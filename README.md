@@ -450,7 +450,7 @@ This is the full cross-platform hook inventory for the plugin. Claude Code gets 
 
 **Install**
 ```
-/plugin marketplace add REPOZY/superpowers-optimized
+/plugin marketplace add brunob54/superpowers-optimized
 /plugin install superpowers-optimized@superpowers-optimized
 ```
 
@@ -458,7 +458,7 @@ This is the full cross-platform hook inventory for the plugin. Claude Code gets 
 
 `/plugin update superpowers-optimized` opens the plugin manager UI. From there:
 
-1. **Marketplaces** tab → select `REPOZY/superpowers-optimized` → **Update marketplace** (refreshes the version catalog)
+1. **Marketplaces** tab → select `brunob54/superpowers-optimized` → **Update marketplace** (refreshes the version catalog)
 2. **Installed** tab → select `superpowers-optimized` → **Update now**
 
 > **Tip:** To skip manual steps in future, enable **Auto-update** for the marketplace in step 1.
@@ -497,12 +497,12 @@ For live Codex hooks, use `codex-cli 0.118.0` or newer. Older CLI builds may sil
 
 **Install** — tell the agent:
 ```
-Fetch and follow instructions from https://raw.githubusercontent.com/REPOZY/superpowers-optimized/refs/heads/main/.codex/INSTALL.md
+Fetch and follow instructions from https://raw.githubusercontent.com/brunob54/superpowers-optimized/refs/heads/main/.codex/INSTALL.md
 ```
 
 **Update** — tell the agent:
 ```
-Fetch and follow the update instructions from https://raw.githubusercontent.com/REPOZY/superpowers-optimized/refs/heads/main/.codex/INSTALL.md
+Fetch and follow the update instructions from https://raw.githubusercontent.com/brunob54/superpowers-optimized/refs/heads/main/.codex/INSTALL.md
 ```
 
 Or manually: follow the `Updating` section in the linked install doc. A plain `git pull` is not always sufficient for a complete update.
@@ -515,12 +515,12 @@ If the installed Codex copy looks stale, dirty, or inconsistent after update, us
 
 **Install** — tell the agent:
 ```
-Fetch and follow instructions from https://raw.githubusercontent.com/REPOZY/superpowers-optimized/refs/heads/main/.opencode/INSTALL.md
+Fetch and follow instructions from https://raw.githubusercontent.com/brunob54/superpowers-optimized/refs/heads/main/.opencode/INSTALL.md
 ```
 
 **Update** — tell the agent:
 ```
-Fetch and follow the update instructions from https://raw.githubusercontent.com/REPOZY/superpowers-optimized/refs/heads/main/.opencode/INSTALL.md
+Fetch and follow the update instructions from https://raw.githubusercontent.com/brunob54/superpowers-optimized/refs/heads/main/.opencode/INSTALL.md
 ```
 
 Or manually: `git pull` in your local clone of the repository.

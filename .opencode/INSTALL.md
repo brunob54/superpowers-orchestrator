@@ -11,12 +11,12 @@
 
 **Unix/macOS:**
 ```bash
-git clone https://github.com/REPOZY/superpowers-optimized.git ~/.config/opencode/superpowers
+git clone https://github.com/brunob54/superpowers-optimized.git ~/.config/opencode/superpowers
 ```
 
 **Windows (PowerShell):**
 ```powershell
-git clone https://github.com/REPOZY/superpowers-optimized.git "$env:USERPROFILE\.config\opencode\superpowers"
+git clone https://github.com/brunob54/superpowers-optimized.git "$env:USERPROFILE\.config\opencode\superpowers"
 ```
 
 ### 2. Register the Plugin
@@ -156,5 +156,5 @@ When skills reference Claude Code tools:
 
 ## Getting Help
 
-- Report issues: https://github.com/REPOZY/superpowers-optimized/issues
-- Full documentation: https://github.com/REPOZY/superpowers-optimized/blob/main/docs/platforms/opencode.md
+- Report issues: https://github.com/brunob54/superpowers-optimized/issues
+- Full documentation: https://github.com/brunob54/superpowers-optimized/blob/main/docs/platforms/opencode.md

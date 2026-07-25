@@ -36,7 +36,7 @@
 ### 1. Clone the repository
 
 ```bash
-git clone https://github.com/REPOZY/superpowers-optimized.git ~/.codex/superpowers-optimized
+git clone https://github.com/brunob54/superpowers-optimized.git ~/.codex/superpowers-optimized
 ```
 
 ### 2. Create the skills symlink
@@ -197,7 +197,7 @@ rm -f ~/.codex/agents/code-reviewer.toml ~/.codex/agents/red-team.toml
 test -L ~/.codex/hooks.json && rm ~/.codex/hooks.json
 rm -rf ~/.codex/superpowers-optimized
 
-git clone https://github.com/REPOZY/superpowers-optimized.git ~/.codex/superpowers-optimized
+git clone https://github.com/brunob54/superpowers-optimized.git ~/.codex/superpowers-optimized
 mkdir -p ~/.agents/skills ~/.codex/agents
 ln -s ~/.codex/superpowers-optimized/skills ~/.agents/skills/superpowers
 cp ~/.codex/superpowers-optimized/codex-agents/*.toml ~/.codex/agents/
@@ -211,7 +211,7 @@ Remove-Item -Force "$env:USERPROFILE\.codex\agents\code-reviewer.toml","$env:USE
 Remove-Item -Force "$env:USERPROFILE\.codex\hooks.json" -ErrorAction SilentlyContinue
 Remove-Item -Recurse -Force "$env:USERPROFILE\.codex\superpowers-optimized"
 
-git clone https://github.com/REPOZY/superpowers-optimized.git "$env:USERPROFILE\.codex\superpowers-optimized"
+git clone https://github.com/brunob54/superpowers-optimized.git "$env:USERPROFILE\.codex\superpowers-optimized"
 New-Item -ItemType Directory -Force -Path "$env:USERPROFILE\.agents\skills","$env:USERPROFILE\.codex\agents" | Out-Null
 cmd /c mklink /J "$env:USERPROFILE\.agents\skills\superpowers" "$env:USERPROFILE\.codex\superpowers-optimized\skills"
 Copy-Item "$env:USERPROFILE\.codex\superpowers-optimized\codex-agents\*.toml" "$env:USERPROFILE\.codex\agents\"
