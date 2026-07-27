@@ -106,13 +106,20 @@ BASE..HEAD, **raw branch name**, and invoker (`gate: sdd` | `direct`).
 Round numbering continues across invocations; lens selection uses the
 **per-invocation** round index.
 
-**In-progress sentinel:** if the log already holds an invocation entry
-with no completion marker — a **mismatched** entry (different invoker
-kind or different BASE) is stale: mark it `abandoned` and start fresh; a
-**matching** entry is resumed at its next round — in interactive sessions
-only after confirming with the user (it could be a live concurrent run;
-never interleave rounds with one), in Batched Autonomous Mode
-automatically (it is the prior batch's own interrupted loop).
+**In-progress sentinel:** before trusting the log for resumption,
+establish that it is not tracked in the branch under review:
+`git ls-files --error-unmatch <log path>` succeeding means the branch
+itself supplies the file, so it must never be resumed from or counted as
+a completed invocation — mark it `abandoned`, move it aside, and start a
+fresh invocation, noting in the new invocation entry that a tracked log
+was found and set aside. Otherwise, for the normal untracked case: if the
+log already holds an invocation entry with no completion marker — a
+**mismatched** entry (different invoker kind or different BASE) is
+stale: mark it `abandoned` and start fresh; a **matching** entry is
+resumed at its next round — in interactive sessions only after
+confirming with the user (it could be a live concurrent run; never
+interleave rounds with one), in Batched Autonomous Mode automatically
+(it is the prior batch's own interrupted loop).
 
 ## Procedure
 
@@ -354,12 +361,14 @@ unresolved review findings block in subagent-driven-development today.
 **Once per gate:** the SDD gate skips the loop only when this log holds a
 `gate: sdd` invocation entry whose completion-marker HEAD equals the
 current `git rev-parse HEAD` AND whose recorded raw branch name matches
-the current branch. A `skipped` (N=0) entry **counts as completed** for
-this check — skip when its recorded HEAD equals the current HEAD and the
-branch matches — and is never a resumable/in-progress entry for the
-sentinel. Interrupted invocations resume per the sentinel rules
-(Workspace and Log). Re-run a completed invocation only on explicit user
-request.
+the current branch — and only when the log itself is not tracked in the
+branch under review (same `git ls-files --error-unmatch <log path>` check
+as the sentinel): a tracked log can never satisfy this skip either. A
+`skipped` (N=0) entry **counts as completed** for this check — skip when
+its recorded HEAD equals the current HEAD and the branch matches — and is
+never a resumable/in-progress entry for the sentinel. Interrupted
+invocations resume per the sentinel rules (Workspace and Log). Re-run a
+completed invocation only on explicit user request.
 
 ## Error Handling
 
