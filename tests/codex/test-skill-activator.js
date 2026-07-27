@@ -984,6 +984,30 @@ test('"cargo build --debug is slow" does NOT route to systematic-debugging', () 
   assert.strictEqual(matchesDebugging('cargo build --debug is slow'), false);
 });
 
+// ── multi-code-review routing ────────────────────────────────────────────────
+
+console.log('\nmulti-code-review routing');
+
+function matchesMcr(prompt) {
+  return matchSkills(prompt).some(m => m.skill === 'multi-code-review');
+}
+
+test('"run several independent code reviews on this branch" routes to multi-code-review', () => {
+  assert.strictEqual(matchesMcr('run several independent code reviews on this branch'), true);
+});
+
+test('"review the branch 3 times" routes to multi-code-review', () => {
+  assert.strictEqual(matchesMcr('review the branch 3 times'), true);
+});
+
+test('"review the spec 3 times" does NOT route to multi-code-review', () => {
+  assert.strictEqual(matchesMcr('review the spec 3 times'), false);
+});
+
+test('"code review my changes" does NOT route to multi-code-review', () => {
+  assert.strictEqual(matchesMcr('code review my changes'), false);
+});
+
 // ── Result ────────────────────────────────────────────────────────────────────
 
 console.log(`\n${'─'.repeat(50)}`);

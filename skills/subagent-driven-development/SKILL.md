@@ -39,7 +39,7 @@ digraph sdd_process {
 
     "Read plan, extract all tasks, create tracking" [shape=box];
     "More tasks?" [shape=diamond];
-    "Final whole-branch review" [shape=box];
+    "Final whole-branch review loop (multi-code-review)" [shape=box];
     "Shut down spawned subagents" [shape=box];
     "Invoke finishing-a-development-branch" [shape=doublecircle];
 
@@ -55,8 +55,8 @@ digraph sdd_process {
     "Spec ✅ and quality approved?" -> "Mark task complete, append ledger line" [label="yes"];
     "Mark task complete, append ledger line" -> "More tasks?";
     "More tasks?" -> "Record BASE, write task brief, dispatch implementer" [label="yes"];
-    "More tasks?" -> "Final whole-branch review" [label="no"];
-    "Final whole-branch review" -> "Shut down spawned subagents";
+    "More tasks?" -> "Final whole-branch review loop (multi-code-review)" [label="no"];
+    "Final whole-branch review loop (multi-code-review)" -> "Shut down spawned subagents";
     "Shut down spawned subagents" -> "Invoke finishing-a-development-branch";
 }
 ```
@@ -74,7 +74,15 @@ digraph sdd_process {
 - Mark task complete: update the task's checkbox in plan.md from `- [ ]` to `- [x]`, append the ledger line (see Durable Progress), and sync `state.md` if it has a plan status section.
    - For complex or high-risk tasks, validate the approach against requirements and consider simpler alternatives before or after the implementer's work.
    - For tasks centered on frontend/UI, apply `frontend-design` standards to guide structure, styling, and accessibility.
-4. Run final whole-branch review.
+4. Run the final whole-branch review loop: invoke the `multi-code-review`
+   skill with BASE = the branch's merge-base (`git merge-base main HEAD`
+   or the BASE recorded before Task 1), the plan path, and the ledger's
+   carried Minor-findings list. Ask the user for N unless a count was
+   already stated (default 3; N=0 skips on explicit user choice). The
+   loop's unresolved Critical/Important and user-decision items block
+   completion exactly as unresolved review findings do. On platforms
+   without the Agent tool, fall back to the single-pass review (see
+   Integration).
 5. Shut down all spawned subagents. Named teammates stay resident and idle
    after their task so they remain addressable for review fix cycles — they do
    not terminate themselves. Once the final review passes, send each one a
@@ -202,8 +210,11 @@ Then stop with a message stating what was completed, any open issues
 
 If the batch ended because the plan is complete, skip the resume instructions:
 write the handoff with `## Open Issues` only (for any carry-over), then proceed
-to the final whole-branch review and `finishing-a-development-branch` as in the
-Core Flow.
+to the final whole-branch review loop (`multi-code-review`) and
+`finishing-a-development-branch` as in the Core Flow. The loop runs
+autonomously: never ask for N (default 3, or a count the user stated when
+starting the batch); plan-mandated/user-decision findings are journaled
+under `## Open Issues` and end the batch.
 
 ### Autonomy Policy (inside a batch)
 
@@ -319,13 +330,12 @@ the final whole-branch review. When you fill a reviewer template:
   what the plan's text requires — is the user's decision, like any plan
   contradiction: present the finding and the plan text, ask which governs.
   (In Batched Autonomous Mode: journal it and end the batch.)
-- The final whole-branch review gets a package too: run
-  `scripts/review-package MERGE_BASE HEAD` (MERGE_BASE = the commit the
-  branch started from, e.g. `git merge-base main HEAD`) and include the
-  printed path in the final review dispatch.
-- If the final whole-branch review returns findings, dispatch ONE fix
-  subagent with the complete findings list — not one fixer per finding.
-  Per-finding fixers each rebuild context and re-run suites.
+- The final whole-branch review is the `multi-code-review` loop; it
+  builds its own packages (`scripts/review-package MERGE_BASE HEAD`,
+  MERGE_BASE = the commit the branch started from, e.g.
+  `git merge-base main HEAD`; regenerated after fixes) and dispatches ONE
+  fix subagent per round with that round's complete findings list —
+  never one fixer per finding.
 - Every fix dispatch carries the implementer contract: the fix subagent
   re-runs the tests covering its change, appends results to the report
   file, and the re-review is dispatched only once the report shows the
@@ -402,7 +412,8 @@ descriptions. Use `haiku` for an implementer only when the plan text
 contains the complete code to write (transcription plus testing) or for a
 single-file mechanical fix. Scale reviewer models to the diff's size,
 complexity, and risk — a subtle concurrency change deserves `opus`; the
-final whole-branch review always runs on `opus`, not the session default.
+final whole-branch review loop (`multi-code-review`) inherits the session
+model with a sonnet floor (see that skill's Parameters).
 
 ## Prompt Templates
 
@@ -413,5 +424,8 @@ Use:
 ## Integration
 
 - Setup workspace first with `using-git-worktrees`.
-- The final whole-branch review uses `requesting-code-review/code-reviewer.md` on the most capable model.
+- The final whole-branch review runs the `multi-code-review` loop
+  (session model, sonnet floor). On platforms without the Agent tool,
+  fall back to a single-pass review using
+  `requesting-code-review/code-reviewer.md`.
 - Finish with `finishing-a-development-branch`.

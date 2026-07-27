@@ -286,6 +286,33 @@ test('Leading whitespace before marker still exempts', () => {
   assert.deepStrictEqual(out, {});
 });
 
+// ── multi-code-review ────────────────────────────────────────────────────────
+
+console.log('\nmulti-code-review');
+
+test('Includes multi-code-review skill in roster', () => {
+  assert.ok(source.includes("'multi-code-review'"), 'Missing multi-code-review skill');
+});
+
+test('Blocks "using multi-code-review" without marker', () => {
+  const out = runGuard('I finished by using multi-code-review on the branch.');
+  assert.strictEqual(out.decision, 'block');
+});
+
+test('Marker-prefixed code-review report quoting skill names is exempt', () => {
+  const report = [
+    '<!-- multi-review report -->',
+    '### Verdict',
+    'Critical: 0 | Important: 1 | Minor: 0',
+    '',
+    '### Findings',
+    '#### Important',
+    '- [I1] skills/foo/SKILL.md:12 — tells the agent to start using subagent-driven-development mid-task | wrong layer | reword',
+  ].join('\n');
+  const out = runGuard(report);
+  assert.deepStrictEqual(out, {});
+});
+
 // ── Summary ──────────────────────────────────────────────────────────────────
 
 console.log(`\n${'─'.repeat(50)}`);
