@@ -923,7 +923,7 @@ git commit -m "skill-rules: route multi-code-review (keywords + intent patterns 
 
 **Does NOT cover:** detection-rate assertions (reviewer finding the planted defect is nondeterministic — the test asserts loop mechanics only and passes vacuously on zero-findings rounds, per spec Testing Strategy). Note on the spec's "harness rules" sentence: `--verbose` + stream-json is the **triggering** runner's convention (`tests/skill-triggering/run-test.sh`), not the claude-code suite's — this test follows the `test-multi-review.sh` convention (plain `claude -p`, timeout shim sourced, no hardcoded git-history assertions), which satisfies the rules that apply to this suite.
 
-- [ ] **Step 1: Write the test with exactly this content**
+- [x] **Step 1: Write the test with exactly this content**
 
 `````bash
 #!/usr/bin/env bash
@@ -1052,12 +1052,12 @@ else
 fi
 `````
 
-- [ ] **Step 2: Make it executable and syntax-check**
+- [x] **Step 2: Make it executable and syntax-check**
 
 Run: `chmod +x tests/claude-code/test-multi-code-review.sh && bash -n tests/claude-code/test-multi-code-review.sh && echo SYNTAX_OK`
 Expected: `SYNTAX_OK`
 
-- [ ] **Step 3: List it in the harness** — in `tests/claude-code/run-skill-tests.sh`:
+- [x] **Step 3: List it in the harness** — in `tests/claude-code/run-skill-tests.sh`:
 
 After the line:
 ```
@@ -1077,12 +1077,12 @@ add:
     "test-multi-code-review.sh"
 ```
 
-- [ ] **Step 4: Verify listing**
+- [x] **Step 4: Verify listing**
 
 Run: `grep -c "test-multi-code-review.sh" tests/claude-code/run-skill-tests.sh`
 Expected: 2
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add tests/claude-code/test-multi-code-review.sh tests/claude-code/run-skill-tests.sh
