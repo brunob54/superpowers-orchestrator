@@ -33,17 +33,23 @@ final review on such platforms; that fallback lives there, not here.)
 
 - **Review range `BASE..HEAD`:** the SDD gate passes MERGE_BASE (the
   commit the branch started from). Direct invocation: if the user gave a
-  BASE, first resolve and verify it with
-  `git rev-parse --verify --quiet "$BASE^{commit}"` (value quoted); stop
+  BASE, reject it outright unless it matches a conservative ref charset —
+  `^[A-Za-z0-9._/~^{}-]+$`, i.e. no `$`, backtick, `;`, `|`, `&`,
+  parenthesis, or newline — because quoting alone does not stop command
+  substitution, and the argument reaches the shell as literal text.
+  Assign it to a shell variable and reference that variable; never paste
+  the user's text straight into a command string. Then resolve and verify
+  with `git rev-parse --verify --quiet "$BASE^{commit}"`; stop
   and report on failure. Use the resulting SHA — never the raw argument —
-  for every later command, reducing it to `git merge-base <resolved-SHA>
+  for every later command, including the ancestry check below, reducing
+  it to `git merge-base <resolved-SHA>
   HEAD` and reviewing from that commit — a user-supplied BASE is never
   used raw. (The package's
   diff is two-dot `git diff BASE..HEAD`, a plain A-vs-B comparison: a
   BASE that is not an ancestor of HEAD — `main` after it advanced, say —
   makes commits the branch never touched appear as deletions, and the
   reviewer, told the diff file is its view of the change, reports them as
-  defects. `git merge-base --is-ancestor <user-BASE> HEAD` is the
+  defects. `git merge-base --is-ancestor <resolved-SHA> HEAD` is the
   equivalent check; if it fails and no merge-base exists, stop and
   report.) Without a user BASE, resolve the default branch via
   `git symbolic-ref refs/remotes/origin/HEAD`, then `main`, then
