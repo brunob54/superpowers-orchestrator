@@ -621,7 +621,7 @@ git commit -m "multi-code-review: reviewer dispatch template"
 
 Apply the following seven exact replacements (old → new). Each old string appears exactly once.
 
-- [ ] **Step 1: Digraph node**
+- [x] **Step 1: Digraph node**
 
 Old:
 ```
@@ -632,7 +632,7 @@ New:
     "Final whole-branch review loop (multi-code-review)" [shape=box];
 ```
 
-- [ ] **Step 2: Digraph edges**
+- [x] **Step 2: Digraph edges**
 
 Old:
 ```
@@ -645,7 +645,7 @@ New:
     "Final whole-branch review loop (multi-code-review)" -> "Shut down spawned subagents";
 ```
 
-- [ ] **Step 3: Core Flow step 4**
+- [x] **Step 3: Core Flow step 4**
 
 Old:
 ```
@@ -662,7 +662,7 @@ New:
    completion exactly as unresolved review findings do.
 ```
 
-- [ ] **Step 4: Constructing Reviewer Prompts — final-review bullets**
+- [x] **Step 4: Constructing Reviewer Prompts — final-review bullets**
 
 Old:
 ```
@@ -684,7 +684,7 @@ New:
   never one fixer per finding.
 ```
 
-- [ ] **Step 5: Model Selection amendment**
+- [x] **Step 5: Model Selection amendment**
 
 Old:
 ```
@@ -714,7 +714,7 @@ New:
   `requesting-code-review/code-reviewer.md`.
 ```
 
-- [ ] **Step 7: Batched Autonomous Mode plan-complete path**
+- [x] **Step 7: Batched Autonomous Mode plan-complete path**
 
 Old:
 ```
@@ -732,7 +732,7 @@ starting the batch); plan-mandated/user-decision findings are journaled
 under `## Open Issues` and end the batch.
 ```
 
-- [ ] **Step 8: Verify no stale references**
+- [x] **Step 8: Verify no stale references**
 
 Run: `grep -n "always runs on .opus" skills/subagent-driven-development/SKILL.md`
 Expected: no hits
@@ -740,7 +740,7 @@ Expected: no hits
 Run: `grep -c "multi-code-review" skills/subagent-driven-development/SKILL.md`
 Expected: ≥ 5
 
-- [ ] **Step 9: Commit**
+- [x] **Step 9: Commit**
 
 ```bash
 git add skills/subagent-driven-development/SKILL.md
