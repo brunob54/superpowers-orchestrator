@@ -700,7 +700,7 @@ final whole-branch review loop (`multi-code-review`) inherits the session
 model with a sonnet floor (see that skill's Parameters).
 ```
 
-- [ ] **Step 6: Integration section**
+- [x] **Step 6: Integration section**
 
 Old:
 ```
