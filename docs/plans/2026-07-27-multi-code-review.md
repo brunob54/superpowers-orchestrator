@@ -1206,7 +1206,9 @@ echo "$ACTIVE"
 Expected: an existing directory (currently `~/.claude/plugins/cache/superpowers-optimized/superpowers-optimized/6.9.0`). Then run the following **in the same shell invocation as the extraction above** (shell state does not persist across separate Bash calls — re-run the `ACTIVE=` line first if invoking separately):
 
 ```bash
-[ -n "$ACTIVE" ] && [ -d "$ACTIVE" ] || { echo "ACTIVE not resolved — STOP"; false; }
+set -euo pipefail
+[ -n "${ACTIVE:-}" ] && [ -d "$ACTIVE" ] || { echo "ACTIVE not resolved — STOP"; exit 1; }
+case "$ACTIVE" in */plugins/cache/superpowers-optimized/*) ;; *) echo "ACTIVE outside the plugin cache — STOP"; exit 1 ;; esac
 REPO=/Users/bruno/Programming/AI/AI_Coding/My_tools/Superpowers
 for d in skills hooks agents .claude-plugin; do rsync -a --delete "$REPO/$d/" "$ACTIVE/$d/"; done
 cp "$REPO/VERSION" "$ACTIVE/VERSION"
