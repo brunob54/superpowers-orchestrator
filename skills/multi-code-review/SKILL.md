@@ -270,12 +270,14 @@ Canonical dispositions — Critical/Important:
 `unresolved: <reason>`; Minor: `fixed — <summary> → <sha>` | `carried` |
 `rejected: <reason>` — the `fixed` line always uses the single shape
 `fixed — <summary> → <sha>`. A clean round (zero
-findings of any severity) writes exactly one disposition line:
+findings of any severity, and — on round 1 — no carried-finding
+dispositions either) writes exactly one disposition line:
 `- none — no material issues under this lens`. A Minor-only round is
 clean for convergence but logs its Minor dispositions normally — never
 the "none" line. Note sonnet-floor substitutions on the round header
-line. Skipped invocations (N=0) get a one-line `skipped` entry recording
-`HEAD <sha>`; a failed round keeps the normal
+line. Skipped invocations (N=0) get a one-line `skipped` entry carrying
+the same invocation-note fields (date, N, BASE..HEAD, raw branch name,
+invoker) plus `HEAD <sha>`; a failed round keeps the normal
 `## Round <i> — <lens name> — <model>` header with
 `**Reviewer verdict:** inconclusive` and one disposition line
 `- inconclusive — <reason>`; verification re-reviews use the

@@ -80,7 +80,9 @@ digraph sdd_process {
    carried Minor-findings list. Ask the user for N unless a count was
    already stated (default 3; N=0 skips on explicit user choice). The
    loop's unresolved Critical/Important and user-decision items block
-   completion exactly as unresolved review findings do.
+   completion exactly as unresolved review findings do. On platforms
+   without the Agent tool, fall back to the single-pass review (see
+   Integration).
 5. Shut down all spawned subagents. Named teammates stay resident and idle
    after their task so they remain addressable for review fix cycles — they do
    not terminate themselves. Once the final review passes, send each one a
