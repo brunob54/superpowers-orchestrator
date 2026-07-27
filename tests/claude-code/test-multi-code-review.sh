@@ -88,7 +88,8 @@ PLUGIN_HEAD_AFTER=$(git -C "$PLUGIN_DIR" rev-parse HEAD)
 PLUGIN_STATUS_AFTER=$(git -C "$PLUGIN_DIR" status --porcelain | shasum | cut -d' ' -f1)
 if [ "$PLUGIN_HEAD_AFTER" != "$PLUGIN_HEAD_BEFORE" ] || [ "$PLUGIN_STATUS_AFTER" != "$PLUGIN_STATUS_BEFORE" ]; then
     echo "FAIL(e): the run mutated the plugin dev repo (misanchored skill?)"
-    echo "  Inspect $PLUGIN_DIR; recover with: git -C $PLUGIN_DIR reset --hard $PLUGIN_HEAD_BEFORE"
+    echo "  Inspect: git -C $PLUGIN_DIR status --porcelain; git -C $PLUGIN_DIR diff"
+    echo "  Only after confirming that tree held nothing else of value, recover with: git -C $PLUGIN_DIR reset --hard $PLUGIN_HEAD_BEFORE (this discards ALL uncommitted work in that repo)"
     FAILURES=$((FAILURES+1))
 fi
 

@@ -33,8 +33,12 @@ final review on such platforms; that fallback lives there, not here.)
 
 - **Review range `BASE..HEAD`:** the SDD gate passes MERGE_BASE (the
   commit the branch started from). Direct invocation: if the user gave a
-  BASE, reduce it to `git merge-base <user-BASE> HEAD` and review from
-  that commit — a user-supplied BASE is never used raw. (The package's
+  BASE, first resolve and verify it with
+  `git rev-parse --verify --quiet "$BASE^{commit}"` (value quoted); stop
+  and report on failure. Use the resulting SHA — never the raw argument —
+  for every later command, reducing it to `git merge-base <resolved-SHA>
+  HEAD` and reviewing from that commit — a user-supplied BASE is never
+  used raw. (The package's
   diff is two-dot `git diff BASE..HEAD`, a plain A-vs-B comparison: a
   BASE that is not an ancestor of HEAD — `main` after it advanced, say —
   makes commits the branch never touched appear as deletions, and the
@@ -69,6 +73,12 @@ final review on such platforms; that fallback lives there, not here.)
   reviews correctness only — log "alignment not reviewed".
 
 ## Workspace and Log
+
+**Working-tree precondition:** before any fix subagent is dispatched
+(first round included), check `git status --porcelain` at the repo root.
+If it is non-empty, stop and report — or, in interactive sessions only,
+proceed after the user explicitly consents to fixing on top of the
+pre-existing uncommitted changes.
 
 **Root anchoring:** everything this skill does — git commands, fix
 commits, packages, and `.superpowers/reviews/` — is rooted at the top
@@ -131,8 +141,10 @@ code has been revised since, so a re-pass is meaningful):
 4. **Triage:**
    - **Critical/Important:** dispatch ONE fix subagent per round with the
      complete list (never one fixer per finding). The fix subagent:
-     minimal fixes only, re-runs the covering tests, appends command +
-     output to the fix-report file, commits with the **generic subject**
+     minimal fixes only, re-runs the covering tests, stages only the
+     files it changed by explicit path — never `git add -A` or
+     `git add .` — appends command + output to the fix-report file,
+     commits with the **generic subject**
      `review fixes (round <i>)` — no finding text (the package's commit
      list would leak it to later reviewers). ALL fix commits use this
      subject form — verification-cycle and post-loop-addendum fixes
