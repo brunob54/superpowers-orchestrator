@@ -430,7 +430,7 @@ git commit -m "multi-code-review: controller skill (loop, lenses, log, gate sema
 
 **Security flag:** `none`
 
-- [ ] **Step 1: Write the file with exactly this content**
+- [x] **Step 1: Write the file with exactly this content**
 
 `````markdown
 # Code Reviewer Prompt Template (multi-code-review)
@@ -590,7 +590,7 @@ triage recommendations — recommendations only; the controller decides and
 logs dispositions.
 `````
 
-- [ ] **Step 2: Verify placeholders and marker**
+- [x] **Step 2: Verify placeholders and marker**
 
 Run: `grep -c "\[PACKAGE_FILE\]\|\[LENS_INSTRUCTIONS\]\|\[MODEL" skills/multi-code-review/reviewer-prompt.md`
 Expected: count ≥ 3
@@ -601,7 +601,7 @@ Expected: ≥ 1 hit (the marker sits indented inside the `prompt: |` block — d
 Run: `for a in "Carried Findings Triage" "Reviewer returns:" "\[REPO_ROOT\]" "Nothing else may be added"; do grep -q "$a" skills/multi-code-review/reviewer-prompt.md || echo "MISSING: $a"; done; echo ANCHORS_DONE`
 Expected: only `ANCHORS_DONE` — no `MISSING:` lines (the template's tail survived transcription)
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add skills/multi-code-review/reviewer-prompt.md
