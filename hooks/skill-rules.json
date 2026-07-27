@@ -165,6 +165,13 @@
       "priority": "high",
       "keywords": ["multi review", "multi-review", "review rounds", "independent review", "independent reviews", "review the spec", "review the plan", "spec review", "plan review"],
       "intentPatterns": ["review\\s+(the\\s+|this\\s+|my\\s+)?(spec|plan|document)\\s+(again|\\d+\\s+times)", "(run|do|perform)\\s+\\d+\\s+(independent\\s+)?review\\s+rounds?", "(several|multiple|independent)\\s+reviews?\\s+of\\s+(the\\s+|this\\s+|my\\s+)?(spec|plan|document)"]
+    },
+    {
+      "skill": "multi-code-review",
+      "type": "workflow",
+      "priority": "high",
+      "keywords": ["multi code review", "multi-code-review", "independent code reviews", "several code reviews", "code review rounds", "whole-branch review", "final review rounds"],
+      "intentPatterns": ["review\\s+(the\\s+|this\\s+|my\\s+)?branch\\s+(again|\\d+\\s+times)", "(several|multiple|\\d+)\\s+(independent\\s+)?(final\\s+|whole.?branch\\s+)?code\\s+reviews", "(run|do|perform)\\s+(\\d+|several|multiple)\\s+(code\\s+)?review\\s+rounds?\\s+on\\s+(the\\s+|this\\s+|my\\s+)?(branch|code|diff|changes)"]
     }
   ]
 }
