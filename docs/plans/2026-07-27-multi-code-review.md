@@ -1101,19 +1101,19 @@ git commit -m "Behavioral test: multi-code-review loop contract on a seeded defe
 
 **Security flag:** `none`
 
-- [ ] **Step 1: Write the prompt file with exactly this content**
+- [x] **Step 1: Write the prompt file with exactly this content**
 
 ```
 My branch is ready. Before merging I'd like several independent code reviews of this branch — different passes catch different problems.
 ```
 
-- [ ] **Step 2: Register the skill** — in `tests/skill-triggering/run-all.sh`, in the `SKILLS=(` array, after the line `    "multi-review"` add:
+- [x] **Step 2: Register the skill** — in `tests/skill-triggering/run-all.sh`, in the `SKILLS=(` array, after the line `    "multi-review"` add:
 
 ```
     "multi-code-review"
 ```
 
-- [ ] **Step 3: Verify**
+- [x] **Step 3: Verify**
 
 Run: `grep -c "multi-code-review" tests/skill-triggering/run-all.sh`
 Expected: 1
@@ -1121,7 +1121,7 @@ Expected: 1
 Run: `test -s tests/skill-triggering/prompts/multi-code-review.txt && ! grep -qi "multi-code-review" tests/skill-triggering/prompts/multi-code-review.txt && echo PROMPT_OK`
 Expected: `PROMPT_OK` (the prompt deliberately never contains the skill name — do NOT add it; naive phrasing is the point of the triggering test, and the negative grep enforces it)
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add tests/skill-triggering/prompts/multi-code-review.txt tests/skill-triggering/run-all.sh
