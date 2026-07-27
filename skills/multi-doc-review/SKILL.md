@@ -1,17 +1,18 @@
 ---
-name: multi-review
+name: multi-doc-review
 description: >
   MUST USE when a spec or plan document needs N independent review rounds
   with findings merged between rounds. One clean-context reviewer subagent
   per round under a rotating lens; findings triaged into the document; a
   sidecar audit log records every disposition; early exit after two
   consecutive clean rounds. Invoked by brainstorming (spec gate) and
-  writing-plans (plan gate), or directly via /multi-review <doc-path> [N].
-  Triggers on: "multi review", "review rounds", "independent reviews",
-  "review the spec again", "review this N times".
+  writing-plans (plan gate), or directly via /multi-doc-review <doc-path> [N].
+  Triggers on: "multi doc review", "document review rounds", "review
+  rounds", "independent reviews", "review the spec again", "review this N
+  times".
 ---
 
-# Multi-Review
+# Multi-Doc-Review
 
 Run an N-round independent review-and-merge loop on a document using
 subagents. Each round is blind to the authoring conversation and to prior

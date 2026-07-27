@@ -62,7 +62,7 @@ while [[ $# -gt 0 ]]; do
             echo ""
             echo "Integration Tests (use --integration):"
             echo "  test-subagent-driven-development-integration.sh  Full workflow execution"
-            echo "  test-multi-review.sh  Multi-review log contract on a seeded flawed spec"
+            echo "  test-multi-doc-review.sh  Multi-doc-review log contract on a seeded flawed spec"
             echo "  test-multi-code-review.sh  Multi-code-review loop contract on a seeded defective branch (use --timeout 1800)"
             exit 0
             ;;
@@ -82,7 +82,7 @@ tests=(
 # Integration tests (slow, full execution)
 integration_tests=(
     "test-subagent-driven-development-integration.sh"
-    "test-multi-review.sh"
+    "test-multi-doc-review.sh"
     "test-multi-code-review.sh"
 )
 

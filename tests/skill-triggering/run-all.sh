@@ -15,7 +15,7 @@ SKILLS=(
     "executing-plans"
     "subagent-driven-development"
     "requesting-code-review"
-    "multi-review"
+    "multi-doc-review"
     "multi-code-review"
 )
 
