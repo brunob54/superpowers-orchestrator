@@ -1189,7 +1189,7 @@ git commit -m "v6.10.0 - multi-code-review skill, SDD final-gate integration"
 
 **Security flag:** `none`
 
-- [ ] **Step 1: Run unit suites (fresh output)**
+- [x] **Step 1: Run unit suites (fresh output)**
 
 Run: `bash tests/codex/run-unit-tests.sh`
 Expected: all pass, including the new guard and activator cases
@@ -1197,7 +1197,7 @@ Expected: all pass, including the new guard and activator cases
 Run: `bash tests/smart-compress/run-tests.sh`
 Expected: all pass / 0 failed (the suite self-seeds `.sp-test-probe.tmp`; passes on a pristine tree since the 2026-07-19 fix — see known-issues.md)
 
-- [ ] **Step 2: Reinstall the plugin into the ACTIVE cache dir**
+- [x] **Step 2: Reinstall the plugin into the ACTIVE cache dir**
 
 ```bash
 ACTIVE=$(grep -o '"installPath": *"[^"]*superpowers-optimized[^"]*"' ~/.claude/plugins/installed_plugins.json | head -1 | sed 's/.*": *"//; s/"$//')
@@ -1219,17 +1219,17 @@ Expected: both files exist (active dir updated AND the 6.10.0 clone landed)
 
 - [ ] **Step 2b (manual, optional per spec):** after a session restart, run an SDD plan end-to-end on a toy feature and confirm the multi-code-review loop fires at the final gate (spec Testing Strategy "manual gate check"). Not automatable here; note the result in `state.md` at this repository's root (`/Users/bruno/Programming/AI/AI_Coding/My_tools/Superpowers/state.md`) when done.
 
-- [ ] **Step 3: Behavioral test**
+- [x] **Step 3: Behavioral test**
 
 Run: `bash tests/claude-code/test-multi-code-review.sh`
 Expected: `PASS: multi-code-review behavioral test` (slow — up to 30 min; needs the timeout shim, auto-sourced)
 
-- [ ] **Step 4: Triggering spot-check (stochastic — retry up to 3x before judging)**
+- [x] **Step 4: Triggering spot-check (stochastic — retry up to 3x before judging)**
 
 Run: `tests/skill-triggering/run-test.sh multi-code-review tests/skill-triggering/prompts/multi-code-review.txt 3`
 Expected: skill triggered (note known-issues.md: with 3 max turns the trigger is stochastic; `error_max_turns` means turn budget, not harness failure). Retry up to 3 times; after 3 misses, record the failure under `## Open Issues` in `state.md` and treat Task 9 as FAILED — do not proceed to Step 5.
 
-- [ ] **Step 5: Commit any checkbox bookkeeping**
+- [x] **Step 5: Commit any checkbox bookkeeping**
 
 ```bash
 git add docs/plans/2026-07-27-multi-code-review.md
