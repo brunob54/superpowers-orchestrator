@@ -47,6 +47,7 @@ const SKILL_NAMES = [
   'performance-investigation',
   'dependency-management',
   'multi-review',
+  'multi-code-review',
 ];
 
 // Multi-review reviewer reports legitimately quote skill names — they review
