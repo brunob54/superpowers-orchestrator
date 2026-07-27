@@ -6,7 +6,7 @@ Contents:
 
 1. [SDD Batched Autonomous Mode (v6.7.0)](#1-sdd-batched-autonomous-mode-v670)
 2. [SDD Token-Optimized Review Flow (v6.8.0)](#2-sdd-token-optimized-review-flow-v680)
-3. [multi-review — N-Round Independent Document Review (v6.9.0)](#3-multi-review--n-round-independent-document-review-v690)
+3. [multi-doc-review — N-Round Independent Document Review (v6.9.0)](#3-multi-doc-review--n-round-independent-document-review-v690)
 
 ---
 
@@ -95,7 +95,9 @@ The flow is automatic whenever subagent-driven-development executes a plan — e
 
 ---
 
-## 3. multi-review — N-Round Independent Document Review (v6.9.0)
+## 3. multi-doc-review — N-Round Independent Document Review (v6.9.0)
+
+*Named `multi-review` through v6.10.0; renamed in v6.11.0 to pair with `multi-code-review`. Historical documents under `docs/specs/` and `docs/plans/` keep the old name.*
 
 ### Summary
 
@@ -118,12 +120,12 @@ A single review — even a careful one — inherits the authoring conversation's
 ### How to use
 
 - **Automatic:** at the brainstorming spec gate and the writing-plans plan gate, the loop runs before the user-approval step and asks for N once if you haven't stated a count.
-- **Direct:** `/multi-review docs/specs/<doc>.md 3` — or phrases like `review this spec 3 times` / `run independent review rounds on docs/plans/<plan>.md`.
+- **Direct:** `/multi-doc-review docs/specs/<doc>.md 3` — or phrases like `review this spec 3 times` / `run independent review rounds on docs/plans/<plan>.md`.
 - **Audit trail:** read `<doc-basename>-review-log.md` next to the document for per-round verdicts and every disposition.
 
 ### Where it lives
 
-`skills/multi-review/` (`SKILL.md` controller + `reviewer-prompt.md` dispatch template), gate steps in `skills/brainstorming/SKILL.md` and `skills/writing-plans/SKILL.md`, `hooks/skill-rules.json` routing entry, `hooks/subagent-guard.js` marker exemption, `tests/claude-code/test-multi-review.sh`.
+`skills/multi-doc-review/` (`SKILL.md` controller + `reviewer-prompt.md` dispatch template), gate steps in `skills/brainstorming/SKILL.md` and `skills/writing-plans/SKILL.md`, `hooks/skill-rules.json` routing entry, `hooks/subagent-guard.js` marker exemption, `tests/claude-code/test-multi-doc-review.sh`.
 
 ### References
 

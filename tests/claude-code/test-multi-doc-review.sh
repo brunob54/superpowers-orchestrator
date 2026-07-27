@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Test: multi-review skill — N-round document review loop (behavioral, slow)
+# Test: multi-doc-review skill — N-round document review loop (behavioral, slow)
 #
 # Seeds a deliberately flawed spec, invokes the skill headlessly with N=2,
 # and asserts the review-log contract from
@@ -8,7 +8,7 @@
 #   (b) doc modified OR all Critical/Important dispositions are rejections
 #   (c) log has a disposition line or an explicit no-findings verdict
 #
-# Requires the INSTALLED plugin to include multi-review — reinstall the
+# Requires the INSTALLED plugin to include multi-doc-review — reinstall the
 # plugin cache after editing skills/ before running this.
 
 set -euo pipefail
@@ -35,7 +35,7 @@ Failed exports are retried a reasonable number of times.
 SPEC_EOF
 SPEC_SHA_BEFORE=$(shasum "$SPEC" | cut -d' ' -f1)
 
-PROMPT="Invoke the superpowers-optimized:multi-review skill on the document $SPEC with N=2. Do not ask me any questions — use N=2 and proceed to completion."
+PROMPT="Invoke the superpowers-optimized:multi-doc-review skill on the document $SPEC with N=2. Do not ask me any questions — use N=2 and proceed to completion."
 # Deliberately no doc-type statement: the spec's Testing Strategy requires this
 # test to exercise path-based inference (docs/specs/ -> spec); stating the type
 # would override inference per the skill's Parameters rule.
@@ -69,7 +69,7 @@ else
 fi
 
 if [ "$FAILURES" -eq 0 ]; then
-    echo "PASS: multi-review behavioral test"
+    echo "PASS: multi-doc-review behavioral test"
 else
     echo "FAILED: $FAILURES assertion(s); transcript in $TEST_PROJECT/output.txt"
     exit 1

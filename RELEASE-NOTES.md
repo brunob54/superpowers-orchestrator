@@ -1,5 +1,23 @@
 # Superpowers Optimized Release Notes
 
+## v6.11.0 — multi-review renamed to multi-doc-review
+
+- **Breaking (invocation name):** the `multi-review` skill is now
+  `multi-doc-review`; the slash form is `/multi-doc-review <doc> [N]`.
+  The old name no longer routes. The rename disambiguates it from
+  `multi-code-review` (v6.10.0) — this loop reviews spec and plan
+  *documents*, that one reviews a branch diff.
+- Renamed: `skills/multi-review/` → `skills/multi-doc-review/`,
+  `tests/claude-code/test-multi-review.sh` →
+  `tests/claude-code/test-multi-doc-review.sh`,
+  `tests/skill-triggering/prompts/multi-review.txt` →
+  `.../multi-doc-review.txt`; roster entry in `hooks/subagent-guard.js`
+  and routing entry in `hooks/skill-rules.json` updated; brainstorming and
+  writing-plans gate steps repointed.
+- Unchanged: behavior, lenses, log format, and the reviewer report marker
+  `<!-- multi-review report -->` — the marker is a shared wire protocol
+  also emitted by `multi-code-review`, so renaming it would break both.
+
 ## v6.10.0 — multi-code-review: N-round independent whole-branch code review
 
 - New `multi-code-review` skill: runs up to N (default 3, cap 10)

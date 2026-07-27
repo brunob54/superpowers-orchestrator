@@ -36,7 +36,7 @@ Every project goes through this process. A todo list, a single-function utility,
    Do not skip this step. An approach that survives adversarial questioning is an approach worth approving.
 9. Save approved design to `docs/specs/YYYY-MM-DD-<topic>-design.md`.
 10. **Spec self-review** — quick inline check for placeholders, contradictions, ambiguity, scope (see Spec Self-Review below). Fix issues inline; no subagent dispatch needed.
-11. **Multi-round spec review** — invoke `superpowers-optimized:multi-review` on the saved spec (doc type `spec`). It asks for N if not already stated (default 3; 0 skips), runs at most once per gate, and writes its audit log to `<spec-basename>-review-log.md`. Skip on platforms without the Agent tool.
+11. **Multi-round spec review** — invoke `superpowers-optimized:multi-doc-review` on the saved spec (doc type `spec`). It asks for N if not already stated (default 3; 0 skips), runs at most once per gate, and writes its audit log to `<spec-basename>-review-log.md`. Skip on platforms without the Agent tool.
 12. **User reviews written spec** — ask user to review the spec file before proceeding (see User Review Gate below).
 13. Invoke `writing-plans`.
 
@@ -54,7 +54,7 @@ digraph brainstorming {
     "Failure-mode check" [shape=box];
     "Save design doc" [shape=box];
     "Spec self-review\n(fix inline)" [shape=box];
-    "Multi-review loop" [shape=box];
+    "Multi-doc-review loop" [shape=box];
     "User reviews spec?" [shape=diamond];
     "Invoke writing-plans" [shape=doublecircle];
 
@@ -69,8 +69,8 @@ digraph brainstorming {
     "User approves design?" -> "Failure-mode check" [label="yes"];
     "Failure-mode check" -> "Save design doc";
     "Save design doc" -> "Spec self-review\n(fix inline)";
-    "Spec self-review\n(fix inline)" -> "Multi-review loop";
-    "Multi-review loop" -> "User reviews spec?";
+    "Spec self-review\n(fix inline)" -> "Multi-doc-review loop";
+    "Multi-doc-review loop" -> "User reviews spec?";
     "User reviews spec?" -> "Save design doc" [label="changes requested"];
     "User reviews spec?" -> "Invoke writing-plans" [label="approved"];
 }
@@ -97,7 +97,7 @@ After the spec self-review passes, ask the user to review the written spec befor
 
 Wait for the user's response. If they request changes, make them and re-run the self-review. Only proceed once the user approves.
 
-If the user requests changes after the multi-review loop already ran at this
+If the user requests changes after the multi-doc-review loop already ran at this
 gate, re-run only the Spec Self-Review on the edited spec — the loop runs at
 most once per gate (detection: the spec's `-review-log.md` already holds an
 invocation entry from this gate). Run the loop again only if the user
@@ -140,6 +140,6 @@ Apply senior engineering judgment during design:
 - Failure-mode check completed — critical failure modes resolved, minor ones documented as non-goals.
 - Design document exists at the required path (`docs/specs/`).
 - Spec self-review completed — placeholders, contradictions, ambiguity, and scope issues resolved.
-- Multi-review loop completed or explicitly skipped (N=0) — every Critical/Important finding applied or rejected-with-reason in the review log.
+- Multi-doc-review loop completed or explicitly skipped (N=0) — every Critical/Important finding applied or rejected-with-reason in the review log.
 - User reviewed the written spec and approved.
 - `writing-plans` is invoked as the next skill.

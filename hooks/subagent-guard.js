@@ -46,11 +46,11 @@ const SKILL_NAMES = [
   'refactoring',
   'performance-investigation',
   'dependency-management',
-  'multi-review',
+  'multi-doc-review',
   'multi-code-review',
 ];
 
-// Multi-review reviewer reports legitimately quote skill names — they review
+// Multi-doc-review reviewer reports legitimately quote skill names — they review
 // documents about skills. A genuine report opens with this exact marker
 // (reviewer-prompt.md makes it the mandatory first line); anything after the
 // start of the message does not count.

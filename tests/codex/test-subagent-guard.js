@@ -239,16 +239,16 @@ test('Handles invalid JSON input gracefully', () => {
   }
 });
 
-// ── multi-review ─────────────────────────────────────────────────────────────
+// ── multi-doc-review ─────────────────────────────────────────────────────────
 
-console.log('\nmulti-review');
+console.log('\nmulti-doc-review');
 
-test('Includes multi-review skill in roster', () => {
-  assert.ok(source.includes("'multi-review'"), 'Missing multi-review skill');
+test('Includes multi-doc-review skill in roster', () => {
+  assert.ok(source.includes("'multi-doc-review'"), 'Missing multi-doc-review skill');
 });
 
-test('Blocks "using multi-review" without marker', () => {
-  const out = runGuard('I completed the task by using multi-review on the doc.');
+test('Blocks "using multi-doc-review" without marker', () => {
+  const out = runGuard('I completed the task by using multi-doc-review on the doc.');
   assert.strictEqual(out.decision, 'block');
 });
 
