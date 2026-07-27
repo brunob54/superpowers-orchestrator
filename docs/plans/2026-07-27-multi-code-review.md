@@ -51,7 +51,7 @@ Wave grouping (disjoint files): **W1** = T1, T2, T4, T5 · **W2** = T3, T6, T7 �
 
 **Does NOT cover:** routing (Task 5), guard roster (Task 4), SDD integration (Task 3). The skill is inert until those land — acceptable within the branch.
 
-- [ ] **Step 1: Write the file with exactly this content**
+- [x] **Step 1: Write the file with exactly this content**
 
 `````markdown
 ---
@@ -397,7 +397,7 @@ quote skill names). Never remove the marker instruction from
 `reviewer-prompt.md`.
 `````
 
-- [ ] **Step 2: Verify content landed**
+- [x] **Step 2: Verify content landed**
 
 Run: `grep -c "Lens Rotation\|sonnet floor" skills/multi-code-review/SKILL.md`
 Expected: count ≥ 3
@@ -414,7 +414,7 @@ Expected: ≥ 300 (a truncated transcription fails this)
 Run: `grep -n "multi-review report" skills/multi-code-review/SKILL.md | head -1`
 Expected: at least one hit (marker documented)
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add skills/multi-code-review/SKILL.md
