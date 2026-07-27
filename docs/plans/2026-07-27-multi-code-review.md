@@ -758,7 +758,7 @@ git commit -m "SDD: final whole-branch review becomes the multi-code-review loop
 
 **Security flag:** `none`
 
-- [ ] **Step 0: Register the guard tests in the unit runner** — `tests/codex/run-unit-tests.sh` does not currently invoke `test-subagent-guard.js` at all. After the line:
+- [x] **Step 0: Register the guard tests in the unit runner** — `tests/codex/run-unit-tests.sh` does not currently invoke `test-subagent-guard.js` at all. After the line:
 
 ```
 run_test "skill-activator (UserPromptSubmit)" "${SCRIPT_DIR}/test-skill-activator.js"
@@ -768,7 +768,7 @@ add:
 run_test "subagent-guard (SubagentStop)" "${SCRIPT_DIR}/test-subagent-guard.js"
 ```
 
-- [ ] **Step 1: Write failing tests** — in `tests/codex/test-subagent-guard.js`, directly after the existing `test('Leading whitespace before marker still exempts', ...)` block inside the multi-review section, add:
+- [x] **Step 1: Write failing tests** — in `tests/codex/test-subagent-guard.js`, directly after the existing `test('Leading whitespace before marker still exempts', ...)` block inside the multi-review section, add:
 
 ```javascript
 // ── multi-code-review ────────────────────────────────────────────────────────
@@ -799,12 +799,12 @@ test('Marker-prefixed code-review report quoting skill names is exempt', () => {
 });
 ```
 
-- [ ] **Step 2: Run tests to verify the roster test fails**
+- [x] **Step 2: Run tests to verify the roster test fails**
 
 Run: `node tests/codex/test-subagent-guard.js; echo "exit=$?"`
 Expected: FAIL — BOTH `Includes multi-code-review skill in roster` (`Missing multi-code-review skill`) AND `Blocks "using multi-code-review" without marker` fail (no roster name yet matches the phrase); exit=1
 
-- [ ] **Step 3: Implement** — in `hooks/subagent-guard.js`, in the `SKILL_NAMES` array, replace:
+- [x] **Step 3: Implement** — in `hooks/subagent-guard.js`, in the `SKILL_NAMES` array, replace:
 
 ```javascript
   'multi-review',
@@ -817,12 +817,12 @@ with:
 ];
 ```
 
-- [ ] **Step 4: Run tests to verify they pass**
+- [x] **Step 4: Run tests to verify they pass**
 
 Run: `node tests/codex/test-subagent-guard.js; echo "exit=$?"`
 Expected: PASS — all tests including the three new ones; exit=0
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add hooks/subagent-guard.js tests/codex/test-subagent-guard.js tests/codex/run-unit-tests.sh
