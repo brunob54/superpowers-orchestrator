@@ -9,6 +9,8 @@
 #       vocabulary (fixed / rejected: / user-decision / unresolved:)
 #   (c) a fix commit exists OR no disposition claims "fixed"
 #   (d) fix commits (if any) use generic subjects — no finding text
+#   (f) the run was not killed by the timeout
+#   (g)/(h) the loop ran Round 2 and wrote its completion marker
 #
 # Requires the INSTALLED plugin to include multi-code-review — reinstall the
 # plugin cache after editing skills/ before running this.
@@ -58,6 +60,7 @@ console.log('ok');
 TEST_EOF
 git add sum.js sum.test.js
 git commit --quiet -m "feature: extend sumFirstN"
+SEEDED_HEAD_SHA=$(git rev-parse HEAD)
 
 PROMPT="Invoke the superpowers-optimized:multi-code-review skill on the git repository at $TEST_PROJECT (review its current branch feature-under-review) with BASE $BASE_SHA and N=2. Do not ask me any questions — use N=2 and proceed to completion, treating any finding that would need my decision as user-decision in the log."
 
@@ -65,13 +68,21 @@ PROMPT="Invoke the superpowers-optimized:multi-code-review skill on the git repo
 PLUGIN_HEAD_BEFORE=$(git -C "$PLUGIN_DIR" rev-parse HEAD)
 PLUGIN_STATUS_BEFORE=$(git -C "$PLUGIN_DIR" status --porcelain | shasum | cut -d' ' -f1)
 
+CLAUDE_STATUS=0
 cd "$PLUGIN_DIR" && timeout 1800 claude -p "$PROMPT" \
     --permission-mode bypassPermissions \
     --add-dir "$TEST_PROJECT" \
-    2>&1 | tee "$TEST_PROJECT/output.txt" || true
+    2>&1 | tee "$TEST_PROJECT/output.txt" || CLAUDE_STATUS=${PIPESTATUS[0]}
 
 cd "$TEST_PROJECT"
 FAILURES=0
+
+# (f) the run must not have been killed by the timeout: GNU timeout reports
+#     124, the tests/lib/timeout-shim.sh fallback reports 143 (SIGTERM).
+if [ "$CLAUDE_STATUS" -eq 124 ] || [ "$CLAUDE_STATUS" -eq 143 ]; then
+    echo "FAIL(f): the claude run was killed by the 1800s timeout (exit $CLAUDE_STATUS) — the loop never finished"
+    FAILURES=$((FAILURES+1))
+fi
 
 PLUGIN_HEAD_AFTER=$(git -C "$PLUGIN_DIR" rev-parse HEAD)
 PLUGIN_STATUS_AFTER=$(git -C "$PLUGIN_DIR" status --porcelain | shasum | cut -d' ' -f1)
@@ -91,8 +102,19 @@ else
         echo "FAIL(a): review log has no '## Round 1' entry"
         FAILURES=$((FAILURES+1))
     fi
-    # (b) every enumerated C/I disposition line uses canonical vocabulary
-    BAD_DISPO=$(grep -E "^- \[(C|I)[0-9]+\]" "$LOG" | grep -vE "fixed — |rejected: |user-decision|unresolved: " || true)
+    # (g) the N=2 loop ran its second round
+    if ! grep -q "^## Round 2 — " "$LOG"; then
+        echo "FAIL(g): review log has no '## Round 2' entry — the loop did not run both rounds"
+        FAILURES=$((FAILURES+1))
+    fi
+    # (h) the loop reached its completion marker
+    if ! grep -q "^_Completed — " "$LOG"; then
+        echo "FAIL(h): review log has no '_Completed — ' marker — the loop did not finish"
+        FAILURES=$((FAILURES+1))
+    fi
+    # (b) every enumerated C/I disposition line uses canonical vocabulary,
+    #     anchored to the disposition position (not matched anywhere on the line)
+    BAD_DISPO=$(grep -E "^- \[(C|I)[0-9]+\]" "$LOG" | grep -vE "^- \[(C|I)[0-9]+\] (fixed — |rejected: |user-decision|unresolved: )" || true)
     if [ -n "$BAD_DISPO" ]; then
         echo "FAIL(b): non-canonical Critical/Important disposition(s):"
         echo "$BAD_DISPO"
@@ -104,14 +126,13 @@ else
         echo "FAIL(c): log claims fixed findings but no fix commit exists"
         FAILURES=$((FAILURES+1))
     fi
-    # (d) fix commits use generic subjects
-    if [ "$COMMITS_NOW" -gt 2 ]; then
-        NON_GENERIC=$(git log --format=%s -n $((COMMITS_NOW-2)) | grep -vE "^review fixes \(round [0-9]+\)$" || true)
-        if [ -n "$NON_GENERIC" ]; then
-            echo "FAIL(d): fix commit subject(s) not generic:"
-            echo "$NON_GENERIC"
-            FAILURES=$((FAILURES+1))
-        fi
+    # (d) fix commits use generic subjects — selected by range from the seeded
+    #     branch tip, so no assumption about history shape or commit counts
+    NON_GENERIC=$(git log --format=%s "$SEEDED_HEAD_SHA..HEAD" | grep -vE "^review fixes \(round [0-9]+\)$" || true)
+    if [ -n "$NON_GENERIC" ]; then
+        echo "FAIL(d): fix commit subject(s) not generic:"
+        echo "$NON_GENERIC"
+        FAILURES=$((FAILURES+1))
     fi
 fi
 

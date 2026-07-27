@@ -32,8 +32,16 @@ final review on such platforms; that fallback lives there, not here.)
 ## Parameters
 
 - **Review range `BASE..HEAD`:** the SDD gate passes MERGE_BASE (the
-  commit the branch started from). Direct invocation: use the user's BASE
-  if given; otherwise resolve the default branch via
+  commit the branch started from). Direct invocation: if the user gave a
+  BASE, reduce it to `git merge-base <user-BASE> HEAD` and review from
+  that commit — a user-supplied BASE is never used raw. (The package's
+  diff is two-dot `git diff BASE..HEAD`, a plain A-vs-B comparison: a
+  BASE that is not an ancestor of HEAD — `main` after it advanced, say —
+  makes commits the branch never touched appear as deletions, and the
+  reviewer, told the diff file is its view of the change, reports them as
+  defects. `git merge-base --is-ancestor <user-BASE> HEAD` is the
+  equivalent check; if it fails and no merge-base exists, stop and
+  report.) Without a user BASE, resolve the default branch via
   `git symbolic-ref refs/remotes/origin/HEAD`, then `main`, then
   `master`, and take `git merge-base <default> HEAD`. Single-argument
   form: an integer 0–10 is N; anything else — including an integer
@@ -74,8 +82,11 @@ fix reports beside it as `<branch-slug>-fix-reports.md`. On first use create
 `.superpowers/reviews/` and write a `.gitignore` containing exactly `*`
 inside it (nothing else ignores `.superpowers/`).
 
-`<branch-slug>` = `git rev-parse --abbrev-ref HEAD` with every
-non-alphanumeric run replaced by `-`; on detached HEAD use
+Detect detached HEAD with `git symbolic-ref -q HEAD`: it exits non-zero
+when HEAD is detached (`git rev-parse --abbrev-ref HEAD` does **not** —
+it prints the literal `HEAD`, so it can never signal the detached case).
+Attached: `<branch-slug>` = the branch name (`git rev-parse --abbrev-ref
+HEAD`) with every non-alphanumeric run replaced by `-`. Detached:
 `detached-<short-BASE-sha>` (BASE is stable; HEAD advances with fixes).
 Compute the slug **once at invocation start** and reuse it for every
 write in the invocation.
@@ -125,7 +136,11 @@ code has been revised since, so a re-pass is meaningful):
      `review fixes (round <i>)` — no finding text (the package's commit
      list would leak it to later reviewers). ALL fix commits use this
      subject form — verification-cycle and post-loop-addendum fixes
-     included, reusing the originating round's number for `<i>`.
+     included, reusing the originating round's number for `<i>`. The fix
+     dispatch also tells the fix subagent **not to name any roster skill
+     in its final message** — `hooks/subagent-guard.js` blocks a
+     subagent's final message that names one without the report marker,
+     and only reviewers emit that marker; refer to files by path instead.
      Verify the fix report shows
      the covering tests, the command run, and the output before
      re-packaging — you are the check; reviewers never see fix reports.
@@ -165,13 +180,18 @@ code has been revised since, so a re-pass is meaningful):
    or cap) that would ship an unreviewed fix, dispatch a **verification
    re-review**: same lens as the round whose findings the fix addressed
    (your Minor fixes: the last-run lens), on the regenerated package,
-   logged as `## Round <i> verification — <lens> — <model>` with `<i>` =
-   the originating round's number, reused across all cycles of that
-   verification (mirroring the fix-commit rule) — same fields as a
-   round, no Converged line; never counts toward convergence, and
-   verification entries are excluded when computing the next round index
-   on resume.
-   Iterate fix → re-review at most **3 cycles**; findings still standing
+   logged as `## Round <i> verification <c> — <lens> — <model>` with
+   `<i>` = the originating round's number, reused across all cycles of
+   that verification (mirroring the fix-commit rule), and `<c>` = the
+   1-based cycle index within that round's verification (`1`, `2`, `3`) —
+   same fields as a round, no Converged line; never counts toward
+   convergence, and verification entries are excluded when computing the
+   next round index on resume.
+   Iterate fix → re-review at most **3 cycles**; the cycles still
+   available are 3 minus the number of `## Round <i> verification <c>`
+   entries already logged for that `<i>` (so a controller resuming after
+   an interruption derives the remaining cap from the log instead of
+   restarting the count); findings still standing
    become `unresolved: verification cap` items (blocking).
 
 ## Lens Rotation
@@ -281,7 +301,7 @@ invoker) plus `HEAD <sha>`; a failed round keeps the normal
 `## Round <i> — <lens name> — <model>` header with
 `**Reviewer verdict:** inconclusive` and one disposition line
 `- inconclusive — <reason>`; verification re-reviews use the
-`## Round <i> verification` header with no Converged line.
+`## Round <i> verification <c>` header with no Converged line.
 
 ## After the Loop
 
@@ -298,7 +318,7 @@ then one verification re-review; disposition becomes
 `fixed — <summary> → <sha>` in a
 post-loop addendum, and the completion marker's HEAD is updated. When the
 accepted findings originate in different rounds, `<i>` — for the fix
-commit subject and the `## Round <i> verification` header alike — is the
+commit subject and the `## Round <i> verification <c>` header alike — is the
 **highest** originating round, and the single verification re-review runs
 under that round's lens. Plan
 governs → `rejected: plan governs (user decision)`. Double-fix-failure
