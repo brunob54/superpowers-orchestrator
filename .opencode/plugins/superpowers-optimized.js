@@ -285,7 +285,10 @@ const SENSITIVE_FILES = [
 // Bash command patterns that expose or exfiltrate secrets (from protect-secrets.js)
 const SECRET_BASH_PATTERNS = [
   // CRITICAL
-  { level: 'critical', id: 'cat-env',            regex: /\b(cat|less|head|tail|more|bat|view)\s+[^|;]*\.env\b/i,           reason: 'Reading .env file exposes secrets' },
+  // Gap excludes `>`/newline/`&` so heredoc writes and downstream mentions are not
+  // read as reads. Keep in step with the cat-env rule in
+  // hooks/safety/protect-secrets.js, the source of truth.
+  { level: 'critical', id: 'cat-env',            regex: /\b(cat|less|head|tail|more|bat|view)\s+[^|;&>\n]*\.env\b/i,       reason: 'Reading .env file exposes secrets' },
   { level: 'critical', id: 'cat-ssh-key',        regex: /\b(cat|less|head|tail|more|bat)\s+[^|;]*(id_rsa|id_ed25519|id_ecdsa|id_dsa|\.pem|\.key)\b/i, reason: 'Reading private key' },
   { level: 'critical', id: 'cat-aws-creds',      regex: /\b(cat|less|head|tail|more)\s+[^|;]*\.aws\/credentials/i,         reason: 'Reading AWS credentials' },
   // HIGH

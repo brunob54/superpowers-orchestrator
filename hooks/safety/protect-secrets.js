@@ -64,7 +64,11 @@ const SENSITIVE_FILES = [
 // Bash patterns that expose or exfiltrate secrets
 const BASH_PATTERNS = [
   // CRITICAL
-  { level: 'critical', id: 'cat-env',            regex: /\b(cat|less|head|tail|more|bat|view|sed|awk|nano|vi|vim|tee|strings|od|xxd|hexdump)\s+[^|;]*\.env\b/i, reason: 'Reading .env file exposes secrets' },
+  // The argument gap excludes `>` and newlines so that WRITES whose payload merely
+  // contains the token — `cat >> notes.md <<'EOF' ... .env ... EOF` — are not read
+  // as reads, and `&` so a mention downstream of an unrelated `cat` does not match.
+  // `<` stays allowed: `cat < .env` really is a read.
+  { level: 'critical', id: 'cat-env',            regex: /\b(cat|less|head|tail|more|bat|view|sed|awk|nano|vi|vim|tee|strings|od|xxd|hexdump)\s+[^|;&>\n]*\.env\b/i, reason: 'Reading .env file exposes secrets' },
   { level: 'critical', id: 'cat-ssh-key',        regex: /\b(cat|less|head|tail|more|bat|sed|awk|nano|vi|vim|tee)\s+[^|;]*(id_rsa|id_ed25519|id_ecdsa|id_dsa|\.pem|\.key)\b/i, reason: 'Reading private key' },
   { level: 'critical', id: 'cat-aws-creds',      regex: /\b(cat|less|head|tail|more|sed|awk|nano|vi|vim|tee)\s+[^|;]*\.aws\/credentials/i, reason: 'Reading AWS credentials' },
 

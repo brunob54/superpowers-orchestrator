@@ -17,6 +17,13 @@
 - Unchanged: behavior, lenses, log format, and the reviewer report marker
   `<!-- multi-review report -->` — the marker is a shared wire protocol
   also emitted by `multi-code-review`, so renaming it would break both.
+- Fix: the `cat-env` rule in `hooks/safety/protect-secrets.js` (and the
+  opencode plugin's copy) blocked *writes* whose payload merely contained
+  the token `.env` — `cat >> notes.md <<'EOF' … EOF` heredocs, generated
+  docs — because its argument gap `[^|;]*` spanned redirects, newlines,
+  and `&&`. The gap now excludes `>`, newlines, and `&`; `<` stays
+  allowed so `cat < .env` is still caught. New unit suite
+  `tests/codex/test-protect-secrets.js` (21 cases) covers both directions.
 
 ## v6.10.0 — multi-code-review: N-round independent whole-branch code review
 
