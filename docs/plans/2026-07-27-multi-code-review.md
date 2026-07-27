@@ -841,7 +841,7 @@ git commit -m "subagent-guard: add multi-code-review to roster (marker exemption
 
 **Does NOT cover:** prompts that mention only "code review" singular — those keep routing to `requesting-code-review`; the new entry requires a multi/independent/rounds signal (the one exception: "whole-branch review" routes here even unqualified — it is this skill's SDD-gate terminology). **Deliberate spec deviation:** the spec's keyword list includes `"review the branch"`; this plan drops it because a bare "review the branch" is a single-review request that belongs to `requesting-code-review` — the branch-with-multiplicity phrasings still route here via the intent pattern.
 
-- [ ] **Step 1: Write failing tests** — in `tests/codex/test-skill-activator.js`, directly after the last `matchesDebugging` test in the Debug-prompt routing section, add:
+- [x] **Step 1: Write failing tests** — in `tests/codex/test-skill-activator.js`, directly after the last `matchesDebugging` test in the Debug-prompt routing section, add:
 
 ```javascript
 // ── multi-code-review routing ────────────────────────────────────────────────
@@ -869,12 +869,12 @@ test('"code review my changes" does NOT route to multi-code-review', () => {
 });
 ```
 
-- [ ] **Step 2: Run to verify failure**
+- [x] **Step 2: Run to verify failure**
 
 Run: `node tests/codex/test-skill-activator.js; echo "exit=$?"`
 Expected: FAIL — the two positive multi-code-review cases fail; exit=1
 
-- [ ] **Step 3: Implement** — in `hooks/skill-rules.json`, replace the closing of the multi-review entry:
+- [x] **Step 3: Implement** — in `hooks/skill-rules.json`, replace the closing of the multi-review entry:
 
 ```json
       "intentPatterns": ["review\\s+(the\\s+|this\\s+|my\\s+)?(spec|plan|document)\\s+(again|\\d+\\s+times)", "(run|do|perform)\\s+\\d+\\s+(independent\\s+)?review\\s+rounds?", "(several|multiple|independent)\\s+reviews?\\s+of\\s+(the\\s+|this\\s+|my\\s+)?(spec|plan|document)"]
@@ -897,14 +897,14 @@ with:
 }
 ```
 
-- [ ] **Step 4: Run to verify pass**
+- [x] **Step 4: Run to verify pass**
 
 Run: `node tests/codex/test-skill-activator.js; echo "exit=$?"`
 Expected: PASS — all cases including the four new ones; exit=0
 
 (Do NOT run the full unit suite here — sibling Task 4 rewrites it through a deliberate red phase in the same wave; Task 9 Step 1 runs the full suite after both land.)
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add hooks/skill-rules.json tests/codex/test-skill-activator.js
