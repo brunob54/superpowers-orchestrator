@@ -1,5 +1,22 @@
 # Superpowers Optimized Release Notes
 
+## v6.10.0 — multi-code-review: N-round independent whole-branch code review
+
+- New `multi-code-review` skill: runs up to N (default 3, cap 10)
+  independent review rounds on a branch diff — one clean-context reviewer
+  subagent per round under a rotating lens (correctness/spec alignment,
+  adversarial red-team, security, test quality, each with a
+  prose/instruction-file adaptation) — with one fix subagent per round for
+  Critical/Important findings, fresh review packages after fixes, a
+  sidecar `.superpowers/reviews/<branch>-review-log.md` audit trail, and
+  early exit after two consecutive clean rounds. No fix ships unreviewed:
+  exits that would ship an unreviewed fix trigger a same-lens
+  verification re-review (3-cycle cap).
+- subagent-driven-development's final whole-branch review is now this
+  loop (session model with sonnet floor, replacing the always-opus rule);
+  direct use: `/multi-code-review [BASE] [N]`. Claude Code only —
+  platforms without the Agent tool keep the single-pass final review.
+
 ## v6.9.0 — multi-review: N-round independent document review
 
 - New `multi-review` skill: runs up to N (default 3, cap 10) independent
