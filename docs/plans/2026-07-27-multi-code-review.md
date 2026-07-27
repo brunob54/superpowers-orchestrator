@@ -1137,13 +1137,13 @@ git commit -m "skill-triggering: multi-code-review naive prompt"
 
 **Security flag:** `none`
 
-- [ ] **Step 1: Bump versions** — replace `6.9.0` with `6.10.0` in each of:
+- [x] **Step 1: Bump versions** — replace `6.9.0` with `6.10.0` in each of:
   - `VERSION` (whole file content: `6.10.0`)
   - `.claude-plugin/plugin.json` line `"version": "6.9.0",`
   - `.claude-plugin/marketplace.json` line `"version": "6.9.0",`
   - `plugin.universal.yaml` line `  version: "6.9.0"`
 
-- [ ] **Step 2: Add release notes** — in `RELEASE-NOTES.md`, directly after the line `# Superpowers Optimized Release Notes`, insert:
+- [x] **Step 2: Add release notes** — in `RELEASE-NOTES.md`, directly after the line `# Superpowers Optimized Release Notes`, insert:
 
 ```markdown
 
@@ -1165,7 +1165,7 @@ git commit -m "skill-triggering: multi-code-review naive prompt"
   platforms without the Agent tool keep the single-pass final review.
 ```
 
-- [ ] **Step 3: Verify sync**
+- [x] **Step 3: Verify sync**
 
 Run: `grep -rn "6.10.0" VERSION .claude-plugin/plugin.json .claude-plugin/marketplace.json plugin.universal.yaml RELEASE-NOTES.md | wc -l`
 Expected: ≥ 5
@@ -1173,7 +1173,7 @@ Expected: ≥ 5
 Run: `grep -n "6.9.0" VERSION .claude-plugin/plugin.json .claude-plugin/marketplace.json plugin.universal.yaml`
 Expected: no hits
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add VERSION .claude-plugin/plugin.json .claude-plugin/marketplace.json plugin.universal.yaml RELEASE-NOTES.md
