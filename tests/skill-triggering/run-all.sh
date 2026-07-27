@@ -16,6 +16,7 @@ SKILLS=(
     "subagent-driven-development"
     "requesting-code-review"
     "multi-review"
+    "multi-code-review"
 )
 
 echo "=== Running Skill Triggering Tests ==="
