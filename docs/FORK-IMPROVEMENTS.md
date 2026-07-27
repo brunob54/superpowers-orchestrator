@@ -1,12 +1,13 @@
 # Fork Improvements (brunob54/superpowers-optimized)
 
-This repository is the third link in a lineage: the original [obra/superpowers](https://github.com/obra/superpowers) by Jesse Vincent, its optimized fork [REPOZY/superpowers-optimized](https://github.com/REPOZY/superpowers-optimized), and this fork, which builds on the REPOZY v6.6.1 baseline. It adds three feature releases — v6.7.0, v6.8.0, and v6.9.0 — described below. **Status: these additions are under testing and evaluation**; behavior and interfaces may still change based on real-world use.
+This repository is the third link in a lineage: the original [obra/superpowers](https://github.com/obra/superpowers) by Jesse Vincent, its optimized fork [REPOZY/superpowers-optimized](https://github.com/REPOZY/superpowers-optimized), and this fork, which builds on the REPOZY v6.6.1 baseline. It adds four feature releases — v6.7.0, v6.8.0, v6.9.0, and v6.10.0 — described below. **Status: these additions are under testing and evaluation**; behavior and interfaces may still change based on real-world use.
 
 Contents:
 
 1. [SDD Batched Autonomous Mode (v6.7.0)](#1-sdd-batched-autonomous-mode-v670)
 2. [SDD Token-Optimized Review Flow (v6.8.0)](#2-sdd-token-optimized-review-flow-v680)
 3. [multi-doc-review — N-Round Independent Document Review (v6.9.0)](#3-multi-doc-review--n-round-independent-document-review-v690)
+4. [multi-code-review — N-Round Independent Whole-Branch Code Review (v6.10.0)](#4-multi-code-review--n-round-independent-whole-branch-code-review-v6100)
 
 ---
 
@@ -132,3 +133,47 @@ A single review — even a careful one — inherits the authoring conversation's
 - Design spec: [specs/2026-07-19-multi-review-design.md](specs/2026-07-19-multi-review-design.md)
 - Review logs (dogfood evidence): [spec](specs/2026-07-19-multi-review-design-review-log.md), [plan](plans/2026-07-19-multi-review-review-log.md)
 - Release notes: [../RELEASE-NOTES.md](../RELEASE-NOTES.md) — v6.9.0
+
+---
+
+## 4. multi-code-review — N-Round Independent Whole-Branch Code Review (v6.10.0)
+
+### Summary
+
+- The same loop as multi-doc-review, aimed at a **branch diff** (`BASE..HEAD`) instead of a document: up to **N independent review rounds** (default 3, cap 10).
+- Each round dispatches **one clean-context reviewer subagent** under a **rotating lens**: correctness & spec alignment → adversarial red-team → security → test & coverage quality. Every lens carries a **prose adaptation** — for files that are instructions to an agent (skills, prompts, configs) rather than executable code, runtime-input attacks are vacuous, so the reviewer attacks *agent misexecution* instead.
+- Between rounds, **one fix subagent** handles that round's Critical/Important findings and the next round reviews a **freshly built package** of the fixed code.
+- **No fix ships unreviewed:** an exit that would leave the last round's fix unexamined triggers a same-lens verification re-review (capped at 3 cycles).
+- Sidecar audit log at `.superpowers/reviews/<branch-slug>-review-log.md`, git-ignored by a `*` rule so the branch under review can never author its own review record. Early exit after **two consecutive clean rounds**.
+
+### Motivation
+
+The v6.9.0 dogfood showed independent lenses finding *disjoint* issue classes on a document. Code has the same property, and subagent-driven-development's final whole-branch review was a single pass — one reviewer, one lens, one chance. This release reuses the v6.9.0 architecture so the two loops stay teachable as one pattern, and adds what code needs that documents do not: fixes applied between rounds, repackaged diffs, and a guarantee that no fix reaches the gate unreviewed.
+
+Dogfood evidence from building it: the design spec collected **33 findings across 4 rounds**, its implementation plan ran **10 rounds**, and the branch itself went through this very loop ([spec review log](specs/2026-07-27-multi-code-review-design-review-log.md), [plan review log](plans/2026-07-27-multi-code-review-review-log.md)).
+
+### How it works
+
+- **Reviewer model:** inherits the session model with a **sonnet floor** — a haiku-tier or unrecognized session model dispatches reviewers on `sonnet`. This replaces subagent-driven-development's previous always-opus final-review rule. Fix subagents follow SDD's existing Model Selection table.
+- **A user-supplied BASE is never used raw:** it is charset-rejected (`^[A-Za-z0-9._/~^{}-]+$`) before anything touches a shell, resolved with `git rev-parse --verify`, and ancestry-checked against HEAD — a non-ancestor BASE would render untouched commits as deletions and the reviewer would report them as defects.
+- Convergence is judged from the reviewer's **enumerated findings**, never the count line and never post-triage — rejecting findings at triage cannot make a round clean.
+- **Once per gate** is keyed on the completion marker's *post-fix* HEAD plus the recorded branch name (an invocation-start HEAD would be defeated by the loop's own fix commits), and never honours a log that `git ls-files` reports as tracked in the branch under review.
+- Reviewer reports reuse the guard-exempt marker `<!-- multi-review report -->`; the skill is in the `hooks/subagent-guard.js` roster.
+
+### How to use
+
+- **Automatic:** at subagent-driven-development's final whole-branch review gate, replacing the former single-pass review.
+- **Direct:** `/multi-code-review [BASE] [N]` — or phrases like `review the branch 3 times` / `several independent code reviews of this branch`. Single-argument form: an integer 0–10 is N, anything else is a git ref.
+- **Audit trail:** `.superpowers/reviews/<branch-slug>-review-log.md` for per-round verdicts, dispositions, and fix commit SHAs.
+- **Claude Code only** — the loop requires the Agent tool; on Codex and Cursor the SDD gate keeps its single-pass final review.
+
+### Where it lives
+
+`skills/multi-code-review/` (`SKILL.md` controller + `reviewer-prompt.md` dispatch template), the final-gate step in `skills/subagent-driven-development/SKILL.md`, `hooks/skill-rules.json` routing entry, `hooks/subagent-guard.js` roster, `tests/claude-code/test-multi-code-review.sh`, `tests/codex/test-subagent-guard.js`.
+
+### References
+
+- Design spec: [specs/2026-07-27-multi-code-review-design.md](specs/2026-07-27-multi-code-review-design.md)
+- Implementation plan: [plans/2026-07-27-multi-code-review.md](plans/2026-07-27-multi-code-review.md)
+- Review logs (dogfood evidence): [spec](specs/2026-07-27-multi-code-review-design-review-log.md), [plan](plans/2026-07-27-multi-code-review-review-log.md)
+- Release notes: [../RELEASE-NOTES.md](../RELEASE-NOTES.md) — v6.10.0
