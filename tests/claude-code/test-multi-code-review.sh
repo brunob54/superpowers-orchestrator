@@ -65,8 +65,11 @@ SEEDED_HEAD_SHA=$(git rev-parse HEAD)
 PROMPT="Invoke the superpowers-optimized:multi-code-review skill on the git repository at $TEST_PROJECT (review its current branch feature-under-review) with BASE $BASE_SHA and N=2. Do not ask me any questions — use N=2 and proceed to completion, treating any finding that would need my decision as user-decision in the log."
 
 # Safety net: the skill commits; a misanchored run must not mutate the dev repo.
+# --ignored=matching is included because .superpowers/ and state.md/known-issues.md/*.txt
+# are gitignored in this repo — exactly the paths the skill under test writes — so a
+# plain --porcelain diff would miss a misanchored run landing its review log or journal here.
 PLUGIN_HEAD_BEFORE=$(git -C "$PLUGIN_DIR" rev-parse HEAD)
-PLUGIN_STATUS_BEFORE=$(git -C "$PLUGIN_DIR" status --porcelain | shasum | cut -d' ' -f1)
+PLUGIN_STATUS_BEFORE=$(git -C "$PLUGIN_DIR" status --porcelain --ignored=matching | shasum | cut -d' ' -f1)
 
 CLAUDE_STATUS=0
 cd "$PLUGIN_DIR" && timeout 1800 claude -p "$PROMPT" \
@@ -85,7 +88,7 @@ if [ "$CLAUDE_STATUS" -eq 124 ] || [ "$CLAUDE_STATUS" -eq 143 ]; then
 fi
 
 PLUGIN_HEAD_AFTER=$(git -C "$PLUGIN_DIR" rev-parse HEAD)
-PLUGIN_STATUS_AFTER=$(git -C "$PLUGIN_DIR" status --porcelain | shasum | cut -d' ' -f1)
+PLUGIN_STATUS_AFTER=$(git -C "$PLUGIN_DIR" status --porcelain --ignored=matching | shasum | cut -d' ' -f1)
 if [ "$PLUGIN_HEAD_AFTER" != "$PLUGIN_HEAD_BEFORE" ] || [ "$PLUGIN_STATUS_AFTER" != "$PLUGIN_STATUS_BEFORE" ]; then
     echo "FAIL(e): the run mutated the plugin dev repo (misanchored skill?)"
     echo "  Inspect: git -C $PLUGIN_DIR status --porcelain; git -C $PLUGIN_DIR diff"
