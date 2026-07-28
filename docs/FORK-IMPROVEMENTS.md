@@ -2,6 +2,8 @@
 
 This repository is the third link in a lineage: the original [obra/superpowers](https://github.com/obra/superpowers) by Jesse Vincent, its optimized fork [REPOZY/superpowers-optimized](https://github.com/REPOZY/superpowers-optimized), and this fork, which builds on the REPOZY v6.6.1 baseline. It adds four feature releases — v6.7.0, v6.8.0, v6.9.0, and v6.10.0 — described below. **Status: these additions are under testing and evaluation**; behavior and interfaces may still change based on real-world use.
 
+For a detailed, evidence-focused comparison of how review works in all three repositories — including the history of obra's own document review loop (shipped in v5.0.0, removed in v5.0.6 on eval data) — see [REVIEW-PROCESS-COMPARISON.md](REVIEW-PROCESS-COMPARISON.md).
+
 Contents:
 
 1. [SDD Batched Autonomous Mode (v6.7.0)](#1-sdd-batched-autonomous-mode-v670)
