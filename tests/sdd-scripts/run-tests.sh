@@ -209,6 +209,7 @@ assert_file_contains "collision archive suffixed" "$WS/archive/planA-2/progress.
 # Out-of-repo plan: absolute physical identity, stable across calls.
 EXT=$(mktemp -d)
 EXT=$(cd "$EXT" && pwd -P)
+: "${EXT:?mktemp -d failed — refusing to operate on absolute root paths}"
 cat > "$EXT/ext-plan.md" << 'PLAN'
 ### Task 1: external plan task
 PLAN
@@ -253,6 +254,7 @@ cat > docs/plans/planC.md << 'PLAN'
 PLAN
 SHADOW_ROOT=$(mktemp -d)
 SHADOW_ROOT=$(cd "$SHADOW_ROOT" && pwd -P)
+: "${SHADOW_ROOT:?mktemp -d failed — refusing to operate on absolute root paths}"
 mkdir -p "$SHADOW_ROOT/docs/plans"
 echo "decoy" > "$SHADOW_ROOT/docs/plans/decoy.md"
 env CDPATH="$SHADOW_ROOT" "$SCRIPTS/sdd-workspace" docs/plans/planC.md > /dev/null

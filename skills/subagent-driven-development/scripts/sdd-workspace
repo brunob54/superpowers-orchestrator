@@ -109,7 +109,7 @@ if [ $# -eq 1 ]; then
     printf '%s\n' "$identity" > "$ref"
   else
     if [ -n "$current" ]; then
-      slug=$(basename "$current"); slug=${slug%.*}
+      slug=$(basename -- "$current"); slug=${slug%.*}
     else
       slug="unknown-$(date +%s)"
     fi
