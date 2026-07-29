@@ -197,6 +197,7 @@ PLAN
 "$SCRIPTS/sdd-workspace" planB.md > /dev/null
 assert_eq "plan.ref switched to plan B" "$(cat "$WS/plan.ref")" "planB.md"
 assert_file_contains "plan A ledger archived intact" "$WS/archive/planA/progress.md" "ledger A"
+assert_file_contains "archived workspace keeps its plan.ref" "$WS/archive/planA/plan.ref" "planA.md"
 
 # Empty plan.ref = crash-during-write recovery state -> legacy rule.
 echo "ledger B" > "$WS/progress.md"
@@ -251,9 +252,10 @@ echo "seed" > "$WS/progress.md"
 ARCH_ERR=$("$SCRIPTS/sdd-workspace" planB.md 2>&1 >/dev/null)
 case "$ARCH_ERR" in *"archived previous workspace to archive/planA"*) ok "archive notice printed with correct slug" ;; *) bad "archive notice printed with correct slug (got: $ARCH_ERR)" ;; esac
 
-# Validation-before-mutation (M4): a rejected invocation (nonexistent plan
-# file) must not create the workspace directory — validation happens before
-# any mkdir/write.
+# Missing-plan rejection creates no workspace: this invariant holds only for
+# the missing-file check, which runs before any mkdir/write. It does not
+# extend to the newline check, which runs after mkdir -p and the .gitignore
+# write.
 rm -rf "$WS"
 "$SCRIPTS/sdd-workspace" nope.md 2>/dev/null
 assert_eq "missing plan (no prior workspace) exits 2" "$?" "2"
@@ -288,11 +290,17 @@ bold "sdd-workspace (newline-in-path rejection)"
 # plan.ref the same way a CDPATH hijack does (I1) — reject it before
 # writing anything, and never touch an existing ledger.
 NL_PLAN=$'weird\nplan.md'
-printf '### Task 1: weird\n' > "$NL_PLAN"
-"$SCRIPTS/sdd-workspace" "$NL_PLAN" 2>/dev/null
-assert_eq "newline plan path rejected (non-zero exit)" "$?" "2"
-assert_eq "newline plan path: plan.ref untouched" "$(cat "$WS/plan.ref")" "docs/plans/planC.md"
-assert_file_contains "newline plan path: ledger untouched" "$WS/progress.md" "cdpath ledger"
+printf '### Task 1: weird\n' > "$NL_PLAN" 2>/dev/null
+if [ -f "$NL_PLAN" ]; then
+  ERR=$("$SCRIPTS/sdd-workspace" "$NL_PLAN" 2>&1 >/dev/null)
+  RC=$?
+  assert_eq "newline plan path rejected (exit 2)" "$RC" "2"
+  case "$ERR" in *"multiple lines"*) ok "newline plan path: error names newline rejection" ;; *) bad "newline plan path: error names newline rejection (got: $ERR)" ;; esac
+  assert_eq "newline plan path: plan.ref untouched" "$(cat "$WS/plan.ref")" "docs/plans/planC.md"
+  assert_file_contains "newline plan path: ledger untouched" "$WS/progress.md" "cdpath ledger"
+else
+  echo "  SKIP: filesystem rejects newlines in filenames — newline-in-path rejection tests skipped"
+fi
 rm -f "$NL_PLAN"
 
 bold "sdd-workspace (symlinked plan path)"
@@ -306,13 +314,16 @@ mkdir -p realdir
 cat > realdir/planSym.md << 'PLAN'
 ### Task 1: symlink test
 PLAN
-ln -s realdir symlink-to-real
-"$SCRIPTS/sdd-workspace" symlink-to-real/planSym.md > /dev/null
-assert_eq "symlinked plan path: identity uses resolved real path" "$(cat "$WS/plan.ref")" "realdir/planSym.md"
-echo "ledger sym" > "$WS/progress.md"
-"$SCRIPTS/sdd-workspace" symlink-to-real/planSym.md > /dev/null
-assert_file_contains "symlinked plan path: repeat call keeps ledger" "$WS/progress.md" "ledger sym"
-if [ ! -d "$WS/archive" ]; then ok "symlinked plan path: no archive on repeat call"; else bad "symlinked plan path: no archive on repeat call"; fi
+if ln -s realdir symlink-to-real 2>/dev/null && [ -L symlink-to-real ]; then
+  "$SCRIPTS/sdd-workspace" symlink-to-real/planSym.md > /dev/null
+  assert_eq "symlinked plan path: identity uses resolved real path" "$(cat "$WS/plan.ref")" "realdir/planSym.md"
+  echo "ledger sym" > "$WS/progress.md"
+  "$SCRIPTS/sdd-workspace" symlink-to-real/planSym.md > /dev/null
+  assert_file_contains "symlinked plan path: repeat call keeps ledger" "$WS/progress.md" "ledger sym"
+  if [ ! -d "$WS/archive" ]; then ok "symlinked plan path: no archive on repeat call"; else bad "symlinked plan path: no archive on repeat call"; fi
+else
+  echo "  SKIP: ln -s not supported on this filesystem — symlinked plan path tests skipped"
+fi
 
 bold ""
 bold "Results: $PASS passed, $FAIL failed"
