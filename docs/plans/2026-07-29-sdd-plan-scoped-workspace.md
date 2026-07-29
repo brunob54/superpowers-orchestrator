@@ -257,6 +257,7 @@ archive_workspace() { # $1 = slug
     mv "$e" "$dest/"
   done
   if [ -e "$ref" ]; then mv "$ref" "$dest/"; fi
+  echo "archived previous workspace to ${dest#"$dir"/}" >&2
 }
 
 # Validate before touching the filesystem.
@@ -386,7 +387,7 @@ with:
 
 - [x] **Step 4: Verify all three edits landed and no stale step-1-style invocation instruction remains** (the File Handoffs arg-less mention stays, see Does NOT cover)
 
-Run: `grep -c "sdd-workspace PLAN_FILE" skills/subagent-driven-development/SKILL.md && grep -c "archive/<slug>/progress.md" skills/subagent-driven-development/SKILL.md && grep -n 'Run `scripts/sdd-workspace` ' skills/subagent-driven-development/SKILL.md | wc -l`
+Run: `grep -c "sdd-workspace PLAN_FILE" skills/subagent-driven-development/SKILL.md && grep -c "slug>\*\?/progress.md" skills/subagent-driven-development/SKILL.md && grep -n 'Run `scripts/sdd-workspace` ' skills/subagent-driven-development/SKILL.md | wc -l`
 Expected: `3`, then `2`, then `0` (no remaining arg-less invocation instruction).
 
 - [x] **Step 5: Commit**

@@ -14,7 +14,8 @@
 - Arg-less calls (internal, from `task-brief`/`review-package`) are
   unchanged on stdout; they now print a stderr scoping line (or a legacy
   warning) so version-skewed sessions can see which plan the ledger
-  belongs to.
+  belongs to. Archiving also prints an `archived previous workspace to
+  archive/<slug>` notice on stderr.
 - SDD SKILL.md: step 1 and the Batched Autonomous Mode Resume Procedure
   now pass `PLAN_FILE`; resume counts as a skill start for scoping.
   Checkboxes + `git log` stay authoritative for position.

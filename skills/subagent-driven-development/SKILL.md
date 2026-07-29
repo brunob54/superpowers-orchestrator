@@ -240,9 +240,11 @@ Review gates are NOT relaxed: the full task review (spec-compliance AND code-qua
    Run `scripts/sdd-workspace PLAN_FILE` — resume is a skill start for
    workspace scoping. If another plan ran in between, this archives its
    workspace and starts this plan with a fresh ledger; consult
-   `archive/<this-plan's-slug>/progress.md` (read-only) — your own earlier
-   ledger, archived when the other plan started — to recover carried
-   Minor findings.
+   the most recent `archive/<this-plan's-slug>*/progress.md` (read-only) —
+   your own earlier ledger, archived when the other plan started — to
+   recover carried Minor findings. Repeated archiving of the same plan
+   suffixes the directory (`<slug>-2`, `<slug>-3`, …); the highest
+   suffix is the most recent.
 2. Reconcile position: plan.md checkboxes + git are authoritative; state.md is
    narrative and may be one batch stale. Before dispatching the first unchecked
    task, check `git log` for evidence it was already implemented (a crash
@@ -359,8 +361,9 @@ expensive failure mode. Track progress in a ledger file, not only in todos:
   `.superpowers/sdd/archive/<slug>/`, so a surviving ledger belongs to
   the current plan. Tasks listed there as complete are DONE — do not
   re-dispatch them. Carried Minor findings from an archived run are
-  recovered read-only from `archive/<slug>/progress.md` for final-review
-  triage. A legacy workspace from before this scoping existed (no
+  recovered read-only from the most recent `archive/<slug>*/progress.md`
+  (repeat archives of one plan are suffixed `<slug>-2`, `<slug>-3`, …)
+  for final-review triage. A legacy workspace from before this scoping existed (no
   `plan.ref`) is archived once under `archive/unknown-<epoch>/` even when
   you are resuming the very same plan — the missing `plan.ref` alone
   cannot distinguish that case.
