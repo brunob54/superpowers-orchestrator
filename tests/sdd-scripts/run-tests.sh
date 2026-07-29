@@ -173,6 +173,11 @@ if ls "$LEGACY"/review-*.diff > /dev/null 2>&1; then ok "review diffs archived";
 assert_file_contains "dotfile archived" "$LEGACY/.hidden-note" "dot"
 if [ ! -e "$WS/progress.md" ]; then ok "workspace root fresh after legacy archive"; else bad "workspace root fresh after legacy archive"; fi
 if ls "$WS"/task-*-brief.md > /dev/null 2>&1 || ls "$WS"/review-*.diff > /dev/null 2>&1; then bad "workspace root free of briefs/diffs"; else ok "workspace root free of briefs/diffs"; fi
+assert_file_contains ".gitignore remains at workspace root after archive" "$WS/.gitignore" "*"
+if [ ! -e "$LEGACY/.gitignore" ]; then ok ".gitignore excluded from archive move"; else bad ".gitignore excluded from archive move"; fi
+BRIEF2=$("$SCRIPTS/task-brief" plan.md 2 | sed 's/^wrote //; s/:.*$//')
+assert_eq "task-brief path unchanged once workspace is plan-scoped" "$BRIEF2" "$REPO/.superpowers/sdd/task-2-brief.md"
+assert_file_contains "task-brief content unchanged once workspace is plan-scoped" "$BRIEF2" "### Task 2: Second thing"
 
 # Resume: same plan via relative, absolute, and subdirectory-relative paths.
 echo "ledger A" > "$WS/progress.md"
@@ -199,6 +204,9 @@ echo "ledger B" > "$WS/progress.md"
 "$SCRIPTS/sdd-workspace" planA.md > /dev/null
 assert_eq "plan.ref rewritten after empty-ref recovery" "$(cat "$WS/plan.ref")" "planA.md"
 assert_eq "empty-ref content archived under unknown-*" "$(ls -d "$WS"/archive/unknown-* | wc -l | tr -d ' ')" "2"
+NEW_UNKNOWN=$(ls -d "$WS"/archive/unknown-* | sort | tail -n 1)
+assert_file_contains "empty-ref ledger archived intact (not dropped/truncated)" "$NEW_UNKNOWN/progress.md" "ledger B"
+if [ ! -e "$WS/progress.md" ]; then ok "workspace root fresh after empty-ref archive"; else bad "workspace root fresh after empty-ref archive"; fi
 
 # Slug collision: archive/planA already exists; archiving plan A's
 # workspace again must land in planA-2.
@@ -210,6 +218,7 @@ assert_file_contains "collision archive suffixed" "$WS/archive/planA-2/progress.
 EXT=$(mktemp -d)
 EXT=$(cd "$EXT" && pwd -P)
 : "${EXT:?mktemp -d failed — refusing to operate on absolute root paths}"
+EXT_PLAN="$EXT/ext-plan.md"
 cat > "$EXT/ext-plan.md" << 'PLAN'
 ### Task 1: external plan task
 PLAN
@@ -224,12 +233,12 @@ rm -rf "$EXT"
 "$SCRIPTS/sdd-workspace" nope.md 2>/dev/null
 assert_eq "missing plan exits 2" "$?" "2"
 ERR=$("$SCRIPTS/sdd-workspace" 2>&1 > /dev/null)
-case "$ERR" in *"workspace is scoped to plan"*) ok "arg-less prints scoping line" ;; *) bad "arg-less prints scoping line (got: $ERR)" ;; esac
+case "$ERR" in *"workspace is scoped to plan $EXT_PLAN"*) ok "arg-less prints scoping line naming current plan" ;; *) bad "arg-less prints scoping line naming current plan (got: $ERR)" ;; esac
 OUT=$("$SCRIPTS/sdd-workspace" 2>/dev/null)
 assert_eq "arg-less stdout unchanged" "$OUT" "$WS"
 rm "$WS/plan.ref"
 ERR=$("$SCRIPTS/sdd-workspace" 2>&1 > /dev/null)
-case "$ERR" in *"warning"*) ok "arg-less warns on legacy workspace" ;; *) bad "arg-less warns on legacy workspace (got: $ERR)" ;; esac
+case "$ERR" in *"no plan.ref"*) ok "arg-less warns on legacy workspace (no plan.ref)" ;; *) bad "arg-less warns on legacy workspace (no plan.ref) (got: $ERR)" ;; esac
 
 # Fresh workspace (no content, no plan.ref): plan.ref written, no archive.
 rm -rf "$WS"
@@ -240,7 +249,15 @@ if [ ! -d "$WS/archive" ]; then ok "fresh workspace created no archive"; else ba
 # Archive notice: switching plans must report where the previous workspace went.
 echo "seed" > "$WS/progress.md"
 ARCH_ERR=$("$SCRIPTS/sdd-workspace" planB.md 2>&1 >/dev/null)
-case "$ARCH_ERR" in *"archived previous workspace to archive/"*) ok "archive notice printed" ;; *) bad "archive notice printed (got: $ARCH_ERR)" ;; esac
+case "$ARCH_ERR" in *"archived previous workspace to archive/planA"*) ok "archive notice printed with correct slug" ;; *) bad "archive notice printed with correct slug (got: $ARCH_ERR)" ;; esac
+
+# Validation-before-mutation (M4): a rejected invocation (nonexistent plan
+# file) must not create the workspace directory — validation happens before
+# any mkdir/write.
+rm -rf "$WS"
+"$SCRIPTS/sdd-workspace" nope.md 2>/dev/null
+assert_eq "missing plan (no prior workspace) exits 2" "$?" "2"
+if [ ! -d "$WS" ]; then ok "missing plan: workspace not created"; else bad "missing plan: workspace not created"; fi
 
 bold "sdd-workspace (CDPATH safety)"
 
@@ -277,6 +294,25 @@ assert_eq "newline plan path rejected (non-zero exit)" "$?" "2"
 assert_eq "newline plan path: plan.ref untouched" "$(cat "$WS/plan.ref")" "docs/plans/planC.md"
 assert_file_contains "newline plan path: ledger untouched" "$WS/progress.md" "cdpath ledger"
 rm -f "$NL_PLAN"
+
+bold "sdd-workspace (symlinked plan path)"
+
+# A plan reached through a symlinked parent directory must resolve to its
+# real (physical) location (script's pwd -P at :29/:94), not the symlink's
+# logical name — otherwise the identity recorded in plan.ref would drift
+# depending on which symlinked name was used to reach the same real plan.
+rm -rf "$WS"
+mkdir -p realdir
+cat > realdir/planSym.md << 'PLAN'
+### Task 1: symlink test
+PLAN
+ln -s realdir symlink-to-real
+"$SCRIPTS/sdd-workspace" symlink-to-real/planSym.md > /dev/null
+assert_eq "symlinked plan path: identity uses resolved real path" "$(cat "$WS/plan.ref")" "realdir/planSym.md"
+echo "ledger sym" > "$WS/progress.md"
+"$SCRIPTS/sdd-workspace" symlink-to-real/planSym.md > /dev/null
+assert_file_contains "symlinked plan path: repeat call keeps ledger" "$WS/progress.md" "ledger sym"
+if [ ! -d "$WS/archive" ]; then ok "symlinked plan path: no archive on repeat call"; else bad "symlinked plan path: no archive on repeat call"; fi
 
 bold ""
 bold "Results: $PASS passed, $FAIL failed"
