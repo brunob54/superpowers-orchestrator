@@ -172,7 +172,7 @@ assert_file_contains "brief archived intact" "$LEGACY/task-2-brief.md" "### Task
 if ls "$LEGACY"/review-*.diff > /dev/null 2>&1; then ok "review diffs archived"; else bad "review diffs archived"; fi
 assert_file_contains "dotfile archived" "$LEGACY/.hidden-note" "dot"
 if [ ! -e "$WS/progress.md" ]; then ok "workspace root fresh after legacy archive"; else bad "workspace root fresh after legacy archive"; fi
-if ls "$WS"/task-*-brief.md "$WS"/review-*.diff > /dev/null 2>&1; then bad "workspace root free of briefs/diffs"; else ok "workspace root free of briefs/diffs"; fi
+if ls "$WS"/task-*-brief.md > /dev/null 2>&1 || ls "$WS"/review-*.diff > /dev/null 2>&1; then bad "workspace root free of briefs/diffs"; else ok "workspace root free of briefs/diffs"; fi
 
 # Resume: same plan via relative, absolute, and subdirectory-relative paths.
 echo "ledger A" > "$WS/progress.md"
@@ -240,6 +240,41 @@ if [ ! -d "$WS/archive" ]; then ok "fresh workspace created no archive"; else ba
 echo "seed" > "$WS/progress.md"
 ARCH_ERR=$("$SCRIPTS/sdd-workspace" planB.md 2>&1 >/dev/null)
 case "$ARCH_ERR" in *"archived previous workspace to archive/"*) ok "archive notice printed" ;; *) bad "archive notice printed (got: $ARCH_ERR)" ;; esac
+
+bold "sdd-workspace (CDPATH safety)"
+
+# A shadowing CDPATH entry must never hijack the relative `cd` used to
+# resolve the plan's directory (I1): the identity must stay single-line
+# and name the real plan, not a same-named directory found via CDPATH.
+rm -rf "$WS"
+mkdir -p docs/plans
+cat > docs/plans/planC.md << 'PLAN'
+### Task 1: plan C task
+PLAN
+SHADOW_ROOT=$(mktemp -d)
+SHADOW_ROOT=$(cd "$SHADOW_ROOT" && pwd -P)
+mkdir -p "$SHADOW_ROOT/docs/plans"
+echo "decoy" > "$SHADOW_ROOT/docs/plans/decoy.md"
+env CDPATH="$SHADOW_ROOT" "$SCRIPTS/sdd-workspace" docs/plans/planC.md > /dev/null
+assert_eq "CDPATH shadow: plan.ref is single line" "$(wc -l < "$WS/plan.ref" | tr -d ' ')" "1"
+assert_eq "CDPATH shadow: plan.ref names correct plan" "$(cat "$WS/plan.ref")" "docs/plans/planC.md"
+echo "cdpath ledger" > "$WS/progress.md"
+env CDPATH="$SHADOW_ROOT" "$SCRIPTS/sdd-workspace" docs/plans/planC.md > /dev/null
+assert_file_contains "CDPATH shadow: repeat call keeps ledger" "$WS/progress.md" "cdpath ledger"
+rm -rf "$SHADOW_ROOT"
+
+bold "sdd-workspace (newline-in-path rejection)"
+
+# A plan path whose basename embeds a literal newline would corrupt
+# plan.ref the same way a CDPATH hijack does (I1) — reject it before
+# writing anything, and never touch an existing ledger.
+NL_PLAN=$'weird\nplan.md'
+printf '### Task 1: weird\n' > "$NL_PLAN"
+"$SCRIPTS/sdd-workspace" "$NL_PLAN" 2>/dev/null
+assert_eq "newline plan path rejected (non-zero exit)" "$?" "2"
+assert_eq "newline plan path: plan.ref untouched" "$(cat "$WS/plan.ref")" "docs/plans/planC.md"
+assert_file_contains "newline plan path: ledger untouched" "$WS/progress.md" "cdpath ledger"
+rm -f "$NL_PLAN"
 
 bold ""
 bold "Results: $PASS passed, $FAIL failed"

@@ -88,10 +88,19 @@ if [ $# -eq 1 ]; then
   plan=$1
   # Physical path: resolve the directory (pwd -P), keep the basename as
   # given — a symlink at the file itself is deliberately not resolved.
-  plan_abs="$(cd "$(dirname "$plan")" && pwd -P)/$(basename "$plan")"
+  # CDPATH= and -- guard against a shadowing CDPATH entry hijacking the
+  # relative cd (bash echoes the resolved dir to stdout in that case,
+  # corrupting the command substitution) and against dash-prefixed paths.
+  plan_abs="$(CDPATH= cd -- "$(dirname -- "$plan")" && pwd -P)/$(basename -- "$plan")"
   case "$plan_abs" in
     "$root"/*) identity=${plan_abs#"$root"/} ;;
     *)         identity=$plan_abs ;;  # out-of-repo plan: absolute identity
+  esac
+  case "$identity" in
+    *$'\n'*)
+      echo "plan identity spans multiple lines (plan path contains a newline): $plan" >&2
+      usage
+      ;;
   esac
   current=$(read_ref)
   if [ "$current" = "$identity" ]; then

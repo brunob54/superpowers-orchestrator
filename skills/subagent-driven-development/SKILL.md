@@ -242,9 +242,14 @@ Review gates are NOT relaxed: the full task review (spec-compliance AND code-qua
    workspace and starts this plan with a fresh ledger; consult
    the most recent `archive/<this-plan's-slug>*/progress.md` (read-only) —
    your own earlier ledger, archived when the other plan started — to
-   recover carried Minor findings. Repeated archiving of the same plan
-   suffixes the directory (`<slug>-2`, `<slug>-3`, …); the highest
-   suffix is the most recent.
+   recover carried Minor findings. If this is the first 6.12.0+ run for
+   this plan, the archived workspace instead landed under
+   `archive/unknown-<epoch>/` (upgrade boundary, no `plan.ref` yet) — check
+   there too. Repeated archiving of the same plan suffixes the directory
+   (`<slug>-2`, `<slug>-3`, …); confirm which suffix is actually this
+   plan's by reading that directory's `plan.ref` rather than assuming the
+   highest suffix is the most recent (an unrelated plan sharing the same
+   slug prefix, or a removed intermediate archive, breaks that assumption).
 2. Reconcile position: plan.md checkboxes + git are authoritative; state.md is
    narrative and may be one batch stale. Before dispatching the first unchecked
    task, check `git log` for evidence it was already implemented (a crash
@@ -362,11 +367,16 @@ expensive failure mode. Track progress in a ledger file, not only in todos:
   the current plan. Tasks listed there as complete are DONE — do not
   re-dispatch them. Carried Minor findings from an archived run are
   recovered read-only from the most recent `archive/<slug>*/progress.md`
-  (repeat archives of one plan are suffixed `<slug>-2`, `<slug>-3`, …)
-  for final-review triage. A legacy workspace from before this scoping existed (no
-  `plan.ref`) is archived once under `archive/unknown-<epoch>/` even when
-  you are resuming the very same plan — the missing `plan.ref` alone
-  cannot distinguish that case.
+  (repeat archives of one plan are suffixed `<slug>-2`, `<slug>-3`, …) —
+  confirm the match by reading that directory's `plan.ref` rather than
+  assuming the highest suffix is the most recent, since an unrelated plan
+  sharing the same slug prefix (or a removed intermediate archive) breaks
+  that assumption — for final-review triage. A legacy workspace from
+  before this scoping existed (no `plan.ref`) is archived once under
+  `archive/unknown-<epoch>/` even when you are resuming the very same
+  plan — the missing `plan.ref` alone cannot distinguish that case, so
+  also check `archive/unknown-*/` for carried findings on the first
+  6.12.0+ run of an in-flight plan.
 - When a task's review comes back clean, append one line:
   `Task N: complete (commits <base7>..<head7>, review clean)` — plus
   `Minor: <finding>` lines for any Minor findings being carried forward.
