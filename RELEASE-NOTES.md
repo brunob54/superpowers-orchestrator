@@ -1,5 +1,28 @@
 # Superpowers Optimized Release Notes
 
+## v6.12.0 — SDD workspace is plan-scoped
+
+- `scripts/sdd-workspace` now takes the plan path (`sdd-workspace PLAN_FILE`)
+  and records it in `.superpowers/sdd/plan.ref`. A workspace belonging to a
+  different plan — or a pre-6.12 workspace with no `plan.ref` — is archived
+  to `.superpowers/sdd/archive/<slug>/` (moved, never deleted) before the
+  new plan starts. Fixes the stale-ledger hazard where a leftover
+  `progress.md` from a finished plan read exactly like a completed record
+  of the current plan and could make the controller skip all work.
+- Out-of-repo plans are supported: their identity is the absolute physical
+  path (no error, no false mismatch).
+- Arg-less calls (internal, from `task-brief`/`review-package`) are
+  unchanged on stdout; they now print a stderr scoping line (or a legacy
+  warning) so version-skewed sessions can see which plan the ledger
+  belongs to.
+- SDD SKILL.md: step 1 and the Batched Autonomous Mode Resume Procedure
+  now pass `PLAN_FILE`; resume counts as a skill start for scoping.
+  Checkboxes + `git log` stay authoritative for position.
+- Upgrade note: the first scoped run archives any pre-6.12 workspace even
+  when resuming the same plan (one-time cost); carried Minor findings are
+  then in `archive/unknown-*/progress.md` — consult during final-review
+  triage.
+
 ## v6.11.0 — multi-review renamed to multi-doc-review
 
 - **Breaking (invocation name):** the `multi-review` skill is now
