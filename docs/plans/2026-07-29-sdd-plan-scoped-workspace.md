@@ -49,13 +49,13 @@
 
 **Security flag:** `none`
 
-- [ ] **Step 1: Create the feature branch**
+- [x] **Step 1: Create the feature branch**
 
 ```bash
 git checkout -b BB/sdd-plan-scoped-workspace main
 ```
 
-- [ ] **Step 2: Commit the spec and plan documents**
+- [x] **Step 2: Commit the spec and plan documents**
 
 ```bash
 git add docs/specs/2026-07-29-sdd-plan-scoped-workspace-design.md \
@@ -65,7 +65,7 @@ git add docs/plans/2026-07-29-sdd-plan-scoped-workspace-review-log.md 2>/dev/nul
 git commit -m "docs: spec + plan for SDD plan-scoped workspace"
 ```
 
-- [ ] **Step 3: Verify**
+- [x] **Step 3: Verify**
 
 Run: `git log --oneline -1 && git status --porcelain | grep -v '^??' | wc -l`
 Expected: the new commit subject, and `0` (no tracked changes left behind; `state.md`/scratch stay untracked).
@@ -82,7 +82,7 @@ Expected: the new commit subject, and `0` (no tracked changes left behind; `stat
 
 **Does NOT cover:** concurrent SDD runs with different plans in one worktree (spec non-goal); plan renamed mid-plan (reads as a new plan — archives, recovery via checkboxes+git); content-based plan identity (editing a plan in place never archives); archive pruning.
 
-- [ ] **Step 1: Write failing tests**
+- [x] **Step 1: Write failing tests**
 
 In `tests/sdd-scripts/run-tests.sh`, insert the following block immediately BEFORE the final results footer (the line `bold ""` at the end of the file, before `bold "Results: ..."`). The preceding sections have already filled the workspace with briefs/diffs and no `plan.ref` — exactly the legacy pre-fix state the first assertions need.
 
@@ -176,12 +176,12 @@ if [ ! -d "$WS/archive" ]; then ok "fresh workspace created no archive"; else ba
 
 Note: once the implementation lands, the internal arg-less `sdd-workspace` calls inside the earlier `task-brief`/`review-package` sections will print the legacy warning to the terminal (workspace has briefs, no `plan.ref`). That stderr noise is designed behavior and must not be "fixed"; the same warning behavior is asserted at the end of the new section — the noise from the earlier sections themselves is unasserted but expected.
 
-- [ ] **Step 2: Run the suite to verify the new tests fail**
+- [x] **Step 2: Run the suite to verify the new tests fail**
 
 Run: `bash tests/sdd-scripts/run-tests.sh`
 Expected: FAIL — all pre-existing tests still pass; the new "plan scoping" section fails starting with `plan.ref holds repo-relative path` (the current script ignores arguments, so no `plan.ref` is ever written). Exit code 1.
 
-- [ ] **Step 3: Implement — replace `skills/subagent-driven-development/scripts/sdd-workspace` with:**
+- [x] **Step 3: Implement — replace `skills/subagent-driven-development/scripts/sdd-workspace` with:**
 
 ```bash
 #!/usr/bin/env bash
@@ -306,12 +306,12 @@ fi
 cd "$dir" && pwd
 ```
 
-- [ ] **Step 4: Run the suite to verify everything passes**
+- [x] **Step 4: Run the suite to verify everything passes**
 
 Run: `bash tests/sdd-scripts/run-tests.sh`
 Expected: PASS — 0 failed, including all pre-existing sdd-workspace/task-brief/review-package tests (exit 0).
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add skills/subagent-driven-development/scripts/sdd-workspace tests/sdd-scripts/run-tests.sh
@@ -329,7 +329,7 @@ git commit -m "sdd-workspace: plan-scoped workspace via plan.ref + archive"
 
 **Does NOT cover:** other skills' prose (executing-plans etc. do not reference the workspace); the version-skewed cached SKILL.md (unfixable from the repo — spec residual risk); the File Handoffs section's arg-less mention ("workspace (`scripts/sdd-workspace` prints its path)") — intentionally untouched, arg-less resolve-only calls remain part of the contract, do NOT "fix" it.
 
-- [ ] **Step 1: Update Core Flow step 1**
+- [x] **Step 1: Update Core Flow step 1**
 
 Replace this text (currently line 64, the numbered step starting "1. Read the plan once"):
 
@@ -343,7 +343,7 @@ with:
 1. Read the plan once and extract all tasks. Run `scripts/sdd-workspace PLAN_FILE` (from this skill's directory) once to create the artifact workspace — the script archives any workspace belonging to a different plan, so a surviving `.superpowers/sdd/progress.md` ledger is by construction the current plan's. Tasks it marks complete are DONE; never re-dispatch them. Plan checkboxes + `git log` stay authoritative for position on any conflict (e.g. a `git reset --hard` rolled back commits the git-ignored ledger still records as complete).
 ```
 
-- [ ] **Step 2: Update the Durable Progress bullet**
+- [x] **Step 2: Update the Durable Progress bullet**
 
 Replace:
 
@@ -365,7 +365,7 @@ with:
   triage.
 ```
 
-- [ ] **Step 3: Update the Resume Procedure**
+- [x] **Step 3: Update the Resume Procedure**
 
 Replace:
 
@@ -384,12 +384,12 @@ with:
    findings.
 ```
 
-- [ ] **Step 4: Verify all three edits landed and no stale step-1-style invocation instruction remains** (the File Handoffs arg-less mention stays, see Does NOT cover)
+- [x] **Step 4: Verify all three edits landed and no stale step-1-style invocation instruction remains** (the File Handoffs arg-less mention stays, see Does NOT cover)
 
 Run: `grep -c "sdd-workspace PLAN_FILE" skills/subagent-driven-development/SKILL.md && grep -c "archive/<slug>/progress.md" skills/subagent-driven-development/SKILL.md && grep -n 'Run `scripts/sdd-workspace` ' skills/subagent-driven-development/SKILL.md | wc -l`
 Expected: `3`, then `2`, then `0` (no remaining arg-less invocation instruction).
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add skills/subagent-driven-development/SKILL.md
@@ -409,11 +409,11 @@ git commit -m "sdd SKILL: plan-scoped workspace — step 1, durable progress, re
 
 **Security flag:** `none`
 
-- [ ] **Step 1: Bump the version in all four files**
+- [x] **Step 1: Bump the version in all four files**
 
 Set `6.12.0` in: `VERSION` (whole file), `.claude-plugin/plugin.json` line with `"version"`, `.claude-plugin/marketplace.json` line with `"version"`, and `plugin.universal.yaml` meta `version:` line. All currently read `6.11.0`.
 
-- [ ] **Step 2: Add the release-notes entry**
+- [x] **Step 2: Add the release-notes entry**
 
 Insert at the top of `RELEASE-NOTES.md`, directly under the `# Superpowers Optimized Release Notes` heading:
 
@@ -442,17 +442,17 @@ Insert at the top of `RELEASE-NOTES.md`, directly under the `# Superpowers Optim
   triage.
 ```
 
-- [ ] **Step 3: Verify version consistency**
+- [x] **Step 3: Verify version consistency**
 
 Run: `cat VERSION && grep '"version"' .claude-plugin/plugin.json .claude-plugin/marketplace.json && grep 'version:' plugin.universal.yaml | head -1 && grep -c 'v6.12.0' RELEASE-NOTES.md`
 Expected: every version line reads `6.12.0`; the last count is ≥ 1.
 
-- [ ] **Step 4: Run the full fast test suites (regression gate)**
+- [x] **Step 4: Run the full fast test suites (regression gate)**
 
 Run: `bash tests/sdd-scripts/run-tests.sh && bash tests/codex/run-unit-tests.sh && bash tests/smart-compress/run-tests.sh`
 Expected: all three suites must exit 0 with 0 failed. Exception: if the ONLY failure is the known clean-tree `[compressed]` smart-compress test, follow `known-issues.md` (it is environmental; the 2026-07-19 probe-file fix should prevent it) and re-run — do not proceed on any other failure.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add VERSION .claude-plugin/plugin.json .claude-plugin/marketplace.json plugin.universal.yaml RELEASE-NOTES.md
