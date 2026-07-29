@@ -150,6 +150,92 @@ assert_eq "--commits bad SHA exits 2" "$?" "2"
 "$SCRIPTS/review-package" --commits 2>/dev/null
 assert_eq "--commits with no SHAs exits 2" "$?" "2"
 
+bold "sdd-workspace (plan scoping)"
+
+# Legacy pre-fix state: workspace holds briefs/diffs from the sections
+# above and no plan.ref. First scoped call must archive it under unknown-*.
+# Fixture dependency: task-2-brief.md ("### Task 2: Second thing") comes from
+# the task-brief section's plan.md; review-*.diff from the review-package
+# sections — editing those sections changes this legacy fixture.
+cat > planA.md << 'PLAN'
+### Task 1: plan A task
+PLAN
+echo "old ledger" > "$WS/progress.md"
+echo "dot" > "$WS/.hidden-note"
+OUT=$("$SCRIPTS/sdd-workspace" planA.md)
+assert_eq "scoped call prints same path" "$OUT" "$WS"
+assert_eq "plan.ref holds repo-relative path" "$(cat "$WS/plan.ref")" "planA.md"
+LEGACY=$(ls -d "$WS"/archive/unknown-* 2>/dev/null | head -n 1)
+if [ -n "$LEGACY" ]; then ok "legacy content archived under unknown-*"; else bad "legacy content archived under unknown-*"; fi
+assert_file_contains "legacy ledger intact in archive" "$LEGACY/progress.md" "old ledger"
+assert_file_contains "brief archived intact" "$LEGACY/task-2-brief.md" "### Task 2: Second thing"
+if ls "$LEGACY"/review-*.diff > /dev/null 2>&1; then ok "review diffs archived"; else bad "review diffs archived"; fi
+assert_file_contains "dotfile archived" "$LEGACY/.hidden-note" "dot"
+if [ ! -e "$WS/progress.md" ]; then ok "workspace root fresh after legacy archive"; else bad "workspace root fresh after legacy archive"; fi
+if ls "$WS"/task-*-brief.md "$WS"/review-*.diff > /dev/null 2>&1; then bad "workspace root free of briefs/diffs"; else ok "workspace root free of briefs/diffs"; fi
+
+# Resume: same plan via relative, absolute, and subdirectory-relative paths.
+echo "ledger A" > "$WS/progress.md"
+"$SCRIPTS/sdd-workspace" planA.md > /dev/null
+assert_file_contains "relative resume keeps ledger" "$WS/progress.md" "ledger A"
+"$SCRIPTS/sdd-workspace" "$REPO/planA.md" > /dev/null
+assert_file_contains "absolute resume keeps ledger" "$WS/progress.md" "ledger A"
+mkdir -p subdir
+(cd subdir && "$SCRIPTS/sdd-workspace" ../planA.md > /dev/null)
+assert_file_contains "subdir-relative resume keeps ledger" "$WS/progress.md" "ledger A"
+assert_eq "resume created no new archives" "$(ls "$WS/archive" | wc -l | tr -d ' ')" "1"
+
+# Switch to plan B: A's workspace archived intact under its slug.
+cat > planB.md << 'PLAN'
+### Task 1: plan B task
+PLAN
+"$SCRIPTS/sdd-workspace" planB.md > /dev/null
+assert_eq "plan.ref switched to plan B" "$(cat "$WS/plan.ref")" "planB.md"
+assert_file_contains "plan A ledger archived intact" "$WS/archive/planA/progress.md" "ledger A"
+
+# Empty plan.ref = crash-during-write recovery state -> legacy rule.
+echo "ledger B" > "$WS/progress.md"
+: > "$WS/plan.ref"
+"$SCRIPTS/sdd-workspace" planA.md > /dev/null
+assert_eq "plan.ref rewritten after empty-ref recovery" "$(cat "$WS/plan.ref")" "planA.md"
+assert_eq "empty-ref content archived under unknown-*" "$(ls -d "$WS"/archive/unknown-* | wc -l | tr -d ' ')" "2"
+
+# Slug collision: archive/planA already exists; archiving plan A's
+# workspace again must land in planA-2.
+echo "ledger A2" > "$WS/progress.md"
+"$SCRIPTS/sdd-workspace" planB.md > /dev/null
+assert_file_contains "collision archive suffixed" "$WS/archive/planA-2/progress.md" "ledger A2"
+
+# Out-of-repo plan: absolute physical identity, stable across calls.
+EXT=$(mktemp -d)
+EXT=$(cd "$EXT" && pwd -P)
+cat > "$EXT/ext-plan.md" << 'PLAN'
+### Task 1: external plan task
+PLAN
+"$SCRIPTS/sdd-workspace" "$EXT/ext-plan.md" > /dev/null
+assert_eq "out-of-repo plan.ref is absolute" "$(cat "$WS/plan.ref")" "$EXT/ext-plan.md"
+echo "ext ledger" > "$WS/progress.md"
+"$SCRIPTS/sdd-workspace" "$EXT/ext-plan.md" > /dev/null
+assert_file_contains "out-of-repo resume keeps ledger" "$WS/progress.md" "ext ledger"
+rm -rf "$EXT"
+
+# Errors and arg-less stderr backstops (stdout must stay one path line).
+"$SCRIPTS/sdd-workspace" nope.md 2>/dev/null
+assert_eq "missing plan exits 2" "$?" "2"
+ERR=$("$SCRIPTS/sdd-workspace" 2>&1 > /dev/null)
+case "$ERR" in *"workspace is scoped to plan"*) ok "arg-less prints scoping line" ;; *) bad "arg-less prints scoping line (got: $ERR)" ;; esac
+OUT=$("$SCRIPTS/sdd-workspace" 2>/dev/null)
+assert_eq "arg-less stdout unchanged" "$OUT" "$WS"
+rm "$WS/plan.ref"
+ERR=$("$SCRIPTS/sdd-workspace" 2>&1 > /dev/null)
+case "$ERR" in *"warning"*) ok "arg-less warns on legacy workspace" ;; *) bad "arg-less warns on legacy workspace (got: $ERR)" ;; esac
+
+# Fresh workspace (no content, no plan.ref): plan.ref written, no archive.
+rm -rf "$WS"
+"$SCRIPTS/sdd-workspace" planA.md > /dev/null
+assert_eq "fresh workspace plan.ref written" "$(cat "$WS/plan.ref")" "planA.md"
+if [ ! -d "$WS/archive" ]; then ok "fresh workspace created no archive"; else bad "fresh workspace created no archive"; fi
+
 bold ""
 bold "Results: $PASS passed, $FAIL failed"
 if [ "$FAIL" -gt 0 ]; then

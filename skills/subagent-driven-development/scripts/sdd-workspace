@@ -9,14 +9,112 @@
 # workspace out of `git status` and out of accidental commits without
 # modifying any tracked file.
 #
-# Single source of truth for the workspace location, so task-brief and
-# review-package cannot drift to different directories.
+# The workspace is plan-scoped: with PLAN_FILE, the plan's identity is
+# recorded in plan.ref (repo-relative physical path; absolute for plans
+# outside the repo). A workspace belonging to a different plan — or a legacy
+# workspace with content but no plan.ref — is archived to archive/<slug>/
+# first, so a leftover progress.md can never masquerade as the current
+# plan's ledger. Without PLAN_FILE (internal calls from task-brief and
+# review-package) behavior is unchanged apart from stderr backstops.
 #
-# Usage: sdd-workspace
+# Single source of truth for the workspace location and plan identity, so
+# task-brief and review-package cannot drift to different directories.
+#
+# Usage: sdd-workspace [PLAN_FILE]
 set -euo pipefail
 
+usage() { echo "usage: sdd-workspace [PLAN_FILE]" >&2; exit 2; }
+
 root=$(git rev-parse --show-toplevel)
+root=$(cd "$root" && pwd -P)
 dir="$root/.superpowers/sdd"
+ref="$dir/plan.ref"
+
+# plan.ref contract: first line, trailing whitespace stripped.
+# Empty or unreadable reads the same as absent.
+read_ref() {
+  if [ -r "$ref" ]; then
+    head -n 1 "$ref" | sed 's/[[:space:]]*$//'
+  fi
+}
+
+# True when the workspace holds any entry other than .gitignore, archive/,
+# and plan.ref itself (identity is handled separately — an empty plan.ref
+# alone must read as a fresh workspace, not as archivable content).
+has_content() {
+  local e
+  for e in "$dir"/* "$dir"/.[!.]* "$dir"/..?*; do
+    [ -e "$e" ] || continue
+    case "$(basename "$e")" in
+      .gitignore|archive|plan.ref) continue ;;
+    esac
+    return 0
+  done
+  return 1
+}
+
+# Move everything except .gitignore and archive/ into archive/<slug>/,
+# suffixing on collision. plan.ref moves LAST: a crash mid-archive then
+# leaves the remainder still slug-identified, so a rerun archives it under
+# the same slug instead of scattering it under unknown-*.
+archive_workspace() { # $1 = slug
+  local dest="$dir/archive/$1" n=2
+  while [ -e "$dest" ]; do dest="$dir/archive/$1-$n"; n=$((n+1)); done
+  mkdir -p "$dest"
+  local e name
+  for e in "$dir"/* "$dir"/.[!.]* "$dir"/..?*; do
+    [ -e "$e" ] || continue
+    name=$(basename "$e")
+    case "$name" in
+      .gitignore|archive|plan.ref) continue ;;
+    esac
+    mv "$e" "$dest/"
+  done
+  if [ -e "$ref" ]; then mv "$ref" "$dest/"; fi
+}
+
+# Validate before touching the filesystem.
+[ $# -le 1 ] || usage
+if [ $# -eq 1 ] && { [ ! -f "$1" ] || [ ! -r "$1" ]; }; then
+  echo "no such readable plan file: $1" >&2
+  usage
+fi
+
 mkdir -p "$dir"
 printf '*\n' > "$dir/.gitignore"
+
+if [ $# -eq 1 ]; then
+  plan=$1
+  # Physical path: resolve the directory (pwd -P), keep the basename as
+  # given — a symlink at the file itself is deliberately not resolved.
+  plan_abs="$(cd "$(dirname "$plan")" && pwd -P)/$(basename "$plan")"
+  case "$plan_abs" in
+    "$root"/*) identity=${plan_abs#"$root"/} ;;
+    *)         identity=$plan_abs ;;  # out-of-repo plan: absolute identity
+  esac
+  current=$(read_ref)
+  if [ "$current" = "$identity" ]; then
+    : # same plan resuming — never touch the ledger
+  elif [ -z "$current" ] && ! has_content; then
+    printf '%s\n' "$identity" > "$ref"
+  else
+    if [ -n "$current" ]; then
+      slug=$(basename "$current"); slug=${slug%.*}
+    else
+      slug="unknown-$(date +%s)"
+    fi
+    archive_workspace "$slug"
+    printf '%s\n' "$identity" > "$ref"
+  fi
+else
+  # Arg-less: resolve only. Stderr backstops let a version-skewed caller
+  # (pre-fix SKILL.md) see which plan the ledger belongs to.
+  current=$(read_ref)
+  if [ -n "$current" ]; then
+    echo "workspace is scoped to plan $current" >&2
+  elif has_content; then
+    echo "warning: workspace has content but no plan.ref — a stale ledger from another plan may be present" >&2
+  fi
+fi
+
 cd "$dir" && pwd
