@@ -61,7 +61,7 @@ digraph sdd_process {
 }
 ```
 
-1. Read the plan once and extract all tasks. Run `scripts/sdd-workspace` (from this skill's directory) once to create the artifact workspace, and check `.superpowers/sdd/progress.md` for a ledger from an earlier session — tasks it marks complete are DONE; never re-dispatch them.
+1. Read the plan once and extract all tasks. Run `scripts/sdd-workspace PLAN_FILE` (from this skill's directory) once to create the artifact workspace — the script archives any workspace belonging to a different plan, so a surviving `.superpowers/sdd/progress.md` ledger is by construction the current plan's. Tasks it marks complete are DONE; never re-dispatch them. Plan checkboxes + `git log` stay authoritative for position on any conflict (e.g. a `git reset --hard` rolled back commits the git-ignored ledger still records as complete).
 2. Create task tracking for all tasks. Run the Pre-Flight Plan Review (below) before dispatching Task 1.
 3. For each task:
 - Record BASE: `git rev-parse HEAD` before dispatching.
@@ -237,6 +237,11 @@ Review gates are NOT relaxed: the full task review (spec-compliance AND code-qua
 ### Resume Procedure (fresh session after /clear)
 
 1. Read `state.md`; read the plan at the recorded path; read recent `git log`.
+   Run `scripts/sdd-workspace PLAN_FILE` — resume is a skill start for
+   workspace scoping. If another plan ran in between, this archives its
+   workspace and starts this plan with a fresh ledger; consult
+   `archive/<slug>/progress.md` (read-only) to recover carried Minor
+   findings.
 2. Reconcile position: plan.md checkboxes + git are authoritative; state.md is
    narrative and may be one batch stale. Before dispatching the first unchecked
    task, check `git log` for evidence it was already implemented (a crash
@@ -348,7 +353,13 @@ its place re-dispatches entire completed task sequences — the single most
 expensive failure mode. Track progress in a ledger file, not only in todos:
 
 - At skill start, check for a ledger: `.superpowers/sdd/progress.md`.
-  Tasks listed there as complete are DONE — do not re-dispatch them.
+  The workspace is plan-scoped: `scripts/sdd-workspace PLAN_FILE` records
+  the plan in `plan.ref` and archives any other plan's artifacts to
+  `.superpowers/sdd/archive/<slug>/`, so a surviving ledger belongs to
+  the current plan. Tasks listed there as complete are DONE — do not
+  re-dispatch them. Carried Minor findings from an archived run are
+  recovered read-only from `archive/<slug>/progress.md` for final-review
+  triage.
 - When a task's review comes back clean, append one line:
   `Task N: complete (commits <base7>..<head7>, review clean)` — plus
   `Minor: <finding>` lines for any Minor findings being carried forward.
