@@ -236,6 +236,11 @@ rm -rf "$WS"
 assert_eq "fresh workspace plan.ref written" "$(cat "$WS/plan.ref")" "planA.md"
 if [ ! -d "$WS/archive" ]; then ok "fresh workspace created no archive"; else bad "fresh workspace created no archive"; fi
 
+# Archive notice: switching plans must report where the previous workspace went.
+echo "seed" > "$WS/progress.md"
+ARCH_ERR=$("$SCRIPTS/sdd-workspace" planB.md 2>&1 >/dev/null)
+case "$ARCH_ERR" in *"archived previous workspace to archive/"*) ok "archive notice printed" ;; *) bad "archive notice printed (got: $ARCH_ERR)" ;; esac
+
 bold ""
 bold "Results: $PASS passed, $FAIL failed"
 if [ "$FAIL" -gt 0 ]; then

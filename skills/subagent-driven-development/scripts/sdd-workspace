@@ -71,6 +71,7 @@ archive_workspace() { # $1 = slug
     mv "$e" "$dest/"
   done
   if [ -e "$ref" ]; then mv "$ref" "$dest/"; fi
+  echo "archived previous workspace to ${dest#"$dir"/}" >&2
 }
 
 # Validate before touching the filesystem.
