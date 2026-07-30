@@ -282,25 +282,28 @@ const SENSITIVE_FILES = [
   { level: 'strict', id: 'curlrc',               regex: /(?:^|\/)\.curlrc$/,                             reason: '.curlrc may contain auth' },
 ];
 
+// Argument gap for the verb→secret-file rules: reaches across one command's
+// operands and no further (stops at `|`, `;`, `&`, `>`, newline; allows a
+// backslash-continuation). Keep in step with ARG_GAP in
+// hooks/safety/protect-secrets.js, the source of truth.
+const ARG_GAP = '(?:[^|;&>\\n]|\\\\\\n)*';
+
 // Bash command patterns that expose or exfiltrate secrets (from protect-secrets.js)
 const SECRET_BASH_PATTERNS = [
   // CRITICAL
-  // Gap excludes `>`/newline/`&` so heredoc writes and downstream mentions are not
-  // read as reads. Keep in step with the cat-env rule in
-  // hooks/safety/protect-secrets.js, the source of truth.
-  { level: 'critical', id: 'cat-env',            regex: /\b(cat|less|head|tail|more|bat|view)\s+[^|;&>\n]*\.env\b/i,       reason: 'Reading .env file exposes secrets' },
-  { level: 'critical', id: 'cat-ssh-key',        regex: /\b(cat|less|head|tail|more|bat)\s+[^|;]*(id_rsa|id_ed25519|id_ecdsa|id_dsa|\.pem|\.key)\b/i, reason: 'Reading private key' },
-  { level: 'critical', id: 'cat-aws-creds',      regex: /\b(cat|less|head|tail|more)\s+[^|;]*\.aws\/credentials/i,         reason: 'Reading AWS credentials' },
+  { level: 'critical', id: 'cat-env',            regex: new RegExp(`\\b(cat|less|head|tail|more|bat|view)\\s+${ARG_GAP}\\.env\\b`, 'i'), reason: 'Reading .env file exposes secrets' },
+  { level: 'critical', id: 'cat-ssh-key',        regex: new RegExp(`\\b(cat|less|head|tail|more|bat)\\s+${ARG_GAP}(id_rsa|id_ed25519|id_ecdsa|id_dsa|\\.pem|\\.key)\\b`, 'i'), reason: 'Reading private key' },
+  { level: 'critical', id: 'cat-aws-creds',      regex: new RegExp(`\\b(cat|less|head|tail|more)\\s+${ARG_GAP}\\.aws\\/credentials`, 'i'), reason: 'Reading AWS credentials' },
   // HIGH
   { level: 'high', id: 'env-dump',               regex: /\bprintenv\b|(?:^|[;&|]\s*)env\s*(?:$|[;&|])/,                    reason: 'Environment dump may expose secrets' },
   { level: 'high', id: 'echo-secret-var',        regex: /\becho\b[^;|&]*\$\{?[A-Za-z_]*(?:SECRET|KEY|TOKEN|PASSWORD|PASSW|CREDENTIAL|API_KEY|AUTH|PRIVATE)[A-Za-z_]*\}?/i, reason: 'Echoing secret variable' },
   { level: 'high', id: 'printf-secret-var',      regex: /\bprintf\b[^;|&]*\$\{?[A-Za-z_]*(?:SECRET|KEY|TOKEN|PASSWORD|CREDENTIAL|API_KEY|AUTH|PRIVATE)[A-Za-z_]*\}?/i, reason: 'Printing secret variable' },
-  { level: 'high', id: 'cat-secrets-file',       regex: /\b(cat|less|head|tail|more)\s+[^|;]*(credentials?|secrets?)\.(json|ya?ml|toml)/i, reason: 'Reading secrets file' },
-  { level: 'high', id: 'source-env',             regex: /\bsource\s+[^|;]*\.env\b|(?:^|[;&|]\s*)\.\s+[^|;]*\.env\b|^\.\s+[^|;]*\.env\b/i, reason: 'Sourcing .env loads secrets' },
+  { level: 'high', id: 'cat-secrets-file',       regex: new RegExp(`\\b(cat|less|head|tail|more)\\s+${ARG_GAP}(credentials?|secrets?)\\.(json|ya?ml|toml)`, 'i'), reason: 'Reading secrets file' },
+  { level: 'high', id: 'source-env',             regex: new RegExp(`\\bsource\\s+${ARG_GAP}\\.env\\b|(?:^|[;&|]\\s*)\\.\\s+${ARG_GAP}\\.env\\b`, 'i'), reason: 'Sourcing .env loads secrets' },
   { level: 'high', id: 'curl-upload-env',        regex: /\bcurl\b[^;|&]*(-d\s*@|-F\s*[^=]+=@|--data[^=]*=@)[^;|&]*(\.env|credentials|secrets|id_rsa|\.pem|\.key)/i, reason: 'Uploading secrets via curl' },
   { level: 'high', id: 'scp-secrets',            regex: /\bscp\b[^;|&]*(\.env|credentials|secrets|id_rsa|\.pem|\.key)[^;|&]+:/i, reason: 'Copying secrets via scp' },
-  { level: 'high', id: 'rm-env',                 regex: /\brm\b.*\.env\b/i,                                                 reason: 'Deleting .env file' },
-  { level: 'high', id: 'rm-aws-creds',           regex: /\brm\b[^;|&]*\.aws\/credentials/i,                                reason: 'Deleting AWS credentials' },
+  { level: 'high', id: 'rm-env',                 regex: new RegExp(`\\brm\\b${ARG_GAP}\\.env\\b`, 'i'),                     reason: 'Deleting .env file' },
+  { level: 'high', id: 'rm-aws-creds',           regex: new RegExp(`\\brm\\b${ARG_GAP}\\.aws\\/credentials`, 'i'),         reason: 'Deleting AWS credentials' },
   { level: 'high', id: 'proc-environ',           regex: /\/proc\/[^/]*\/environ/,                                          reason: 'Reading process environment' },
   // STRICT
   { level: 'strict', id: 'grep-password',        regex: /\bgrep\b[^|;]*(-r|--recursive)[^|;]*(password|secret|api.?key|token|credential)/i, reason: 'Grep for secrets may expose them' },
