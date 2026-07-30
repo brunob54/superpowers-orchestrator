@@ -61,7 +61,7 @@ digraph sdd_process {
 }
 ```
 
-1. Read the plan once and extract all tasks. Run `scripts/sdd-workspace` (from this skill's directory) once to create the artifact workspace, and check `.superpowers/sdd/progress.md` for a ledger from an earlier session — tasks it marks complete are DONE; never re-dispatch them.
+1. Read the plan once and extract all tasks. Run `scripts/sdd-workspace PLAN_FILE` (from this skill's directory) once to create the artifact workspace — the script archives any workspace belonging to a different plan, so a surviving `.superpowers/sdd/progress.md` ledger is by construction the current plan's. Tasks it marks complete are DONE; never re-dispatch them. Plan checkboxes + `git log` stay authoritative for position on any conflict (e.g. a `git reset --hard` rolled back commits the git-ignored ledger still records as complete).
 2. Create task tracking for all tasks. Run the Pre-Flight Plan Review (below) before dispatching Task 1.
 3. For each task:
 - Record BASE: `git rev-parse HEAD` before dispatching.
@@ -237,6 +237,19 @@ Review gates are NOT relaxed: the full task review (spec-compliance AND code-qua
 ### Resume Procedure (fresh session after /clear)
 
 1. Read `state.md`; read the plan at the recorded path; read recent `git log`.
+   Run `scripts/sdd-workspace PLAN_FILE` — resume is a skill start for
+   workspace scoping. If another plan ran in between, this archives its
+   workspace and starts this plan with a fresh ledger; consult
+   the most recent `archive/<this-plan's-slug>*/progress.md` (read-only) —
+   your own earlier ledger, archived when the other plan started — to
+   recover carried Minor findings. If this is the first 6.12.0+ run for
+   this plan, the archived workspace instead landed under
+   `archive/unknown-<epoch>/` (upgrade boundary, no `plan.ref` yet) — check
+   there too. Repeated archiving of the same plan suffixes the directory
+   (`<slug>-2`, `<slug>-3`, …); confirm which suffix is actually this
+   plan's by reading that directory's `plan.ref` rather than assuming the
+   highest suffix is the most recent (an unrelated plan sharing the same
+   slug prefix, or a removed intermediate archive, breaks that assumption).
 2. Reconcile position: plan.md checkboxes + git are authoritative; state.md is
    narrative and may be one batch stale. Before dispatching the first unchecked
    task, check `git log` for evidence it was already implemented (a crash
@@ -348,7 +361,22 @@ its place re-dispatches entire completed task sequences — the single most
 expensive failure mode. Track progress in a ledger file, not only in todos:
 
 - At skill start, check for a ledger: `.superpowers/sdd/progress.md`.
-  Tasks listed there as complete are DONE — do not re-dispatch them.
+  The workspace is plan-scoped: `scripts/sdd-workspace PLAN_FILE` records
+  the plan in `plan.ref` and archives any other plan's artifacts to
+  `.superpowers/sdd/archive/<slug>/`, so a surviving ledger belongs to
+  the current plan. Tasks listed there as complete are DONE — do not
+  re-dispatch them. Carried Minor findings from an archived run are
+  recovered read-only from the most recent `archive/<slug>*/progress.md`
+  (repeat archives of one plan are suffixed `<slug>-2`, `<slug>-3`, …) —
+  confirm the match by reading that directory's `plan.ref` rather than
+  assuming the highest suffix is the most recent, since an unrelated plan
+  sharing the same slug prefix (or a removed intermediate archive) breaks
+  that assumption — for final-review triage. A legacy workspace from
+  before this scoping existed (no `plan.ref`) is archived once under
+  `archive/unknown-<epoch>/` even when you are resuming the very same
+  plan — the missing `plan.ref` alone cannot distinguish that case, so
+  also check `archive/unknown-*/` for carried findings on the first
+  6.12.0+ run of an in-flight plan.
 - When a task's review comes back clean, append one line:
   `Task N: complete (commits <base7>..<head7>, review clean)` — plus
   `Minor: <finding>` lines for any Minor findings being carried forward.
