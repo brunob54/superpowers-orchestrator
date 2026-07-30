@@ -16,6 +16,11 @@ const path = require('path');
 
 const SAFETY_LEVEL = 'high';
 
+// Argument gap for verb→secret-file rules: reaches across one command's operands
+// and no further (stops at `|`, `;`, `&`, `>`, newline; allows a backslash
+// continuation). Keep in step with ARG_GAP in safety/protect-secrets.js.
+const ARG_GAP = '(?:[^|;&>\\n]|\\\\\\n)*';
+
 const PATTERNS = [
   // CRITICAL — Catastrophic, unrecoverable
   { level: 'critical', id: 'rm-home',          regex: /\brm\s+(-\S+\s+)*["']?~\/?["']?(\s|$|[;&|])/,                        reason: 'rm targeting home directory' },
@@ -35,7 +40,10 @@ const PATTERNS = [
   { level: 'high', id: 'git-clean-f',    regex: /\bgit\s+clean\s+(-\w*f|-f)/,                                             reason: 'git clean -f deletes untracked files' },
   { level: 'high', id: 'chmod-777',      regex: /\bchmod\b.+\b777\b/,                                                     reason: 'chmod 777 is a security risk' },
   { level: 'high', id: 'cat-env',        regex: /\b(cat|less|head|tail|more)\s+\.env\b/,                                  reason: 'reading .env file exposes secrets' },
-  { level: 'high', id: 'cat-secrets',    regex: /\b(cat|less|head|tail|more)\b.+(credentials|secrets?|\.pem|\.key|id_rsa|id_ed25519)/i, reason: 'reading secrets file' },
+  // `\s+` after the verb, not `\b.+`: without it an identifier like `cat-secrets-file`
+  // in a pipeline counted as the command `cat`, and the gap reached the word "secrets"
+  // anywhere later in the line — denying commands that read nothing sensitive.
+  { level: 'high', id: 'cat-secrets',    regex: new RegExp(`\\b(cat|less|head|tail|more)\\s+${ARG_GAP}(credentials|secrets?|\\.pem|\\.key|id_rsa|id_ed25519)`, 'i'), reason: 'reading secrets file' },
   { level: 'high', id: 'echo-secret',    regex: /\becho\b.+\$\w*(SECRET|KEY|TOKEN|PASSWORD|API_|PRIVATE)/i,               reason: 'echoing secret variable' },
   { level: 'high', id: 'docker-vol-rm',  regex: /\bdocker\s+volume\s+(rm|prune)/,                                         reason: 'docker volume deletion loses data' },
   { level: 'high', id: 'rm-ssh',         regex: /\brm\b.+\.ssh\/(id_|authorized_keys|known_hosts)/,                       reason: 'deleting SSH keys' },

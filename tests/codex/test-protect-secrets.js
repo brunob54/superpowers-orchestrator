@@ -84,6 +84,79 @@ for (const [label, cmd] of MUST_ALLOW) {
   ));
 }
 
+// ── The cp/mv/rm/source family shares cat-env's gap defect ───────────────────
+//
+// `process.env.X` in a node script contains the env-file token, so any of these
+// verbs followed on the same line by such a script used to match. A backslash
+// continuation is still ONE command and must keep matching.
+
+console.log('\nprotect-secrets: file-operation family blocks real operations');
+
+const FAMILY_MUST_BLOCK = [
+  ['copy the env file', `cp ${ENV} /tmp/steal`],
+  ['copy from a nested path', `cp config/${ENV} /tmp/`],
+  ['move the env file', `mv ${ENV} /tmp/`],
+  ['delete the env file', `rm ${ENV}`],
+  ['delete with flags', `rm -f ${ENV}`],
+  ['source the env file', `source ${ENV}`],
+  ['dot-source the env file', `. ${ENV}`],
+  ['truncate the env file', `truncate -s 0 ${ENV}`],
+  ['copy a private key', 'cp ~/.ssh/id_rsa /tmp/'],
+  ['delete a private key', 'rm ~/.ssh/id_ed25519'],
+  ['read the netrc', 'cat ~/.netrc'],
+  ['read aws credentials', 'cat ~/.aws/credentials'],
+  ['read a secrets json', 'cat config/credentials.json'],
+  // Backslash continuation is one command — splitting it must not evade the rule.
+  ['copy split over a line continuation', `cp \\\n  ${ENV} /tmp/steal`],
+  ['read split over a line continuation', `cat \\\n  ${ENV}`],
+];
+
+for (const [label, cmd] of FAMILY_MUST_BLOCK) {
+  test(label, () => assert.strictEqual(blocks(cmd), true, `expected BLOCK for: ${cmd}`));
+}
+
+console.log('\nprotect-secrets: file-operation family ignores process.env and prose');
+
+// `process` + `.env` + `.HOME`, assembled so the literal never appears here.
+const PROC_ENV = 'process' + ENV + '.HOME';
+
+const FAMILY_MUST_ALLOW = [
+  ['backup then a node script reading the environment (the live failure)',
+    `cp reg.json reg.json.bak\nnode -e "console.log(${PROC_ENV})"`],
+  ['move then a node script reading the environment',
+    `mv old.md new.md && node -e "console.log(${PROC_ENV})"`],
+  ['delete then a node script reading the environment',
+    `rm scratch.js && node -e "console.log(${PROC_ENV})"`],
+  ['delete then a separate command mentioning the token',
+    `rm tmp.txt; echo "the config lives in ${ENV}"`],
+  ['copy an unrelated file, token in a later line',
+    `cp a.md b.md\n# remember: ${ENV} is gitignored`],
+  ['node script alone reading the environment', `node -e "console.log(${PROC_ENV})"`],
+];
+
+for (const [label, cmd] of FAMILY_MUST_ALLOW) {
+  test(label, () => assert.strictEqual(
+    blocks(cmd), false,
+    `expected ALLOW for: ${cmd}\n    (blocked by rule: ${ruleId(cmd)})`
+  ));
+}
+
+// ── Known limitation, pinned deliberately ────────────────────────────────────
+//
+// The gap fix stops a rule reaching past its own command, but it cannot tell
+// prose from shell when a heredoc body contains a line that IS the dangerous
+// command verbatim. Distinguishing them needs shell parsing, not a regex.
+// Workaround when it bites: `git commit -F <file>`, or write the file with the
+// Write tool instead of a heredoc.
+
+console.log('\nprotect-secrets: known limitation — heredoc body quoting a real command');
+
+test('heredoc body containing the literal sourcing command is still blocked', () => {
+  const cmd = `cat >> README.md <<'EOF'\nRun \`source ${ENV}\` before starting.\nEOF`;
+  assert.strictEqual(blocks(cmd), true);
+  assert.strictEqual(ruleId(cmd), 'source-env', 'expected source-env to be the rule that fires');
+});
+
 console.log('\nprotect-secrets: unrelated rules still fire');
 
 test('private key read still blocked', () => assert.strictEqual(blocks('cat ~/.ssh/id_rsa'), true));
