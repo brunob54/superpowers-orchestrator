@@ -26,13 +26,25 @@ assert_file_contains() { # desc file needle
 assert_file_not_contains() { # desc file needle
   if grep -qF -- "$3" "$2"; then bad "$1 (must not contain: $3)"; else ok "$1"; fi
 }
+# sdd-workspace's arg-less stderr backstops (scoping line / legacy warning) and
+# its archive notices are asserted from $ERRF, not left to scroll past a green
+# run. Capture with `2>"$ERRF"` at the call site, then assert here.
+assert_stderr() {        # desc needle
+  assert_file_contains "$1" "$ERRF" "$2"
+}
+assert_stderr_silent() { # desc
+  assert_eq "$1" "$(cat "$ERRF")" ""
+}
 
 # Fresh throwaway git repo; all tests run inside it.
 # pwd -P resolves macOS's /var -> /private/var symlink so path assertions
 # match what git rev-parse --show-toplevel prints.
 REPO=$(mktemp -d)
 REPO=$(cd "$REPO" && pwd -P)
-trap 'rm -rf "$REPO"' EXIT
+# Stderr sink for the assertions above. Kept outside $REPO so it can never
+# appear in a `git status --porcelain` assertion.
+ERRF=$(mktemp)
+trap 'rm -rf "$REPO" "$ERRF"' EXIT
 cd "$REPO"
 git init --quiet
 git config user.email "test@test"
@@ -88,7 +100,8 @@ Past the nested decoy.
 Body of task three.
 PLAN
 
-BRIEF=$("$SCRIPTS/task-brief" plan.md 2 | sed 's/^wrote //; s/:.*$//')
+BRIEF=$("$SCRIPTS/task-brief" plan.md 2 2>"$ERRF" | sed 's/^wrote //; s/:.*$//')
+assert_stderr_silent "task-brief quiet on an unscoped workspace with no content"
 assert_eq "brief path" "$BRIEF" "$REPO/.superpowers/sdd/task-2-brief.md"
 assert_file_contains "brief has task 2 heading" "$BRIEF" "### Task 2: Second thing"
 assert_file_contains "brief spans past the fenced decoy" "$BRIEF" "Still task two text."
@@ -114,7 +127,8 @@ echo "beta" > beta.txt
 git add beta.txt && git commit --quiet -m "task: add beta"
 HEAD_SHA=$(git rev-parse HEAD)
 
-PKG=$("$SCRIPTS/review-package" "$BASE" "$HEAD_SHA" | sed 's/^wrote //; s/:.*$//')
+PKG=$("$SCRIPTS/review-package" "$BASE" "$HEAD_SHA" 2>"$ERRF" | sed 's/^wrote //; s/:.*$//')
+assert_stderr "review-package surfaces the legacy backstop once the workspace has content" "no plan.ref"
 EXPECTED_PKG="$REPO/.superpowers/sdd/review-$(git rev-parse --short "$BASE")..$(git rev-parse --short "$HEAD_SHA").diff"
 assert_eq "range package path" "$PKG" "$EXPECTED_PKG"
 assert_file_contains "range: first commit in list" "$PKG" "task: add alpha"
@@ -137,7 +151,8 @@ echo "epsilon" > epsilon.txt
 git add epsilon.txt && git commit --quiet -m "task1: add epsilon"
 C3=$(git rev-parse HEAD)
 
-CPKG=$("$SCRIPTS/review-package" --commits "$C1" "$C3" | sed 's/^wrote //; s/:.*$//')
+CPKG=$("$SCRIPTS/review-package" --commits "$C1" "$C3" 2>"$ERRF" | sed 's/^wrote //; s/:.*$//')
+assert_stderr "--commits surfaces the legacy backstop too" "no plan.ref"
 EXPECTED_CPKG="$REPO/.superpowers/sdd/review-commits-$(git rev-parse --short "$C1")..$(git rev-parse --short "$C3").diff"
 assert_eq "--commits package path" "$CPKG" "$EXPECTED_CPKG"
 assert_file_contains "--commits: first commit present" "$CPKG" "+gamma"
@@ -162,7 +177,8 @@ cat > planA.md << 'PLAN'
 PLAN
 echo "old ledger" > "$WS/progress.md"
 echo "dot" > "$WS/.hidden-note"
-OUT=$("$SCRIPTS/sdd-workspace" planA.md)
+OUT=$("$SCRIPTS/sdd-workspace" planA.md 2>"$ERRF")
+assert_stderr "first scoping archives the legacy workspace under unknown-*" "archived previous workspace to archive/unknown-"
 assert_eq "scoped call prints same path" "$OUT" "$WS"
 assert_eq "plan.ref holds repo-relative path" "$(cat "$WS/plan.ref")" "planA.md"
 LEGACY=$(ls -d "$WS"/archive/unknown-* 2>/dev/null | head -n 1)
@@ -175,7 +191,8 @@ if [ ! -e "$WS/progress.md" ]; then ok "workspace root fresh after legacy archiv
 if ls "$WS"/task-*-brief.md > /dev/null 2>&1 || ls "$WS"/review-*.diff > /dev/null 2>&1; then bad "workspace root free of briefs/diffs"; else ok "workspace root free of briefs/diffs"; fi
 assert_file_contains ".gitignore remains at workspace root after archive" "$WS/.gitignore" "*"
 if [ ! -e "$LEGACY/.gitignore" ]; then ok ".gitignore excluded from archive move"; else bad ".gitignore excluded from archive move"; fi
-BRIEF2=$("$SCRIPTS/task-brief" plan.md 2 | sed 's/^wrote //; s/:.*$//')
+BRIEF2=$("$SCRIPTS/task-brief" plan.md 2 2>"$ERRF" | sed 's/^wrote //; s/:.*$//')
+assert_stderr "task-brief surfaces the scoping backstop naming the current plan" "workspace is scoped to plan planA.md"
 assert_eq "task-brief path unchanged once workspace is plan-scoped" "$BRIEF2" "$REPO/.superpowers/sdd/task-2-brief.md"
 assert_file_contains "task-brief content unchanged once workspace is plan-scoped" "$BRIEF2" "### Task 2: Second thing"
 
@@ -194,7 +211,8 @@ assert_eq "resume created no new archives" "$(ls "$WS/archive" | wc -l | tr -d '
 cat > planB.md << 'PLAN'
 ### Task 1: plan B task
 PLAN
-"$SCRIPTS/sdd-workspace" planB.md > /dev/null
+"$SCRIPTS/sdd-workspace" planB.md > /dev/null 2>"$ERRF"
+assert_stderr "plan switch names the archive slug it wrote" "archived previous workspace to archive/planA"
 assert_eq "plan.ref switched to plan B" "$(cat "$WS/plan.ref")" "planB.md"
 assert_file_contains "plan A ledger archived intact" "$WS/archive/planA/progress.md" "ledger A"
 assert_file_contains "archived workspace keeps its plan.ref" "$WS/archive/planA/plan.ref" "planA.md"
@@ -202,7 +220,8 @@ assert_file_contains "archived workspace keeps its plan.ref" "$WS/archive/planA/
 # Empty plan.ref = crash-during-write recovery state -> legacy rule.
 echo "ledger B" > "$WS/progress.md"
 : > "$WS/plan.ref"
-"$SCRIPTS/sdd-workspace" planA.md > /dev/null
+"$SCRIPTS/sdd-workspace" planA.md > /dev/null 2>"$ERRF"
+assert_stderr "empty-ref recovery archives under unknown-*" "archived previous workspace to archive/unknown-"
 assert_eq "plan.ref rewritten after empty-ref recovery" "$(cat "$WS/plan.ref")" "planA.md"
 assert_eq "empty-ref content archived under unknown-*" "$(ls -d "$WS"/archive/unknown-* | wc -l | tr -d ' ')" "2"
 NEW_UNKNOWN=$(ls -d "$WS"/archive/unknown-* | sort | tail -n 1)
@@ -212,7 +231,8 @@ if [ ! -e "$WS/progress.md" ]; then ok "workspace root fresh after empty-ref arc
 # Slug collision: archive/planA already exists; archiving plan A's
 # workspace again must land in planA-2.
 echo "ledger A2" > "$WS/progress.md"
-"$SCRIPTS/sdd-workspace" planB.md > /dev/null
+"$SCRIPTS/sdd-workspace" planB.md > /dev/null 2>"$ERRF"
+assert_stderr "collision notice names the suffixed slug" "archived previous workspace to archive/planA-2"
 assert_file_contains "collision archive suffixed" "$WS/archive/planA-2/progress.md" "ledger A2"
 
 # Out-of-repo plan: absolute physical identity, stable across calls.
@@ -223,10 +243,12 @@ EXT_PLAN="$EXT/ext-plan.md"
 cat > "$EXT/ext-plan.md" << 'PLAN'
 ### Task 1: external plan task
 PLAN
-"$SCRIPTS/sdd-workspace" "$EXT/ext-plan.md" > /dev/null
+"$SCRIPTS/sdd-workspace" "$EXT/ext-plan.md" > /dev/null 2>"$ERRF"
+assert_stderr "out-of-repo scoping archives the previous plan" "archived previous workspace to archive/planB"
 assert_eq "out-of-repo plan.ref is absolute" "$(cat "$WS/plan.ref")" "$EXT/ext-plan.md"
 echo "ext ledger" > "$WS/progress.md"
-"$SCRIPTS/sdd-workspace" "$EXT/ext-plan.md" > /dev/null
+"$SCRIPTS/sdd-workspace" "$EXT/ext-plan.md" > /dev/null 2>"$ERRF"
+assert_stderr_silent "out-of-repo resume archives nothing and stays quiet"
 assert_file_contains "out-of-repo resume keeps ledger" "$WS/progress.md" "ext ledger"
 rm -rf "$EXT"
 
