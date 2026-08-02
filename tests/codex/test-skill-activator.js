@@ -958,6 +958,76 @@ test('"resume the plan discussion from yesterday" does NOT trigger SDD', () => {
   assert.strictEqual(matchesSdd('resume the plan discussion from yesterday'), false);
 });
 
+// ── Batch phrasing must OUTRANK executing-plans, not merely appear ───────────
+//
+// matchesSdd() above only asserts presence. Presence is not enough: matches are
+// sorted by priority before score (skill-activator.js), and executing-plans is
+// `high` where SDD is `medium` — so a batch prompt that matches both lists
+// executing-plans first and routes the user to inline execution. These assert
+// the rank.
+
+function topSkill(prompt) {
+  const m = matchSkills(prompt);
+  return m.length ? m[0].skill : null;
+}
+
+const SDD = 'subagent-driven-development';
+const EXEC = 'executing-plans';
+
+test('"execute the plan in batches" ranks SDD above executing-plans', () => {
+  assert.strictEqual(topSkill('execute the plan in batches'), SDD);
+});
+
+test('batch phrasing with a plan path in between still ranks SDD first', () => {
+  assert.strictEqual(
+    topSkill('execute the plan in docs/plans/2026-08-02-foo.md in batches'), SDD);
+});
+
+test('"in batched autonomous mode" after a plan path ranks SDD first', () => {
+  assert.strictEqual(
+    topSkill('Execute the plan at docs/plans/2026-08-02-foo.md in batched autonomous mode'),
+    SDD);
+});
+
+test('"implement the plan in batches" ranks SDD first', () => {
+  assert.strictEqual(
+    topSkill('Implement the plan in batches, starting with docs/plans/foo.md'), SDD);
+});
+
+test('plain "execute the plan" still routes to executing-plans', () => {
+  assert.strictEqual(topSkill('execute the plan'), EXEC);
+});
+
+test('plain "execute the plan at <path>" still routes to executing-plans', () => {
+  assert.strictEqual(topSkill('Execute the plan at docs/plans/2026-08-02-foo.md'), EXEC);
+});
+
+test('"follow the plan" still routes to executing-plans', () => {
+  assert.strictEqual(topSkill('follow the plan'), EXEC);
+});
+
+test('"start building" still routes to executing-plans', () => {
+  assert.strictEqual(topSkill("let's start building"), EXEC);
+});
+
+test('a plan mentioned far before unrelated "in batch" text is NOT hijacked', () => {
+  // The batch exclusion is distance-bounded; an unrelated later mention of
+  // batching must not steal a plain execute-the-plan prompt.
+  const far = 'execute the plan' + ' and also note that '.repeat(6) + 'we ship in batches';
+  assert.strictEqual(topSkill(far), EXEC);
+});
+
+test('writing-plans paste prompt for batched mode routes to SDD', () => {
+  assert.strictEqual(
+    topSkill('Use subagents in batched autonomous mode on docs/plans/2026-08-02-foo.md'),
+    SDD);
+});
+
+test('writing-plans paste prompt for interactive SDD routes to SDD', () => {
+  assert.strictEqual(
+    topSkill('Use subagents to implement docs/plans/2026-08-02-foo.md'), SDD);
+});
+
 test('"resume the implementation talk after lunch" does NOT trigger SDD', () => {
   assert.strictEqual(matchesSdd('resume the implementation talk after lunch'), false);
 });
