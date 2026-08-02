@@ -54,7 +54,7 @@
       "type": "workflow",
       "priority": "high",
       "keywords": ["execute the plan", "follow the plan", "start building", "implement the plan"],
-      "intentPatterns": ["(execute|follow|implement|run)\\s+(the|this)\\s+plan", "start\\s+(building|implementing|coding)", "let('s|\\s+us)\\s+(go|start|begin)"]
+      "intentPatterns": ["(execute|follow|implement|run)\\s+(the|this)\\s+plan\\b(?![\\s\\S]{0,80}?\\bin\\s+batch)", "start\\s+(building|implementing|coding)", "let('s|\\s+us)\\s+(go|start|begin)"]
     },
     {
       "skill": "dispatching-parallel-agents",
@@ -73,7 +73,7 @@
       "type": "workflow",
       "priority": "medium",
       "keywords": ["parallel", "subagent", "run in parallel", "concurrent", "in batches", "batched", "resume the plan"],
-      "intentPatterns": ["(run|do|execute)\\s+(these|them|tasks?)\\s+(in\\s+)?parallel", "use\\s+subagent", "implement\\s+the\\s+next\\s+\\d+\\s+tasks?", "(execute|run|implement)\\s+(the\\s+)?plan\\s+in\\s+batch(es)?", "resume\\s+the\\s+(plan|implementation)(?!\\s+(discussion|talk|meeting|review|notes|conversation))"]
+      "intentPatterns": ["(run|do|execute)\\s+(these|them|tasks?)\\s+(in\\s+)?parallel", "use\\s+subagent", "implement\\s+the\\s+next\\s+\\d+\\s+tasks?", "(execute|run|implement)\\s+(the\\s+)?plan\\b[\\s\\S]{0,80}?\\bin\\s+batch", "resume\\s+the\\s+(plan|implementation)(?!\\s+(discussion|talk|meeting|review|notes|conversation))"]
     },
     {
       "skill": "finishing-a-development-branch",

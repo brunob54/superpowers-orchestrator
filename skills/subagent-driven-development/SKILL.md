@@ -162,8 +162,12 @@ the user. Announce: `I'm using subagent-driven-development (batched autonomous m
 
 ### Batch Loop
 
-1. If `state.md` at the project root records a plan in progress, run the
-   Resume Procedure below before executing anything.
+1. If `state.md` at the project root records a plan in progress, first check
+   that it names the same plan the user's prompt does. If it names a different
+   plan — or its plan file no longer exists — it is stale: ignore it entirely,
+   start from the plan the prompt names, and overwrite it at this batch's end.
+   Never resume from a `state.md` that points somewhere the prompt does not.
+   Otherwise run the Resume Procedure below before executing anything.
 2. Execute tasks with the normal per-task flow (implementer → task review (both verdicts) → update plan.md checkbox → commit). Per-task checkboxes and
    commits are the crash-safe position record — never defer them to batch end.
    This mode executes tasks sequentially — the Parallel Waves default does NOT
