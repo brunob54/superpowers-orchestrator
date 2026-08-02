@@ -516,14 +516,22 @@ lines.push('2 vulnerabilities (1 moderate, 1 high)');
 process.stdout.write(lines.join('\n'));
 ")
 raw_tok=$(( ${#npm_mock} / 4 ))
-comp_result=$(node -e "
+# The mock goes through the environment, never through the -e source: it is
+# multi-line, and interpolating it into a JS string literal is a syntax error
+# that empties comp_result — which the savings check below reads as perfect
+# compression. Crashes stay on stderr for the same reason.
+comp_result=$(NPM_MOCK="$npm_mock" node -e "
   const { RULES } = require('./hooks/compression-rules');
   const r = RULES.find(r => r.type === 'npm-install');
-  const c = r.compress($(node -e "process.stdout.write(JSON.stringify('$npm_mock'))"), '', 0);
+  const c = r.compress(process.env.NPM_MOCK, '', 0);
   process.stdout.write(c || '');
-" 2>/dev/null)
+")
 comp_tok=$(( ${#comp_result} / 4 ))
-if [ "$comp_tok" -lt "$raw_tok" ] && [ "$raw_tok" -gt 0 ]; then
+if [ -z "$comp_result" ]; then
+  red "  FAIL: npm-install simulation produced no output (rule missing, or compress threw or returned null)"
+  ERRORS+=("npm-install simulation produced no output")
+  ((FAIL++))
+elif [ "$comp_tok" -lt "$raw_tok" ] && [ "$raw_tok" -gt 0 ]; then
   saved=$(( (raw_tok - comp_tok) * 100 / raw_tok ))
   printf "  %-38s ~%d tok → ~%d tok  (%d%% saved)\n" "npm install (80-pkg mock)" "$raw_tok" "$comp_tok" "$saved"
   ((PASS++))
