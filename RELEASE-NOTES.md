@@ -1,5 +1,44 @@
 # Superpowers Optimized Release Notes
 
+## v6.13.0 — plan handoff starts a fresh session; batch phrasing routes correctly
+
+- `writing-plans` now recommends starting execution in a **fresh session**
+  (`/clear`) rather than continuing in the planning session. Planning
+  context — brainstorming, the plan itself, the multi-doc-review rounds —
+  is dead weight for execution and spends the Batched Autonomous Mode
+  context budget (60% pressure boundary) before Task 1 begins. The Ready
+  Message now carries a paste-prompt table for batched / interactive
+  subagent-driven / inline execution.
+- `writing-plans` gained a **Seed `state.md`** step before the ready
+  message: a full rewrite of the plan-execution sections pointing at the
+  new plan. This is what makes the fresh session safe — without it, a
+  `state.md` left over from a previous plan makes the next session resume
+  the wrong plan.
+- `subagent-driven-development` Batch Loop step 1 now cross-checks
+  `state.md` against the prompt: if it names a different plan, or its plan
+  file no longer exists, it is stale — ignored, and overwritten at batch
+  end. Previously any `state.md` recording "a plan in progress" triggered
+  the Resume Procedure, which then read *its* recorded plan path.
+- **Fix (routing):** SDD's own advertised trigger "execute the plan in
+  batches" routed to `executing-plans`, not `subagent-driven-development`
+  — matches sort by priority before score, and `executing-plans` is
+  `high` where SDD is `medium`. `executing-plans`' plan pattern now
+  carries a distance-bounded negative lookahead
+  (`(?![\s\S]{0,80}?\bin\s+batch)`), so batch phrasing drops it below the
+  confidence threshold entirely instead of merely outranking it.
+- **Fix (routing):** SDD's batch pattern required `plan` and `in batches`
+  to be *adjacent*, so the phrasing users actually type — `execute the
+  plan at docs/plans/X.md in batched autonomous mode` — matched SDD not at
+  all. It now tolerates up to 80 characters between them
+  (`plan\b[\s\S]{0,80}?\bin\s+batch`), which fits a plan path but excludes
+  a distant unrelated mention of batching.
+- The trigger test that should have caught both used `.some()` — asserting
+  the skill was *present* among matches, not that it ranked first — so it
+  stayed green throughout. `tests/codex/test-skill-activator.js` gains a
+  `topSkill()` helper and 11 rank-asserting cases covering the batch
+  phrasings, the writing-plans paste prompts, and the plain
+  `executing-plans` phrasings that must not regress.
+
 ## v6.12.0 — SDD workspace is plan-scoped
 
 - `scripts/sdd-workspace` now takes the plan path (`sdd-workspace PLAN_FILE`)
