@@ -2,10 +2,10 @@
 
 [![AI Coding Agents](https://img.shields.io/badge/USE_WITH-Claude_Code_%7C_Codex_%7C_OpenCode_%7C_Gemini_CLI_%7C_Antigravity-white?style=for-the-badge)]()
 
-[![GitHub stars](https://img.shields.io/github/stars/REPOZY/superpowers-optimized?style=for-the-badge&color=white)](https://github.com/REPOZY/superpowers-optimized/stargazers)
-[![Version](https://img.shields.io/github/v/release/REPOZY/superpowers-optimized?style=for-the-badge&color=white)](https://github.com/REPOZY/superpowers-optimized/releases)
+[![GitHub stars](https://img.shields.io/github/stars/brunob54/superpowers-optimized?style=for-the-badge&color=white)](https://github.com/brunob54/superpowers-optimized/stargazers)
+[![Version](https://img.shields.io/badge/version-6.13.0-white?style=for-the-badge)](RELEASE-NOTES.md)
 [![License: MIT](https://img.shields.io/badge/License-MIT-white?style=for-the-badge)](LICENSE)
-[![Install](https://img.shields.io/badge/install-now-white?style=for-the-badge&logo=claude)](https://github.com/REPOZY/superpowers-optimized#installation)
+[![Install](https://img.shields.io/badge/install-now-white?style=for-the-badge&logo=claude)](https://github.com/brunob54/superpowers-optimized#installation)
 
 </div>
 
@@ -18,16 +18,18 @@
 Built on the trusted obra/superpowers workflow and refined through research into LLM agent behavior, it adds automatic 3-tier workflow routing, proactive safety hooks, self-consistency verification at critical decision points, cross-session memory, and adversarial red-teaming — everything the original does, plus the discipline layer it was missing.
 
 > [!NOTE]
-> **Lineage & status:** this repository builds on two origins — the original [obra/superpowers](https://github.com/obra/superpowers) by Jesse Vincent and its optimized fork [REPOZY/superpowers-optimized](https://github.com/REPOZY/superpowers-optimized) (baseline v6.6.1). Full credit to both. This fork's own additions (v6.7.0–v6.9.0) are **under testing and evaluation** — see [What this fork adds](#what-this-fork-adds).
+> **Lineage & status:** this repository builds on two origins — the original [obra/superpowers](https://github.com/obra/superpowers) by Jesse Vincent and its optimized fork [REPOZY/superpowers-optimized](https://github.com/REPOZY/superpowers-optimized) (baseline v6.6.1). Full credit to both. This fork's own additions (v6.7.0–v6.13.0) are **under testing and evaluation** — see [What this fork adds](#what-this-fork-adds).
 
 ### What this fork adds
 
-Three releases beyond the REPOZY v6.6.1 baseline — full guide with usage, details, and motivations in [docs/FORK-IMPROVEMENTS.md](docs/FORK-IMPROVEMENTS.md):
+Seven releases beyond the REPOZY v6.6.1 baseline. The four flagship additions — full guide with usage, details, and motivations in [docs/FORK-IMPROVEMENTS.md](docs/FORK-IMPROVEMENTS.md):
 
 - **SDD Batched Autonomous Mode (v6.7.0)** — execute a plan in resumable batches of N tasks, ending each batch at 60% measured context pressure with a `state.md` handoff; say "implement the next 3 tasks", then after `/clear`: "resume the plan". [Details](docs/FORK-IMPROVEMENTS.md#1-sdd-batched-autonomous-mode-v670)
 - **SDD Token-Optimized Review Flow (v6.8.0)** — port of upstream obra v6.0.0: one two-verdict task reviewer, file-based handoffs under `.superpowers/sdd/`, explicit per-dispatch model selection; automatic whenever subagent-driven-development executes a plan (~2x faster, ~50–60% fewer tokens per upstream measurement). [Details](docs/FORK-IMPROVEMENTS.md#2-sdd-token-optimized-review-flow-v680)
 - **multi-doc-review (v6.9.0)** — N independent clean-context review rounds with rotating lenses on every spec and plan before its approval gate, with a sidecar audit log; automatic at the gates, or direct: `/multi-doc-review docs/specs/<doc>.md 3`. [Details](docs/FORK-IMPROVEMENTS.md#3-multi-doc-review--n-round-independent-document-review-v690)
 - **multi-code-review (v6.10.0)** — N independent whole-branch code review rounds with rotating lenses (correctness/spec alignment, adversarial red-team, security, test quality) and fixes applied between rounds, with a sidecar audit log; automatic at subagent-driven-development's final review gate, or direct: `/multi-code-review [BASE] [N]`. [Details](docs/FORK-IMPROVEMENTS.md#4-multi-code-review--n-round-independent-whole-branch-code-review-v6100)
+
+Three further releases — `multi-doc-review` rename (v6.11.0), plan-scoped SDD workspace (v6.12.0), and fresh-session plan handoff (v6.13.0) — are covered in [RELEASE-NOTES.md](RELEASE-NOTES.md).
 
 Cross-session memory changes the experience fundamentally. Without it, every session starts blind: the AI re-explores structure it already mapped, re-proposes approaches that were already rejected, re-debugs errors that were already solved. With the memory stack, it arrives knowing what was tried, what was decided, and why — and with a pre-computed snapshot of exactly what changed since the last commit — and builds forward instead of sideways.
 
@@ -263,12 +265,12 @@ Generate once with "map this project". After that, the session-start hook inject
 _Generated: 2026-03-20 14:32 | Git: a4b9c2d_
 
 ## Directory Structure
-skills/ — 25 skills, each in skills/<name>/SKILL.md
+skills/ — 26 skills, each in skills/<name>/SKILL.md
 hooks/ — 10 hooks (JS) + hooks.json registry + skill-rules.json
 
 ## Key Files
 hooks/skill-activator.js — UserPromptSubmit: context pressure gate (blocks plan execution at ≥60% context, reads session JSONL); skill hints via skill-rules.json; memory recall from session-log.md + known-issues.md. Micro-task detection skips all enrichment.
-hooks/skill-rules.json — 23 rules: skill name, keywords, intentPatterns, priority.
+hooks/skill-rules.json — 24 rules covering 23 skills (context-management has two: map-project and save-state): skill name, keywords, intentPatterns, priority.
 
 ## Critical Constraints
 - hooks.json uses \" not ' around ${CLAUDE_PLUGIN_ROOT} (single quotes break Linux)
@@ -373,7 +375,7 @@ With this stack, sessions start with full context and zero re-discovery overhead
 ---
 
 
-## Skills Library (25 skills)
+## Skills Library (26 skills)
 
 ### Core Workflow
 - **using-superpowers** — Mandatory workflow router with 3-tier complexity classification (micro/lightweight/full) and instruction priority hierarchy
