@@ -145,7 +145,7 @@ Agent tool.
 
 ## Execution Handoff
 
-After saving the plan, completing self-review, and completing the multi-round plan review, auto-select the execution approach using the logic below, then output the ready message and **stop**. Do not invoke any execution skill until the user replies.
+After saving the plan, completing self-review, and completing the multi-round plan review, auto-select the execution approach using the logic below, seed `state.md`, then output the ready message and **stop**. Do not invoke any execution skill until the user replies.
 
 ### Selection Logic (evaluate in order)
 
@@ -154,11 +154,52 @@ After saving the plan, completing self-review, and completing the multi-round pl
 3. Tasks have heavy inter-task state sharing (each task depends on runtime state from the previous) → **Inline**
 4. Default → **Subagent-Driven**
 
+### Seed `state.md`
+
+Write the plan pointer into `state.md` at the project root — a full rewrite of
+the plan-execution sections, in the same shape subagent-driven-development
+writes at each batch end:
+
+- `## Current Goal` — the plan's Goal line
+- `## Plan` — path to the plan file + "Next task: 1 — <title>"
+- `## Decisions & Deviations` — decisions made during planning that live only in
+  this conversation. Usually empty: a decision that binds implementation belongs
+  in the plan's Global Constraints, not here.
+- `## Open Issues` — anything unresolved that execution must not run past
+
+**Replace any earlier plan's sections — never append.** A `state.md` still
+pointing at a previous plan makes the next session resume the wrong plan. This
+seed is what makes it safe to start execution in a fresh session.
+
 ### Ready Message
 
 ```
-Plan saved to `docs/plans/<filename>.md`. Ready to execute with **[Subagent-Driven / Inline Execution]** (<N> tasks[, <one-word reason>]). Reply to start, or say "inline" / "subagent" to switch.
+Plan saved to `docs/plans/<filename>.md`. Ready to execute with **[Subagent-Driven / Inline Execution]** (<N> tasks[, <one-word reason>]).
+
+Recommended: start execution in a fresh session (`/clear` in Claude Code) — this session's planning context is dead weight for execution and spends the first batch's context budget before Task 1 begins. The plan file and `state.md` carry everything execution needs. Then paste:
+
+    <paste prompt from the table below>
+
+Or reply here to execute in this session, or say "inline" / "subagent" to switch.
 ```
+
+Fill the paste prompt from the selected approach. When Subagent-Driven is
+selected, offer both variants (batched first) — the selection logic does not
+distinguish them:
+
+| Approach | Paste prompt | Behavior |
+|---|---|---|
+| Subagent-Driven, batched | `Use subagents in batched autonomous mode on docs/plans/<filename>.md` | Never asks mid-batch; hands off at the context boundary |
+| Subagent-Driven, interactive | `Use subagents to implement docs/plans/<filename>.md` | Per-task subagents; stops to ask on ambiguity or blockers |
+| Inline | `Execute the plan at docs/plans/<filename>.md` | Continuous in-session execution with checkpoints |
+
+**Use these prompts verbatim — they are tuned to the skill-activator's
+scoring, not just readable.** Two failure modes they avoid: a prompt matching
+only one keyword scores 1 and is dropped below the confidence threshold, so the
+fresh session routes to no skill at all; and a Subagent-Driven prompt that loses
+its "subagents" or "in batches" wording falls through to executing-plans
+(priority `high` against subagent-driven-development's `medium`) and silently
+lands in inline execution.
 
 **Stop here.** Do not invoke any execution skill until the user replies.
 
