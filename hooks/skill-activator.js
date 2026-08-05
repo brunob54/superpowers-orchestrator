@@ -384,7 +384,24 @@ const EXECUTION_TRIGGER_PATTERNS = [
 ];
 
 const CONTEXT_WINDOW_SIZE = 200000; // Fallback window when the statusline cache is absent
-const CONTEXT_PRESSURE_THRESHOLD = 0.60; // Hard block at 60%
+const CONTEXT_PRESSURE_THRESHOLD = 0.60; // Default hard-block ratio (60%)
+const PRESSURE_THRESHOLD_MIN = 10; // Percent bounds for the env override
+const PRESSURE_THRESHOLD_MAX = 90;
+
+/**
+ * Active gate threshold as a ratio. Overridable per user via the
+ * SUPERPOWERS_PRESSURE_THRESHOLD env var (a percentage, e.g. "50"),
+ * typically set in settings.json's `env` block so it survives plugin
+ * updates. Values outside 10–90 or unparseable fall back to the default.
+ * Read at call time so a changed environment takes effect immediately.
+ */
+function pressureThreshold() {
+  const n = parseFloat(process.env.SUPERPOWERS_PRESSURE_THRESHOLD);
+  if (Number.isFinite(n) && n >= PRESSURE_THRESHOLD_MIN && n <= PRESSURE_THRESHOLD_MAX) {
+    return n / 100;
+  }
+  return CONTEXT_PRESSURE_THRESHOLD;
+}
 const CONTEXT_CACHE_MAX_AGE_MS = 30 * 60 * 1000; // Statusline cache staleness cutoff
 const CONTEXT_CACHE_FILE = 'context-window.cache.json';
 
@@ -449,12 +466,14 @@ function readContextWindowCache(sessionId) {
   const total = cache.input_tokens_total;
   if (!(windowSize > 0) || !(total > 0)) return null;
 
+  const threshold = pressureThreshold();
   const ratio = total / windowSize;
   return {
     inputK: Math.round(total / 1000),
     percent: Math.round(ratio * 100),
-    overThreshold: ratio >= CONTEXT_PRESSURE_THRESHOLD,
+    overThreshold: ratio >= threshold,
     windowK: Math.round(windowSize / 1000),
+    thresholdPercent: Math.round(threshold * 100),
   };
 }
 
@@ -503,12 +522,14 @@ function getContextPressure(cwd, sessionId) {
 
   if (lastInputTotal === 0) return null;
 
+  const threshold = pressureThreshold();
   const ratio = lastInputTotal / CONTEXT_WINDOW_SIZE;
   return {
     inputK: Math.round(lastInputTotal / 1000),
     percent: Math.round(ratio * 100),
-    overThreshold: ratio >= CONTEXT_PRESSURE_THRESHOLD,
+    overThreshold: ratio >= threshold,
     windowK: Math.round(CONTEXT_WINDOW_SIZE / 1000),
+    thresholdPercent: Math.round(threshold * 100),
   };
 }
 
@@ -565,7 +586,7 @@ function buildContextPressureBlock(pressure) {
     `STOP — Do not start implementation yet.`,
     ``,
     `Context window: ~${pressure.inputK}K tokens consumed (${pressure.percent}% of ${pressure.windowK || 200}K limit).`,
-    `Starting implementation at ≥60% risks Auto Compact firing mid-task, destroying`,
+    `Starting implementation at ≥${pressure.thresholdPercent || 60}% risks Auto Compact firing mid-task, destroying`,
     `variable names, file paths, and discovered facts at the worst possible moment.`,
     ``,
     `Required actions before proceeding:`,
@@ -681,5 +702,6 @@ if (require.main === module) {
     MAX_MEMORY_ENTRIES,
     CONTEXT_WINDOW_SIZE,
     CONTEXT_PRESSURE_THRESHOLD,
+    pressureThreshold,
   };
 }

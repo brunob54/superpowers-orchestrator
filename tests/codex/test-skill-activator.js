@@ -803,6 +803,70 @@ test('readContextWindowCache returns null for zero/missing window or totals', ()
   assert.strictEqual(results[1], null, 'Missing token total must be rejected');
 });
 
+console.log('\nContext pressure gate — SUPERPOWERS_PRESSURE_THRESHOLD override');
+
+function withThresholdEnv(value, fn) {
+  const orig = process.env.SUPERPOWERS_PRESSURE_THRESHOLD;
+  if (value === undefined) delete process.env.SUPERPOWERS_PRESSURE_THRESHOLD;
+  else process.env.SUPERPOWERS_PRESSURE_THRESHOLD = value;
+  try {
+    return fn();
+  } finally {
+    if (orig === undefined) delete process.env.SUPERPOWERS_PRESSURE_THRESHOLD;
+    else process.env.SUPERPOWERS_PRESSURE_THRESHOLD = orig;
+  }
+}
+
+function transcriptPressureAt55Percent() {
+  // 110K/200K = 55% via the transcript fallback path.
+  return withTmpHome((tmpHome) => {
+    const cwd = path.join(tmpHome, 'myproject');
+    const sessionId = 'thr-' + Math.random().toString(36).slice(2);
+    makeJsonlSession(sessionId, cwdToProjectDir(cwd), tmpHome, [
+      { input_tokens: 5, cache_creation_input_tokens: 90000, cache_read_input_tokens: 19995, output_tokens: 100 },
+    ]);
+    return getContextPressure(cwd, sessionId);
+  });
+}
+
+test('55% is under the default 60% threshold', () => {
+  const result = withThresholdEnv(undefined, transcriptPressureAt55Percent);
+  assert.strictEqual(result.overThreshold, false);
+  assert.strictEqual(result.thresholdPercent, 60);
+});
+
+test('SUPERPOWERS_PRESSURE_THRESHOLD=50 puts 55% over threshold', () => {
+  const result = withThresholdEnv('50', transcriptPressureAt55Percent);
+  assert.strictEqual(result.overThreshold, true, '55% must exceed a 50% threshold');
+  assert.strictEqual(result.thresholdPercent, 50);
+});
+
+test('Override applies to the statusline-cache path too', () => {
+  const result = withThresholdEnv('50', () => withTmpHome((tmpHome) => {
+    const sessionId = 'thr-cache-' + Date.now();
+    makeContextCache(tmpHome, {
+      session_id: sessionId, context_window_size: 1000000,
+      input_tokens_total: 550000, used_percentage: 55,
+    });
+    return readContextWindowCache(sessionId);
+  }));
+  assert.strictEqual(result.overThreshold, true, '55% of 1M must exceed a 50% threshold');
+  assert.strictEqual(result.thresholdPercent, 50);
+});
+
+test('Invalid or out-of-range values fall back to 60%', () => {
+  for (const bad of ['abc', '', '5', '95', '-20', '0']) {
+    const result = withThresholdEnv(bad, transcriptPressureAt55Percent);
+    assert.strictEqual(result.overThreshold, false, `"${bad}" must fall back to 60% (55% under)`);
+    assert.strictEqual(result.thresholdPercent, 60, `"${bad}" must report the default threshold`);
+  }
+});
+
+test('Block message reports the active threshold', () => {
+  const block = buildContextPressureBlock({ inputK: 110, percent: 55, windowK: 200, thresholdPercent: 50 });
+  assert.ok(block.includes('≥50%'), `Expected ≥50% in block, got: ${block.slice(0, 300)}`);
+});
+
 console.log('\nContext pressure gate — buildContextPressureBlock');
 
 test('Contains opening and closing context-pressure-gate tags', () => {
