@@ -93,7 +93,7 @@ Fix any issues inline. No need to re-review — just fix and move on.
 
 After the spec self-review passes, ask the user to review the written spec before proceeding:
 
-> "Spec written and committed to `<path>`. Please review it and let me know if you want to make any changes before we start writing out the implementation plan."
+> "Spec written and committed to `<path>`. Please review it and let me know if you want to make any changes before we start writing out the implementation plan. (Alternatively, say 'orchestrate it' to run plan, reviews, and implementation autonomously via orchestrating-development.)"
 
 Wait for the user's response. If they request changes, make them and re-run the self-review. Only proceed once the user approves.
 
