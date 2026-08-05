@@ -1083,7 +1083,7 @@ git commit -m "feat(skill): code-review-loop controller template"
 
 **Does NOT cover:** changing brainstorming's terminal state (it remains `writing-plans`); routing (Task 2 owns it).
 
-- [ ] **Step 1: Edit the User Review Gate blockquote**
+- [x] **Step 1: Edit the User Review Gate blockquote**
 
 In `skills/brainstorming/SKILL.md`, replace the line:
 
@@ -1097,12 +1097,12 @@ with:
 > "Spec written and committed to `<path>`. Please review it and let me know if you want to make any changes before we start writing out the implementation plan. (Alternatively, say 'orchestrate it' to run plan, reviews, and implementation autonomously via orchestrating-development.)"
 ```
 
-- [ ] **Step 2: Verify**
+- [x] **Step 2: Verify**
 
 Run: `grep -c "orchestrate it" skills/brainstorming/SKILL.md`
 Expected: `1`
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add skills/brainstorming/SKILL.md
