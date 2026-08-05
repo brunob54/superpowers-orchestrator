@@ -1,6 +1,6 @@
 # Fork Improvements (brunob54/superpowers-optimized)
 
-This repository is the third link in a lineage: the original [obra/superpowers](https://github.com/obra/superpowers) by Jesse Vincent, its optimized fork [REPOZY/superpowers-optimized](https://github.com/REPOZY/superpowers-optimized), and this fork, which builds on the REPOZY v6.6.1 baseline. It adds four feature releases — v6.7.0, v6.8.0, v6.9.0, and v6.10.0 — described below. **Status: these additions are under testing and evaluation**; behavior and interfaces may still change based on real-world use.
+This repository is the third link in a lineage: the original [obra/superpowers](https://github.com/obra/superpowers) by Jesse Vincent, its optimized fork [REPOZY/superpowers-optimized](https://github.com/REPOZY/superpowers-optimized), and this fork, which builds on the REPOZY v6.6.1 baseline. It adds five flagship feature releases — v6.7.0, v6.8.0, v6.9.0, v6.10.0, and v6.14.0 — described below; three smaller releases in between (v6.11.0–v6.13.0: the `multi-doc-review` rename, the plan-scoped SDD workspace, and the fresh-session plan handoff) are covered in [../RELEASE-NOTES.md](../RELEASE-NOTES.md). **Status: these additions are under testing and evaluation**; behavior and interfaces may still change based on real-world use.
 
 For a detailed, evidence-focused comparison of how review works in all three repositories — including the history of obra's own document review loop (shipped in v5.0.0, removed in v5.0.6 on eval data) — see [REVIEW-PROCESS-COMPARISON.md](REVIEW-PROCESS-COMPARISON.md).
 
@@ -10,6 +10,7 @@ Contents:
 2. [SDD Token-Optimized Review Flow (v6.8.0)](#2-sdd-token-optimized-review-flow-v680)
 3. [multi-doc-review — N-Round Independent Document Review (v6.9.0)](#3-multi-doc-review--n-round-independent-document-review-v690)
 4. [multi-code-review — N-Round Independent Whole-Branch Code Review (v6.10.0)](#4-multi-code-review--n-round-independent-whole-branch-code-review-v6100)
+5. [orchestrating-development — Autonomous Spec-to-Merge-Gate Pipeline (v6.14.0)](#5-orchestrating-development--autonomous-spec-to-merge-gate-pipeline-v6140)
 
 ---
 
@@ -179,3 +180,44 @@ Dogfood evidence from building it: the design spec collected **33 findings acros
 - Implementation plan: [plans/2026-07-27-multi-code-review.md](plans/2026-07-27-multi-code-review.md)
 - Review logs (dogfood evidence): [spec](specs/2026-07-27-multi-code-review-design-review-log.md), [plan](plans/2026-07-27-multi-code-review-review-log.md)
 - Release notes: [../RELEASE-NOTES.md](../RELEASE-NOTES.md) — v6.10.0
+
+---
+
+## 5. orchestrating-development — Autonomous Spec-to-Merge-Gate Pipeline (v6.14.0)
+
+### Summary
+
+- From an **approved design spec**, runs the whole development lifecycle autonomously: plan writing → N independent plan-review rounds → batched implementation → N independent whole-branch code-review rounds — **stopping only on major errors and ending before merge/PR**. The merge decision stays human.
+- One interactive **Phase 0** collects everything up front — plan/code review counts, batch task cap, branch point, and a permissions confirmation for the unattended run — then the user is never asked mid-flight; blockers become journaled `BLOCKED` stops with resume instructions, never silent guesses.
+- Four fresh-context **controller subagent templates** (plan-writer, doc-review-loop, batch-controller, code-review-loop) each drive one phase by invoking the existing skills (writing-plans, multi-doc-review, subagent-driven-development, multi-code-review); the orchestrator itself only fills template placeholders and reads compact structured returns (`PLAN_DONE` / `REVIEW_DONE` / `BATCH_DONE` / `BLOCKED` / …).
+- A **committed orchestration log** `docs/plans/<slug>-orchestration-log.md` records every phase boundary, and **resume / abandon** procedures reconstruct or tear down a run from durable artifacts alone (log, plan checkboxes, git history) — a fresh session can pick up a crashed run.
+
+### Motivation
+
+The fork's stages were each automated individually — batched SDD execution (v6.7.0), plan review loops (v6.9.0), branch review loops (v6.10.0) — but a human still had to chain them, and chaining them inside the authoring session pollutes every stage with the previous one's context. Orchestration runs each stage in a fresh controller subagent with only its template placeholders, and makes the whole chain crash-safe: position lives in the committed orchestration log and durable artifacts, so an interrupted pipeline resumes instead of restarting.
+
+### How it works
+
+- Controllers return compact structured final messages; round-by-round detail stays in the sub-skills' own logs and files — it never enters the orchestrator's context. A malformed return gets one identical retry, then the run stops.
+- Controllers dispatch their own nested workers (implementers, reviewers, fix subagents). `hooks/subagent-guard.js` records this sanctioned nesting and exempts returns opening with the `<!-- orchestration report -->` marker from skill-leakage blocking — free-text `BLOCKED` reasons may legitimately name skills.
+- A **Major-Error Stop Policy** enumerates the stop conditions (unresolved review findings, malformed returns after retry, failed phase-boundary commits, missing artifacts on resume, zero-checkbox plans); each writes a `STOPPED` entry with a one-line reason and the exact resume command.
+- The batch controller carries **mid-task crash recovery**: on retry it derives the review base from the last ledger line, falling back to the last `chore(plan): task <n> complete` commit and then the merge-base with the default branch — never its own starting HEAD — so a crashed attempt's commits can never bypass the task-review gate. A `[RESUME_ANSWER]` placeholder carries the user's answer when a `BLOCKED` run is resumed.
+- Dogfood evidence: the feature's own spec collected **35 findings across 4 review rounds**, its implementation plan **22 findings (all applied, none rejected)**, and the branch went through the v6.10.0 whole-branch loop before merging ([spec review log](specs/2026-08-04-orchestrating-development-design-review-log.md), [plan review log](plans/2026-08-04-orchestrating-development-review-log.md)).
+
+### How to use
+
+- **From brainstorming:** when a spec passes its review gate, the gate message offers orchestration as an alternative to the manual writing-plans handoff.
+- **Direct:** `orchestrate development of docs/specs/<spec>.md` — then answer the Phase 0 questions once.
+- **After a stop:** `Resume orchestration for docs/plans/<plan>.md` (supply the blocking answer if the stop was a `BLOCKED`); `Abandon orchestration for docs/plans/<plan>.md` tears the run down with confirmation.
+- **Claude Code only** — the pipeline requires the Agent tool with nested controller dispatch; it is not available on Codex or Cursor.
+
+### Where it lives
+
+`skills/orchestrating-development/` (`SKILL.md` orchestrator + `plan-writer-prompt.md`, `doc-review-loop-prompt.md`, `batch-controller-prompt.md`, `code-review-loop-prompt.md`), the marker exemption in `hooks/subagent-guard.js`, the routing entry in `hooks/skill-rules.json`, the gate line in `skills/brainstorming/SKILL.md`, tests in `tests/codex/test-subagent-guard.js` and `tests/codex/test-skill-activator.js`.
+
+### References
+
+- Design spec: [specs/2026-08-04-orchestrating-development-design.md](specs/2026-08-04-orchestrating-development-design.md)
+- Implementation plan: [plans/2026-08-04-orchestrating-development.md](plans/2026-08-04-orchestrating-development.md)
+- Review logs (dogfood evidence): [spec](specs/2026-08-04-orchestrating-development-design-review-log.md), [plan](plans/2026-08-04-orchestrating-development-review-log.md)
+- Release notes: [../RELEASE-NOTES.md](../RELEASE-NOTES.md) — v6.14.0
