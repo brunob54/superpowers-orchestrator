@@ -178,7 +178,7 @@ git commit -m "feat(guard): exempt orchestration report marker; record sanctione
 
 **Does NOT cover:** routing for phrasings that never name orchestration or a pipeline (e.g. "do everything automatically") — below the activator's confidence threshold by design; behavioral prompt files in `tests/skill-triggering/` (deferred per spec Testing Strategy).
 
-- [ ] **Step 1: Write failing rank tests**
+- [x] **Step 1: Write failing rank tests**
 
 In `tests/codex/test-skill-activator.js`, after the existing `topSkill()` rank-test section (search for `function topSkill(prompt)`; append after the last test in that section):
 
@@ -222,12 +222,12 @@ test('non-regression: "resume the plan at <path>" still routes to SDD', () => {
 });
 ```
 
-- [ ] **Step 2: Run tests to verify the new ones fail**
+- [x] **Step 2: Run tests to verify the new ones fail**
 
 Run: `node tests/codex/test-skill-activator.js`
 Expected: FAIL — the five positive ORCH tests fail (skill unknown → `null` or another skill ranks first); the bare-orchestrate and two non-regression tests already pass. No pre-existing test fails.
 
-- [ ] **Step 3: Add the rules entry**
+- [x] **Step 3: Add the rules entry**
 
 In `hooks/skill-rules.json`, append to the `rules` array (after the `multi-code-review` entry, matching existing formatting):
 
@@ -255,17 +255,17 @@ In `hooks/skill-rules.json`, append to the `rules` array (after the `multi-code-
 }
 ```
 
-- [ ] **Step 4: Run tests to verify all pass**
+- [x] **Step 4: Run tests to verify all pass**
 
 Run: `node tests/codex/test-skill-activator.js`
 Expected: PASS — 0 failed, including every pre-existing routing test.
 
-- [ ] **Step 5: Run the full unit suite (cross-hook non-regression)**
+- [x] **Step 5: Run the full unit suite (cross-hook non-regression)**
 
 Run: `bash tests/codex/run-unit-tests.sh`
 Expected: 0 failed across all suites.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add hooks/skill-rules.json tests/codex/test-skill-activator.js
