@@ -141,6 +141,38 @@ test('Full payload on stdin writes the cache and prints the status line', () => 
   assert.strictEqual(onDisk.session_id, 'sess-123');
 });
 
+test('Delegate mode caches AND relays the existing renderer output unchanged', () => {
+  const { stdout, onDisk } = withTmpHome((tmpHome) => {
+    const res = spawnSync(process.execPath, [
+      SCRIPT, '--', process.execPath, '-e',
+      'let d="";process.stdin.on("data",c=>d+=c).on("end",()=>console.log("MY-HUD "+JSON.parse(d).model.display_name))',
+    ], {
+      input: JSON.stringify(FULL_INPUT),
+      encoding: 'utf8',
+      env: { ...process.env, HOME: tmpHome, USERPROFILE: tmpHome },
+    });
+    const onDisk = JSON.parse(fs.readFileSync(cacheFileIn(tmpHome), 'utf8'));
+    return { stdout: res.stdout, onDisk };
+  });
+  assert.ok(stdout.includes('MY-HUD Opus 5'), `Delegate output relayed, got: ${stdout}`);
+  assert.ok(!stdout.includes('ctx 130K'), 'Own line must not replace the delegate output');
+  assert.strictEqual(onDisk.session_id, 'sess-123', 'Cache still written in delegate mode');
+});
+
+test('Failing delegate falls back to the bridge\'s own line', () => {
+  const { stdout } = withTmpHome((tmpHome) => {
+    const res = spawnSync(process.execPath, [
+      SCRIPT, '--', process.execPath, '-e', 'process.exit(3)',
+    ], {
+      input: JSON.stringify(FULL_INPUT),
+      encoding: 'utf8',
+      env: { ...process.env, HOME: tmpHome, USERPROFILE: tmpHome },
+    });
+    return { stdout: res.stdout };
+  });
+  assert.ok(stdout.includes('Opus 5 | ctx 130K/1000K (13%)'), `Fallback line expected, got: ${stdout}`);
+});
+
 test('Malformed stdin still prints a line and writes no cache', () => {
   const { stdout, exists } = withTmpHome((tmpHome) => {
     const res = spawnSync(process.execPath, [SCRIPT], {

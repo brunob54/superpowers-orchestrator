@@ -14,11 +14,16 @@
  *   "statusLine": { "type": "command",
  *     "command": "node <plugin-root>/hooks/statusline-context-cache.js" }
  *
+ * Already have a statusline? Delegate mode caches, then feeds the same
+ * payload to your existing renderer and relays its output unchanged:
+ *   "command": "node <plugin-root>/hooks/statusline-context-cache.js -- node ~/.claude/hud/my-hud.mjs"
+ *
  * Never throws; on any failure it still prints a line (statusline contract).
  */
 
 const fs = require('fs');
 const path = require('path');
+const { spawnSync } = require('child_process');
 
 const CACHE_FILE_NAME = 'context-window.cache.json';
 
@@ -74,7 +79,26 @@ function statusLine(input, entry) {
   return `${model} | ctx ${usedK}K/${windowK}K (${entry.used_percentage}%)`;
 }
 
+/** Argv after a `--` separator: an existing statusline command to delegate to. */
+function delegateCommand(argv) {
+  const idx = argv.indexOf('--');
+  if (idx < 0 || idx === argv.length - 1) return null;
+  return argv.slice(idx + 1);
+}
+
+/** Feed the raw payload to the delegate renderer; null when it fails. */
+function runDelegate(cmd, raw) {
+  try {
+    const res = spawnSync(cmd[0], cmd.slice(1), { input: raw, encoding: 'utf8', timeout: 5000 });
+    if (res.status === 0 && res.stdout && res.stdout.trim()) return res.stdout;
+  } catch {
+    // Fall through to our own line.
+  }
+  return null;
+}
+
 function main() {
+  const delegate = delegateCommand(process.argv.slice(2));
   let raw = '';
   process.stdin.setEncoding('utf8');
   process.stdin.on('data', (chunk) => { raw += chunk; });
@@ -87,12 +111,16 @@ function main() {
     } catch {
       // Malformed payload — keep the fallback line; never break the statusline.
     }
-    process.stdout.write(line + '\n');
+    const delegated = delegate ? runDelegate(delegate, raw) : null;
+    process.stdout.write(delegated !== null ? delegated : line + '\n');
   });
 }
 
 if (require.main === module) {
   main();
 } else {
-  module.exports = { writeCache, statusLine, totalInputTokens, cachePath, CACHE_FILE_NAME };
+  module.exports = {
+    writeCache, statusLine, totalInputTokens, cachePath,
+    delegateCommand, runDelegate, CACHE_FILE_NAME,
+  };
 }

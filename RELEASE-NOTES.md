@@ -24,6 +24,9 @@
   parsing against the 200K default otherwise. The gate's block message now
   reports the real window. Wire it in settings.json:
   `"statusLine": {"type": "command", "command": "node <plugin-cache-root>/hooks/statusline-context-cache.js"}`.
+  Already have a statusline? Append `-- <your command>` and the bridge
+  caches, then relays your renderer's output unchanged (falling back to
+  its own line if the renderer fails).
   Subagents are unaffected — the statusline is main-session scoped, so the
   session-id match keeps the cache from ever misinforming them.
 
