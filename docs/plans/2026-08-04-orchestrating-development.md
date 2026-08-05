@@ -620,7 +620,7 @@ git commit -m "feat(skill): orchestrating-development orchestrator procedure"
 
 **Does NOT cover:** plan review (Phase 2 owns it); execution handoff (the orchestrator owns sequencing — the template explicitly skips writing-plans' handoff sections).
 
-- [ ] **Step 1: Write the file with exactly this content**
+- [x] **Step 1: Write the file with exactly this content**
 
 ````markdown
 # Plan-Writer Controller Prompt Template
@@ -689,12 +689,12 @@ design rationale.
 or `BLOCKED: <question>`.
 ````
 
-- [ ] **Step 2: Verify**
+- [x] **Step 2: Verify**
 
 Run: `grep -c "orchestration report\|PLAN_READY\|BLOCKED" skills/orchestrating-development/plan-writer-prompt.md`
 Expected: >= 5 total matching lines.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add skills/orchestrating-development/plan-writer-prompt.md
