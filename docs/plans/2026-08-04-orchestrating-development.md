@@ -965,7 +965,7 @@ git commit -m "feat(skill): batch-controller template with mid-task crash recove
 
 **Does NOT cover:** interactive resolution of user-decision findings (the orchestrator stops instead — batched-autonomous behavior); N=0 (never dispatched).
 
-- [ ] **Step 1: Write the file with exactly this content**
+- [x] **Step 1: Write the file with exactly this content**
 
 ````markdown
 # Code-Review-Loop Controller Prompt Template
@@ -1060,12 +1060,12 @@ outcome=<converged|cap> fixes=<n> unresolved=<n> user_decision=<n>` or
 `BLOCKED: <reason>`.
 ````
 
-- [ ] **Step 2: Verify**
+- [x] **Step 2: Verify**
 
 Run: `grep -c "REVIEW_DONE\|orchestration artifact\|ledger absent\|user_decision" skills/orchestrating-development/code-review-loop-prompt.md`
 Expected: >= 5 matching lines.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add skills/orchestrating-development/code-review-loop-prompt.md
