@@ -712,7 +712,7 @@ git commit -m "feat(skill): plan-writer controller template"
 
 **Does NOT cover:** spec reviews (only the plan is reviewed here); N=0 (the orchestrator never dispatches this controller then).
 
-- [ ] **Step 1: Write the file with exactly this content**
+- [x] **Step 1: Write the file with exactly this content**
 
 ````markdown
 # Doc-Review-Loop Controller Prompt Template
@@ -802,12 +802,12 @@ Agent tool (general-purpose):
 `BLOCKED: <reason>`.
 ````
 
-- [ ] **Step 2: Verify**
+- [x] **Step 2: Verify**
 
 Run: `grep -c "REVIEW_DONE\|gate: orchestration\|Loop complete" skills/orchestrating-development/doc-review-loop-prompt.md`
 Expected: >= 4 matching lines.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add skills/orchestrating-development/doc-review-loop-prompt.md
