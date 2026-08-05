@@ -172,6 +172,27 @@
       "priority": "high",
       "keywords": ["multi code review", "multi-code-review", "independent code reviews", "several code reviews", "code review rounds", "whole-branch review", "final review rounds"],
       "intentPatterns": ["review\\s+(the\\s+|this\\s+|my\\s+)?branch\\s+(again|\\d+\\s+times)", "(several|multiple|\\d+)\\s+(independent\\s+)?(final\\s+|whole.?branch\\s+)?code\\s+reviews", "(run|do|perform)\\s+(\\d+|several|multiple)\\s+(code\\s+)?review\\s+rounds?\\s+on\\s+(the\\s+|this\\s+|my\\s+)?(branch|code|diff|changes)"]
+    },
+    {
+      "skill": "orchestrating-development",
+      "type": "workflow",
+      "priority": "high",
+      "keywords": [
+        "orchestrate",
+        "orchestration",
+        "orchestrator",
+        "whole pipeline",
+        "full pipeline",
+        "resume orchestration",
+        "abandon orchestration"
+      ],
+      "intentPatterns": [
+        "orchestrate\\s+(the\\s+)?(development|implementation|pipeline)",
+        "orchestrate\\b[\\s\\S]{0,80}?docs[\\/]specs[\\/]",
+        "\\borchestrate\\s+(it|this)\\b",
+        "(resume|abandon)\\s+orchestration",
+        "(run|execute|start)\\s+the\\s+(whole|full|entire)\\s+pipeline"
+      ]
     }
   ]
 }

@@ -5,6 +5,9 @@
  * Detects when subagents invoke superpowers-optimized skills or spawn
  * recursive sub-subagents. When detected, blocks the subagent from
  * stopping and instructs it to redo its work without skill invocations.
+ * Exception: orchestrating-development dispatches controller subagents that
+ * intentionally spawn nested workers — that is sanctioned design, not leakage;
+ * controller returns are exempted via the orchestration report marker below.
  *
  * This is the "locked door" layer of defense — prompt-based instructions
  * ("do NOT invoke skills") are the first layer; this hook catches violations
@@ -56,6 +59,13 @@ const SKILL_NAMES = [
 // start of the message does not count.
 const REVIEW_REPORT_MARKER = '<!-- multi-review report -->';
 
+// Orchestrating-development controller subagents return status contracts whose
+// free text (e.g. a BLOCKED reason quoting a plan conflict) may legitimately
+// pair action verbs with skill names. A genuine controller return opens with
+// this exact marker (the skill's prompt templates make it the mandatory first
+// line); anything after the start of the message does not count.
+const ORCHESTRATION_REPORT_MARKER = '<!-- orchestration report -->';
+
 const ACTION_VERB = '(?:invoking?|using|use|running?|called?|calling|activat(?:e|ed|ing)|trigger(?:ing|ed)?|execut(?:e|ed|ing)|launch(?:ing|ed)?|spawn(?:ing|ed)?|start(?:ing|ed)?)\\s+(?:the\\s+)?';
 
 const VIOLATION_PATTERNS = [
@@ -98,7 +108,11 @@ function main() {
       const agentId = data.agent_id || 'unknown';
       const agentType = data.agent_type || 'unknown';
 
-      if (lastMessage.trimStart().startsWith(REVIEW_REPORT_MARKER)) {
+      const trimmedMessage = lastMessage.trimStart();
+      if (
+        trimmedMessage.startsWith(REVIEW_REPORT_MARKER) ||
+        trimmedMessage.startsWith(ORCHESTRATION_REPORT_MARKER)
+      ) {
         process.stdout.write('{}');
         return;
       }
