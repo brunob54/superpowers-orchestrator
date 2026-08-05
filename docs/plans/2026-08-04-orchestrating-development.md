@@ -1118,7 +1118,7 @@ git commit -m "docs(brainstorming): offer orchestration at the spec review gate"
 
 **Security flag:** `none`
 
-- [ ] **Step 1: Bump every version field**
+- [x] **Step 1: Bump every version field**
 
 - `VERSION`: `6.14.0`
 - `.claude-plugin/plugin.json` line 4: `"version": "6.14.0",`
@@ -1139,7 +1139,7 @@ git commit -m "docs(brainstorming): offer orchestration at the spec review gate"
     alongside the other execution-workflow skills:
     `- **orchestrating-development** — autonomous spec→plan→review→implement→review pipeline; fresh controller subagent per phase/batch; stops only on major errors, ends before merge/PR`
 
-- [ ] **Step 2: Add the release-notes entry**
+- [x] **Step 2: Add the release-notes entry**
 
 At the top of `RELEASE-NOTES.md`, after the `# Superpowers Optimized Release Notes` heading, insert:
 
@@ -1166,7 +1166,7 @@ At the top of `RELEASE-NOTES.md`, after the `# Superpowers Optimized Release Not
   workflows are unchanged.
 ```
 
-- [ ] **Step 3: Verify**
+- [x] **Step 3: Verify**
 
 Run:
 ```bash
@@ -1182,7 +1182,7 @@ grep -c "## v6\.14\.0" RELEASE-NOTES.md                                       # 
 (README's remaining `v6.13.0` hit — the historical "fresh-session plan
 handoff (v6.13.0)" sentence — is correct and stays.)
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add VERSION .claude-plugin/plugin.json .claude-plugin/marketplace.json plugin.universal.yaml README.md RELEASE-NOTES.md
