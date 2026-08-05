@@ -1032,6 +1032,44 @@ test('"resume the implementation talk after lunch" does NOT trigger SDD', () => 
   assert.strictEqual(matchesSdd('resume the implementation talk after lunch'), false);
 });
 
+// ── orchestrating-development routing ────────────────────────────────────────
+
+const ORCH = 'orchestrating-development';
+
+test('"orchestrate the development of <spec>" ranks orchestrating-development first', () => {
+  assert.strictEqual(
+    topSkill('orchestrate the development of docs/specs/2026-08-04-foo-design.md'), ORCH);
+});
+
+test('"run the whole pipeline autonomously from the spec" routes to orchestrating-development', () => {
+  assert.strictEqual(topSkill('run the whole pipeline autonomously from the spec'), ORCH);
+});
+
+test('"Resume orchestration for <plan>" routes to orchestrating-development, not SDD', () => {
+  assert.strictEqual(topSkill('Resume orchestration for docs/plans/2026-08-04-foo.md'), ORCH);
+});
+
+test('"Abandon orchestration for <plan>" routes to orchestrating-development', () => {
+  assert.strictEqual(topSkill('Abandon orchestration for docs/plans/2026-08-04-foo.md'), ORCH);
+});
+
+test('"orchestrate it" (the brainstorming-gate reply phrase) routes to orchestrating-development', () => {
+  assert.strictEqual(topSkill('orchestrate it'), ORCH);
+});
+
+test('bare "orchestrate" scores below threshold and routes nowhere', () => {
+  assert.strictEqual(topSkill('orchestrate'), null);
+});
+
+test('non-regression: "execute the plan in batches" still ranks SDD first', () => {
+  assert.strictEqual(topSkill('execute the plan in batches'), SDD);
+});
+
+test('non-regression: "resume the plan at <path>" still routes to SDD', () => {
+  assert.strictEqual(
+    topSkill('Resume the plan at docs/plans/2026-08-04-foo.md (batched autonomous mode)'), SDD);
+});
+
 // ── Debug-prompt routing (Codex post-push checklist canonical prompt) ─────────
 
 console.log('\nDebug-prompt routing');
