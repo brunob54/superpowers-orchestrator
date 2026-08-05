@@ -3,7 +3,7 @@
 [![AI Coding Agents](https://img.shields.io/badge/USE_WITH-Claude_Code_%7C_Codex_%7C_OpenCode_%7C_Gemini_CLI_%7C_Antigravity-white?style=for-the-badge)]()
 
 [![GitHub stars](https://img.shields.io/github/stars/brunob54/superpowers-optimized?style=for-the-badge&color=white)](https://github.com/brunob54/superpowers-optimized/stargazers)
-[![Version](https://img.shields.io/badge/version-6.15.0-white?style=for-the-badge)](RELEASE-NOTES.md)
+[![Version](https://img.shields.io/badge/version-6.15.1-white?style=for-the-badge)](RELEASE-NOTES.md)
 [![License: MIT](https://img.shields.io/badge/License-MIT-white?style=for-the-badge)](LICENSE)
 [![Install](https://img.shields.io/badge/install-now-white?style=for-the-badge&logo=claude)](https://github.com/brunob54/superpowers-optimized#installation)
 
@@ -18,7 +18,7 @@
 Built on the trusted obra/superpowers workflow and refined through research into LLM agent behavior, it adds automatic 3-tier workflow routing, proactive safety hooks, self-consistency verification at critical decision points, cross-session memory, and adversarial red-teaming — everything the original does, plus the discipline layer it was missing.
 
 > [!NOTE]
-> **Lineage & status:** this repository builds on two origins — the original [obra/superpowers](https://github.com/obra/superpowers) by Jesse Vincent and its optimized fork [REPOZY/superpowers-optimized](https://github.com/REPOZY/superpowers-optimized) (baseline v6.6.1). Full credit to both. This fork's own additions (v6.7.0–v6.15.0) are **under testing and evaluation** — see [What this fork adds](#what-this-fork-adds).
+> **Lineage & status:** this repository builds on two origins — the original [obra/superpowers](https://github.com/obra/superpowers) by Jesse Vincent and its optimized fork [REPOZY/superpowers-optimized](https://github.com/REPOZY/superpowers-optimized) (baseline v6.6.1). Full credit to both. This fork's own additions (v6.7.0–v6.15.1) are **under testing and evaluation** — see [What this fork adds](#what-this-fork-adds).
 
 ### What this fork adds
 
@@ -425,7 +425,7 @@ This is the full cross-platform hook inventory for the plugin. Claude Code gets 
 
 - **context-engine** (SessionStart) — Runs git commands on every session start and writes `context-snapshot.json`: changed files, blast radius (which other files reference each changed file, filtered to actual import/require references), recent commits, and change stats. Uses per-project watermarks (md5 of cwd) so multiple projects don't interfere, and cross-session diff base so "what changed" reflects changes since your last session, not just the last commit. Zero dependencies. Silent no-op on non-git projects
 - **session-start** (SessionStart) — Injects using-superpowers routing into every session; injects `project-map.md` content directly if it exists (full content ≤200 lines, Critical Constraints + Hot Files only above that); checks for available plugin update
-- **skill-activator** (UserPromptSubmit) — Context pressure gate: blocks plan-execution triggers when context ≥60% of the model window (fires compact-first instruction instead of skill hints). Window size comes from the opt-in statusline bridge (`hooks/statusline-context-cache.js`, true 200K/1M size) when configured, else from session-JSONL parsing against a 200K default. Also: micro-task detection + confidence-threshold skill matching + weighted memory recall from session-log.md and known-issues.md (70% keyword density + 30% recency scoring)
+- **skill-activator** (UserPromptSubmit) — Context pressure gate: blocks plan-execution triggers when context ≥60% of the model window (fires compact-first instruction instead of skill hints; threshold overridable via `SUPERPOWERS_PRESSURE_THRESHOLD`). Window size comes from the opt-in statusline bridge (`hooks/statusline-context-cache.js`, true 200K/1M size, installed to a stable path by `tools/install-statusline-bridge.sh`) when configured, else from session-JSONL parsing against a 200K default. Also: micro-task detection + confidence-threshold skill matching + weighted memory recall from session-log.md and known-issues.md (70% keyword density + 30% recency scoring)
 - **track-edits** (PostToolUse: Edit/Write) — Logs file changes for TDD reminders; auto-adds AI workspace artifacts (`project-map.md`, `session-log.md`, `state.md`) to `.gitignore` on first write
 - **track-session-stats** (PostToolUse: Skill) — Tracks skill invocations for progress visibility
 - **stop-reminders** (Stop) — Surfaces TDD reminders, commit nudges, and session summary after each response turn

@@ -1,5 +1,20 @@
 # Superpowers Optimized Release Notes
 
+## v6.15.1 — statusline bridge installer + configurable gate threshold
+
+- New `tools/install-statusline-bridge.sh` copies the statusline bridge to
+  the version-independent `~/.claude/statusline/` and prints the
+  settings.json snippet to wire it — pointing settings at the plugin cache
+  path would break on every release, since that path embeds the version.
+  Detects an existing `statusLine` and prints the delegate-mode variant
+  instead, so a configured HUD keeps rendering. Re-run after plugin
+  updates to refresh the installed copy.
+- `SUPERPOWERS_PRESSURE_THRESHOLD` env var (a percentage, valid 10–90,
+  default 60) overrides the start gate's block threshold on both the
+  statusline-cache and transcript paths; the gate's STOP message reports
+  the active value. Set it in settings.json's `env` block so it survives
+  plugin updates. Invalid or out-of-range values fall back to 60.
+
 ## v6.15.0 — batched mode: fixed task cap replaces the measured batch boundary
 
 - **subagent-driven-development** Batched Autonomous Mode now ends batches
