@@ -148,8 +148,8 @@ Loop until every task is complete:
    committed each checkbox tick per-task); rewrite `state.md`. `BLOCKED`
    → major error → stop.
 
-Cap sizing: nothing but the cap bounds a controller's context (SDD's 60%
-pressure check belongs to the batch loop you replaced) — that is why
+Cap sizing: nothing but the cap bounds a controller's context (SDD's own
+batch cap belongs to the batch loop you replaced) — that is why
 Phase 0 caps it at 5. On a controller death, previously completed tasks
 are checkbox-ticked and ledger-recorded, so the retried controller
 (idempotent `sdd-workspace`, same plan) skips them; the template's

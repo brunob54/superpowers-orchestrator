@@ -1,5 +1,21 @@
 # Superpowers Optimized Release Notes
 
+## v6.15.0 — batched mode: fixed task cap replaces the measured batch boundary
+
+- **subagent-driven-development** Batched Autonomous Mode now ends batches
+  at a fixed task cap — the user's explicit count, otherwise 3 — instead of
+  the in-batch 60% context-pressure measurement. Batches are expected to
+  start in fresh sessions (the writing-plans handoff and resume flow both
+  route through `/clear`), which made the measurement redundant; its
+  hardcoded 200K window also overstated pressure ~5× on 1M-context models,
+  ending batches at ~13% real occupancy.
+- The 60% **start gate** on prompt submission is unchanged — it still
+  catches implementation started mid-session with arbitrary existing
+  context. The `--pressure` CLI remains as a manual inspection tool.
+- orchestrating-development's cap-sizing note updated to match; the
+  batched-mode behavioral test asserts the cap boundary instead of the
+  pressure boundary; README and FORK-IMPROVEMENTS updated.
+
 ## v6.14.0 — orchestrating-development: autonomous spec→merge-gate pipeline
 
 - New skill **orchestrating-development**: from an approved spec, runs

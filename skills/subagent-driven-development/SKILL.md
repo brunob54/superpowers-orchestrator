@@ -4,7 +4,7 @@ description: >
   Executes plans using parallel subagents with per-task implementation
   and staged review gates. Invoke for parallel plan execution in the
   current session. Also provides Batched Autonomous Mode: implement up
-  to N tasks per session with a context-pressure batch boundary, write
+  to N tasks per session with a fixed task-cap batch boundary, write
   a handoff into state.md, and resume after /clear. Triggers on:
   "implement the next N tasks", "execute the plan in batches",
   "resume the plan". Routed by writing-plans handoff or
@@ -173,16 +173,12 @@ the user. Announce: `I'm using subagent-driven-development (batched autonomous m
    This mode executes tasks sequentially — the Parallel Waves default does NOT
    apply inside a batch, because the boundary must be evaluated after every task.
 3. After each task, end the batch when ANY of the following holds:
-   - **Context pressure ≥ 60% (primary boundary).** Run
-     `node "<plugin-root>/hooks/skill-activator.js" --pressure "$(pwd)"`
-     and stop when the JSON output has `"overThreshold": true`.
-     `<plugin-root>` is this skill's plugin installation root — derive it from
-     the skill's base directory (two levels up from this SKILL.md's folder), or
-     use `$CLAUDE_PLUGIN_ROOT` when that variable is set.
-     **Fallback:** if the command errors or prints `{"error":"unmeasurable"}`,
-     cap this batch at 3 tasks total. Never let a failed measurement extend a batch.
-   - **The user's explicit task count X is reached.** X is a cap, not a target —
-     pressure can end the batch earlier.
+   - **The task cap is reached (primary boundary).** The cap is the user's
+     explicit task count X when one was given, otherwise **3 tasks**. X is a
+     cap, not a target — the boundaries below can end the batch earlier.
+     (Batches are expected to start in a fresh session — the writing-plans
+     handoff and the Resume Instructions both route through /clear; the 60%
+     context gate on prompt submission catches mid-session starts.)
    - **The plan is complete.**
    - **A blocker occurred** (see Autonomy Policy below).
 
