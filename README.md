@@ -3,7 +3,7 @@
 [![AI Coding Agents](https://img.shields.io/badge/USE_WITH-Claude_Code_%7C_Codex_%7C_OpenCode_%7C_Gemini_CLI_%7C_Antigravity-white?style=for-the-badge)]()
 
 [![GitHub stars](https://img.shields.io/github/stars/brunob54/superpowers-optimized?style=for-the-badge&color=white)](https://github.com/brunob54/superpowers-optimized/stargazers)
-[![Version](https://img.shields.io/badge/version-6.13.0-white?style=for-the-badge)](RELEASE-NOTES.md)
+[![Version](https://img.shields.io/badge/version-6.14.0-white?style=for-the-badge)](RELEASE-NOTES.md)
 [![License: MIT](https://img.shields.io/badge/License-MIT-white?style=for-the-badge)](LICENSE)
 [![Install](https://img.shields.io/badge/install-now-white?style=for-the-badge&logo=claude)](https://github.com/brunob54/superpowers-optimized#installation)
 
@@ -18,7 +18,7 @@
 Built on the trusted obra/superpowers workflow and refined through research into LLM agent behavior, it adds automatic 3-tier workflow routing, proactive safety hooks, self-consistency verification at critical decision points, cross-session memory, and adversarial red-teaming — everything the original does, plus the discipline layer it was missing.
 
 > [!NOTE]
-> **Lineage & status:** this repository builds on two origins — the original [obra/superpowers](https://github.com/obra/superpowers) by Jesse Vincent and its optimized fork [REPOZY/superpowers-optimized](https://github.com/REPOZY/superpowers-optimized) (baseline v6.6.1). Full credit to both. This fork's own additions (v6.7.0–v6.13.0) are **under testing and evaluation** — see [What this fork adds](#what-this-fork-adds).
+> **Lineage & status:** this repository builds on two origins — the original [obra/superpowers](https://github.com/obra/superpowers) by Jesse Vincent and its optimized fork [REPOZY/superpowers-optimized](https://github.com/REPOZY/superpowers-optimized) (baseline v6.6.1). Full credit to both. This fork's own additions (v6.7.0–v6.14.0) are **under testing and evaluation** — see [What this fork adds](#what-this-fork-adds).
 
 ### What this fork adds
 
@@ -65,7 +65,7 @@ See [Installation](#installation) for install, update, and uninstall commands on
 ---
 
 > [!IMPORTANT]
-> **Compatibility Note:** This plugin includes a comprehensive workflow router and 25 specialized skills covering debugging, planning, code review, TDD, execution, and more.
+> **Compatibility Note:** This plugin includes a comprehensive workflow router and 26 specialized skills covering debugging, planning, code review, TDD, execution, and more.
 >
 > Other plugins or custom skills/agents in your `.claude/skills/` and `.claude/agents/` folders may interfere if they cover overlapping domains. Duplicate or competing skills can cause trigger conflicts, contradictory instructions, and unnecessary **context bloat/rot**, which will degrade the model's performance.
 >
@@ -265,12 +265,12 @@ Generate once with "map this project". After that, the session-start hook inject
 _Generated: 2026-03-20 14:32 | Git: a4b9c2d_
 
 ## Directory Structure
-skills/ — 26 skills, each in skills/<name>/SKILL.md
+skills/ — 27 skills, each in skills/<name>/SKILL.md
 hooks/ — 10 hooks (JS) + hooks.json registry + skill-rules.json
 
 ## Key Files
 hooks/skill-activator.js — UserPromptSubmit: context pressure gate (blocks plan execution at ≥60% context, reads session JSONL); skill hints via skill-rules.json; memory recall from session-log.md + known-issues.md. Micro-task detection skips all enrichment.
-hooks/skill-rules.json — 24 rules covering 23 skills (context-management has two: map-project and save-state): skill name, keywords, intentPatterns, priority.
+hooks/skill-rules.json — 25 rules covering 24 skills (context-management has two: map-project and save-state): skill name, keywords, intentPatterns, priority.
 
 ## Critical Constraints
 - hooks.json uses \" not ' around ${CLAUDE_PLUGIN_ROOT} (single quotes break Linux)
@@ -375,7 +375,7 @@ With this stack, sessions start with full context and zero re-discovery overhead
 ---
 
 
-## Skills Library (26 skills)
+## Skills Library (27 skills)
 
 ### Core Workflow
 - **using-superpowers** — Mandatory workflow router with 3-tier complexity classification (micro/lightweight/full) and instruction priority hierarchy
@@ -393,6 +393,7 @@ With this stack, sessions start with full context and zero re-discovery overhead
 ### Execution
 - **executing-plans** — Batch execution with verification checkpoints and engineering rigor for complex tasks
 - **subagent-driven-development** — Parallel subagent execution with two-stage review gates (spec compliance, then code quality), blocked-task escalation, E2E process hygiene, context isolation, and skill leakage prevention
+- **orchestrating-development** — autonomous spec→plan→review→implement→review pipeline; fresh controller subagent per phase/batch; stops only on major errors, ends before merge/PR
 - **dispatching-parallel-agents** — Concurrent subagent workflows for independent tasks
 - **using-git-worktrees** — Isolated workspace creation on feature branches
 

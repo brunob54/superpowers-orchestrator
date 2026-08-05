@@ -1,5 +1,26 @@
 # Superpowers Optimized Release Notes
 
+## v6.14.0 — orchestrating-development: autonomous spec→merge-gate pipeline
+
+- New skill **orchestrating-development**: from an approved spec, runs
+  plan writing, N plan-review rounds, batched implementation (fresh
+  controller subagent per ≤cap tasks, nested implementer/reviewer
+  workers), and N code-review rounds fully autonomously — stopping only
+  on major errors, ending before merge/PR. One interactive Phase 0
+  (review counts, batch cap, branch-point + permission confirmations);
+  committed orchestration log `docs/plans/…-orchestration-log.md`;
+  resume and abandon procedures.
+- `hooks/subagent-guard.js`: new `<!-- orchestration report -->` exempt
+  marker for controller returns (free-text BLOCKED reasons may name
+  skills); header now records that controller nested dispatch is
+  sanctioned. Unit-tested in `tests/codex/test-subagent-guard.js`.
+- `hooks/skill-rules.json`: routing entry for orchestrate / resume
+  orchestration / abandon orchestration phrasings, rank-tested in
+  `tests/codex/test-skill-activator.js`.
+- `brainstorming` spec-review gate message now offers orchestration as
+  an alternative to the manual writing-plans handoff. Existing manual
+  workflows are unchanged.
+
 ## v6.13.0 — plan handoff starts a fresh session; batch phrasing routes correctly
 
 - `writing-plans` now recommends starting execution in a **fresh session**
