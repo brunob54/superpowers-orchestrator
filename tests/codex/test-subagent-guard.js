@@ -313,6 +313,39 @@ test('Marker-prefixed code-review report quoting skill names is exempt', () => {
   assert.deepStrictEqual(out, {});
 });
 
+// ── Orchestration report marker ──────────────────────────────────────────────
+
+console.log('\nOrchestration report marker');
+
+test('orchestration-marked BLOCKED return naming a skill is allowed', () => {
+  const out = runGuard([
+    '<!-- orchestration report -->',
+    'BLOCKED task=3: plan says use executing-plans semantics but the spec forbids it — which governs?',
+  ].join('\n'));
+  assert.deepStrictEqual(out, {});
+});
+
+test('same skill-naming BLOCKED text without the marker is blocked', () => {
+  const out = runGuard(
+    'BLOCKED task=3: plan says use executing-plans semantics but the spec forbids it — which governs?'
+  );
+  assert.strictEqual(out.decision, 'block');
+});
+
+test('orchestration marker after the first line does not exempt', () => {
+  const out = runGuard('I was using executing-plans.\n<!-- orchestration report -->');
+  assert.strictEqual(out.decision, 'block');
+});
+
+test('leading whitespace before the orchestration marker still exempts', () => {
+  // Body must contain a verb+skill pair so this fails on the unmodified
+  // guard — a benign body would pass vacuously.
+  const out = runGuard(
+    '  <!-- orchestration report -->\nBLOCKED task=3: plan says use executing-plans semantics'
+  );
+  assert.deepStrictEqual(out, {});
+});
+
 // ── Summary ──────────────────────────────────────────────────────────────────
 
 console.log(`\n${'─'.repeat(50)}`);
