@@ -825,7 +825,7 @@ git commit -m "feat(skill): doc-review-loop controller template"
 
 **Does NOT cover:** parallel waves (batches are sequential by design decision); the final whole-branch review (Phase 4 owns it); shutdown of named resident teammates (controllers spawn only task-scoped workers).
 
-- [ ] **Step 1: Write the file with exactly this content**
+- [x] **Step 1: Write the file with exactly this content**
 
 ````markdown
 # Batch-Controller Prompt Template
@@ -942,12 +942,12 @@ Agent tool (general-purpose):
 plus per-task lines, or `BLOCKED task=<n>: <reason>`.
 ````
 
-- [ ] **Step 2: Verify**
+- [x] **Step 2: Verify**
 
 Run: `grep -c "BATCH_COMPLETE\|REVIEW_BASE\|Pre-Flight\|focused subagent" skills/orchestrating-development/batch-controller-prompt.md`
 Expected: >= 6 matching lines.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add skills/orchestrating-development/batch-controller-prompt.md
