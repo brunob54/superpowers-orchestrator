@@ -1198,7 +1198,7 @@ git commit -m "v6.14.0 - orchestrating-development autonomous pipeline"
 
 **Security flag:** `none`
 
-- [ ] **Step 1: Run both fast suites**
+- [x] **Step 1: Run both fast suites**
 
 Run: `bash tests/codex/run-unit-tests.sh`
 Expected: 0 failed across all suites.
@@ -1206,7 +1206,7 @@ Expected: 0 failed across all suites.
 Run: `bash tests/smart-compress/run-tests.sh`
 Expected: 0 failed (the suite self-seeds `.sp-test-probe.tmp`; a pristine tree is fine).
 
-- [ ] **Step 1b: Guard cross-platform smoke (explicit checks)**
+- [x] **Step 1b: Guard cross-platform smoke (explicit checks)**
 
 The guard is shared across platforms and Task 1 changed its behavior. The
 Codex checklist has no SubagentStop parity (its SubagentStop item set is
@@ -1226,7 +1226,7 @@ Record the outcome — `guard smoke: PASS` or `guard smoke: PARTIAL —
 (subagent-driven execution), or under `state.md`'s `## Evidence` section
 when executing inline via executing-plans (which has no report files).
 
-- [ ] **Step 2: Template/SKILL.md cross-check (manual lint)**
+- [x] **Step 2: Template/SKILL.md cross-check (manual lint)**
 
 Verify, by grep, that every placeholder named in each template's
 **Placeholders:** list appears in its prompt block, and that the return
@@ -1244,7 +1244,7 @@ grep -o "PLAN_READY\|REVIEW_DONE\|BATCH_COMPLETE\|BLOCKED" skills/orchestrating-
 Expected: each template's bracket set matches its Placeholders list;
 SKILL.md contains all four tokens.
 
-- [ ] **Step 3: Sync the dev install**
+- [x] **Step 3: Sync the dev install**
 
 Run: `bash tools/sync-dev-install.sh`
 Expected: completes without error (mirrors the repo into the registry's
@@ -1255,7 +1255,7 @@ the script prints: `ls <printed-installPath>/skills | grep orchestrating`
 Note: live sessions only see the new skill after this sync (editing the
 repo does NOT change live behavior — CLAUDE.md constraint).
 
-- [ ] **Step 4: Commit (only if anything changed)**
+- [x] **Step 4: Commit (only if anything changed)**
 
 ```bash
 git status --porcelain
