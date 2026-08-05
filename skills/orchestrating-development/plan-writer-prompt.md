@@ -35,6 +35,10 @@ Agent tool (general-purpose):
     Plan output path (exact, already reserved): [PLAN_PATH]
     The plan header's **Spec:** line must name [SPEC_PATH].
 
+    ## Resume Answer (omit this whole section on a first dispatch)
+
+    [RESUME_ANSWER]
+
     ## Return (final message, 15 lines max)
 
     First line exactly:
@@ -56,6 +60,11 @@ Agent tool (general-purpose):
 - `[SPEC_PATH]` — REQUIRED: absolute path of the approved spec
 - `[PLAN_PATH]` — REQUIRED: absolute output path
   `docs/plans/YYYY-MM-DD-<slug>.md` computed by the orchestrator
+- `[RESUME_ANSWER]` — OPTIONAL: omitted, together with its `## Resume
+  Answer` heading, on a first dispatch; filled only when re-dispatching
+  after a `BLOCKED` stop, with the user's answer to the question that
+  could not be derived. Authoritative — the controller uses it instead of
+  deriving that answer again
 
 **Nothing else may be added to the prompt.** No conversation history, no
 design rationale.

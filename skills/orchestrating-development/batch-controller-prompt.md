@@ -45,6 +45,10 @@ Agent tool (general-purpose):
     Review" over the whole plan before task 1; any conflict → return
     BLOCKED for that conflict — never best-guess it)
 
+    ## Resume Answer (omit this whole section on a first dispatch)
+
+    [RESUME_ANSWER]
+
     ## Deviations (binding)
 
     1. Never ask the user. NEEDS_CONTEXT: answer from plan, spec, and
@@ -65,14 +69,20 @@ Agent tool (general-purpose):
        reads plan bodies and cannot supply it).
     4. Mid-task crash recovery: for each assigned task that is unchecked
        when you start, set REVIEW_BASE = the HEAD recorded by the last
-       ledger line (or your starting HEAD if none) and check
-       `git log REVIEW_BASE..HEAD` for existing commits touching it. If
-       any exist, dispatch the implementer with an explicit partial-work
-       note (verify existing behavior and tests rather than expecting a
-       fresh TDD fail step) and build that task's review package from
-       REVIEW_BASE — orphan commits are reviewed with the completion.
-       Never apply SDD's crash shortcut ("commits present → mark
-       complete"): it skips the review gate.
+       completed ledger line; with no ledger line, the most recent
+       `chore(plan): task <n> complete` commit on the branch (find it
+       with `git log`); with neither, the branch's merge-base with the
+       default branch. Never fall back to your own starting HEAD — on a
+       retried controller it already contains the crashed attempt's
+       commits, so `git log REVIEW_BASE..HEAD` comes back empty and
+       those orphans silently bypass the task-review gate. Then check
+       `git log REVIEW_BASE..HEAD` for existing commits touching the
+       task. If any exist, dispatch the implementer with an explicit
+       partial-work note (verify existing behavior and tests rather than
+       expecting a fresh TDD fail step) and build that task's review
+       package from REVIEW_BASE — orphan commits are reviewed with the
+       completion. Never apply SDD's crash shortcut ("commits present →
+       mark complete"): it skips the review gate.
     5. A task with **Security flag:** `security` gets the
        pre-implementation security review SDD mandates before its
        implementer is dispatched.
@@ -101,6 +111,11 @@ Agent tool (general-purpose):
 - `[TASK_RANGE]` — REQUIRED: `<first>..<last>` of TASK_LIST
 - `[PLAN_PATH]` — REQUIRED: absolute plan path
 - `[FIRST_BATCH]` — REQUIRED: `yes` or `no`
+- `[RESUME_ANSWER]` — OPTIONAL: omitted, together with its `## Resume
+  Answer` heading, on a first dispatch; filled only when re-dispatching
+  after a `BLOCKED task=<n>` stop, with the user's answer to that task's
+  blocking question. Authoritative — the controller uses it instead of
+  re-deriving that answer
 - `[SDD_SKILL_PATH]` / `[SDD_SCRIPTS_DIR]` / `[IMPLEMENTER_PROMPT_PATH]` /
   `[TASK_REVIEWER_PROMPT_PATH]` — REQUIRED: absolute paths under
   `../subagent-driven-development/` resolved from this skill's base

@@ -215,7 +215,8 @@ Resume: Resume orchestration for docs/plans/<plan>.md
 
 (For a Phase 1 stop the plan may not exist: the Resume line names the
 spec path instead, and resume re-dispatches the plan-writer with the
-answer the resume prompt must supply.) Skipped loops write the
+answer the resume prompt must supply, carried in the template's
+`[RESUME_ANSWER]` placeholder.) Skipped loops write the
 `skipped (N_x=0)` line shapes from Phase 0. Round-by-round detail lives
 in the sub-skills' own logs — never duplicate it here. Commit the log at
 every boundary: Phase 0, after Phases 1–2, after each batch, after
@@ -245,10 +246,17 @@ Trigger: `Resume orchestration for <plan-or-spec path>`.
    `docs/plans/*-<slug>-orchestration-log.md` (its date prefix is the
    run's start date, not today's) — authoritative for parameters and last
    completed phase; `state.md` (narrative, may be one step stale); the
-   plan's checkboxes (if it exists); recent `git log`.
+   plan's checkboxes (if it exists); recent `git log`. A required
+   artifact missing — no log matches the glob, or the log records a
+   completed Phase 1 but the plan it names is gone — is a major error:
+   stop, report what is missing, and suggest starting a fresh
+   orchestration; never reconstruct it.
 2. Log ends with `_Completed_` → report that and stop.
 3. Log ends with `## STOPPED` carrying a blocking question the resume
-   prompt does not answer → present the question and stop.
+   prompt does not answer → present the question and stop. When the
+   resume prompt does answer it, re-dispatch the stopped phase's
+   controller with that answer in the template's `[RESUME_ANSWER]`
+   placeholder — the only channel for it.
 4. Otherwise continue at the first incomplete phase/batch. Your own log's
    phase entries are the primary re-run guard; the sub-skills' logs are
    the backstop.
@@ -278,8 +286,13 @@ resume prompt. Stop on: plan-writer BLOCKED; doc-review unresolved > 0 or
 loop failure; pre-flight plan conflict; batch-controller BLOCKED;
 checkbox cross-check mismatch; code-review unresolved or user-decision
 items; any controller malformed/failed twice; branch changed under you or
-unexpected dirty tree at a boundary. Everything else is handled inside
-the controllers by the consumed skills' own rules.
+unexpected dirty tree at a boundary; a `### Task N` heading with zero
+checkboxes (malformed plan, Phase 3 step 1); a log or plan commit that
+fails at a phase boundary (report the git output verbatim); resume
+finding a required artifact missing (orchestration log deleted, plan
+moved) — report it and suggest starting a fresh orchestration rather
+than reconstructing state. Remaining failure modes surface inside the
+controllers and are handled there by the consumed skills' own rules.
 
 ## Guard Interaction
 

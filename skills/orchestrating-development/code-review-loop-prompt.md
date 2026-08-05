@@ -55,7 +55,12 @@ Agent tool (general-purpose):
        checkbox ticks, or a `*-review-log.md` sidecar — whether the
        finding is about its presence, modification, or content, is
        rejected as `rejected: orchestration artifact (documented)`. Never
-       dispatch a fix subagent against these files.
+       dispatch a fix subagent against these files. EXCEPTION: a finding
+       reporting an exposed secret or credential (token, key, password)
+       committed into one of these files is NOT rejected — record it as
+       `unresolved` so the loop's unresolved count stops the run and
+       surfaces it. The never-dispatch-a-fix-subagent rule still holds
+       for these files; the orchestrator, not this loop, resolves it.
 
     ## Return (final message, 15 lines max)
 
