@@ -283,7 +283,7 @@ git commit -m "feat(routing): orchestrating-development entry with rank tests"
 
 **Does NOT cover:** Codex/Cursor execution (skill refuses without the Agent tool); parallel waves inside a batch; auto-merge/PR; spec authoring/review; timeout watchdogs (permission-stall risk is handled by the Phase 0 confirmation instead).
 
-- [ ] **Step 1: Write the file with exactly this content**
+- [x] **Step 1: Write the file with exactly this content**
 
 ````markdown
 ---
@@ -589,7 +589,7 @@ exempts.
 - `./code-review-loop-prompt.md`
 ````
 
-- [ ] **Step 2: Verify required strings**
+- [x] **Step 2: Verify required strings**
 
 Run:
 ```bash
@@ -602,7 +602,7 @@ grep -n "finishing-a-development-branch" $f                    # expected: 1 hit
 ```
 Expected: counts as annotated; no output missing.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add skills/orchestrating-development/SKILL.md
