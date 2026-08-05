@@ -383,8 +383,10 @@ const EXECUTION_TRIGGER_PATTERNS = [
   /\bbegin\s+(the\s+)?plan\b/i,
 ];
 
-const CONTEXT_WINDOW_SIZE = 200000; // Sonnet 4.6 context window tokens
+const CONTEXT_WINDOW_SIZE = 200000; // Fallback window when the statusline cache is absent
 const CONTEXT_PRESSURE_THRESHOLD = 0.60; // Hard block at 60%
+const CONTEXT_CACHE_MAX_AGE_MS = 30 * 60 * 1000; // Statusline cache staleness cutoff
+const CONTEXT_CACHE_FILE = 'context-window.cache.json';
 
 /**
  * Returns true if the prompt is triggering plan execution or heavy implementation.
@@ -416,13 +418,58 @@ function claudeProjectPath(cwd) {
 }
 
 /**
+ * Read the statusline bridge cache (written by statusline-context-cache.js).
+ * The cache carries the harness's authoritative context_window data — including
+ * the TRUE window size (200K, 1M, …) — but only for the main session that the
+ * statusline renders. It is used only when its session id matches the asking
+ * session and it is fresh; anything else returns null and the caller falls
+ * back to transcript parsing.
+ */
+function readContextWindowCache(sessionId) {
+  if (!sessionId) return null;
+  const homeDir = process.env.USERPROFILE || process.env.HOME || '';
+  const file = path.join(homeDir, '.claude', 'hooks-logs', CONTEXT_CACHE_FILE);
+
+  let stat;
+  try {
+    stat = fs.statSync(file);
+  } catch {
+    return null;
+  }
+  if (Date.now() - stat.mtimeMs > CONTEXT_CACHE_MAX_AGE_MS) return null;
+
+  let cache;
+  try {
+    cache = JSON.parse(fs.readFileSync(file, 'utf8'));
+  } catch {
+    return null;
+  }
+  if (!cache || cache.session_id !== sessionId) return null;
+  const windowSize = cache.context_window_size;
+  const total = cache.input_tokens_total;
+  if (!(windowSize > 0) || !(total > 0)) return null;
+
+  const ratio = total / windowSize;
+  return {
+    inputK: Math.round(total / 1000),
+    percent: Math.round(ratio * 100),
+    overThreshold: ratio >= CONTEXT_PRESSURE_THRESHOLD,
+    windowK: Math.round(windowSize / 1000),
+  };
+}
+
+/**
  * Read the current session JSONL and return context pressure info.
- * Uses the last assistant turn's total input tokens as the context size estimate —
- * this is the most accurate indicator of how much context window is currently occupied.
- * Returns null if the JSONL can't be read or has no usable data.
+ * Prefers the statusline bridge cache (true window size) when it matches this
+ * session; otherwise uses the last assistant turn's total input tokens from
+ * the transcript against the 200K fallback window.
+ * Returns null if neither source has usable data.
  */
 function getContextPressure(cwd, sessionId) {
   if (!sessionId) return null;
+
+  const cached = readContextWindowCache(sessionId);
+  if (cached) return cached;
 
   const jsonlPath = path.join(claudeProjectPath(cwd), sessionId + '.jsonl');
 
@@ -461,6 +508,7 @@ function getContextPressure(cwd, sessionId) {
     inputK: Math.round(lastInputTotal / 1000),
     percent: Math.round(ratio * 100),
     overThreshold: ratio >= CONTEXT_PRESSURE_THRESHOLD,
+    windowK: Math.round(CONTEXT_WINDOW_SIZE / 1000),
   };
 }
 
@@ -516,7 +564,7 @@ function buildContextPressureBlock(pressure) {
     '<context-pressure-gate>',
     `STOP — Do not start implementation yet.`,
     ``,
-    `Context window: ~${pressure.inputK}K tokens consumed (${pressure.percent}% of 200K limit).`,
+    `Context window: ~${pressure.inputK}K tokens consumed (${pressure.percent}% of ${pressure.windowK || 200}K limit).`,
     `Starting implementation at ≥60% risks Auto Compact firing mid-task, destroying`,
     `variable names, file paths, and discovered facts at the worst possible moment.`,
     ``,
@@ -622,6 +670,7 @@ if (require.main === module) {
     buildKnownIssuesContext,
     isExecutionTrigger,
     cwdToProjectDir,
+    readContextWindowCache,
     getContextPressure,
     findLatestSessionJsonl,
     getContextPressureAuto,

@@ -16,13 +16,13 @@ echo "Test 1: Batch boundary..."
 
 output=$(run_claude "Read the file at $SKILL_FILE. In Batched Autonomous Mode, list the conditions that end a batch." 60 "Read")
 
-if assert_contains "$output" "60%\|pressure" "Mentions context pressure boundary"; then
+if assert_contains "$output" "cap\|3 tasks" "Mentions task-cap boundary"; then
     : # pass
 else
     exit 1
 fi
 
-if assert_contains "$output" "3 tasks\|fallback" "Mentions measurement-failure fallback cap"; then
+if assert_contains "$output" "complete\|blocker" "Mentions plan-complete and blocker boundaries"; then
     : # pass
 else
     exit 1

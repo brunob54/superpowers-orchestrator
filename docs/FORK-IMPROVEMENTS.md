@@ -1,6 +1,6 @@
 # Fork Improvements (brunob54/superpowers-optimized)
 
-This repository is the third link in a lineage: the original [obra/superpowers](https://github.com/obra/superpowers) by Jesse Vincent, its optimized fork [REPOZY/superpowers-optimized](https://github.com/REPOZY/superpowers-optimized), and this fork, which builds on the REPOZY v6.6.1 baseline. It adds five flagship feature releases — v6.7.0, v6.8.0, v6.9.0, v6.10.0, and v6.14.0 — described below; three smaller releases in between (v6.11.0–v6.13.0: the `multi-doc-review` rename, the plan-scoped SDD workspace, and the fresh-session plan handoff) are covered in [../RELEASE-NOTES.md](../RELEASE-NOTES.md). **Status: these additions are under testing and evaluation**; behavior and interfaces may still change based on real-world use.
+This repository is the third link in a lineage: the original [obra/superpowers](https://github.com/obra/superpowers) by Jesse Vincent, its optimized fork [REPOZY/superpowers-optimized](https://github.com/REPOZY/superpowers-optimized), and this fork, which builds on the REPOZY v6.6.1 baseline. It adds five flagship feature releases — v6.7.0, v6.8.0, v6.9.0, v6.10.0, and v6.14.0 — described below; four smaller releases (v6.11.0–v6.13.0: the `multi-doc-review` rename, the plan-scoped SDD workspace, and the fresh-session plan handoff; v6.15.0: the cap-only batch boundary) are covered in [../RELEASE-NOTES.md](../RELEASE-NOTES.md). **Status: these additions are under testing and evaluation**; behavior and interfaces may still change based on real-world use.
 
 For a detailed, evidence-focused comparison of how review works in all three repositories — including the history of obra's own document review loop (shipped in v5.0.0, removed in v5.0.6 on eval data) — see [REVIEW-PROCESS-COMPARISON.md](REVIEW-PROCESS-COMPARISON.md).
 
@@ -16,23 +16,24 @@ Contents:
 
 ## 1. SDD Batched Autonomous Mode (v6.7.0)
 
+*Through v6.14.0 the primary batch boundary was a measured 60% context-pressure check (`--pressure` CLI). v6.15.0 replaced it with a fixed task cap: batches are expected to start in fresh sessions (the writing-plans handoff and resume flow both route through `/clear`), which made the in-batch measurement redundant — and its hardcoded 200K window overstated pressure five-fold on 1M-context models, ending batches at ~13% real occupancy. The 60% start gate on prompt submission (below) is unchanged — and v6.15.0 makes it model-window-aware via an opt-in statusline bridge: configure `"statusLine": {"type": "command", "command": "node <plugin-cache-root>/hooks/statusline-context-cache.js"}` in settings.json, and the gate reads the harness's authoritative `context_window` (true 200K/1M/larger size) from a cache the statusline script maintains, falling back to transcript parsing against 200K when the cache is absent, stale, or belongs to another session.*
+
 ### Summary
 
 - Executes an implementation plan in **batches of up to N tasks per session**, each task handled by a fresh subagent with full review gates.
-- A batch ends when **context pressure reaches 60%** (measured by a new `--pressure` CLI on the skill-activator hook; if measurement fails, the batch caps at 3 tasks), when the user's task count is reached, when the plan completes, or when a blocker occurs.
+- A batch ends at a **fixed task cap** — the user's explicit task count, otherwise 3 — or earlier when the plan completes or a blocker occurs.
 - At batch end, a **handoff is written into `state.md`** (hard cap 100 lines): current goal, next task, decisions made autonomously, discovered constraints, open issues, and exact resume instructions.
 - After `/clear`, **"resume the plan"** reconciles position from `plan.md` checkboxes and git history (authoritative) rather than the narrative state file, and refuses to execute past an unanswered blocking question.
 
 ### Motivation
 
-Long implementation plans cannot finish inside one context window. Without a batch boundary, sessions drift into auto-compaction mid-task — losing decisions, re-dispatching completed work, and guessing at plan ambiguities with nobody watching. Batched Autonomous Mode makes the boundary explicit and crash-safe: context pressure is measured instead of guessed, position lives in durable artifacts (checkboxes, commits, ledger), and blockers become journaled questions instead of silent best-guesses.
+Long implementation plans cannot finish inside one context window. Without a batch boundary, sessions drift into auto-compaction mid-task — losing decisions, re-dispatching completed work, and guessing at plan ambiguities with nobody watching. Batched Autonomous Mode makes the boundary explicit and crash-safe: the batch size is bounded up front, position lives in durable artifacts (checkboxes, commits, ledger), and blockers become journaled questions instead of silent best-guesses.
 
-**Relation to the baseline 60% gate.** The REPOZY v6.6.1 baseline already uses the same 60% pressure measurement, but as a *start gate*: when a prompt is about to trigger implementation and the window is ≥60% full, the `UserPromptSubmit` hook injects a STOP block that replaces all skill hints and mandates save-state (`state.md` via context-management) → inform the user → `/compact` → resume, *before* any implementation begins. It does not compact anything itself — a hook cannot — and it fires only at the moment execution is requested. Batched Autonomous Mode (this release) reuses that measurement, exposed as the `--pressure` CLI, but flips the response: instead of gating the *start* of work behind compact-first, it re-checks pressure *after every completed task* and ends the batch with a `state.md` handoff — preferring a clean `/clear` + "resume the plan" (rebuilt from checkboxes and git) over mid-work compaction. The two mechanisms coexist: the gate protects the entry into implementation; the batch boundary protects the middle of it.
+**Relation to the baseline 60% gate.** The REPOZY v6.6.1 baseline measures context pressure as a *start gate*: when a prompt is about to trigger implementation and the window is ≥60% full, the `UserPromptSubmit` hook injects a STOP block that replaces all skill hints and mandates save-state (`state.md` via context-management) → inform the user → `/compact` → resume, *before* any implementation begins. It does not compact anything itself — a hook cannot — and it fires only at the moment execution is requested. The two mechanisms divide the work: the gate protects the *entry* into implementation (catching mid-session starts with arbitrary existing occupancy), while the fixed task cap bounds the *middle* of it — each batch ends with a `state.md` handoff, preferring a clean `/clear` + "resume the plan" (rebuilt from checkboxes and git) over mid-work compaction.
 
 ### How it works
 
 - Inside a batch, execution is fully autonomous (the user is never asked); tasks run sequentially so the boundary can be evaluated after every task.
-- Pressure check: `node hooks/skill-activator.js --pressure "$(pwd)"` returns JSON with `overThreshold: true` at ≥60%.
 - Review gates are not relaxed: every task still gets the full task review, and pre-implementation security review where flagged.
 - On resume, a crash between commit and checkbox update is detected from `git log` and the checkbox is reconciled before dispatching anything.
 
@@ -44,11 +45,11 @@ Say any of (with a plan file present):
 - `execute the plan in batches`
 - after `/clear`: `resume the plan`
 
-To inspect pressure yourself: `node hooks/skill-activator.js --pressure "$(pwd)"`.
+To inspect the start gate's pressure measurement yourself: `node hooks/skill-activator.js --pressure "$(pwd)"`.
 
 ### Where it lives
 
-`skills/subagent-driven-development/SKILL.md` (Batched Autonomous Mode section), `hooks/skill-activator.js` (`--pressure`), `hooks/skill-rules.json` (batch/resume triggers), `tests/claude-code/test-batched-autonomous-mode.sh`.
+`skills/subagent-driven-development/SKILL.md` (Batched Autonomous Mode section), `hooks/skill-activator.js` (60% start gate + `--pressure` inspection CLI), `hooks/skill-rules.json` (batch/resume triggers), `tests/claude-code/test-batched-autonomous-mode.sh`.
 
 ### References
 

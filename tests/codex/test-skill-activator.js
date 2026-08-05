@@ -498,6 +498,7 @@ const {
   isExecutionTrigger,
   cwdToProjectDir,
   getContextPressure,
+  readContextWindowCache,
   buildContextPressureBlock,
 } = require('../../hooks/skill-activator');
 
@@ -693,6 +694,115 @@ test('Skips non-assistant lines without crashing', () => {
   assert.strictEqual(threw, false, 'Should not throw on mixed/invalid lines');
 });
 
+console.log('\nContext pressure gate — statusline cache bridge');
+
+function makeContextCache(homeDir, entry, mtimeMs) {
+  const dir = path.join(homeDir, '.claude', 'hooks-logs');
+  fs.mkdirSync(dir, { recursive: true });
+  const file = path.join(dir, 'context-window.cache.json');
+  fs.writeFileSync(file, typeof entry === 'string' ? entry : JSON.stringify(entry));
+  if (mtimeMs) fs.utimesSync(file, mtimeMs / 1000, mtimeMs / 1000);
+  return file;
+}
+
+function withTmpHome(fn) {
+  const tmpHome = fs.mkdtempSync(path.join(os.tmpdir(), 'cp-cache-'));
+  const orig = { up: process.env.USERPROFILE, home: process.env.HOME };
+  process.env.USERPROFILE = tmpHome;
+  process.env.HOME = tmpHome;
+  try {
+    return fn(tmpHome);
+  } finally {
+    process.env.USERPROFILE = orig.up;
+    process.env.HOME = orig.home;
+    fs.rmSync(tmpHome, { recursive: true });
+  }
+}
+
+test('Cache with matching session wins over transcript and carries true window size', () => {
+  const result = withTmpHome((tmpHome) => {
+    const cwd = path.join(tmpHome, 'myproject');
+    const sessionId = 'cache-match-' + Date.now();
+    // Transcript alone would read 125K/200K = 62% (over threshold).
+    makeJsonlSession(sessionId, cwdToProjectDir(cwd), tmpHome, [
+      { input_tokens: 5, cache_creation_input_tokens: 100000, cache_read_input_tokens: 25000, output_tokens: 2000 },
+    ]);
+    // Cache knows the real window is 1M → 13%, under threshold.
+    makeContextCache(tmpHome, {
+      session_id: sessionId, context_window_size: 1000000,
+      input_tokens_total: 130000, used_percentage: 13,
+    });
+    return getContextPressure(cwd, sessionId);
+  });
+  assert.ok(result !== null, 'Should return a result');
+  assert.strictEqual(result.overThreshold, false, '13% of 1M must be under threshold');
+  assert.strictEqual(result.percent, 13, `Expected 13%, got ${result.percent}%`);
+  assert.strictEqual(result.windowK, 1000, `Expected windowK 1000, got ${result.windowK}`);
+});
+
+test('Cache with a DIFFERENT session id is ignored — transcript fallback applies', () => {
+  const result = withTmpHome((tmpHome) => {
+    const cwd = path.join(tmpHome, 'myproject');
+    const sessionId = 'cache-mismatch-' + Date.now();
+    makeJsonlSession(sessionId, cwdToProjectDir(cwd), tmpHome, [
+      { input_tokens: 5, cache_creation_input_tokens: 100000, cache_read_input_tokens: 25000, output_tokens: 2000 },
+    ]);
+    makeContextCache(tmpHome, {
+      session_id: 'some-other-session', context_window_size: 1000000,
+      input_tokens_total: 130000, used_percentage: 13,
+    });
+    return getContextPressure(cwd, sessionId);
+  });
+  assert.ok(result !== null, 'Should return a result');
+  assert.strictEqual(result.overThreshold, true, 'Transcript fallback: 62% of 200K');
+  assert.strictEqual(result.windowK, 200, 'Fallback carries the 200K default window');
+});
+
+test('Stale cache (>30 min) is ignored — transcript fallback applies', () => {
+  const result = withTmpHome((tmpHome) => {
+    const cwd = path.join(tmpHome, 'myproject');
+    const sessionId = 'cache-stale-' + Date.now();
+    makeJsonlSession(sessionId, cwdToProjectDir(cwd), tmpHome, [
+      { input_tokens: 5, cache_creation_input_tokens: 100000, cache_read_input_tokens: 25000, output_tokens: 2000 },
+    ]);
+    makeContextCache(tmpHome, {
+      session_id: sessionId, context_window_size: 1000000,
+      input_tokens_total: 130000, used_percentage: 13,
+    }, Date.now() - 31 * 60 * 1000);
+    return getContextPressure(cwd, sessionId);
+  });
+  assert.ok(result !== null, 'Should return a result');
+  assert.strictEqual(result.overThreshold, true, 'Stale cache must not be trusted');
+});
+
+test('Malformed cache falls back to transcript without throwing', () => {
+  const result = withTmpHome((tmpHome) => {
+    const cwd = path.join(tmpHome, 'myproject');
+    const sessionId = 'cache-bad-' + Date.now();
+    makeJsonlSession(sessionId, cwdToProjectDir(cwd), tmpHome, [
+      { input_tokens: 5, cache_creation_input_tokens: 100000, cache_read_input_tokens: 25000, output_tokens: 2000 },
+    ]);
+    makeContextCache(tmpHome, '{not valid json');
+    return getContextPressure(cwd, sessionId);
+  });
+  assert.ok(result !== null, 'Should fall back to transcript');
+  assert.strictEqual(result.overThreshold, true, 'Transcript fallback result expected');
+});
+
+test('readContextWindowCache returns null for zero/missing window or totals', () => {
+  const results = withTmpHome((tmpHome) => {
+    const sessionId = 'cache-zero-' + Date.now();
+    const out = [];
+    makeContextCache(tmpHome, { session_id: sessionId, context_window_size: 0, input_tokens_total: 130000 });
+    out.push(readContextWindowCache(sessionId));
+    makeContextCache(tmpHome, { session_id: sessionId, context_window_size: 1000000 });
+    out.push(readContextWindowCache(sessionId));
+    return out;
+  });
+  assert.strictEqual(results[0], null, 'Zero window size must be rejected');
+  assert.strictEqual(results[1], null, 'Missing token total must be rejected');
+});
+
 console.log('\nContext pressure gate — buildContextPressureBlock');
 
 test('Contains opening and closing context-pressure-gate tags', () => {
@@ -722,6 +832,14 @@ test('References /compact in step 3', () => {
 test('References state.md in step 1', () => {
   const block = buildContextPressureBlock({ inputK: 100, percent: 60 });
   assert.ok(block.includes('state.md'), 'Step 1 should reference state.md');
+});
+test('Interpolates the true window size when windowK is present', () => {
+  const block = buildContextPressureBlock({ inputK: 620, percent: 62, windowK: 1000 });
+  assert.ok(block.includes('1000K limit'), `Expected 1000K limit, got: ${block.slice(0, 200)}`);
+});
+test('Falls back to 200K limit when windowK is absent', () => {
+  const block = buildContextPressureBlock({ inputK: 125, percent: 62 });
+  assert.ok(block.includes('200K limit'), `Expected 200K limit, got: ${block.slice(0, 200)}`);
 });
 
 console.log('\nContext pressure gate — evaluatePayload integration');

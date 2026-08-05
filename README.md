@@ -3,7 +3,7 @@
 [![AI Coding Agents](https://img.shields.io/badge/USE_WITH-Claude_Code_%7C_Codex_%7C_OpenCode_%7C_Gemini_CLI_%7C_Antigravity-white?style=for-the-badge)]()
 
 [![GitHub stars](https://img.shields.io/github/stars/brunob54/superpowers-optimized?style=for-the-badge&color=white)](https://github.com/brunob54/superpowers-optimized/stargazers)
-[![Version](https://img.shields.io/badge/version-6.14.0-white?style=for-the-badge)](RELEASE-NOTES.md)
+[![Version](https://img.shields.io/badge/version-6.15.0-white?style=for-the-badge)](RELEASE-NOTES.md)
 [![License: MIT](https://img.shields.io/badge/License-MIT-white?style=for-the-badge)](LICENSE)
 [![Install](https://img.shields.io/badge/install-now-white?style=for-the-badge&logo=claude)](https://github.com/brunob54/superpowers-optimized#installation)
 
@@ -18,19 +18,19 @@
 Built on the trusted obra/superpowers workflow and refined through research into LLM agent behavior, it adds automatic 3-tier workflow routing, proactive safety hooks, self-consistency verification at critical decision points, cross-session memory, and adversarial red-teaming — everything the original does, plus the discipline layer it was missing.
 
 > [!NOTE]
-> **Lineage & status:** this repository builds on two origins — the original [obra/superpowers](https://github.com/obra/superpowers) by Jesse Vincent and its optimized fork [REPOZY/superpowers-optimized](https://github.com/REPOZY/superpowers-optimized) (baseline v6.6.1). Full credit to both. This fork's own additions (v6.7.0–v6.14.0) are **under testing and evaluation** — see [What this fork adds](#what-this-fork-adds).
+> **Lineage & status:** this repository builds on two origins — the original [obra/superpowers](https://github.com/obra/superpowers) by Jesse Vincent and its optimized fork [REPOZY/superpowers-optimized](https://github.com/REPOZY/superpowers-optimized) (baseline v6.6.1). Full credit to both. This fork's own additions (v6.7.0–v6.15.0) are **under testing and evaluation** — see [What this fork adds](#what-this-fork-adds).
 
 ### What this fork adds
 
-Eight releases beyond the REPOZY v6.6.1 baseline. The five flagship additions — full guide with usage, details, and motivations in [docs/FORK-IMPROVEMENTS.md](docs/FORK-IMPROVEMENTS.md):
+Nine releases beyond the REPOZY v6.6.1 baseline. The five flagship additions — full guide with usage, details, and motivations in [docs/FORK-IMPROVEMENTS.md](docs/FORK-IMPROVEMENTS.md):
 
-- **SDD Batched Autonomous Mode (v6.7.0)** — execute a plan in resumable batches of N tasks, ending each batch at 60% measured context pressure with a `state.md` handoff; say "implement the next 3 tasks", then after `/clear`: "resume the plan". [Details](docs/FORK-IMPROVEMENTS.md#1-sdd-batched-autonomous-mode-v670)
+- **SDD Batched Autonomous Mode (v6.7.0)** — execute a plan in resumable batches of N tasks, ending each batch at a fixed task cap (the requested count, default 3) with a `state.md` handoff; say "implement the next 3 tasks", then after `/clear`: "resume the plan". [Details](docs/FORK-IMPROVEMENTS.md#1-sdd-batched-autonomous-mode-v670)
 - **SDD Token-Optimized Review Flow (v6.8.0)** — port of upstream obra v6.0.0: one two-verdict task reviewer, file-based handoffs under `.superpowers/sdd/`, explicit per-dispatch model selection; automatic whenever subagent-driven-development executes a plan (~2x faster, ~50–60% fewer tokens per upstream measurement). [Details](docs/FORK-IMPROVEMENTS.md#2-sdd-token-optimized-review-flow-v680)
 - **multi-doc-review (v6.9.0)** — N independent clean-context review rounds with rotating lenses on every spec and plan before its approval gate, with a sidecar audit log; automatic at the gates, or direct: `/multi-doc-review docs/specs/<doc>.md 3`. [Details](docs/FORK-IMPROVEMENTS.md#3-multi-doc-review--n-round-independent-document-review-v690)
 - **multi-code-review (v6.10.0)** — N independent whole-branch code review rounds with rotating lenses (correctness/spec alignment, adversarial red-team, security, test quality) and fixes applied between rounds, with a sidecar audit log; automatic at subagent-driven-development's final review gate, or direct: `/multi-code-review [BASE] [N]`. [Details](docs/FORK-IMPROVEMENTS.md#4-multi-code-review--n-round-independent-whole-branch-code-review-v6100)
 - **orchestrating-development (v6.14.0)** — fully autonomous spec-to-merge-gate pipeline: from an approved design spec, runs plan writing, N plan-review rounds, batched implementation, and N code-review rounds via fresh-context controller subagents, stopping only on major errors and ending before merge/PR; one interactive Phase 0 collects review counts, batch cap, and branch/permission confirmations, then say "orchestrate development of docs/specs/<spec>.md". [Details](docs/FORK-IMPROVEMENTS.md#5-orchestrating-development--autonomous-spec-to-merge-gate-pipeline-v6140)
 
-Three further releases — `multi-doc-review` rename (v6.11.0), plan-scoped SDD workspace (v6.12.0), and fresh-session plan handoff (v6.13.0) — are covered in [RELEASE-NOTES.md](RELEASE-NOTES.md).
+Four further releases — `multi-doc-review` rename (v6.11.0), plan-scoped SDD workspace (v6.12.0), fresh-session plan handoff (v6.13.0), and cap-only batch boundary (v6.15.0) — are covered in [RELEASE-NOTES.md](RELEASE-NOTES.md).
 
 Cross-session memory changes the experience fundamentally. Without it, every session starts blind: the AI re-explores structure it already mapped, re-proposes approaches that were already rejected, re-debugs errors that were already solved. With the memory stack, it arrives knowing what was tried, what was decided, and why — and with a pre-computed snapshot of exactly what changed since the last commit — and builds forward instead of sideways.
 
@@ -270,7 +270,7 @@ skills/ — 27 skills, each in skills/<name>/SKILL.md
 hooks/ — 10 hooks (JS) + hooks.json registry + skill-rules.json
 
 ## Key Files
-hooks/skill-activator.js — UserPromptSubmit: context pressure gate (blocks plan execution at ≥60% context, reads session JSONL); skill hints via skill-rules.json; memory recall from session-log.md + known-issues.md. Micro-task detection skips all enrichment.
+hooks/skill-activator.js — UserPromptSubmit: context pressure gate (blocks plan execution at ≥60% context; reads the statusline bridge cache when configured, else session JSONL); skill hints via skill-rules.json; memory recall from session-log.md + known-issues.md. Micro-task detection skips all enrichment.
 hooks/skill-rules.json — 25 rules covering 24 skills (context-management has two: map-project and save-state): skill name, keywords, intentPatterns, priority.
 
 ## Critical Constraints
@@ -425,7 +425,7 @@ This is the full cross-platform hook inventory for the plugin. Claude Code gets 
 
 - **context-engine** (SessionStart) — Runs git commands on every session start and writes `context-snapshot.json`: changed files, blast radius (which other files reference each changed file, filtered to actual import/require references), recent commits, and change stats. Uses per-project watermarks (md5 of cwd) so multiple projects don't interfere, and cross-session diff base so "what changed" reflects changes since your last session, not just the last commit. Zero dependencies. Silent no-op on non-git projects
 - **session-start** (SessionStart) — Injects using-superpowers routing into every session; injects `project-map.md` content directly if it exists (full content ≤200 lines, Critical Constraints + Hot Files only above that); checks for available plugin update
-- **skill-activator** (UserPromptSubmit) — Context pressure gate: reads session JSONL, blocks plan-execution triggers when context ≥60% of 200K window (fires compact-first instruction instead of skill hints). Also: micro-task detection + confidence-threshold skill matching + weighted memory recall from session-log.md and known-issues.md (70% keyword density + 30% recency scoring)
+- **skill-activator** (UserPromptSubmit) — Context pressure gate: blocks plan-execution triggers when context ≥60% of the model window (fires compact-first instruction instead of skill hints). Window size comes from the opt-in statusline bridge (`hooks/statusline-context-cache.js`, true 200K/1M size) when configured, else from session-JSONL parsing against a 200K default. Also: micro-task detection + confidence-threshold skill matching + weighted memory recall from session-log.md and known-issues.md (70% keyword density + 30% recency scoring)
 - **track-edits** (PostToolUse: Edit/Write) — Logs file changes for TDD reminders; auto-adds AI workspace artifacts (`project-map.md`, `session-log.md`, `state.md`) to `.gitignore` on first write
 - **track-session-stats** (PostToolUse: Skill) — Tracks skill invocations for progress visibility
 - **stop-reminders** (Stop) — Surfaces TDD reminders, commit nudges, and session summary after each response turn
