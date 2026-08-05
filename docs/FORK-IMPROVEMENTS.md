@@ -16,7 +16,7 @@ Contents:
 
 ## 1. SDD Batched Autonomous Mode (v6.7.0)
 
-*Through v6.14.0 the primary batch boundary was a measured 60% context-pressure check (`--pressure` CLI). v6.15.0 replaced it with a fixed task cap: batches are expected to start in fresh sessions (the writing-plans handoff and resume flow both route through `/clear`), which made the in-batch measurement redundant — and its hardcoded 200K window overstated pressure five-fold on 1M-context models, ending batches at ~13% real occupancy. The 60% start gate on prompt submission (below) is unchanged.*
+*Through v6.14.0 the primary batch boundary was a measured 60% context-pressure check (`--pressure` CLI). v6.15.0 replaced it with a fixed task cap: batches are expected to start in fresh sessions (the writing-plans handoff and resume flow both route through `/clear`), which made the in-batch measurement redundant — and its hardcoded 200K window overstated pressure five-fold on 1M-context models, ending batches at ~13% real occupancy. The 60% start gate on prompt submission (below) is unchanged — and v6.15.0 makes it model-window-aware via an opt-in statusline bridge: configure `"statusLine": {"type": "command", "command": "node <plugin-cache-root>/hooks/statusline-context-cache.js"}` in settings.json, and the gate reads the harness's authoritative `context_window` (true 200K/1M/larger size) from a cache the statusline script maintains, falling back to transcript parsing against 200K when the cache is absent, stale, or belongs to another session.*
 
 ### Summary
 

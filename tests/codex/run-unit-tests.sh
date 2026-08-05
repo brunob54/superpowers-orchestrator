@@ -44,6 +44,7 @@ run_test "stop-adapter"         "${SCRIPT_DIR}/test-stop-adapter.js"
 run_test "stop-reminders (Claude Stop shape)" "${SCRIPT_DIR}/test-stop-reminders.js"
 run_test "session-start-adapter" "${SCRIPT_DIR}/test-session-start-adapter.js"
 run_test "skill-activator (UserPromptSubmit)" "${SCRIPT_DIR}/test-skill-activator.js"
+run_test "statusline-context-cache" "${SCRIPT_DIR}/test-statusline-cache.js"
 run_test "subagent-guard (SubagentStop)" "${SCRIPT_DIR}/test-subagent-guard.js"
 run_test "protect-secrets (PreToolUse Bash)" "${SCRIPT_DIR}/test-protect-secrets.js"
 

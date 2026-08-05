@@ -15,6 +15,17 @@
 - orchestrating-development's cap-sizing note updated to match; the
   batched-mode behavioral test asserts the cap boundary instead of the
   pressure boundary; README and FORK-IMPROVEMENTS updated.
+- **Statusline bridge (opt-in)** makes the start gate model-window-aware:
+  new `hooks/statusline-context-cache.js` tees Claude Code's statusline
+  `context_window` payload (which carries the TRUE window size — 200K, 1M,
+  or larger) into `~/.claude/hooks-logs/context-window.cache.json`, and
+  `getContextPressure()` prefers that cache when its session id matches
+  the asking session (30-min staleness cutoff), falling back to transcript
+  parsing against the 200K default otherwise. The gate's block message now
+  reports the real window. Wire it in settings.json:
+  `"statusLine": {"type": "command", "command": "node <plugin-cache-root>/hooks/statusline-context-cache.js"}`.
+  Subagents are unaffected — the statusline is main-session scoped, so the
+  session-id match keeps the cache from ever misinforming them.
 
 ## v6.14.0 — orchestrating-development: autonomous spec→merge-gate pipeline
 
