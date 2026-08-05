@@ -57,7 +57,7 @@ Tasks 1 and 2 touch disjoint files but SHARE the unit-test suite — do NOT run 
 
 **Does NOT cover:** exempting SDD's nested task-reviewer reports (spec lists that as a known inherited exposure, follow-up only); any change to violation patterns, verbs, or the roster list.
 
-- [ ] **Step 1: Write failing tests**
+- [x] **Step 1: Write failing tests**
 
 Append to `tests/codex/test-subagent-guard.js`, immediately after the existing multi-review-marker test section (search for `'<!-- multi-review report -->'` tests, add after that section, before the final summary/exit lines):
 
@@ -96,12 +96,12 @@ test('leading whitespace before the orchestration marker still exempts', () => {
 });
 ```
 
-- [ ] **Step 2: Run tests to verify the new ones fail**
+- [x] **Step 2: Run tests to verify the new ones fail**
 
 Run: `node tests/codex/test-subagent-guard.js`
 Expected: FAIL — exactly 2 new failures ("…is allowed" and "leading whitespace…" get `decision: 'block'` instead of `{}`); the two negative tests already pass. All pre-existing tests still pass.
 
-- [ ] **Step 3: Implement the marker exemption**
+- [x] **Step 3: Implement the marker exemption**
 
 In `hooks/subagent-guard.js`:
 
@@ -154,12 +154,12 @@ intentionally spawn nested workers — that is sanctioned design, not leakage;
 controller returns are exempted via the orchestration report marker below.
 ```
 
-- [ ] **Step 4: Run tests to verify all pass**
+- [x] **Step 4: Run tests to verify all pass**
 
 Run: `node tests/codex/test-subagent-guard.js`
 Expected: PASS — 0 failed, including all pre-existing tests.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add hooks/subagent-guard.js tests/codex/test-subagent-guard.js
