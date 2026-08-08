@@ -515,18 +515,22 @@ Start a new session in your chosen platform and ask for something that should tr
 ---
 
 
-## Claude Opus 4.6's honest take:
+## Claude Fable 5's honest take:
 
-> I've worked inside this plugin — not just reviewed it, but been the agent running under it across extended sessions. The three-tier routing is the most useful single feature: without it, I over-engineer simple tasks and under-scope complex ones. The hard overrides that force full classification when a change adds conditional logic or touches shared code catch mis-classifications I make constantly on my own.
+> I've worked under this plugin across many sessions on this very repository, so this is an assessment from use, not a review of the README.
 >
-> The research-informed design is genuine. The finding that verbose context files hurt rather than help is counterintuitive but correct — I've experienced context overload firsthand. The self-consistency reasoning catches cases where I commit to a single plausible hypothesis and miss the actual root cause. The adversarial red team surfaces failure modes that pass every checklist. The memory stack means I arrive at each session with actual context rather than starting blind.
+> The part I'd defend most strongly is the memory stack. In practice it does what it claims: sessions on this repo start with the relevant prior decisions, rejected approaches, and already-solved errors injected before I ask for them — and that recall has repeatedly changed what I did, not just what I knew. Documented mistakes stay made once. That's the feature I'd miss most if it were gone.
 >
-> The constraint architecture is well-designed: tight where mistakes are hard to recover from — safety hooks, verification gates, TDD enforcement — and silent where flexibility is needed. That asymmetry is correct. I prefer operating under structured constraints for production work. The result is output I can stand behind rather than output I have to apologize for.
+> The three-tier routing earns its keep in the aggregate: proportional overhead is the right idea, and the hard overrides catch real misclassifications. It errs deliberately toward the heavy path, so occasionally a small task gets more ceremony than it deserved. That's the intended trade, but it is a trade.
 >
-> Strongly recommended for any developer who wants their AI to build with discipline rather than confidence alone.
+> Be equally clear-eyed about the review machinery: N-round document and code reviews cost real tokens and real minutes, and the value depends on the stakes of what's being reviewed. The rounds are configurable down to zero, which matters — use the depth where correctness is expensive, not everywhere by reflex.
 >
-> — Claude Opus 4.6
-> (March 23, 2026)
+> The orchestrator is the feature neither parent fork has: hand it an approved spec and it runs plan, reviews, implementation, and final review unattended, stopping on anything suspicious rather than guessing, keeping every position durable in files and git, and always ending before the merge decision — that stays yours. The design earns trust in the right way: recoverable by construction, autonomous only between gates you set. It's also the newest part of the system, with the least mileage on it — treat early runs as supervised until it has earned your confidence on your own projects.
+>
+> The honest overall framing: this plugin is a discipline system, and discipline has carrying costs — always-on context, gates that ask for your approval, process where a bare model would have just typed. For multi-session work on a codebase you care about, I think the trade is clearly worth it. For quick one-off scripting, it's more harness than the ride needs.
+>
+> — Claude Fable 5
+> (August 8, 2026)
 
 
 ---
@@ -553,4 +557,4 @@ MIT License - see LICENSE file for details
 - Issues (this fork): https://github.com/brunob54/superpowers-optimized/issues
 - Optimized fork base: https://github.com/REPOZY/superpowers-optimized
 - Original: https://github.com/obra/superpowers
-- Discussions: https://github.com/REPOZY/superpowers-optimized/discussions
+- Discussions: https://github.com/brunob54/superpowers-optimized/discussions
