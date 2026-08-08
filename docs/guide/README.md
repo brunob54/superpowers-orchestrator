@@ -206,6 +206,60 @@ pressure gate (§7) also blocks *starting* a batch mid-session when the
 window is already too full to finish one. Recovery semantics — including
 crashes mid-batch — are §5's batched-execution case.
 
+### `/clear` between the gates — and why it costs you nothing
+
+The pipeline actively recommends starting execution in a **fresh session**,
+and ending each batch with `/clear`. This isn't housekeeping; it's one of
+the plugin's research-backed principles (see the main README's
+research section): models over-condition on their own previous output, and
+a window full of design debate and dead reasoning measurably degrades the
+work that follows. By the time the plan is approved, the planning
+conversation is dead weight — it spends the first batch's context budget
+before Task 1 even begins.
+
+`/clear` is safe *because of the memory system* (§6). Every gate writes its
+outcome to files before asking you anything: the spec and plan are committed,
+`state.md` carries position and decisions, and the next session reads them
+back automatically at startup. The conversation is disposable; the files are
+the state. You never lose work by clearing — you only shed noise.
+
+You don't have to remember any of this — the skills tell you at each gate.
+These are the actual dialogs:
+
+**Spec approval gate** (end of `brainstorming`):
+
+> Spec written and committed to `<path>`. Please review it and let me know
+> if you want to make any changes before we start writing out the
+> implementation plan. (Alternatively, say 'orchestrate it' to run plan,
+> reviews, and implementation autonomously via orchestrating-development.)
+
+**Execution handoff** (end of `writing-plans`, after plan approval):
+
+> Plan saved to `docs/plans/<filename>.md`. Ready to execute with
+> **[Subagent-Driven / Inline Execution]** (`<N>` tasks).
+>
+> Recommended: start execution in a fresh session (`/clear` in Claude Code)
+> — this session's planning context is dead weight for execution and spends
+> the first batch's context budget before Task 1 begins. The plan file and
+> `state.md` carry everything execution needs. Then paste:
+>
+> `Use subagents in batched autonomous mode on docs/plans/<filename>.md`
+>
+> Or reply here to execute in this session, or say "inline" / "subagent"
+> to switch.
+
+**Batch boundary** (end of each batch in batched autonomous mode):
+
+> Batch complete (N tasks). Context at P%. To continue: run `/clear`, then
+> paste:
+> "Resume the plan at `<plan-path>` (batched autonomous mode)"
+
+One rule matters when following these dialogs: **paste the prompts
+verbatim.** They're tuned to the router's scoring, not just written to be
+readable — a reworded prompt can score below the routing threshold (fresh
+session lands in no skill at all) or drop the "subagents"/"batched" wording
+and silently fall through to inline execution.
+
 ## 4. "I want an autonomous run" — orchestrating development
 
 The `orchestrating-development` skill drives an **approved spec** through the
@@ -481,6 +535,11 @@ Recall is mostly automatic. At session start, the plugin reads `state.md`,
 When you submit a prompt, hooks inject any `known-issues.md` and
 `session-log.md` entries matching it — so a bug you fixed in March resurfaces
 as context the moment you hit it again in August, without you asking.
+
+This is also what makes the pipeline's `/clear` recommendations (§3) free of
+cost: since every gate persists its outcome to these files before asking you
+anything, a cleared conversation loses only noise — the next session
+reconstructs everything that matters from disk.
 
 📸 _Screenshot: a known-issues recall firing at prompt time. (v6.15.1)_
 
