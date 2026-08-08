@@ -53,22 +53,117 @@ to refresh the stable statusline copy). -->
 
 ## 3. "I want to build a feature" — the main pipeline
 
-<!-- TODO: The core workflow walkthrough:
-brainstorming (design doc + review gate) → writing-plans (task decomposition,
-plan review) → execution (executing-plans, or subagent-driven-development for
-parallel/batched work) → verification-before-completion →
-finishing-a-development-branch (merge/PR/keep/discard).
-For each stage: what triggers it, what artifact it produces (spec in
-docs/specs/, plan in docs/plans/), and what the user decides at each gate.
-Include where multi-doc-review and multi-code-review slot in. -->
+Every feature moves through the same five stages. Each stage produces a
+**file artifact** and ends at a **gate** — three of them are yours to
+approve; the rest run autonomously:
 
-📸 _Screenshot: a plan file with task checkboxes mid-execution._
+```mermaid
+flowchart TD
+    A[Feature request] --> B["Design — brainstorming<br/>spec in docs/specs/"]
+    B --> B2["spec review rounds<br/>(multi-doc-review)"]
+    B2 --> G1{"GATE: you approve<br/>the spec"}
+    G1 --> C["Plan — writing-plans<br/>plan in docs/plans/"]
+    C --> C2["plan review rounds<br/>(multi-doc-review)"]
+    C2 --> G2{"GATE: you approve<br/>the plan"}
+    G2 --> D["Execute — executing-plans or<br/>subagent-driven-development"]
+    D --> D2["per task: TDD → review →<br/>checkbox ticked + commit"]
+    D2 -->|more tasks| D
+    D2 --> E["whole-branch review rounds<br/>(multi-code-review)"]
+    E --> F["verification-before-completion<br/>(fresh command output as evidence)"]
+    F --> G3{"GATE: merge, PR,<br/>keep, or discard"}
+    G3 --> H["finishing-a-development-branch"]
+```
+
+The middle of the pipeline (plan → execute → review) is exactly what §4's
+orchestration automates end to end; this section is the interactive version,
+where you're present at each gate.
+
+### Stage 1 — Design (`brainstorming`)
+
+Say what you want ("build X", "add a feature that...", "I want to change...")
+and the router lands you in `brainstorming`. It inspects the project, asks
+its questions **in one batch** (multiple-choice where possible), and writes a
+spec to `docs/specs/YYYY-MM-DD-<name>-design.md` covering scope, non-goals,
+and the design itself. The spec then passes a self-review and — for
+non-trivial work — N independent `multi-doc-review` rounds before reaching
+you.
+
+Two rules worth internalizing:
+
+- **Nothing is "too simple to need a design."** Simple projects get a short
+  spec — a few sentences — but the approval gate always exists; unexamined
+  assumptions in "trivial" work are where effort goes to die.
+- **The gate is hard.** No code, no file edits, no implementation skills
+  until you explicitly approve the spec.
+
+### Stage 2 — Plan (`writing-plans`)
+
+After spec approval, `writing-plans` decomposes it into
+`docs/plans/YYYY-MM-DD-<name>.md`: tasks with checkboxes, each broken into
+steps of one action apiece (~2–5 minutes), with the actual file contents and
+exact verification commands an engineer needs — placeholders like "update
+logic" are treated as plan failures. TDD ordering is built in: test-writing
+steps precede implementation steps. The plan gets its own `multi-doc-review`
+gate before you approve it.
+
+This file is the pipeline's backbone: its checkboxes are the durable
+position record that execution ticks and commits task by task (§5).
+
+### Stage 3 — Execute
+
+Two modes, chosen by plan size and independence of tasks:
+
+- **`executing-plans`** — sequential, in-session: batches of tasks with a
+  checkpoint report after each batch. The default for small plans.
+- **`subagent-driven-development` (SDD)** — a fresh subagent per task with a
+  strict per-task review gate; independent tasks run in parallel waves. The
+  default for larger plans, and the engine behind batched autonomous mode
+  (below) and orchestration (§4).
+
+Both run on an isolated feature branch (never on `main` without your explicit
+consent), both enforce test-driven development for behavior changes, and both
+tick + commit each task's checkbox the moment it completes.
+
+📸 _Screenshot: a plan file with task checkboxes mid-execution. (v6.15.1)_
+
+### Stage 4 — Review and verify
+
+When the last task completes, `multi-code-review` runs N independent
+whole-branch review rounds (rotating lenses: correctness, red-team, security,
+test quality), with Critical/Important findings fixed between rounds and an
+early exit after two consecutive clean rounds. Throughout, any "done" claim
+must pass `verification-before-completion` — fresh command output as
+evidence, never memory of an earlier run.
+
+### Stage 5 — Finish (`finishing-a-development-branch`)
+
+The final gate is always interactive: merge locally, open a PR, keep the
+branch for later, or discard it. The pipeline never merges or publishes on
+its own — same rule as orchestration.
 
 ### Batched autonomous mode
 
-<!-- TODO: "implement the next N tasks" — cap-only batch boundary (user count,
-default 3), the 60% start gate for mid-session starts, handoff into state.md,
-resume after /clear. -->
+For plans too large for one sitting, SDD can run in batches that survive
+session boundaries:
+
+```
+implement the next 5 tasks of docs/plans/2026-08-08-my-feature.md
+```
+
+A batch executes up to the **task cap** (your stated count, else 3) fully
+autonomously — sequentially, never asking questions mid-batch; a blocker
+ends the batch early with the question journaled instead of guessed at. At
+the boundary it writes a handoff into `state.md` (position, decisions, open
+issues, and the exact resume prompt), tells you to `/clear`, and you paste:
+
+```
+Resume the plan at docs/plans/2026-08-08-my-feature.md (batched autonomous mode)
+```
+
+Fresh session, cached-context costs gone, next batch begins. A context-
+pressure gate (§7) also blocks *starting* a batch mid-session when the
+window is already too full to finish one. Recovery semantics — including
+crashes mid-batch — are §5's batched-execution case.
 
 ## 4. "I want an autonomous run" — orchestrating development
 
