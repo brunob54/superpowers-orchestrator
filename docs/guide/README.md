@@ -184,16 +184,119 @@ merge, PR, keep, or discard is yours to decide.
 
 ## 5. "My run was interrupted" — resuming and recovering
 
-<!-- TODO: The recovery story, per interruption type:
-- Deliberate stop (major error): log ends with `## STOPPED` + resume line.
-- Crash/power loss: log simply ends at the last committed boundary; resume
-  infers position from log + checkboxes + git history.
-- `Resume orchestration for <plan-or-spec path>` — what it checks, why it
-  never re-asks Phase 0 questions, per-parameter overrides (`... with cap=2`).
-- The dirty-tree caveat: resume refuses on uncommitted changes; you inspect
-  and clean up manually first.
-- `Abandon orchestration for <plan>` — the sanctioned teardown.
-- SDD batched-mode resume ("resume the plan") for non-orchestrated runs. -->
+Every long-running workflow in this plugin — orchestrated or not — keeps its
+position in **files and git, never in the conversation**. The plan's task
+checkboxes are ticked and committed the moment each task completes; commits
+land per task; `state.md` carries the narrative. A crash, a killed terminal,
+a `/clear`, or a power loss therefore loses at most the work in flight since
+the last completed task — everything earlier is already on disk and in
+history. Recovery is always the same idea: a fresh session reads the files,
+reconciles them against git, and continues at the first genuinely
+incomplete step.
+
+What differs is the resume phrase and a few caveats, by workflow:
+
+### Orchestrated runs
+
+Two interruption shapes, one resume phrase:
+
+- **Deliberate stop** (major error): the orchestration log ends with a
+  `## STOPPED` entry naming the reason, a pointer to the detail file, and the
+  exact resume prompt to paste.
+- **Crash / power loss**: no `STOPPED` entry — the log simply ends at the
+  last committed boundary. Resume infers the position from the log, the
+  plan's checkboxes, and recent git history.
+
+Either way:
+
+```
+Resume orchestration for docs/plans/2026-08-08-my-feature.md
+```
+
+Resume checks out the feature branch, reads the log (authoritative for
+parameters and last completed phase), and continues at the first incomplete
+phase or batch. It **never re-asks the Phase 0 questions** — parameters come
+from the log — but you may override them per-parameter in the resume prompt
+(`... with cap=2`), which is also the designed escape when a parameter caused
+the stop. Mid-batch, already-completed tasks keep their ticked checkboxes and
+commits and are skipped; orphan commits from a half-finished task are
+reviewed together with the task's completion, never blindly trusted.
+
+If a stop recorded a blocking question, answer it in the resume prompt;
+resume with an unanswered blocker just presents the question and stops again.
+
+**Interrupted during plan writing or a review round?** Resume re-enters any
+phase whose completion entry never made it into the orchestration log, but
+how much is redone differs:
+
+- **Plan writing (Phase 1)** is only durable once the finished plan is
+  committed. A crash mid-write leaves at most a partial, uncommitted plan
+  file — that's the dirty-tree case below: discard it, resume, and the plan
+  is rewritten from the spec. Nothing done is lost, because nothing was
+  finished.
+- **Review loops (Phases 2 and 4)** are durable *round by round*. Every
+  completed round is recorded in the loop's own review log before the next
+  begins, and Phase 4's fixes are committed as they're applied — so the
+  resumed loop picks up at the next round rather than restarting from
+  round 1 (even a partially-used fix-verification cycle budget is recovered
+  from the log). Only the round in flight is lost; if it died mid-edit,
+  its uncommitted changes are again the dirty-tree case — typically you
+  discard them and that round simply re-runs.
+
+To tear down a wedged or superseded run instead of resuming it:
+
+```
+Abandon orchestration for docs/plans/2026-08-08-my-feature.md
+```
+
+(confirms once, then deletes the feature branch — refusing if it's merged or
+checked out elsewhere).
+
+### Batched plan execution (SDD batched autonomous mode)
+
+Batches end with a handoff written to `state.md` containing verbatim resume
+instructions. After `/clear` (or a crash), paste:
+
+```
+Resume the plan at docs/plans/2026-08-08-my-feature.md (batched autonomous mode)
+```
+
+Resume reads `state.md`, then **reconciles against the authoritative
+record**: plan checkboxes + git history. `state.md` is narrative and may be
+one batch stale — that's expected. The reconciliation even heals the classic
+crash window: a task interrupted *between* its commit and its checkbox tick
+is detected in `git log`, its box is marked, and execution advances rather
+than redoing (or half-redoing) done work. A blocking question recorded in
+`## Open Issues` stops resume until you answer it — the run never executes
+past an unanswered blocker.
+
+One safety rule to know: resume refuses a `state.md` that names a
+*different* plan than your prompt does — you're asked to resolve the
+mismatch, never silently switched.
+
+### Ordinary sessions
+
+The same file-based durability serves everyday work:
+
+- Ending a session mid-task? Say **`save state`** — `state.md` gets the
+  current goal, decisions, and resume instructions for the next session.
+- Decisions and rejected approaches accumulate in `session-log.md`, and
+  solved errors in `known-issues.md` — both are recalled automatically in
+  future sessions (§6).
+- A plan being executed non-batched still has its committed checkboxes; a
+  fresh session pointed at the plan picks up from the first unchecked task.
+
+### Two caveats that apply everywhere
+
+1. **A dirty tree blocks resume.** If the interruption left uncommitted
+   changes (a task died mid-edit), resume stops and reports rather than
+   guessing what the half-done work meant. Inspect the diff yourself, then
+   commit or discard it before resuming. This is deliberate: recovery never
+   silently reconciles your working tree.
+2. **`state.md` and `.superpowers/` are git-excluded.** They survive a crash
+   on the same machine, but not a fresh clone or `git clean -fdx`. The
+   committed artifacts (plan, checkboxes, logs) are the source of truth;
+   anything excluded that's lost is reported, never silently reconstructed.
 
 ## 6. "How does it remember?" — the memory system
 
