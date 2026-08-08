@@ -34,22 +34,63 @@ this guide documents the stable user surface and links there.
 
 ## 1. Quick start — your first session
 
-<!-- TODO: What happens when a session starts (using-superpowers loads, task
-gets classified micro/lightweight/full), what the user sees, and the one rule
-that matters: name a skill and it WILL be invoked via the Skill tool. Show one
-tiny end-to-end example (a small fix) and one routed example (a feature request
-landing in brainstorming). -->
+When a session starts, the plugin loads its workflow router
+(`using-superpowers`). You don't invoke anything — you just describe what you
+want, and every technical request is classified into one of three tiers
+before any work begins:
 
-📸 _Screenshot: session start with the superpowers banner / skill suggestion._
+| Tier | What qualifies | What happens |
+| --- | --- | --- |
+| **Micro** | Typo fix, single rename, 1-line config change | Just done — no ceremony |
+| **Lightweight** | ≤ ~2 files, no new behavior, no cross-module risk | Fast path: implement + verify |
+| **Full** | New behavior, anything touching gates/triggers, user-visible changes, shared files | The §3 pipeline, starting at design |
+
+The classification errs deliberately toward **full**: an unnecessary design
+round costs minutes, while skipping design on a task that needed it ships a
+gap. If your "small tweak" lands in brainstorming and you disagree, say so —
+the router proposes, you dispose.
+
+Two things worth knowing on day one:
+
+- **Naming a skill is a command, not a hint.** "Use brainstorming",
+  "/multi-code-review", "run verification" — any skill named in your prompt
+  is invoked as-is, never re-improvised.
+- **The session reads your project memory first** (§6): `state.md` for
+  work in progress, `known-issues.md` for already-solved errors,
+  `project-map.md` for orientation. A project with history starts warm.
+
+Example session, both tiers at once: "fix the typo in the install banner" is
+done in one edit, no skills; "add a `--json` flag to the export command" gets
+routed to `brainstorming`, which asks its questions in one batch and writes a
+short spec for your approval before any code exists.
+
+📸 _Screenshot: session start with the superpowers banner / skill suggestion. (v6.15.1)_
 
 ## 2. Installing and staying up to date
 
-<!-- TODO: Point to README install instructions rather than duplicating them.
-Cover what the README does not: the installed-copy distinction (sessions run
-`~/.claude/plugins/cache/superpowers-optimized/`, NOT your checkout — editing
-the repo changes nothing until you update the plugin); how updates arrive
-(marketplace update); post-update steps (re-run install-statusline-bridge.sh
-to refresh the stable statusline copy). -->
+Install and update commands for every platform (Claude Code, Cursor, Codex,
+OpenCode) live in the [main README's Installation
+section](../../README.md#installation) — one source of truth, not duplicated
+here. What the README doesn't tell you:
+
+**You run the installed copy, not a checkout.** Sessions load the plugin from
+`~/.claude/plugins/cache/superpowers-optimized/…`. If you've cloned this
+repository, editing a skill there changes nothing in your live sessions until
+the plugin itself is updated — a perennial "my change didn't work" trap for
+contributors.
+
+**Updates are two steps in Claude Code**: refresh the *marketplace* (the
+version catalog), then update the *plugin* — or enable auto-update for the
+marketplace and forget about it. After any update, verify with a new session:
+the version is in the plugin's install path and its `VERSION` file.
+
+**After each update, re-run the statusline bridge installer** if you use it
+(§7): `tools/install-statusline-bridge.sh` refreshes the version-independent
+copy under `~/.claude/statusline/` that your `settings.json` points at.
+
+Platform capabilities differ — Codex and Cursor lack the nested subagent
+dispatch that §4's orchestration requires (it refuses cleanly there). See
+[docs/platforms](../platforms) for per-platform notes.
 
 ## 3. "I want to build a feature" — the main pipeline
 
@@ -423,50 +464,134 @@ The same file-based durability serves everyday work:
 
 ## 6. "How does it remember?" — the memory system
 
-<!-- TODO: The five project-memory files and what each answers:
-project-map.md (what exists), session-log.md (what happened & was decided),
-known-issues.md (errors already solved — consulted automatically before
-debugging), state.md (mid-work snapshot for cross-session handoff),
-context-snapshot.json (what changed before this session).
-When they're written, where they live, what's safe to delete.
-Note: state.md and .superpowers/ are git-excluded — they survive a crash but
-not a fresh clone or `git clean -fdx`. -->
+Sessions start with zero conversational memory. Everything that persists does
+so through five plain-text files at your project root — readable, editable,
+and deletable by you:
 
-📸 _Screenshot: a known-issues recall firing at prompt time._
+| File | Answers | Written when |
+| --- | --- | --- |
+| `project-map.md` | What exists, key files, critical constraints | You say "map this project"; refreshed when flagged stale |
+| `session-log.md` | What was decided, why, and what was *rejected* | "save state", or the end-of-session decision prompt |
+| `known-issues.md` | Errors already solved (symptom → cause → fix) | "save this fix", or after debugging resolves a recurring error |
+| `state.md` | Where mid-flight work stands right now | Batch handoffs (§3), "save state" |
+| `context-snapshot.json` | What changed just before this session | Automatically at session start |
+
+Recall is mostly automatic. At session start, the plugin reads `state.md`,
+`known-issues.md`, and `project-map.md` (and detects a stale map via git).
+When you submit a prompt, hooks inject any `known-issues.md` and
+`session-log.md` entries matching it — so a bug you fixed in March resurfaces
+as context the moment you hit it again in August, without you asking.
+
+📸 _Screenshot: a known-issues recall firing at prompt time. (v6.15.1)_
+
+What you should know as the owner of these files:
+
+- **They're yours to edit.** Wrong or outdated entry? Fix or delete it —
+  superseded decisions get marked, not silently overwritten.
+- **The log records the "why".** Design docs and code record what was built;
+  `session-log.md` records what was *chosen and rejected* — the knowledge
+  that otherwise evaporates at session end.
+- **`state.md` is disposable once its work is merged**; the others accumulate.
+- **`state.md` and `.superpowers/` are git-excluded** (the plugin adds the
+  exclude entries itself): they survive crashes on the same machine but not a
+  fresh clone or `git clean -fdx` — the recovery caveat from §5.
 
 ## 7. Context pressure and the statusline bridge
 
-<!-- TODO: Why context pressure matters (batch boundaries, start gates), the
-statusline bridge (install-statusline-bridge.sh, delegate mode preserving an
-existing statusline), SUPERPOWERS_PRESSURE_THRESHOLD, and the 1M-window
-calibration story (why the bridge exists: without it, pressure math assumed a
-200K window). -->
+Autonomous work needs headroom: a batch started in a nearly-full context
+window degrades or dies mid-task. So the plugin gates batch *starts* on
+context pressure — asking to start batched execution when the window is
+already past the threshold (default **60%**) is blocked with a
+compact-first message instead of limping into a doomed batch. Batch *ends*
+are governed by the task cap (§3), not by pressure.
 
-📸 _Screenshot: statusline showing real context occupancy._
+Tune the threshold with an env var in your `settings.json` (percent, 10–90):
+
+```json
+{ "env": { "SUPERPOWERS_PRESSURE_THRESHOLD": "50" } }
+```
+
+**Why the bridge exists.** The only official source for real context usage
+is the statusline JSON that Claude Code feeds your statusline command.
+Without it, the plugin falls back to estimating against an assumed 200K
+window — which on a 1M-context model overstates pressure ~5×: a session at
+13% real occupancy reads as "67% full" and gets blocked for no reason.
+
+**The bridge** is a small statusline wrapper that caches the real
+`context_window` payload where the gate can read it
+(`~/.claude/hooks-logs/context-window.cache.json`, matched to your session).
+Install it once:
+
+```
+bash tools/install-statusline-bridge.sh
+```
+
+It copies itself to a version-independent `~/.claude/statusline/` location
+and prints the `settings.json` snippet to wire up. Already have a statusline
+you like (a HUD, a git prompt)? **Delegate mode** wraps it — the bridge
+caches the payload, then hands the JSON through to your existing command
+unchanged. Re-run the installer after each plugin update (§2).
+
+📸 _Screenshot: statusline showing real context occupancy. (v6.15.1)_
 
 ## 8. Phrase cheat-sheet
 
-<!-- TODO: One table: phrase → what happens. Seed rows:
-- "orchestrate the development of <spec>" → full autonomous pipeline
-- "Resume orchestration for <plan>" → resume from last boundary
-- "Abandon orchestration for <plan>" → teardown wedged run
-- "implement the next N tasks" → SDD batched mode
-- "resume the plan" → SDD resume
-- "/multi-code-review [BASE] [N]" → N whole-branch review rounds
-- "/multi-doc-review <doc> [N]" → N doc review rounds
-- "save state" / "compress context" → context-management
-- "map this project" → project-map generation
-- "save this fix" → error-recovery / known-issues entry
-Keep this table in sync at every release (see CLAUDE.md Releases). -->
+The phrases that drive the plugin, in one place. Anything not listed here is
+handled by the router (§1) — just describe what you want.
+
+| You say | What happens | Details |
+| --- | --- | --- |
+| "build / add / change X" | Routed into design → the full pipeline | §3 |
+| "implement the next N tasks of `<plan>`" | Batched autonomous execution, cap N | §3 |
+| "Resume the plan at `<plan>` (batched autonomous mode)" | Next batch, fresh session | §5 |
+| "orchestrate the development of `<spec>`" | Full autonomous pipeline, one setup conversation | §4 |
+| "Resume orchestration for `<plan>`" | Continue an interrupted run from its last boundary | §5 |
+| "Abandon orchestration for `<plan>`" | Confirmed teardown of a wedged run | §5 |
+| `/multi-doc-review <doc> [N]` | N independent review rounds on a spec or plan | §3 |
+| `/multi-code-review [BASE] [N]` | N whole-branch code-review rounds with fixes | §3 |
+| "save state" / "compress context" | Snapshot to `state.md` + decision log entry | §6 |
+| "map this project" | Generate `project-map.md` | §6 |
+| "save this fix" | Record symptom → cause → fix in `known-issues.md` | §6 |
+| "use `<skill>`" / `/<skill>` | Direct invocation of any skill by name | §1 |
+
+(This table is release-maintained — if a phrase here doesn't work, your
+installed plugin version and guide version have probably diverged; check §2.)
 
 ## 9. Troubleshooting
 
-<!-- TODO: Symptom → cause → fix, seeded from real support cases:
-- A skill didn't trigger → is it in hooks/skill-rules.json? Named skills can
-  always be invoked explicitly.
-- Edited a skill but behavior unchanged → you edited the repo, not the
-  installed copy (see §2).
-- Unattended run stalled → a permission prompt; why Phase 0 asks you to
-  confirm permissions up front.
-- Marketplace pointer reverted after update → verify clone HEAD.
-Link to platform notes (docs/platforms/) for Codex/OpenCode/Windows limits. -->
+Symptom-first, from real support cases:
+
+**A skill didn't trigger automatically.** Auto-routing only suggests skills
+registered in the plugin's routing rules (`hooks/skill-rules.json`), and
+keyword matching is deliberately conservative. The reliable path always
+works: name the skill (§1) — "use refactoring", `/multi-code-review` — and
+it's invoked directly.
+
+**I edited a skill but behavior didn't change.** You edited a checkout;
+sessions run the installed copy under `~/.claude/plugins/cache/`. Update or
+reinstall the plugin, then start a fresh session (§2).
+
+**My unattended run has been silent for an hour.** Almost always a
+permission prompt: a subagent asked for an approval nobody is watching for,
+and the run stalls indefinitely — this is exactly what §4's Phase 0
+permissions confirmation exists to prevent. Check the terminal for a pending
+dialog; after answering it, let the run continue or stop it and resume (§5).
+
+**I updated, but the plugin is still the old version.** Two-step update
+half-done (marketplace refreshed but plugin not updated, or vice versa — §2),
+or the marketplace pointer reverted to a stale repository. Verify what's
+actually installed: the plugin's install path and its `VERSION` file must
+both show the expected version; if not, re-run both update steps and check
+the marketplace entry points at the right repo.
+
+**"Context pressure" blocks me from starting a batch.** The §7 start gate.
+If the session genuinely is full: compact or `/clear` first. If you're on a
+large-window model and the number looks absurd, the gate is likely falling
+back to a 200K assumption — install the statusline bridge (§7).
+
+**Something orchestration-specific went wrong.** §5 covers stops, crashes,
+resumes, and teardown; the orchestration log's `## STOPPED` entry names the
+blocker and the detail file.
+
+Platform-specific limits (Codex, OpenCode, Windows) are documented in
+[docs/platforms](../platforms).
