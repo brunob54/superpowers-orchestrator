@@ -17,6 +17,9 @@
 
 Built on the trusted obra/superpowers workflow and refined through research into LLM agent behavior, it adds automatic 3-tier workflow routing, proactive safety hooks, self-consistency verification at critical decision points, cross-session memory, and adversarial red-teaming — everything the original does, plus the discipline layer it was missing.
 
+> [!TIP]
+> **New to the plugin?** Start with the [User Guide](docs/guide/README.md) — the day-to-day operating manual: workflows, trigger phrases, autonomous runs, and recovery.
+
 > [!NOTE]
 > **Lineage & status:** this repository builds on two origins — the original [obra/superpowers](https://github.com/obra/superpowers) by Jesse Vincent and its optimized fork [REPOZY/superpowers-optimized](https://github.com/REPOZY/superpowers-optimized) (baseline v6.6.1). Full credit to both. This fork's own additions (v6.7.0–v6.15.1) are **under testing and evaluation** — see [What this fork adds](#what-this-fork-adds).
 
