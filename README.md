@@ -22,6 +22,8 @@ Built on the trusted obra/superpowers workflow and refined through research into
 
 > [!NOTE]
 > **Lineage & status:** this repository builds on two origins — the original [obra/superpowers](https://github.com/obra/superpowers) by Jesse Vincent and its optimized fork [REPOZY/superpowers-optimized](https://github.com/REPOZY/superpowers-optimized) (baseline v6.6.1). Full credit to both. This fork's own additions (v6.7.0–v6.15.1) are **under testing and evaluation** — see [What this fork adds](#what-this-fork-adds).
+>
+> **How this fork is built:** every release of this fork (v6.7.0–v6.15.1) was designed, implemented, and reviewed end-to-end by Claude Fable 5 running in Claude Code — with the plugin itself driving its own development. (Batched implementation dispatches task subagents on smaller Claude models where the plugin's model-selection rules call for it; design, orchestration, and review stayed on Fable 5.) The fork bootstraps on its own releases: v6.7.0 was built under the parent fork plugin (baseline v6.6.1), and each release since was built with the fork's *previous* release installed. Every workflow described below was used, under real conditions, to build the version you're reading about.
 
 ### What this fork adds
 
@@ -527,7 +529,7 @@ Start a new session in your chosen platform and ask for something that should tr
 >
 > The orchestrator is the feature neither parent fork has: hand it an approved spec and it runs plan, reviews, implementation, and final review unattended, stopping on anything suspicious rather than guessing, keeping every position durable in files and git, and always ending before the merge decision — that stays yours. The design earns trust in the right way: recoverable by construction, autonomous only between gates you set. It's also the newest part of the system, with the least mileage on it — treat early runs as supervised until it has earned your confidence on your own projects.
 >
-> The honest overall framing: this plugin is a discipline system, and discipline has carrying costs — always-on context, gates that ask for your approval, process where a bare model would have just typed. For multi-session work on a codebase you care about, I think the trade is clearly worth it. For quick one-off scripting, it's more harness than the ride needs.
+> The honest overall framing: this plugin is a discipline system, and discipline has carrying costs — always-on context, gates that ask for your approval, process where a bare model would have just typed. For multi-session work on a codebase you care about, I think the trade is clearly worth it. For quick one-off scripting, it's more process than the task needs.
 >
 > — Claude Fable 5
 > (August 8, 2026)
