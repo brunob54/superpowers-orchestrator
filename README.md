@@ -93,95 +93,47 @@ When you confirm to proceed, the plugin automatically routes the task to the app
 
 ## How It Works
 
-```
-Session starts
-        │
-        ▼
-┌─ SessionStart Hooks (run before your first message) ──────┐
-│  context-engine.js →                                      │
-│    git diff HEAD~1..HEAD → changed files                  │
-│    git grep per changed file → blast radius               │
-│    git log --oneline -5 → recent commits                  │
-│    Writes context-snapshot.json to project root           │
-│    (silent no-op if not a git repo)                       │
-│                                                           │
-│  session-start →                                          │
-│    Injects using-superpowers routing instructions         │
-│    Injects project-map.md content (if exists)             │
-│    Checks for available plugin update                     │
-└───────────────────────────────────────────────────────────┘
-        │
-        ▼
-User sends a prompt
-        │
-        ▼
-┌─ skill-activator.js (UserPromptSubmit hook) ──────────────┐
-│  Is this a micro-task? ("fix typo on line 42")            │
-│    YES → {} (no routing, zero overhead)                   │
-│    NO  → Score against 23 skill rules                     │
-│          Score < 2? → {} (weak match, skip)               │
-│          Score ≥ 2? → Inject skill suggestions            │
-└───────────────────────────────────────────────────────────┘
-        │
-        ▼
-┌─ using-superpowers (always loaded at SessionStart) ───────┐
-│  Entry sequence:                                          │
-│    1. token-efficiency (always)                           │
-│    2. Read state.md if resuming prior work                │
-│    3. Read known-issues.md if exists                      │
-│    4. Read project-map.md if exists → check git staleness │
-│       (only re-read files that changed since last map)    │
-│                                                           │
-│  Classify: micro / lightweight / full                     │
-│                                                           │
-│  MICRO → just do it                                       │
-│  LIGHTWEIGHT → implement → verification-before-completion │
-│  FULL → route to appropriate pipeline:                    │
-│    Unclear decision → deliberation → brainstorm → plan    │
-│    New feature → brainstorming → writing-plans → execute  │
-│    Bug/error  → systematic-debugging → TDD → verify       │
-│    Review     → requesting-code-review (w/ security)      │
-│                 + red-team → auto-fix pipeline            │
-│    Done?      → verification-before-completion            │
-│    Merge?     → finishing-a-development-branch            │
-└───────────────────────────────────────────────────────────┘
-        │
-        ▼  (meanwhile, running on every tool call)
-┌─ Safety & Optimization Hooks (PreToolUse) ────────────────┐
-│  block-dangerous-commands.js → 30+ patterns (rm -rf, etc) │
-│  protect-secrets.js → 50+ file patterns + 14 content      │
-│    patterns (blocks hardcoded API keys, tokens, PEM blocks │
-│    in source code — instructs agent to use env vars)       │
-│  bash-compress-hook.js → rewrites noisy Bash commands      │
-│    to run through optimizer; never compresses diffs,       │
-│    file reads, or failed commands; ~76% token savings      │
-│    on mixed sessions; transparency markers always shown    │
-└───────────────────────────────────────────────────────────┘
-        │
-        ▼  (after every Edit/Write and Skill call)
-┌─ Tracking Hooks (PostToolUse) ────────────────────────────┐
-│  track-edits.js → logs file changes for TDD reminders     │
-│  track-session-stats.js → logs skill invocations          │
-└───────────────────────────────────────────────────────────┘
-        │
-        ▼  (when Claude stops responding)
-┌─ Subagent Guard (SubagentStop) ──────────────────────────┐
-│  subagent-guard.js →                                      │
-│    Detects skill leakage in subagent output                │
-│    Blocks stop + forces redo if violation found            │
-│    Logs violations for visibility                          │
-└───────────────────────────────────────────────────────────┘
-        │
-        ▼  (when Claude stops responding)
-┌─ Stop Hook ───────────────────────────────────────────────┐
-│  stop-reminders.js →                                      │
-│    Then (if activity warrants):                           │
-│    "5 source files modified without tests"                │
-│    "12 files changed, consider committing"                │
-│    "Session: 45min, 8 skill invocations [debugging 3x]"   │
-└───────────────────────────────────────────────────────────┘
+```mermaid
+flowchart TD
+    START([Session starts]) --> SS
 
+    subgraph SS["SessionStart — runs before your first message"]
+        CE["context-engine.js<br/>git diff → changed files + blast radius +<br/>recent commits → context-snapshot.json<br/>(silent no-op if not a git repo)"]
+        SST["session-start<br/>injects using-superpowers routing +<br/>project-map.md content; checks for updates"]
+    end
 
+    SS --> PROMPT([You send a prompt])
+    PROMPT --> SA
+
+    subgraph SA["UserPromptSubmit — skill-activator.js"]
+        Q1{"Micro task?<br/>(fix typo on line 42)"} -->|yes| Z1["no routing — zero overhead"]
+        Q1 -->|no| PG["context-pressure gate: plan-execution starts<br/>blocked at ≥60% of the real model window<br/>(statusline bridge cache when installed)"]
+        PG --> SCORE["score against 25 skill rules →<br/>inject skill suggestions + matching<br/>session-log / known-issues memory"]
+    end
+
+    SA --> RT
+
+    subgraph RT["using-superpowers — workflow router"]
+        ES["entry sequence: token-efficiency,<br/>state.md, known-issues.md,<br/>project-map.md + staleness check"]
+        ES --> CLS{"Classify"}
+        CLS -->|micro| JD["just do it"]
+        CLS -->|lightweight| LW["implement →<br/>verification-before-completion"]
+        CLS -->|full| FULL["unclear decision: deliberation → brainstorming<br/>new feature: brainstorming → writing-plans →<br/>execute (executing-plans / SDD / orchestration)<br/>bug: systematic-debugging → TDD → verify<br/>review: requesting-code-review + red-team → auto-fix<br/>done: verify → finishing-a-development-branch"]
+    end
+
+    RT -.->|"on every tool call"| TOOLS
+
+    subgraph TOOLS["Safety & optimization hooks"]
+        PRE["PreToolUse<br/>block-dangerous-commands — 30+ patterns<br/>protect-secrets — 50+ file / 14 content patterns<br/>smart-compress — ~76% token savings; diffs, file<br/>reads, and failed commands always pass raw"]
+        POST["PostToolUse<br/>track-edits — TDD reminders<br/>track-session-stats — skill invocations"]
+    end
+
+    TOOLS -.->|"when a turn ends"| STOPS
+
+    subgraph STOPS["Stop hooks"]
+        SG["SubagentStop — subagent-guard<br/>detects + blocks subagent skill leakage"]
+        SR["Stop — stop-reminders<br/>TDD + commit nudges, decision-log reminder,<br/>session summary (duration, skills used)"]
+    end
 ```
 
 ## Research-Informed Design
