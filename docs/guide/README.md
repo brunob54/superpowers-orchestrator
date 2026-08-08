@@ -178,6 +178,34 @@ What it will **never** do: merge or open a PR on its own, ask you questions
 mid-run, stash or commit unrelated changes it finds in your tree, or silently
 reconcile inconsistent state — anything suspicious is a stop, not a guess.
 
+```mermaid
+flowchart TD
+    A["orchestrate the development of docs/specs/&lt;spec&gt;.md"] --> P0
+
+    subgraph INT1["🧑 Interactive — your only conversation"]
+        P0["Phase 0 — one question batch:<br/>N_plan, N_code, batch cap,<br/>branch point + permissions confirm"]
+    end
+
+    P0 --> P1
+
+    subgraph AUTO["🤖 Unattended — hours, zero questions"]
+        P1["Phase 1 — write plan<br/>from the spec"] --> P2["Phase 2 — N_plan<br/>plan-review rounds"]
+        P2 --> P3["Phase 3 — implementation batch<br/>(≤ cap tasks; checkbox + commit per task)"]
+        P3 -->|tasks remain| P3
+        P3 --> P4["Phase 4 — N_code whole-branch<br/>review rounds, fixes committed"]
+        P4 --> P5["Phase 5 — verify all checkboxes<br/>+ clean tree"]
+    end
+
+    P1 & P2 & P3 & P4 -. "major error" .-> S["## STOPPED in orchestration log<br/>reason + ready-made resume prompt"]
+    S -. "Resume orchestration for &lt;plan&gt; (§5)" .-> AUTO
+
+    P5 --> F
+
+    subgraph INT2["🧑 Interactive — the decision is yours"]
+        F["finishing-a-development-branch:<br/>merge / PR / keep / discard"]
+    end
+```
+
 Authoritative detail:
 [`skills/orchestrating-development/SKILL.md`](../../skills/orchestrating-development/SKILL.md).
 
