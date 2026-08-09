@@ -70,7 +70,7 @@ before any work begins:
 The classification errs deliberately toward **full**: an unnecessary design
 round costs minutes, while skipping design on a task that needed it ships a
 gap. If your "small tweak" lands in brainstorming and you disagree, say so —
-the router proposes, you dispose.
+the router's classification is a proposal, and you can override it.
 
 Behind the scenes, the plugin works through two mechanisms, and knowing the
 difference helps you read the rest of this guide:
@@ -94,7 +94,8 @@ Three things worth knowing on day one:
   is invoked as-is, never re-improvised.
 - **The session reads your project memory first** (§6): `state.md` for
   work in progress, `known-issues.md` for already-solved errors,
-  `project-map.md` for orientation. A project with history starts warm.
+  `project-map.md` for orientation. A project with history starts already
+  informed — nothing has to be re-explained.
 - **One repo, one working session.** Parallel sessions in *different*
   projects are completely fine. In the *same* repo checkout, only one
   session should be doing work (editing, executing plans, committing) —
@@ -124,7 +125,7 @@ flowchart TD
     G1 --> C["Plan — writing-plans<br/>plan in docs/plans/"]
     C --> C2["plan review rounds<br/>(multi-doc-review)"]
     C2 --> G2{"GATE: you approve<br/>the plan"}
-    G2 --> D["Execute — executing-plans or<br/>subagent-driven-development"]
+    G2 --> D["Execute — subagent-driven-development<br/>(batched by default) or executing-plans"]
     D --> D2["per task: TDD → review →<br/>checkbox ticked + commit"]
     D2 -->|more tasks| D
     D2 --> E["whole-branch review rounds<br/>(multi-code-review)"]
@@ -151,7 +152,7 @@ Two rules worth internalizing:
 
 - **Nothing is "too simple to need a design."** Simple projects get a short
   spec — a few sentences — but the approval gate always exists; unexamined
-  assumptions in "trivial" work are where effort goes to die.
+  assumptions in "trivial" work are where the most effort is wasted.
 - **The gate is hard.** No code, no file edits, no implementation skills
   until you explicitly approve the spec.
 
@@ -161,8 +162,8 @@ After spec approval, `writing-plans` decomposes it into
 `docs/plans/YYYY-MM-DD-<name>.md`: tasks with checkboxes, each broken into
 steps of one action apiece (~2–5 minutes), with the actual file contents and
 exact verification commands an engineer needs — placeholders like "update
-logic" are treated as plan failures. TDD ordering is built in: test-writing
-steps precede implementation steps. The plan gets its own `multi-doc-review`
+logic" are treated as plan failures. Test-driven development (TDD) ordering
+is built in: test-writing steps precede implementation steps. The plan gets its own `multi-doc-review`
 gate before you approve it.
 
 This file is the pipeline's backbone: its checkboxes are the durable
@@ -170,18 +171,26 @@ position record that execution ticks and commits task by task (§5).
 
 ### Stage 3 — Execute
 
-Two modes, chosen by plan size and independence of tasks:
+When you approve the plan, `writing-plans` selects the execution approach
+for you and hands you a ready-made paste prompt (the dialogs are quoted in
+the `/clear` section below). **In this fork, the recommended and default
+approach is `subagent-driven-development` (SDD) in batched autonomous
+mode**: a fresh subagent per task, a strict per-task review gate, executed
+in resumable batches with a handoff at every boundary — the mode described
+in detail just below. The alternatives exist for specific situations:
 
-- **`executing-plans`** — sequential, in-session: batches of tasks with a
-  checkpoint report after each batch. The default for small plans.
-- **`subagent-driven-development` (SDD)** — a fresh subagent per task with a
-  strict per-task review gate; independent tasks run in parallel waves. The
-  default for larger plans, and the engine behind batched autonomous mode
-  (below) and orchestration (§4).
+- **SDD, interactive** — the same per-task subagents and reviews, but it
+  stops to ask you about ambiguities instead of journaling them for the
+  batch end. Choose it when you want to stay in the loop task by task.
+- **`executing-plans` (inline)** — continuous execution inside the current
+  session, no subagents. The handoff auto-selects this only when the
+  plan's tasks share heavy runtime state that fresh subagents would lose;
+  it is the exception, not the default.
 
-Both run on an isolated feature branch (never on `main` without your explicit
-consent), both enforce test-driven development for behavior changes, and both
-tick + commit each task's checkbox the moment it completes.
+Whatever the mode: work happens on an isolated feature branch (never on
+`main` without your explicit consent), test-driven development is enforced
+for behavior changes, and each task's checkbox is ticked and committed the
+moment the task completes.
 
 ### Stage 4 — Review and verify
 
@@ -200,8 +209,9 @@ its own — same rule as orchestration.
 
 ### Batched autonomous mode
 
-For plans too large for one sitting, SDD can run in batches that survive
-session boundaries:
+This is the fork's recommended way to execute a plan: SDD running in
+batches that survive session boundaries. You can also start it directly on
+any existing plan:
 
 ```
 implement the next 5 tasks of docs/plans/2026-08-08-my-feature.md
@@ -227,11 +237,12 @@ crashes mid-batch — are §5's batched-execution case.
 The pipeline actively recommends starting execution in a **fresh session**,
 and ending each batch with `/clear`. This isn't housekeeping; it's one of
 the plugin's research-backed principles (see the main README's
-research section): models over-condition on their own previous output, and
+[Research-Informed Design](../../README.md#research-informed-design)
+section): models over-condition on their own previous output, and
 a window full of design debate and dead reasoning measurably degrades the
 work that follows. By the time the plan is approved, the planning
-conversation is dead weight — it spends the first batch's context budget
-before Task 1 even begins.
+conversation is no longer useful — it only takes up memory that the first
+batch needs, spending the context budget before Task 1 even begins.
 
 `/clear` is safe *because of the memory system* (§6). Every gate writes its
 outcome to files before asking you anything: the spec and plan are committed,
@@ -255,8 +266,9 @@ These are the actual dialogs:
 > **[Subagent-Driven / Inline Execution]** (`<N>` tasks).
 >
 > Recommended: start execution in a fresh session (`/clear` in Claude Code)
-> — this session's planning context is dead weight for execution and spends
-> the first batch's context budget before Task 1 begins. The plan file and
+> — this session's planning context is no longer needed for execution and
+> only spends the first batch's context budget before Task 1 begins. The
+> plan file and
 > `state.md` carry everything execution needs. Then paste:
 >
 > `Use subagents in batched autonomous mode on docs/plans/<filename>.md`
@@ -377,7 +389,7 @@ what makes interrupted runs recoverable (§5).
 
 ### Watching progress
 
-The orchestration log is the run's public face:
+The orchestration log is the run's visible record:
 `docs/plans/<date>-<slug>-orchestration-log.md`, committed at every boundary.
 Tail it from another terminal:
 
