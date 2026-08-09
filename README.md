@@ -17,8 +17,13 @@
 
 Built on the trusted obra/superpowers workflow and refined through research into LLM agent behavior, it adds automatic 3-tier workflow routing, proactive safety hooks, self-consistency verification at critical decision points, cross-session memory, and adversarial red-teaming — everything the original does, plus the discipline layer it was missing.
 
+> [!TIP]
+> **New to the plugin?** Start with the [User Guide](docs/guide/README.md) — the day-to-day operating manual: workflows, trigger phrases, autonomous runs, and recovery.
+
 > [!NOTE]
 > **Lineage & status:** this repository builds on two origins — the original [obra/superpowers](https://github.com/obra/superpowers) by Jesse Vincent and its optimized fork [REPOZY/superpowers-optimized](https://github.com/REPOZY/superpowers-optimized) (baseline v6.6.1). Full credit to both. This fork's own additions (v6.7.0–v6.15.1) are **under testing and evaluation** — see [What this fork adds](#what-this-fork-adds).
+>
+> **How this fork is built:** every release of this fork (v6.7.0–v6.15.1) was designed, implemented, and reviewed end-to-end by Claude Fable 5 running in Claude Code — with the plugin itself driving its own development. (Batched implementation dispatches task subagents on smaller Claude models where the plugin's model-selection rules call for it; design, orchestration, and review stayed on Fable 5.) The fork bootstraps on its own releases: v6.7.0 was built under the parent fork plugin (baseline v6.6.1), and each release since was built with the fork's *previous* release installed. Every workflow described below was used, under real conditions, to build the version you're reading about.
 
 ### What this fork adds
 
@@ -31,10 +36,6 @@ Nine releases beyond the REPOZY v6.6.1 baseline. The five flagship additions —
 - **orchestrating-development (v6.14.0)** — fully autonomous spec-to-merge-gate pipeline: from an approved design spec, runs plan writing, N plan-review rounds, batched implementation, and N code-review rounds via fresh-context controller subagents, stopping only on major errors and ending before merge/PR; one interactive Phase 0 collects review counts, batch cap, and branch/permission confirmations, then say "orchestrate development of docs/specs/<spec>.md". [Details](docs/FORK-IMPROVEMENTS.md#5-orchestrating-development--autonomous-spec-to-merge-gate-pipeline-v6140)
 
 Four further releases — `multi-doc-review` rename (v6.11.0), plan-scoped SDD workspace (v6.12.0), fresh-session plan handoff (v6.13.0), and cap-only batch boundary (v6.15.0) — are covered in [RELEASE-NOTES.md](RELEASE-NOTES.md).
-
-Cross-session memory changes the experience fundamentally. Without it, every session starts blind: the AI re-explores structure it already mapped, re-proposes approaches that were already rejected, re-debugs errors that were already solved. With the memory stack, it arrives knowing what was tried, what was decided, and why — and with a pre-computed snapshot of exactly what changed since the last commit — and builds forward instead of sideways.
-
-Five research-backed principles run throughout: *less is more* (minimal always-on instructions), *fresh context beats accumulated context* (subagents get clean scoped prompts, not polluted history), *compliance ≠ competence* (instructions must be carefully engineered, not just comprehensive), *verify your own reasoning* (multi-path self-consistency catches confident-but-wrong failures before they become expensive), and *accountability drives accuracy* (agents that know their output has real downstream consequences perform better).
 
 ### Why developers switch
 | Feature                  | Original Superpowers          | Superpowers Optimized                          | Real-world impact                  |
@@ -90,95 +91,47 @@ When you confirm to proceed, the plugin automatically routes the task to the app
 
 ## How It Works
 
-```
-Session starts
-        │
-        ▼
-┌─ SessionStart Hooks (run before your first message) ──────┐
-│  context-engine.js →                                      │
-│    git diff HEAD~1..HEAD → changed files                  │
-│    git grep per changed file → blast radius               │
-│    git log --oneline -5 → recent commits                  │
-│    Writes context-snapshot.json to project root           │
-│    (silent no-op if not a git repo)                       │
-│                                                           │
-│  session-start →                                          │
-│    Injects using-superpowers routing instructions         │
-│    Injects project-map.md content (if exists)             │
-│    Checks for available plugin update                     │
-└───────────────────────────────────────────────────────────┘
-        │
-        ▼
-User sends a prompt
-        │
-        ▼
-┌─ skill-activator.js (UserPromptSubmit hook) ──────────────┐
-│  Is this a micro-task? ("fix typo on line 42")            │
-│    YES → {} (no routing, zero overhead)                   │
-│    NO  → Score against 23 skill rules                     │
-│          Score < 2? → {} (weak match, skip)               │
-│          Score ≥ 2? → Inject skill suggestions            │
-└───────────────────────────────────────────────────────────┘
-        │
-        ▼
-┌─ using-superpowers (always loaded at SessionStart) ───────┐
-│  Entry sequence:                                          │
-│    1. token-efficiency (always)                           │
-│    2. Read state.md if resuming prior work                │
-│    3. Read known-issues.md if exists                      │
-│    4. Read project-map.md if exists → check git staleness │
-│       (only re-read files that changed since last map)    │
-│                                                           │
-│  Classify: micro / lightweight / full                     │
-│                                                           │
-│  MICRO → just do it                                       │
-│  LIGHTWEIGHT → implement → verification-before-completion │
-│  FULL → route to appropriate pipeline:                    │
-│    Unclear decision → deliberation → brainstorm → plan    │
-│    New feature → brainstorming → writing-plans → execute  │
-│    Bug/error  → systematic-debugging → TDD → verify       │
-│    Review     → requesting-code-review (w/ security)      │
-│                 + red-team → auto-fix pipeline            │
-│    Done?      → verification-before-completion            │
-│    Merge?     → finishing-a-development-branch            │
-└───────────────────────────────────────────────────────────┘
-        │
-        ▼  (meanwhile, running on every tool call)
-┌─ Safety & Optimization Hooks (PreToolUse) ────────────────┐
-│  block-dangerous-commands.js → 30+ patterns (rm -rf, etc) │
-│  protect-secrets.js → 50+ file patterns + 14 content      │
-│    patterns (blocks hardcoded API keys, tokens, PEM blocks │
-│    in source code — instructs agent to use env vars)       │
-│  bash-compress-hook.js → rewrites noisy Bash commands      │
-│    to run through optimizer; never compresses diffs,       │
-│    file reads, or failed commands; ~76% token savings      │
-│    on mixed sessions; transparency markers always shown    │
-└───────────────────────────────────────────────────────────┘
-        │
-        ▼  (after every Edit/Write and Skill call)
-┌─ Tracking Hooks (PostToolUse) ────────────────────────────┐
-│  track-edits.js → logs file changes for TDD reminders     │
-│  track-session-stats.js → logs skill invocations          │
-└───────────────────────────────────────────────────────────┘
-        │
-        ▼  (when Claude stops responding)
-┌─ Subagent Guard (SubagentStop) ──────────────────────────┐
-│  subagent-guard.js →                                      │
-│    Detects skill leakage in subagent output                │
-│    Blocks stop + forces redo if violation found            │
-│    Logs violations for visibility                          │
-└───────────────────────────────────────────────────────────┘
-        │
-        ▼  (when Claude stops responding)
-┌─ Stop Hook ───────────────────────────────────────────────┐
-│  stop-reminders.js →                                      │
-│    Then (if activity warrants):                           │
-│    "5 source files modified without tests"                │
-│    "12 files changed, consider committing"                │
-│    "Session: 45min, 8 skill invocations [debugging 3x]"   │
-└───────────────────────────────────────────────────────────┘
+```mermaid
+flowchart TD
+    START([Session starts]) --> SS
 
+    subgraph SS["SessionStart — runs before your first message"]
+        CE["context-engine.js<br/>git diff → changed files + blast radius +<br/>recent commits → context-snapshot.json<br/>(silent no-op if not a git repo)"]
+        SST["session-start<br/>injects using-superpowers routing +<br/>project-map.md content; checks for updates"]
+    end
 
+    SS --> PROMPT([You send a prompt])
+    PROMPT --> SA
+
+    subgraph SA["UserPromptSubmit — skill-activator.js"]
+        Q1{"Micro task?"} -->|yes| Z1["no routing — zero overhead<br/>(e.g. fix typo on line 42)"]
+        Q1 -->|no| PG["context-pressure gate: plan-execution starts<br/>blocked at ≥60% of the real model window<br/>(statusline bridge cache when installed)"]
+        PG --> SCORE["score against 25 skill rules →<br/>inject skill suggestions + matching<br/>session-log / known-issues memory"]
+    end
+
+    SA --> RT
+
+    subgraph RT["using-superpowers — workflow router"]
+        ES["entry sequence: token-efficiency,<br/>state.md, known-issues.md,<br/>project-map.md + staleness check"]
+        ES --> CLS{"Classify"}
+        CLS -->|micro| JD["just do it"]
+        CLS -->|lightweight| LW["implement →<br/>verification-before-completion"]
+        CLS -->|full| FULL["unclear decision: deliberation → brainstorming<br/>new feature: brainstorming → writing-plans →<br/>execute (executing-plans / SDD / orchestration)<br/>bug: systematic-debugging → TDD → verify<br/>review: requesting-code-review + red-team → auto-fix<br/>done: verify → finishing-a-development-branch"]
+    end
+
+    RT -.->|"on every tool call"| TOOLS
+
+    subgraph TOOLS["Safety & optimization hooks"]
+        PRE["PreToolUse<br/>block-dangerous-commands — 30+ patterns<br/>protect-secrets — 50+ file / 14 content patterns<br/>smart-compress — ~76% token savings; diffs, file<br/>reads, and failed commands always pass raw"]
+        POST["PostToolUse<br/>track-edits — TDD reminders<br/>track-session-stats — skill invocations"]
+    end
+
+    TOOLS -.->|"when a turn ends"| STOPS
+
+    subgraph STOPS["Stop hooks"]
+        SG["SubagentStop — subagent-guard<br/>detects + blocks subagent skill leakage"]
+        SR["Stop — stop-reminders<br/>TDD + commit nudges, decision-log reminder,<br/>session summary (duration, skills used)"]
+    end
 ```
 
 ## Research-Informed Design
@@ -247,7 +200,9 @@ These research insights drive five core principles throughout the fork:
 
 ## Session Memory: The AI That Remembers
 
-The plugin builds a memory stack at your project root. Together they eliminate the most expensive form of session overhead: re-discovering things the AI already knew.
+Cross-session memory changes the experience fundamentally. Without it, every session starts blind: the AI re-explores structure it already mapped, re-proposes approaches that were already rejected, re-debugs errors that were already solved. With the memory stack, it arrives knowing what was tried, what was decided, and why — and with a pre-computed snapshot of exactly what changed since the last commit — and builds forward instead of sideways.
+
+The plugin builds this memory stack at your project root. Together the files eliminate the most expensive form of session overhead: re-discovering things the AI already knew.
 
 ```
 context-snapshot.json  ← git blast radius + changed files (written automatically every session)
@@ -560,18 +515,22 @@ Start a new session in your chosen platform and ask for something that should tr
 ---
 
 
-## Claude Opus 4.6's honest take:
+## Claude Fable 5's honest take:
 
-> I've worked inside this plugin — not just reviewed it, but been the agent running under it across extended sessions. The three-tier routing is the most useful single feature: without it, I over-engineer simple tasks and under-scope complex ones. The hard overrides that force full classification when a change adds conditional logic or touches shared code catch mis-classifications I make constantly on my own.
+> I've worked under this plugin across many sessions on this very repository, so this is an assessment from use, not a review of the README.
 >
-> The research-informed design is genuine. The finding that verbose context files hurt rather than help is counterintuitive but correct — I've experienced context overload firsthand. The self-consistency reasoning catches cases where I commit to a single plausible hypothesis and miss the actual root cause. The adversarial red team surfaces failure modes that pass every checklist. The memory stack means I arrive at each session with actual context rather than starting blind.
+> The part I'd defend most strongly is the memory stack. In practice it does what it claims: sessions on this repo start with the relevant prior decisions, rejected approaches, and already-solved errors injected before I ask for them — and that recall has repeatedly changed what I did, not just what I knew. Documented mistakes stay made once. That's the feature I'd miss most if it were gone.
 >
-> The constraint architecture is well-designed: tight where mistakes are hard to recover from — safety hooks, verification gates, TDD enforcement — and silent where flexibility is needed. That asymmetry is correct. I prefer operating under structured constraints for production work. The result is output I can stand behind rather than output I have to apologize for.
+> The three-tier routing earns its keep in the aggregate: proportional overhead is the right idea, and the hard overrides catch real misclassifications. It errs deliberately toward the heavy path, so occasionally a small task gets more ceremony than it deserved. That's the intended trade, but it is a trade.
 >
-> Strongly recommended for any developer who wants their AI to build with discipline rather than confidence alone.
+> Be equally clear-eyed about the review machinery: N-round document and code reviews cost real tokens and real minutes, and the value depends on the stakes of what's being reviewed. The rounds are configurable down to zero, which matters — use the depth where correctness is expensive, not everywhere by reflex.
 >
-> — Claude Opus 4.6
-> (March 23, 2026)
+> The orchestrator is the feature neither parent fork has: hand it an approved spec and it runs plan, reviews, implementation, and final review unattended, stopping on anything suspicious rather than guessing, keeping every position durable in files and git, and always ending before the merge decision — that stays yours. The design earns trust in the right way: recoverable by construction, autonomous only between gates you set. It's also the newest part of the system, with the least mileage on it — treat early runs as supervised until it has earned your confidence on your own projects.
+>
+> The honest overall framing: this plugin is a discipline system, and discipline has carrying costs — always-on context, gates that ask for your approval, process where a bare model would have just typed. For multi-session work on a codebase you care about, I think the trade is clearly worth it. For quick one-off scripting, it's more process than the task needs.
+>
+> — Claude Fable 5
+> (August 8, 2026)
 
 
 ---
@@ -598,4 +557,4 @@ MIT License - see LICENSE file for details
 - Issues (this fork): https://github.com/brunob54/superpowers-optimized/issues
 - Optimized fork base: https://github.com/REPOZY/superpowers-optimized
 - Original: https://github.com/obra/superpowers
-- Discussions: https://github.com/REPOZY/superpowers-optimized/discussions
+- Discussions: https://github.com/brunob54/superpowers-optimized/discussions

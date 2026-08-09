@@ -176,7 +176,7 @@ seed is what makes it safe to start execution in a fresh session.
 ```
 Plan saved to `docs/plans/<filename>.md`. Ready to execute with **[Subagent-Driven / Inline Execution]** (<N> tasks[, <one-word reason>]).
 
-Recommended: start execution in a fresh session (`/clear` in Claude Code) — this session's planning context is dead weight for execution and spends the first batch's context budget before Task 1 begins. The plan file and `state.md` carry everything execution needs. Then paste:
+Recommended: start execution in a fresh session (`/clear` in Claude Code) — this session's planning context is no longer needed for execution and only spends the first batch's context budget before Task 1 begins. The plan file and `state.md` carry everything execution needs. Then paste:
 
     <paste prompt from the table below>
 
