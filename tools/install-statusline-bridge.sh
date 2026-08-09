@@ -27,6 +27,14 @@ cp "$SRC" "$DEST"
 echo "Installed: $DEST"
 echo ""
 
+if [ -f "$SETTINGS" ] && grep -qF "$DEST" "$SETTINGS"; then
+  echo "Already wired: your statusLine entry in $SETTINGS points at the"
+  echo "bridge. Copy refreshed — nothing else to do."
+  echo ""
+  echo "Re-run this script after plugin updates to refresh the installed copy."
+  exit 0
+fi
+
 if [ -f "$SETTINGS" ] && grep -q '"statusLine"' "$SETTINGS"; then
   echo "You already have a statusLine configured. Use DELEGATE mode so the"
   echo "bridge caches context data and your current renderer keeps drawing"
