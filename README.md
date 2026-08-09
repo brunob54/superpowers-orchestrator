@@ -37,10 +37,6 @@ Nine releases beyond the REPOZY v6.6.1 baseline. The five flagship additions —
 
 Four further releases — `multi-doc-review` rename (v6.11.0), plan-scoped SDD workspace (v6.12.0), fresh-session plan handoff (v6.13.0), and cap-only batch boundary (v6.15.0) — are covered in [RELEASE-NOTES.md](RELEASE-NOTES.md).
 
-Cross-session memory changes the experience fundamentally. Without it, every session starts blind: the AI re-explores structure it already mapped, re-proposes approaches that were already rejected, re-debugs errors that were already solved. With the memory stack, it arrives knowing what was tried, what was decided, and why — and with a pre-computed snapshot of exactly what changed since the last commit — and builds forward instead of sideways.
-
-Five research-backed principles run throughout: *less is more* (minimal always-on instructions), *fresh context beats accumulated context* (subagents get clean scoped prompts, not polluted history), *compliance ≠ competence* (instructions must be carefully engineered, not just comprehensive), *verify your own reasoning* (multi-path self-consistency catches confident-but-wrong failures before they become expensive), and *accountability drives accuracy* (agents that know their output has real downstream consequences perform better).
-
 ### Why developers switch
 | Feature                  | Original Superpowers          | Superpowers Optimized                          | Real-world impact                  |
 |--------------------------|-------------------------------|------------------------------------------------|------------------------------------|
@@ -204,7 +200,9 @@ These research insights drive five core principles throughout the fork:
 
 ## Session Memory: The AI That Remembers
 
-The plugin builds a memory stack at your project root. Together they eliminate the most expensive form of session overhead: re-discovering things the AI already knew.
+Cross-session memory changes the experience fundamentally. Without it, every session starts blind: the AI re-explores structure it already mapped, re-proposes approaches that were already rejected, re-debugs errors that were already solved. With the memory stack, it arrives knowing what was tried, what was decided, and why — and with a pre-computed snapshot of exactly what changed since the last commit — and builds forward instead of sideways.
+
+The plugin builds this memory stack at your project root. Together the files eliminate the most expensive form of session overhead: re-discovering things the AI already knew.
 
 ```
 context-snapshot.json  ← git blast radius + changed files (written automatically every session)
