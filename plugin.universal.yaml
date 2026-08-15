@@ -1,14 +1,14 @@
-# plugin.universal.yaml — single source of truth for superpowers-optimized
+# plugin.universal.yaml — single source of truth for superpowers-orchestrator
 # Compile with: hookbridge compile
 # (or before npm publish: node /path/to/hookbridge/hookbridge.js compile)
 
 meta:
-  name: superpowers-optimized
-  version: "6.15.1"
+  name: superpowers-orchestrator
+  version: "7.0.0"
   description: "Workflow skills and hooks for Claude Code and Codex"
-  author: "Jesse Vincent, forked by REPOZY"
-  homepage: "https://github.com/REPOZY/superpowers-optimized"
-  repository: "https://github.com/REPOZY/superpowers-optimized"
+  author: "Jesse Vincent, forked by brunob54"
+  homepage: "https://github.com/brunob54/superpowers-orchestrator"
+  repository: "https://github.com/brunob54/superpowers-orchestrator"
   license: "MIT"
   keywords: ["skills", "tdd", "debugging", "code-review", "workflows", "agentic", "token-efficiency", "hooks", "safety", "subagent"]
   platforms: [claude-code, codex]
@@ -123,7 +123,7 @@ extensions:
 
   codex:
     install_path: "$HOME/.codex/{meta.name}"
-    legacy_install_paths: ["$HOME/.codex/superpowers"]
+    legacy_install_paths: ["$HOME/.codex/superpowers-optimized", "$HOME/.codex/superpowers"]
     description: "Structured workflow skills for Codex — systematic debugging, TDD, brainstorming, code review, and 30+ expert workflows. Skills work on all platforms. Lifecycle hooks (routing, safety, reminders) require separate setup on macOS/Linux."
-    display_name: "Superpowers Optimized"
+    display_name: "Superpowers Orchestrator"
     short_description: "30+ expert workflow skills — debugging, TDD, code review, brainstorming, and more"

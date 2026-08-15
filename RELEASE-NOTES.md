@@ -1,4 +1,41 @@
-# Superpowers Optimized Release Notes
+# Superpowers Orchestrator Release Notes
+
+## v7.0.0 — project renamed: superpowers-optimized → superpowers-orchestrator
+
+**Breaking change: the plugin and marketplace are renamed.** The installed
+plugin id changes from `superpowers-optimized@superpowers-optimized` to
+`superpowers-orchestrator@superpowers-orchestrator`, so the plugin must be
+reinstalled — an in-place update cannot cross the rename.
+
+- **Why the rename:** the old name described the fork's first change
+  (token efficiency). The fork's main feature today is the autonomous
+  orchestration pipeline (`orchestrating-development`, batched
+  `subagent-driven-development`, `multi-code-review`). The name now matches.
+- **Claude Code migration:** `/plugin uninstall superpowers-optimized`,
+  remove the old marketplace entry, then
+  `/plugin marketplace add brunob54/superpowers-orchestrator` and
+  `/plugin install superpowers-orchestrator@superpowers-orchestrator`.
+  If `~/.claude/settings.json` has an `extraKnownMarketplaces` entry for
+  the old name, replace it — it re-seeds the marketplace list on start.
+- **Codex migration:** rename the clone directory,
+  `mv ~/.codex/superpowers-optimized ~/.codex/superpowers-orchestrator`
+  (see `.codex/INSTALL.md`). The hook commands look for the new directory
+  first and fall back to the old names.
+- **OpenCode migration:** the plugin file is renamed to
+  `superpowers-orchestrator.js`; remove the old
+  `~/.config/opencode/plugins/superpowers-optimized.js` symlink and create
+  the new one (see `.opencode/INSTALL.md`). The JS export is renamed
+  `SuperpowersOptimizedPlugin` → `SuperpowersOrchestratorPlugin`.
+- **GitHub repository** renamed to `brunob54/superpowers-orchestrator`;
+  GitHub redirects the old URLs and git remotes.
+- The skill prefix in this plugin's hints and cross-skill references is now
+  `superpowers-orchestrator:`. The skill-name parser and the subagent guard
+  accept both the old and the new prefix during the transition.
+- Manifest `homepage`/`repository` fields and the session-start update
+  check now point at `brunob54/superpowers-orchestrator` (previously the
+  intermediate `REPOZY` fork, whose repo does not carry this fork's
+  releases). The README lineage note keeps citing both upstreams as
+  history.
 
 ## v6.15.1 — statusline bridge installer + configurable gate threshold
 

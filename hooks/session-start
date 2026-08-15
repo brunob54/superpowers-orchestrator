@@ -19,7 +19,7 @@ PLUGIN_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 # Path B — marketplace install (Claude Code / Cursor):
 #   If PLUGIN_ROOT is NOT a git repo, compare the locally installed version
 #   against the remote plugin.json on GitHub. If an update is available,
-#   tell the user to run /plugin update superpowers-optimized.
+#   tell the user to run /plugin update superpowers-orchestrator.
 #
 # Both paths: cached for 24h to avoid network access on every session start.
 # Both paths: fail silently — never block session startup.
@@ -151,7 +151,7 @@ See RELEASE-NOTES.md for full details."
 
             update_notice="\n\n<important-reminder>IN YOUR FIRST REPLY AFTER SEEING THIS MESSAGE YOU MUST TELL THE USER:
 
-**Superpowers Optimized has been updated to v${new_version}** (was v${old_version})
+**Superpowers Orchestrator has been updated to v${new_version}** (was v${old_version})
 
 **What's New:**
 ${whats_new}</important-reminder>"
@@ -168,7 +168,7 @@ ${whats_new}</important-reminder>"
         local local_version=""
         local registry_file="${HOME}/.claude/plugins/installed_plugins.json"
         if [ -f "$registry_file" ]; then
-            local_version=$(grep -A 10 '"superpowers-optimized@superpowers-optimized"' "$registry_file" 2>/dev/null \
+            local_version=$(grep -A 10 '"superpowers-orchestrator@superpowers-orchestrator"' "$registry_file" 2>/dev/null \
                 | grep '"version"' | head -1 | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' || echo "")
         fi
         if [ -z "$local_version" ]; then
@@ -194,7 +194,7 @@ ${whats_new}</important-reminder>"
         local remote_version="$cached_remote"
         if [ -z "$remote_version" ]; then
             remote_version=$(curl -sf --max-time 3 \
-                "https://raw.githubusercontent.com/REPOZY/superpowers-optimized/refs/heads/main/.claude-plugin/plugin.json" \
+                "https://raw.githubusercontent.com/brunob54/superpowers-orchestrator/refs/heads/main/.claude-plugin/plugin.json" \
                 2>/dev/null \
                 | grep '"version"' | head -1 | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' || echo "")
             # Cache the result (even if empty, to avoid hammering GitHub on no-internet)
@@ -215,10 +215,10 @@ ${whats_new}</important-reminder>"
             local l="${local_parts[$i]:-0}"
             local r="${remote_parts[$i]:-0}"
             if [ "$r" -gt "$l" ]; then
-                update_notice="\n\n<important-reminder>IN YOUR FIRST REPLY AFTER SEEING THIS MESSAGE YOU MUST TELL THE USER: 🔄 **Superpowers Optimized v${remote_version} is available** (you have v${local_version}). Run \`/plugin update superpowers-optimized\` which opens the plugin manager UI. From there:
+                update_notice="\n\n<important-reminder>IN YOUR FIRST REPLY AFTER SEEING THIS MESSAGE YOU MUST TELL THE USER: 🔄 **Superpowers Orchestrator v${remote_version} is available** (you have v${local_version}). Run \`/plugin update superpowers-orchestrator\` which opens the plugin manager UI. From there:
 
-Marketplaces tab → select REPOZY/superpowers-optimized → Update marketplace (refreshes the version catalog)
-Installed tab → select superpowers-optimized → Update now
+Marketplaces tab → select brunob54/superpowers-orchestrator → Update marketplace (refreshes the version catalog)
+Installed tab → select superpowers-orchestrator → Update now
 
 Tip: To skip manual steps in future, enable Auto-update for the marketplace in step 1.</important-reminder>"
                 return
@@ -445,7 +445,7 @@ state_escaped=$(escape_for_json "$state_content")
 known_issues_escaped=$(escape_for_json "$known_issues_content")
 context_snapshot_escaped=$(escape_for_json "$context_snapshot_content")
 
-session_context="<EXTREMELY_IMPORTANT>\nYou have superpowers-optimized.\n\n**The \`superpowers-optimized:using-superpowers\` guidance is loaded below. For all other skills, use the \`Skill\` tool.**\n\n**MANDATORY FIRST ACTIONS — before ANY tool calls beyond reading files:**\n1. Silently activate token-efficiency (its rules apply immediately)\n2. Classify the task complexity (micro/lightweight/full) per the Entry Sequence below\n3. If the user names a specific skill (e.g. use brainstorming, use context management), that IS a Skill tool invocation — call \`Skill\` with that skill name. Do NOT re-implement the skill's purpose with ad-hoc agents or manual steps.\n\n${using_superpowers_escaped}\n\n${warning_escaped}${update_escaped}${git_escaped}\n</EXTREMELY_IMPORTANT>${project_map_escaped}${session_log_escaped}${state_escaped}${known_issues_escaped}${context_snapshot_escaped}"
+session_context="<EXTREMELY_IMPORTANT>\nYou have superpowers-orchestrator.\n\n**The \`superpowers-orchestrator:using-superpowers\` guidance is loaded below. For all other skills, use the \`Skill\` tool.**\n\n**MANDATORY FIRST ACTIONS — before ANY tool calls beyond reading files:**\n1. Silently activate token-efficiency (its rules apply immediately)\n2. Classify the task complexity (micro/lightweight/full) per the Entry Sequence below\n3. If the user names a specific skill (e.g. use brainstorming, use context management), that IS a Skill tool invocation — call \`Skill\` with that skill name. Do NOT re-implement the skill's purpose with ad-hoc agents or manual steps.\n\n${using_superpowers_escaped}\n\n${warning_escaped}${update_escaped}${git_escaped}\n</EXTREMELY_IMPORTANT>${project_map_escaped}${session_log_escaped}${state_escaped}${known_issues_escaped}${context_snapshot_escaped}"
 
 # ── Output ─────────────────────────────────────────────────────────────────────
 # Uses printf instead of heredoc (cat <<EOF) to work around a bash 5.3+

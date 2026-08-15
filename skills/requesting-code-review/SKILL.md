@@ -27,7 +27,7 @@ Request review early to catch issues before they spread.
      - **Hashes match (fresh):** use `changed_files` and `blast_radius` as the review scope. Inject this summary into the code-reviewer prompt: *"Changed files: [list]. Also referenced by: [blast_radius callers]."*
      - **Hashes differ (stale):** note the snapshot is from a previous commit; use `changed_files` as a starting point but do not rely on `blast_radius`.
    - If absent: determine scope from `git diff --name-only BASE_SHA..HEAD_SHA` directly.
-3. Dispatch `superpowers-optimized:code-reviewer` using `requesting-code-review/code-reviewer.md`.
+3. Dispatch `superpowers-orchestrator:code-reviewer` using `requesting-code-review/code-reviewer.md`.
 4. Provide:
    - What changed (from context snapshot or git diff)
    - Scoped file list (changed files + blast radius callers if fresh snapshot available, or broad if not)
@@ -63,7 +63,7 @@ When changes touch security-relevant areas, the code review **must** include a s
 
 ## Adversarial Red Team (Optional)
 
-For changes involving complex logic, concurrency, state management, or critical data paths, dispatch `superpowers-optimized:red-team` in parallel with the code reviewer.
+For changes involving complex logic, concurrency, state management, or critical data paths, dispatch `superpowers-orchestrator:red-team` in parallel with the code reviewer.
 
 **Triggers when changes touch:**
 - State machines or multi-step workflows

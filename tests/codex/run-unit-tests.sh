@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Unit test runner for superpowers-optimized Codex hooks
+# Unit test runner for superpowers-orchestrator Codex hooks
 #
 # Run from the repo root:
 #   bash tests/codex/run-unit-tests.sh
@@ -15,7 +15,7 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 
 echo "=================================================="
-echo " superpowers-optimized — Codex Hook Unit Tests"
+echo " superpowers-orchestrator — Codex Hook Unit Tests"
 echo "=================================================="
 echo " Repo root: ${REPO_ROOT}"
 echo " Node:      $(node --version 2>/dev/null || echo 'NOT FOUND')"

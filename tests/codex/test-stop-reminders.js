@@ -145,7 +145,7 @@ test('Stats-only session (skill invocations but no edits) emits {} — does not 
     const statsFile = path.join(logDir, 'session-stats.json');
     fs.writeFileSync(statsFile, JSON.stringify({
       startedAt: new Date(Date.now() - 6 * 60 * 1000).toISOString(), // 6 min ago
-      skillInvocations: { 'superpowers-optimized:executing-plans': 1 },
+      skillInvocations: { 'superpowers-orchestrator:executing-plans': 1 },
       totalSkillCalls: 1,
       hookBlocks: 0,
       filesEdited: 0,

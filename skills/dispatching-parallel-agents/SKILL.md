@@ -50,7 +50,7 @@ Each agent prompt must include:
 - Acceptance criteria
 - Constraints (what not to touch)
 - Required output format
-- Skill leakage prevention: "You are a focused subagent. Do NOT invoke any skills from the superpowers-optimized plugin. Do NOT use the Skill tool. Your only job is the task described below."
+- Skill leakage prevention: "You are a focused subagent. Do NOT invoke any skills from the superpowers-orchestrator plugin. Do NOT use the Skill tool. Your only job is the task described below."
 
 ### Example prompt
 
@@ -67,7 +67,7 @@ Your task:
 3. Fix the root cause. Do NOT just increase timeouts.
 4. Do NOT change any files outside src/agents/agent-tool-abort.test.ts and its direct implementation file.
 
-You are a focused subagent. Do NOT invoke any skills from the superpowers-optimized plugin.
+You are a focused subagent. Do NOT invoke any skills from the superpowers-orchestrator plugin.
 Do NOT use the Skill tool. Your only job is the task described above.
 
 Return: Summary of root cause and what you changed.

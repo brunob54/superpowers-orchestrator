@@ -112,7 +112,7 @@ test('Context contains using-superpowers entry point instruction (plain text)', 
     const result = runAdapter({ source: 'startup' }, dir);
     const plainText = result._rawPlainText || '';
     assert.ok(
-      plainText.includes('using-superpowers') || plainText.includes('superpowers-optimized'),
+      plainText.includes('using-superpowers') || plainText.includes('superpowers-orchestrator'),
       'Missing using-superpowers reference in context'
     );
   } finally { cleanup(dir); }

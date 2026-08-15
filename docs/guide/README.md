@@ -1,4 +1,4 @@
-# Superpowers Optimized — User Guide
+# Superpowers Orchestrator — User Guide
 
 _Guide last reviewed against plugin version **6.15.1**._
 
@@ -36,7 +36,7 @@ section](../../README.md#installation) — one source of truth, not duplicated
 here. What the README doesn't tell you:
 
 **You run the installed copy, not a checkout.** Sessions load the plugin from
-`~/.claude/plugins/cache/superpowers-optimized/…`. If you've cloned this
+`~/.claude/plugins/cache/superpowers-orchestrator/…`. If you've cloned this
 repository, editing a skill there changes nothing in your live sessions until
 the plugin itself is updated — a perennial "my change didn't work" trap for
 contributors.
@@ -626,7 +626,7 @@ Run the plugin's statusline bridge installer (tools/install-statusline-bridge.sh
 
 You do not need a clone of this repository: the installed plugin is a full
 copy, so the script is already on your machine (under
-`~/.claude/plugins/cache/superpowers-optimized/…/tools/`), and Claude knows
+`~/.claude/plugins/cache/superpowers-orchestrator/…/tools/`), and Claude knows
 where its own plugin lives. If you *do* have a checkout, running
 `bash tools/install-statusline-bridge.sh` from the repo root does the same
 thing.

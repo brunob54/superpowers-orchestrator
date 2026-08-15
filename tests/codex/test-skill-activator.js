@@ -192,9 +192,9 @@ test('Max 3 skills suggested per prompt', () => {
   });
   const ctx = result.hookSpecificOutput?.additionalContext || '';
   if (ctx) {
-    // Count only skill list entries (lines starting with "  - superpowers-optimized:").
-    // Excludes the instruction line "invoke superpowers-optimized:using-superpowers FIRST".
-    const skillLines = ctx.split('\n').filter(l => /^\s+-\s+superpowers-optimized:/.test(l));
+    // Count only skill list entries (lines starting with "  - superpowers-orchestrator:").
+    // Excludes the instruction line "invoke superpowers-orchestrator:using-superpowers FIRST".
+    const skillLines = ctx.split('\n').filter(l => /^\s+-\s+superpowers-orchestrator:/.test(l));
     assert.ok(skillLines.length <= 3,
       `More than 3 skills suggested: ${skillLines.length}\n${ctx}`);
   }

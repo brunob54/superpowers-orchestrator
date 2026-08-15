@@ -200,7 +200,7 @@ const checkForUpdates = (pluginRoot, configDir, homeDir) => {
   const whatsNew = readWhatsNew(pluginRoot, newVersion, oldVersion);
   return `<important-reminder>IN YOUR FIRST REPLY AFTER SEEING THIS MESSAGE YOU MUST TELL THE USER:
 
-**Superpowers Optimized has been updated to v${newVersion}** (was v${oldVersion})
+**Superpowers Orchestrator has been updated to v${newVersion}** (was v${oldVersion})
 
 **What's New:**
 ${whatsNew}</important-reminder>`;
@@ -383,7 +383,7 @@ function safetyCheckWriteContent(filePath, content) {
 
 // ---------------------------------------------------------------------------
 
-export const SuperpowersOptimizedPlugin = async (_context) => {
+export const SuperpowersOrchestratorPlugin = async (_context) => {
   const homeDir = os.homedir();
   const pluginRoot = path.resolve(__dirname, '../..');
   const superpowersSkillsDir = path.resolve(__dirname, '../../skills');
@@ -413,7 +413,7 @@ Use OpenCode's native \`skill\` tool to list and load skills.`;
     const updateSection = updateNotice ? `\n\n${updateNotice}\n` : '';
 
     return `<EXTREMELY_IMPORTANT>
-You have superpowers-optimized.
+You have superpowers-orchestrator.
 
 **The \`using-superpowers\` guidance below is already loaded. Do not load it again.**
 

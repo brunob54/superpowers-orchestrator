@@ -6,7 +6,7 @@
  * Three configurable safety levels: critical, high, strict.
  *
  * Based on claude-code-hooks by karanb192 (MIT License).
- * Adapted for superpowers-optimized plugin with cross-platform support.
+ * Adapted for superpowers-orchestrator plugin with cross-platform support.
  *
  * Logs blocked commands to: ~/.claude/hooks-logs/YYYY-MM-DD.jsonl
  */

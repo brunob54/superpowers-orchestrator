@@ -13,7 +13,7 @@ source "$SCRIPT_DIR/setup.sh"
 # Trap to cleanup on exit
 trap cleanup_test_env EXIT
 
-plugin_file="$HOME/.config/opencode/superpowers/.opencode/plugins/superpowers-optimized.js"
+plugin_file="$HOME/.config/opencode/superpowers/.opencode/plugins/superpowers-orchestrator.js"
 
 echo "Test 1: Plugin file exists..."
 if [ -f "$plugin_file" ]; then

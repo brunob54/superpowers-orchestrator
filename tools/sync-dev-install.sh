@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Sync this working tree into the installed superpowers-optimized plugin under
+# Sync this working tree into the installed superpowers-orchestrator plugin under
 # ~/.claude, so local edits take effect in every project without pushing or
 # running `claude plugin update`.
 #
@@ -19,7 +19,7 @@
 #
 set -euo pipefail
 
-PLUGIN_ID="${PLUGIN_ID:-superpowers-optimized@superpowers-optimized}"
+PLUGIN_ID="${PLUGIN_ID:-superpowers-orchestrator@superpowers-orchestrator}"
 REGISTRY="${CLAUDE_PLUGIN_REGISTRY:-$HOME/.claude/plugins/installed_plugins.json}"
 LOCK_DIR=".in_use"
 PLUGIN_MANIFEST=".claude-plugin/plugin.json"

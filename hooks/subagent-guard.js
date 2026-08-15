@@ -2,7 +2,7 @@
 /**
  * Subagent Guard — SubagentStop Hook
  *
- * Detects when subagents invoke superpowers-optimized skills or spawn
+ * Detects when subagents invoke superpowers-orchestrator skills or spawn
  * recursive sub-subagents. When detected, blocks the subagent from
  * stopping and instructs it to redo its work without skill invocations.
  * Exception: orchestrating-development dispatches controller subagents that
@@ -69,7 +69,7 @@ const ORCHESTRATION_REPORT_MARKER = '<!-- orchestration report -->';
 const ACTION_VERB = '(?:invoking?|using|use|running?|called?|calling|activat(?:e|ed|ing)|trigger(?:ing|ed)?|execut(?:e|ed|ing)|launch(?:ing|ed)?|spawn(?:ing|ed)?|start(?:ing|ed)?)\\s+(?:the\\s+)?';
 
 const VIOLATION_PATTERNS = [
-  /Invoke the superpowers-optimized/i,
+  /Invoke the superpowers-(?:orchestrator|optimized)/i,
   /I'm using the .+ skill/i,
   /Skill\s*\(\s*["']?superpowers/i,
   /skill:\s*["']?(superpowers|using-superpowers|brainstorming|deliberation|systematic-debugging|test-driven-development|verification|executing-plans|writing-plans|context-management|frontend-design|refactoring|performance-investigation|dependency-management)/i,
@@ -126,9 +126,9 @@ function main() {
           const result = {
             decision: 'block',
             reason: [
-              'SKILL LEAKAGE DETECTED: You invoked a superpowers-optimized skill, which is not allowed for subagents.',
+              'SKILL LEAKAGE DETECTED: You invoked a superpowers-orchestrator skill, which is not allowed for subagents.',
               'Redo your assigned task using only your core tools (Read, Edit, Write, Bash, Grep, Glob).',
-              'Do NOT invoke the Skill tool. Do NOT reference any superpowers-optimized skills.',
+              'Do NOT invoke the Skill tool. Do NOT reference any superpowers-orchestrator skills.',
               'Focus only on the task you were given.'
             ].join(' ')
           };

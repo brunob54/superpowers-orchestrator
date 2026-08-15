@@ -1,4 +1,4 @@
-# Installing Superpowers Optimized for Codex
+# Installing Superpowers Orchestrator for Codex
 
 ## What you get
 
@@ -36,7 +36,7 @@
 ### 1. Clone the repository
 
 ```bash
-git clone https://github.com/brunob54/superpowers-optimized.git ~/.codex/superpowers-optimized
+git clone https://github.com/brunob54/superpowers-orchestrator.git ~/.codex/superpowers-orchestrator
 ```
 
 ### 2. Create the skills symlink
@@ -44,13 +44,13 @@ git clone https://github.com/brunob54/superpowers-optimized.git ~/.codex/superpo
 **macOS / Linux:**
 ```bash
 mkdir -p ~/.agents/skills
-ln -s ~/.codex/superpowers-optimized/skills ~/.agents/skills/superpowers
+ln -s ~/.codex/superpowers-orchestrator/skills ~/.agents/skills/superpowers
 ```
 
 **Windows (PowerShell):**
 ```powershell
 New-Item -ItemType Directory -Force -Path "$env:USERPROFILE\.agents\skills"
-cmd /c mklink /J "$env:USERPROFILE\.agents\skills\superpowers" "$env:USERPROFILE\.codex\superpowers-optimized\skills"
+cmd /c mklink /J "$env:USERPROFILE\.agents\skills\superpowers" "$env:USERPROFILE\.codex\superpowers-orchestrator\skills"
 ```
 
 ### 3. Install custom agents
@@ -62,13 +62,13 @@ These agent files are part of the standard Codex install for this plugin. Withou
 **macOS / Linux:**
 ```bash
 mkdir -p ~/.codex/agents
-cp ~/.codex/superpowers-optimized/codex-agents/*.toml ~/.codex/agents/
+cp ~/.codex/superpowers-orchestrator/codex-agents/*.toml ~/.codex/agents/
 ```
 
 **Windows (PowerShell):**
 ```powershell
 New-Item -ItemType Directory -Force -Path "$env:USERPROFILE\.codex\agents"
-Copy-Item "$env:USERPROFILE\.codex\superpowers-optimized\codex-agents\*.toml" "$env:USERPROFILE\.codex\agents\"
+Copy-Item "$env:USERPROFILE\.codex\superpowers-orchestrator\codex-agents\*.toml" "$env:USERPROFILE\.codex\agents\"
 ```
 
 After installing, these agents are available by name in Codex subagent workflows (e.g., "Use the code-reviewer agent to review this branch").
@@ -87,10 +87,10 @@ codex_hooks = true
 
 **4b.** Link the hook registry:
 ```bash
-ln -s ~/.codex/superpowers-optimized/hooks/codex-hooks.json ~/.codex/hooks.json
+ln -s ~/.codex/superpowers-orchestrator/hooks/codex-hooks.json ~/.codex/hooks.json
 ```
 
-If `~/.codex/hooks.json` already exists, merge this plugin's Codex entries from the top-level `hooks` object in `~/.codex/superpowers-optimized/hooks/codex-hooks.json` into your existing file instead of replacing it.
+If `~/.codex/hooks.json` already exists, merge this plugin's Codex entries from the top-level `hooks` object in `~/.codex/superpowers-orchestrator/hooks/codex-hooks.json` into your existing file instead of replacing it.
 
 ### 5. Restart Codex
 
@@ -140,27 +140,33 @@ To disable startup update checks:
 
 ## Migrating from old install path
 
-If you previously installed to `~/.codex/superpowers` (old path):
+If you previously installed to `~/.codex/superpowers-optimized` (name before v7.0.0) or `~/.codex/superpowers` (oldest path):
 
 ```bash
 # Update and rename
-if [ -d ~/.codex/superpowers ] && [ ! -d ~/.codex/superpowers-optimized ]; then
-  mv ~/.codex/superpowers ~/.codex/superpowers-optimized
+if [ -d ~/.codex/superpowers-optimized ] && [ ! -d ~/.codex/superpowers-orchestrator ]; then
+  mv ~/.codex/superpowers-optimized ~/.codex/superpowers-orchestrator
 fi
-cd ~/.codex/superpowers-optimized && git pull
+if [ -d ~/.codex/superpowers ] && [ ! -d ~/.codex/superpowers-orchestrator ]; then
+  mv ~/.codex/superpowers ~/.codex/superpowers-orchestrator
+fi
+cd ~/.codex/superpowers-orchestrator && git pull
 
 # Recreate symlink to new path
 rm -f ~/.agents/skills/superpowers
-ln -s ~/.codex/superpowers-optimized/skills ~/.agents/skills/superpowers
+ln -s ~/.codex/superpowers-orchestrator/skills ~/.agents/skills/superpowers
 ```
 
 **Windows (PowerShell):**
 ```powershell
-if ((Test-Path "$env:USERPROFILE\.codex\superpowers") -and -not (Test-Path "$env:USERPROFILE\.codex\superpowers-optimized")) {
-  Rename-Item "$env:USERPROFILE\.codex\superpowers" "superpowers-optimized"
+if ((Test-Path "$env:USERPROFILE\.codex\superpowers-optimized") -and -not (Test-Path "$env:USERPROFILE\.codex\superpowers-orchestrator")) {
+  Rename-Item "$env:USERPROFILE\.codex\superpowers-optimized" "superpowers-orchestrator"
+}
+if ((Test-Path "$env:USERPROFILE\.codex\superpowers") -and -not (Test-Path "$env:USERPROFILE\.codex\superpowers-orchestrator")) {
+  Rename-Item "$env:USERPROFILE\.codex\superpowers" "superpowers-orchestrator"
 }
 cmd /c rmdir "$env:USERPROFILE\.agents\skills\superpowers"
-cmd /c mklink /J "$env:USERPROFILE\.agents\skills\superpowers" "$env:USERPROFILE\.codex\superpowers-optimized\skills"
+cmd /c mklink /J "$env:USERPROFILE\.agents\skills\superpowers" "$env:USERPROFILE\.codex\superpowers-orchestrator\skills"
 ```
 
 Also remove any old bootstrap block from `~/.codex/AGENTS.md` referencing `superpowers-codex bootstrap` — no longer needed.
@@ -170,8 +176,8 @@ Also remove any old bootstrap block from `~/.codex/AGENTS.md` referencing `super
 ## Updating
 
 ```bash
-cd ~/.codex/superpowers-optimized && git pull
-cp ~/.codex/superpowers-optimized/codex-agents/*.toml ~/.codex/agents/
+cd ~/.codex/superpowers-orchestrator && git pull
+cp ~/.codex/superpowers-orchestrator/codex-agents/*.toml ~/.codex/agents/
 ```
 
 Skills and hooks update from the clone automatically. Custom agents are copied files, so re-copy them after pulling updates.
@@ -188,20 +194,20 @@ Use a clean reinstall instead of the standard update flow when:
 - custom agent files are stale or missing
 - you want a pristine known-good install and are fine losing local changes inside the installed clone
 
-**Warning:** this removes the installed clone and any local changes inside `~/.codex/superpowers-optimized`.
+**Warning:** this removes the installed clone and any local changes inside `~/.codex/superpowers-orchestrator`.
 
 **macOS / Linux:**
 ```bash
 rm -f ~/.agents/skills/superpowers
 rm -f ~/.codex/agents/code-reviewer.toml ~/.codex/agents/red-team.toml
 test -L ~/.codex/hooks.json && rm ~/.codex/hooks.json
-rm -rf ~/.codex/superpowers-optimized
+rm -rf ~/.codex/superpowers-orchestrator
 
-git clone https://github.com/brunob54/superpowers-optimized.git ~/.codex/superpowers-optimized
+git clone https://github.com/brunob54/superpowers-orchestrator.git ~/.codex/superpowers-orchestrator
 mkdir -p ~/.agents/skills ~/.codex/agents
-ln -s ~/.codex/superpowers-optimized/skills ~/.agents/skills/superpowers
-cp ~/.codex/superpowers-optimized/codex-agents/*.toml ~/.codex/agents/
-ln -s ~/.codex/superpowers-optimized/hooks/codex-hooks.json ~/.codex/hooks.json
+ln -s ~/.codex/superpowers-orchestrator/skills ~/.agents/skills/superpowers
+cp ~/.codex/superpowers-orchestrator/codex-agents/*.toml ~/.codex/agents/
+ln -s ~/.codex/superpowers-orchestrator/hooks/codex-hooks.json ~/.codex/hooks.json
 ```
 
 **Windows (PowerShell):**
@@ -209,12 +215,12 @@ ln -s ~/.codex/superpowers-optimized/hooks/codex-hooks.json ~/.codex/hooks.json
 cmd /c rmdir "$env:USERPROFILE\.agents\skills\superpowers"
 Remove-Item -Force "$env:USERPROFILE\.codex\agents\code-reviewer.toml","$env:USERPROFILE\.codex\agents\red-team.toml" -ErrorAction SilentlyContinue
 Remove-Item -Force "$env:USERPROFILE\.codex\hooks.json" -ErrorAction SilentlyContinue
-Remove-Item -Recurse -Force "$env:USERPROFILE\.codex\superpowers-optimized"
+Remove-Item -Recurse -Force "$env:USERPROFILE\.codex\superpowers-orchestrator"
 
-git clone https://github.com/brunob54/superpowers-optimized.git "$env:USERPROFILE\.codex\superpowers-optimized"
+git clone https://github.com/brunob54/superpowers-orchestrator.git "$env:USERPROFILE\.codex\superpowers-orchestrator"
 New-Item -ItemType Directory -Force -Path "$env:USERPROFILE\.agents\skills","$env:USERPROFILE\.codex\agents" | Out-Null
-cmd /c mklink /J "$env:USERPROFILE\.agents\skills\superpowers" "$env:USERPROFILE\.codex\superpowers-optimized\skills"
-Copy-Item "$env:USERPROFILE\.codex\superpowers-optimized\codex-agents\*.toml" "$env:USERPROFILE\.codex\agents\"
+cmd /c mklink /J "$env:USERPROFILE\.agents\skills\superpowers" "$env:USERPROFILE\.codex\superpowers-orchestrator\skills"
+Copy-Item "$env:USERPROFILE\.codex\superpowers-orchestrator\codex-agents\*.toml" "$env:USERPROFILE\.codex\agents\"
 ```
 
 After a clean reinstall:
@@ -232,14 +238,14 @@ After a clean reinstall:
 rm ~/.agents/skills/superpowers
 rm -f ~/.codex/agents/code-reviewer.toml ~/.codex/agents/red-team.toml
 test -L ~/.codex/hooks.json && rm ~/.codex/hooks.json
-rm -rf ~/.codex/superpowers-optimized   # optional: delete the clone
+rm -rf ~/.codex/superpowers-orchestrator   # optional: delete the clone
 ```
 
 **Windows (PowerShell):**
 ```powershell
 cmd /c rmdir "$env:USERPROFILE\.agents\skills\superpowers"
 Remove-Item -Force "$env:USERPROFILE\.codex\agents\code-reviewer.toml","$env:USERPROFILE\.codex\agents\red-team.toml" -ErrorAction SilentlyContinue
-Remove-Item -Recurse -Force "$env:USERPROFILE\.codex\superpowers-optimized"
+Remove-Item -Recurse -Force "$env:USERPROFILE\.codex\superpowers-orchestrator"
 ```
 
 ---
@@ -252,4 +258,4 @@ Remove-Item -Recurse -Force "$env:USERPROFILE\.codex\superpowers-optimized"
 2. Confirm `codex_hooks = true` is set in `~/.codex/config.toml`
 3. Confirm `~/.codex/hooks.json` exists and includes this plugin's Codex hook entries under a top-level `hooks` object
 4. Restart Codex after any hook-file change
-5. If hooks still do not fire, inspect the installed `~/.codex/superpowers-optimized/hooks/codex-hooks.json` and validate the JSON syntax
+5. If hooks still do not fire, inspect the installed `~/.codex/superpowers-orchestrator/hooks/codex-hooks.json` and validate the JSON syntax
