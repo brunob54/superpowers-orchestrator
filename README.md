@@ -11,21 +11,21 @@
 
 # Superpowers Orchestrator
 
-**The production-grade fork of obra/superpowers** — same trusted workflow, dramatically leaner, safer, and more intelligent.
+**Superpowers** is a plugin for coding agents (Claude Code, Cursor, Codex, OpenCode) that adds a disciplined development workflow: a design specification first, then a task plan, then test-driven implementation with staged code reviews. The workflow is implemented as *skills* (instruction files the agent follows) and *hooks* (scripts that run automatically at session events).
 
-Built on the trusted obra/superpowers workflow and refined through research into LLM agent behavior, it adds automatic 3-tier workflow routing, proactive safety hooks, self-consistency verification at critical decision points, cross-session memory, and adversarial red-teaming — everything the original does, plus the discipline layer it was missing.
+This repository is a fork of [obra/superpowers](https://github.com/obra/superpowers) via [REPOZY/superpowers-optimized](https://github.com/REPOZY/superpowers-optimized). Its own contribution is **orchestration**: the same workflow can run autonomously from an approved specification to a merge-ready branch, with independent review rounds between stages — see [What this repo adds](#what-this-repo-adds).
 
 > [!TIP]
 > **New to the plugin?** Start with the [User Guide](docs/guide/README.md) — the day-to-day operating manual: workflows, trigger phrases, autonomous runs, and recovery.
 
 > [!NOTE]
-> **Lineage & status:** this repository builds on two origins — the original [obra/superpowers](https://github.com/obra/superpowers) by Jesse Vincent and its optimized fork [REPOZY/superpowers-optimized](https://github.com/REPOZY/superpowers-optimized) (baseline v6.6.1). Full credit to both. The project was named *superpowers-optimized* through v6.15.1 and was renamed to **superpowers-orchestrator** at v7.0.0, to match its main feature: the autonomous orchestration pipeline. This fork's own additions (v6.7.0–v7.0.0) are **under testing and evaluation** — see [What this fork adds](#what-this-fork-adds).
+> **Lineage & status:** this repository builds on two origins — the original [obra/superpowers](https://github.com/obra/superpowers) by Jesse Vincent and its optimized fork [REPOZY/superpowers-optimized](https://github.com/REPOZY/superpowers-optimized) (baseline v6.6.1). Full credit to both. The project was named *superpowers-optimized* through v6.15.1 and was renamed to **superpowers-orchestrator** at v7.0.0, to match its main feature: the autonomous orchestration pipeline. This fork's own additions (v6.7.0–v7.0.0) are **under testing and evaluation** — see [What this repo adds](#what-this-repo-adds).
 >
 > **How this fork is built:** every release of this fork (v6.7.0–v7.0.0) was designed, implemented, and reviewed end-to-end by Claude Fable 5 running in Claude Code — with the plugin itself driving its own development. (Batched implementation dispatches task subagents on smaller Claude models where the plugin's model-selection rules call for it; design, orchestration, and review stayed on Fable 5.) The fork bootstraps on its own releases: v6.7.0 was built under the parent fork plugin (baseline v6.6.1), and each release since was built with the fork's *previous* release installed. Every workflow described below was used, under real conditions, to build the version you're reading about.
 
-### What this fork adds
+## What this repo adds
 
-Ten releases beyond the REPOZY v6.6.1 baseline. The five flagship additions — full guide with usage, details, and motivations in [docs/FORK-IMPROVEMENTS.md](docs/FORK-IMPROVEMENTS.md):
+Ten releases beyond the REPOZY v6.6.1 baseline. The five main additions — full guide with usage, details, and motivations in [docs/FORK-IMPROVEMENTS.md](docs/FORK-IMPROVEMENTS.md):
 
 - **SDD Batched Autonomous Mode (v6.7.0)** — execute a plan in resumable batches of N tasks, ending each batch at a fixed task cap (the requested count, default 3) with a `state.md` handoff; say "implement the next 3 tasks", then after `/clear`: "resume the plan". [Details](docs/FORK-IMPROVEMENTS.md#1-sdd-batched-autonomous-mode-v670)
 - **SDD Token-Optimized Review Flow (v6.8.0)** — port of upstream obra v6.0.0: one two-verdict task reviewer, file-based handoffs under `.superpowers/sdd/`, explicit per-dispatch model selection; automatic whenever subagent-driven-development executes a plan (~2x faster, ~50–60% fewer tokens per upstream measurement). [Details](docs/FORK-IMPROVEMENTS.md#2-sdd-token-optimized-review-flow-v680)
@@ -35,20 +35,19 @@ Ten releases beyond the REPOZY v6.6.1 baseline. The five flagship additions — 
 
 Four further releases — `multi-doc-review` rename (v6.11.0), plan-scoped SDD workspace (v6.12.0), fresh-session plan handoff (v6.13.0), and cap-only batch boundary (v6.15.0) — are covered in [RELEASE-NOTES.md](RELEASE-NOTES.md).
 
-### Why developers switch
-| Feature                  | Original Superpowers          | Superpowers Orchestrator                          | Real-world impact                  |
-|--------------------------|-------------------------------|------------------------------------------------|------------------------------------|
-| Workflow selection       | Manual                        | Automatic 3-tier (micro / lightweight / full)  | Zero overhead on simple tasks      |
-| Safety & hooks           | None                          | 10 proactive hooks overall, with platform-specific subsets on Codex/OpenCode | Strongest safety on Claude; partial hook parity on Codex/OpenCode |
-| Security review          | None                          | Built into code review with OWASP checklist    | Security catches before merge      |
-| Adversarial red team     | None                          | Red team agent + auto-fix pipeline             | Finds bugs checklists miss, fixes them with TDD |
-| Error recovery           | None                          | Project-specific known-issues.md               | No rediscovering the same bug      |
-| Token efficiency         | Standard                      | Always-on context hygiene + exploration tracking + automatic Bash output compression (76% savings on mixed sessions) | Less re-discovery, fewer wasted iterations    |
-| Discipline enforcement   | Instructional tone             | Rationalization tables, red flags, iron laws   | Fewer LLM shortcuts                |
-| Progress visibility      | None                          | Session stats (skills used, duration, actions)  | See what the plugin did for you    |
-| Cross-session memory     | None                          | Four-file memory stack: `project-map.md` (structure cache) + `session-log.md` (decision history) + `state.md` (task snapshot) + `known-issues.md` (error map) + automatic `context-snapshot.json` (git blast radius, written every session start) | The AI starts every session with full project context — no re-exploring, no re-explaining, no re-debugging |
+## Inherited from the parent projects
 
-### Try it in 30 seconds
+From [REPOZY/superpowers-optimized](https://github.com/REPOZY/superpowers-optimized) (baseline v6.6.1):
+
+- Automatic 3-tier workflow routing (micro / lightweight / full), so overhead stays proportional to task size
+- The 10 lifecycle hooks: dangerous-command blocking, secret protection, Bash output compression, skill activation, edit tracking, session statistics, stop reminders, subagent guard (platform-specific subsets on Codex/OpenCode — see the parity note below)
+- Security review (OWASP checklist) inside code review, and the red-team agent with its auto-fix pipeline
+- The cross-session memory stack: `project-map.md`, `session-log.md`, `state.md`, `known-issues.md`, plus the automatic `context-snapshot.json` written at every session start
+- Token-efficiency rules: concise responses, parallel tool calls, exploration tracking
+
+From [obra/superpowers](https://github.com/obra/superpowers) (the original, by Jesse Vincent): the skills framework itself and the core workflow skills — brainstorming, writing plans, test-driven development, systematic debugging, and code review.
+
+## Quick start
 In any supported agent IDE, start a new chat and paste:
 
 ```
@@ -65,22 +64,20 @@ See [Installation](#installation) for install, update, and uninstall commands on
 ---
 
 > [!IMPORTANT]
-> **Compatibility Note:** This plugin includes a comprehensive workflow router and 27 specialized skills covering debugging, planning, code review, TDD, execution, and more.
+> **Compatibility note:** this plugin ships a workflow router and 27 skills covering debugging, planning, code review, TDD, and execution.
 >
-> Other plugins or custom skills/agents in your `.claude/skills/` and `.claude/agents/` folders may interfere if they cover overlapping domains. Duplicate or competing skills can cause trigger conflicts, contradictory instructions, and unnecessary **context bloat/rot**, which will degrade the model's performance.
->
-> **For the best experience and peak AI reasoning, we recommend disabling or removing all other plugins and existing `SKILL.md` or `AGENTS.md` files.** This ensures a clean environment with zero risk of conflicting instructions.
+> Other plugins or custom skills/agents in your `.claude/skills/` and `.claude/agents/` folders can interfere when they cover the same domains: duplicate skills cause trigger conflicts and contradictory instructions, and every extra skill adds text to the model's context. If you see conflicting behavior, disable the overlapping plugins or skill files.
 
 
 ---
 
-Upon initiating a session with your coding agent, the plugin immediately pauses to establish a precise understanding of your objective rather than proceeding directly to code. It collaborates with you through a structured dialogue to refine a clear, complete specification, presenting each element in concise, easily digestible segments for your review and approval.
+A typical session runs like this. For a non-trivial task, the agent does not start coding immediately: it first asks questions, one section at a time, until a clear specification exists and you approve it.
 
-Once the design is approved, the agent constructs a detailed implementation plan that enforces genuine red/green TDD cycles, strict adherence to YAGNI and DRY principles, and token-efficient instructions that eliminate unnecessary verbosity.
+From the approved design, the agent writes an implementation plan whose tasks follow red/green TDD cycles (write a failing test, make it pass) and stay minimal — no speculative features, no duplicated code.
 
-When you confirm to proceed, the plugin automatically routes the task to the appropriate workflow—either *subagent-driven-development* or *executing-plans*—and executes it through mandatory staged reviews: first verifying full specification compliance, then assessing code quality, and integrating security analysis (per OWASP guidelines) on any sensitive changes. For complex logic, the *red-team* agent conducts adversarial testing to surface concrete failure scenarios. Each critical finding is automatically converted by the auto-fix pipeline into a failing test, followed by a targeted fix and regression verification.
+When you confirm, the plugin routes execution to *subagent-driven-development* or *executing-plans* and runs staged reviews: specification compliance first, then code quality, with security analysis (OWASP checklist) on sensitive changes. For complex logic, the *red-team* agent attacks the code with concrete failure scenarios; each critical finding becomes a failing test, a fix, and a regression check.
 
-**The agent evaluates relevant skills before every task.** These workflows are enforced as mandatory processes, never optional suggestions. Overhead remains strictly proportional to complexity:
+**The agent evaluates relevant skills before every task.** The workflows are mandatory, not suggestions, and overhead stays proportional to task complexity:
 - **Micro-tasks** bypass all gates entirely
 - **Lightweight tasks** receive a single verification checkpoint
 - **Full-complexity tasks** engage the complete pipeline
@@ -196,11 +193,11 @@ These research insights drive five core principles throughout the fork:
 ---
 
 
-## Session Memory: The AI That Remembers
+## Session Memory
 
-Cross-session memory changes the experience fundamentally. Without it, every session starts blind: the AI re-explores structure it already mapped, re-proposes approaches that were already rejected, re-debugs errors that were already solved. With the memory stack, it arrives knowing what was tried, what was decided, and why — and with a pre-computed snapshot of exactly what changed since the last commit — and builds forward instead of sideways.
+An agent session normally starts with no memory of previous sessions: the AI re-explores structure it already mapped, re-proposes approaches that were already rejected, and re-debugs errors that were already solved. The memory stack removes that repeated work — each session starts knowing what was tried, what was decided and why, and what changed since the last commit.
 
-The plugin builds this memory stack at your project root. Together the files eliminate the most expensive form of session overhead: re-discovering things the AI already knew.
+The plugin builds this memory stack at your project root:
 
 ```
 context-snapshot.json  ← git blast radius + changed files (written automatically every session)
@@ -316,7 +313,7 @@ Unlike `session-log.md`, `state.md` is ephemeral — it represents the current t
 
 ### The combined impact
 
-Without this stack, every new session starts with amnesia:
+Without this stack, every new session starts with no memory of the project:
 - The AI re-globs the project to understand its structure
 - Re-reads files it already understood last session
 - Proposes approaches that were already rejected
