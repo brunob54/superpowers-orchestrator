@@ -143,8 +143,8 @@ test('Blocks "I\'m using the brainstorming skill"', () => {
   assert.strictEqual(result.decision, 'block', `Expected block, got: ${JSON.stringify(result)}`);
 });
 
-test('Blocks "Invoke the superpowers-optimized skill"', () => {
-  const result = runGuard('Invoke the superpowers-optimized using-superpowers skill.');
+test('Blocks "Invoke the superpowers-orchestrator skill"', () => {
+  const result = runGuard('Invoke the superpowers-orchestrator using-superpowers skill.');
   assert.strictEqual(result.decision, 'block', `Expected block, got: ${JSON.stringify(result)}`);
 });
 

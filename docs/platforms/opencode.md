@@ -7,7 +7,7 @@ Complete guide for using Superpowers with [OpenCode.ai](https://opencode.ai).
 Tell OpenCode:
 
 ```
-Clone https://github.com/brunob54/superpowers-optimized.git to ~/.config/opencode/superpowers, then create directory ~/.config/opencode/plugins, then symlink ~/.config/opencode/superpowers/.opencode/plugins/superpowers-optimized.js to ~/.config/opencode/plugins/superpowers-optimized.js, then symlink ~/.config/opencode/superpowers/skills to ~/.config/opencode/skills/superpowers, then restart opencode.
+Clone https://github.com/brunob54/superpowers-orchestrator.git to ~/.config/opencode/superpowers, then create directory ~/.config/opencode/plugins, then symlink ~/.config/opencode/superpowers/.opencode/plugins/superpowers-orchestrator.js to ~/.config/opencode/plugins/superpowers-orchestrator.js, then symlink ~/.config/opencode/superpowers/skills to ~/.config/opencode/skills/superpowers, then restart opencode.
 ```
 
 ## Manual Installation
@@ -24,18 +24,18 @@ Clone https://github.com/brunob54/superpowers-optimized.git to ~/.config/opencod
 if [ -d ~/.config/opencode/superpowers ]; then
   cd ~/.config/opencode/superpowers && git pull
 else
-  git clone https://github.com/brunob54/superpowers-optimized.git ~/.config/opencode/superpowers
+  git clone https://github.com/brunob54/superpowers-orchestrator.git ~/.config/opencode/superpowers
 fi
 
 # 2. Create directories
 mkdir -p ~/.config/opencode/plugins ~/.config/opencode/skills
 
 # 3. Remove old symlinks/directories if they exist
-rm -f ~/.config/opencode/plugins/superpowers-optimized.js
+rm -f ~/.config/opencode/plugins/superpowers-orchestrator.js
 rm -rf ~/.config/opencode/skills/superpowers
 
 # 4. Create symlinks
-ln -s ~/.config/opencode/superpowers/.opencode/plugins/superpowers-optimized.js ~/.config/opencode/plugins/superpowers-optimized.js
+ln -s ~/.config/opencode/superpowers/.opencode/plugins/superpowers-orchestrator.js ~/.config/opencode/plugins/superpowers-orchestrator.js
 ln -s ~/.config/opencode/superpowers/skills ~/.config/opencode/skills/superpowers
 
 # 5. Restart OpenCode
@@ -44,7 +44,7 @@ ln -s ~/.config/opencode/superpowers/skills ~/.config/opencode/skills/superpower
 #### Verify Installation
 
 ```bash
-ls -l ~/.config/opencode/plugins/superpowers-optimized.js
+ls -l ~/.config/opencode/plugins/superpowers-orchestrator.js
 ls -l ~/.config/opencode/skills/superpowers
 ```
 
@@ -66,18 +66,18 @@ Run as Administrator, or with Developer Mode enabled:
 
 ```cmd
 :: 1. Install Superpowers
-git clone https://github.com/brunob54/superpowers-optimized.git "%USERPROFILE%\.config\opencode\superpowers"
+git clone https://github.com/brunob54/superpowers-orchestrator.git "%USERPROFILE%\.config\opencode\superpowers"
 
 :: 2. Create directories
 mkdir "%USERPROFILE%\.config\opencode\plugins" 2>nul
 mkdir "%USERPROFILE%\.config\opencode\skills" 2>nul
 
 :: 3. Remove existing links (safe for reinstalls)
-del "%USERPROFILE%\.config\opencode\plugins\superpowers-optimized.js" 2>nul
+del "%USERPROFILE%\.config\opencode\plugins\superpowers-orchestrator.js" 2>nul
 rmdir "%USERPROFILE%\.config\opencode\skills\superpowers" 2>nul
 
 :: 4. Create plugin symlink (requires Developer Mode or Admin)
-mklink "%USERPROFILE%\.config\opencode\plugins\superpowers-optimized.js" "%USERPROFILE%\.config\opencode\superpowers\.opencode\plugins\superpowers-optimized.js"
+mklink "%USERPROFILE%\.config\opencode\plugins\superpowers-orchestrator.js" "%USERPROFILE%\.config\opencode\superpowers\.opencode\plugins\superpowers-orchestrator.js"
 
 :: 5. Create skills junction (works without special privileges)
 mklink /J "%USERPROFILE%\.config\opencode\skills\superpowers" "%USERPROFILE%\.config\opencode\superpowers\skills"
@@ -91,18 +91,18 @@ Run as Administrator, or with Developer Mode enabled:
 
 ```powershell
 # 1. Install Superpowers
-git clone https://github.com/brunob54/superpowers-optimized.git "$env:USERPROFILE\.config\opencode\superpowers"
+git clone https://github.com/brunob54/superpowers-orchestrator.git "$env:USERPROFILE\.config\opencode\superpowers"
 
 # 2. Create directories
 New-Item -ItemType Directory -Force -Path "$env:USERPROFILE\.config\opencode\plugins"
 New-Item -ItemType Directory -Force -Path "$env:USERPROFILE\.config\opencode\skills"
 
 # 3. Remove existing links (safe for reinstalls)
-Remove-Item "$env:USERPROFILE\.config\opencode\plugins\superpowers-optimized.js" -Force -ErrorAction SilentlyContinue
+Remove-Item "$env:USERPROFILE\.config\opencode\plugins\superpowers-orchestrator.js" -Force -ErrorAction SilentlyContinue
 Remove-Item "$env:USERPROFILE\.config\opencode\skills\superpowers" -Force -ErrorAction SilentlyContinue
 
 # 4. Create plugin symlink (requires Developer Mode or Admin)
-New-Item -ItemType SymbolicLink -Path "$env:USERPROFILE\.config\opencode\plugins\superpowers-optimized.js" -Target "$env:USERPROFILE\.config\opencode\superpowers\.opencode\plugins\superpowers-optimized.js"
+New-Item -ItemType SymbolicLink -Path "$env:USERPROFILE\.config\opencode\plugins\superpowers-orchestrator.js" -Target "$env:USERPROFILE\.config\opencode\superpowers\.opencode\plugins\superpowers-orchestrator.js"
 
 # 5. Create skills junction (works without special privileges)
 New-Item -ItemType Junction -Path "$env:USERPROFILE\.config\opencode\skills\superpowers" -Target "$env:USERPROFILE\.config\opencode\superpowers\skills"
@@ -116,17 +116,17 @@ Note: Git Bash's native `ln` command copies files instead of creating symlinks. 
 
 ```bash
 # 1. Install Superpowers
-git clone https://github.com/brunob54/superpowers-optimized.git ~/.config/opencode/superpowers
+git clone https://github.com/brunob54/superpowers-orchestrator.git ~/.config/opencode/superpowers
 
 # 2. Create directories
 mkdir -p ~/.config/opencode/plugins ~/.config/opencode/skills
 
 # 3. Remove existing links (safe for reinstalls)
-rm -f ~/.config/opencode/plugins/superpowers-optimized.js 2>/dev/null
+rm -f ~/.config/opencode/plugins/superpowers-orchestrator.js 2>/dev/null
 rm -rf ~/.config/opencode/skills/superpowers 2>/dev/null
 
 # 4. Create plugin symlink (requires Developer Mode or Admin)
-cmd //c "mklink \"$(cygpath -w ~/.config/opencode/plugins/superpowers-optimized.js)\" \"$(cygpath -w ~/.config/opencode/superpowers/.opencode/plugins/superpowers-optimized.js)\""
+cmd //c "mklink \"$(cygpath -w ~/.config/opencode/plugins/superpowers-orchestrator.js)\" \"$(cygpath -w ~/.config/opencode/superpowers/.opencode/plugins/superpowers-orchestrator.js)\""
 
 # 5. Create skills junction (works without special privileges)
 cmd //c "mklink /J \"$(cygpath -w ~/.config/opencode/skills/superpowers)\" \"$(cygpath -w ~/.config/opencode/superpowers/skills)\""
@@ -258,7 +258,7 @@ Skills written for Claude Code are automatically adapted for OpenCode. The boots
 
 ### Plugin Structure
 
-**Location:** `~/.config/opencode/superpowers/.opencode/plugins/superpowers-optimized.js`
+**Location:** `~/.config/opencode/superpowers/.opencode/plugins/superpowers-orchestrator.js`
 
 **Components:**
 - `experimental.chat.system.transform` hook for bootstrap injection
@@ -283,7 +283,7 @@ Restart OpenCode to load the updates.
 
 ### Plugin not loading
 
-1. Check plugin exists: `ls ~/.config/opencode/superpowers/.opencode/plugins/superpowers-optimized.js`
+1. Check plugin exists: `ls ~/.config/opencode/superpowers/.opencode/plugins/superpowers-orchestrator.js`
 2. Check symlink/junction: `ls -l ~/.config/opencode/plugins/` (macOS/Linux) or `dir /AL %USERPROFILE%\.config\opencode\plugins` (Windows)
 3. Check OpenCode logs: `opencode run "test" --print-logs --log-level DEBUG`
 4. Look for plugin loading message in logs
@@ -308,8 +308,8 @@ If you see `Cannot find module` errors on Windows:
 
 ## Getting Help
 
-- Report issues: https://github.com/brunob54/superpowers-optimized/issues
-- Main documentation: https://github.com/brunob54/superpowers-optimized
+- Report issues: https://github.com/brunob54/superpowers-orchestrator/issues
+- Main documentation: https://github.com/brunob54/superpowers-orchestrator
 - OpenCode docs: https://opencode.ai/docs/
 
 ## Testing

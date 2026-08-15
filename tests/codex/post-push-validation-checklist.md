@@ -27,7 +27,7 @@ bash -lc 'source ~/.nvm/nvm.sh && codex --version'
 grep -n "codex_hooks" ~/.codex/config.toml
 test -f ~/.codex/hooks.json && echo "hooks.json present"
 grep -n '"hooks"' ~/.codex/hooks.json
-ls -la ~/.codex/superpowers-optimized
+ls -la ~/.codex/superpowers-orchestrator
 ls -la ~/.codex/agents/code-reviewer.toml ~/.codex/agents/red-team.toml
 ls -la ~/.agents/skills/superpowers
 ```
@@ -51,7 +51,7 @@ These validate the installed adapter files without depending on the full Codex r
 ### SessionStart adapter
 
 ```bash
-bash -lc 'source ~/.nvm/nvm.sh && printf "{\"cwd\":\"'$PWD'\"}\n" | node ~/.codex/superpowers-optimized/hooks/codex/session-start-adapter.js | sed -n "1,60p"'
+bash -lc 'source ~/.nvm/nvm.sh && printf "{\"cwd\":\"'$PWD'\"}\n" | node ~/.codex/superpowers-orchestrator/hooks/codex/session-start-adapter.js | sed -n "1,60p"'
 ```
 
 Expected:
@@ -63,7 +63,7 @@ Expected:
 ### UserPromptSubmit adapter
 
 ```bash
-bash -lc 'source ~/.nvm/nvm.sh && printf "{\"prompt\":\"debug this stack trace from the API and identify the root cause before proposing a fix\",\"cwd\":\"'$PWD'\"}\n" | node ~/.codex/superpowers-optimized/hooks/codex/user-prompt-submit-adapter.js'
+bash -lc 'source ~/.nvm/nvm.sh && printf "{\"prompt\":\"debug this stack trace from the API and identify the root cause before proposing a fix\",\"cwd\":\"'$PWD'\"}\n" | node ~/.codex/superpowers-orchestrator/hooks/codex/user-prompt-submit-adapter.js'
 ```
 
 Expected:
@@ -75,7 +75,7 @@ Expected:
 ### PreToolUse adapter
 
 ```bash
-bash -lc 'source ~/.nvm/nvm.sh && printf "{\"tool_name\":\"Bash\",\"tool_input\":{\"command\":\"rm -rf ~\"}}\n" | node ~/.codex/superpowers-optimized/hooks/codex/pretool-bash-adapter.js'
+bash -lc 'source ~/.nvm/nvm.sh && printf "{\"tool_name\":\"Bash\",\"tool_input\":{\"command\":\"rm -rf ~\"}}\n" | node ~/.codex/superpowers-orchestrator/hooks/codex/pretool-bash-adapter.js'
 ```
 
 Expected:
@@ -89,7 +89,7 @@ Expected:
 Create a fixture with only source changes and no tests, then run:
 
 ```bash
-bash -lc 'source ~/.nvm/nvm.sh && printf "{\"cwd\":\"/tmp/sp-test-stop\",\"stop_hook_active\":false}\n" | node ~/.codex/superpowers-optimized/hooks/codex/stop-adapter.js'
+bash -lc 'source ~/.nvm/nvm.sh && printf "{\"cwd\":\"/tmp/sp-test-stop\",\"stop_hook_active\":false}\n" | node ~/.codex/superpowers-orchestrator/hooks/codex/stop-adapter.js'
 ```
 
 Expected:

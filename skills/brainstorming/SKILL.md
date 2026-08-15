@@ -36,7 +36,7 @@ Every project goes through this process. A todo list, a single-function utility,
    Do not skip this step. An approach that survives adversarial questioning is an approach worth approving.
 9. Save approved design to `docs/specs/YYYY-MM-DD-<topic>-design.md`.
 10. **Spec self-review** — quick inline check for placeholders, contradictions, ambiguity, scope (see Spec Self-Review below). Fix issues inline; no subagent dispatch needed.
-11. **Multi-round spec review** — invoke `superpowers-optimized:multi-doc-review` on the saved spec (doc type `spec`). It asks for N if not already stated (default 3; 0 skips), runs at most once per gate, and writes its audit log to `<spec-basename>-review-log.md`. Skip on platforms without the Agent tool.
+11. **Multi-round spec review** — invoke `superpowers-orchestrator:multi-doc-review` on the saved spec (doc type `spec`). It asks for N if not already stated (default 3; 0 skips), runs at most once per gate, and writes its audit log to `<spec-basename>-review-log.md`. Skip on platforms without the Agent tool.
 12. **User reviews written spec** — ask user to review the spec file before proceeding (see User Review Gate below).
 13. Invoke `writing-plans`.
 

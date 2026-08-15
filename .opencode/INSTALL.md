@@ -1,4 +1,4 @@
-# Installing Superpowers Optimized for OpenCode
+# Installing Superpowers Orchestrator for OpenCode
 
 ## Prerequisites
 
@@ -11,12 +11,12 @@
 
 **Unix/macOS:**
 ```bash
-git clone https://github.com/brunob54/superpowers-optimized.git ~/.config/opencode/superpowers
+git clone https://github.com/brunob54/superpowers-orchestrator.git ~/.config/opencode/superpowers
 ```
 
 **Windows (PowerShell):**
 ```powershell
-git clone https://github.com/brunob54/superpowers-optimized.git "$env:USERPROFILE\.config\opencode\superpowers"
+git clone https://github.com/brunob54/superpowers-orchestrator.git "$env:USERPROFILE\.config\opencode\superpowers"
 ```
 
 ### 2. Register the Plugin
@@ -26,15 +26,17 @@ Create a symlink so OpenCode discovers the plugin:
 **Unix/macOS:**
 ```bash
 mkdir -p ~/.config/opencode/plugins
-rm -f ~/.config/opencode/plugins/superpowers-optimized.js
-ln -s ~/.config/opencode/superpowers/.opencode/plugins/superpowers-optimized.js ~/.config/opencode/plugins/superpowers-optimized.js
+rm -f ~/.config/opencode/plugins/superpowers-orchestrator.js
+ln -s ~/.config/opencode/superpowers/.opencode/plugins/superpowers-orchestrator.js ~/.config/opencode/plugins/superpowers-orchestrator.js
 ```
+
+> **Upgrading from a version before v7.0.0:** the plugin file was named `superpowers-optimized.js`. Remove the old symlink first: `rm -f ~/.config/opencode/plugins/superpowers-optimized.js` (PowerShell: `Remove-Item "$env:USERPROFILE\.config\opencode\plugins\superpowers-optimized.js"`).
 
 **Windows (PowerShell):**
 ```powershell
 New-Item -ItemType Directory -Force -Path "$env:USERPROFILE\.config\opencode\plugins"
-Remove-Item -Force "$env:USERPROFILE\.config\opencode\plugins\superpowers-optimized.js" -ErrorAction SilentlyContinue
-cmd /c mklink "$env:USERPROFILE\.config\opencode\plugins\superpowers-optimized.js" "$env:USERPROFILE\.config\opencode\superpowers\.opencode\plugins\superpowers-optimized.js"
+Remove-Item -Force "$env:USERPROFILE\.config\opencode\plugins\superpowers-orchestrator.js" -ErrorAction SilentlyContinue
+cmd /c mklink "$env:USERPROFILE\.config\opencode\plugins\superpowers-orchestrator.js" "$env:USERPROFILE\.config\opencode\superpowers\.opencode\plugins\superpowers-orchestrator.js"
 ```
 
 > **Windows note:** File symlinks require Developer Mode enabled (`Settings → For developers → Developer Mode`) or an elevated PowerShell prompt.
@@ -125,13 +127,13 @@ Set-Location "$env:USERPROFILE\.config\opencode\superpowers"; git pull
 ### Plugin not loading
 
 **Unix/macOS:**
-1. Check plugin symlink: `ls -l ~/.config/opencode/plugins/superpowers-optimized.js`
-2. Check source exists: `ls ~/.config/opencode/superpowers/.opencode/plugins/superpowers-optimized.js`
+1. Check plugin symlink: `ls -l ~/.config/opencode/plugins/superpowers-orchestrator.js`
+2. Check source exists: `ls ~/.config/opencode/superpowers/.opencode/plugins/superpowers-orchestrator.js`
 3. Check OpenCode logs for errors
 
 **Windows (PowerShell):**
-1. Check plugin symlink: `Get-Item "$env:USERPROFILE\.config\opencode\plugins\superpowers-optimized.js"`
-2. Check source exists: `Test-Path "$env:USERPROFILE\.config\opencode\superpowers\.opencode\plugins\superpowers-optimized.js"`
+1. Check plugin symlink: `Get-Item "$env:USERPROFILE\.config\opencode\plugins\superpowers-orchestrator.js"`
+2. Check source exists: `Test-Path "$env:USERPROFILE\.config\opencode\superpowers\.opencode\plugins\superpowers-orchestrator.js"`
 3. Check OpenCode logs for errors
 
 ### Skills not found
@@ -156,5 +158,5 @@ When skills reference Claude Code tools:
 
 ## Getting Help
 
-- Report issues: https://github.com/brunob54/superpowers-optimized/issues
-- Full documentation: https://github.com/brunob54/superpowers-optimized/blob/main/docs/platforms/opencode.md
+- Report issues: https://github.com/brunob54/superpowers-orchestrator/issues
+- Full documentation: https://github.com/brunob54/superpowers-orchestrator/blob/main/docs/platforms/opencode.md

@@ -8,7 +8,7 @@ How `session-log.md`, `project-map.md`, and `state.md` work together to give the
 
 LLMs have no memory between sessions. Every time you start a new Claude Code session, the agent starts from scratch — it doesn't know what decisions were made last week, what approaches were tried and rejected, which files are the most frequently changed, or what non-obvious constraints exist in the codebase. You end up re-explaining context, re-discovering known bugs, and losing the accumulated knowledge built up over weeks of work.
 
-Superpowers Optimized solves this with three plain markdown files placed at the project root. No database, no embeddings, no external services — just files that Claude can read and write like any other project file.
+Superpowers Orchestrator solves this with three plain markdown files placed at the project root. No database, no embeddings, no external services — just files that Claude can read and write like any other project file.
 
 ---
 
@@ -182,7 +182,7 @@ This blog post by the original Superpowers author is the direct source for the m
 
 His original implementation used a SQLite database with vector search, a conversation archive, an MCP integration tool, and a Haiku subagent to manage context retrieval — powerful, but with external dependencies.
 
-This fork (superpowers-optimized) implements the same episodic memory concept as a lighter-weight, dependency-free variant: plain markdown files, keyword grep instead of vector search, and automatic stop-hook writing instead of a separate archiving process. The tradeoff is that retrieval is lexical rather than semantic — you find entries by keyword, not by meaning — but the system requires no database, no embeddings API, and no extra services. Everything stays in project files.
+This fork (superpowers-orchestrator) implements the same episodic memory concept as a lighter-weight, dependency-free variant: plain markdown files, keyword grep instead of vector search, and automatic stop-hook writing instead of a separate archiving process. The tradeoff is that retrieval is lexical rather than semantic — you find entries by keyword, not by meaning — but the system requires no database, no embeddings API, and no extra services. Everything stays in project files.
 
 **CLAUDE.md / AGENTS.md pattern.** The broader convention of using project-root markdown files as persistent context for AI coding assistants — established by Anthropic's CLAUDE.md and OpenAI's AGENTS.md guidance — inspired the file-based storage approach. `project-map.md` and `session-log.md` extend this pattern from static human-written configuration to dynamic, session-generated memory.
 
@@ -194,4 +194,4 @@ This fork (superpowers-optimized) implements the same episodic memory concept as
 
 - `skills/context-management/SKILL.md` — full procedure for generating maps, saving state, and reading history
 - `hooks/stop-reminders.js` — the stop hook that auto-appends session entries
-- `docs/superpowers-optimized/specs/2026-03-16-meta-memory-behavioral-self-evolution.md` — proposed future extension: behavioral preference distillation across sessions
+- `docs/superpowers-orchestrator/specs/2026-03-16-meta-memory-behavioral-self-evolution.md` — proposed future extension: behavioral preference distillation across sessions

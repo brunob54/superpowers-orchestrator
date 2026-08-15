@@ -16,7 +16,7 @@ state.md
 known-issues.md
 
 *.txt
-docs/superpowers-optimized/specs/2026-03-23-extension-ecosystem-design.md
+docs/superpowers-orchestrator/specs/2026-03-23-extension-ecosystem-design.md
 docs/plugin-overview.txt
 plugin.universal.old.yaml
 

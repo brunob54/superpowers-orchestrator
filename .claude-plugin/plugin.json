@@ -1,12 +1,12 @@
 {
-  "name": "superpowers-optimized",
+  "name": "superpowers-orchestrator",
   "description": "Agentic development framework for Claude Code — disciplined workflow routing, TDD enforcement, safety hooks, systematic debugging, and code review",
-  "version": "6.15.1",
+  "version": "7.0.0",
   "author": {
-    "name": "Jesse Vincent, forked by REPOZY"
+    "name": "Jesse Vincent, forked by brunob54"
   },
-  "homepage": "https://github.com/REPOZY/superpowers-optimized",
-  "repository": "https://github.com/REPOZY/superpowers-optimized",
+  "homepage": "https://github.com/brunob54/superpowers-orchestrator",
+  "repository": "https://github.com/brunob54/superpowers-orchestrator",
   "license": "MIT",
   "keywords": ["skills", "tdd", "debugging", "code-review", "workflows", "agentic", "token-efficiency", "hooks", "safety", "subagent"]
 }

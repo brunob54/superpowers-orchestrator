@@ -5,7 +5,7 @@
  * Analyzes the user's prompt before Claude processes it and injects
  * two types of context:
  *
- * 1. Skill hints — which superpowers-optimized skills are relevant to
+ * 1. Skill hints — which superpowers-orchestrator skills are relevant to
  *    this prompt (reinforces using-superpowers routing deterministically).
  *
  * 2. Memory recall — relevant past decisions from session-log.md that
@@ -171,13 +171,13 @@ function buildContext(matches) {
   if (matches.length === 0) return null;
 
   const skillList = matches
-    .map(m => `  - superpowers-optimized:${m.skill} (${m.priority})`)
+    .map(m => `  - superpowers-orchestrator:${m.skill} (${m.priority})`)
     .join('\n');
 
   return [
     '<user-prompt-submit-hook>',
     'Skill activation hint: The following skills are relevant to this prompt.',
-    'Remember: invoke superpowers-optimized:using-superpowers FIRST as the mandatory entry point,',
+    'Remember: invoke superpowers-orchestrator:using-superpowers FIRST as the mandatory entry point,',
     'then follow its routing to these suggested skills:',
     skillList,
     'IMPORTANT: If the user names a skill directly (e.g. "use brainstorming"), invoke it via the Skill tool.',

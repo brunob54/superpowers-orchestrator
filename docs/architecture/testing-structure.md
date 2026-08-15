@@ -1,4 +1,4 @@
-# Testing Superpowers Optimized
+# Testing Superpowers Orchestrator
 
 How to run tests for skills, hooks, and workflows.
 
@@ -235,7 +235,7 @@ Session transcripts are JSONL files. Each line is a JSON object.
 
 ### Skills not loading
 
-1. Run from the plugin directory: `cd /path/to/superpowers-optimized`
+1. Run from the plugin directory: `cd /path/to/superpowers-orchestrator`
 2. Use `--plugin-dir` to point to the plugin root
 3. Verify skill exists in `skills/` with correct YAML frontmatter
 

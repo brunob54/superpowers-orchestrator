@@ -2,16 +2,16 @@
 
 [![AI Coding Agents](https://img.shields.io/badge/USE_WITH-Claude_Code_%7C_Codex_%7C_OpenCode_%7C_Gemini_CLI_%7C_Antigravity-white?style=for-the-badge)]()
 
-[![GitHub stars](https://img.shields.io/github/stars/brunob54/superpowers-optimized?style=for-the-badge&color=white)](https://github.com/brunob54/superpowers-optimized/stargazers)
-[![Version](https://img.shields.io/badge/version-6.15.1-white?style=for-the-badge)](RELEASE-NOTES.md)
+[![GitHub stars](https://img.shields.io/github/stars/brunob54/superpowers-orchestrator?style=for-the-badge&color=white)](https://github.com/brunob54/superpowers-orchestrator/stargazers)
+[![Version](https://img.shields.io/badge/version-7.0.0-white?style=for-the-badge)](RELEASE-NOTES.md)
 [![License: MIT](https://img.shields.io/badge/License-MIT-white?style=for-the-badge)](LICENSE)
-[![Install](https://img.shields.io/badge/install-now-white?style=for-the-badge&logo=claude)](https://github.com/brunob54/superpowers-optimized#installation)
+[![Install](https://img.shields.io/badge/install-now-white?style=for-the-badge&logo=claude)](https://github.com/brunob54/superpowers-orchestrator#installation)
 
 </div>
 
-![](media/Superpowers-Optimized-Header.gif)
+![](media/Superpowers-Orchestrator-Header.gif)
 
-# Superpowers Optimized
+# Superpowers Orchestrator
 
 **The production-grade fork of obra/superpowers** — same trusted workflow, dramatically leaner, safer, and more intelligent.
 
@@ -21,13 +21,13 @@ Built on the trusted obra/superpowers workflow and refined through research into
 > **New to the plugin?** Start with the [User Guide](docs/guide/README.md) — the day-to-day operating manual: workflows, trigger phrases, autonomous runs, and recovery.
 
 > [!NOTE]
-> **Lineage & status:** this repository builds on two origins — the original [obra/superpowers](https://github.com/obra/superpowers) by Jesse Vincent and its optimized fork [REPOZY/superpowers-optimized](https://github.com/REPOZY/superpowers-optimized) (baseline v6.6.1). Full credit to both. This fork's own additions (v6.7.0–v6.15.1) are **under testing and evaluation** — see [What this fork adds](#what-this-fork-adds).
+> **Lineage & status:** this repository builds on two origins — the original [obra/superpowers](https://github.com/obra/superpowers) by Jesse Vincent and its optimized fork [REPOZY/superpowers-optimized](https://github.com/REPOZY/superpowers-optimized) (baseline v6.6.1). Full credit to both. The project was named *superpowers-optimized* through v6.15.1 and was renamed to **superpowers-orchestrator** at v7.0.0, to match its main feature: the autonomous orchestration pipeline. This fork's own additions (v6.7.0–v7.0.0) are **under testing and evaluation** — see [What this fork adds](#what-this-fork-adds).
 >
-> **How this fork is built:** every release of this fork (v6.7.0–v6.15.1) was designed, implemented, and reviewed end-to-end by Claude Fable 5 running in Claude Code — with the plugin itself driving its own development. (Batched implementation dispatches task subagents on smaller Claude models where the plugin's model-selection rules call for it; design, orchestration, and review stayed on Fable 5.) The fork bootstraps on its own releases: v6.7.0 was built under the parent fork plugin (baseline v6.6.1), and each release since was built with the fork's *previous* release installed. Every workflow described below was used, under real conditions, to build the version you're reading about.
+> **How this fork is built:** every release of this fork (v6.7.0–v7.0.0) was designed, implemented, and reviewed end-to-end by Claude Fable 5 running in Claude Code — with the plugin itself driving its own development. (Batched implementation dispatches task subagents on smaller Claude models where the plugin's model-selection rules call for it; design, orchestration, and review stayed on Fable 5.) The fork bootstraps on its own releases: v6.7.0 was built under the parent fork plugin (baseline v6.6.1), and each release since was built with the fork's *previous* release installed. Every workflow described below was used, under real conditions, to build the version you're reading about.
 
 ### What this fork adds
 
-Nine releases beyond the REPOZY v6.6.1 baseline. The five flagship additions — full guide with usage, details, and motivations in [docs/FORK-IMPROVEMENTS.md](docs/FORK-IMPROVEMENTS.md):
+Ten releases beyond the REPOZY v6.6.1 baseline. The five flagship additions — full guide with usage, details, and motivations in [docs/FORK-IMPROVEMENTS.md](docs/FORK-IMPROVEMENTS.md):
 
 - **SDD Batched Autonomous Mode (v6.7.0)** — execute a plan in resumable batches of N tasks, ending each batch at a fixed task cap (the requested count, default 3) with a `state.md` handoff; say "implement the next 3 tasks", then after `/clear`: "resume the plan". [Details](docs/FORK-IMPROVEMENTS.md#1-sdd-batched-autonomous-mode-v670)
 - **SDD Token-Optimized Review Flow (v6.8.0)** — port of upstream obra v6.0.0: one two-verdict task reviewer, file-based handoffs under `.superpowers/sdd/`, explicit per-dispatch model selection; automatic whenever subagent-driven-development executes a plan (~2x faster, ~50–60% fewer tokens per upstream measurement). [Details](docs/FORK-IMPROVEMENTS.md#2-sdd-token-optimized-review-flow-v680)
@@ -38,7 +38,7 @@ Nine releases beyond the REPOZY v6.6.1 baseline. The five flagship additions —
 Four further releases — `multi-doc-review` rename (v6.11.0), plan-scoped SDD workspace (v6.12.0), fresh-session plan handoff (v6.13.0), and cap-only batch boundary (v6.15.0) — are covered in [RELEASE-NOTES.md](RELEASE-NOTES.md).
 
 ### Why developers switch
-| Feature                  | Original Superpowers          | Superpowers Optimized                          | Real-world impact                  |
+| Feature                  | Original Superpowers          | Superpowers Orchestrator                          | Real-world impact                  |
 |--------------------------|-------------------------------|------------------------------------------------|------------------------------------|
 | Workflow selection       | Manual                        | Automatic 3-tier (micro / lightweight / full)  | Zero overhead on simple tasks      |
 | Safety & hooks           | None                          | 10 proactive hooks overall, with platform-specific subsets on Codex/OpenCode | Strongest safety on Claude; partial hook parity on Codex/OpenCode |
@@ -54,7 +54,7 @@ Four further releases — `multi-doc-review` rename (v6.11.0), plan-scoped SDD w
 In any supported agent IDE, start a new chat and paste:
 
 ```
-Activate Superpowers Optimized and plan a secure user-authentication endpoint with full TDD and security review.
+Activate Superpowers Orchestrator and plan a secure user-authentication endpoint with full TDD and security review.
 ```
 
 The agent will automatically route to the correct workflow, apply safety guards, and run an integrated security review during code review — no manual skill selection required.
@@ -411,22 +411,22 @@ This is the full cross-platform hook inventory for the plugin. Claude Code gets 
 
 **Install**
 ```
-/plugin marketplace add brunob54/superpowers-optimized
-/plugin install superpowers-optimized@superpowers-optimized
+/plugin marketplace add brunob54/superpowers-orchestrator
+/plugin install superpowers-orchestrator@superpowers-orchestrator
 ```
 
 **Update**
 
-`/plugin update superpowers-optimized` opens the plugin manager UI. From there:
+`/plugin update superpowers-orchestrator` opens the plugin manager UI. From there:
 
-1. **Marketplaces** tab → select `brunob54/superpowers-optimized` → **Update marketplace** (refreshes the version catalog)
-2. **Installed** tab → select `superpowers-optimized` → **Update now**
+1. **Marketplaces** tab → select `brunob54/superpowers-orchestrator` → **Update marketplace** (refreshes the version catalog)
+2. **Installed** tab → select `superpowers-orchestrator` → **Update now**
 
 > **Tip:** To skip manual steps in future, enable **Auto-update** for the marketplace in step 1.
 
 **Uninstall**
 ```
-/plugin uninstall superpowers-optimized
+/plugin uninstall superpowers-orchestrator
 ```
 
 ---
@@ -435,17 +435,17 @@ This is the full cross-platform hook inventory for the plugin. Claude Code gets 
 
 **Install**
 ```
-/plugin-add superpowers-optimized
+/plugin-add superpowers-orchestrator
 ```
 
 **Update**
 ```
-/plugin-update superpowers-optimized
+/plugin-update superpowers-orchestrator
 ```
 
 **Uninstall**
 ```
-/plugin-remove superpowers-optimized
+/plugin-remove superpowers-orchestrator
 ```
 
 ---
@@ -458,12 +458,12 @@ For live Codex hooks, use `codex-cli 0.118.0` or newer. Older CLI builds may sil
 
 **Install** — tell the agent:
 ```
-Fetch and follow instructions from https://raw.githubusercontent.com/brunob54/superpowers-optimized/refs/heads/main/.codex/INSTALL.md
+Fetch and follow instructions from https://raw.githubusercontent.com/brunob54/superpowers-orchestrator/refs/heads/main/.codex/INSTALL.md
 ```
 
 **Update** — tell the agent:
 ```
-Fetch and follow the update instructions from https://raw.githubusercontent.com/brunob54/superpowers-optimized/refs/heads/main/.codex/INSTALL.md
+Fetch and follow the update instructions from https://raw.githubusercontent.com/brunob54/superpowers-orchestrator/refs/heads/main/.codex/INSTALL.md
 ```
 
 Or manually: follow the `Updating` section in the linked install doc. A plain `git pull` is not always sufficient for a complete update.
@@ -476,12 +476,12 @@ If the installed Codex copy looks stale, dirty, or inconsistent after update, us
 
 **Install** — tell the agent:
 ```
-Fetch and follow instructions from https://raw.githubusercontent.com/brunob54/superpowers-optimized/refs/heads/main/.opencode/INSTALL.md
+Fetch and follow instructions from https://raw.githubusercontent.com/brunob54/superpowers-orchestrator/refs/heads/main/.opencode/INSTALL.md
 ```
 
 **Update** — tell the agent:
 ```
-Fetch and follow the update instructions from https://raw.githubusercontent.com/brunob54/superpowers-optimized/refs/heads/main/.opencode/INSTALL.md
+Fetch and follow the update instructions from https://raw.githubusercontent.com/brunob54/superpowers-orchestrator/refs/heads/main/.opencode/INSTALL.md
 ```
 
 Or manually: `git pull` in your local clone of the repository.
@@ -554,7 +554,7 @@ MIT License - see LICENSE file for details
 
 
 **Support**
-- Issues (this fork): https://github.com/brunob54/superpowers-optimized/issues
+- Issues (this fork): https://github.com/brunob54/superpowers-orchestrator/issues
 - Optimized fork base: https://github.com/REPOZY/superpowers-optimized
 - Original: https://github.com/obra/superpowers
-- Discussions: https://github.com/brunob54/superpowers-optimized/discussions
+- Discussions: https://github.com/brunob54/superpowers-orchestrator/discussions

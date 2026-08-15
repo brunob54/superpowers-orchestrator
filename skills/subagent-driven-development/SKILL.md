@@ -411,9 +411,9 @@ Exclude unrelated prior assistant analysis and old failed hypotheses. Subagents 
 
 ## Subagent Skill Leakage Prevention
 
-Subagents can discover superpowers-optimized skills via filesystem access and invoke them, causing a focused implementer to behave as a workflow orchestrator. Every subagent prompt MUST include this instruction:
+Subagents can discover superpowers-orchestrator skills via filesystem access and invoke them, causing a focused implementer to behave as a workflow orchestrator. Every subagent prompt MUST include this instruction:
 
-> You are a focused subagent. Do NOT invoke any skills from the superpowers-optimized plugin. Do NOT use the Skill tool. Your only job is the task described below.
+> You are a focused subagent. Do NOT invoke any skills from the superpowers-orchestrator plugin. Do NOT use the Skill tool. Your only job is the task described below.
 
 ## Model Selection for Agent Tool Calls
 

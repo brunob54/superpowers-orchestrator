@@ -62,7 +62,7 @@ git add sum.js sum.test.js
 git commit --quiet -m "feature: extend sumFirstN"
 SEEDED_HEAD_SHA=$(git rev-parse HEAD)
 
-PROMPT="Invoke the superpowers-optimized:multi-code-review skill on the git repository at $TEST_PROJECT (review its current branch feature-under-review) with BASE $BASE_SHA and N=2. Do not ask me any questions — use N=2 and proceed to completion, treating any finding that would need my decision as user-decision in the log."
+PROMPT="Invoke the superpowers-orchestrator:multi-code-review skill on the git repository at $TEST_PROJECT (review its current branch feature-under-review) with BASE $BASE_SHA and N=2. Do not ask me any questions — use N=2 and proceed to completion, treating any finding that would need my decision as user-decision in the log."
 
 # Safety net: the skill commits; a misanchored run must not mutate the dev repo.
 # --ignored=matching is included because .superpowers/ and state.md/known-issues.md/*.txt

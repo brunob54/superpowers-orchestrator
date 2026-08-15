@@ -35,7 +35,7 @@ Failed exports are retried a reasonable number of times.
 SPEC_EOF
 SPEC_SHA_BEFORE=$(shasum "$SPEC" | cut -d' ' -f1)
 
-PROMPT="Invoke the superpowers-optimized:multi-doc-review skill on the document $SPEC with N=2. Do not ask me any questions — use N=2 and proceed to completion."
+PROMPT="Invoke the superpowers-orchestrator:multi-doc-review skill on the document $SPEC with N=2. Do not ask me any questions — use N=2 and proceed to completion."
 # Deliberately no doc-type statement: the spec's Testing Strategy requires this
 # test to exercise path-based inference (docs/specs/ -> spec); stating the type
 # would override inference per the skill's Parameters rule.

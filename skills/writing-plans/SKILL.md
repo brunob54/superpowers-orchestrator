@@ -21,7 +21,7 @@ Save to `docs/plans/YYYY-MM-DD-<feature-name>.md`.
 ```markdown
 # <Feature Name> Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers-optimized:subagent-driven-development (recommended) or superpowers-optimized:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers-orchestrator:subagent-driven-development (recommended) or superpowers-orchestrator:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** <single sentence>
 **Spec:** `docs/specs/<the spec this plan implements>.md` *(multi-doc-review reads this line to locate the spec on direct plan reviews)*
@@ -135,7 +135,7 @@ If you find issues, fix them inline. No need to re-review — just fix and move 
 
 ## Multi-Round Plan Review
 
-After self-review, invoke `superpowers-optimized:multi-doc-review` on the saved
+After self-review, invoke `superpowers-orchestrator:multi-doc-review` on the saved
 plan (doc type `plan`; spec path from the plan header's `**Spec:**` line).
 It asks for N if not already stated (default 3; 0 skips), runs at most once
 per gate, and writes its audit log to `<plan-basename>-review-log.md`. If
@@ -206,9 +206,9 @@ lands in inline execution.
 ### On User Reply
 
 **If Subagent-Driven:**
-- **REQUIRED SUB-SKILL:** Use superpowers-optimized:subagent-driven-development
+- **REQUIRED SUB-SKILL:** Use superpowers-orchestrator:subagent-driven-development
 - Fresh subagent per task + two-stage review
 
 **If Inline Execution:**
-- **REQUIRED SUB-SKILL:** Use superpowers-optimized:executing-plans
+- **REQUIRED SUB-SKILL:** Use superpowers-orchestrator:executing-plans
 - Continuous execution with checkpoints for review

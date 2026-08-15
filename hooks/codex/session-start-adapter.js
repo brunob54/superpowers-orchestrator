@@ -106,7 +106,7 @@ function checkForUpdates() {
       }
     }
 
-    return `\n\n<important-reminder>IN YOUR FIRST REPLY AFTER SEEING THIS MESSAGE YOU MUST TELL THE USER:\n\n**Superpowers Optimized has been updated to v${newVersion}** (was v${oldVersion})\n\n**What's New:**\n${whatsNew}\n</important-reminder>`;
+    return `\n\n<important-reminder>IN YOUR FIRST REPLY AFTER SEEING THIS MESSAGE YOU MUST TELL THE USER:\n\n**Superpowers Orchestrator has been updated to v${newVersion}** (was v${oldVersion})\n\n**What's New:**\n${whatsNew}\n</important-reminder>`;
   } catch {
     return '';
   }
@@ -237,9 +237,9 @@ function spawnContextEngine(cwd) {
 function buildSessionContext(cwd) {
   return [
     '<EXTREMELY_IMPORTANT>',
-    'You have superpowers-optimized.',
+    'You have superpowers-orchestrator.',
     '',
-    '**The `superpowers-optimized:using-superpowers` guidance is loaded below. For all other skills, use the `Skill` tool.**',
+    '**The `superpowers-orchestrator:using-superpowers` guidance is loaded below. For all other skills, use the `Skill` tool.**',
     '',
     '**MANDATORY FIRST ACTIONS — before ANY tool calls beyond reading files:**',
     '1. Silently activate token-efficiency (its rules apply immediately)',
