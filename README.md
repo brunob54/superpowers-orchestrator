@@ -9,8 +9,6 @@
 
 </div>
 
-![](media/Superpowers-Orchestrator-Header.gif)
-
 # Superpowers Orchestrator
 
 **The production-grade fork of obra/superpowers** — same trusted workflow, dramatically leaner, safer, and more intelligent.
