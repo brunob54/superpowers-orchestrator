@@ -55,6 +55,14 @@ Task tool (general-purpose):
     While iterating, run the focused test for what you're changing; run the
     full suite once before committing, not after every edit.
 
+    ## Commit Messages
+
+    Every commit you create carries the workstream trailers. If the task's
+    own commit step already specifies a command with `Session:` and `Stage:`
+    trailers, use it verbatim; otherwise use this shape:
+
+        git commit -m "<type>(<scope>): <what changed>" --trailer "Session: [SLUG]" --trailer "Stage: task N/[TASK_TOTAL]"
+
     ## Code Organization
 
     You reason best about code you can hold in context at once, and your edits are more
@@ -152,4 +160,7 @@ Task tool (general-purpose):
 - `[BRIEF_FILE]` — REQUIRED: `scripts/task-brief PLAN_FILE N` prints the path
 - `[REPORT_FILE]` — REQUIRED: same directory and stem as the brief
   (brief `…/task-N-brief.md` → report `…/task-N-report.md`)
+- `[SLUG]` — REQUIRED: the plan's file basename with the `YYYY-MM-DD-`
+  prefix and `.md` stripped
+- `[TASK_TOTAL]` — REQUIRED: total number of tasks in the plan
 - `[directory]` — the working directory for the task

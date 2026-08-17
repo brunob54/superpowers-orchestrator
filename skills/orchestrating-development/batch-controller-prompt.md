@@ -60,7 +60,9 @@ Agent tool (general-purpose):
        all-boxes-checked), append the ledger line per "Durable Progress",
        then commit the tick immediately, staging the plan file by
        explicit path — `git add [PLAN_PATH] && git commit -m
-       "chore(plan): task <n> complete"` — never `git add -A`. An
+       "chore(plan): <slug> task <n> complete"`, where `<slug>` = the
+       plan's file basename with the `YYYY-MM-DD-` prefix and `.md`
+       stripped — never `git add -A`. An
        uncommitted tick leaves the tree dirty at the next phase boundary
        and wedges the run.
     3b. Extract the plan's `**Global Constraints:**` block yourself from
@@ -70,8 +72,10 @@ Agent tool (general-purpose):
     4. Mid-task crash recovery: for each assigned task that is unchecked
        when you start, set REVIEW_BASE = the HEAD recorded by the last
        completed ledger line; with no ledger line, the most recent
-       `chore(plan): task <n> complete` commit on the branch (find it
-       with `git log`); with neither, the branch's merge-base with the
+       checkbox-tick commit for task <n> on the branch (subject
+       `chore(plan): <slug> task <n> complete`; find it with
+       `git log --grep "task <n> complete"`, which also matches ticks
+       from before the slug was added); with neither, the branch's merge-base with the
        default branch. Never fall back to your own starting HEAD — on a
        retried controller it already contains the crashed attempt's
        commits, so `git log REVIEW_BASE..HEAD` comes back empty and

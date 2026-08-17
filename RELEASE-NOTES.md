@@ -1,5 +1,35 @@
 # Superpowers Orchestrator Release Notes
 
+## v7.1.0 — commit messages carry the workstream slug and stage
+
+Field report: a pipeline run produces many commits whose messages carry
+no context — `chore(plan): task 3 complete` does not say which plan, and
+a month later `git log` cannot separate two workstreams on one branch.
+
+- **One convention, defined in `writing-plans`.** The *slug* is the
+  plan's file basename with the `YYYY-MM-DD-` date prefix and `.md`
+  stripped (`2026-08-17-auth-login.md` → `auth-login`); every skill in
+  the pipeline derives it with the same rule. Content commits keep a
+  conventional subject and add two git trailers: `Session: <slug>` and
+  `Stage: task <N>/<total>`. `git log --grep "^Session: <slug>"` lists a
+  whole workstream. The plan template's commit step now pre-fills the
+  full command (No Placeholders applies to it).
+- **Implementers inherit the format.** The SDD implementer prompt gains
+  a Commit Messages section with `[SLUG]` / `[TASK_TOTAL]` placeholders;
+  `executing-plans` adds the trailers when running a pre-convention plan.
+- **Process commits name the slug in the subject** (they are the ones
+  read via `git log --oneline`): checkbox ticks become
+  `chore(plan): <slug> task <n> complete` (SDD per-task flow and the
+  orchestration batch controller; the controller's crash-recovery search
+  now greps `task <n> complete`, matching pre-slug ticks too);
+  multi-code-review fix commits become
+  `review fixes (<slug>, round <i>)` — still no finding text, so the
+  reviewer-blinding rule is intact (behavioral test regex updated,
+  accepts both shapes); orchestration boundary commits become
+  `chore(orchestration): <slug> <boundary>` and Phase 2's revised plan
+  `docs(plan): <slug> plan after review`.
+- Docs synced: FORK-IMPROVEMENTS quotes the new tick subject.
+
 ## v7.0.1 — spec gate offers the fresh-session orchestration route
 
 Field report: after the spec review rounds, the gate message could be

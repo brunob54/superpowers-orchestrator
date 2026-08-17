@@ -97,9 +97,19 @@ Expected: PASS
 
 ```bash
 git add <files>
-git commit -m "<message>"
+git commit -m "<type>(<scope>): <what changed>" --trailer "Session: <slug>" --trailer "Stage: task <N>/<total>"
 ```
 ````
+
+## Commit Messages
+
+Every commit made while executing a plan must say which workstream and which stage it belongs to — without this, a branch full of task commits is unreadable later.
+
+- **Slug** = the plan's file basename with the `YYYY-MM-DD-` date prefix and the `.md` extension stripped: `docs/plans/2026-08-17-auth-login.md` → `auth-login`. Every skill in the pipeline derives the slug with this same rule.
+- Step 5 of each task carries the full commit command: a conventional subject describing the change, plus two trailers (a trailer is a `Key: value` line at the end of the commit message, the same mechanism as `Co-Authored-By`):
+  - `Session: <slug>` — the workstream.
+  - `Stage: task <N>/<total>` — position in the pipeline.
+- Fill in the real slug and task numbers when writing the plan — the No Placeholders rule applies to the commit command too. `git log --grep "^Session: <slug>"` then lists every commit of the workstream.
 
 ## No Placeholders
 

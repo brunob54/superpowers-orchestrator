@@ -132,7 +132,7 @@ else
     fi
     # (d) fix commits use generic subjects — selected by range from the seeded
     #     branch tip, so no assumption about history shape or commit counts
-    NON_GENERIC=$(git log --format=%s "$SEEDED_HEAD_SHA..HEAD" | grep -vE "^review fixes \(round [0-9]+\)$" || true)
+    NON_GENERIC=$(git log --format=%s "$SEEDED_HEAD_SHA..HEAD" | grep -vE "^review fixes \(([^,]+, )?round [0-9]+\)$" || true)
     if [ -n "$NON_GENERIC" ]; then
         echo "FAIL(d): fix commit subject(s) not generic:"
         echo "$NON_GENERIC"

@@ -94,7 +94,7 @@ the same question batch below).
 7. **Log:** create `docs/plans/YYYY-MM-DD-<slug>-orchestration-log.md`
    (start date) with the invocation header (format below), recording
    BASE = `git rev-parse HEAD`. Commit it
-   (`chore: start orchestration log`).
+   (`chore(orchestration): <slug> log started`).
 8. **Seed `state.md`:** the sections writing-plans seeds, plus
    `## Orchestration` (format below).
 
@@ -118,7 +118,8 @@ If N_plan = 0, log the skip and go to Phase 3. Otherwise fill
 `./doc-review-loop-prompt.md` (plan path, spec path, N_plan) and dispatch.
 Expected return: `REVIEW_DONE rounds=<r> outcome=<converged|cap>
 unresolved=<n>` or `BLOCKED: <reason>`. `unresolved > 0` → major error →
-stop. On success: commit the revised plan + its review log, append and
+stop. On success: commit the revised plan + its review log
+(`docs(plan): <slug> plan after review`), append and
 commit the Phase 2 log entry.
 
 ## Phase 3 — Implementation Batches
@@ -220,7 +221,10 @@ answer the resume prompt must supply, carried in the template's
 `skipped (N_x=0)` line shapes from Phase 0. Round-by-round detail lives
 in the sub-skills' own logs — never duplicate it here. Commit the log at
 every boundary: Phase 0, after Phases 1–2, after each batch, after
-Phase 4, and at completion/stop.
+Phase 4, and at completion/stop. Boundary commits use the subject
+`chore(orchestration): <slug> <boundary>`, where `<boundary>` names the
+boundary: `phase 1 log`, `phase 2 log`, `batch 2 log`, `stopped`,
+`completed`.
 
 ## state.md Section
 
