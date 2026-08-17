@@ -2,7 +2,7 @@
   "name": "superpowers-orchestrator",
   "displayName": "Superpowers Orchestrator",
   "description": "Agentic development framework — disciplined workflow routing, TDD enforcement, safety hooks, systematic debugging, and code review",
-  "version": "7.0.0",
+  "version": "7.0.1",
   "author": {
     "name": "Jesse Vincent, forked by brunob54"
   },

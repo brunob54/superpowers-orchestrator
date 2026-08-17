@@ -255,10 +255,14 @@ These are the actual dialogs:
 
 **Spec approval gate** (end of `brainstorming`):
 
-> Spec written and committed to `<path>`. Please review it and let me know
-> if you want to make any changes before we start writing out the
-> implementation plan. (Alternatively, say 'orchestrate it' to run plan,
-> reviews, and implementation autonomously via orchestrating-development.)
+> Spec written and saved to `<path>`. The review rounds are complete. Choose how to continue:
+>
+> 1. **Review it here** — request changes, or approve to continue to `writing-plans` in this session.
+> 2. **Autonomous pipeline** — run `/clear` (the spec and its review log stay on disk), then paste:
+>
+>        orchestrate the development of <path>
+>
+>    orchestrating-development runs plan writing, plan reviews, batched implementation, and code reviews unattended, and stops before any merge or PR. A fresh session is recommended because the pipeline then starts with the full context window.
 
 **Execution handoff** (end of `writing-plans`, after plan approval):
 
@@ -346,9 +350,16 @@ Authoritative detail:
 
 ### Starting a run
 
+Recommended: start from a fresh session (`/clear`) — the spec and its review
+log live on disk, so nothing is lost, and the pipeline gets the full context
+window. Then paste:
+
 ```
 orchestrate the development of docs/specs/2026-08-04-my-feature-design.md
 ```
+
+The spec approval gate at the end of `brainstorming` (§3) offers this same
+prompt with your spec's path already filled in.
 
 ### Phase 0 — the only conversation you'll have
 

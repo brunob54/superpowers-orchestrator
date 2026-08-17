@@ -1,5 +1,31 @@
 # Superpowers Orchestrator Release Notes
 
+## v7.0.1 — spec gate offers the fresh-session orchestration route
+
+Field report: after the spec review rounds, the gate message could be
+paraphrased by the model and the orchestration option silently dropped —
+the user had to find the orchestrator's trigger phrase in the guide.
+
+- **brainstorming User Review Gate rewritten.** The message is now marked
+  verbatim-required and anchored *after* the multi-doc-review loop (the
+  previous header said "after the spec self-review passes", leaving the
+  gate's position ambiguous). It presents two explicit paths: (1) review
+  and continue to `writing-plans` in-session, or (2) run `/clear` and
+  paste `orchestrate the development of <path>` — paste-ready with the
+  real spec path, mirroring the writing-plans ready message. The prompt
+  was verified to route uniquely to `orchestrating-development` through
+  the skill activator.
+- Stale wording fixed: the gate said "written and committed", but
+  brainstorming leaves the spec uncommitted (orchestration commits it).
+  Now "written and saved".
+- Process-flow contradiction fixed: the flow said writing-plans is the
+  only possible next step; orchestration hand-off is now a second
+  terminal state (the user starts it in a fresh session — brainstorming
+  still never invokes implementation skills itself).
+- Guide synced: §3's quoted spec-gate dialog matches the new message
+  verbatim; §4 "Starting a run" now recommends `/clear` first and notes
+  the gate supplies the same prompt pre-filled.
+
 ## v7.0.0 — project renamed: superpowers-optimized → superpowers-orchestrator
 
 **Breaking change: the plugin and marketplace are renamed.** The installed
