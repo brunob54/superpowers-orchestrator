@@ -163,8 +163,12 @@ code has been revised since, so a re-pass is meaningful):
      files it changed by explicit path — never `git add -A` or
      `git add .` — appends command + output to the fix-report file,
      commits with the **generic subject**
-     `review fixes (round <i>)` — no finding text (the package's commit
-     list would leak it to later reviewers). ALL fix commits use this
+     `review fixes (<slug>, round <i>)` — `<slug>` = the plan basename
+     with the `YYYY-MM-DD-` prefix and `.md` stripped; with no plan
+     path, the current branch name minus any `feature/` prefix — and no
+     finding text (the slug names the workstream, never a finding; the
+     package's commit list would leak finding text to later reviewers).
+     ALL fix commits use this
      subject form — verification-cycle and post-loop-addendum fixes
      included, reusing the originating round's number for `<i>`. The fix
      dispatch also tells the fix subagent **not to name any roster skill

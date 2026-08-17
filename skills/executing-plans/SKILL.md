@@ -74,6 +74,7 @@ When a task is architectural, high-risk, or touches cross-module boundaries:
 ## Execution Rules
 
 - Do not skip plan steps unless user approves deviation.
+- Use the commit commands the plan's commit steps provide. If a task's commit step lacks the `Session:`/`Stage:` trailers (a plan written before this convention), add them: `--trailer "Session: <slug>" --trailer "Stage: task <N>/<total>"`, where `<slug>` = the plan basename with the `YYYY-MM-DD-` prefix and `.md` stripped.
 - Never start implementation on main/master branch without explicit user consent — ensure isolated workspace is ready first.
 - Keep edits scoped to the current task.
 - Do not claim completion without fresh command output.
