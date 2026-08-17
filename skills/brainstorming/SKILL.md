@@ -37,8 +37,8 @@ Every project goes through this process. A todo list, a single-function utility,
 9. Save approved design to `docs/specs/YYYY-MM-DD-<topic>-design.md`.
 10. **Spec self-review** — quick inline check for placeholders, contradictions, ambiguity, scope (see Spec Self-Review below). Fix issues inline; no subagent dispatch needed.
 11. **Multi-round spec review** — invoke `superpowers-orchestrator:multi-doc-review` on the saved spec (doc type `spec`). It asks for N if not already stated (default 3; 0 skips), runs at most once per gate, and writes its audit log to `<spec-basename>-review-log.md`. Skip on platforms without the Agent tool.
-12. **User reviews written spec** — ask user to review the spec file before proceeding (see User Review Gate below).
-13. Invoke `writing-plans`.
+12. **User reviews written spec** — present the User Review Gate message (below) verbatim, with `<path>` filled in. This is the skill's final message; do not paraphrase it or drop either option.
+13. If the user approves in-session: invoke `writing-plans`. If the user chooses orchestration: stop — they run it from a fresh session.
 
 ## Process Flow
 
@@ -71,12 +71,15 @@ digraph brainstorming {
     "Save design doc" -> "Spec self-review\n(fix inline)";
     "Spec self-review\n(fix inline)" -> "Multi-doc-review loop";
     "Multi-doc-review loop" -> "User reviews spec?";
+    "Hand off to orchestration\n(user runs it in a fresh session)" [shape=doublecircle];
+
     "User reviews spec?" -> "Save design doc" [label="changes requested"];
-    "User reviews spec?" -> "Invoke writing-plans" [label="approved"];
+    "User reviews spec?" -> "Invoke writing-plans" [label="approved in-session"];
+    "User reviews spec?" -> "Hand off to orchestration\n(user runs it in a fresh session)" [label="user chooses orchestration"];
 }
 ```
 
-**The terminal state is invoking writing-plans.** Do NOT invoke frontend-design, or any other implementation skill. The ONLY skill you invoke after brainstorming is writing-plans.
+**The terminal state is invoking writing-plans, or handing off to orchestration.** Do NOT invoke frontend-design, or any other implementation skill. The ONLY skill brainstorming itself invokes afterwards is writing-plans; orchestrating-development is never invoked from this session — the user starts it in a fresh session via the gate message.
 
 ## Spec Self-Review
 
@@ -91,9 +94,16 @@ Fix any issues inline. No need to re-review — just fix and move on.
 
 ## User Review Gate
 
-After the spec self-review passes, ask the user to review the written spec before proceeding:
+After the multi-doc-review loop completes (or is skipped), present this message **verbatim** with `<path>` replaced by the actual spec path. It must be the last message before the user answers — even when review rounds ran in between, repeat it in full; do not paraphrase it and do not drop option 2:
 
-> "Spec written and committed to `<path>`. Please review it and let me know if you want to make any changes before we start writing out the implementation plan. (Alternatively, say 'orchestrate it' to run plan, reviews, and implementation autonomously via orchestrating-development.)"
+> Spec written and saved to `<path>`. The review rounds are complete. Choose how to continue:
+>
+> 1. **Review it here** — request changes, or approve to continue to `writing-plans` in this session.
+> 2. **Autonomous pipeline** — run `/clear` (the spec and its review log stay on disk), then paste:
+>
+>        orchestrate the development of <path>
+>
+>    orchestrating-development runs plan writing, plan reviews, batched implementation, and code reviews unattended, and stops before any merge or PR. A fresh session is recommended because the pipeline then starts with the full context window.
 
 Wait for the user's response. If they request changes, make them and re-run the self-review. Only proceed once the user approves.
 
