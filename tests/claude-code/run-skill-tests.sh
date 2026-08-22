@@ -64,6 +64,7 @@ while [[ $# -gt 0 ]]; do
             echo "  test-subagent-driven-development-integration.sh  Full workflow execution"
             echo "  test-multi-doc-review.sh  Multi-doc-review log contract on a seeded flawed spec"
             echo "  test-multi-code-review.sh  Multi-code-review loop contract on a seeded defective branch (use --timeout 1800)"
+            echo "  test-researching-prior-art.sh  Merged-report contract for the prior-art research skill (use --timeout 1800)"
             exit 0
             ;;
         *)
@@ -84,6 +85,7 @@ integration_tests=(
     "test-subagent-driven-development-integration.sh"
     "test-multi-doc-review.sh"
     "test-multi-code-review.sh"
+    "test-researching-prior-art.sh"
 )
 
 # Add integration tests if requested
