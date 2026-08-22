@@ -8,7 +8,7 @@ every `[PLACEHOLDER]`, then dispatch via the Agent tool:
   The prompt below carries the read-only instruction either way —
   `Explore` lacks Edit and Write but keeps Bash, so read-only is
   tool-restricted plus instructed plus checked, never structural.
-- **description:** `Research assignment K/N: [ASSIGNMENT NAME]`
+- **description:** `Research assignment K/N: [ASSIGNMENT_NAME]`
 - **model:** `[MODEL]` — REQUIRED. Haiku-class only for the split-out
   registry existence check and for cache re-verification; Sonnet-class
   for every other assignment (angles 1, 2, 4, 5, angle 3 when its halves
@@ -61,7 +61,10 @@ every `[PLACEHOLDER]`, then dispatch via the Agent tool:
     - Reusable patterns and APIs relevant to the decision — each with
       a citation (file path or URL) into the EXTERNAL project's source
       or tests, plus a short verbatim quoted snippet. The project
-      under evaluation, not this repository.
+      under evaluation, not this repository. A citation that is a path
+      into a clone under `.superpowers/research/clones/` must also
+      name the upstream repository URL, and the commit hash when you
+      know it, because the clone is deleted once the run ends.
     - Edge cases and boundaries the source and tests reveal.
     - Version facts: presence or deprecation of the APIs the decision
       relies on, at the anchored version.

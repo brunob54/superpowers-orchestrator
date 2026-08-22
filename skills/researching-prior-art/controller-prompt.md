@@ -54,12 +54,12 @@ subagent via the Agent tool:
       path you write, and every path you pass to a researcher, is
       absolute and rooted here — your working directory may be
       elsewhere.
-    - Researcher report files: [REPORT_DIR]/<slug>-r<K>-report.md,
+    - Researcher report files: [REPORT_DIR]/[SLUG]-r<K>-report.md,
       where K is the assignment's position (1-based).
-    - Re-verifier report files: [REPORT_DIR]/<slug>-rv<J>-report.md,
+    - Re-verifier report files: [REPORT_DIR]/[SLUG]-rv<J>-report.md,
       where J is the cache hit's position (1-based) in the cache
       state. Follow-up researchers dispatched after an invalidated
-      entry write [REPORT_DIR]/<slug>-f<J>-report.md (same J). The
+      entry write [REPORT_DIR]/[SLUG]-f<J>-report.md (same J). The
       report-verification rules below apply to these files too.
     - Merged report file: [MERGED_REPORT_FILE]
     - Researcher prompt template: [RESEARCH_PROMPT_PATH] — read it,
