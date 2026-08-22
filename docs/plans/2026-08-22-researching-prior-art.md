@@ -426,7 +426,7 @@ git commit -m "feat(skills): researching-prior-art researcher prompt template" -
 
 **Does NOT cover:** spot-fetching catches fabricated citations only, not fabricated conclusions — conclusion-level trust comes from the Contradictions section and the user's review (stated in the template).
 
-- [ ] **Step 1: Create the file with this exact content**
+- [x] **Step 1: Create the file with this exact content**
 
 ```markdown
 # Controller Prompt Template
@@ -572,12 +572,12 @@ subagent via the Agent tool:
        <!-- research report -->
 ```
 
-- [ ] **Step 2: Verify placeholders and markers**
+- [x] **Step 2: Verify placeholders and markers**
 
 Run: `for p in DECISION CANDIDATES ASSIGNMENTS CACHE_STATE REPORT_DIR MERGED_REPORT_FILE RESEARCHER_MODELS RESEARCH_PROMPT_PATH SLUG REPO_ROOT; do grep -q "\[$p\]" skills/researching-prior-art/controller-prompt.md || echo "MISSING $p"; done; grep -c '<!-- research report -->' skills/researching-prior-art/controller-prompt.md`
 Expected: no `MISSING` lines; marker count = 4 (discard rule, merged-report first line, summary first line, dispatch-failure summary rule).
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add skills/researching-prior-art/controller-prompt.md
