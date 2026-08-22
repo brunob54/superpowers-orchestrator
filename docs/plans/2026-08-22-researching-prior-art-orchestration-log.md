@@ -11,3 +11,9 @@ plan: docs/plans/2026-08-22-researching-prior-art.md — 12 tasks
 - Task 1: complete — subagent-guard research-report marker exemption (cc28ca0..8b50ce4)
 - Task 2: complete — skill-activator routing rule (111bccc..0637d2f)
 - Task 3: complete — research-prompt.md researcher template (eb49ba2..344be63)
+
+## Phase 3 — Batch 2 (tasks 4–6) — COMPLETE — commits 9a90bca..abd8987
+- Task 4: complete — controller prompt template (9a90bca..347a97c)
+- Task 5: complete — researching-prior-art sub-skill (24cb456..8c56cd5)
+- Task 6: complete — brainstorming integration (8c56cd5..abd8987)
+- Note: the first batch-2 controller died mid-run on an API session limit; the identical dispatch was retried once. The retry finished the batch (task 6 re-reviewed from REVIEW_BASE per Deviation 4) but its final return message was never delivered. Completion confirmed instead by the orchestrator's checkbox cross-check (tasks 4–6: 14 checked, 0 unchecked), a clean tree, and ledger lines recording clean reviews with commit ranges.
