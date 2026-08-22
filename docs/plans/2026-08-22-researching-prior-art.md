@@ -1675,29 +1675,29 @@ git commit -m "chore(release): v7.2.0 — researching-prior-art skill, docs and 
 
 **Security flag:** `none`
 
-- [ ] **Step 1: Unit suite (fast)**
+- [x] **Step 1: Unit suite (fast)**
 
 Run: `bash tests/codex/run-unit-tests.sh`
 Expected: every suite passes, including `subagent-guard (SubagentStop)` and `skill-activator (UserPromptSubmit)` with the new sections. Exit code 0.
 
-- [ ] **Step 2: Sync the dev install**
+- [x] **Step 2: Sync the dev install**
 
 Run: `bash tools/sync-dev-install.sh`
 Expected: completes without error (mirrors the repo into the registry's `installPath` — do NOT locate the install by directory-name glob; the active directory's name lies about its version). Verify using the target path the script prints: `ls <printed-installPath>/skills | grep researching` → `researching-prior-art`. Live sessions only see the new skill after this sync (editing the repo does NOT change live behavior — CLAUDE.md constraint).
 
-- [ ] **Step 3: Behavioral test — merged-report contract (slow)**
+- [x] **Step 3: Behavioral test — merged-report contract (slow)**
 
 Run: `bash tests/claude-code/run-skill-tests.sh --test test-researching-prior-art.sh --timeout 1800 --verbose`
 Expected: `PASS: researching-prior-art behavioral test` (slow — up to 30 min; needs network access; the timeout shim is auto-sourced).
 
-- [ ] **Step 4: Behavioral test — gate message contract (slow)**
+- [x] **Step 4: Behavioral test — gate message contract (slow)**
 
 Run: `bash tests/claude-code/run-skill-tests.sh --test test-researching-prior-art-gate.sh --timeout 1800 --verbose`
 Expected: `PASS: research-gate behavioral test`.
 
 If either behavioral test fails, debug and fix the skill text (Tasks 3-8 files), re-run `bash tools/sync-dev-install.sh`, and re-run the failed test — the installed copy must be re-synced after every skill edit. If the behavioral test shows unacceptable overhead, stop and return the decision to the user (the spec's recorded fallback is verification-at-review).
 
-- [ ] **Step 5: Final clean-tree check**
+- [x] **Step 5: Final clean-tree check**
 
 Run: `diff .superpowers/pre-plan-status.txt <(git status --porcelain)`
 Expected: empty, or differences touching only the pipeline's own design documents — the spec `docs/specs/2026-08-22-researching-prior-art-design.md`, its `-review-log.md` sidecar, the plan `docs/plans/2026-08-22-researching-prior-art.md`, and its sidecars — which the recommended execution routes (subagent-driven-development / executing-plans) leave uncommitted and may touch during execution. Entries that were already present at the Task 1 Step 0 baseline appear on both sides and cancel out, so no judgment call about "pre-existing dirt" is needed. Every file created or modified by Tasks 1-11 must be committed; `state.md` (committed `.gitignore`) and `.superpowers/` (self-`.gitignore` written in Task 1 Step 0) never appear in the status output. Any other difference is a failure.
