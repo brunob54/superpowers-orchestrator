@@ -65,6 +65,7 @@ while [[ $# -gt 0 ]]; do
             echo "  test-multi-doc-review.sh  Multi-doc-review log contract on a seeded flawed spec"
             echo "  test-multi-code-review.sh  Multi-code-review loop contract on a seeded defective branch (use --timeout 1800)"
             echo "  test-researching-prior-art.sh  Merged-report contract for the prior-art research skill (use --timeout 1800)"
+            echo "  test-researching-prior-art-gate.sh  Brainstorming research-gate message contract (use --timeout 1800)"
             exit 0
             ;;
         *)
@@ -86,6 +87,7 @@ integration_tests=(
     "test-multi-doc-review.sh"
     "test-multi-code-review.sh"
     "test-researching-prior-art.sh"
+    "test-researching-prior-art-gate.sh"
 )
 
 # Add integration tests if requested
