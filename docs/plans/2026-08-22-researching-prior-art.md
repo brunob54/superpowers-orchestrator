@@ -1149,7 +1149,7 @@ git commit -m "feat(skills): multi-doc-review spec lens flags uncited external-t
 
 **Does NOT cover:** the check applies only to specs matching a predicate branch — specs with no technology decision pass without a "Prior art and alternatives" section (existing specs stay valid; the spec's rollout note). It checks section presence, not section quality — quality is multi-doc-review's job.
 
-- [ ] **Step 1: Document the thin-sequencer exception in the intro**
+- [x] **Step 1: Document the thin-sequencer exception in the intro**
 
 Replace (current lines 17-19 tail):
 
@@ -1167,7 +1167,7 @@ exception: Phase 0 step 4's prior-art intake check reads the spec body
 once, before any controller dispatch — nothing else.
 ```
 
-- [ ] **Step 2: Add the intake check to Phase 0 step 4**
+- [x] **Step 2: Add the intake check to Phase 0 step 4**
 
 Replace (current lines 77-81):
 
@@ -1199,12 +1199,12 @@ with:
    > hosted service, platform, or base image that the system will depend on.
 ```
 
-- [ ] **Step 3: Verify**
+- [x] **Step 3: Verify**
 
 Run: `grep -c "Prior art and alternatives" skills/orchestrating-development/SKILL.md && grep -c "This decision would add or change" skills/orchestrating-development/SKILL.md`
 Expected: 1 and 1. (The predicate's wording is identical to the block in Task 6/Task 5; only the indentation prefix `   > ` differs from `> `.)
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add skills/orchestrating-development/SKILL.md
