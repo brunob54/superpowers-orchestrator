@@ -227,7 +227,7 @@ git commit -m "feat(hooks): subagent-guard exempts research-report marker, adds 
 
 **Security flag:** `none`
 
-- [ ] **Step 1: Write failing routing tests**
+- [x] **Step 1: Write failing routing tests**
 
 In `tests/codex/test-skill-activator.js`, insert this block immediately BEFORE the line `// ── Result ────────────────────────────────────────────────────────────────────` (near the end of the file; `matchSkills` is already in scope from the `require` at line 1103):
 
@@ -253,12 +253,12 @@ test('"rename getUserData to fetchUserData" does NOT route to researching-prior-
 });
 ```
 
-- [ ] **Step 2: Run tests to verify they fail**
+- [x] **Step 2: Run tests to verify they fail**
 
 Run: `node tests/codex/test-skill-activator.js`
 Expected: FAIL — the two positive tests fail (no rule for `researching-prior-art` exists). Exit code 1.
 
-- [ ] **Step 3: Add the skill-rules.json entry**
+- [x] **Step 3: Add the skill-rules.json entry**
 
 In `hooks/skill-rules.json`, the array currently ends with the `orchestrating-development` entry, closed by:
 
@@ -283,12 +283,12 @@ Change to (append the new entry at the array tail, the file's convention):
 }
 ```
 
-- [ ] **Step 4: Run tests to verify they pass**
+- [x] **Step 4: Run tests to verify they pass**
 
 Run: `node tests/codex/test-skill-activator.js && node -e "JSON.parse(require('fs').readFileSync('hooks/skill-rules.json','utf8')); console.log('valid JSON')"`
 Expected: PASS on all activator tests (this IS the live matching verification — `matchSkills` runs the real hook code against the real rules file, never reading the JSON by eye), then `valid JSON`.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add hooks/skill-rules.json tests/codex/test-skill-activator.js
