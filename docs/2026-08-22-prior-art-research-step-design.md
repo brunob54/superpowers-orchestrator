@@ -1,9 +1,14 @@
-# Assessment: porting upstream PR #2116 (research step in brainstorming)
+# Prior-art research step: assessment and design
 
 **Date:** 2026-08-22
-**Upstream PR:** https://github.com/obra/superpowers/pull/2116 (open, not merged)
+**Scope:** started as an assessment of upstream PR #2116; grew into the full
+design for a `researching-prior-art` sub-skill (upstream discussion review,
+four-angle web survey, four introduction alternatives, five-lens design
+review, final architecture).
+**Upstream origin:** https://github.com/obra/superpowers/pull/2116 (open, not merged)
 **File changed upstream:** `skills/brainstorming/SKILL.md` (33 additions, 10 deletions)
-**Verdict:** worth porting, with manual adaptation. The upstream diff does not apply to this fork.
+**Verdict:** build it — as a new sub-skill plus a mandatory spec section, not
+a direct port. The upstream diff does not apply to this fork.
 
 ## What the upstream PR does
 
