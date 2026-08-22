@@ -91,6 +91,11 @@ the same question batch below).
    > example package.json, pyproject.toml, go.mod, Cargo.toml), or it depends
    > on version-sensitive external API behavior, or it selects an external
    > hosted service, platform, or base image that the system will depend on.
+
+   Tell the user what to do next: add a "Prior art and alternatives"
+   section to the spec, recording either the research findings or a
+   note that the spec predates this research gate, then re-run
+   orchestration.
 5. **Branch:** create and switch to `feature/<slug>` from current HEAD.
    `<slug>` = spec basename with `YYYY-MM-DD-` prefix and `-design` suffix
    each stripped only if present. If the branch exists: locate the

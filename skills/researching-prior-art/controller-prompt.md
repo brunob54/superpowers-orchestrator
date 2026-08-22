@@ -135,7 +135,14 @@ subagent via the Agent tool:
        If the researcher total differs from the planned count (cache
        hits, invalidated entries, discards), note the difference here.
     2. Create or update `[REPO_ROOT]/docs/research/<candidate-slug>.md`
-       for each candidate researched or re-verified. Header line:
+       for each candidate researched or re-verified. Derive
+       `<candidate-slug>` with this rule: prefix the registry or
+       ecosystem in kebab-case, then the candidate name: lowercase;
+       drop `@`; replace `/`, `.`, spaces, and every other
+       non-alphanumeric character with `-`; collapse repeated `-`.
+       Examples: npm `lodash.merge` → `npm-lodash-merge`;
+       `@tanstack/react-query` on npm → `npm-tanstack-react-query`; the
+       Stripe service → `service-stripe`. Header line:
        `_Researched: YYYY-MM-DD | registry: <registry> | canonical name: <exact name> | versions inspected: <list>_`
        Body: that candidate's durable findings with citations.
     3. Return a summary of at most 15 lines. Its first line is

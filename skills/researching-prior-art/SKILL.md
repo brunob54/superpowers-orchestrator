@@ -112,6 +112,11 @@ a `.gitignore` containing exactly `*` inside it (the multi-code-review
 pattern — nothing else ignores `.superpowers/`). Researchers may clone
 candidate repositories under `.superpowers/research/clones/`.
 
+Delete any existing `.superpowers/research/<slug>-*` files (a previous
+run's merged report and per-researcher reports for this same topic
+slug) before the controller is dispatched, so the current run cannot
+inherit stale files left by an earlier failed or partial run.
+
 ### 3. Cache check (`docs/research/<candidate-slug>.md`)
 
 **Slug rule:** prefix the registry or ecosystem in kebab-case, then the
@@ -138,8 +143,9 @@ hit. A future-dated header is invalid, not fresh.
   runs.
 - **Stale** (90 days or older): same reduction, but the entry's
   findings are used only after its re-verifier confirms.
-- Post-cache N is floored at 1 while any candidate remains
-  un-researched. Report the reduction to the invoker.
+- Post-cache N is floored at 1, unconditionally — never reduced to 0,
+  whether or not any candidate remains un-researched. Report the
+  reduction to the invoker.
 - Re-verifiers are always dispatched in addition to the (reduced) N
   and sit outside the merge/split algorithm — the researcher total may
   exceed N by the number of cache hits plus any invalidated entries;
