@@ -16,4 +16,10 @@ plan: docs/plans/2026-08-22-researching-prior-art.md — 12 tasks
 - Task 4: complete — controller prompt template (9a90bca..347a97c)
 - Task 5: complete — researching-prior-art sub-skill (24cb456..8c56cd5)
 - Task 6: complete — brainstorming integration (8c56cd5..abd8987)
-- Note: the first batch-2 controller died mid-run on an API session limit; the identical dispatch was retried once. The retry finished the batch (task 6 re-reviewed from REVIEW_BASE per Deviation 4) but its final return message was never delivered. Completion confirmed instead by the orchestrator's checkbox cross-check (tasks 4–6: 14 checked, 0 unchecked), a clean tree, and ledger lines recording clean reviews with commit ranges.
+- Note (batch 2): the first batch-2 controller died mid-run on an API session limit; the identical dispatch was retried once. The retry finished the batch (task 6 re-reviewed from REVIEW_BASE per Deviation 4) but its final return message was never delivered. Completion confirmed instead by the orchestrator's checkbox cross-check (tasks 4–6: 14 checked, 0 unchecked), a clean tree, and ledger lines recording clean reviews with commit ranges.
+
+## Phase 3 — Batch 3 (tasks 7–9) — COMPLETE — commits 695b173..4f60b55
+- Task 7: complete — multi-doc-review spec lens, uncited external-technology claims (695b173..2f0eae9)
+- Task 8: complete — orchestration Phase 0 prior-art spec-intake check (5c3a9fa..651bb85)
+- Task 9: complete — behavioral test, merged-report contract (dba6873..4f60b55)
+- Note (batch 3): the controller's final return message was again not delivered. Completion confirmed by the orchestrator's checkbox cross-check (tasks 7–9: 12 checked, 0 unchecked), a clean tree, and ledger lines recording clean reviews with commit ranges.
