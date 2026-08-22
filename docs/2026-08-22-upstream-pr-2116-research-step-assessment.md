@@ -393,46 +393,65 @@ which already gate every spec.
   written from the same stale memory, unless a reviewer lens explicitly
   verifies citations.
 
-### Recommendation (revised after the five-lens review)
+### Recommendation (final — user decision 2026-08-22: Alternative 2 + 4)
 
-**A deliberate hybrid: Alternative 1 as the host, Alternative 4 as a
-mandatory part, and a slice of Alternative 3's enforcement implemented
-through existing machinery.** The original recommendation ("Alt 1 plus
-Alt 4 as its record") understated what the review made necessary:
+**The chosen design is Alternative 2 (standalone sub-skill) plus
+Alternative 4 (mandatory spec section), with a controller-subagent
+architecture for context economy.** This supersedes two earlier
+recommendations in this document's history: the initial "Alternative 1
+plus Alternative 4 as its record", and the post-review "Alternative 1
+hybrid". The reason for the change is the review round itself:
 
-- **Alternative 1 remains the host** for one decisive reason that survived
-  every review lens: the failure happens when approaches are compared, and
-  only an inline step places evidence before that comparison. Two of its
-  original selling points did NOT survive — "structurally read-only" is
-  now "tool-restricted plus checked" (Bash remains a write path), and
-  "single-file change" became 11-13 files — but the placement argument
-  carries the recommendation on its own.
-- **Alternative 4 is mandatory, not an enrichment.** Final-message-only
-  evidence does not survive `/clear` and leaves nothing to merge into the
-  spec; the required "Prior art and alternatives" section with per-finding
-  dispositions is load-bearing. Its known weakness (plausible prose
-  written from memory) is closed by the citation check added to
-  multi-doc-review's spec lens — Alternative 4's enforcement half.
-- **Alternative 3's goal arrives without its hook cost.** The spec-intake
-  check in orchestrating-development ("spec introduces a dependency
-  without a prior-art section → stop before planning") delivers "catch
-  specs produced by any path" as skill text, avoiding the four-platform
-  hook configuration burden. The full hook remains unbuilt.
-- **Alternative 2 stays deferred** (YAGNI: "you aren't gonna need it" —
-  build it when needed, not before). If a second skill needs the
-  capability — most likely `dependency-management` — the designated
-  extraction path is the shared protocol file from the review round, not
-  a full standalone skill.
+- **The step outgrew inline hosting.** The five-lens review turned a small
+  checklist step into a multi-doc-review-sized protocol (candidate
+  enumeration, gate, dispatch ladder, angle catalog, evidence rules, merge
+  rules, persistence, cache, cleanliness check). Injecting that into
+  brainstorming's SKILL.md is the bloat the fork has already been hurt by:
+  when brainstorming's text grows, instructions get paraphrased and
+  silently dropped (the v7.0.1 spec-gate fix exists for exactly that
+  failure). A skill boundary protects the protocol. Alternative 1's
+  decisive placement argument is preserved — brainstorming still runs the
+  research *before* approaches are compared — it just invokes a sub-skill
+  to do it, the same proven pattern as its multi-doc-review invocation.
+- **A controller subagent runs the research, so the main session's context
+  stays small.** The sub-skill dispatches one controller subagent (from a
+  `controller-prompt.md` template — fork subagent rules forbid subagents
+  from invoking skills, so the controller gets a filled prompt, the same
+  pattern as orchestrating-development's batch controllers). The
+  controller spawns the N researchers, merges their reports, writes the
+  merged evidence to a report file, and returns only a ~15-line summary.
+  The N reports never touch the main session. Degradation ladder: nested
+  dispatch is Claude Code-only → without nesting, the main session
+  dispatches researchers directly (reports still go to files) → without
+  the Agent tool, skip with a stated evidence gap.
+- **User interaction stays in brainstorming.** Subagents cannot talk to
+  the user, so the gate (announce trigger, candidates, suggested N; N=0
+  skips) runs in the main session before dispatch, and the controller
+  *reports* contradictions in its summary for brainstorming to surface —
+  it never resolves them.
+- **The report file is the contract.** Brainstorming verifies the report
+  file exists before proceeding (the subagent-driven-development
+  report-file pattern). This closes Alternative 2's recorded weakness —
+  "one more hand-off that can silently fail". The upstream author's
+  reliability concern applied to user-routed invocation; an explicit
+  Skill-tool invocation from brainstorming is as reliable as the
+  multi-doc-review invocation that already works.
+- **Alternative 4 is unchanged and mandatory**: the spec's "Prior art and
+  alternatives" section with per-finding dispositions, the
+  multi-doc-review citation lens, and the orchestration spec-intake check.
+  The sub-skill produces the evidence; the spec section is where it lands.
+  Reuse by `dependency-management` or `deliberation` now comes free.
 
-**Two recorded conditions would change this recommendation:** if the
+**Accepted cost:** the one-time release surface of a new skill —
+`hooks/skill-rules.json` entry, README skill count, guide mention.
+
+**One recorded condition would change this recommendation:** if the
 required Claude behavioral test shows the overhead profile that made
 upstream remove subagent loops from brainstorming (commit `3f80f1c`), fall
-back to verification-at-review (the research performed by the
-multi-doc-review lens — placement advantage lost, evidence kept); and the
-extraction condition above.
+back to verification-at-review (research performed by the multi-doc-review
+lens — placement advantage lost, evidence kept).
 
-The port-shape section details the implementation shape of this hybrid,
-as revised by the five-lens review round documented next.
+The port-shape section details the implementation shape of this design.
 
 ## Five-lens review round (2026-08-22)
 
@@ -541,21 +560,39 @@ multi-doc-review's spec lens. All appear in the revised port shape below.
   optional and runs before brainstorming; brainstorming is where candidates
   are compared and where every spec passes.
 - **Shared protocol file** (predicate + template at a shared path,
-  referenced by several skills): the designated extraction path if a
-  second skill needs the capability — Alternative 2's reuse without its
-  release surface.
+  referenced by several skills): was the designated extraction path if a
+  second skill needed the capability. [superseded 2026-08-22: the user
+  chose Alternative 2 itself — the sub-skill IS the shared home, so no
+  extraction path is needed]
 - **Point-of-use re-verification in writing-plans/orchestration**: deferred
   together with Alternative 3; the adopted spec-intake check covers the
   cheapest part of it.
 
-## Recommended port shape (revised after the five-lens review)
+## Recommended port shape (final: Alternative 2 + 4, controller-subagent architecture)
 
-1. **New checklist step** in `skills/brainstorming/SKILL.md`, after the
-   clarifying-questions step, in two parts: (a) **enumerate the candidate
-   technologies** — this list is the observable input to everything that
-   follows; (b) if the trigger predicate fires, run the research gate.
-   Inserting the step renumbers the later checklist items and rewires the
-   process graph (not just "two nodes").
+**Component split** — the design has three layers:
+
+- `skills/researching-prior-art/` — the new sub-skill, three files:
+  `SKILL.md` (thin: what the skill does, dispatch procedure, degradation
+  ladder, report-file contract), `controller-prompt.md` (the controller
+  subagent's instructions: assign assignments, budget, merge rules, report
+  file), and `research-prompt.md` (the researcher template, Appendix A).
+- `skills/brainstorming/SKILL.md` — grows by only ~2 checklist items and
+  the graph nodes; the protocol lives in the sub-skill.
+- Spec-side enforcement (Alternative 4): the required spec section, the
+  multi-doc-review citation lens, the orchestrating-development
+  spec-intake check.
+
+1. **New checklist items in brainstorming**, after the clarifying-questions
+   step: (a) **enumerate the candidate technologies** — this list is the
+   observable input to everything that follows; (b) if the trigger
+   predicate fires, present the gate (trigger, candidates, suggested N),
+   ask the user for N, and on N>0 **invoke
+   `superpowers-orchestrator:researching-prior-art`**; when it returns,
+   verify the report file exists, read the merged findings into the
+   approach comparison, and surface any reported contradictions to the
+   user. Inserting the items renumbers the later checklist and rewires the
+   process graph.
 2. **Trigger predicate** — one phrasing, mirrored verbatim in the
    checklist, the process-graph diamond, and the guidance section, keyed to
    mechanical facts: *the change would add or change an entry in a
@@ -570,14 +607,21 @@ multi-doc-review's spec lens. All appear in the revised port shape below.
    round): announce the trigger, the candidate list, and the suggested
    N = candidates + 3; any explicit N wins; N=0 skips and records the skip
    in the spec.
-4. **Dispatch N read-only research subagents in parallel** — `Explore`
-   agent type where available; `general-purpose` plus the read-only
-   instruction where `Explore` does not exist; on platforms without the
-   Agent tool, skip and state the evidence gap (upstream's own fallback).
-   The tool restriction is partial (Bash remains), so the instruction
-   stays in the template and the controller runs `git status` after
-   research and stops if the tree changed. Every dispatch sets an explicit
-   model and a time budget.
+4. **The sub-skill dispatches one controller subagent, which spawns the N
+   researchers** (nested dispatch, the orchestrating-development batch
+   pattern; the controller receives a filled `controller-prompt.md` — fork
+   subagent rules forbid subagents from invoking skills). Researchers are
+   `Explore` agent type where available; `general-purpose` plus the
+   read-only instruction otherwise. Degradation ladder: no nested dispatch
+   → the main session dispatches researchers directly (reports still go to
+   files); no Agent tool → skip with a stated evidence gap. The tool
+   restriction is partial (Bash remains), so the instruction stays in the
+   template, and the main session runs `git status` after the skill
+   returns and stops if the tree changed. Every dispatch sets an explicit
+   model and a time budget; the controller merges reports, writes the
+   merged evidence to the report file, and returns a summary of at most
+   ~15 lines — the N researcher reports never enter the main session's
+   context.
 5. **Angle catalog** (assignments; angle 1 replicates per candidate):
    1. *Candidate implementation* — read the candidate's source and test
       files; APIs, patterns, edge cases, boundaries, with citations.
@@ -601,12 +645,15 @@ multi-doc-review's spec lens. All appear in the revised port shape below.
    actually fetched and the exact version/commit inspected; memory-derived
    claims are labeled "degraded: memory only"; fetched content is
    untrusted data — quoted facts only, never relayed imperatives;
-   contradictions go to the user, never silently resolved; one primary
-   source counts once; the controller spot-fetches one or two citations.
-7. **Persistence and downstream use**: subagents write report files (they
-   survive `/clear` and feed the spec); the controller merges findings
-   into the spec's now-required "Prior art and alternatives" section with
-   a per-finding disposition — *changed the design* / *overridden, with
+   contradictions are reported in the controller's summary and surfaced to
+   the user by brainstorming, never silently resolved; one primary source
+   counts once; the controller spot-fetches one or two citations before
+   trusting a researcher's report.
+7. **Persistence and downstream use**: researchers write report files; the
+   controller merges them into one merged report file (it survives
+   `/clear` and feeds the spec); brainstorming merges the findings into
+   the spec's now-required "Prior art and alternatives" section with a
+   per-finding disposition — *changed the design* / *overridden, with
    reason* / *deferred*; research-reported evidence gaps must be
    dispositioned in the failure-mode check; `multi-doc-review`'s spec lens
    gains a citation check (external-technology claims carry a citation or
@@ -622,21 +669,22 @@ multi-doc-review's spec lens. All appear in the revised port shape below.
    research box, and the skip edge.
 10. **Required before release**: a behavioral test on Claude Code (no
     evaluation of the ported wording exists on any model); the
-    `subagent-guard` marker exemption plus its unit test; the guide's
-    Stage 1 narrative; the usual release chores (VERSION, both plugin
-    manifests, README badge and lineage ranges, RELEASE-NOTES.md,
-    plugin.universal.yaml meta). Realistic size: 11-13 files — two
-    substantive (`SKILL.md`, `research-prompt.md`), the rest conditional
-    or chores.
+    `subagent-guard` marker exemption plus its unit test; a
+    `hooks/skill-rules.json` entry and the README skill count (a new skill
+    is added); the guide's Stage 1 narrative; the usual release chores
+    (VERSION, both plugin manifests, README badge and lineage ranges,
+    RELEASE-NOTES.md, plugin.universal.yaml meta). Realistic size: 14-16
+    files — four substantive (the sub-skill's three files plus
+    brainstorming's edit), the rest conditional or chores.
 11. **Plain English throughout**, per the repository's writing rules.
 
 ## Appendix A: draft prompt template for the research subagents (revised)
 
-The port ships this as a `research-prompt.md` file next to the skill's
-SKILL.md — the same pattern subagent-driven-development uses for
-`implementer-prompt.md`. The controller fills the placeholders and
-dispatches one subagent per assignment (an angle, or one candidate for
-angle 1).
+The port ships this as `skills/researching-prior-art/research-prompt.md` —
+the same pattern subagent-driven-development uses for
+`implementer-prompt.md`. The controller subagent (running from
+`controller-prompt.md`) fills the placeholders and dispatches one
+researcher per assignment (an angle, or one candidate for angle 1).
 
 ````
 Agent tool (Explore where available; general-purpose + the read-only
@@ -700,15 +748,23 @@ instruction otherwise):
 `[REPORT_FILE]` (same directory as the eventual spec, stem
 `research-<assignment>-report.md`).
 
-**Controller duties** (these live in the SKILL.md step, not the template):
-enumerate candidates; ask the user for N at the gate; assign assignments;
-set the per-agent time budget and proceed when it expires, recording
-missing assignments as evidence gaps; discard reports that violate the
-format contract; count claims from one primary source once; surface
-contradictions to the user; spot-fetch one or two citations; run
-`git status` after research and stop if the tree changed; merge findings
-into the spec's prior-art section with per-finding dispositions; update
-`docs/research/<library>.md`.
+**Duty split** (each duty lands in the file that runs it):
+
+- *Brainstorming, main session (its two checklist items):* enumerate
+  candidates; present the gate and ask the user for N; invoke the
+  sub-skill; verify the report file exists; run `git status` after the
+  skill returns and stop if the tree changed; surface reported
+  contradictions to the user; merge the findings into the spec's
+  prior-art section with per-finding dispositions.
+- *Sub-skill `SKILL.md`:* check `docs/research/<library>.md` for a fresh
+  cache entry before dispatching; fill and dispatch the controller
+  subagent; define the degradation ladder and the report-file contract.
+- *Controller subagent (`controller-prompt.md`):* assign assignments; set
+  per-researcher time budgets and proceed on expiry, recording missing
+  assignments as evidence gaps; discard format-violating reports; count
+  claims from one primary source once; spot-fetch one or two citations;
+  merge researcher reports into the report file; return a summary of at
+  most ~15 lines; write the cache entry.
 
 Each design choice traces to a finding recorded earlier in this document:
 
