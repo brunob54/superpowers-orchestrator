@@ -907,7 +907,7 @@ git commit -m "feat(skills): add researching-prior-art sub-skill" --trailer "Ses
 
 All quoted "current text" below is the file's exact content; apply with exact-match edits.
 
-- [ ] **Step 1: Extend the Hard Gate (line 18)**
+- [x] **Step 1: Extend the Hard Gate (line 18)**
 
 Replace:
 
@@ -921,7 +921,7 @@ with:
 Do not write code, edit files, or invoke implementation skills until design approval is explicit. One carve-out: writes under `docs/research/` and `.superpowers/research/` made by the prior-art research step are part of design work, not implementation.
 ```
 
-- [ ] **Step 2: Replace the checklist (current lines 26-41) with the renumbered 15-item list**
+- [x] **Step 2: Replace the checklist (current lines 26-41) with the renumbered 15-item list**
 
 Current items 1-3 stay identical; insert new items 4 and 5; old items 4-13 become 6-15 with text otherwise unchanged. The full new checklist body:
 
@@ -946,7 +946,7 @@ Current items 1-3 stay identical; insert new items 4 and 5; old items 4-13 becom
 15. If the user approves in-session: invoke `writing-plans`. If the user chooses orchestration: stop — they run it from a fresh session.
 ```
 
-- [ ] **Step 3: Update the process graph**
+- [x] **Step 3: Update the process graph**
 
 In the `dot` block (current lines 45-79), make these changes:
 
@@ -982,7 +982,7 @@ with:
 
 All other nodes and edges stay unchanged.
 
-- [ ] **Step 4: Extend the mid-flow skill-restriction sentence (current line 82)**
+- [x] **Step 4: Extend the mid-flow skill-restriction sentence (current line 82)**
 
 Replace:
 
@@ -996,7 +996,7 @@ with:
 **The terminal state is invoking writing-plans, or handing off to orchestration.** Do NOT invoke frontend-design, or any other implementation skill. Mid-flow, brainstorming itself invokes only two skills: `researching-prior-art` (at the research gate) and `multi-doc-review` (at the spec review gate). The ONLY skill brainstorming itself invokes afterwards is writing-plans; orchestrating-development is never invoked from this session — the user starts it in a fresh session via the gate message.
 ```
 
-- [ ] **Step 5: Add the Research Gate section**
+- [x] **Step 5: Add the Research Gate section**
 
 Insert a new section between the paragraph edited in Step 4 and the `## Spec Self-Review` heading (anchor: insert before `## Spec Self-Review`, leaving one blank line on each side):
 
@@ -1044,7 +1044,7 @@ the suggested N, angle 5 (local fit) is merged into each candidate's
 angle-1 assignment — this is intentional; a larger N splits it out.
 ```
 
-- [ ] **Step 6: Add the required spec section to Design Contents**
+- [x] **Step 6: Add the required spec section to Design Contents**
 
 Replace (current lines 124-130):
 
@@ -1063,7 +1063,7 @@ Include:
 - Architecture and data flow
 ```
 
-- [ ] **Step 7: Extend Exit Criteria**
+- [x] **Step 7: Extend Exit Criteria**
 
 After the bullet (current line 153):
 
@@ -1077,17 +1077,17 @@ insert:
 - The spec contains a "Prior art and alternatives" section — research findings dispositioned (applied / overridden with reason / deferred), or the skip or failure recorded.
 ```
 
-- [ ] **Step 8: Verify structure (checklist length, graph nodes)**
+- [x] **Step 8: Verify structure (checklist length, graph nodes)**
 
 Run: `grep -c '^15\. ' skills/brainstorming/SKILL.md && grep -c '"Trigger predicate matches?"' skills/brainstorming/SKILL.md && grep -c '"Enumerate candidate technologies"' skills/brainstorming/SKILL.md`
 Expected: `1` (the checklist now ends at item 15), `4` (graph: one node line plus three edge references), `3` (one node line plus two edge references) — confirms Steps 2 and 3 landed at the right positions.
 
-- [ ] **Step 9: Verify the predicate and gate-message copies are identical across files**
+- [x] **Step 9: Verify the predicate and gate-message copies are identical across files**
 
 Run: `diff <(sed -n '/^> This decision would add or change/,/^> hosted service.*depend on\.$/p' skills/brainstorming/SKILL.md) <(sed -n '/^> This decision would add or change/,/^> hosted service.*depend on\.$/p' skills/researching-prior-art/SKILL.md) && diff <(sed -n '/^> Research gate: this decision triggers/,/^> skip — a skip is recorded in the spec\.$/p' skills/brainstorming/SKILL.md) <(sed -n '/^> Research gate: this decision triggers/,/^> skip — a skip is recorded in the spec\.$/p' skills/researching-prior-art/SKILL.md) && grep -c "Research gate: this decision triggers prior-art research." skills/brainstorming/SKILL.md`
 Expected: both diffs empty (predicate and gate-message blocks identical across the two files); brainstorming gate-message count 1.
 
-- [ ] **Step 10: Commit**
+- [x] **Step 10: Commit**
 
 ```bash
 git add skills/brainstorming/SKILL.md
