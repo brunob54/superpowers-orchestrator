@@ -1103,7 +1103,7 @@ git commit -m "feat(skills): brainstorming research gate, prior-art spec section
 
 **Security flag:** `none`
 
-- [ ] **Step 1: Extend the Ambiguity & testability lens's `spec:` cell**
+- [x] **Step 1: Extend the Ambiguity & testability lens's `spec:` cell**
 
 The placement determines which round checks it — this cell, where "unverifiable claims" already lives, per the spec. Replace (current lines 113-115):
 
@@ -1126,12 +1126,12 @@ with:
 
 (Do not touch the `- plan:` and `- general:` cells directly below — "unverifiable" also appears there; anchor the edit on the full three-line `- spec:` text above.)
 
-- [ ] **Step 2: Verify**
+- [x] **Step 2: Verify**
 
 Run: `grep -c 'neither a source citation nor the label' skills/multi-doc-review/SKILL.md && sed -n '/^\*\*Ambiguity & testability\*\*$/,/^- plan:/p' skills/multi-doc-review/SKILL.md | grep -c 'neither a source citation nor the label'`
 Expected: `1` then `1` — the sentence occurs exactly once in the file AND that occurrence sits inside the Ambiguity & testability lens block (bounded by the lens header and the following `- plan:` bullet), so the placement is checked mechanically, not by eye.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add skills/multi-doc-review/SKILL.md
