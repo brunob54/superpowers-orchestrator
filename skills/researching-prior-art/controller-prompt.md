@@ -75,7 +75,13 @@ subagent via the Agent tool:
       assignment is: confirm the candidate exists in its registry
       under the exact canonical name, and report the current stable
       version. Re-verifiers are in addition to the assignments above
-      and outside the merge/split algorithm.
+      and outside the merge/split algorithm. Dispatch re-verifiers,
+      and the follow-up researchers described under "Re-verifier
+      outcomes" below, from the same filled researcher template used
+      for the assignments above, with the re-verification (or
+      follow-up) text as their [ASSIGNMENT] — so their reports carry
+      the required marker and citations and are not discarded under
+      the report-verification rules below.
     - The 10-minute budget is a prompt-level instruction inside the
       researcher template. Dispatches block; when a dispatch returns
       with a missing or unusable report file, record that assignment

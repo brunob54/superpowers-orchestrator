@@ -2,7 +2,10 @@
 
 Used by the controller subagent — or by the main session on degradation
 rung 2 (see SKILL.md) — to dispatch one researcher per assignment. Fill
-every `[PLACEHOLDER]`, then dispatch via the Agent tool:
+every `[PLACEHOLDER]`, then dispatch via the Agent tool. This covers
+both the dispatch-metadata bullets right below (`[ASSIGNMENT_NAME]`,
+`[MODEL]`) and the indented prompt body further down (`[REPO_ROOT]`,
+`[DECISION]`, `[ASSIGNMENT]`, `[REPORT_FILE]`):
 
 - **Agent type:** `Explore` where available; otherwise `general-purpose`.
   The prompt below carries the read-only instruction either way —

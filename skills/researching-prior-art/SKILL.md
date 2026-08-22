@@ -241,7 +241,10 @@ Fill `./controller-prompt.md` (this skill's directory):
   `<repo-root>/.superpowers/research/<slug>-research-report.md`
   (resolved absolute path, same rule),
 - `[RESEARCHER_MODELS]` — the tier mapping per assignment,
-- `[RESEARCH_PROMPT_PATH]` — absolute path of `./research-prompt.md`,
+- `[RESEARCH_PROMPT_PATH]` — absolute path of `./research-prompt.md`;
+  its own placeholders (`[REPO_ROOT]`, `[DECISION]`, `[ASSIGNMENT]`,
+  `[REPORT_FILE]`, `[MODEL]`, `[ASSIGNMENT_NAME]`) are filled by the
+  controller once per assignment, not here,
 - `[SLUG]` — the topic slug.
 
 Dispatch ONE controller subagent, agent type `general-purpose`. On
