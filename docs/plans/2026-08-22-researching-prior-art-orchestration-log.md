@@ -4,3 +4,5 @@ _Invocation 1 — 2026-08-22 — spec docs/specs/2026-08-22-researching-prior-ar
 
 ## Phase 1 — Plan — DONE — 2026-08-22
 plan: docs/plans/2026-08-22-researching-prior-art.md — 12 tasks
+
+## Phase 2 — Plan review — rounds 5 — cap — unresolved 0
