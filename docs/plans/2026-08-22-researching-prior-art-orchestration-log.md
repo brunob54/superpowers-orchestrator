@@ -30,3 +30,9 @@ plan: docs/plans/2026-08-22-researching-prior-art.md — 12 tasks
 - Task 12: complete — dev-install sync and full verification, no repo changes (8b10f0c..8b10f0c)
 - Verification recorded by task 12: unit suite 9 suites / 302 checks pass; behavioral merged-report test pass (485s); behavioral research-gate test pass (34s); dev install synced; clean-tree check against the pre-plan status snapshot empty.
 - Note (batch 4): the controller's final return message was again not delivered. Completion confirmed by the orchestrator's checkbox cross-check (all 12 tasks: 0 unchecked), a clean tree, and ledger lines recording clean reviews.
+
+## Phase 4 — Code review — rounds 5 (+3 verification cycles) — cap — fixes 7 — unresolved 0 — user_decision 9
+
+## STOPPED — 2026-08-22 — phase 4 — code review ended with 9 user-decision findings (unresolved 0); every one is plan-mandated, so fixing it means changing the plan or spec text, which the review loop must not do on its own
+Detail: .superpowers/reviews/feature-researching-prior-art-review-log.md
+Resume: Resume orchestration for docs/plans/2026-08-22-researching-prior-art.md
