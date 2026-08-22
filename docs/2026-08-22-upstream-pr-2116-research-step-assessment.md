@@ -393,20 +393,45 @@ which already gate every spec.
   written from the same stale memory, unless a reviewer lens explicitly
   verifies citations.
 
-### Recommendation
+### Recommendation (revised after the five-lens review)
 
-**Alternative 1 as the core, plus Alternative 4 as its record.** The inline
-step is the only shape that puts evidence in front of the approach
-comparison (the actual failure point) at minimal cost, and writing its
-findings into a required spec section gives persistence and reviewability
-almost for free. Alternative 2 becomes attractive only when a second skill
-actually needs the capability — extract it then, not speculatively (YAGNI:
-"you aren't gonna need it"). Alternative 3 is the strongest *enforcement*
-but the weakest *capability*; add it later only if field reports show the
-inline step being skipped.
+**A deliberate hybrid: Alternative 1 as the host, Alternative 4 as a
+mandatory part, and a slice of Alternative 3's enforcement implemented
+through existing machinery.** The original recommendation ("Alt 1 plus
+Alt 4 as its record") understated what the review made necessary:
 
-The port-shape section details the implementation shape of the recommended
-core (Alternative 1 with Alternative 4 folded in as the persistence items),
+- **Alternative 1 remains the host** for one decisive reason that survived
+  every review lens: the failure happens when approaches are compared, and
+  only an inline step places evidence before that comparison. Two of its
+  original selling points did NOT survive — "structurally read-only" is
+  now "tool-restricted plus checked" (Bash remains a write path), and
+  "single-file change" became 11-13 files — but the placement argument
+  carries the recommendation on its own.
+- **Alternative 4 is mandatory, not an enrichment.** Final-message-only
+  evidence does not survive `/clear` and leaves nothing to merge into the
+  spec; the required "Prior art and alternatives" section with per-finding
+  dispositions is load-bearing. Its known weakness (plausible prose
+  written from memory) is closed by the citation check added to
+  multi-doc-review's spec lens — Alternative 4's enforcement half.
+- **Alternative 3's goal arrives without its hook cost.** The spec-intake
+  check in orchestrating-development ("spec introduces a dependency
+  without a prior-art section → stop before planning") delivers "catch
+  specs produced by any path" as skill text, avoiding the four-platform
+  hook configuration burden. The full hook remains unbuilt.
+- **Alternative 2 stays deferred** (YAGNI: "you aren't gonna need it" —
+  build it when needed, not before). If a second skill needs the
+  capability — most likely `dependency-management` — the designated
+  extraction path is the shared protocol file from the review round, not
+  a full standalone skill.
+
+**Two recorded conditions would change this recommendation:** if the
+required Claude behavioral test shows the overhead profile that made
+upstream remove subagent loops from brainstorming (commit `3f80f1c`), fall
+back to verification-at-review (the research performed by the
+multi-doc-review lens — placement advantage lost, evidence kept); and the
+extraction condition above.
+
+The port-shape section details the implementation shape of this hybrid,
 as revised by the five-lens review round documented next.
 
 ## Five-lens review round (2026-08-22)
