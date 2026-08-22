@@ -12,8 +12,8 @@
 
 **Assumptions:**
 - **Version bump is 7.2.0** (minor bump for a new skill, matching prior new-skill releases). Assumes no other release lands first — will NOT be correct if another release bumps the version before this plan executes; re-derive from `VERSION` at execution time and adjust every version edit in Task 11 consistently.
-- **The normative wordings live once per file in dedicated sections.** In `skills/brainstorming/SKILL.md` the trigger predicate and gate message live verbatim in a new "Research Gate" section; checklist items 4-5 reference that section by name. In the process graph, the predicate appears verbatim as a `//` comment block directly above the decision diamond, and the diamond carries a short name — a Graphviz node label cannot legibly hold a 60-word paragraph. A named reference is not a paraphrase; the verbatim copies satisfy the "checklist, process graph" placements.
-- **The controller prompt carries one extra placeholder, `[RESEARCH_PROMPT_PATH]`**, beyond the spec's required list. The spec's list is a minimum; the controller needs the absolute path of the researcher template to fill and dispatch it. Assumes the installed plugin's skill directory is readable by subagents — true on Claude Code.
+- **The normative wordings live once per file in dedicated sections.** In `skills/brainstorming/SKILL.md` the trigger predicate and gate message live verbatim in a new "Research Gate" section; checklist items 4-5 reference that section by name. In the process graph, the predicate appears verbatim as a `//` comment block directly above the decision diamond, and the diamond carries a short name — a Graphviz node label cannot legibly hold a 60-word paragraph. A named reference is not a paraphrase; the verbatim copies satisfy the "checklist, process graph" placements. This deviation from a literal reading of the spec's placement list is the plan's explicit recorded disposition — do not reopen it without new evidence.
+- **The prompt templates carry extra placeholders beyond the spec's required lists.** The controller prompt adds `[RESEARCH_PROMPT_PATH]` (absolute path of the researcher template it fills and dispatches), `[SLUG]` (for its `description` line), and `[REPO_ROOT]` (the resolved absolute repository root that anchors every controller and researcher write — subagents inherit the session's working directory, which may be elsewhere); the researcher prompt adds `[REPO_ROOT]` for the same reason. The spec's lists are minimums. Assumes the installed plugin's skill directory is readable by subagents — true on Claude Code.
 - **Both behavioral tests register as integration tests** (they invoke the real `claude` CLI headlessly and take minutes), matching how `test-multi-doc-review.sh` and `test-multi-code-review.sh` are registered.
 - **`ms@2.1.3`** is the "real small library" the behavioral fixture names — one file, no dependencies, stable for years. Will NOT work offline: the behavioral tests need network access.
 - **The orchestrating-development intake check is folded into Phase 0 step 4 (Preconditions)** instead of becoming a new numbered step. This avoids renumbering steps 5-8 and the "steps 1-6" / "step 7" cross-references, and it makes a failed check a pre-log stop — which matches the spec's "stop and report before planning".
@@ -79,6 +79,8 @@
 > skip — a skip is recorded in the spec.
 ```
 
+*(The backticks around `<candidates>` and `<S>` are placeholder markup: they are dropped together with the angle brackets when the values are filled in — the presented message contains the plain values.)*
+
 **Report marker** (first line of every researcher report file, the merged report file, every researcher's final message, AND the controller's summary message):
 
 ```
@@ -96,6 +98,11 @@
 **Security flag:** `security` *(modifies a defense hook that blocks skill leakage; the exemption is a marker-based bypass mirroring the two existing sanctioned markers)*
 
 **Does NOT cover:** a marker appearing after the first line never exempts (intentional — tested). A malicious subagent can prefix the marker deliberately; that is the same accepted residual risk the two existing markers carry (prompt-layer defense is first; the guard catches accidents, not adversaries).
+
+- [ ] **Step 0: Record the pre-execution status baseline**
+
+Run: `mkdir -p .superpowers && printf '*\n' > .superpowers/.gitignore && git status --porcelain > .superpowers/pre-plan-status.txt`
+The self-`.gitignore` (containing `*`) keeps `.superpowers/` out of `git status` on any clone — the committed `.gitignore` does NOT exclude it (only a local `.git/info/exclude` does, on this machine). Write the `.gitignore` BEFORE the status snapshot, so the directory never appears in the baseline. Task 12 Step 5 compares against this baseline.
 
 - [ ] **Step 1: Write failing unit tests**
 
@@ -177,26 +184,26 @@ change to:
 const RESEARCH_REPORT_MARKER = '<!-- research report -->';
 ```
 
-3c. Extend the exemption condition — currently:
+3c. Extend the exemption condition — currently (the file's real indentation is six spaces on `if (` and eight on the conditions):
 
 ```js
-    if (
-      trimmedMessage.startsWith(REVIEW_REPORT_MARKER) ||
-      trimmedMessage.startsWith(ORCHESTRATION_REPORT_MARKER)
-    ) {
+      if (
+        trimmedMessage.startsWith(REVIEW_REPORT_MARKER) ||
+        trimmedMessage.startsWith(ORCHESTRATION_REPORT_MARKER)
+      ) {
 ```
 
 change to:
 
 ```js
-    if (
-      trimmedMessage.startsWith(REVIEW_REPORT_MARKER) ||
-      trimmedMessage.startsWith(ORCHESTRATION_REPORT_MARKER) ||
-      trimmedMessage.startsWith(RESEARCH_REPORT_MARKER)
-    ) {
+      if (
+        trimmedMessage.startsWith(REVIEW_REPORT_MARKER) ||
+        trimmedMessage.startsWith(ORCHESTRATION_REPORT_MARKER) ||
+        trimmedMessage.startsWith(RESEARCH_REPORT_MARKER)
+      ) {
 ```
 
-3d. Extend the `skill:` alternation pattern (line 75, inside `VIOLATION_PATTERNS`) — append `|researching-prior-art` before the closing parenthesis. The alternation currently ends with `|dependency-management)`; it must end with `|dependency-management|researching-prior-art)`. (The file's own convention: every dispatchable skill appears in both `SKILL_NAMES` and, for Skill-tool detection, this alternation — the guard also detects a subagent invoking the new skill.)
+3d. Extend the `skill:` alternation pattern (line 75, inside `VIOLATION_PATTERNS`) — append `|researching-prior-art` before the closing parenthesis. The alternation currently ends with `|dependency-management)`; it must end with `|dependency-management|researching-prior-art)`. (This adds Skill-tool invocation detection for the new skill, so the guard also catches a subagent invoking it. Note: not every `SKILL_NAMES` entry appears in this alternation today — do not "fix" the older entries.)
 
 - [ ] **Step 4: Run tests to verify they pass**
 
@@ -327,9 +334,12 @@ every `[PLACEHOLDER]`, then dispatch via the Agent tool:
     1. You may write your own report file [REPORT_FILE], using one
        shell redirect.
     2. You may clone candidate repositories into
-       .superpowers/research/clones/ (that directory is ignored by
-       git), so you can read a not-yet-installed candidate's full
-       source without touching the working tree.
+       [REPO_ROOT]/.superpowers/research/clones/ (that directory is
+       ignored by git), so you can read a not-yet-installed
+       candidate's full source without touching the working tree.
+       [REPO_ROOT] is the absolute root of the repository under
+       research; never use relative paths — your working directory
+       may be elsewhere.
     All other file creation, editing, or deletion is forbidden. Do not
     invoke any skill. Do not spawn subagents. Your only job is to
     gather evidence.
@@ -346,7 +356,8 @@ every `[PLACEHOLDER]`, then dispatch via the Agent tool:
     what you did not reach as evidence gaps.
 
     ## Version anchor
-    First read this repository's dependency manifest and lockfile.
+    First read the dependency manifest and lockfile at [REPO_ROOT]
+    (the repository under research — not your working directory).
     Verify every API claim against the pinned or floor version, not
     the latest release. If the candidate is not yet in the manifest,
     the anchor is the latest stable release at research time — name it
@@ -394,8 +405,8 @@ every `[PLACEHOLDER]`, then dispatch via the Agent tool:
 
 - [ ] **Step 2: Verify placeholders and marker**
 
-Run: `grep -c '\[MODEL\]\|\[DECISION\]\|\[ASSIGNMENT\]\|\[REPORT_FILE\]' skills/researching-prior-art/research-prompt.md && grep -c '<!-- research report -->' skills/researching-prior-art/research-prompt.md`
-Expected: first count >= 5 (all four required placeholders present; `[ASSIGNMENT NAME]` also matches), second count = 1.
+Run: `for p in MODEL DECISION ASSIGNMENT REPORT_FILE REPO_ROOT; do grep -q "\[$p\]" skills/researching-prior-art/research-prompt.md || echo "MISSING $p"; done; grep -c '<!-- research report -->' skills/researching-prior-art/research-prompt.md`
+Expected: no `MISSING` lines (each required placeholder checked individually); marker count = 1.
 
 - [ ] **Step 3: Commit**
 
@@ -455,7 +466,7 @@ subagent via the Agent tool:
     ## Cache state
     [CACHE_STATE]
     (per candidate: none / fresh / stale, with the cache entry path
-    docs/research/<candidate-slug>.md where one exists)
+    [REPO_ROOT]/docs/research/<candidate-slug>.md where one exists)
 
     ## Researcher model tiers
     [RESEARCHER_MODELS]
@@ -463,8 +474,17 @@ subagent via the Agent tool:
     always Haiku-class)
 
     ## Paths
+    - Repository root under research: [REPO_ROOT] (absolute). Every
+      path you write, and every path you pass to a researcher, is
+      absolute and rooted here — your working directory may be
+      elsewhere.
     - Researcher report files: [REPORT_DIR]/<slug>-r<K>-report.md,
       where K is the assignment's position (1-based).
+    - Re-verifier report files: [REPORT_DIR]/<slug>-rv<J>-report.md,
+      where J is the cache hit's position (1-based) in the cache
+      state. Follow-up researchers dispatched after an invalidated
+      entry write [REPORT_DIR]/<slug>-f<J>-report.md (same J). The
+      report-verification rules below apply to these files too.
     - Merged report file: [MERGED_REPORT_FILE]
     - Researcher prompt template: [RESEARCH_PROMPT_PATH] — read it,
       fill its placeholders once per assignment, and dispatch.
@@ -489,6 +509,13 @@ subagent via the Agent tool:
       definition is outside this repository's control and may change):
       re-dispatch the wave once with `general-purpose` plus the
       read-only instruction, then proceed normally.
+    - If the Agent tool is unavailable to you, or every dispatch
+      attempt returns an error (not merely missing report files),
+      write no merged report: return a summary stating that you
+      could not dispatch subagents, its first line exactly:
+      <!-- research report -->
+      The invoking skill then dispatches the researchers itself
+      (its degradation rung 2).
 
     ## Report verification
     - Discard (do not merge) any report missing the
@@ -536,8 +563,8 @@ subagent via the Agent tool:
        results, and note "Sources fetched: cache + re-verification".
        If the researcher total differs from the planned count (cache
        hits, invalidated entries, discards), note the difference here.
-    2. Create or update `docs/research/<candidate-slug>.md` for each
-       candidate researched or re-verified. Header line:
+    2. Create or update `[REPO_ROOT]/docs/research/<candidate-slug>.md`
+       for each candidate researched or re-verified. Header line:
        `_Researched: YYYY-MM-DD | registry: <registry> | canonical name: <exact name> | versions inspected: <list>_`
        Body: that candidate's durable findings with citations.
     3. Return a summary of at most 15 lines. Its first line is
@@ -547,8 +574,8 @@ subagent via the Agent tool:
 
 - [ ] **Step 2: Verify placeholders and markers**
 
-Run: `for p in DECISION CANDIDATES ASSIGNMENTS CACHE_STATE REPORT_DIR MERGED_REPORT_FILE RESEARCHER_MODELS RESEARCH_PROMPT_PATH; do grep -q "\[$p\]" skills/researching-prior-art/controller-prompt.md || echo "MISSING $p"; done; grep -c '<!-- research report -->' skills/researching-prior-art/controller-prompt.md`
-Expected: no `MISSING` lines; marker count = 3 (discard rule, merged-report first line, summary first line).
+Run: `for p in DECISION CANDIDATES ASSIGNMENTS CACHE_STATE REPORT_DIR MERGED_REPORT_FILE RESEARCHER_MODELS RESEARCH_PROMPT_PATH SLUG REPO_ROOT; do grep -q "\[$p\]" skills/researching-prior-art/controller-prompt.md || echo "MISSING $p"; done; grep -c '<!-- research report -->' skills/researching-prior-art/controller-prompt.md`
+Expected: no `MISSING` lines; marker count = 4 (discard rule, merged-report first line, summary first line, dispatch-failure summary rule).
 
 - [ ] **Step 3: Commit**
 
@@ -595,8 +622,28 @@ never chooses an approach.
 **When invoked by brainstorming, never ask the user anything** — all
 user interaction already happened at brainstorming's research gate. The
 one exception: invoked directly by the user without an explicit N,
-present brainstorming's gate message yourself to obtain N (the user is
-the invoker; no gate has happened yet). Never pick N silently.
+present the gate message below yourself to obtain N (the user is the
+invoker; no gate has happened yet). Never pick N silently.
+
+On that direct path, present this gate message verbatim — the same
+block brainstorming presents, copied character-exactly (`<candidates>`
+and `<S>` filled in — the backticks around them are placeholder
+markup, dropped with the angle brackets when the values are filled;
+the bracketed sentence appears only when the choice is difficult to
+reverse):
+
+> Research gate: this decision triggers prior-art research.
+> Candidates: `<candidates>`.
+> [This choice is difficult to reverse — consider a higher N.]
+> How many research subagents should I dispatch? Suggested N=`<S>`
+> (number of candidates + 3, at most 10). Reply with a number, or 0 to
+> skip — a skip is recorded in the spec.
+
+A direct invocation usually has no spec. On a 0 reply, state the skip
+in the conversation and stop; record it in a spec's "Prior art and
+alternatives" section only when a spec exists. A negative or
+non-numeric reply → ask once more; a second unusable reply → use the
+suggested `<S>` (the same rule brainstorming applies at its gate).
 
 ## Inputs (from the invoker)
 
@@ -604,8 +651,10 @@ the invoker; no gate has happened yet). Never pick N silently.
 - **Candidates**: registry or ecosystem plus exact canonical name, per
   candidate.
 - **N**: how many researcher subagents to dispatch. Valid N is 0-10; a
-  larger value is clamped to 10. N=0 never reaches this skill — the
-  invoker records the skip.
+  larger value is clamped to 10. When brainstorming invokes this
+  skill, N=0 never reaches it — brainstorming records the skip. On a
+  direct invocation, a 0 reply is handled here (see the gate message
+  above): state the skip and stop.
 - **Topic slug**: kebab-case, no date (example: `http-retry-library`).
 
 **Root anchoring:** everything this skill does — the git snapshot,
@@ -638,7 +687,9 @@ hosted service, a CDN script tag, a Docker base image).
    researchers directly from `research-prompt.md`; reports still go to
    files; apply the controller contract in `controller-prompt.md`
    yourself (budgets, discard rules, spot-fetch verification, merge
-   rules, cache writes).
+   rules, cache writes, re-verifier dispatch for cache hits).
+   Procedure step 6 below still applies on this rung: run its checks
+   after you write the merged report yourself.
 3. **No Agent tool** (Codex, Cursor, OpenCode): skip. State in the
    conversation and in the spec which evidence is missing and that
    technology claims are provisional.
@@ -761,13 +812,20 @@ assignments to fill N.
 
 Fill `./controller-prompt.md` (this skill's directory):
 
+- `[REPO_ROOT]` — the Root-anchoring result
+  (`git rev-parse --show-toplevel`, absolute); it anchors every
+  controller and researcher write,
 - `[DECISION]`, `[CANDIDATES]` (registry + canonical name each),
 - `[ASSIGNMENTS]` — the resolved ordered list from step 4,
 - `[CACHE_STATE]` — per candidate: none / fresh / stale, with entry
   paths,
-- `[REPORT_DIR]` = `.superpowers/research` (absolute path),
+- `[REPORT_DIR]` = `<repo-root>/.superpowers/research`, where
+  `<repo-root>` is the Root-anchoring result
+  (`git rev-parse --show-toplevel`); pass the resolved absolute path,
+  never the relative form,
 - `[MERGED_REPORT_FILE]` =
-  `.superpowers/research/<slug>-research-report.md` (absolute path),
+  `<repo-root>/.superpowers/research/<slug>-research-report.md`
+  (resolved absolute path, same rule),
 - `[RESEARCHER_MODELS]` — the tier mapping per assignment,
 - `[RESEARCH_PROMPT_PATH]` — absolute path of `./research-prompt.md`,
 - `[SLUG]` — the topic slug.
@@ -775,7 +833,7 @@ Fill `./controller-prompt.md` (this skill's directory):
 Dispatch ONE controller subagent, agent type `general-purpose`. On
 rung 1, never dispatch researchers from the main session.
 
-### 6. After the controller returns
+### 6. After the research completes (rung 1: the controller returned; rung 2: you wrote the merged report)
 
 1. Verify `[MERGED_REPORT_FILE]` exists. Missing → report research as
    failed to the invoker: evidence gap, claims stay provisional. Never
@@ -812,7 +870,7 @@ rung 1, never dispatch researchers from the main session.
 | Post-research status differs from the snapshot outside `docs/research/` and `.superpowers/research/` | Report the diff; the invoker presents it and asks the user whether to continue |
 | Project is not a git repository | Cleanliness check skipped; the skip stated in the conversation |
 | All researcher reports discarded | Merged report contains only evidence gaps; surfaced to the user |
-| N=0 or platform skip | Never reaches this skill; the invoker records the skip in the spec |
+| N=0 or platform skip | Brainstorming-invoked: never reaches this skill; brainstorming records the skip in the spec. Direct invocation answered 0: state the skip in the conversation and stop |
 
 ## Guard interaction
 
@@ -826,8 +884,8 @@ get blocked and assignments degrade to evidence gaps.
 
 - [ ] **Step 2: Verify the normative blocks and structure**
 
-Run: `head -1 skills/researching-prior-art/SKILL.md && grep -c "^> This decision would add or change" skills/researching-prior-art/SKILL.md && grep -c '<!-- research report -->' skills/researching-prior-art/SKILL.md && ls skills/researching-prior-art/`
-Expected: `---` (frontmatter present); predicate count 1; marker count >= 1; directory lists exactly `SKILL.md controller-prompt.md research-prompt.md`.
+Run: `head -1 skills/researching-prior-art/SKILL.md && grep -c "^> This decision would add or change" skills/researching-prior-art/SKILL.md && grep -c "^> Research gate: this decision triggers prior-art research\.$" skills/researching-prior-art/SKILL.md && grep -c '<!-- research report -->' skills/researching-prior-art/SKILL.md && ls skills/researching-prior-art/`
+Expected: `---` (frontmatter present); predicate count 1; gate-message count 1; marker count >= 1; directory lists exactly `SKILL.md controller-prompt.md research-prompt.md`.
 
 - [ ] **Step 3: Commit**
 
@@ -960,8 +1018,10 @@ features. The third branch covers decisions that change no manifest (a
 hosted service, a CDN script tag, a Docker base image).
 
 When the predicate fires, present this gate message verbatim
-(`<candidates>` and `<S>` filled in; the bracketed sentence appears
-only when the choice is difficult to reverse):
+(`<candidates>` and `<S>` filled in — the backticks around them are
+placeholder markup, dropped with the angle brackets when the values
+are filled; the bracketed sentence appears only when the choice is
+difficult to reverse):
 
 > Research gate: this decision triggers prior-art research.
 > Candidates: `<candidates>`.
@@ -1017,12 +1077,17 @@ insert:
 - The spec contains a "Prior art and alternatives" section — research findings dispositioned (applied / overridden with reason / deferred), or the skip or failure recorded.
 ```
 
-- [ ] **Step 8: Verify the predicate copies are identical across files**
+- [ ] **Step 8: Verify structure (checklist length, graph nodes)**
 
-Run: `diff <(sed -n '/^> This decision would add or change/,/^> hosted service.*depend on\.$/p' skills/brainstorming/SKILL.md) <(sed -n '/^> This decision would add or change/,/^> hosted service.*depend on\.$/p' skills/researching-prior-art/SKILL.md) && grep -c "Research gate: this decision triggers prior-art research." skills/brainstorming/SKILL.md`
-Expected: empty diff (identical blocks); gate-message count 1.
+Run: `grep -c '^15\. ' skills/brainstorming/SKILL.md && grep -c '"Trigger predicate matches?"' skills/brainstorming/SKILL.md && grep -c '"Enumerate candidate technologies"' skills/brainstorming/SKILL.md`
+Expected: `1` (the checklist now ends at item 15), `4` (graph: one node line plus three edge references), `3` (one node line plus two edge references) — confirms Steps 2 and 3 landed at the right positions.
 
-- [ ] **Step 9: Commit**
+- [ ] **Step 9: Verify the predicate and gate-message copies are identical across files**
+
+Run: `diff <(sed -n '/^> This decision would add or change/,/^> hosted service.*depend on\.$/p' skills/brainstorming/SKILL.md) <(sed -n '/^> This decision would add or change/,/^> hosted service.*depend on\.$/p' skills/researching-prior-art/SKILL.md) && diff <(sed -n '/^> Research gate: this decision triggers/,/^> skip — a skip is recorded in the spec\.$/p' skills/brainstorming/SKILL.md) <(sed -n '/^> Research gate: this decision triggers/,/^> skip — a skip is recorded in the spec\.$/p' skills/researching-prior-art/SKILL.md) && grep -c "Research gate: this decision triggers prior-art research." skills/brainstorming/SKILL.md`
+Expected: both diffs empty (predicate and gate-message blocks identical across the two files); brainstorming gate-message count 1.
+
+- [ ] **Step 10: Commit**
 
 ```bash
 git add skills/brainstorming/SKILL.md
@@ -1063,8 +1128,8 @@ with:
 
 - [ ] **Step 2: Verify**
 
-Run: `grep -n 'neither a source citation nor the label' skills/multi-doc-review/SKILL.md`
-Expected: exactly one hit, inside the Ambiguity & testability block (between the `**Ambiguity & testability**` header and the `- plan:` bullet).
+Run: `grep -c 'neither a source citation nor the label' skills/multi-doc-review/SKILL.md && sed -n '/^\*\*Ambiguity & testability\*\*$/,/^- plan:/p' skills/multi-doc-review/SKILL.md | grep -c 'neither a source citation nor the label'`
+Expected: `1` then `1` — the sentence occurs exactly once in the file AND that occurrence sits inside the Ambiguity & testability lens block (bounded by the lens header and the following `- plan:` bullet), so the placement is checked mechanically, not by eye.
 
 - [ ] **Step 3: Commit**
 
@@ -1168,7 +1233,8 @@ git commit -m "feat(skills): orchestration Phase 0 prior-art spec-intake check" 
 # contract from docs/specs/2026-08-22-researching-prior-art-design.md:
 #   (a) .superpowers/research/<slug>-research-report.md exists
 #   (b) its first line is exactly the research report marker
-#   (c) it contains at least one URL citation and one quoted snippet
+#   (c) it contains at least one citation (URL or clone file path) and one
+#       quoted snippet
 #   (d) it contains a "Sources fetched" section
 #   (e) the plugin dev repo is unmutated (HEAD + status snapshot)
 #   (f) the run was not killed by the timeout
@@ -1207,13 +1273,17 @@ git commit --quiet -m "base: fixture with ms dependency"
 PROMPT="Invoke the superpowers-orchestrator:researching-prior-art skill on the git repository at $TEST_PROJECT. Decision: verify that the npm package ms (pinned at 2.1.3 in package.json) still fits this project's duration-parsing needs — this decision depends on version-sensitive external API behavior. Candidates: ms (npm, canonical name ms). N=2. Topic slug: ms-duration. Do not ask me any questions — proceed to completion."
 
 # Safety net: a misanchored run must not mutate the dev repo.
-# --ignored=matching because .superpowers/ and state.md are gitignored here —
-# exactly the paths the skill under test writes.
+# --ignored=matching because .superpowers/ (self-.gitignore, written in Task 1
+# Step 0) and state.md (committed .gitignore) are excluded here — exactly the
+# paths the skill under test writes.
 PLUGIN_HEAD_BEFORE=$(git -C "$PLUGIN_DIR" rev-parse HEAD)
 PLUGIN_STATUS_BEFORE=$(git -C "$PLUGIN_DIR" status --porcelain --ignored=matching | shasum | cut -d' ' -f1)
 
+# Inner budget (1700s) sits below the runner's outer --timeout 1800 so a hang
+# is killed here first: the timeout assertion can fire and the keep-project
+# trap still runs (the outer timeout would kill this whole script instead).
 CLAUDE_STATUS=0
-cd "$PLUGIN_DIR" && timeout 1800 claude -p "$PROMPT" \
+cd "$PLUGIN_DIR" && timeout 1700 claude -p "$PROMPT" \
     --permission-mode bypassPermissions \
     --add-dir "$TEST_PROJECT" \
     2>&1 | tee "$TEST_PROJECT/output.txt" || CLAUDE_STATUS=${PIPESTATUS[0]}
@@ -1223,7 +1293,7 @@ FAILURES=0
 
 # (f) GNU timeout reports 124; the tests/lib/timeout-shim.sh fallback reports 143.
 if [ "$CLAUDE_STATUS" -eq 124 ] || [ "$CLAUDE_STATUS" -eq 143 ]; then
-    echo "FAIL(f): the claude run was killed by the 1800s timeout (exit $CLAUDE_STATUS)"
+    echo "FAIL(f): the claude run was killed by the 1700s inner timeout (exit $CLAUDE_STATUS)"
     FAILURES=$((FAILURES+1))
 fi
 
@@ -1244,8 +1314,8 @@ else
         echo "FAIL(b): first line of the merged report is not the research report marker"
         FAILURES=$((FAILURES+1))
     fi
-    if ! grep -qE 'https?://' "$REPORT"; then
-        echo "FAIL(c): no URL citation found in the merged report"
+    if ! grep -qE 'https?://|\.superpowers/research/clones/' "$REPORT"; then
+        echo "FAIL(c): no citation (URL or clone file path) found in the merged report"
         FAILURES=$((FAILURES+1))
     fi
     if ! grep -qE '"[^"]{10,}"|`[^`]{10,}`' "$REPORT"; then
@@ -1283,10 +1353,13 @@ fi
 
 - [ ] **Step 3: List the test in `tests/claude-code/README.md`**
 
-In the "Integration Tests" listing (the section enumerating current tests, around lines 81-117), append this line to the list of integration tests:
+The `### Integration Tests (use --integration flag)` section (line 95) documents each test under a `####` heading (note: `test-multi-doc-review.sh` and `test-multi-code-review.sh` are currently undocumented there — leave that as is). Insert, directly BEFORE the `## Adding New Tests` heading (line 118), matching that heading-per-test format:
 
 ```markdown
-- `test-researching-prior-art.sh` — merged-report contract of the researching-prior-art skill on a seeded fixture repo (slow; use `--timeout 1800`)
+#### test-researching-prior-art.sh
+
+Merged-report contract of the researching-prior-art skill on a seeded fixture repo (slow; use `--timeout 1800`).
+
 ```
 
 - [ ] **Step 4: Verify registration and syntax**
@@ -1361,8 +1434,11 @@ PROMPT="Use the brainstorming skill on the project at $TEST_PROJECT to design th
 PLUGIN_HEAD_BEFORE=$(git -C "$PLUGIN_DIR" rev-parse HEAD)
 PLUGIN_STATUS_BEFORE=$(git -C "$PLUGIN_DIR" status --porcelain --ignored=matching | shasum | cut -d' ' -f1)
 
+# Inner budget (1700s) sits below the runner's outer --timeout 1800 so a hang
+# is killed here first: the timeout assertion can fire and the keep-project
+# trap still runs (the outer timeout would kill this whole script instead).
 CLAUDE_STATUS=0
-cd "$PLUGIN_DIR" && timeout 1800 claude -p "$PROMPT" \
+cd "$PLUGIN_DIR" && timeout 1700 claude -p "$PROMPT" \
     --permission-mode bypassPermissions \
     --add-dir "$TEST_PROJECT" \
     2>&1 | tee "$TEST_PROJECT/output.txt" || CLAUDE_STATUS=${PIPESTATUS[0]}
@@ -1371,7 +1447,7 @@ cd "$TEST_PROJECT"
 FAILURES=0
 
 if [ "$CLAUDE_STATUS" -eq 124 ] || [ "$CLAUDE_STATUS" -eq 143 ]; then
-    echo "FAIL: the claude run was killed by the 1800s timeout (exit $CLAUDE_STATUS)"
+    echo "FAIL: the claude run was killed by the 1700s inner timeout (exit $CLAUDE_STATUS)"
     FAILURES=$((FAILURES+1))
 fi
 
@@ -1399,7 +1475,7 @@ if ! grep -qE "Candidates: .*(got|axios)" "$OUT"; then
     echo "FAIL(b): Candidates line missing or names no seeded candidate"
     FAILURES=$((FAILURES+1))
 fi
-if ! grep -qE "How many research subagents should I dispatch\? Suggested N=[0-9]+" "$OUT"; then
+if ! grep -qE "How many research subagents should I dispatch\? Suggested N=\`?[0-9]+" "$OUT"; then
     echo "FAIL(b): Suggested-N line missing or malformed"
     FAILURES=$((FAILURES+1))
 fi
@@ -1445,10 +1521,13 @@ fi
 
 - [ ] **Step 3: List the test in `tests/claude-code/README.md`**
 
-Append to the same Integration Tests list as Task 9 Step 3:
+Insert directly AFTER the `#### test-researching-prior-art.sh` block added in Task 9 Step 3 (still before `## Adding New Tests`), same heading-per-test format:
 
 ```markdown
-- `test-researching-prior-art-gate.sh` — brainstorming presents the research-gate message verbatim and dispatches nothing before the N answer (slow; use `--timeout 1800`)
+#### test-researching-prior-art-gate.sh
+
+Brainstorming presents the research-gate message verbatim and dispatches nothing before the N answer (slow; use `--timeout 1800`).
+
 ```
 
 - [ ] **Step 4: Verify registration and syntax**
@@ -1620,8 +1699,8 @@ If either behavioral test fails, debug and fix the skill text (Tasks 3-8 files),
 
 - [ ] **Step 5: Final clean-tree check**
 
-Run: `git status --porcelain`
-Expected: empty (everything committed in Tasks 1-11; `state.md` and `.superpowers/` are gitignored in this repo).
+Run: `diff .superpowers/pre-plan-status.txt <(git status --porcelain)`
+Expected: empty, or differences touching only the pipeline's own design documents — the spec `docs/specs/2026-08-22-researching-prior-art-design.md`, its `-review-log.md` sidecar, the plan `docs/plans/2026-08-22-researching-prior-art.md`, and its sidecars — which the recommended execution routes (subagent-driven-development / executing-plans) leave uncommitted and may touch during execution. Entries that were already present at the Task 1 Step 0 baseline appear on both sides and cancel out, so no judgment call about "pre-existing dirt" is needed. Every file created or modified by Tasks 1-11 must be committed; `state.md` (committed `.gitignore`) and `.superpowers/` (self-`.gitignore` written in Task 1 Step 0) never appear in the status output. Any other difference is a failure.
 
 ---
 
@@ -1629,5 +1708,5 @@ Expected: empty (everything committed in Tasks 1-11; `state.md` and `.superpower
 
 1. **Spec coverage** — Scope 1 (three skill files): Tasks 3-5. Scope 2 (brainstorming, both amendments): Task 6. Scope 3 (spec-side enforcement): Tasks 7-8. Scope 4 (durable cache): defined in Tasks 4-5, exercised at runtime. Scope 5 (guard exemption + unit test, behavioral test, release chores): Tasks 1, 9-10, 11. Testing Strategy 1-3: Tasks 1, 9, 10; Strategy 4 (reinstall first): Task 12. Non-goals respected: no hook enforcement of the research step, no changes to deliberation/writing-plans/dependency-management, no silent N, no upstream contribution.
 2. **Placeholder scan** — the `[UPPERCASE]` tokens inside Tasks 3-5 are the templates' own runtime placeholders (deliverable content, filled at dispatch time), not plan placeholders. No TBD/TODO items remain.
-3. **Type consistency** — marker string `<!-- research report -->`, constant `RESEARCH_REPORT_MARKER`, slug `researching-prior-art`, merged-report path `<slug>-research-report.md`, and the predicate/gate blocks are identical across all tasks (Task 6 Step 8 and Task 8 Step 3 verify the cross-file copies mechanically).
+3. **Type consistency** — marker string `<!-- research report -->`, constant `RESEARCH_REPORT_MARKER`, slug `researching-prior-art`, merged-report path `<slug>-research-report.md`, and the predicate/gate blocks are identical across all tasks (Task 6 Step 9 and Task 8 Step 3 verify the cross-file copies mechanically).
 4. **Scope-reduction scan** — no "v1/basic/for now/minimal" downgrades. The gate test's "stop at the gate" instruction is a test-harness necessity (headless runs cannot answer questions), not a scope cut.
