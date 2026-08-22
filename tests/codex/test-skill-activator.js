@@ -1298,6 +1298,26 @@ test('"code review my changes" does NOT route to multi-code-review', () => {
   assert.strictEqual(matchesMcr('code review my changes'), false);
 });
 
+// ── researching-prior-art ─────────────────────────────────────────────────────
+
+console.log('\nresearching-prior-art');
+
+function matchesRpa(prompt) {
+  return matchSkills(prompt).some(m => m.skill === 'researching-prior-art');
+}
+
+test('"research prior art for the candidate libraries" routes to researching-prior-art', () => {
+  assert.strictEqual(matchesRpa('research prior art for the candidate libraries'), true);
+});
+
+test('"run prior-art research on these npm packages" routes to researching-prior-art', () => {
+  assert.strictEqual(matchesRpa('run prior-art research on these npm packages'), true);
+});
+
+test('"rename getUserData to fetchUserData" does NOT route to researching-prior-art', () => {
+  assert.strictEqual(matchesRpa('rename getUserData to fetchUserData'), false);
+});
+
 // ── Result ────────────────────────────────────────────────────────────────────
 
 console.log(`\n${'─'.repeat(50)}`);
