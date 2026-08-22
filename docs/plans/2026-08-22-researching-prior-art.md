@@ -1385,7 +1385,7 @@ git commit -m "test(claude-code): behavioral merged-report contract for research
 
 **Security flag:** `none`
 
-- [ ] **Step 1: Create `tests/claude-code/test-researching-prior-art-gate.sh` with this exact content, then `chmod +x` it**
+- [x] **Step 1: Create `tests/claude-code/test-researching-prior-art-gate.sh` with this exact content, then `chmod +x` it**
 
 ```bash
 #!/usr/bin/env bash
@@ -1505,7 +1505,7 @@ else
 fi
 ```
 
-- [ ] **Step 2: Register the test in `tests/claude-code/run-skill-tests.sh`**
+- [x] **Step 2: Register the test in `tests/claude-code/run-skill-tests.sh`**
 
 2a. In the `integration_tests=(` array, after the line `    "test-researching-prior-art.sh"` (added in Task 9), insert:
 
@@ -1519,7 +1519,7 @@ fi
             echo "  test-researching-prior-art-gate.sh  Brainstorming research-gate message contract (use --timeout 1800)"
 ```
 
-- [ ] **Step 3: List the test in `tests/claude-code/README.md`**
+- [x] **Step 3: List the test in `tests/claude-code/README.md`**
 
 Insert directly AFTER the `#### test-researching-prior-art.sh` block added in Task 9 Step 3 (still before `## Adding New Tests`), same heading-per-test format:
 
@@ -1530,12 +1530,12 @@ Brainstorming presents the research-gate message verbatim and dispatches nothing
 
 ```
 
-- [ ] **Step 4: Verify registration and syntax**
+- [x] **Step 4: Verify registration and syntax**
 
 Run: `bash -n tests/claude-code/test-researching-prior-art-gate.sh && bash tests/claude-code/run-skill-tests.sh --help | grep -c researching-prior-art`
 Expected: no syntax error; count = 2 (both tests listed).
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add tests/claude-code/test-researching-prior-art-gate.sh tests/claude-code/run-skill-tests.sh tests/claude-code/README.md
