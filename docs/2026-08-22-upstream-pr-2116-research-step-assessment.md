@@ -294,6 +294,99 @@ technology recommendations from model memory fail:
      convention and preventing the same alternatives from being re-litigated
      in later sessions.
 
+## Four alternatives for introducing the step in this project
+
+The alternatives differ in **where the research lives** and **how it is
+enforced**. All four assume the maintainer's corrections from the #2116
+review: the observable trigger predicate, recipe form, and read-only
+enforcement.
+
+### Alternative 1 — Inline conditional step in brainstorming (the direct port)
+
+Add one checklist step to `skills/brainstorming/SKILL.md`, between "ask
+clarifying questions" and "propose 2-3 approaches". When the trigger
+predicate fires (the decision introduces or replaces an external dependency,
+is hard to reverse, or depends on version-sensitive API behavior),
+brainstorming dispatches one `Explore` subagent and feeds its findings into
+the approach comparison.
+
+- **Strengths:** smallest change (one file, no `hooks/skill-rules.json`
+  edit); matches the upstream-affirmed design, so future comparison with
+  upstream stays easy; the research lands exactly where the failure happens —
+  before approaches are proposed.
+- **Weaknesses:** the capability is trapped inside brainstorming.
+  `deliberation`, `writing-plans`, and `dependency-management` face the same
+  stale-memory risk and get nothing. Brainstorming's SKILL.md grows again.
+
+### Alternative 2 — Standalone sub-skill (`researching-prior-art`)
+
+Create a new skill that performs the research (predicate check, `Explore`
+dispatch, evidence report with citations), and have brainstorming invoke it
+at the right point — the same composition pattern this fork already uses for
+`multi-doc-review`, which is invoked by both brainstorming and writing-plans.
+Other skills (`deliberation`, `dependency-management`) can invoke it later,
+and users can call it directly.
+
+- **Strengths:** reusable and testable in isolation; follows an established
+  fork pattern; one authoritative definition instead of copies drifting in
+  several skills.
+- **Weaknesses:** the largest release surface (new skill,
+  `hooks/skill-rules.json` entry, README skill count, guide). The upstream
+  author reported that a *separately invoked* research skill was unreliable
+  in their evaluation — mitigated here because the calling skill invokes it,
+  but the indirection adds one more hand-off that can silently fail.
+
+### Alternative 3 — Hook-enforced gate on the spec artifact
+
+Do not change how research happens; enforce that it *happened*. A
+`PostToolUse(Write|Edit)` hook detects a spec file being written under
+`docs/specs/` and checks it for a prior-art section with source citations
+whenever the spec names an external dependency; if the section is missing,
+the hook emits a blocking reminder. Deterministic enforcement survives the
+paraphrase drift that has repeatedly eroded instruction-only rules in this
+fork (the v7.0.1 spec-gate fix exists for exactly that reason).
+
+- **Strengths:** enforcement instead of exhortation — skill text can be
+  ignored, a hook cannot; catches specs produced by *any* path, including
+  orchestration.
+- **Weaknesses:** a hook can demand research but cannot perform it, so it
+  must pair with instruction somewhere anyway; dependency detection by
+  pattern matching will produce false positives and false negatives; hook
+  changes touch up to four platform configuration files, and Codex has only
+  partial hook parity.
+
+### Alternative 4 — Required "Prior art and alternatives" spec section
+
+Follow the Rust RFC / MADR convention from the survey: add a required
+section to brainstorming's Design Contents ("Prior art and alternatives:
+existing solutions considered, with source-level evidence and reasons for
+rejection") and add a check for it to the multi-doc-review reviewer lenses,
+which already gate every spec.
+
+- **Strengths:** rides entirely on existing machinery (spec template plus
+  multi-doc-review); produces a durable artifact, so rejected options are
+  recorded and not re-litigated; no new subagent plumbing.
+- **Weaknesses:** the research arrives at spec-writing time — *after* the
+  approaches were compared, which is exactly when the pg-boss-style failure
+  occurs; and a section requirement can be satisfied by plausible prose
+  written from the same stale memory, unless a reviewer lens explicitly
+  verifies citations.
+
+### Recommendation
+
+**Alternative 1 as the core, plus Alternative 4 as its record.** The inline
+step is the only shape that puts evidence in front of the approach
+comparison (the actual failure point) at minimal cost, and writing its
+findings into a required spec section gives persistence and reviewability
+almost for free. Alternative 2 becomes attractive only when a second skill
+actually needs the capability — extract it then, not speculatively (YAGNI:
+"you aren't gonna need it"). Alternative 3 is the strongest *enforcement*
+but the weakest *capability*; add it later only if field reports show the
+inline step being skipped.
+
+The next section details the implementation shape of the recommended core
+(Alternative 1, with Alternative 4 as item 9).
+
 ## Recommended port shape (summary, updated with the review findings)
 
 1. New checklist step in `skills/brainstorming/SKILL.md`, after the
