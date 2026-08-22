@@ -595,7 +595,7 @@ git commit -m "feat(skills): researching-prior-art controller prompt template" -
 
 **Does NOT cover:** the status comparison cannot see writes to files that were already dirty or untracked at snapshot time (stated honestly in the file). Rung 3 platforms get no research path at all — the skill states the evidence gap instead.
 
-- [ ] **Step 1: Create the file with this exact content**
+- [x] **Step 1: Create the file with this exact content**
 
 ```markdown
 ---
@@ -882,12 +882,12 @@ documentation. Never remove the marker instruction from
 get blocked and assignments degrade to evidence gaps.
 ```
 
-- [ ] **Step 2: Verify the normative blocks and structure**
+- [x] **Step 2: Verify the normative blocks and structure**
 
 Run: `head -1 skills/researching-prior-art/SKILL.md && grep -c "^> This decision would add or change" skills/researching-prior-art/SKILL.md && grep -c "^> Research gate: this decision triggers prior-art research\.$" skills/researching-prior-art/SKILL.md && grep -c '<!-- research report -->' skills/researching-prior-art/SKILL.md && ls skills/researching-prior-art/`
 Expected: `---` (frontmatter present); predicate count 1; gate-message count 1; marker count >= 1; directory lists exactly `SKILL.md controller-prompt.md research-prompt.md`.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add skills/researching-prior-art/SKILL.md
