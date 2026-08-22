@@ -28,7 +28,8 @@ every `[PLACEHOLDER]`, then dispatch via the Agent tool:
        candidate's full source without touching the working tree.
        [REPO_ROOT] is the absolute root of the repository under
        research; never use relative paths — your working directory
-       may be elsewhere.
+       may be elsewhere. Clone shallow and without submodules:
+       `git clone --depth 1 --no-recurse-submodules`.
     All other file creation, editing, or deletion is forbidden. You
     never run a cloned candidate's install, build, or test scripts,
     and you never execute any code from a cloned repository — reading
@@ -78,6 +79,11 @@ every `[PLACEHOLDER]`, then dispatch via the Agent tool:
     verbatim-snippet requirement applies to factual evidence only.
 
     ## Constraints
+    - Outbound queries and fetched URLs may contain only the
+      candidate's public name, its version, and public URLs — never
+      this repository's paths, internal package names, private
+      registry hosts, or file contents from the repository under
+      research.
     - Sources, in this order: this repository's manifest and lockfile;
       a documentation MCP server if one is available (for example
       context7 — cite the returned documentation version); the

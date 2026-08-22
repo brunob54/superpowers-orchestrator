@@ -56,6 +56,12 @@ suggested `<S>` (the same rule brainstorming applies at its gate).
   direct invocation, a 0 reply is handled here (see the gate message
   above): state the skip and stop.
 - **Topic slug**: kebab-case, no date (example: `http-retry-library`).
+  **Validation:** the slug must match `^[a-z0-9]+(-[a-z0-9]+)*$`. A slug
+  that does not match is rejected: ask the invoker for a corrected
+  slug. Never use the slug in any path or delete command before it
+  matches — it is interpolated into every written path and into the
+  step-2 delete command, so an unvalidated slug containing `/` or `..`
+  could write or delete outside `.superpowers/research/`.
 
 **Root anchoring:** everything this skill does — the git snapshot,
 `.superpowers/research/`, `docs/research/` — is rooted at the top level
@@ -112,10 +118,12 @@ a `.gitignore` containing exactly `*` inside it (the multi-code-review
 pattern — nothing else ignores `.superpowers/`). Researchers may clone
 candidate repositories under `.superpowers/research/clones/`.
 
-Delete any existing `.superpowers/research/<slug>-*` files (a previous
-run's merged report and per-researcher reports for this same topic
-slug) before the controller is dispatched, so the current run cannot
-inherit stale files left by an earlier failed or partial run.
+Confirm the topic slug matches the validation rule under "Inputs"
+above before this delete runs. Delete any existing
+`.superpowers/research/<slug>-*` files (a previous run's merged report
+and per-researcher reports for this same topic slug) before the
+controller is dispatched, so the current run cannot inherit stale
+files left by an earlier failed or partial run.
 
 ### 3. Cache check (`docs/research/<candidate-slug>.md`)
 
@@ -243,7 +251,10 @@ rung 1, never dispatch researchers from the main session.
 
 1. Verify `[MERGED_REPORT_FILE]` exists. Missing → report research as
    failed to the invoker: evidence gap, claims stay provisional. Never
-   block the session.
+   block the session. Remove
+   `.superpowers/research/clones/` if it exists, regardless of outcome
+   — researchers clone candidate repositories there, and clones must
+   not linger in the working tree.
 2. Compare `git status --porcelain` with the step-1 snapshot. Changes
    under `docs/research/` and `.superpowers/research/` are expected.
    Any other new path, or a newly-modified previously-clean path, is
