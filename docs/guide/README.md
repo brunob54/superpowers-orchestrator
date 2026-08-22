@@ -148,6 +148,15 @@ and the design itself. The spec then passes a self-review and — for
 non-trivial work — N independent `multi-doc-review` rounds before reaching
 you.
 
+When a design decision would add or change a dependency, depend on
+version-sensitive external API behavior, or select an external hosted
+service, brainstorming pauses at a **research gate**: it names the
+candidate technologies and asks how many read-only research subagents
+to dispatch (0 skips; a skip is recorded in the spec). The merged
+evidence report feeds the approach comparison, and the spec records
+what the research changed in a required "Prior art and alternatives"
+section.
+
 Two rules worth internalizing:
 
 - **Nothing is "too simple to need a design."** Simple projects get a short
