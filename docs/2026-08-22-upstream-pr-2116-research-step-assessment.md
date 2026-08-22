@@ -455,3 +455,88 @@ The next section details the implementation shape of the recommended core
 9. Optional enrichment (from the web survey): carry the research findings
    into the spec as an "alternatives considered" entry, so rejected options
    and their reasons are recorded and not re-litigated later.
+
+## Appendix A: draft prompt template for the research subagents
+
+The port ships this as a `research-prompt.md` file next to the skill's
+SKILL.md — the same pattern subagent-driven-development uses for
+`implementer-prompt.md`. The controller fills the placeholders and
+dispatches one subagent per angle.
+
+````
+Agent tool (Explore):
+  description: "Research angle K/N: [ANGLE NAME]"
+  prompt: |
+    You are a read-only research subagent. Do not create, edit, or delete
+    any file. Do not invoke any skill. Your only job is to gather evidence.
+
+    ## Decision under research
+    [DECISION — verbatim, with the candidate technologies named]
+
+    ## Your angle (K of N; each subagent gets exactly one)
+    [ANGLE — assigned by the controller from the angle catalog:
+     per-candidate implementation source and tests; version and
+     documentation verification; health, risk, and existence;
+     prior art and community experience]
+
+    ## What to report (evidence only, never a recommendation)
+    - Reusable patterns and APIs relevant to the decision — each with a
+      citation (file path or URL) into the EXTERNAL project's source or
+      tests. The project under evaluation, not this repository.
+    - Edge cases and boundaries the source and tests reveal
+    - Version facts: current release; presence or deprecation of the APIs
+      the decision relies on
+    - Evidence gaps: what you could not verify; contradictions you found
+
+    ## Constraints
+    - Sources: the external project's repository files, official
+      documentation, changelogs; web search allowed.
+    - Do not choose or rank approaches — the controller runs the
+      comparison.
+    - Final message: structured findings, under 60 lines; every claim
+      carries a citation or the label "unverified".
+````
+
+Each design choice traces to a finding recorded earlier in this document:
+
+- **Read-only is structural**, not instructed: the `Explore` agent type has
+  no write tools (the measured 1-in-3 instruction-only violation rate).
+- **"What to report" is recipe form**, not a prohibition list (maintainer
+  review point 2).
+- **The EXTERNAL-project emphasis** closes the "whose source files"
+  loophole: without it, an agent can satisfy the instruction by re-reading
+  the local repository (same review point).
+- **"Never a recommendation"** is upstream's own rule — "do not ask the
+  subagent to choose the design"; the controller runs the comparison with
+  all N reports in view.
+- **The bounded final message** (under 60 lines, citations required) keeps
+  N parallel reports mergeable in the controller's context window.
+
+## Appendix B: reference verification (2026-08-22)
+
+The citations in this document have two different provenance levels:
+
+- **First-hand (verified at collection time):** everything in the "Related
+  upstream discussion" section — PRs #2116, #386, #724, #1911, issues
+  #2129, #2093, #983, #231, and the maintainer's five-point review — was
+  fetched directly from the GitHub API during this assessment.
+- **Second-hand (reported by the four survey subagents), then verified:**
+  all 8 URLs cited in this document were checked on 2026-08-22. All
+  resolve (HTTP 200). The four arXiv titles match the claims exactly:
+  2406.10279 = "We Have a Package for You! A Comprehensive Analysis of
+  Package Hallucinations by Code Generating LLMs"; 2406.09834 = "LLMs Meet
+  Library Evolution: Evaluating Deprecated API Usage in LLM-based Code
+  Completion"; 2503.15231 = "When LLMs Meet API Documentation: Can
+  Retrieval Augmentation Aid Code Generation Just as It Helps
+  Developers?"; 2507.12367 = "GitChameleon 2.0: Evaluating AI Code
+  Generation Against Python Library Version Incompatibilities". The two
+  abstracts pulled through the arXiv API confirm the reported methodology
+  word-for-word (for 2406.09834: "seven advanced LLMs, 145 API mappings
+  from eight popular Python libraries, and 28,125 completion prompts").
+
+**Remaining caveat:** the fine-grained result figures (19.7% hallucinated
+samples, 43% deterministic recurrence, 83-220% retrieval improvement) sit
+in the paper bodies, not the abstracts. They are topic-confirmed and
+consistent with secondary reporting, but were not re-derived number by
+number from the papers' full texts. Sources named by the survey subagents
+but not cited by URL in this document were not individually re-checked.
