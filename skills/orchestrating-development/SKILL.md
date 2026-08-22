@@ -16,7 +16,9 @@ Drive an approved spec through plan → plan review → batched implementation
 → whole-branch code review with no user interaction between Phase 0 and
 completion. You are a thin sequencer: every phase and every batch runs in a
 fresh controller subagent; all state moves through files. Never read plan
-bodies, diffs, reviewer reports, or fix reports yourself.
+bodies, diffs, reviewer reports, or fix reports yourself. One documented
+exception: Phase 0 step 4's prior-art intake check reads the spec body
+once, before any controller dispatch — nothing else.
 
 ## Required Start
 
@@ -79,6 +81,16 @@ the same question batch below).
    empty EXCEPT the spec and its `<spec-basename>-review-log.md` sidecar
    (brainstorming leaves them uncommitted). Any other dirt → stop and
    report; never stash or commit the user's unrelated changes.
+   **Prior-art intake check** — the deliberate, documented exception to
+   the thin-sequencer rule: the orchestrator itself reads the spec body
+   here, before any controller dispatch (it otherwise touches the spec
+   only for existence checks). If the spec matches ANY branch of the
+   trigger predicate below and contains no "Prior art and alternatives"
+   section, stop and report before planning.
+   > This decision would add or change an entry in a dependency manifest (for
+   > example package.json, pyproject.toml, go.mod, Cargo.toml), or it depends
+   > on version-sensitive external API behavior, or it selects an external
+   > hosted service, platform, or base image that the system will depend on.
 5. **Branch:** create and switch to `feature/<slug>` from current HEAD.
    `<slug>` = spec basename with `YYYY-MM-DD-` prefix and `-design` suffix
    each stripped only if present. If the branch exists: locate the
