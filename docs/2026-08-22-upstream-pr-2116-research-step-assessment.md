@@ -307,8 +307,9 @@ Add one checklist step to `skills/brainstorming/SKILL.md`, between "ask
 clarifying questions" and "propose 2-3 approaches". When the trigger
 predicate fires (the decision introduces or replaces an external dependency,
 is hard to reverse, or depends on version-sensitive API behavior),
-brainstorming dispatches one `Explore` subagent and feeds its findings into
-the approach comparison.
+brainstorming dispatches N independent `Explore` subagents in parallel
+(default N=4, one distinct research angle each) and feeds their merged
+findings into the approach comparison.
 
 - **Strengths:** smallest change (one file, no `hooks/skill-rules.json`
   edit); matches the upstream-affirmed design, so future comparison with
@@ -394,9 +395,18 @@ The next section details the implementation shape of the recommended core
    maintainer review (external dependency introduced or replaced, hard to
    reverse, or version-sensitive API behavior) — not by self-assessed
    familiarity.
-2. Dispatch the subagent as the `Explore` agent type where available, making
-   the read-only constraint structural (justified by the measured 1-in-3
-   instruction-only violation rate).
+2. Dispatch **N independent research subagents in parallel (default N=4)**,
+   each as the `Explore` agent type where available, making the read-only
+   constraint structural (justified by the measured 1-in-3 instruction-only
+   violation rate). Each subagent gets a distinct angle (for example:
+   candidate A's source and tests, candidate B's source and tests, current
+   API/version documentation, known issues and security posture), so the
+   angles are covered independently rather than by one agent's single pass.
+   N follows the fork's existing N-parameter convention (user can override;
+   multi-doc-review and multi-code-review work the same way). This is a
+   **deliberate deviation from upstream PR #2116, which dispatches exactly
+   one subagent** — the fork chooses parallel independent coverage; the
+   2026-08-22 survey in this document was itself produced this way.
 3. Write the subagent's task in **recipe form**: report patterns, APIs, edge
    cases, and boundaries, each with a citation into the external project's
    source and test files.
