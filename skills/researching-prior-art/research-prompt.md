@@ -29,9 +29,12 @@ every `[PLACEHOLDER]`, then dispatch via the Agent tool:
        [REPO_ROOT] is the absolute root of the repository under
        research; never use relative paths — your working directory
        may be elsewhere.
-    All other file creation, editing, or deletion is forbidden. Do not
-    invoke any skill. Do not spawn subagents. Your only job is to
-    gather evidence.
+    All other file creation, editing, or deletion is forbidden. You
+    never run a cloned candidate's install, build, or test scripts,
+    and you never execute any code from a cloned repository — reading
+    its files is allowed, executing them is not. Do not invoke any
+    skill. Do not spawn subagents. Your only job is to gather
+    evidence.
 
     ## Decision under research
     [DECISION]
