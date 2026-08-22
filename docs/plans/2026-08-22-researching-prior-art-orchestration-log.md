@@ -23,3 +23,10 @@ plan: docs/plans/2026-08-22-researching-prior-art.md — 12 tasks
 - Task 8: complete — orchestration Phase 0 prior-art spec-intake check (5c3a9fa..651bb85)
 - Task 9: complete — behavioral test, merged-report contract (dba6873..4f60b55)
 - Note (batch 3): the controller's final return message was again not delivered. Completion confirmed by the orchestrator's checkbox cross-check (tasks 7–9: 12 checked, 0 unchecked), a clean tree, and ledger lines recording clean reviews with commit ranges.
+
+## Phase 3 — Batch 4 (tasks 10–12) — COMPLETE — commits b550340..976d5a1
+- Task 10: complete — behavioral test, brainstorming research-gate message (b550340..7c08b3e)
+- Task 11: complete — release chores, v7.2.0 (837f47f..976d5a1)
+- Task 12: complete — dev-install sync and full verification, no repo changes (8b10f0c..8b10f0c)
+- Verification recorded by task 12: unit suite 9 suites / 302 checks pass; behavioral merged-report test pass (485s); behavioral research-gate test pass (34s); dev install synced; clean-tree check against the pre-plan status snapshot empty.
+- Note (batch 4): the controller's final return message was again not delivered. Completion confirmed by the orchestrator's checkbox cross-check (all 12 tasks: 0 unchecked), a clean tree, and ledger lines recording clean reviews.
