@@ -306,7 +306,7 @@ git commit -m "feat(hooks): skill-rules routing entry for researching-prior-art"
 
 **Does NOT cover:** the read-only rule has exactly two carve-outs (`[REPORT_FILE]`, clones under `.superpowers/research/clones/`) and no others; it does not structurally prevent Bash writes — enforcement is instruction plus the sub-skill's status check.
 
-- [ ] **Step 1: Create the file with this exact content**
+- [x] **Step 1: Create the file with this exact content**
 
 ```markdown
 # Researcher Prompt Template
@@ -403,12 +403,12 @@ every `[PLACEHOLDER]`, then dispatch via the Agent tool:
       <!-- research report -->
 ```
 
-- [ ] **Step 2: Verify placeholders and marker**
+- [x] **Step 2: Verify placeholders and marker**
 
 Run: `for p in MODEL DECISION ASSIGNMENT REPORT_FILE REPO_ROOT; do grep -q "\[$p\]" skills/researching-prior-art/research-prompt.md || echo "MISSING $p"; done; grep -c '<!-- research report -->' skills/researching-prior-art/research-prompt.md`
 Expected: no `MISSING` lines (each required placeholder checked individually); marker count = 1.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add skills/researching-prior-art/research-prompt.md
