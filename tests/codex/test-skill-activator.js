@@ -1318,6 +1318,12 @@ test('"rename getUserData to fetchUserData" does NOT route to researching-prior-
   assert.strictEqual(matchesRpa('rename getUserData to fetchUserData'), false);
 });
 
+test('"update dependencies to latest" routes to dependency-management, not researching-prior-art', () => {
+  const matched = matchSkills('update dependencies to latest').map(m => m.skill);
+  assert.ok(matched.includes('dependency-management'), `Expected dependency-management, got: ${JSON.stringify(matched)}`);
+  assert.ok(!matched.includes('researching-prior-art'), `Unexpected researching-prior-art match: ${JSON.stringify(matched)}`);
+});
+
 // ── Result ────────────────────────────────────────────────────────────────────
 
 console.log(`\n${'─'.repeat(50)}`);

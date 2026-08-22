@@ -359,6 +359,11 @@ test('Blocks "using researching-prior-art" without marker', () => {
   assert.strictEqual(out.decision, 'block');
 });
 
+test('Blocks skill: "researching-prior-art" form without marker', () => {
+  const out = runGuard('skill: "researching-prior-art"');
+  assert.strictEqual(out.decision, 'block');
+});
+
 test('Marker-prefixed research report quoting skill names is exempt', () => {
   const report = [
     '<!-- research report -->',
