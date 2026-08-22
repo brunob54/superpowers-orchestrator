@@ -308,7 +308,8 @@ clarifying questions" and "propose 2-3 approaches". When the trigger
 predicate fires (the decision introduces or replaces an external dependency,
 is hard to reverse, or depends on version-sensitive API behavior),
 brainstorming dispatches N independent `Explore` subagents in parallel
-(default N=4, one distinct research angle each) and feeds their merged
+(default N = number of candidates + 3, minimum 4; one research angle each —
+see the angle catalog in the port-shape section) and feeds their merged
 findings into the approach comparison.
 
 - **Strengths:** smallest change (one file, no `hooks/skill-rules.json`
@@ -395,18 +396,47 @@ The next section details the implementation shape of the recommended core
    maintainer review (external dependency introduced or replaced, hard to
    reverse, or version-sensitive API behavior) — not by self-assessed
    familiarity.
-2. Dispatch **N independent research subagents in parallel (default N=4)**,
-   each as the `Explore` agent type where available, making the read-only
-   constraint structural (justified by the measured 1-in-3 instruction-only
-   violation rate). Each subagent gets a distinct angle (for example:
-   candidate A's source and tests, candidate B's source and tests, current
-   API/version documentation, known issues and security posture), so the
-   angles are covered independently rather than by one agent's single pass.
-   N follows the fork's existing N-parameter convention (user can override;
-   multi-doc-review and multi-code-review work the same way). This is a
-   **deliberate deviation from upstream PR #2116, which dispatches exactly
-   one subagent** — the fork chooses parallel independent coverage; the
-   2026-08-22 survey in this document was itself produced this way.
+2. Dispatch **N independent research subagents in parallel**, each as the
+   `Explore` agent type where available, making the read-only constraint
+   structural (justified by the measured 1-in-3 instruction-only violation
+   rate). Each subagent gets exactly one angle from the catalog below, so
+   the angles are covered independently rather than by one agent's single
+   pass. **Default N = number of candidate technologies + 3, with a minimum
+   of 4**; an explicit user N always wins (the fork's existing N-parameter
+   convention — multi-doc-review and multi-code-review work the same way).
+   With fewer agents than angles, merge angles by the priority order below;
+   with more, split them. This is a **deliberate deviation from upstream
+   PR #2116, which dispatches exactly one subagent** — the fork chooses
+   parallel independent coverage; the 2026-08-22 survey in this document
+   was itself produced this way (four agents, four angles).
+
+   **Angle catalog** — each angle exists because the survey measured the
+   failure it defends against; in priority order:
+
+   1. *Candidate implementation* (one agent per candidate): read the
+      candidate's implementation source and test files; report APIs,
+      patterns, edge cases, boundaries with file-level citations. (The
+      PR's core requirement; the retrieval evidence found code examples
+      contribute more than descriptive documentation.)
+   2. *Version and documentation verification*: every API the decision
+      relies on exists in the current release; deprecations and version
+      floors. (25-38% deprecated-API usage; ~50% version-conditioned
+      correctness from memory.)
+   3. *Health, risk, and existence*: the packages exist on the registry
+      and are the intended projects, not similarly named ones
+      (slopsquatting); then the OpenSSF criteria — maintenance activity,
+      known vulnerabilities, license, security posture. (19.7% hallucinated
+      package references; the registered `huggingface-cli` experiment.)
+   4. *Prior art and community experience*: existing solutions NOT among
+      the candidates (the anti-NIH direction: build only what is core);
+      issue trackers, migration reports, and postmortems for the
+      candidates — "the good and the bad", as the Rust prior-art RFC
+      phrases it.
+
+   At the default N (candidates + 3), angles 2, 3, and 4 each get one
+   agent alongside the per-candidate agents. A larger N splits angle 3
+   (existence/supply-chain vs OpenSSF health) and angle 4 (prior-art sweep
+   vs community experience) into separate agents.
 3. Write the subagent's task in **recipe form**: report patterns, APIs, edge
    cases, and boundaries, each with a citation into the external project's
    source and test files.
