@@ -51,6 +51,7 @@ const SKILL_NAMES = [
   'dependency-management',
   'multi-doc-review',
   'multi-code-review',
+  'researching-prior-art',
 ];
 
 // Multi-doc-review reviewer reports legitimately quote skill names — they review
@@ -66,13 +67,20 @@ const REVIEW_REPORT_MARKER = '<!-- multi-review report -->';
 // line); anything after the start of the message does not count.
 const ORCHESTRATION_REPORT_MARKER = '<!-- orchestration report -->';
 
+// Researching-prior-art researchers and controllers report on external
+// projects whose documentation legitimately contains skill-like phrases. A
+// genuine research report or summary opens with this exact marker
+// (research-prompt.md and controller-prompt.md make it the mandatory first
+// line); anything after the start of the message does not count.
+const RESEARCH_REPORT_MARKER = '<!-- research report -->';
+
 const ACTION_VERB = '(?:invoking?|using|use|running?|called?|calling|activat(?:e|ed|ing)|trigger(?:ing|ed)?|execut(?:e|ed|ing)|launch(?:ing|ed)?|spawn(?:ing|ed)?|start(?:ing|ed)?)\\s+(?:the\\s+)?';
 
 const VIOLATION_PATTERNS = [
   /Invoke the superpowers-(?:orchestrator|optimized)/i,
   /I'm using the .+ skill/i,
   /Skill\s*\(\s*["']?superpowers/i,
-  /skill:\s*["']?(superpowers|using-superpowers|brainstorming|deliberation|systematic-debugging|test-driven-development|verification|executing-plans|writing-plans|context-management|frontend-design|refactoring|performance-investigation|dependency-management)/i,
+  /skill:\s*["']?(superpowers|using-superpowers|brainstorming|deliberation|systematic-debugging|test-driven-development|verification|executing-plans|writing-plans|context-management|frontend-design|refactoring|performance-investigation|dependency-management|researching-prior-art)/i,
   ...SKILL_NAMES.map(name => new RegExp(ACTION_VERB + name, 'i')),
 ];
 
@@ -111,7 +119,8 @@ function main() {
       const trimmedMessage = lastMessage.trimStart();
       if (
         trimmedMessage.startsWith(REVIEW_REPORT_MARKER) ||
-        trimmedMessage.startsWith(ORCHESTRATION_REPORT_MARKER)
+        trimmedMessage.startsWith(ORCHESTRATION_REPORT_MARKER) ||
+        trimmedMessage.startsWith(RESEARCH_REPORT_MARKER)
       ) {
         process.stdout.write('{}');
         return;
