@@ -1222,7 +1222,7 @@ git commit -m "feat(skills): orchestration Phase 0 prior-art spec-intake check" 
 
 **Security flag:** `none`
 
-- [ ] **Step 1: Create `tests/claude-code/test-researching-prior-art.sh` with this exact content, then `chmod +x` it**
+- [x] **Step 1: Create `tests/claude-code/test-researching-prior-art.sh` with this exact content, then `chmod +x` it**
 
 ```bash
 #!/usr/bin/env bash
@@ -1337,7 +1337,7 @@ else
 fi
 ```
 
-- [ ] **Step 2: Register the test in `tests/claude-code/run-skill-tests.sh`**
+- [x] **Step 2: Register the test in `tests/claude-code/run-skill-tests.sh`**
 
 2a. In the `integration_tests=(` array, after the line `    "test-multi-code-review.sh"`, insert:
 
@@ -1351,7 +1351,7 @@ fi
             echo "  test-researching-prior-art.sh  Merged-report contract for the prior-art research skill (use --timeout 1800)"
 ```
 
-- [ ] **Step 3: List the test in `tests/claude-code/README.md`**
+- [x] **Step 3: List the test in `tests/claude-code/README.md`**
 
 The `### Integration Tests (use --integration flag)` section (line 95) documents each test under a `####` heading (note: `test-multi-doc-review.sh` and `test-multi-code-review.sh` are currently undocumented there — leave that as is). Insert, directly BEFORE the `## Adding New Tests` heading (line 118), matching that heading-per-test format:
 
@@ -1362,12 +1362,12 @@ Merged-report contract of the researching-prior-art skill on a seeded fixture re
 
 ```
 
-- [ ] **Step 4: Verify registration and syntax**
+- [x] **Step 4: Verify registration and syntax**
 
 Run: `bash -n tests/claude-code/test-researching-prior-art.sh && bash tests/claude-code/run-skill-tests.sh --help | grep researching-prior-art && grep -n 'test-researching-prior-art.sh' tests/claude-code/run-skill-tests.sh`
 Expected: no syntax error; the help line prints; two hits in the runner (array + help). (The test itself runs in Task 12, after the dev-install sync.)
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add tests/claude-code/test-researching-prior-art.sh tests/claude-code/run-skill-tests.sh tests/claude-code/README.md
