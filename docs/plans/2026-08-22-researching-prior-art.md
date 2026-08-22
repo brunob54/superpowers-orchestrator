@@ -1553,19 +1553,19 @@ git commit -m "test(claude-code): behavioral research-gate message contract" --t
 
 All "current text" below was verified at plan time; if the repo's version is no longer 7.1.0, re-derive the numbers first (see Assumptions).
 
-- [ ] **Step 1: Version bumps**
+- [x] **Step 1: Version bumps**
 
 - `VERSION` (whole file): `7.1.0` → `7.2.0` (keep the trailing newline).
 - `.claude-plugin/plugin.json` line 4: `  "version": "7.1.0",` → `  "version": "7.2.0",`
 - `.claude-plugin/marketplace.json` line 13: `      "version": "7.1.0",` → `      "version": "7.2.0",`
 - `plugin.universal.yaml` line 7: `  version: "7.1.0"` → `  version: "7.2.0"`
 
-- [ ] **Step 2: README badge and lineage ranges**
+- [x] **Step 2: README badge and lineage ranges**
 
 - Line 6: replace `version-7.1.0-white` with `version-7.2.0-white` (the badge is static; nothing updates it automatically).
 - Lines 22 and 24: replace `v6.7.0–v7.1.0` with `v6.7.0–v7.2.0` in both lines (the dash is an en dash `–`, U+2013 — not a hyphen).
 
-- [ ] **Step 3: README counts (three "27 skills" + the rules line)**
+- [x] **Step 3: README counts (three "27 skills" + the rules line)**
 
 - Line 67: `... a workflow router and 27 skills covering ...` → `... a workflow router and 28 skills covering ...`
 - Line 219 (inside the fenced repo-layout block): `skills/ — 27 skills, each in skills/<name>/SKILL.md` → `skills/ — 28 skills, each in skills/<name>/SKILL.md`
@@ -1574,7 +1574,7 @@ All "current text" below was verified at plan time; if the repo's version is no 
 
 Only these README occurrences change — hits in `docs/plans/`, `docs/specs/`, and RELEASE-NOTES history stay untouched.
 
-- [ ] **Step 4: README Skills Library entry**
+- [x] **Step 4: README Skills Library entry**
 
 In the `### Design & Planning` category, insert between the `- **deliberation** — ...` line (339) and the `- **brainstorming** — ...` line (340):
 
@@ -1582,7 +1582,7 @@ In the `### Design & Planning` category, insert between the `- **deliberation** 
 - **researching-prior-art** — Prior-art research gate for technology decisions: read-only researcher subagents gather verified external evidence (versions anchored to the repo's own manifest, registry existence and health, prior art) into one merged report before design approaches are compared
 ```
 
-- [ ] **Step 5: RELEASE-NOTES.md entry**
+- [x] **Step 5: RELEASE-NOTES.md entry**
 
 Insert at line 3 (directly under the `# Superpowers Orchestrator Release Notes` header, pushing the v7.1.0 entry down), matching the house style (`## vX.Y.Z — <lowercase summary>`; "Field report:" paragraph wrapped at ~70 chars; bold-lead bullets; terse docs line):
 
@@ -1629,7 +1629,7 @@ before approaches are compared.
   lineage ranges.
 ```
 
-- [ ] **Step 6: docs/guide/README.md Stage 1**
+- [x] **Step 6: docs/guide/README.md Stage 1**
 
 In `docs/guide/README.md`, after the Stage 1 paragraph that currently ends (lines 146-149):
 
@@ -1655,12 +1655,12 @@ what the research changed in a required "Prior art and alternatives"
 section.
 ```
 
-- [ ] **Step 7: Verify**
+- [x] **Step 7: Verify**
 
 Run: `grep -rn "7\.1\.0" VERSION .claude-plugin/plugin.json .claude-plugin/marketplace.json plugin.universal.yaml; grep -n "27 skills\|25 rules" README.md; grep -c "researching-prior-art" README.md; grep -n "v7.2.0" RELEASE-NOTES.md | head -1; grep -c "research gate" docs/guide/README.md`
 Expected: no `7.1.0` hits in the four version files; no `27 skills` / `25 rules` hits in README.md; README `researching-prior-art` count >= 1; RELEASE-NOTES hit at line 3; guide count >= 1.
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add VERSION .claude-plugin/plugin.json .claude-plugin/marketplace.json plugin.universal.yaml README.md RELEASE-NOTES.md docs/guide/README.md
