@@ -99,12 +99,12 @@
 
 **Does NOT cover:** a marker appearing after the first line never exempts (intentional — tested). A malicious subagent can prefix the marker deliberately; that is the same accepted residual risk the two existing markers carry (prompt-layer defense is first; the guard catches accidents, not adversaries).
 
-- [ ] **Step 0: Record the pre-execution status baseline**
+- [x] **Step 0: Record the pre-execution status baseline**
 
 Run: `mkdir -p .superpowers && printf '*\n' > .superpowers/.gitignore && git status --porcelain > .superpowers/pre-plan-status.txt`
 The self-`.gitignore` (containing `*`) keeps `.superpowers/` out of `git status` on any clone — the committed `.gitignore` does NOT exclude it (only a local `.git/info/exclude` does, on this machine). Write the `.gitignore` BEFORE the status snapshot, so the directory never appears in the baseline. Task 12 Step 5 compares against this baseline.
 
-- [ ] **Step 1: Write failing unit tests**
+- [x] **Step 1: Write failing unit tests**
 
 In `tests/codex/test-subagent-guard.js`, insert this block immediately BEFORE the line `// ── Summary ──────────────────────────────────────────────────────────────────` (line 349; keep that section last):
 
@@ -146,12 +146,12 @@ test('Leading whitespace before research marker still exempts', () => {
 });
 ```
 
-- [ ] **Step 2: Run tests to verify they fail**
+- [x] **Step 2: Run tests to verify they fail**
 
 Run: `node tests/codex/test-subagent-guard.js`
 Expected: FAIL — the new section reports at least 4 failures ("Missing researching-prior-art skill"; the two exemption tests get `decision: 'block'` instead of `{}`). Exit code 1.
 
-- [ ] **Step 3: Implement the guard changes**
+- [x] **Step 3: Implement the guard changes**
 
 Three edits in `hooks/subagent-guard.js` (quoted text is the file's current content; preserve the file's exact existing indentation when applying):
 
@@ -205,12 +205,12 @@ change to:
 
 3d. Extend the `skill:` alternation pattern (line 75, inside `VIOLATION_PATTERNS`) — append `|researching-prior-art` before the closing parenthesis. The alternation currently ends with `|dependency-management)`; it must end with `|dependency-management|researching-prior-art)`. (This adds Skill-tool invocation detection for the new skill, so the guard also catches a subagent invoking it. Note: not every `SKILL_NAMES` entry appears in this alternation today — do not "fix" the older entries.)
 
-- [ ] **Step 4: Run tests to verify they pass**
+- [x] **Step 4: Run tests to verify they pass**
 
 Run: `node tests/codex/test-subagent-guard.js`
 Expected: PASS — all sections including `researching-prior-art`; exit code 0. Then run the whole suite: `bash tests/codex/run-unit-tests.sh` → all suites pass.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add hooks/subagent-guard.js tests/codex/test-subagent-guard.js
