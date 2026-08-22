@@ -249,13 +249,16 @@ rung 1, never dispatch researchers from the main session.
 
 ### 6. After the research completes (rung 1: the controller returned; rung 2: you wrote the merged report)
 
-1. Verify `[MERGED_REPORT_FILE]` exists. Missing → report research as
+1. Remove `.superpowers/research/clones/` if it exists, regardless of
+   outcome — researchers clone candidate repositories there, and
+   clones must not linger in the working tree. Run this first and
+   unconditionally: even when the controller subagent died, timed
+   out, or its dispatch errored and the rest of step 6 does not run
+   (see the error-handling row for that failure).
+2. Verify `[MERGED_REPORT_FILE]` exists. Missing → report research as
    failed to the invoker: evidence gap, claims stay provisional. Never
-   block the session. Remove
-   `.superpowers/research/clones/` if it exists, regardless of outcome
-   — researchers clone candidate repositories there, and clones must
-   not linger in the working tree.
-2. Compare `git status --porcelain` with the step-1 snapshot. Changes
+   block the session.
+3. Compare `git status --porcelain` with the step-1 snapshot. Changes
    under `docs/research/` and `.superpowers/research/` are expected.
    Any other new path, or a newly-modified previously-clean path, is
    unexpected: report the diff to the invoker (brainstorming presents
@@ -265,7 +268,7 @@ rung 1, never dispatch researchers from the main session.
    comparison detects new paths and newly-modified previously-clean
    paths only — it cannot see writes to files that were already dirty
    or untracked at snapshot time.
-3. Report to the invoker: the merged report path, the cache reduction
+4. Report to the invoker: the merged report path, the cache reduction
    (if any), the re-verifier count, the status-comparison result, and
    the controller's summary.
 
@@ -282,7 +285,7 @@ rung 1, never dispatch researchers from the main session.
 
 | Failure | Behavior |
 |---|---|
-| Controller subagent dies or times out (the Agent dispatch returns an error, or the platform's own timeout fires — no additional timer) | Report the failure; the invoker states the evidence gap and continues with provisional claims (never blocks the session) |
+| Controller subagent dies or times out (the Agent dispatch returns an error, or the platform's own timeout fires — no additional timer) | Still run step 6 item 1 (remove `.superpowers/research/clones/` if it exists). Report the failure; the invoker states the evidence gap and continues with provisional claims (never blocks the session) |
 | Merged report file missing after return | Research counts as failed: evidence gap, provisional claims |
 | Post-research status differs from the snapshot outside `docs/research/` and `.superpowers/research/` | Report the diff; the invoker presents it and asks the user whether to continue |
 | Project is not a git repository | Cleanliness check skipped; the skip stated in the conversation |
