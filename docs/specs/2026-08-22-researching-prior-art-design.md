@@ -355,14 +355,25 @@ the merged report and cache files, so `Explore` cannot host it.
 ### Cache contract (`docs/research/<candidate-slug>.md`)
 
 One file per candidate; `<candidate-slug>` is
-`<registry-or-ecosystem>-<name>` in kebab-case (`npm-lodash-merge`,
-`pypi-requests`, `service-stripe`), so registries never collide and
-typosquat pairs (npm `lodash.merge` vs `lodash-merge`) cannot share a
-cache file. Header line:
+`<registry-or-ecosystem>-<name>` in kebab-case, with `.` in the
+candidate name mapped to `_` (not `-`) so the mapping stays injective
+(`npm-lodash-merge`, `npm-lodash_merge`, `pypi-requests`,
+`service-stripe`) — registries never collide, and typosquat pairs (npm
+`lodash.merge` → `npm-lodash_merge` vs npm `lodash-merge` →
+`npm-lodash-merge`) cannot share a cache file, because the `.`→`_`
+mapping is distinct from the `-`→`-` mapping applied to every other
+separator. Header line:
 `_Researched: YYYY-MM-DD | registry: <registry> | canonical name: <exact
-name> | versions inspected: <list>_`. A cache file counts as a hit ONLY
-when its registry and exact canonical name match the candidate — a slug
-match alone is not a hit.
+name> | versions inspected: <list> | verified: YYYY-MM-DD_`. `Researched:`
+is set once, when the entry's findings are actually gathered, and is never
+touched by a later re-verification — a re-verification checks only
+registry existence, canonical name, and the anchor version, and gathers no
+new health, vulnerability, or maintenance evidence, so it must not advance
+the date the freshness test below reads. `verified:` is absent until the
+entry's first confirmed re-verification, then holds the date of the most
+recent one (see "Re-verifier outcomes" below). A cache file counts as a
+hit ONLY when its registry and exact canonical name match the candidate —
+a slug match alone is not a hit.
 
 **Who commits the cache.** The controller subagent writes and updates the
 cache files, but it never commits them. The `researching-prior-art` skill
@@ -392,7 +403,7 @@ are most likely, so it must not be skipped there. The rung-2 fallback, the
 merged-report check, and the cache commit are conditional; each states its
 own condition.
 
-- Fresh (younger than 90 days): the candidate's per-candidate assignment
+- Fresh (`Researched:` date younger than 90 days): the candidate's per-candidate assignment
   (angles 1+5) is removed and N is reduced by exactly 1 per cached
   candidate — but **every cache hit, fresh included, still gets the
   Haiku-class re-verifier** (existence and current version), because the
@@ -432,18 +443,23 @@ own condition.
   wave completes, same invocation, no user interaction. A **confirmed**
   re-verification (the anchor version is in the list): the cached findings
   count as evidence, the candidate's angles 1+5 stay removed (N stays
-  reduced as in the fresh branch), and the controller refreshes the
-  entry's `_Researched:` date.
-- Stale (90 days or older): same as fresh, except the entry's findings
-  are used only after its re-verifier confirms (fresh-hit findings may be
-  used provisionally while re-verification runs).
+  reduced as in the fresh branch), and the controller sets the entry's
+  `verified:` date to today — `Researched:` stays untouched, because the
+  re-verification gathered no new findings.
+- Stale (`Researched:` date 90 days or older): same as fresh, except the
+  entry's findings are used only after its re-verifier confirms (fresh-hit
+  findings may be used provisionally while re-verification runs).
 
 **Slug rule:** prefix the registry or ecosystem in kebab-case, then the
-candidate name: lowercase; drop `@`; replace `/`, `.`, spaces, and every
-other non-alphanumeric character with `-`; collapse repeated `-`.
-Example: `@tanstack/react-query` on npm → `npm-tanstack-react-query`.
-The registry prefix and the header's canonical-name line together prevent
-cross-registry and typosquat collisions (see the hit rule above).
+candidate name: lowercase; drop `@`; replace `.` with `_`; replace `/`,
+spaces, and every other non-alphanumeric character other than `.` with
+`-`; collapse repeated `-`. Giving `.` its own replacement keeps the
+rule injective — the two `.` and `-` variants of a name can never map
+to the same slug. Example: `@tanstack/react-query` on npm →
+`npm-tanstack-react-query`; npm `lodash.merge` → `npm-lodash_merge`.
+The registry prefix, the distinct `.`→`_` mapping, and the header's
+canonical-name line together prevent cross-registry and typosquat
+collisions (see the hit rule above).
 
 ### Brainstorming integration
 

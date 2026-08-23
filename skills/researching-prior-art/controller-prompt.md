@@ -146,8 +146,13 @@ subagent via the Agent tool:
       version is still the one this repository uses.
     - Confirmed (the anchor version is present in the cache header's
       "versions inspected" list): the cached findings count as
-      evidence, the candidate's research assignment stays removed,
-      and you refresh the entry's `_Researched:` date.
+      evidence, the candidate's research assignment stays removed, and
+      you set the entry's `verified:` date to today — a separate field
+      from `Researched:`, which you leave untouched. A re-verification
+      only checks registry existence, canonical name, and the anchor
+      version; it gathers no new health, vulnerability, or maintenance
+      evidence, so it must never advance the date the freshness test
+      reads.
     - Stale entries: use their findings only after confirmation.
       Fresh entries: their findings may be used provisionally while
       re-verification runs.
@@ -173,17 +178,26 @@ subagent via the Agent tool:
        for each candidate researched or re-verified. Derive
        `<candidate-slug>` with this rule: prefix the registry or
        ecosystem in kebab-case, then the candidate name: lowercase;
-       drop `@`; replace `/`, `.`, spaces, and every other
-       non-alphanumeric character with `-`; collapse repeated `-`.
-       Examples: npm `lodash.merge` → `npm-lodash-merge`;
+       drop `@`; replace `.` with `_`; replace `/`, spaces, and every
+       other non-alphanumeric character other than `.` with `-`;
+       collapse repeated `-`. Giving `.` its own replacement (`_`, not
+       `-`) keeps the rule injective: npm `lodash.merge` →
+       `npm-lodash_merge` stays distinct from npm `lodash-merge` →
+       `npm-lodash-merge`, so the two cannot land on the same cache
+       file path. Examples: npm `lodash.merge` → `npm-lodash_merge`;
        `@tanstack/react-query` on npm → `npm-tanstack-react-query`; the
        Stripe service → `service-stripe`. **Validation:** after
        applying this rule, the resulting candidate slug must match
-       `^[a-z0-9]+(-[a-z0-9]+)*$`. A slug that does not match must not
-       be used in any path: stop using that candidate slug in any
+       `^[a-z0-9]+([_-][a-z0-9]+)*$`. A slug that does not match must
+       not be used in any path: stop using that candidate slug in any
        path, `git add`, or `git commit` command, and report the
        candidate as unable to be cached. Header line:
-       `_Researched: YYYY-MM-DD | registry: <registry> | canonical name: <exact name> | versions inspected: <list>_`
+       `_Researched: YYYY-MM-DD | registry: <registry> | canonical name: <exact name> | versions inspected: <list> | verified: YYYY-MM-DD_`
+       `Researched:` is the date you actually gathered the entry's
+       findings — set it on first write and never touch it again on a
+       later re-verification. `verified:` is absent on first write;
+       a later confirmed re-verification sets it, per "Re-verifier
+       outcomes" above, without changing `Researched:`.
        Body: that candidate's durable findings with citations.
     3. Return a summary of at most 15 lines. Its first line is
        exactly:

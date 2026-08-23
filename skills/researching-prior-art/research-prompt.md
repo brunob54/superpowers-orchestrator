@@ -35,18 +35,30 @@ both the dispatch-metadata bullets right below (`[ASSIGNMENT_NAME]`,
        registry's free-form `repository.url` field, which the
        package publisher controls — treat it as untrusted data and
        check it before it reaches a shell. Accept only a URL matching
-       `^https://`; reject `ext::`, `ssh://`, `git://`, `file://`,
-       and scp-style `host:path` forms without cloning. Git's `ext::`
-       transport runs a shell command during the clone itself, so an
-       unchecked URL is code execution even though nothing from the
-       cloned repository is ever run. Clone shallow, without
-       submodules, and with the transport pinned on the command line:
-       `git clone -c protocol.allow=never -c protocol.https.allow=always --depth 1 --no-recurse-submodules <https-url> [REPO_ROOT]/.superpowers/research/clones/<candidate-slug>`.
-       A clone command with no explicit destination path is forbidden:
-       `git clone <url>` with no destination writes into a directory
-       named after the repository inside your current working
-       directory, which may be outside the clones directory named
-       above.
+       `^https://` AND matching the strict charset
+       `^https://[A-Za-z0-9._~:/?#@%+-]+$` — no `$`, no backtick, no
+       quote, no space, no `;`, no `|`, no `&`, no newline; reject
+       `ext::`, `ssh://`, `git://`, `file://`, and scp-style
+       `host:path` forms without cloning. Git's `ext::` transport runs
+       a shell command during the clone itself, so an unchecked URL is
+       code execution even though nothing from the cloned repository
+       is ever run; the charset check exists separately because even a
+       `https://` URL is shell-interpolated when the clone command
+       runs, and a publisher-controlled string containing `$(...)`,
+       backticks, `;`, `|`, `&`, or a newline lets the shell run
+       arbitrary commands before `git` ever sees the URL —
+       `protocol.allow=never` does not stop that. Clone shallow,
+       without submodules, with the transport pinned on the command
+       line, the URL single-quoted, and `--` before the URL argument
+       so it can never be parsed as a flag:
+       `git clone -c protocol.allow=never -c protocol.https.allow=always --depth 1 --no-recurse-submodules -- '<https-url>' [REPO_ROOT]/.superpowers/research/clones/<candidate-slug>`.
+       Both requirements are mandatory: the charset check on the URL
+       string, AND single-quoting the URL with `--` before it in the
+       command actually run. A clone command with no explicit
+       destination path is forbidden: `git clone <url>` with no
+       destination writes into a directory named after the repository
+       inside your current working directory, which may be outside
+       the clones directory named above.
     All other file creation, editing, or deletion is forbidden. You
     never run a cloned candidate's install, build, or test scripts,
     and you never execute any code from a cloned repository — reading

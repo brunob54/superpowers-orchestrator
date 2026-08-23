@@ -27,9 +27,10 @@ invoker; no gate has happened yet). Never pick N silently.
 
 On every invocation path — whether the gate message below is shown or
 not — a non-zero N ends, on success, with findings cached under
-`docs/research/` and committed to whatever branch is currently checked
-out in this repository (step 6 item 5). State this to the invoker
-before that commit can run.
+`docs/research/` and committed to the currently checked-out branch in
+this repository, unless HEAD is detached, in which case the commit is
+skipped and the cache stays uncommitted on disk (step 6 item 5, sub-step
+5e). State this to the invoker before that commit can run.
 
 On that direct path, present this gate message verbatim — the same
 block brainstorming presents, copied character-exactly (`<candidates>`
@@ -132,51 +133,74 @@ candidate repositories under `.superpowers/research/clones/`.
 
 Confirm the topic slug matches the validation rule under "Inputs"
 above before this delete runs. Delete the invocation's own files by
-exact name, never by a bare prefix glob (a bare prefix such as
-`.superpowers/research/<slug>-*` also matches a different, longer slug
-that happens to start with this one, for example slug `http` matching
-files that belong to slug `http-retry`): delete
-`.superpowers/research/<slug>-research-report.md` (the merged report,
-per the Files table below); `.superpowers/research/<slug>-r<K>-report.md`
-for every K from 1 through 10 (the per-researcher reports, per the
-same table); `.superpowers/research/<slug>-rv<J>-report.md` for every
-J from 1 through 10 (the re-verifier reports); and
-`.superpowers/research/<slug>-f<J>-report.md` for every J from 1
-through 10 (the follow-up researcher reports) — 10 is the maximum N
-this skill ever dispatches, so these ranges cover every per-researcher,
-re-verifier, and follow-up report a previous run could have left,
-regardless of that run's own N. This is a previous run's merged report and
-per-researcher, re-verifier, and follow-up reports for this same topic slug, deleted before the
+matching a directory listing of `.superpowers/research/` against an
+anchored pattern built from the exact slug — never by a bare prefix
+glob (a bare prefix such as `.superpowers/research/<slug>-*` also
+matches a different, longer slug that happens to start with this one,
+for example slug `http` matching files that belong to slug
+`http-retry`), and never by a fixed numeric range: a previous run's
+re-verifier and follow-up reports are indexed by cache-hit position,
+not by N, and cache-hit position is not bounded by the N≤10 cap — with
+12 cached candidates a previous run can leave `<slug>-rv11-report.md`
+and beyond, which a fixed 1-through-10 range would miss and leave on
+disk to be read as this run's evidence. List the directory and delete
+every entry whose name matches, for this exact slug:
+- `^<slug>-research-report\.md$` (the merged report, per the Files
+  table below)
+- `^<slug>-r[0-9]+-report\.md$` (the per-researcher reports)
+- `^<slug>-rv[0-9]+-report\.md$` (the re-verifier reports)
+- `^<slug>-f[0-9]+-report\.md$` (the follow-up researcher reports)
+
+Each pattern anchors the literal slug immediately against its own
+separator and suffix, so it never matches a longer slug's files: slug
+`http` cannot match `http-retry-r1-report.md`, because after the
+literal `http-r` the pattern requires a digit, not `etry-...`. This is
+a previous run's merged report and per-researcher, re-verifier, and
+follow-up reports for this same topic slug, deleted before the
 controller is dispatched, so the current run cannot inherit stale
-files left by an earlier failed or partial run. Keep the delete
-confined to `.superpowers/research/`.
+files left by an earlier failed or partial run — including one left by
+a run with more than 10 cache hits. Keep the delete confined to
+`.superpowers/research/`.
 
 ### 3. Cache check (`docs/research/<candidate-slug>.md`)
 
 **Slug rule:** prefix the registry or ecosystem in kebab-case, then the
-candidate name: lowercase; drop `@`; replace `/`, `.`, spaces, and
-every other non-alphanumeric character with `-`; collapse repeated `-`.
-Examples: npm `lodash.merge` → `npm-lodash-merge`; `@tanstack/react-query`
+candidate name: lowercase; drop `@`; replace `.` with `_`; replace `/`,
+spaces, and every other non-alphanumeric character other than `.` with
+`-`; collapse repeated `-`. Giving `.` its own replacement (`_`, not
+`-`) keeps the rule injective: npm `lodash.merge` → `npm-lodash_merge`
+stays distinct from npm `lodash-merge` → `npm-lodash-merge`, so the two
+cannot land on the same cache file path.
+Examples: npm `lodash.merge` → `npm-lodash_merge`; `@tanstack/react-query`
 on npm → `npm-tanstack-react-query`; the Stripe service →
-`service-stripe`. The registry prefix and the header's canonical-name
-field together prevent cross-registry and typosquat collisions.
+`service-stripe`. The registry prefix, the distinct `.`→`_` mapping,
+and the header's canonical-name field together prevent cross-registry
+and typosquat collisions.
 
 **Validation:** after applying the slug rule above, each resulting
-candidate slug must match `^[a-z0-9]+(-[a-z0-9]+)*$` — the same
-charset rule the topic slug uses (see Inputs above) — before it is
+candidate slug must match `^[a-z0-9]+([_-][a-z0-9]+)*$` — wider than
+the topic slug's charset rule (see Inputs above), because the
+candidate slug rule uses `_` as a distinct separator — before it is
 used in any path or command. A slug that does not match: re-apply the
 slug rule; if the result still does not match, stop using that
 candidate slug in any path, `git add`, or `git commit` command, and
 report the candidate as unable to be cached.
 
 **Header line** (first body line of a cache entry):
-`_Researched: YYYY-MM-DD | registry: <registry> | canonical name: <exact name> | versions inspected: <list>_`
+`_Researched: YYYY-MM-DD | registry: <registry> | canonical name: <exact name> | versions inspected: <list> | verified: YYYY-MM-DD_`
+The `verified:` field is absent until the entry's first confirmed
+re-verification; from then on it holds the date of the most recent
+confirmed re-verification. `Researched:` always holds the date the
+entry's findings were actually gathered — health, vulnerability, and
+maintenance evidence included — and a re-verification never touches
+it, because a re-verification does not re-gather that evidence (see
+"Re-verifier outcomes" below).
 
 **Hit rule:** a cache file counts as a hit ONLY when its registry and
 exact canonical name match the candidate — a slug match alone is not a
-hit. A future-dated header is invalid, not fresh.
+hit. A future-dated `Researched:` header is invalid, not fresh.
 
-- **Fresh** (younger than 90 days): remove the candidate's
+- **Fresh** (`Researched:` date younger than 90 days): remove the candidate's
   per-candidate assignment (angles 1+5) and reduce N by exactly 1 —
   but every cache hit, fresh included, still gets a Haiku-class
   re-verifier (existence and the pinned or floor anchor version — not
@@ -185,7 +209,7 @@ hit. A future-dated header is invalid, not fresh.
   edited.
   Fresh-hit findings may be used provisionally while re-verification
   runs.
-- **Stale** (90 days or older): same reduction, but the entry's
+- **Stale** (`Researched:` date 90 days or older): same reduction, but the entry's
   findings are used only after its re-verifier confirms.
 - Post-cache N is floored at 1, unconditionally — never reduced to 0,
   whether or not any candidate remains un-researched. Report the
@@ -205,7 +229,8 @@ hit. A future-dated header is invalid, not fresh.
   step 6 holds on this path too.
 
 Re-verifier outcomes (mismatch → invalidate and re-research; confirmed
-→ keep the reduction and refresh the date) are handled by the
+→ keep the reduction and set the `verified:` date — `Researched:`
+stays untouched) are handled by the
 controller; see `controller-prompt.md`.
 
 ### 4. Resolve assignments (deterministic)
@@ -366,11 +391,20 @@ and 5 are conditional; each states its own condition.
      they must be committed or removed before
      orchestrating-development's clean-tree check will pass. This is
      the one disclosure sentence items 3 and 4 point at.
-   - 5b. **Build the path list.** It holds every `docs/research/` entry
-     this invocation created or updated — written by the controller on
-     rung 1, or by you on rung 2. A re-verified cache hit whose
-     `_Researched:` date was refreshed counts as updated. Every slug on
-     the list already passed the Validation rule in step 3.
+   - 5b. **Build the path list deterministically.** It holds exactly
+     one path, `docs/research/<candidate-slug>.md`, per candidate slug
+     THIS invocation validated in step 3 — the set of candidates named
+     by the invoker, not a derivation from `git status` or from
+     anything the controller reports. Include a path only when the
+     file exists on disk (a candidate the controller could not cache,
+     per step 3's Validation rule, contributes no path). This covers
+     every shape a path can take: freshly researched, re-verified
+     (whether or not its `verified:` date changed), or invalidated and
+     re-researched — every one of them is still this invocation's own
+     candidate, so its slug is already on the step-3 list. Never build
+     this list from `git status --porcelain` output — that listing is
+     used only in 5c below, to find paths that are NOT on this list,
+     never to build the list itself.
    - 5c. **Entries this invocation did not write stay out of the list.**
      List `git status --porcelain -- docs/research/` at the repo root
      and report every path it shows that is not on the 5b list. A
@@ -382,25 +416,43 @@ and 5 are conditional; each states its own condition.
      Never run `git commit -m "<subject>" --` with no path after the
      separator. That is not a no-op; it commits the whole index, and
      would sweep the user's unrelated staged work into your commit.
-   - 5e. **Stage the listed paths:** `git add -- docs/research/<slug-1>.md
+   - 5e. **Detached-HEAD check, before staging or committing.** Run
+     `git symbolic-ref -q HEAD` at the anchored repository root. A
+     non-zero exit means HEAD is detached: `git commit` would still
+     succeed there, but the resulting commit is unreachable from any
+     branch and is lost at the next checkout, while this skill would
+     otherwise report the cache as committed. Skip the rest of item 5
+     (staging and committing) in this case: report "cache written, not
+     committed", give the invoker 5a's disclosure sentence, and
+     continue. A detached HEAD never blocks the session.
+   - 5f. **Stage the listed paths:** `git add -- docs/research/<slug-1>.md
      docs/research/<slug-2>.md`. Staging is required because
      `git commit -- <pathspec>` accepts only paths already in the index.
      An untracked first-research cache file would otherwise fail with
      "pathspec ... did not match any file(s) known to git".
-   - 5f. **Commit the same paths:** `git commit -m "chore(research):
-     prior-art cache for <topic-slug>" -- docs/research/<slug-1>.md
-     docs/research/<slug-2>.md`. Both commands are path-limited, so
-     neither can sweep unrelated work in: `git add` stages only these
-     paths, and the commit takes only these paths whatever else the
-     user had staged. Never run `git add -A`. Never run a bare
-     `git commit`.
-   - 5g. **Where.** Run both commands at the anchored repository root,
-     not at the session's working directory.
-   - 5h. **When the commit fails** — not a git repository, a failing
-     pre-commit hook, a detached HEAD, a signing prompt — report
-     "cache written, not committed", give the invoker 5a's disclosure
-     sentence, and continue. A commit failure never blocks the session,
-     and the research result stays valid.
+   - 5g. **Commit the same paths, non-interactively:**
+     `GIT_TERMINAL_PROMPT=0 git commit --no-gpg-sign -m
+     "chore(research): prior-art cache for <topic-slug>" --
+     docs/research/<slug-1>.md docs/research/<slug-2>.md`. Both
+     `git add` and `git commit` are path-limited, so neither can sweep
+     unrelated work in: `git add` stages only these paths, and the
+     commit takes only these paths whatever else the user had staged.
+     Never run `git add -A`. Never run a bare `git commit`.
+     `GIT_TERMINAL_PROMPT=0` and `--no-gpg-sign` keep the commit
+     non-interactive: without them, `commit.gpgsign=true` with a
+     passphrase-protected key and no agent makes `git commit` block on
+     a terminal prompt rather than return an error, and in a headless
+     run there is no tty to answer it, so the call would hang until
+     the tool timeout instead of failing fast.
+   - 5h. **Where.** Run every command in 5e-5g at the anchored
+     repository root, not at the session's working directory.
+   - 5i. **When the commit fails** — not a git repository, or a
+     failing pre-commit hook — report "cache written, not committed",
+     give the invoker 5a's disclosure sentence, and continue. A commit
+     failure never blocks the session, and the research result stays
+     valid. (Detached HEAD is handled separately in 5e, before the
+     commit is attempted at all; a GPG signing prompt cannot occur
+     because 5g runs non-interactively.)
 6. Report to the invoker: the merged report path, the cache reduction
    (if any), the re-verifier count, the status-comparison result, and
    the controller's summary.
@@ -420,7 +472,7 @@ and 5 are conditional; each states its own condition.
 |---|---|
 | Controller subagent dies or times out (the Agent dispatch returns an error, or the platform's own timeout fires — no additional timer) | Still run step 6 items 1, 4 and 6: remove `.superpowers/research/clones/`, compare the working tree against the step-1 snapshot, and report. Item 4 matters most here — a failed controller is the case where stray writes are most likely. Item 5 then skips per 5a. Report the failure; the invoker states the evidence gap and continues with provisional claims (never blocks the session) |
 | Merged report file missing after return, and degradation rung 2 (step 6 item 2) was not applicable or also produced no merged report | Research counts as failed: evidence gap, provisional claims; any `docs/research/` entry already written stays uncommitted — tell the invoker it must be committed or removed before orchestrating-development's clean-tree check will pass |
-| Cache commit fails (no git repository, pre-commit hook, detached HEAD, signing prompt) | Report "cache written, not committed"; tell the invoker `docs/research/` entries stay uncommitted and must be committed or removed before orchestrating-development's clean-tree check will pass; research result stays valid; never block the session |
+| Cache commit fails (no git repository, or a failing pre-commit hook), or is skipped because HEAD is detached | Report "cache written, not committed"; tell the invoker `docs/research/` entries stay uncommitted and must be committed or removed before orchestrating-development's clean-tree check will pass; research result stays valid; never block the session |
 | Post-research status differs from the snapshot outside `docs/research/` and `.superpowers/research/` | Report the diff; the invoker presents it and asks the user whether to continue; on continue, `docs/research/` entries from this run stay uncommitted — tell the invoker they must be committed or removed before orchestrating-development's clean-tree check will pass |
 | Project is not a git repository | Cleanliness check skipped; the skip stated in the conversation. `[REPO_ROOT]` falls back to the invoker-named project directory (see Root anchoring); with no project directory named either, the skill stops and says so |
 | All researcher reports discarded | Merged report contains only evidence gaps; surfaced to the user |
