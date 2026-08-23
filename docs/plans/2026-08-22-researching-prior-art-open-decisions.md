@@ -39,7 +39,7 @@ session safety filter. The file itself carries the full name.
 
 | # | Finding | Class | Confirmations | Recommendation |
 |---|---------|-------|---------------|----------------|
-| 1 | `docs/research/` cache files are never committed or ignored, and they trip the orchestrator's clean-tree gate | Blocking defect | 4 | Fix — add the ignore/commit path |
+| 1 | `docs/research/` cache files are never committed or ignored, and they trip the orchestrator's clean-tree gate | Blocking defect | 4 | **DECIDED** — the research skill commits the cache itself |
 | 2 | Degradation rung 2's second trigger can never be reached | Dead path | 3 | Fix — small wording change |
 | 3 | Two enforcement points disagree on when the spec section is required | Inconsistency | 2 | Fix — align on the predicate-gated form |
 | 4 | Cache invalidation uses a different version anchor than the researchers | Design semantics | 1 | Decide — costs re-research, not correctness |
@@ -116,12 +116,74 @@ so the review loop could not extend it.
 3. **Accept and document.** Users hitting it commit or delete the files
    by hand. Cheapest now, but every research-then-orchestrate run pays.
 
-### Recommendation
+### DECIDED (2026-08-23) — option 2, with `researching-prior-art` as the committing actor
 
-Option 2. The cache is only valuable if it is shared across sessions and
-machines, and that requires committing it — which is what the design
-already claims. Option 1 is the smaller change but quietly demotes the
-cache to a per-machine scratch file.
+The `researching-prior-art` skill commits its own cache files. The
+`brainstorming` skill is not involved beyond its existing carve-out.
+
+**Why the writer, not brainstorming:**
+
+1. It works on every path. The skill can be invoked directly, not only
+   from brainstorming. If brainstorming committed, a direct invocation
+   would leave the cache uncommitted and this finding would return.
+2. It is the only actor that knows what to stage. It holds the validated
+   candidate slugs, so it can stage by explicit path. Brainstorming would
+   have to re-derive them or use `git add -A`, which would sweep in the
+   user's unrelated work and the spec sidecar that brainstorming
+   deliberately leaves uncommitted.
+3. It closes this finding without touching the orchestrator.
+   `docs/research/` is never dirty at Phase 0, so the clean-tree
+   exception list stays as it is.
+
+**Where:** procedure step 6, executed by the main session — **not** by the
+controller subagent. The controller carries an explicit negative write
+boundary (added by a round-1 review fix); giving it commit power would
+widen that boundary. Step 6 already runs the status comparison, so the
+commit lands directly after the check that the tree holds only expected
+changes.
+
+**Binding conditions:**
+
+- Stage by explicit path only, one path per candidate slug:
+  `git add docs/research/<candidate-slug>.md`. Never `git add -A`.
+  `.superpowers/research/` is scratch and stays out of the commit.
+- Commit only after the status comparison passes. If the comparison found
+  unexpected changes, report them and do not commit — otherwise the skill
+  commits a tree state the user has not seen.
+- Nothing to commit (every candidate was a cache hit, no file changed) is
+  a normal outcome, not an error.
+- Never block the session on a commit failure. Not a git repository, a
+  failing pre-commit hook, a detached HEAD, or a signing prompt → report
+  "cache written, not committed" and continue. The research result stays
+  valid either way.
+- The commit runs at the anchored repository root (`[REPO_ROOT]`), not at
+  the session working directory.
+
+**Accompanying edits:**
+
+- `skills/brainstorming/SKILL.md:18` — the hard-gate carve-out must say it
+  covers *committing* those paths, not only writing them. Otherwise the
+  gate forbids the commit this decision depends on.
+- `skills/researching-prior-art/SKILL.md:284` — the Files table lifetime
+  becomes "committed by step 6" instead of a bare "committed", so the
+  claim names its actor.
+- **The gate message states that cache entries are committed.** The user
+  decided this explicitly: the skill writes to the user's git history, and
+  one sentence at the gate removes the surprise. The gate message is
+  verbatim-normative and appears in more than one file, so every copy
+  changes together.
+
+**Behavioral test impact of the gate-message change: none, if the new
+sentence is added rather than substituted.**
+`tests/claude-code/test-researching-prior-art-gate.sh` asserts on four
+fixed strings only — the opening line (`:74`), the reply instruction
+(`:78`), the `Candidates:` line (`:84`), and the `Suggested N=` line
+(`:88`). A sentence appended to the gate message leaves all four intact.
+The files carrying the gate message or the predicate are:
+`skills/brainstorming/SKILL.md`, `skills/researching-prior-art/SKILL.md`,
+`skills/orchestrating-development/SKILL.md`,
+`skills/researching-prior-art/controller-prompt.md`, the spec, and that
+test.
 
 ---
 
@@ -548,7 +610,9 @@ changing what the predicate means anywhere.
 
 ## What happens next
 
-Tell me which option you want for each finding. I will apply them on this
+**Decided so far: finding 1. Open: findings 2-9.**
+
+Tell me which option you want for each remaining finding. I will apply them on this
 branch, then resume the orchestration with:
 
 ```
