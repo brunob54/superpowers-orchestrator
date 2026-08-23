@@ -92,8 +92,10 @@ both the dispatch-metadata bullets right below (`[ASSIGNMENT_NAME]`,
       or tests, plus a short verbatim quoted snippet. The project
       under evaluation, not this repository. A citation that is a path
       into a clone under `.superpowers/research/clones/` must also
-      name the upstream repository URL, and the commit hash when you
-      know it, because the clone is deleted once the run ends.
+      name the upstream repository URL — including its host, so a
+      reader can see where this "source" actually came from — and the
+      commit hash when you know it, because the clone is deleted once
+      the run ends.
     - Edge cases and boundaries the source and tests reveal.
     - Version facts: presence or deprecation of the APIs the decision
       relies on, at the anchored version.

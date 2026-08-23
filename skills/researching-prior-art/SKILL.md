@@ -33,11 +33,11 @@ skipped and the cache stays uncommitted on disk (step 6 item 5, sub-step
 5e). State this to the invoker before that commit can run.
 
 On that direct path, present this gate message verbatim — the same
-block brainstorming presents, copied character-exactly (`<candidates>`
-and `<S>` filled in — the backticks around them are placeholder
-markup, dropped with the angle brackets when the values are filled;
-the bracketed sentence appears only when the choice is difficult to
-reverse):
+block brainstorming presents, copied character-exactly (`<candidates>`,
+`<S>`, and `<branch>` filled in — the backticks around them are
+placeholder markup, dropped with the angle brackets when the values
+are filled; the bracketed sentence appears only when the choice is
+difficult to reverse):
 
 > Research gate: this decision triggers prior-art research.
 > Candidates: `<candidates>`.
@@ -45,11 +45,13 @@ reverse):
 > How many research subagents should I dispatch? Suggested N=`<S>`
 > (number of candidates + 3, at most 10). Reply with a number, or 0 to
 > skip — a skip is recorded in the spec.
-> On a non-zero reply, findings are cached under `docs/research/` and committed to this repository.
+> On a non-zero reply, findings are cached under `docs/research/` and committed to this repository, on the branch checked out right now (`<branch>`).
 
 A direct invocation usually has no spec. On a 0 reply, state the skip
 in the conversation and stop; record it in a spec's "Prior art and
-alternatives" section only when a spec exists. A negative or
+alternatives" section only when a spec exists. `<branch>` = the name
+of the branch checked out at the moment the gate fires (resolve with
+`git rev-parse --abbrev-ref HEAD`). A negative or
 non-numeric reply → ask once more; a second unusable reply → use the
 suggested `<S>` (the same rule brainstorming applies at its gate).
 
@@ -81,7 +83,12 @@ session's incidental working directory. **Non-git fallback:** when
 git repository, `[REPO_ROOT]` is the project directory the invoker
 named, resolved to an absolute path. If the invoker named no project
 directory either, the skill stops and says so rather than guessing at
-a root.
+a root. On this path, step 1's snapshot and step 6 item 4's comparison
+against it both skip (there is no `git status --porcelain` to run), so
+nothing detects a write outside `[REPO_ROOT]/.superpowers/research/clones/`
+and `[REPO_ROOT]/docs/research/*.md`. State this to the invoker: on a
+non-git project, the read-only boundary for the researchers and the
+controller is instruction-only and unverified for this run.
 
 ## Trigger predicate (fired by the invoker's gate, restated here)
 
@@ -430,29 +437,36 @@ and 5 are conditional; each states its own condition.
      `git commit -- <pathspec>` accepts only paths already in the index.
      An untracked first-research cache file would otherwise fail with
      "pathspec ... did not match any file(s) known to git".
-   - 5g. **Commit the same paths, non-interactively:**
-     `GIT_TERMINAL_PROMPT=0 git commit --no-gpg-sign -m
+   - 5g. **Commit the same paths, non-interactively and under a time
+     bound:** `GIT_TERMINAL_PROMPT=0 timeout 30 git commit -m
      "chore(research): prior-art cache for <topic-slug>" --
      docs/research/<slug-1>.md docs/research/<slug-2>.md`. Both
      `git add` and `git commit` are path-limited, so neither can sweep
      unrelated work in: `git add` stages only these paths, and the
      commit takes only these paths whatever else the user had staged.
-     Never run `git add -A`. Never run a bare `git commit`.
-     `GIT_TERMINAL_PROMPT=0` and `--no-gpg-sign` keep the commit
-     non-interactive: without them, `commit.gpgsign=true` with a
-     passphrase-protected key and no agent makes `git commit` block on
-     a terminal prompt rather than return an error, and in a headless
-     run there is no tty to answer it, so the call would hang until
-     the tool timeout instead of failing fast.
+     Never run `git add -A`. Never run a bare `git commit`. Keep the
+     user's configured commit signing as-is: never pass
+     `--no-gpg-sign`. Stripping it would silently produce an unsigned
+     commit in a repository whose `commit.gpgsign=true` requires
+     verified signatures, overriding the user's own configuration.
+     `GIT_TERMINAL_PROMPT=0` suppresses a credential prompt, but a GPG
+     passphrase prompt for a protected signing key can still block
+     with no tty to answer it; the outer `timeout 30` bounds that wait
+     so the call fails fast (or times out) instead of hanging until
+     the tool's own timeout. Treat a `timeout`-caused exit (124) the
+     same as any other non-zero exit from this command.
    - 5h. **Where.** Run every command in 5e-5g at the anchored
      repository root, not at the session's working directory.
-   - 5i. **When the commit fails** — not a git repository, or a
-     failing pre-commit hook — report "cache written, not committed",
-     give the invoker 5a's disclosure sentence, and continue. A commit
-     failure never blocks the session, and the research result stays
-     valid. (Detached HEAD is handled separately in 5e, before the
-     commit is attempted at all; a GPG signing prompt cannot occur
-     because 5g runs non-interactively.)
+   - 5i. **When the commit fails** — not a git repository, a failing
+     pre-commit hook, or a signing prompt that `timeout 30` cut off —
+     unstage the same paths staged in 5f (`git restore --staged --
+     docs/research/<slug-1>.md docs/research/<slug-2>.md`; this
+     returns the index to what it held before 5f, so the user's next
+     unrelated commit does not silently pick up these paths), report
+     "cache written, not committed", give the invoker 5a's disclosure
+     sentence, and continue. A commit failure never blocks the
+     session, and the research result stays valid. (Detached HEAD is
+     handled separately in 5e, before the commit is attempted at all.)
 6. Report to the invoker: the merged report path, the cache reduction
    (if any), the re-verifier count, the status-comparison result, and
    the controller's summary.
@@ -472,7 +486,7 @@ and 5 are conditional; each states its own condition.
 |---|---|
 | Controller subagent dies or times out (the Agent dispatch returns an error, or the platform's own timeout fires — no additional timer) | Still run step 6 items 1, 4 and 6: remove `.superpowers/research/clones/`, compare the working tree against the step-1 snapshot, and report. Item 4 matters most here — a failed controller is the case where stray writes are most likely. Item 5 then skips per 5a. Report the failure; the invoker states the evidence gap and continues with provisional claims (never blocks the session) |
 | Merged report file missing after return, and degradation rung 2 (step 6 item 2) was not applicable or also produced no merged report | Research counts as failed: evidence gap, provisional claims; any `docs/research/` entry already written stays uncommitted — tell the invoker it must be committed or removed before orchestrating-development's clean-tree check will pass |
-| Cache commit fails (no git repository, or a failing pre-commit hook), or is skipped because HEAD is detached | Report "cache written, not committed"; tell the invoker `docs/research/` entries stay uncommitted and must be committed or removed before orchestrating-development's clean-tree check will pass; research result stays valid; never block the session |
+| Cache commit fails (no git repository, a failing pre-commit hook, or a GPG signing prompt that the 30-second `timeout` cut off), or is skipped because HEAD is detached | Unstage the paths staged in 5f, report "cache written, not committed"; tell the invoker `docs/research/` entries stay uncommitted and must be committed or removed before orchestrating-development's clean-tree check will pass; research result stays valid; never block the session |
 | Post-research status differs from the snapshot outside `docs/research/` and `.superpowers/research/` | Report the diff; the invoker presents it and asks the user whether to continue; on continue, `docs/research/` entries from this run stay uncommitted — tell the invoker they must be committed or removed before orchestrating-development's clean-tree check will pass |
 | Project is not a git repository | Cleanliness check skipped; the skip stated in the conversation. `[REPO_ROOT]` falls back to the invoker-named project directory (see Root anchoring); with no project directory named either, the skill stops and says so |
 | All researcher reports discarded | Merged report contains only evidence gaps; surfaced to the user |

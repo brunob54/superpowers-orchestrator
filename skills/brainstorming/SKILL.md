@@ -121,10 +121,10 @@ features. The third branch covers decisions that change no manifest (a
 hosted service, a CDN script tag, a Docker base image).
 
 When the predicate fires, present this gate message verbatim
-(`<candidates>` and `<S>` filled in — the backticks around them are
-placeholder markup, dropped with the angle brackets when the values
-are filled; the bracketed sentence appears only when the choice is
-difficult to reverse):
+(`<candidates>`, `<S>`, and `<branch>` filled in — the backticks
+around them are placeholder markup, dropped with the angle brackets
+when the values are filled; the bracketed sentence appears only when
+the choice is difficult to reverse):
 
 > Research gate: this decision triggers prior-art research.
 > Candidates: `<candidates>`.
@@ -132,9 +132,11 @@ difficult to reverse):
 > How many research subagents should I dispatch? Suggested N=`<S>`
 > (number of candidates + 3, at most 10). Reply with a number, or 0 to
 > skip — a skip is recorded in the spec.
-> On a non-zero reply, findings are cached under `docs/research/` and committed to this repository.
+> On a non-zero reply, findings are cached under `docs/research/` and committed to this repository, on the branch checked out right now (`<branch>`).
 
-`<S>` = min(number of candidates + 3, 10). A negative or non-numeric
+`<S>` = min(number of candidates + 3, 10). `<branch>` = the name of
+the branch checked out at the moment the gate fires (resolve with
+`git rev-parse --abbrev-ref HEAD`). A negative or non-numeric
 reply → ask once more; a second unusable reply → use the suggested
 `<S>`. On a platform without the Agent tool (degradation rung 3 of
 researching-prior-art), skip the gate entirely — do not ask a question

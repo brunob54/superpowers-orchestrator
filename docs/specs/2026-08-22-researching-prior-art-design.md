@@ -163,8 +163,8 @@ script tag, a Docker base image). The orchestrating-development intake
 check (Spec-side enforcement) uses this same predicate, all branches.
 
 **Gate message** (brainstorming presents it verbatim when the predicate
-fires; `<candidates>` and `<S>` filled in; the bracketed sentence appears
-only when the choice is difficult to reverse):
+fires; `<candidates>`, `<S>`, and `<branch>` filled in; the bracketed
+sentence appears only when the choice is difficult to reverse):
 
 > Research gate: this decision triggers prior-art research.
 > Candidates: `<candidates>`.
@@ -172,9 +172,11 @@ only when the choice is difficult to reverse):
 > How many research subagents should I dispatch? Suggested N=`<S>`
 > (number of candidates + 3, at most 10). Reply with a number, or 0 to
 > skip — a skip is recorded in the spec.
-> On a non-zero reply, findings are cached under `docs/research/` and committed to this repository.
+> On a non-zero reply, findings are cached under `docs/research/` and committed to this repository, on the branch checked out right now (`<branch>`).
 
-`<S>` = min(candidates + 3, 10). A negative or non-numeric reply → ask
+`<S>` = min(candidates + 3, 10). `<branch>` = the name of the branch
+checked out at the moment the gate fires (resolve with
+`git rev-parse --abbrev-ref HEAD`). A negative or non-numeric reply → ask
 once more; a second unusable reply → use the suggested `<S>`. On a
 platform without the Agent tool (degradation rung 3), brainstorming skips
 the gate entirely — do not ask a question whose every non-zero answer
