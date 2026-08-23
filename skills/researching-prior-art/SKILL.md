@@ -323,12 +323,16 @@ and 5 are conditional; each states its own condition.
    paths only — it cannot see writes to files that were already dirty
    or untracked at snapshot time, and it cannot see writes to any
    git-ignored path at all (`git status --porcelain` never reports
-   them). `.superpowers/research/` carries a self-written `.gitignore`
-   containing `*`, and the orchestrator adds `.superpowers/` to
-   `.git/info/exclude`, so a write anywhere under `.superpowers/` —
+   them). `.superpowers/research/` is always self-ignored, by its own
+   `.gitignore` containing `*`. The rest of `.superpowers/` —
    including `.superpowers/sdd/`, which holds orchestration
-   control-flow files — is invisible to this comparison, not merely
-   already dirty or untracked.
+   control-flow files — is ignored only after the
+   orchestrating-development skill's Phase 0 has added
+   `.superpowers/` to `.git/info/exclude`. In a plain brainstorming
+   session that has not run, so such a write DOES appear in
+   `git status --porcelain`. Report any `.superpowers/` entry that
+   appears in the status output to the invoker, the same as any other
+   unexpected path.
 
    Accepted residual risk: this expected-change filter treats any
    change under `docs/research/` as expected, not only changes to the
@@ -368,7 +372,9 @@ and 5 are conditional; each states its own condition.
      `_Researched:` date was refreshed counts as updated. Every slug on
      the list already passed the Validation rule in step 3.
    - 5c. **Entries this invocation did not write stay out of the list.**
-     A `docs/research/` entry for any other slug — one a compromised
+     List `git status --porcelain -- docs/research/` at the repo root
+     and report every path it shows that is not on the 5b list. A
+     `docs/research/` entry for any other slug — one a compromised
      controller wrote for a candidate outside this invocation — is
      never staged. Report any such entry to the invoker.
    - 5d. **An empty path list ends item 5.** It is a normal outcome,
