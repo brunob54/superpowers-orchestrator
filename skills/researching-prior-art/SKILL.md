@@ -75,7 +75,12 @@ suggested `<S>` (the same rule brainstorming applies at its gate).
 of the repository under research: resolve it once at invocation start
 (`git rev-parse --show-toplevel`, from the repo path the invoker named
 or the current repo) and use absolute paths from there, never the
-session's incidental working directory.
+session's incidental working directory. **Non-git fallback:** when
+`git rev-parse --show-toplevel` fails because the project is not a
+git repository, `[REPO_ROOT]` is the project directory the invoker
+named, resolved to an absolute path. If the invoker named no project
+directory either, the skill stops and says so rather than guessing at
+a root.
 
 ## Trigger predicate (fired by the invoker's gate, restated here)
 
@@ -285,8 +290,8 @@ rung 1, never dispatch researchers from the main session.
    item apply.
 3. Verify `[MERGED_REPORT_FILE]` exists. Missing → report research as
    failed to the invoker: evidence gap, claims stay provisional. Never
-   block the session. Any `docs/research/` entry already written by a
-   researcher before the failure stays uncommitted (item 5 skips on
+   block the session. Any `docs/research/` entry already written by
+   the controller before the failure stays uncommitted (item 5 skips on
    this path) — tell the invoker that these entries must be committed
    or removed before orchestrating-development's clean-tree check will
    pass.
@@ -345,7 +350,10 @@ rung 1, never dispatch researchers from the main session.
    `--` separator: `git add -- docs/research/<slug-1>.md
    docs/research/<slug-2>.md`, then `git commit -m "<subject>" --
    docs/research/<slug-1>.md docs/research/<slug-2>.md`, one path per
-   candidate researched in this invocation, each slug already checked
+   `docs/research/` entry this invocation's controller created or
+   updated — a re-verified entry whose `_Researched:` date was
+   refreshed counts as updated, so a cache hit that was re-verified
+   still needs its path on this list — each slug already checked
    against the Validation rule in step 3 before it reaches this
    command line. This path list names only this invocation's own
    candidates: a `docs/research/` cache entry for any other slug (for
@@ -366,8 +374,9 @@ rung 1, never dispatch researchers from the main session.
    must stay out of the commit. Run the commands at the anchored
    repository root, not at the session's working directory. Commit
    message subject: `chore(research): prior-art cache for
-   <topic-slug>`. Having nothing to commit — every candidate was a
-   cache hit and no file changed — is a normal outcome, not an error. A
+   <topic-slug>`. Having nothing to commit — every candidate slug
+   failed the Validation rule in step 3, so no candidate could be
+   cached — is a normal outcome, not an error. A
    commit failure never blocks the session: not a git repository, a
    failing pre-commit hook, a detached HEAD, or a signing prompt —
    report "cache written, not committed" to the invoker and continue.
@@ -396,7 +405,7 @@ rung 1, never dispatch researchers from the main session.
 | Merged report file missing after return, and degradation rung 2 (step 6 item 2) was not applicable or also produced no merged report | Research counts as failed: evidence gap, provisional claims; any `docs/research/` entry already written stays uncommitted — tell the invoker it must be committed or removed before orchestrating-development's clean-tree check will pass |
 | Cache commit fails (no git repository, pre-commit hook, detached HEAD, signing prompt) | Report "cache written, not committed"; tell the invoker `docs/research/` entries stay uncommitted and must be committed or removed before orchestrating-development's clean-tree check will pass; research result stays valid; never block the session |
 | Post-research status differs from the snapshot outside `docs/research/` and `.superpowers/research/` | Report the diff; the invoker presents it and asks the user whether to continue; on continue, `docs/research/` entries from this run stay uncommitted — tell the invoker they must be committed or removed before orchestrating-development's clean-tree check will pass |
-| Project is not a git repository | Cleanliness check skipped; the skip stated in the conversation |
+| Project is not a git repository | Cleanliness check skipped; the skip stated in the conversation. `[REPO_ROOT]` falls back to the invoker-named project directory (see Root anchoring); with no project directory named either, the skill stops and says so |
 | All researcher reports discarded | Merged report contains only evidence gaps; surfaced to the user |
 | N=0 or platform skip | Brainstorming-invoked: never reaches this skill; brainstorming records the skip in the spec. Direct invocation answered 0: state the skip in the conversation and stop |
 

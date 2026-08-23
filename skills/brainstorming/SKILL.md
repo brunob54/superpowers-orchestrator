@@ -27,7 +27,7 @@ Every project goes through this process. A todo list, a single-function utility,
 2. Assess scope: if the project touches 4+ independent subsystems or would require 20+ implementation tasks, decompose into sub-projects. Design each sub-project as a separate spec. Present the decomposition to the user for approval before designing individual specs.
 3. Ask all clarifying questions together in a single turn. Use multiple-choice format where possible to reduce round trips.
 4. Enumerate the candidate technologies for any decision matching the trigger predicate (see Research Gate below for the predicate's exact wording).
-5. **Research gate.** Run this step only if the predicate matches, and the platform is not on degradation rung 3 (no Agent tool). When more than one decision matches, repeat steps 5a-5h separately for each — one gate message and one sub-skill invocation per matching decision, never several decisions lumped into one.
+5. **Research gate.** Run this step only if the predicate matches, and the platform is not on degradation rung 3 (no Agent tool). When more than one decision matches, repeat steps 5a-5h separately for each — one gate message and one sub-skill invocation per matching decision, never several decisions lumped into one, and a distinct topic slug per decision (the same slug reused for a second decision deletes the first decision's merged report at that sub-skill's step 2).
    - 5a. Present the gate message verbatim (see Research Gate below).
    - 5b. On a reply of N=0: record the skip so it appears in the spec's "Prior art and alternatives" section (the spec file itself is written at step 11) — carry the skip forward in the working design notes you accumulate for the spec, the same running draft steps 6-10 build up, until step 11 writes it to disk. Then continue with step 6.
    - 5c. On a reply of N>0: invoke `superpowers-orchestrator:researching-prior-art`. Pass the decision (one sentence, candidates named), the candidate list, N, and the topic slug (kebab-case, no date).
@@ -190,6 +190,8 @@ explicitly asks.
 Include:
 - Scope and non-goals
 - Prior art and alternatives (required when the research predicate matched for any decision in this design): findings that changed the design; findings overridden, with reason; findings deferred; skips recorded (N=0 or platform skip); failed research recorded ("research attempted, failed — evidence gap", covering the research error-handling outcomes)
+- When no decision in this design matched the trigger predicate, record this exact sentence in the spec, verbatim, in place of a "Prior art and alternatives" section:
+  > No decision in this design matched the prior-art trigger predicate.
 - Architecture and data flow
 - Interfaces/contracts
 - Error handling
