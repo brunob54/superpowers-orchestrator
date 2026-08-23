@@ -38,6 +38,7 @@ reverse):
 > How many research subagents should I dispatch? Suggested N=`<S>`
 > (number of candidates + 3, at most 10). Reply with a number, or 0 to
 > skip — a skip is recorded in the spec.
+> On a non-zero reply, findings are cached under `docs/research/` and committed to this repository.
 
 A direct invocation usually has no spec. On a 0 reply, state the skip
 in the conversation and stop; record it in a spec's "Prior art and
@@ -258,10 +259,18 @@ rung 1, never dispatch researchers from the main session.
    unconditionally: even when the controller subagent died, timed
    out, or its dispatch errored and the rest of step 6 does not run
    (see the error-handling row for that failure).
-2. Verify `[MERGED_REPORT_FILE]` exists. Missing → report research as
+2. If the controller returned a summary reporting that it could not
+   dispatch subagents, drop to degradation rung 2 now: dispatch the N
+   researchers yourself from `research-prompt.md`, apply the
+   controller contract from `controller-prompt.md` yourself, and write
+   the merged report. Remove `.superpowers/research/clones/` again
+   after your own researchers return. Then continue with the remaining
+   items of this step. Only when this fallback also produces no merged
+   report does the next item apply.
+3. Verify `[MERGED_REPORT_FILE]` exists. Missing → report research as
    failed to the invoker: evidence gap, claims stay provisional. Never
    block the session.
-3. Compare `git status --porcelain` with the step-1 snapshot. Changes
+4. Compare `git status --porcelain` with the step-1 snapshot. Changes
    under `docs/research/` and `.superpowers/research/` are expected.
    Any other new path, or a newly-modified previously-clean path, is
    unexpected: report the diff to the invoker (brainstorming presents
@@ -271,7 +280,37 @@ rung 1, never dispatch researchers from the main session.
    comparison detects new paths and newly-modified previously-clean
    paths only — it cannot see writes to files that were already dirty
    or untracked at snapshot time.
-4. Report to the invoker: the merged report path, the cache reduction
+
+   Accepted residual risk: this expected-change filter treats any
+   change under `docs/research/` as expected, not only changes to the
+   candidate slugs of this invocation. A prompt-injected controller
+   could therefore overwrite an unrelated cache entry without the
+   comparison flagging it. Accepted: the candidate slug is
+   charset-validated before any path use, writes outside
+   `docs/research/` and `.superpowers/research/` are still flagged,
+   and the affected files are cache entries that the user reviews
+   before they are committed.
+5. Commit the cache files, and only them. Commit only when the
+   comparison in the previous item found no unexpected changes; when
+   it found unexpected changes, report them and do not commit. Name
+   every cache file on the `git commit` command line, after a `--`
+   separator: `git commit -m "<subject>" -- docs/research/<slug-1>.md
+   docs/research/<slug-2>.md`, one path per candidate researched in
+   this invocation. A path-limited commit takes those files from the
+   working tree and ignores whatever else the user already staged, so
+   it cannot sweep unrelated work into your commit. Never run
+   `git add -A`, and never run a bare `git commit` that would commit
+   the whole index. `.superpowers/research/` is transient and must
+   stay out of the commit. Run the command at the anchored repository
+   root, not at the session's working directory. Commit message
+   subject: `chore(research): prior-art cache for <topic-slug>`. Having nothing
+   to commit — every candidate was a cache hit and no file changed —
+   is a normal outcome, not an error. A commit failure never blocks
+   the session: not a git repository, a failing pre-commit hook, a
+   detached HEAD, or a signing prompt — report "cache written, not
+   committed" to the invoker and continue. The research result stays
+   valid.
+6. Report to the invoker: the merged report path, the cache reduction
    (if any), the re-verifier count, the status-comparison result, and
    the controller's summary.
 
@@ -281,7 +320,7 @@ rung 1, never dispatch researchers from the main session.
 |---|---|---|
 | Researcher report | `.superpowers/research/<slug>-r<K>-report.md` | transient (self-gitignored) |
 | Merged report | `.superpowers/research/<slug>-research-report.md` | transient (self-gitignored); survives `/clear` |
-| Durable cache | `docs/research/<candidate-slug>.md` | committed |
+| Durable cache | `docs/research/<candidate-slug>.md` | committed by step 6 |
 | Spec section | "Prior art and alternatives" in the spec | committed (written by brainstorming) |
 
 ## Error handling
@@ -290,6 +329,7 @@ rung 1, never dispatch researchers from the main session.
 |---|---|
 | Controller subagent dies or times out (the Agent dispatch returns an error, or the platform's own timeout fires — no additional timer) | Still run step 6 item 1 (remove `.superpowers/research/clones/` if it exists). Report the failure; the invoker states the evidence gap and continues with provisional claims (never blocks the session) |
 | Merged report file missing after return | Research counts as failed: evidence gap, provisional claims |
+| Cache commit fails (no git repository, pre-commit hook, detached HEAD, signing prompt) | Report "cache written, not committed"; research result stays valid; never block the session |
 | Post-research status differs from the snapshot outside `docs/research/` and `.superpowers/research/` | Report the diff; the invoker presents it and asks the user whether to continue |
 | Project is not a git repository | Cleanliness check skipped; the skip stated in the conversation |
 | All researcher reports discarded | Merged report contains only evidence gaps; surfaced to the user |

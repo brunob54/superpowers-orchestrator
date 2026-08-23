@@ -129,7 +129,13 @@ brainstorming (main session)
    reporting it could not dispatch subagents → the main session dispatches
    the N researchers directly; reports still go to files; the main session
    applies the controller contract (budgets, discard rules, merge rules)
-   itself.
+   itself. **This second trigger is checked first.** When the controller
+   reports that it could not dispatch subagents, the skill drops to rung 2
+   and dispatches the researchers itself; only if that second attempt also
+   produces no merged report does the missing-merged-report rule apply and
+   declare research failed. The order matters: a controller that
+   dispatched nothing also leaves no merged report, so without this rule
+   research would be declared failed before rung 2 could ever run.
 3. No Agent tool → skip; state in the conversation and in the spec: which
    evidence is missing and that technology claims are provisional.
 
@@ -165,6 +171,7 @@ only when the choice is difficult to reverse):
 > How many research subagents should I dispatch? Suggested N=`<S>`
 > (number of candidates + 3, at most 10). Reply with a number, or 0 to
 > skip — a skip is recorded in the spec.
+> On a non-zero reply, findings are cached under `docs/research/` and committed to this repository.
 
 `<S>` = min(candidates + 3, 10). A negative or non-numeric reply → ask
 once more; a second unusable reply → use the suggested `<S>`. On a
@@ -202,7 +209,7 @@ anything — all user interaction already happened at the gate.
 |---|---|---|
 | Researcher report | `.superpowers/research/<slug>-r<K>-report.md` | transient (self-gitignored, see flow step 3) |
 | Merged report | `.superpowers/research/<slug>-research-report.md` | transient (self-gitignored); survives `/clear` |
-| Durable cache | `docs/research/<candidate-slug>.md` | committed |
+| Durable cache | `docs/research/<candidate-slug>.md` | committed by step 6 |
 | Spec section | "Prior art and alternatives" in the spec | committed |
 
 ### Assignments
@@ -323,7 +330,9 @@ the merged report and cache files, so `Explore` cannot host it.
 - Write the merged report (marker first line; sections: Findings per
   candidate, Version facts, Health and risk, Prior art, Contradictions,
   Evidence gaps, Sources fetched); update `docs/research/<candidate-slug>.md`
-  per candidate; return a summary of at most 15 lines, marker first line.
+  per candidate — write the file only, never commit it; the committing
+  actor is the skill in the main session (see Cache contract); return a
+  summary of at most 15 lines, marker first line.
 
 ### Cache contract (`docs/research/<candidate-slug>.md`)
 
@@ -336,6 +345,21 @@ cache file. Header line:
 name> | versions inspected: <list>_`. A cache file counts as a hit ONLY
 when its registry and exact canonical name match the candidate — a slug
 match alone is not a hit.
+
+**Who commits the cache.** The controller subagent writes and updates the
+cache files, but it never commits them. The `researching-prior-art` skill
+commits them itself, in the main session, in its own procedure step 6.
+That commit names only the `docs/research/<candidate-slug>.md` files, by
+explicit path, on the `git commit` command line after a `--` separator —
+never `git add -A`, never a directory, never a bare `git commit`. A
+path-limited commit ignores whatever the user already staged, so it cannot
+sweep unrelated work into the cache commit. It runs only after
+the post-research status comparison has found no unexpected changes: an
+unexpected change goes to the user first, so nothing is committed while
+the working tree state is unexplained. If the commit fails for any reason,
+the skill reports the failure and continues; a failed commit never blocks
+the session. The cache files then stay in the working tree for the user to
+handle.
 
 - Fresh (younger than 90 days): the candidate's per-candidate assignment
   (angles 1+5) is removed and N is reduced by exactly 1 per cached
@@ -357,16 +381,27 @@ match alone is not a hit.
   and those results ("Sources fetched: cache + re-verification" noted),
   so the merged report is always controller-written and the
   file-existence check holds on this path too.
+- **Version anchor for invalidation.** The re-verifier compares the entry
+  against the version this repository pins for the candidate, read from
+  the manifest or lockfile — not against the newest release upstream. An
+  entry is invalidated when the pinned version is not present in the
+  entry's "versions inspected" list. A newer stable release published
+  upstream does not by itself invalidate the entry, because the cached
+  findings were written against the pinned version and still describe the
+  version this repository runs. For a candidate that this repository does
+  not pin (the predicate's "would add" branch), the anchor stays the
+  latest stable release at research time, as in the researcher contract;
+  the entry is invalidated when that release is not in the list.
 - **Re-verifier outcomes (fresh and stale hits alike):** a mismatch —
-  package missing from the registry, canonical-name difference, or a
-  current version different from the header's "versions inspected" —
+  package missing from the registry, canonical-name difference, or an
+  anchor version absent from the header's "versions inspected" —
   invalidates the cache entry; the controller dispatches one follow-up
   full-research researcher (that candidate's angles 1+5) after the first
   wave completes, same invocation, no user interaction. A **confirmed**
-  re-verification (version matches): the cached findings count as
-  evidence, the candidate's angles 1+5 stay removed (N stays reduced as
-  in the fresh branch), and the controller refreshes the entry's
-  `_Researched:` date.
+  re-verification (the anchor version is in the list): the cached findings
+  count as evidence, the candidate's angles 1+5 stay removed (N stays
+  reduced as in the fresh branch), and the controller refreshes the
+  entry's `_Researched:` date.
 - Stale (90 days or older): same as fresh, except the entry's findings
   are used only after its re-verifier confirms (fresh-hit findings may be
   used provisionally while re-verification runs).
@@ -395,11 +430,21 @@ process graph updated accordingly):
   approach comparison; present any listed contradictions to the user as
   open questions.
 
-Design Contents gains a required section: **Prior art and alternatives** —
-findings that changed the design; findings overridden, with reason;
-findings deferred; skips recorded (N=0 or platform skip); failed research
-recorded ("research attempted, failed — evidence gap", covering the Error
-Handling outcomes). Exit Criteria extended to include it.
+Design Contents gains a section: **Prior art and alternatives** — findings
+that changed the design; findings overridden, with reason; findings
+deferred; skips recorded (N=0 or platform skip); failed research recorded
+("research attempted, failed — evidence gap", covering the Error Handling
+outcomes). Exit Criteria extended to include it.
+
+**When the section is required.** The section is required when the
+research predicate matched for at least one decision in the design — the
+match is what creates the obligation, whether the research then ran, was
+skipped by the user, or failed. When no decision in the design matched the
+predicate, the section is not required; instead the design records that
+fact in one sentence, so a later reader can tell "no technology decision
+needed research" apart from "the section was forgotten". Both enforcement
+points use this same rule: the brainstorming exit criterion and the
+`orchestrating-development` spec-intake check.
 
 ### Spec-side enforcement
 
@@ -409,10 +454,12 @@ Handling outcomes). Exit Criteria extended to include it.
   cell — the placement determines which round checks it): claims about
   external technology must carry a source citation or the label
   "unverified"; flag any that do not.
-- `orchestrating-development` spec intake, one added check: if the spec
-  matches the trigger predicate (any branch of the three-branch predicate
-  defined in Normative Wordings) and has no "Prior art and alternatives"
-  section, stop and
+- `orchestrating-development` spec intake, one added check, applying the
+  same rule as the brainstorming exit criterion: if the spec matches the
+  trigger predicate (any branch of the three-branch predicate defined in
+  Normative Wordings) and has neither a "Prior art and alternatives"
+  section nor a recorded statement that no decision matched the predicate,
+  stop and
   report before planning. **Phase 0 — the orchestrator itself, before any
   controller dispatch — reads the spec body for this check.** This is a
   deliberate, documented exception to the orchestrator's thin-sequencer
@@ -437,7 +484,8 @@ Covered by a unit test registered in `tests/codex/run-unit-tests.sh`.
 | Failure | Behavior |
 |---|---|
 | Controller subagent dies or times out (detected by the Agent dispatch returning an error or the platform's own timeout — no additional timer) | Sub-skill reports the failure; brainstorming states the evidence gap and continues with provisional claims (never blocks the session) |
-| Merged report file missing after return | Brainstorming treats research as failed: evidence gap, provisional claims |
+| Controller returns reporting it could not dispatch subagents | Checked before the row below: the skill drops to degradation rung 2 and dispatches the N researchers itself |
+| Merged report file missing after return, and rung 2 was not applicable or also produced no merged report | Brainstorming treats research as failed: evidence gap, provisional claims |
 | Post-research status differs from the pre-dispatch snapshot outside `docs/research/` and `.superpowers/research/` | Brainstorming presents the diff and asks the user whether to continue (concurrent tooling can dirty the tree legitimately) |
 | Project is not a git repository | Cleanliness check skipped; the skip stated in the conversation |
 | All researcher reports discarded | Merged report contains only evidence gaps; surfaced to the user |

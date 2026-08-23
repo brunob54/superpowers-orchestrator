@@ -73,9 +73,15 @@ subagent via the Agent tool:
     - Also dispatch one Haiku-class re-verifier per cache hit listed
       in the cache state (fresh AND stale hits). A re-verifier's
       assignment is: confirm the candidate exists in its registry
-      under the exact canonical name, and report the current stable
-      version. Re-verifiers are in addition to the assignments above
-      and outside the merge/split algorithm. Dispatch re-verifiers,
+      under the exact canonical name, report the version THIS
+      repository pins for that candidate — read from the dependency
+      manifest or lockfile at [REPO_ROOT] — and report the current
+      stable version as well. The current stable version is context
+      for the merged report; it is not the invalidation test. If the
+      candidate is absent from this repository's manifest, the
+      re-verifier reports that absence in place of a pinned version.
+      Re-verifiers are in addition to the assignments above and
+      outside the merge/split algorithm. Dispatch re-verifiers,
       and the follow-up researchers described under "Re-verifier
       outcomes" below, from the same filled researcher template used
       for the assignments above, with the re-verification (or
@@ -115,13 +121,31 @@ subagent via the Agent tool:
       and the user's review.
 
     ## Re-verifier outcomes (fresh and stale hits alike)
+    - The version test uses the anchor version, which is the version
+      this repository pins for the candidate. When the candidate is
+      not pinned here at all — a new dependency under evaluation —
+      the anchor is the current stable version instead, matching the
+      researcher template's version-anchor rule.
+    - Reading the anchor version, in this order. A lockfile wins over
+      a manifest, because it records the version actually resolved.
+      With no lockfile and a manifest range (for example `^2.1.0`),
+      the anchor is the range's lowest allowed version — the floor.
+      With several manifests, use the one nearest [REPO_ROOT]; name
+      the file you read in the re-verifier's report. When the entry
+      pins no version at all — a git URL, a branch, a local path —
+      report it as unpinned and use the current stable version as the
+      anchor.
     - Mismatch — package missing from the registry, canonical-name
-      difference, or a current version different from the cache
-      header's "versions inspected" — invalidates the cache entry:
-      dispatch one follow-up full-research researcher (that
+      difference, or the anchor version absent from the cache
+      header's "versions inspected" list — invalidates the cache
+      entry: dispatch one follow-up full-research researcher (that
       candidate's angles 1+5) after the first wave completes, same
-      invocation, no user interaction.
-    - Confirmed (version matches): the cached findings count as
+      invocation, no user interaction. A newer stable release
+      upstream does not by itself invalidate the entry: the cached
+      findings were written against the pinned version, and that
+      version is still the one this repository uses.
+    - Confirmed (the anchor version is present in the cache header's
+      "versions inspected" list): the cached findings count as
       evidence, the candidate's research assignment stays removed,
       and you refresh the entry's `_Researched:` date.
     - Stale entries: use their findings only after confirmation.

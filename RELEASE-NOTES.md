@@ -22,7 +22,11 @@ before approaches are compared.
   are listed, never silently resolved. Platforms without the Agent
   tool skip and state the evidence gap.
 - **Durable cache under `docs/research/`.** One committed file per
-  candidate (`<registry>-<name>.md`). A hit younger than 90 days
+  candidate (`<registry>-<name>.md`). Research writes these files and
+  the skill commits them for you, staging only the
+  `docs/research/` cache files by explicit path — nothing else in your
+  working tree is staged, and a commit that fails is reported but never
+  blocks the session. A hit younger than 90 days
   removes that candidate's research assignment, but every hit still
   gets a cheap re-verifier — a committed header can be planted or
   edited.

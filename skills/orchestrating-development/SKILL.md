@@ -92,6 +92,12 @@ the same question batch below).
    > on version-sensitive external API behavior, or it selects an external
    > hosted service, platform, or base image that the system will depend on.
 
+   "Version-sensitive external API behavior" means behavior that has
+   changed, or is documented as changing, across the external API's
+   released versions — deprecations, breaking changes, or version-gated
+   features. The third branch covers decisions that change no manifest
+   (a hosted service, a CDN script tag, a Docker base image).
+
    Tell the user what to do next: add a "Prior art and alternatives"
    section to the spec, recording either the research findings or a
    note that the spec predates this research gate, then re-run

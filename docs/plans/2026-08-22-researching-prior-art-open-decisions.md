@@ -40,14 +40,20 @@ session safety filter. The file itself carries the full name.
 | # | Finding | Class | Confirmations | Recommendation |
 |---|---------|-------|---------------|----------------|
 | 1 | `docs/research/` cache files are never committed or ignored, and they trip the orchestrator's clean-tree gate | Blocking defect | 4 | **DECIDED** — the research skill commits the cache itself |
-| 2 | Degradation rung 2's second trigger can never be reached | Dead path | 3 | Fix — small wording change |
-| 3 | Two enforcement points disagree on when the spec section is required | Inconsistency | 2 | Fix — align on the predicate-gated form |
-| 4 | Cache invalidation uses a different version anchor than the researchers | Design semantics | 1 | Decide — costs re-research, not correctness |
-| 5 | The "quoted snippet" test assertion can never fail | Vacuous test | 1 | Fix later — needs a slow test re-run |
-| 6 | No assertion separates a real research run from a fully degraded one | Test gap | 1 | Fix later — same slow test |
-| 7 | Brainstorming checklist item 5 is a 117-word run-on sentence | Readability | 1 | Fix — violates your own plain-English rule |
-| 8 | The expected-change filter covers the whole `docs/research/` directory | Security scope | 2 | Accept, with note |
-| 9 | The predicate ships without its explanatory gloss in one of three files | Wording drift | 1 | Fix — copy the gloss |
+| 2 | Degradation rung 2's second trigger can never be reached | Dead path | 3 | **DECIDED** — made reachable (option 1) |
+| 3 | Two enforcement points disagree on when the spec section is required | Inconsistency | 2 | **DECIDED** — align on predicate-gated (option 1) |
+| 4 | Cache invalidation uses a different version anchor than the researchers | Design semantics | 1 | **DECIDED** — compare the pinned version (option 1) |
+| 5 | The "quoted snippet" test assertion can never fail | Vacuous test | 1 | **DEFERRED** — follow-up branch (option 1) |
+| 6 | No assertion separates a real research run from a fully degraded one | Test gap | 1 | **DEFERRED** — follow-up branch (option 1) |
+| 7 | Brainstorming checklist item 5 is a 117-word run-on sentence | Readability | 1 | **DECIDED** — split, add N=0 action (option 1) |
+| 8 | The expected-change filter covers the whole `docs/research/` directory | Security scope | 2 | **DECIDED** — accept, document the risk (option 2) |
+| 9 | The predicate ships without its explanatory gloss in one of three files | Wording drift | 1 | **DECIDED** — copy the gloss (option 1) |
+
+**All nine findings are decided (2026-08-23).** Findings 1, 2, 3, 4, 7, 8
+and 9 are applied on this branch. Findings 5 and 6 move to a follow-up
+branch, because both change the pass criteria of a network-dependent
+behavioral test that takes about eight minutes and that this branch has
+already passed.
 
 ---
 
@@ -610,10 +616,12 @@ changing what the predicate means anywhere.
 
 ## What happens next
 
-**Decided so far: finding 1. Open: findings 2-9.**
+**All nine findings are decided.** The user chose the recommended option
+for findings 2-9 on 2026-08-23.
 
-Tell me which option you want for each remaining finding. I will apply them on this
-branch, then resume the orchestration with:
+Applied on this branch: 1, 2, 3, 4, 7, 8, 9.
+Deferred to a follow-up branch: 5, 6. The applied changes then go back through
+the orchestration's Phase 4 review:
 
 ```
 Resume orchestration for docs/plans/2026-08-22-researching-prior-art.md
