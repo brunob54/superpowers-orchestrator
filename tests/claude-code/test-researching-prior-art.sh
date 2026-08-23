@@ -13,6 +13,9 @@
 #   (e) the plugin dev repo is unmutated (HEAD + status snapshot)
 #   (f) the run was not killed by the timeout
 #   (g) its "Version facts" section names the version the fixture pins
+#   (h) the durable cache entry docs/research/npm-ms.md exists, its commit
+#       touches only docs/research/ paths, and a file the user staged before
+#       the run is still staged and still uncommitted
 # No assertions on hardcoded git history.
 #
 # (c) and (g) exist because assertions (a)-(f) as originally written passed
@@ -72,6 +75,13 @@ cat > package.json << PKG_EOF
 PKG_EOF
 git add package.json
 git commit --quiet -m "base: fixture with ms dependency"
+
+# Assertion (h) needs work the user staged but did not commit. The skill's
+# cache commit is path-limited, so this file must still be staged and
+# uncommitted when the run ends. A bare `git commit` would sweep it in.
+UNRELATED_FILE="unrelated-staged-work.js"
+echo "// staged by the user before the research run, never committed" > "$UNRELATED_FILE"
+git add "$UNRELATED_FILE"
 
 PROMPT="Invoke the superpowers-orchestrator:researching-prior-art skill on the git repository at $TEST_PROJECT. Decision: verify that the npm package ms (pinned at $PINNED_VERSION in package.json) still fits this project's duration-parsing needs — this decision depends on version-sensitive external API behavior. Candidates: ms (npm, canonical name ms). N=2. Topic slug: ms-duration. Do not ask me any questions — proceed to completion."
 
@@ -150,6 +160,40 @@ else
         echo "FAIL(g): 'Version facts' does not name the pinned version $PINNED_VERSION"
         FAILURES=$((FAILURES+1))
     fi
+fi
+
+# (h) The durable cache and its commit — the release's headline behavior, and
+# the only place the skill writes to the user's git history. Three checks:
+# the cache entry exists, the commit is path-limited, and the user's own
+# staged work was left alone.
+CACHE_ENTRY="$TEST_PROJECT/docs/research/npm-ms.md"
+if [ ! -f "$CACHE_ENTRY" ]; then
+    echo "FAIL(h): no durable cache entry at $CACHE_ENTRY"
+    FAILURES=$((FAILURES+1))
+else
+    # Every path in the cache commit must live under docs/research/. A bare
+    # `git commit` would also carry package.json or the staged file above.
+    CACHE_COMMIT_PATHS=$(git log -1 --name-only --format= -- docs/research/ | grep -v '^$' || true)
+    OFF_PATHS=$(git log -1 --name-only --format= | grep -v '^$' | grep -v '^docs/research/' || true)
+    if [ -z "$CACHE_COMMIT_PATHS" ]; then
+        echo "FAIL(h): the last commit touches no docs/research/ path — the cache was not committed"
+        FAILURES=$((FAILURES+1))
+    fi
+    if [ -n "$OFF_PATHS" ]; then
+        echo "FAIL(h): the cache commit is not path-limited; it also carries:"
+        printf '  %s\n' $OFF_PATHS
+        FAILURES=$((FAILURES+1))
+    fi
+fi
+
+# The user's staged file must still be staged and still uncommitted.
+if ! git diff --cached --name-only | grep -qF "$UNRELATED_FILE"; then
+    echo "FAIL(h): $UNRELATED_FILE is no longer staged — the run swept the user's index"
+    FAILURES=$((FAILURES+1))
+fi
+if git log --format= --name-only | grep -qF "$UNRELATED_FILE"; then
+    echo "FAIL(h): $UNRELATED_FILE was committed — the cache commit was not path-limited"
+    FAILURES=$((FAILURES+1))
 fi
 
 if [ "$FAILURES" -eq 0 ]; then
