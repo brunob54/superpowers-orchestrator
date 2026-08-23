@@ -44,3 +44,5 @@ _Resumed — 2026-08-23 — same parameters (N_plan=5 N_code=5 cap=3, BASE 9b7f5
 ## STOPPED — 2026-08-23 — phase 4 — code review ended with 2 unresolved findings and 4 user-decision findings; both unresolved items are defects in the cache-commit step this round introduced, and each has a stated remedy
 Detail: .superpowers/reviews/feature-researching-prior-art-review-log.md
 Resume: Resume orchestration for docs/plans/2026-08-22-researching-prior-art.md
+
+_Resumed — 2026-08-23 — same parameters. Both unresolved findings fixed at 14271fa, each with the remedy the reviewer stated: step 6 items 1, 4 and 6 declared unconditional (with the error-handling row naming them), and item 5 split into sub-steps 5a-5h with the duplicated disclosure clause stated once. The 4 user-decision findings are left as recorded; three of them concern the behavioral test file that branch BB/prior-art-test-assertions owns._
