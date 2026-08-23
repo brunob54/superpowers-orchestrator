@@ -38,3 +38,9 @@ Detail: .superpowers/reviews/feature-researching-prior-art-review-log.md
 Resume: Resume orchestration for docs/plans/2026-08-22-researching-prior-art.md
 
 _Resumed — 2026-08-23 — same parameters (N_plan=5 N_code=5 cap=3, BASE 9b7f598). The user decided all 9 user-decision findings. Seven are applied on this branch at bd5c433; findings 5 and 6 are deferred to a follow-up branch because both change the pass criteria of a slow network-dependent behavioral test. Decision record: docs/plans/2026-08-22-researching-prior-art-open-decisions.md_
+
+## Phase 4 — Code review (invocation 2) — rounds 6–10 (+3 verification cycles) — cap — fixes 40 — unresolved 2 — user_decision 4
+
+## STOPPED — 2026-08-23 — phase 4 — code review ended with 2 unresolved findings and 4 user-decision findings; both unresolved items are defects in the cache-commit step this round introduced, and each has a stated remedy
+Detail: .superpowers/reviews/feature-researching-prior-art-review-log.md
+Resume: Resume orchestration for docs/plans/2026-08-22-researching-prior-art.md
