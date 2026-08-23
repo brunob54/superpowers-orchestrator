@@ -82,8 +82,10 @@ session's incidental working directory. **Non-git fallback:** when
 `git rev-parse --show-toplevel` fails because the project is not a
 git repository, `[REPO_ROOT]` is the project directory the invoker
 named, resolved to an absolute path. If the invoker named no project
-directory either, the skill stops and says so rather than guessing at
-a root. On this path, step 1's snapshot and step 6 item 4's comparison
+directory, `[REPO_ROOT]` falls back to the session's current project
+directory — never a silent guess: state in the conversation which
+root was used. If that is also unavailable, the skill stops and says
+so rather than guessing at a root. On this path, step 1's snapshot and step 6 item 4's comparison
 against it both skip (there is no `git status --porcelain` to run), so
 nothing detects a write outside `[REPO_ROOT]/.superpowers/research/clones/`
 and `[REPO_ROOT]/docs/research/*.md`. State this to the invoker: on a
@@ -205,7 +207,9 @@ it, because a re-verification does not re-gather that evidence (see
 
 **Hit rule:** a cache file counts as a hit ONLY when its registry and
 exact canonical name match the candidate — a slug match alone is not a
-hit. A future-dated `Researched:` header is invalid, not fresh.
+hit. A future-dated `Researched:` header is invalid: treat it as no
+cache hit at all — the candidate keeps its full assignment (angles
+1+5) and N is not reduced for it.
 
 - **Fresh** (`Researched:` date younger than 90 days): remove the candidate's
   per-candidate assignment (angles 1+5) and reduce N by exactly 1 —
@@ -311,8 +315,8 @@ Fill `./controller-prompt.md` (this skill's directory):
 - `[RESEARCHER_MODELS]` — the tier mapping per assignment,
 - `[RESEARCH_PROMPT_PATH]` — absolute path of `./research-prompt.md`;
   its own placeholders (`[REPO_ROOT]`, `[DECISION]`, `[ASSIGNMENT]`,
-  `[REPORT_FILE]`, `[MODEL]`, `[ASSIGNMENT_NAME]`) are filled by the
-  controller once per assignment, not here,
+  `[REPORT_FILE]`, `[MODEL]`, `[ASSIGNMENT_NAME]`, `[CANDIDATE_SLUG]`)
+  are filled by the controller once per assignment, not here,
 - `[SLUG]` — the topic slug.
 
 Dispatch ONE controller subagent, agent type `general-purpose`. On
@@ -361,10 +365,10 @@ and 5 are conditional; each states its own condition.
    control-flow files — is ignored only after the
    orchestrating-development skill's Phase 0 has added
    `.superpowers/` to `.git/info/exclude`. In a plain brainstorming
-   session that has not run, so such a write DOES appear in
-   `git status --porcelain`. Report any `.superpowers/` entry that
-   appears in the status output to the invoker, the same as any other
-   unexpected path.
+   session, that Phase 0 has not run, so such a write DOES appear in
+   `git status --porcelain`. Report any `.superpowers/` entry OUTSIDE
+   `.superpowers/research/` that appears in the status output to the
+   invoker, the same as any other unexpected path.
 
    Accepted residual risk: this expected-change filter treats any
    change under `docs/research/` as expected, not only changes to the
@@ -438,27 +442,52 @@ and 5 are conditional; each states its own condition.
      An untracked first-research cache file would otherwise fail with
      "pathspec ... did not match any file(s) known to git".
    - 5g. **Commit the same paths, non-interactively and under a time
-     bound:** `GIT_TERMINAL_PROMPT=0 timeout 30 git commit -m
-     "chore(research): prior-art cache for <topic-slug>" --
-     docs/research/<slug-1>.md docs/research/<slug-2>.md`. Both
-     `git add` and `git commit` are path-limited, so neither can sweep
-     unrelated work in: `git add` stages only these paths, and the
-     commit takes only these paths whatever else the user had staged.
-     Never run `git add -A`. Never run a bare `git commit`. Keep the
-     user's configured commit signing as-is: never pass
-     `--no-gpg-sign`. Stripping it would silently produce an unsigned
-     commit in a repository whose `commit.gpgsign=true` requires
-     verified signatures, overriding the user's own configuration.
-     `GIT_TERMINAL_PROMPT=0` suppresses a credential prompt, but a GPG
-     passphrase prompt for a protected signing key can still block
-     with no tty to answer it; the outer `timeout 30` bounds that wait
-     so the call fails fast (or times out) instead of hanging until
-     the tool's own timeout. Treat a `timeout`-caused exit (124) the
-     same as any other non-zero exit from this command.
+     bound where one is available:** first check whether a time-bound
+     wrapper exists on this machine — run `command -v timeout` (GNU
+     coreutils), and if that fails, `command -v gtimeout` (Homebrew
+     coreutils' name for it on macOS, which ships neither `timeout`
+     nor `gtimeout` by default — confirm neither is on `PATH` before
+     assuming one is). When one of them is found, prefix the commit
+     with it, 30-second bound: `GIT_TERMINAL_PROMPT=0 timeout 30 git
+     commit -m "chore(research): prior-art cache for <topic-slug>" --
+     docs/research/<slug-1>.md docs/research/<slug-2>.md` (use
+     `gtimeout 30` in place of `timeout 30` when that is the one
+     found). When neither is found, run the same commit without a
+     wrapper: `GIT_TERMINAL_PROMPT=0 git commit -m "chore(research):
+     prior-art cache for <topic-slug>" --
+     docs/research/<slug-1>.md docs/research/<slug-2>.md`.
+     `GIT_TERMINAL_PROMPT=0` is unconditional either way — it
+     suppresses a credential prompt so the call fails instead of
+     hanging with no tty to answer it. Both `git add` and `git commit`
+     are path-limited, so neither can sweep unrelated work in: `git
+     add` stages only these paths, and the commit takes only these
+     paths whatever else the user had staged. Never run `git add -A`.
+     Never run a bare `git commit`. Keep the user's configured commit
+     signing as-is: never pass `--no-gpg-sign`. Stripping it would
+     silently produce an unsigned commit in a repository whose
+     `commit.gpgsign=true` requires verified signatures, overriding
+     the user's own configuration. A GPG passphrase prompt for a
+     protected signing key can still block with no tty to answer it,
+     because `GIT_TERMINAL_PROMPT=0` covers only the credential
+     prompt, not a signing prompt; when a wrapper is available, the
+     outer `timeout 30` (or `gtimeout 30`) bounds that wait so the
+     call fails fast (or times out) instead of hanging until the
+     tool's own timeout — treat a wrapper-caused exit (124) the same
+     as any other non-zero exit from this command. When no wrapper is
+     available, such a prompt can hang until the tool's own timeout;
+     sub-step 5i's "commit fails" handling still applies once that
+     timeout resolves the call one way or the other.
    - 5h. **Where.** Run every command in 5e-5g at the anchored
      repository root, not at the session's working directory.
    - 5i. **When the commit fails** — not a git repository, a failing
-     pre-commit hook, or a signing prompt that `timeout 30` cut off —
+     pre-commit hook, a signing prompt that a `timeout`/`gtimeout`
+     wrapper cut off (when 5g found one and used it), or the
+     `timeout`/`gtimeout` command not being installed — a 127 exit
+     from actually invoking a wrapper that turned out to be missing.
+     Recognise that 127 exit for what it is, a missing wrapper, not a
+     real commit failure: 5g's `command -v` check exists precisely so
+     this cause should not arise, so treat it as this cause only if
+     5g's check was skipped or its result not honored —
      unstage the same paths staged in 5f (`git restore --staged --
      docs/research/<slug-1>.md docs/research/<slug-2>.md`; this
      returns the index to what it held before 5f, so the user's next
@@ -486,9 +515,9 @@ and 5 are conditional; each states its own condition.
 |---|---|
 | Controller subagent dies or times out (the Agent dispatch returns an error, or the platform's own timeout fires — no additional timer) | Still run step 6 items 1, 4 and 6: remove `.superpowers/research/clones/`, compare the working tree against the step-1 snapshot, and report. Item 4 matters most here — a failed controller is the case where stray writes are most likely. Item 5 then skips per 5a. Report the failure; the invoker states the evidence gap and continues with provisional claims (never blocks the session) |
 | Merged report file missing after return, and degradation rung 2 (step 6 item 2) was not applicable or also produced no merged report | Research counts as failed: evidence gap, provisional claims; any `docs/research/` entry already written stays uncommitted — tell the invoker it must be committed or removed before orchestrating-development's clean-tree check will pass |
-| Cache commit fails (no git repository, a failing pre-commit hook, or a GPG signing prompt that the 30-second `timeout` cut off), or is skipped because HEAD is detached | Unstage the paths staged in 5f, report "cache written, not committed"; tell the invoker `docs/research/` entries stay uncommitted and must be committed or removed before orchestrating-development's clean-tree check will pass; research result stays valid; never block the session |
+| Cache commit fails (no git repository, a failing pre-commit hook, a GPG signing prompt that a `timeout`/`gtimeout` wrapper cut off when one was available, or `timeout`/`gtimeout` not being installed), or is skipped because HEAD is detached | Unstage the paths staged in 5f, report "cache written, not committed"; tell the invoker `docs/research/` entries stay uncommitted and must be committed or removed before orchestrating-development's clean-tree check will pass; research result stays valid; never block the session |
 | Post-research status differs from the snapshot outside `docs/research/` and `.superpowers/research/` | Report the diff; the invoker presents it and asks the user whether to continue; on continue, `docs/research/` entries from this run stay uncommitted — tell the invoker they must be committed or removed before orchestrating-development's clean-tree check will pass |
-| Project is not a git repository | Cleanliness check skipped; the skip stated in the conversation. `[REPO_ROOT]` falls back to the invoker-named project directory (see Root anchoring); with no project directory named either, the skill stops and says so |
+| Project is not a git repository | Cleanliness check skipped; the skip stated in the conversation. `[REPO_ROOT]` falls back to the invoker-named project directory, then to the session's current project directory, stating which was used (see Root anchoring); with neither available, the skill stops and says so |
 | All researcher reports discarded | Merged report contains only evidence gaps; surfaced to the user |
 | N=0 or platform skip | Brainstorming-invoked: never reaches this skill; brainstorming records the skip in the spec. Direct invocation answered 0: state the skip in the conversation and stop |
 

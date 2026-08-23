@@ -64,12 +64,24 @@ subagent via the Agent tool:
     - Merged report file: [MERGED_REPORT_FILE]
     - Researcher prompt template: [RESEARCH_PROMPT_PATH] — read it,
       fill its placeholders once per assignment, and dispatch.
+    - Candidate slugs: before dispatching, compute each candidate's
+      slug with the rule stated under Outputs item 2 below (registry
+      prefix, lowercase, `.` mapped to `_`, every other
+      non-alphanumeric character mapped to `-`, repeats collapsed,
+      validated against `^[a-z0-9]+([_-][a-z0-9]+)*$`). You need these
+      slugs now, not only when writing the cache entries later: they
+      fill the researcher template's `[CANDIDATE_SLUG]` placeholder
+      (see Dispatch rules below), which names each candidate's clone
+      directory.
 
     ## Dispatch rules
     - Dispatch all researchers in parallel, one per assignment, each
       from the filled researcher template. Use `Explore` where
       available; otherwise `general-purpose` (the template carries the
-      read-only instruction either way).
+      read-only instruction either way). Fill the template's
+      `[CANDIDATE_SLUG]` placeholder with the candidate slug (or
+      slugs, one per candidate named, when an assignment names more
+      than one) computed under Paths above.
     - Also dispatch one Haiku-class re-verifier per cache hit listed
       in the cache state (fresh AND stale hits). A re-verifier's
       assignment is: confirm the candidate exists in its registry

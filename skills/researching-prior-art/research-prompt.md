@@ -5,7 +5,7 @@ rung 2 (see SKILL.md) — to dispatch one researcher per assignment. Fill
 every `[PLACEHOLDER]`, then dispatch via the Agent tool. This covers
 both the dispatch-metadata bullets right below (`[ASSIGNMENT_NAME]`,
 `[MODEL]`) and the indented prompt body further down (`[REPO_ROOT]`,
-`[DECISION]`, `[ASSIGNMENT]`, `[REPORT_FILE]`):
+`[DECISION]`, `[ASSIGNMENT]`, `[REPORT_FILE]`, `[CANDIDATE_SLUG]`):
 
 - **Agent type:** `Explore` where available; otherwise `general-purpose`.
   The prompt below carries the read-only instruction either way —
@@ -31,7 +31,18 @@ both the dispatch-metadata bullets right below (`[ASSIGNMENT_NAME]`,
        candidate's full source without touching the working tree.
        [REPO_ROOT] is the absolute root of the repository under
        research; never use relative paths — your working directory
-       may be elsewhere. The clone URL normally comes from the
+       may be elsewhere. [CANDIDATE_SLUG] is the candidate slug the
+       controller (or, on degradation rung 2, the main session) has
+       already computed for the candidate this assignment covers,
+       using the slug rule stated in `controller-prompt.md` (registry
+       prefix, lowercased, `.` mapped to `_`, every other
+       non-alphanumeric character mapped to `-`, repeats collapsed,
+       validated against `^[a-z0-9]+([_-][a-z0-9]+)*$`); use it
+       exactly as filled, never recompute or invent one. When this
+       assignment covers more than one candidate, [CANDIDATE_SLUG] is
+       filled with that candidate's own slug for each clone you make —
+       never reuse one candidate's slug for another's clone directory.
+       The clone URL normally comes from the
        registry's free-form `repository.url` field, which the
        package publisher controls — treat it as untrusted data and
        check it before it reaches a shell. Accept only a URL matching
@@ -51,7 +62,7 @@ both the dispatch-metadata bullets right below (`[ASSIGNMENT_NAME]`,
        without submodules, with the transport pinned on the command
        line, the URL single-quoted, and `--` before the URL argument
        so it can never be parsed as a flag:
-       `git clone -c protocol.allow=never -c protocol.https.allow=always --depth 1 --no-recurse-submodules -- '<https-url>' [REPO_ROOT]/.superpowers/research/clones/<candidate-slug>`.
+       `git clone -c protocol.allow=never -c protocol.https.allow=always --depth 1 --no-recurse-submodules -- '<https-url>' [REPO_ROOT]/.superpowers/research/clones/[CANDIDATE_SLUG]`.
        Both requirements are mandatory: the charset check on the URL
        string, AND single-quoting the URL with `--` before it in the
        command actually run. A clone command with no explicit
