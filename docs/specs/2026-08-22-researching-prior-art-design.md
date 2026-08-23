@@ -382,6 +382,16 @@ the skill reports the failure and continues; a failed commit never blocks
 the session. The cache files then stay in the working tree for the user to
 handle.
 
+**Which parts of step 6 are unconditional.** Removing the clone directory,
+comparing the working tree against the pre-research snapshot, and reporting
+to the invoker always run, whatever the controller's outcome — a controller
+that died, timed out, or could not dispatch included. The comparison is the
+skill's only check that the read-only researchers wrote nothing outside
+their carve-outs, and a failed controller is the case where stray writes
+are most likely, so it must not be skipped there. The rung-2 fallback, the
+merged-report check, and the cache commit are conditional; each states its
+own condition.
+
 - Fresh (younger than 90 days): the candidate's per-candidate assignment
   (angles 1+5) is removed and N is reduced by exactly 1 per cached
   candidate — but **every cache hit, fresh included, still gets the

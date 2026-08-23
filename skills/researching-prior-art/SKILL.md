@@ -288,13 +288,16 @@ rung 1, never dispatch researchers from the main session.
 
 ### 6. After the research completes (rung 1: the controller returned; rung 2: you wrote the merged report)
 
-1. Remove `<repo-root>/.superpowers/research/clones/` if it exists,
-   regardless of outcome — researchers clone candidate repositories
-   there, and clones must not linger in the working tree. Run this
-   first and unconditionally, at the anchored repository root, not at
-   the session's working directory: even when the controller subagent
-   died, timed out, or its dispatch errored and the rest of step 6
-   does not run (see the error-handling row for that failure).
+**Items 1, 4 and 6 always run, whatever the controller's outcome** —
+including a controller that died, timed out, or could not dispatch. A
+failed controller is the case where stray writes are most likely, so
+the working-tree comparison in item 4 matters most there. Items 2, 3
+and 5 are conditional; each states its own condition.
+
+1. Remove `<repo-root>/.superpowers/research/clones/` if it exists —
+   researchers clone candidate repositories there, and clones must not
+   linger in the working tree. Run this first, at the anchored
+   repository root, not at the session's working directory.
 2. If the controller returned a summary reporting that it could not
    dispatch subagents, drop to degradation rung 2 now: dispatch the N
    researchers yourself from `research-prompt.md`, apply the
@@ -306,21 +309,15 @@ rung 1, never dispatch researchers from the main session.
    item apply.
 3. Verify `[MERGED_REPORT_FILE]` exists. Missing → report research as
    failed to the invoker: evidence gap, claims stay provisional. Never
-   block the session. Any `docs/research/` entry already written by
-   the controller before the failure stays uncommitted (item 5 skips on
-   this path) — tell the invoker that these entries must be committed
-   or removed before orchestrating-development's clean-tree check will
-   pass.
+   block the session. Item 5a covers any cache entry the controller
+   wrote before the failure.
 4. Compare `git status --porcelain` with the step-1 snapshot. Changes
    under `docs/research/` and `.superpowers/research/` are expected.
    Any other new path, or a newly-modified previously-clean path, is
    unexpected: report the diff to the invoker (brainstorming presents
    it and asks the user whether to continue — concurrent tooling such
-   as format-on-save can legitimately dirty the tree mid-research). On
-   a continue, item 5 below does not commit: tell the invoker that
-   `docs/research/` entries from this run stay uncommitted and must be
-   committed or removed before orchestrating-development's clean-tree
-   check will pass.
+   as format-on-save can legitimately dirty the tree mid-research).
+   Item 5a covers what happens to the cache entries in that case.
    Do not halt unconditionally. Honest coverage statement: this
    comparison detects new paths and newly-modified previously-clean
    paths only — it cannot see writes to files that were already dirty
@@ -356,63 +353,48 @@ rung 1, never dispatch researchers from the main session.
    so the invoking skill and the user can identify and read research
    output, and the reports themselves are already handled as data,
    not instructions, throughout this skill and its prompt templates.
-5. Skip this item entirely when item 3 reported research as failed
-   (merged report missing) — leave any cache entries written so far
-   uncommitted for the user (see item 3's disclosure). Otherwise,
-   commit the cache files, and only them. Commit only when the comparison in the previous item
-   found no unexpected changes; when it found unexpected changes,
-   report them and do not commit. Build the path list — every
-   `docs/research/` entry created or updated by this invocation, by
-   the controller on rung 1 or by you on rung 2 — before running
-   either command. When that path list is
-   empty, for ANY reason (no cache entry was created or updated this
-   invocation, every candidate slug failed the Validation rule in step
-   3, or any other cause), skip both commands together: never run
-   `git add` and never run `git commit` when the path list is empty.
-   `git commit -m "<subject>" --` with no path after the `--` separator
-   is not a no-op — it is an ordinary commit that commits the whole
-   index — so running it with an empty path list would sweep the
-   user's unrelated staged work into this commit. When the path list is
-   non-empty, stage the cache files first, then
-   commit them, naming every cache file on both command lines, after a
-   `--` separator: `git add -- docs/research/<slug-1>.md
-   docs/research/<slug-2>.md`, then `git commit -m "<subject>" --
-   docs/research/<slug-1>.md docs/research/<slug-2>.md`, one path per
-   `docs/research/` entry created or updated by this invocation, by
-   the controller on rung 1 or by you on rung 2 — a re-verified entry
-   whose `_Researched:` date was refreshed counts as updated, so a
-   cache hit that was re-verified
-   still needs its path on this list — each slug already checked
-   against the Validation rule in step 3 before it reaches this
-   command line. This path list names only this invocation's own
-   candidates: a `docs/research/` cache entry for any other slug (for
-   example, one a compromised controller wrote for a candidate outside
-   this invocation's list) is never staged by this command and stays
-   uncommitted — tell the invoker about any such entry so it can be
-   committed or removed before orchestrating-development's clean-tree
-   check will pass. The staging step is
-   required because `git commit -- <pathspec>` only accepts paths
-   already in the index; an untracked (first-research) cache file
-   would otherwise make the commit fail with "pathspec ... did not
-   match any file(s) known to git". Both commands stay path-limited, so
-   neither can sweep unrelated work into your commit: `git add` stages
-   only these paths, and the path-limited `git commit` commits only
-   these paths regardless of what else the user already had staged.
-   Never run `git add -A`, and never run a bare `git commit` that would
-   commit the whole index. `.superpowers/research/` is transient and
-   must stay out of the commit. Run the commands at the anchored
-   repository root, not at the session's working directory. Commit
-   message subject: `chore(research): prior-art cache for
-   <topic-slug>`. An empty path list — for any of the reasons above —
-   is a normal outcome, not an error: report "nothing to cache" to the
-   invoker and continue, without running either command. A
-   commit failure never blocks the session: not a git repository, a
-   failing pre-commit hook, a detached HEAD, or a signing prompt —
-   report "cache written, not committed" to the invoker and continue.
-   Tell the invoker that these `docs/research/` entries stay
-   uncommitted and must be committed or removed before
-   orchestrating-development's clean-tree check will pass. The
-   research result stays valid.
+5. Commit this invocation's cache entries, and nothing else. Work
+   through the sub-steps in order.
+
+   - 5a. **When to skip.** Skip the rest of item 5 in two cases: item 3
+     reported research as failed, or item 4 found unexpected changes.
+     In both cases the cache entries stay uncommitted. Tell the invoker
+     they must be committed or removed before
+     orchestrating-development's clean-tree check will pass. This is
+     the one disclosure sentence items 3 and 4 point at.
+   - 5b. **Build the path list.** It holds every `docs/research/` entry
+     this invocation created or updated — written by the controller on
+     rung 1, or by you on rung 2. A re-verified cache hit whose
+     `_Researched:` date was refreshed counts as updated. Every slug on
+     the list already passed the Validation rule in step 3.
+   - 5c. **Entries this invocation did not write stay out of the list.**
+     A `docs/research/` entry for any other slug — one a compromised
+     controller wrote for a candidate outside this invocation — is
+     never staged. Report any such entry to the invoker.
+   - 5d. **An empty path list ends item 5.** It is a normal outcome,
+     not an error: report "nothing to cache" and run neither command.
+     Never run `git commit -m "<subject>" --` with no path after the
+     separator. That is not a no-op; it commits the whole index, and
+     would sweep the user's unrelated staged work into your commit.
+   - 5e. **Stage the listed paths:** `git add -- docs/research/<slug-1>.md
+     docs/research/<slug-2>.md`. Staging is required because
+     `git commit -- <pathspec>` accepts only paths already in the index.
+     An untracked first-research cache file would otherwise fail with
+     "pathspec ... did not match any file(s) known to git".
+   - 5f. **Commit the same paths:** `git commit -m "chore(research):
+     prior-art cache for <topic-slug>" -- docs/research/<slug-1>.md
+     docs/research/<slug-2>.md`. Both commands are path-limited, so
+     neither can sweep unrelated work in: `git add` stages only these
+     paths, and the commit takes only these paths whatever else the
+     user had staged. Never run `git add -A`. Never run a bare
+     `git commit`.
+   - 5g. **Where.** Run both commands at the anchored repository root,
+     not at the session's working directory.
+   - 5h. **When the commit fails** — not a git repository, a failing
+     pre-commit hook, a detached HEAD, a signing prompt — report
+     "cache written, not committed", give the invoker 5a's disclosure
+     sentence, and continue. A commit failure never blocks the session,
+     and the research result stays valid.
 6. Report to the invoker: the merged report path, the cache reduction
    (if any), the re-verifier count, the status-comparison result, and
    the controller's summary.
@@ -430,7 +412,7 @@ rung 1, never dispatch researchers from the main session.
 
 | Failure | Behavior |
 |---|---|
-| Controller subagent dies or times out (the Agent dispatch returns an error, or the platform's own timeout fires — no additional timer) | Still run step 6 item 1 (remove `.superpowers/research/clones/` if it exists). Report the failure; the invoker states the evidence gap and continues with provisional claims (never blocks the session) |
+| Controller subagent dies or times out (the Agent dispatch returns an error, or the platform's own timeout fires — no additional timer) | Still run step 6 items 1, 4 and 6: remove `.superpowers/research/clones/`, compare the working tree against the step-1 snapshot, and report. Item 4 matters most here — a failed controller is the case where stray writes are most likely. Item 5 then skips per 5a. Report the failure; the invoker states the evidence gap and continues with provisional claims (never blocks the session) |
 | Merged report file missing after return, and degradation rung 2 (step 6 item 2) was not applicable or also produced no merged report | Research counts as failed: evidence gap, provisional claims; any `docs/research/` entry already written stays uncommitted — tell the invoker it must be committed or removed before orchestrating-development's clean-tree check will pass |
 | Cache commit fails (no git repository, pre-commit hook, detached HEAD, signing prompt) | Report "cache written, not committed"; tell the invoker `docs/research/` entries stay uncommitted and must be committed or removed before orchestrating-development's clean-tree check will pass; research result stays valid; never block the session |
 | Post-research status differs from the snapshot outside `docs/research/` and `.superpowers/research/` | Report the diff; the invoker presents it and asks the user whether to continue; on continue, `docs/research/` entries from this run stay uncommitted — tell the invoker they must be committed or removed before orchestrating-development's clean-tree check will pass |
