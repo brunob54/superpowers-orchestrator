@@ -348,12 +348,15 @@ match alone is not a hit.
 
 **Who commits the cache.** The controller subagent writes and updates the
 cache files, but it never commits them. The `researching-prior-art` skill
-commits them itself, in the main session, in its own procedure step 6.
-That commit names only the `docs/research/<candidate-slug>.md` files, by
-explicit path, on the `git commit` command line after a `--` separator —
-never `git add -A`, never a directory, never a bare `git commit`. A
-path-limited commit ignores whatever the user already staged, so it cannot
-sweep unrelated work into the cache commit. It runs only after
+commits them itself, in the main session, in its own procedure step 6. It
+first stages those same files with `git add --` (required because `git
+commit -- <pathspec>` only accepts paths already in the index, and a
+first-research cache file is untracked), then commits them. Both the
+`git add` and the `git commit` name only the
+`docs/research/<candidate-slug>.md` files, by explicit path, after a `--`
+separator — never `git add -A`, never a directory, never a bare `git
+commit`. Both commands stay path-limited, so unrelated staged work is
+never swept into the cache commit. It runs only after
 the post-research status comparison has found no unexpected changes: an
 unexpected change goes to the user first, so nothing is committed while
 the working tree state is unexplained. If the commit fails for any reason,
@@ -367,7 +370,8 @@ handle.
   Haiku-class re-verifier** (existence and current version), because the
   header is self-reported and a committed cache file can be planted or
   edited; a future-dated header is treated as invalid, not fresh.
-  Post-cache N is floored at 1 while any candidate remains un-researched.
+  Post-cache N is floored at 1, unconditionally — never reduced to 0,
+  whether or not any candidate remains un-researched.
   Shared-angle researchers exclude cached candidates. The sub-skill
   reports the reduction. **Re-verifiers are always dispatched in addition
   to the (reduced) N and sit outside the merge/split algorithm** — the

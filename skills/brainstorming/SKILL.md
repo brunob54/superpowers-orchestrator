@@ -29,7 +29,7 @@ Every project goes through this process. A todo list, a single-function utility,
 4. Enumerate the candidate technologies for any decision matching the trigger predicate (see Research Gate below for the predicate's exact wording).
 5. **Research gate.** Run this step only if the predicate matches, and the platform is not on degradation rung 3 (no Agent tool).
    - 5a. Present the gate message verbatim (see Research Gate below).
-   - 5b. On a reply of N=0: record the skip in the spec's "Prior art and alternatives" section. Then continue with step 6.
+   - 5b. On a reply of N=0: record the skip so it appears in the spec's "Prior art and alternatives" section (the spec file itself is written at step 11). Then continue with step 6.
    - 5c. On a reply of N>0: invoke `superpowers-orchestrator:researching-prior-art`. Pass the decision (one sentence, candidates named), the candidate list, N, and the topic slug (kebab-case, no date).
    - 5d. On return: verify the merged report file exists. Read the sub-skill's status-comparison result.
    - 5e. On unexpected changes: present the diff. Ask the user whether to continue.

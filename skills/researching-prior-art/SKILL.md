@@ -288,28 +288,39 @@ rung 1, never dispatch researchers from the main session.
    comparison flagging it. Accepted: the candidate slug is
    charset-validated before any path use, writes outside
    `docs/research/` and `.superpowers/research/` are still flagged,
-   and the affected files are cache entries that the user reviews
-   before they are committed.
-5. Commit the cache files, and only them. Commit only when the
-   comparison in the previous item found no unexpected changes; when
-   it found unexpected changes, report them and do not commit. Name
-   every cache file on the `git commit` command line, after a `--`
-   separator: `git commit -m "<subject>" -- docs/research/<slug-1>.md
-   docs/research/<slug-2>.md`, one path per candidate researched in
-   this invocation. A path-limited commit takes those files from the
-   working tree and ignores whatever else the user already staged, so
-   it cannot sweep unrelated work into your commit. Never run
-   `git add -A`, and never run a bare `git commit` that would commit
-   the whole index. `.superpowers/research/` is transient and must
-   stay out of the commit. Run the command at the anchored repository
-   root, not at the session's working directory. Commit message
-   subject: `chore(research): prior-art cache for <topic-slug>`. Having nothing
-   to commit — every candidate was a cache hit and no file changed —
-   is a normal outcome, not an error. A commit failure never blocks
-   the session: not a git repository, a failing pre-commit hook, a
-   detached HEAD, or a signing prompt — report "cache written, not
-   committed" to the invoker and continue. The research result stays
-   valid.
+   and the affected files are cache entries that this skill commits
+   automatically once the comparison in this item finds no unexpected
+   changes — no user review step stands between the write and the
+   commit.
+5. Skip this item entirely when item 3 reported research as failed
+   (merged report missing) — leave any cache entries written so far
+   uncommitted for the user. Otherwise, commit the cache files, and
+   only them. Commit only when the comparison in the previous item
+   found no unexpected changes; when it found unexpected changes,
+   report them and do not commit. Stage the cache files first, then
+   commit them, naming every cache file on both command lines, after a
+   `--` separator: `git add -- docs/research/<slug-1>.md
+   docs/research/<slug-2>.md`, then `git commit -m "<subject>" --
+   docs/research/<slug-1>.md docs/research/<slug-2>.md`, one path per
+   candidate researched in this invocation. The staging step is
+   required because `git commit -- <pathspec>` only accepts paths
+   already in the index; an untracked (first-research) cache file
+   would otherwise make the commit fail with "pathspec ... did not
+   match any file(s) known to git". Both commands stay path-limited, so
+   neither can sweep unrelated work into your commit: `git add` stages
+   only these paths, and the path-limited `git commit` commits only
+   these paths regardless of what else the user already had staged.
+   Never run `git add -A`, and never run a bare `git commit` that would
+   commit the whole index. `.superpowers/research/` is transient and
+   must stay out of the commit. Run the commands at the anchored
+   repository root, not at the session's working directory. Commit
+   message subject: `chore(research): prior-art cache for
+   <topic-slug>`. Having nothing to commit — every candidate was a
+   cache hit and no file changed — is a normal outcome, not an error. A
+   commit failure never blocks the session: not a git repository, a
+   failing pre-commit hook, a detached HEAD, or a signing prompt —
+   report "cache written, not committed" to the invoker and continue.
+   The research result stays valid.
 6. Report to the invoker: the merged report path, the cache reduction
    (if any), the re-verifier count, the status-comparison result, and
    the controller's summary.
@@ -328,7 +339,7 @@ rung 1, never dispatch researchers from the main session.
 | Failure | Behavior |
 |---|---|
 | Controller subagent dies or times out (the Agent dispatch returns an error, or the platform's own timeout fires — no additional timer) | Still run step 6 item 1 (remove `.superpowers/research/clones/` if it exists). Report the failure; the invoker states the evidence gap and continues with provisional claims (never blocks the session) |
-| Merged report file missing after return | Research counts as failed: evidence gap, provisional claims |
+| Merged report file missing after return, and degradation rung 2 (step 6 item 2) was not applicable or also produced no merged report | Research counts as failed: evidence gap, provisional claims |
 | Cache commit fails (no git repository, pre-commit hook, detached HEAD, signing prompt) | Report "cache written, not committed"; research result stays valid; never block the session |
 | Post-research status differs from the snapshot outside `docs/research/` and `.superpowers/research/` | Report the diff; the invoker presents it and asks the user whether to continue |
 | Project is not a git repository | Cleanliness check skipped; the skip stated in the conversation |

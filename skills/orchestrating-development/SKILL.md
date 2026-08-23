@@ -85,8 +85,9 @@ the same question batch below).
    the thin-sequencer rule: the orchestrator itself reads the spec body
    here, before any controller dispatch (it otherwise touches the spec
    only for existence checks). If the spec matches ANY branch of the
-   trigger predicate below and contains no "Prior art and alternatives"
-   section, stop and report before planning.
+   trigger predicate below and has neither a "Prior art and
+   alternatives" section nor a recorded statement that no decision
+   matched the predicate, stop and report before planning.
    > This decision would add or change an entry in a dependency manifest (for
    > example package.json, pyproject.toml, go.mod, Cargo.toml), or it depends
    > on version-sensitive external API behavior, or it selects an external
