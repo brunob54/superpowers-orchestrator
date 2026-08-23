@@ -20,8 +20,9 @@ with a controller-subagent architecture.
 ## Global Constraints
 
 - **Verbatim-normative wordings.** The trigger predicate, the gate message,
-  and the report marker defined in this spec are copied exactly wherever
-  they appear (checklist, process graph, prose, templates). No paraphrase.
+  the report marker, and the no-decision-matched sentence defined in this
+  spec are copied exactly wherever they appear (checklist, process graph,
+  prose, templates). No paraphrase.
 - **Subagents never invoke skills.** The controller subagent runs from a
   filled `controller-prompt.md`; it must not use the Skill tool.
 - **Read-only is tool-restricted plus instructed plus checked, never
@@ -190,6 +191,23 @@ report file, every researcher's final message, AND the controller's
 summary message — an unmarked summary can be blocked by the guard):
 
 > `<!-- research report -->`
+
+**No-decision-matched sentence** (recorded verbatim in the spec's Design
+Contents, in place of a "Prior art and alternatives" section, when no
+decision in the design matched the trigger predicate above; matched
+verbatim by the `orchestrating-development` spec-intake check as one of
+the two accepted remedies):
+
+> No decision in this design matched the prior-art trigger predicate.
+
+Cross-file identity check (same shape as the trigger predicate and gate
+message above, both copied verbatim into `skills/brainstorming/SKILL.md`
+and `skills/researching-prior-art/SKILL.md`): this sentence is copied
+verbatim into `skills/brainstorming/SKILL.md` (Design Contents) and
+`skills/orchestrating-development/SKILL.md` (spec-intake check, both the
+check text and its remediation text). Verify with
+`grep -n "No decision in this design matched the prior-art trigger predicate." skills/brainstorming/SKILL.md skills/orchestrating-development/SKILL.md` —
+every returned line must carry byte-identical wording.
 
 ---
 

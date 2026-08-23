@@ -92,6 +92,13 @@ the same question batch below).
    anywhere in the spec:
    > No decision in this design matched the prior-art trigger predicate.
 
+   (this sentence, when present, is an explicit author override of the
+   orchestrator's own text-level match above: the orchestrator's check
+   only tests whether the spec text, read literally, appears to trigger
+   the predicate, not whether a decision actually required research —
+   the author is asserting deliberately that it did not, and that
+   assertion is accepted here without further argument)
+
    then stop and report before planning. The trigger predicate:
    > This decision would add or change an entry in a dependency manifest (for
    > example package.json, pyproject.toml, go.mod, Cargo.toml), or it depends

@@ -131,11 +131,22 @@ pattern — nothing else ignores `.superpowers/`). Researchers may clone
 candidate repositories under `.superpowers/research/clones/`.
 
 Confirm the topic slug matches the validation rule under "Inputs"
-above before this delete runs. Delete any existing
-`.superpowers/research/<slug>-*` files (a previous run's merged report
-and per-researcher reports for this same topic slug) before the
+above before this delete runs. Delete the invocation's own files by
+exact name, never by a bare prefix glob (a bare prefix such as
+`.superpowers/research/<slug>-*` also matches a different, longer slug
+that happens to start with this one, for example slug `http` matching
+files that belong to slug `http-retry`): delete
+`.superpowers/research/<slug>-research-report.md` (the merged report,
+per the Files table below) and
+`.superpowers/research/<slug>-r<K>-report.md` for every K from 1
+through 10 (the per-researcher reports, per the same table; 10 is the
+maximum N this skill ever dispatches, so this range covers every
+per-researcher report a previous run could have left, regardless of
+that run's own N). This is a previous run's merged report and
+per-researcher reports for this same topic slug, deleted before the
 controller is dispatched, so the current run cannot inherit stale
-files left by an earlier failed or partial run.
+files left by an earlier failed or partial run. Keep the delete
+confined to `.superpowers/research/`.
 
 ### 3. Cache check (`docs/research/<candidate-slug>.md`)
 
@@ -165,8 +176,10 @@ hit. A future-dated header is invalid, not fresh.
 - **Fresh** (younger than 90 days): remove the candidate's
   per-candidate assignment (angles 1+5) and reduce N by exactly 1 —
   but every cache hit, fresh included, still gets a Haiku-class
-  re-verifier (existence and current version), because the header is
-  self-reported and a committed cache file can be planted or edited.
+  re-verifier (existence and the pinned or floor anchor version — not
+  the newest upstream release, which is context only), because the
+  header is self-reported and a committed cache file can be planted or
+  edited.
   Fresh-hit findings may be used provisionally while re-verification
   runs.
 - **Stale** (90 days or older): same reduction, but the entry's
@@ -345,7 +358,18 @@ rung 1, never dispatch researchers from the main session.
    uncommitted for the user (see item 3's disclosure). Otherwise,
    commit the cache files, and only them. Commit only when the comparison in the previous item
    found no unexpected changes; when it found unexpected changes,
-   report them and do not commit. Stage the cache files first, then
+   report them and do not commit. Build the path list — every
+   `docs/research/` entry this invocation's controller created or
+   updated — before running either command. When that path list is
+   empty, for ANY reason (no cache entry was created or updated this
+   invocation, every candidate slug failed the Validation rule in step
+   3, or any other cause), skip both commands together: never run
+   `git add` and never run `git commit` when the path list is empty.
+   `git commit -m "<subject>" --` with no path after the `--` separator
+   is not a no-op — it is an ordinary commit that commits the whole
+   index — so running it with an empty path list would sweep the
+   user's unrelated staged work into this commit. When the path list is
+   non-empty, stage the cache files first, then
    commit them, naming every cache file on both command lines, after a
    `--` separator: `git add -- docs/research/<slug-1>.md
    docs/research/<slug-2>.md`, then `git commit -m "<subject>" --
@@ -374,9 +398,9 @@ rung 1, never dispatch researchers from the main session.
    must stay out of the commit. Run the commands at the anchored
    repository root, not at the session's working directory. Commit
    message subject: `chore(research): prior-art cache for
-   <topic-slug>`. Having nothing to commit — every candidate slug
-   failed the Validation rule in step 3, so no candidate could be
-   cached — is a normal outcome, not an error. A
+   <topic-slug>`. An empty path list — for any of the reasons above —
+   is a normal outcome, not an error: report "nothing to cache" to the
+   invoker and continue, without running either command. A
    commit failure never blocks the session: not a git repository, a
    failing pre-commit hook, a detached HEAD, or a signing prompt —
    report "cache written, not committed" to the invoker and continue.
