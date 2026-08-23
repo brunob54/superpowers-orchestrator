@@ -141,8 +141,16 @@ the choice is difficult to reverse):
 > On a non-zero reply, findings are cached under `docs/research/` and committed to this repository, on the branch checked out right now (`<branch>`).
 
 `<S>` = min(number of candidates + 3, 10). `<branch>` = the name of
-the branch checked out at the moment the gate fires (resolve with
-`git rev-parse --abbrev-ref HEAD`). A negative or non-numeric
+the branch checked out at the moment the gate fires, resolved like
+this: first run `git symbolic-ref -q HEAD` at the repo root. A
+non-zero exit means HEAD is detached — fill `<branch>` with the text
+`detached HEAD — the cache will not be committed` and do not run
+`git rev-parse --abbrev-ref HEAD` at all, because on a detached HEAD
+that command prints the literal string `HEAD`, which looks like a
+branch name and cannot be told apart from one by its output alone.
+Only when `git symbolic-ref -q HEAD` succeeds (HEAD is attached to a
+branch) does `<branch>` = the output of
+`git rev-parse --abbrev-ref HEAD`. A negative or non-numeric
 reply → ask once more; a second unusable reply → use the suggested
 `<S>`. On a platform without the Agent tool (degradation rung 3 of
 researching-prior-art), skip the gate entirely — do not ask a question

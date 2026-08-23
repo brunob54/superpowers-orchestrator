@@ -16,8 +16,9 @@ description: >
 # Researching Prior Art
 
 Gather verified external evidence for one technology decision, in
-parallel, without touching the working tree. Evidence only — this skill
-never chooses an approach.
+parallel, without touching the working tree outside `docs/research/` and
+`.superpowers/research/`. Evidence only — this skill never chooses an
+approach.
 
 **When invoked by brainstorming, never ask the user anything** — all
 user interaction already happened at brainstorming's research gate. The
@@ -50,8 +51,16 @@ difficult to reverse):
 A direct invocation usually has no spec. On a 0 reply, state the skip
 in the conversation and stop; record it in a spec's "Prior art and
 alternatives" section only when a spec exists. `<branch>` = the name
-of the branch checked out at the moment the gate fires (resolve with
-`git rev-parse --abbrev-ref HEAD`). A negative or
+of the branch checked out at the moment the gate fires, resolved like
+this: first run `git symbolic-ref -q HEAD` at the repo root. A
+non-zero exit means HEAD is detached — fill `<branch>` with the text
+`detached HEAD — the cache will not be committed` and do not run
+`git rev-parse --abbrev-ref HEAD` at all, because on a detached HEAD
+that command prints the literal string `HEAD`, which looks like a
+branch name and cannot be told apart from one by its output alone.
+Only when `git symbolic-ref -q HEAD` succeeds (HEAD is attached to a
+branch) does `<branch>` = the output of
+`git rev-parse --abbrev-ref HEAD`. A negative or
 non-numeric reply → ask once more; a second unusable reply → use the
 suggested `<S>` (the same rule brainstorming applies at its gate).
 
@@ -441,30 +450,47 @@ and 5 are conditional; each states its own condition.
      `git commit -- <pathspec>` accepts only paths already in the index.
      An untracked first-research cache file would otherwise fail with
      "pathspec ... did not match any file(s) known to git".
-   - 5g. **Commit the same paths, non-interactively and under a time
-     bound where one is available:** first check whether a time-bound
-     wrapper exists on this machine — run `command -v timeout` (GNU
-     coreutils), and if that fails, `command -v gtimeout` (Homebrew
-     coreutils' name for it on macOS, which ships neither `timeout`
-     nor `gtimeout` by default — confirm neither is on `PATH` before
-     assuming one is). When one of them is found, prefix the commit
-     with it, 30-second bound: `GIT_TERMINAL_PROMPT=0 timeout 30 git
-     commit -m "chore(research): prior-art cache for <topic-slug>" --
+   - 5g. **No-change check, before committing.** Run `git diff --cached
+     --quiet -- docs/research/<slug-1>.md docs/research/<slug-2>.md`
+     (the same paths staged in 5f) at the anchored repository root.
+     Exit 0 means every staged file is byte-identical to what the
+     branch already has: every candidate was a confirmed fresh cache
+     hit and the controller wrote back an unchanged entry, or the "All
+     researcher reports discarded" outcome left the pre-existing cache
+     files untouched. This is a normal outcome, not an error. Unstage
+     the same paths (`git restore --staged -- docs/research/<slug-1>.md
+     docs/research/<slug-2>.md`), report "cache already up to date",
+     do NOT give the invoker 5a's disclosure sentence — the files are
+     already committed and the tree is already clean — and skip the
+     rest of item 5. A non-zero exit from this check means at least
+     one staged file differs from what the branch already has:
+     continue to 5h.
+   - 5h. **Probe for a time-bound wrapper.** The commit built in 5i
+     should run under a time bound where one is available. Run
+     `command -v timeout` (GNU coreutils); if that fails, run
+     `command -v gtimeout` (Homebrew coreutils' name for it on macOS,
+     which ships neither `timeout` nor `gtimeout` by default — confirm
+     neither is on `PATH` before assuming one is).
+   - 5i. **Build the commit command.** When 5h found one of the two
+     wrappers, prefix the commit with it, 30-second bound:
+     `GIT_TERMINAL_PROMPT=0 timeout 30 git commit -m "chore(research):
+     prior-art cache for <topic-slug>" --
      docs/research/<slug-1>.md docs/research/<slug-2>.md` (use
      `gtimeout 30` in place of `timeout 30` when that is the one
-     found). When neither is found, run the same commit without a
+     found). When 5h found neither, use the same commit without a
      wrapper: `GIT_TERMINAL_PROMPT=0 git commit -m "chore(research):
      prior-art cache for <topic-slug>" --
      docs/research/<slug-1>.md docs/research/<slug-2>.md`.
      `GIT_TERMINAL_PROMPT=0` is unconditional either way — it
      suppresses a credential prompt so the call fails instead of
-     hanging with no tty to answer it. Both `git add` and `git commit`
-     are path-limited, so neither can sweep unrelated work in: `git
-     add` stages only these paths, and the commit takes only these
-     paths whatever else the user had staged. Never run `git add -A`.
-     Never run a bare `git commit`. Keep the user's configured commit
-     signing as-is: never pass `--no-gpg-sign`. Stripping it would
-     silently produce an unsigned commit in a repository whose
+     hanging with no tty to answer it.
+   - 5j. **Run the command built in 5i.** Both `git add` and `git
+     commit` are path-limited, so neither can sweep unrelated work in:
+     `git add` stages only these paths, and the commit takes only
+     these paths whatever else the user had staged. Never run `git add
+     -A`. Never run a bare `git commit`. Keep the user's configured
+     commit signing as-is: never pass `--no-gpg-sign`. Stripping it
+     would silently produce an unsigned commit in a repository whose
      `commit.gpgsign=true` requires verified signatures, overriding
      the user's own configuration. A GPG passphrase prompt for a
      protected signing key can still block with no tty to answer it,
@@ -475,20 +501,22 @@ and 5 are conditional; each states its own condition.
      tool's own timeout — treat a wrapper-caused exit (124) the same
      as any other non-zero exit from this command. When no wrapper is
      available, such a prompt can hang until the tool's own timeout;
-     sub-step 5i's "commit fails" handling still applies once that
+     sub-step 5l's "commit fails" handling still applies once that
      timeout resolves the call one way or the other.
-   - 5h. **Where.** Run every command in 5e-5g at the anchored
+   - 5k. **Where.** Run every command in 5e-5j at the anchored
      repository root, not at the session's working directory.
-   - 5i. **When the commit fails** — not a git repository, a failing
-     pre-commit hook, a signing prompt that a `timeout`/`gtimeout`
-     wrapper cut off (when 5g found one and used it), or the
-     `timeout`/`gtimeout` command not being installed — a 127 exit
-     from actually invoking a wrapper that turned out to be missing.
-     Recognise that 127 exit for what it is, a missing wrapper, not a
-     real commit failure: 5g's `command -v` check exists precisely so
-     this cause should not arise, so treat it as this cause only if
-     5g's check was skipped or its result not honored —
-     unstage the same paths staged in 5f (`git restore --staged --
+   - 5l. **What counts as a commit failure.** Not a git repository, a
+     failing pre-commit hook, a signing prompt that a
+     `timeout`/`gtimeout` wrapper cut off (when 5h found one and 5i
+     used it), or the `timeout`/`gtimeout` command not being installed
+     — a 127 exit from actually invoking a wrapper that turned out to
+     be missing. Recognise that 127 exit for what it is, a missing
+     wrapper, not a real commit failure: 5h's `command -v` check
+     exists precisely so this cause should not arise, so treat it as
+     this cause only if 5h's check was skipped or its result not
+     honored.
+   - 5m. **What to do on a commit failure.** Unstage the same paths
+     staged in 5f (`git restore --staged --
      docs/research/<slug-1>.md docs/research/<slug-2>.md`; this
      returns the index to what it held before 5f, so the user's next
      unrelated commit does not silently pick up these paths), report

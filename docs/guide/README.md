@@ -350,6 +350,10 @@ Authoritative detail:
 
 - **An approved spec** in `docs/specs/` — usually produced by `brainstorming`
   (§3). Orchestration starts *from* a spec; it does not design one.
+- **Spec content, when it matches the prior-art trigger predicate** (§3):
+  a "Prior art and alternatives" section, or the exact sentence "No
+  decision in this design matched the prior-art trigger predicate."
+  Missing both stops Phase 0 before planning starts.
 - **Claude Code only.** The pipeline needs nested subagent dispatch (the
   orchestrator spawns controllers, which spawn workers). On other platforms
   the skill refuses with one line.
@@ -438,6 +442,13 @@ inconsistency, the branch changed under it — appends a `## STOPPED` entry to
 the log with the reason, a pointer to the detail file, and the exact resume
 prompt to use. Nothing is lost: everything up to the stop is committed. See
 §5 for resuming, overriding parameters on resume, and abandoning a wedged run.
+
+Phase 0 itself can also refuse to start, before the log even exists: the
+prior-art intake check (see Prerequisites above) reads the spec, and when
+it matches the trigger predicate but carries neither the required section
+nor the override sentence, orchestration stops and reports directly —
+there is no `## STOPPED` log entry, because planning never began. Add the
+missing section or sentence to the spec and re-run orchestration.
 
 ### On completion
 
