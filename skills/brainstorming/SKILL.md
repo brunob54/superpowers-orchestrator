@@ -157,8 +157,12 @@ branch name and cannot be told apart from one by its output alone.
 Only when `git symbolic-ref -q HEAD` succeeds (HEAD is attached to a
 branch) does `<branch>` = the output of
 `git rev-parse --abbrev-ref HEAD`. A negative or non-numeric
-reply → ask once more; a second unusable reply → use the suggested
-`<S>`. On a platform without the Agent tool (degradation rung 3 of
+reply → ask once more; a second unusable reply → treat it as a skip,
+exactly as a `0` reply, and record the skip in the spec's "Prior art
+and alternatives" section. Never fall back to the suggested `<S>`: a
+non-zero N dispatches researchers and ends with a commit to the user's
+checked-out branch, and a user who twice answered something other than
+a number has not agreed to either. On a platform without the Agent tool (degradation rung 3 of
 researching-prior-art), skip the gate entirely — do not ask a question
 whose every non-zero answer leads to a skip — and record the platform
 skip in the spec's "Prior art and alternatives" section.
@@ -212,8 +216,8 @@ explicitly asks.
 Include:
 - Scope and non-goals
 - Prior art and alternatives (required when the research predicate matched for any decision in this design): findings that changed the design; findings overridden, with reason; findings deferred; skips recorded (N=0 or platform skip); failed research recorded ("research attempted, failed — evidence gap", covering the research error-handling outcomes)
-- When no decision in this design matched the trigger predicate, record this exact sentence in the spec, verbatim, in place of a "Prior art and alternatives" section:
-  > No decision in this design matched the prior-art trigger predicate.
+- When no decision in this design matched the trigger predicate, record this exact sentence in the spec, verbatim, in place of a "Prior art and alternatives" section: `No decision in this design matched the prior-art trigger predicate.`
+  Write it as a plain sentence in the spec's own body text. Do not put it in a block quote, a code fence, or a list of quoted normative wordings. The orchestrator's spec-intake check accepts the sentence only when the spec asserts it as its own statement, so a quoted copy does not satisfy that check and the spec is stopped before planning. (The backticks above mark the exact wording here; they are not part of the sentence.)
 - Architecture and data flow
 - Interfaces/contracts
 - Error handling

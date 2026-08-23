@@ -67,8 +67,12 @@ branch name and cannot be told apart from one by its output alone.
 Only when `git symbolic-ref -q HEAD` succeeds (HEAD is attached to a
 branch) does `<branch>` = the output of
 `git rev-parse --abbrev-ref HEAD`. A negative or
-non-numeric reply → ask once more; a second unusable reply → use the
-suggested `<S>` (the same rule brainstorming applies at its gate).
+non-numeric reply → ask once more; a second unusable reply → treat it
+as a skip, exactly as a `0` reply: state the skip and stop, and never
+fall back to the suggested `<S>`. A non-zero N dispatches researchers
+and ends with a commit to the user's checked-out branch, and a user
+who twice answered something other than a number has not agreed to
+either. This is the same rule brainstorming applies at its gate.
 
 ## Inputs (from the invoker)
 

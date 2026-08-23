@@ -177,7 +177,11 @@ sentence appears only when the choice is difficult to reverse):
 `<S>` = min(candidates + 3, 10). `<branch>` = the name of the branch
 checked out at the moment the gate fires (resolve with
 `git rev-parse --abbrev-ref HEAD`). A negative or non-numeric reply → ask
-once more; a second unusable reply → use the suggested `<S>`. On a
+once more; a second unusable reply → treat it as a skip, exactly as a `0`
+reply, and record the skip. There is no fallback to the suggested `<S>`:
+a non-zero N dispatches researchers and ends with a commit to the user's
+checked-out branch, and a user who twice answered something other than a
+number has agreed to neither. On a
 platform without the Agent tool (degradation rung 3), brainstorming skips
 the gate entirely — do not ask a question whose every non-zero answer
 leads to a skip.
@@ -201,6 +205,16 @@ verbatim by the `orchestrating-development` spec-intake check as one of
 the two accepted remedies):
 
 > No decision in this design matched the prior-art trigger predicate.
+
+**Form requirement in the spec that carries it.** The spec author writes
+this sentence as a plain sentence in the spec's own body text — never
+inside a block quote, a code fence, or a list of quoted normative
+wordings. The intake check accepts the sentence only when the spec
+asserts it as its own statement, so a quoted copy does not satisfy the
+check and the spec is stopped before planning. `brainstorming` states
+this form requirement where it instructs the author. This requirement
+applies to the spec being checked, not to the skill files below, which
+necessarily quote the sentence in order to define it.
 
 Cross-file identity check (same shape as the trigger predicate and gate
 message above, both copied verbatim into `skills/brainstorming/SKILL.md`
