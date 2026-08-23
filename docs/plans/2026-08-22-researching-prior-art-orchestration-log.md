@@ -52,3 +52,5 @@ _Resumed — 2026-08-23 — same parameters. Both unresolved findings fixed at 1
 ## STOPPED — 2026-08-23 — phase 4 — 1 unresolved finding (introduced by this loop's own verification-2 fix, two stated remedies) and 3 user-decision findings
 Detail: .superpowers/reviews/feature-researching-prior-art-review-log.md
 Resume: Resume orchestration for docs/plans/2026-08-22-researching-prior-art.md
+
+_Findings addressed — 2026-08-23 — at 204f7f8, without subagents (the user asked for none). The unresolved Phase 0 contradiction is fixed: brainstorming now tells the spec author to write the no-decision-matched sentence as plain body text, and the orchestrator's block-quote restriction is kept because it exists to stop a document that merely quotes the wording from satisfying the check. User decisions: a second unusable reply at the research gate is now a skip in all three files; the skill still does not refuse to commit on the default branch; the cache-and-commit assertions went to branch BB/prior-art-test-assertions at 019b397. Phase 4 has NOT been re-run — its loop requires a controller subagent._
