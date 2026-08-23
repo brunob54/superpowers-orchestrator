@@ -46,3 +46,9 @@ Detail: .superpowers/reviews/feature-researching-prior-art-review-log.md
 Resume: Resume orchestration for docs/plans/2026-08-22-researching-prior-art.md
 
 _Resumed — 2026-08-23 — same parameters. Both unresolved findings fixed at 14271fa, each with the remedy the reviewer stated: step 6 items 1, 4 and 6 declared unconditional (with the error-handling row naming them), and item 5 split into sub-steps 5a-5h with the duplicated disclosure clause stated once. The 4 user-decision findings are left as recorded; three of them concern the behavioral test file that branch BB/prior-art-test-assertions owns._
+
+## Phase 4 — Code review (invocation 3) — rounds 11–15 (+3 verification cycles) — cap — fixes 32 — unresolved 1 — user_decision 3
+
+## STOPPED — 2026-08-23 — phase 4 — 1 unresolved finding (introduced by this loop's own verification-2 fix, two stated remedies) and 3 user-decision findings
+Detail: .superpowers/reviews/feature-researching-prior-art-review-log.md
+Resume: Resume orchestration for docs/plans/2026-08-22-researching-prior-art.md
