@@ -27,9 +27,9 @@ Every project goes through this process. A todo list, a single-function utility,
 2. Assess scope: if the project touches 4+ independent subsystems or would require 20+ implementation tasks, decompose into sub-projects. Design each sub-project as a separate spec. Present the decomposition to the user for approval before designing individual specs.
 3. Ask all clarifying questions together in a single turn. Use multiple-choice format where possible to reduce round trips.
 4. Enumerate the candidate technologies for any decision matching the trigger predicate (see Research Gate below for the predicate's exact wording).
-5. **Research gate.** Run this step only if the predicate matches, and the platform is not on degradation rung 3 (no Agent tool).
+5. **Research gate.** Run this step only if the predicate matches, and the platform is not on degradation rung 3 (no Agent tool). When more than one decision matches, repeat steps 5a-5h separately for each — one gate message and one sub-skill invocation per matching decision, never several decisions lumped into one.
    - 5a. Present the gate message verbatim (see Research Gate below).
-   - 5b. On a reply of N=0: record the skip so it appears in the spec's "Prior art and alternatives" section (the spec file itself is written at step 11). Then continue with step 6.
+   - 5b. On a reply of N=0: record the skip so it appears in the spec's "Prior art and alternatives" section (the spec file itself is written at step 11) — carry the skip forward in the working design notes you accumulate for the spec, the same running draft steps 6-10 build up, until step 11 writes it to disk. Then continue with step 6.
    - 5c. On a reply of N>0: invoke `superpowers-orchestrator:researching-prior-art`. Pass the decision (one sentence, candidates named), the candidate list, N, and the topic slug (kebab-case, no date).
    - 5d. On return: verify the merged report file exists. Read the sub-skill's status-comparison result.
    - 5e. On unexpected changes: present the diff. Ask the user whether to continue.
