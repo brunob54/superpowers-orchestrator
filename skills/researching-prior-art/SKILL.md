@@ -7,10 +7,10 @@ description: >
   reading, version verification anchored to this repository's manifest,
   registry existence and health, prior art) and merges their file-based
   reports into one evidence report. Invoked by brainstorming at its
-  research gate with the decision, candidate list, N, and topic slug;
-  or directly via /researching-prior-art. Triggers on: "research prior
-  art", "prior-art research", "research the candidates", "verify the
-  library", "research this dependency".
+  research gate with the decision, candidate list, N, topic slug, and
+  project directory; or directly via /researching-prior-art. Triggers
+  on: "research prior art", "prior-art research", "research the
+  candidates", "verify the library", "research this dependency".
 ---
 
 # Researching Prior Art
@@ -52,8 +52,14 @@ A direct invocation usually has no spec. On a 0 reply, state the skip
 in the conversation and stop; record it in a spec's "Prior art and
 alternatives" section only when a spec exists. `<branch>` = the name
 of the branch checked out at the moment the gate fires, resolved like
-this: first run `git symbolic-ref -q HEAD` at the repo root. A
-non-zero exit means HEAD is detached — fill `<branch>` with the text
+this: first run `git rev-parse --git-dir` at the repo root. A
+non-zero exit means this is not a git repository — fill `<branch>`
+with the text `not a git repository — the cache will not be
+committed` and stop there; do not run `git symbolic-ref -q HEAD` in
+that case, its exit status does not distinguish a non-git project
+from a detached HEAD. When `git rev-parse --git-dir` succeeds, next
+run `git symbolic-ref -q HEAD`. A non-zero exit here means HEAD is
+detached — fill `<branch>` with the text
 `detached HEAD — the cache will not be committed` and do not run
 `git rev-parse --abbrev-ref HEAD` at all, because on a detached HEAD
 that command prints the literal string `HEAD`, which looks like a
@@ -81,6 +87,13 @@ suggested `<S>` (the same rule brainstorming applies at its gate).
   matches — it is interpolated into every written path and into the
   step-2 delete command, so an unvalidated slug containing `/` or `..`
   could write or delete outside `.superpowers/research/`.
+- **Project directory** (optional): absolute path of the project the
+  invoker's own context inspection used. Consulted only by the
+  Non-git fallback below, to resolve `[REPO_ROOT]` when the project is
+  not a git repository; when the invoker omits it, that fallback falls
+  through to the session's current project directory instead (see
+  Root anchoring below) — a different root than the invoker may have
+  intended.
 
 **Root anchoring:** everything this skill does — the git snapshot,
 `.superpowers/research/`, `docs/research/` — is rooted at the top level
@@ -213,6 +226,10 @@ entry's findings were actually gathered — health, vulnerability, and
 maintenance evidence included — and a re-verification never touches
 it, because a re-verification does not re-gather that evidence (see
 "Re-verifier outcomes" below).
+The `verified:` field is informational only — a record for human
+readers of when the entry was last re-verified. No rule in this skill
+reads it: the Fresh/Stale freshness test below reads `Researched:`
+only.
 
 **Hit rule:** a cache file counts as a hit ONLY when its registry and
 exact canonical name match the candidate — a slug match alone is not a
@@ -426,8 +443,15 @@ and 5 are conditional; each states its own condition.
      used only in 5c below, to find paths that are NOT on this list,
      never to build the list itself.
    - 5c. **Entries this invocation did not write stay out of the list.**
-     List `git status --porcelain -- docs/research/` at the repo root
-     and report every path it shows that is not on the 5b list. A
+     List `git status --porcelain -uall -- docs/research/` at the repo
+     root and report every path it shows that is not on the 5b list.
+     `-uall` is required: plain `--porcelain` defaults to `-unormal`,
+     which collapses a directory holding only untracked files into one
+     `?? docs/research/` entry — on the first prior-art run in any
+     repository, before this invocation's own files exist on the 5b
+     list, that collapsed entry would both false-alarm on every path
+     under the directory and hide any foreign untracked file sitting
+     inside it. A
      `docs/research/` entry for any other slug — one a compromised
      controller wrote for a candidate outside this invocation — is
      never staged. Report any such entry to the invoker.
@@ -436,15 +460,22 @@ and 5 are conditional; each states its own condition.
      Never run `git commit -m "<subject>" --` with no path after the
      separator. That is not a no-op; it commits the whole index, and
      would sweep the user's unrelated staged work into your commit.
-   - 5e. **Detached-HEAD check, before staging or committing.** Run
-     `git symbolic-ref -q HEAD` at the anchored repository root. A
-     non-zero exit means HEAD is detached: `git commit` would still
-     succeed there, but the resulting commit is unreachable from any
-     branch and is lost at the next checkout, while this skill would
-     otherwise report the cache as committed. Skip the rest of item 5
-     (staging and committing) in this case: report "cache written, not
-     committed", give the invoker 5a's disclosure sentence, and
-     continue. A detached HEAD never blocks the session.
+   - 5e. **Repository-and-HEAD check, before staging or committing.**
+     Run `git rev-parse --git-dir` at the anchored repository root
+     first. A non-zero exit means this is not a git repository: skip
+     the rest of item 5 (staging and committing) — report "cache
+     written, not committed" because the project is not a git
+     repository, give the invoker 5a's disclosure sentence, and
+     continue. When `git rev-parse --git-dir` succeeds, next run `git
+     symbolic-ref -q HEAD`. A non-zero exit here means HEAD is
+     detached: `git commit` would still succeed there, but the
+     resulting commit is unreachable from any branch and is lost at
+     the next checkout, while this skill would otherwise report the
+     cache as committed. Skip the rest of item 5 (staging and
+     committing) in this case too: report "cache written, not
+     committed" because HEAD is detached, give the invoker 5a's
+     disclosure sentence, and continue. Neither a non-git project nor
+     a detached HEAD ever blocks the session.
    - 5f. **Stage the listed paths:** `git add -- docs/research/<slug-1>.md
      docs/research/<slug-2>.md`. Staging is required because
      `git commit -- <pathspec>` accepts only paths already in the index.
@@ -525,7 +556,9 @@ and 5 are conditional; each states its own condition.
      session, and the research result stays valid. (Detached HEAD is
      handled separately in 5e, before the commit is attempted at all.)
 6. Report to the invoker: the merged report path, the cache reduction
-   (if any), the re-verifier count, the status-comparison result, and
+   (if any), the re-verifier count, the status-comparison result, the
+   cache-commit outcome (committed; "cache already up to date"; or
+   "cache written, not committed" plus 5a's disclosure sentence), and
    the controller's summary.
 
 ## Files

@@ -142,8 +142,14 @@ the choice is difficult to reverse):
 
 `<S>` = min(number of candidates + 3, 10). `<branch>` = the name of
 the branch checked out at the moment the gate fires, resolved like
-this: first run `git symbolic-ref -q HEAD` at the repo root. A
-non-zero exit means HEAD is detached — fill `<branch>` with the text
+this: first run `git rev-parse --git-dir` at the repo root. A
+non-zero exit means this is not a git repository — fill `<branch>`
+with the text `not a git repository — the cache will not be
+committed` and stop there; do not run `git symbolic-ref -q HEAD` in
+that case, its exit status does not distinguish a non-git project
+from a detached HEAD. When `git rev-parse --git-dir` succeeds, next
+run `git symbolic-ref -q HEAD`. A non-zero exit here means HEAD is
+detached — fill `<branch>` with the text
 `detached HEAD — the cache will not be committed` and do not run
 `git rev-parse --abbrev-ref HEAD` at all, because on a detached HEAD
 that command prints the literal string `HEAD`, which looks like a
