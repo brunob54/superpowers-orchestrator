@@ -1314,6 +1314,19 @@ test('"run prior-art research on these npm packages" routes to researching-prior
   assert.strictEqual(matchesRpa('run prior-art research on these npm packages'), true);
 });
 
+// These two carry zero of the rule's literal keywords (verified: 0 keyword
+// hits, score 2 — entirely from the intent pattern), so a pass can only come
+// through the "research the candidates" / "(research|verify) the
+// library|libraries|package|packages|dependency|dependencies" intent
+// patterns, not from keyword matching.
+test('"research candidates for this decision" routes to researching-prior-art (intent pattern only)', () => {
+  assert.strictEqual(matchesRpa('research candidates for this decision'), true);
+});
+
+test('"verify these dependencies before merging" routes to researching-prior-art (intent pattern only)', () => {
+  assert.strictEqual(matchesRpa('verify these dependencies before merging'), true);
+});
+
 test('"rename getUserData to fetchUserData" does NOT route to researching-prior-art', () => {
   assert.strictEqual(matchesRpa('rename getUserData to fetchUserData'), false);
 });
