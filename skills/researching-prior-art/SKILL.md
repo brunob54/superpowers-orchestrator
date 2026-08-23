@@ -137,13 +137,16 @@ exact name, never by a bare prefix glob (a bare prefix such as
 that happens to start with this one, for example slug `http` matching
 files that belong to slug `http-retry`): delete
 `.superpowers/research/<slug>-research-report.md` (the merged report,
-per the Files table below) and
-`.superpowers/research/<slug>-r<K>-report.md` for every K from 1
-through 10 (the per-researcher reports, per the same table; 10 is the
-maximum N this skill ever dispatches, so this range covers every
-per-researcher report a previous run could have left, regardless of
-that run's own N). This is a previous run's merged report and
-per-researcher reports for this same topic slug, deleted before the
+per the Files table below); `.superpowers/research/<slug>-r<K>-report.md`
+for every K from 1 through 10 (the per-researcher reports, per the
+same table); `.superpowers/research/<slug>-rv<J>-report.md` for every
+J from 1 through 10 (the re-verifier reports); and
+`.superpowers/research/<slug>-f<J>-report.md` for every J from 1
+through 10 (the follow-up researcher reports) — 10 is the maximum N
+this skill ever dispatches, so these ranges cover every per-researcher,
+re-verifier, and follow-up report a previous run could have left,
+regardless of that run's own N. This is a previous run's merged report and
+per-researcher, re-verifier, and follow-up reports for this same topic slug, deleted before the
 controller is dispatched, so the current run cannot inherit stale
 files left by an earlier failed or partial run. Keep the delete
 confined to `.superpowers/research/`.
@@ -359,8 +362,9 @@ rung 1, never dispatch researchers from the main session.
    commit the cache files, and only them. Commit only when the comparison in the previous item
    found no unexpected changes; when it found unexpected changes,
    report them and do not commit. Build the path list — every
-   `docs/research/` entry this invocation's controller created or
-   updated — before running either command. When that path list is
+   `docs/research/` entry created or updated by this invocation, by
+   the controller on rung 1 or by you on rung 2 — before running
+   either command. When that path list is
    empty, for ANY reason (no cache entry was created or updated this
    invocation, every candidate slug failed the Validation rule in step
    3, or any other cause), skip both commands together: never run
@@ -374,9 +378,10 @@ rung 1, never dispatch researchers from the main session.
    `--` separator: `git add -- docs/research/<slug-1>.md
    docs/research/<slug-2>.md`, then `git commit -m "<subject>" --
    docs/research/<slug-1>.md docs/research/<slug-2>.md`, one path per
-   `docs/research/` entry this invocation's controller created or
-   updated — a re-verified entry whose `_Researched:` date was
-   refreshed counts as updated, so a cache hit that was re-verified
+   `docs/research/` entry created or updated by this invocation, by
+   the controller on rung 1 or by you on rung 2 — a re-verified entry
+   whose `_Researched:` date was refreshed counts as updated, so a
+   cache hit that was re-verified
    still needs its path on this list — each slug already checked
    against the Validation rule in step 3 before it reaches this
    command line. This path list names only this invocation's own

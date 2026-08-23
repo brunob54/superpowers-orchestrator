@@ -41,7 +41,12 @@ both the dispatch-metadata bullets right below (`[ASSIGNMENT_NAME]`,
        unchecked URL is code execution even though nothing from the
        cloned repository is ever run. Clone shallow, without
        submodules, and with the transport pinned on the command line:
-       `git clone -c protocol.allow=never -c protocol.https.allow=always --depth 1 --no-recurse-submodules <https-url>`.
+       `git clone -c protocol.allow=never -c protocol.https.allow=always --depth 1 --no-recurse-submodules <https-url> [REPO_ROOT]/.superpowers/research/clones/<candidate-slug>`.
+       A clone command with no explicit destination path is forbidden:
+       `git clone <url>` with no destination writes into a directory
+       named after the repository inside your current working
+       directory, which may be outside the clones directory named
+       above.
     All other file creation, editing, or deletion is forbidden. You
     never run a cloned candidate's install, build, or test scripts,
     and you never execute any code from a cloned repository — reading
