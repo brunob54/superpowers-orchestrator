@@ -267,20 +267,22 @@ rung 1, never dispatch researchers from the main session.
 
 ### 6. After the research completes (rung 1: the controller returned; rung 2: you wrote the merged report)
 
-1. Remove `.superpowers/research/clones/` if it exists, regardless of
-   outcome — researchers clone candidate repositories there, and
-   clones must not linger in the working tree. Run this first and
-   unconditionally: even when the controller subagent died, timed
-   out, or its dispatch errored and the rest of step 6 does not run
-   (see the error-handling row for that failure).
+1. Remove `<repo-root>/.superpowers/research/clones/` if it exists,
+   regardless of outcome — researchers clone candidate repositories
+   there, and clones must not linger in the working tree. Run this
+   first and unconditionally, at the anchored repository root, not at
+   the session's working directory: even when the controller subagent
+   died, timed out, or its dispatch errored and the rest of step 6
+   does not run (see the error-handling row for that failure).
 2. If the controller returned a summary reporting that it could not
    dispatch subagents, drop to degradation rung 2 now: dispatch the N
    researchers yourself from `research-prompt.md`, apply the
    controller contract from `controller-prompt.md` yourself, and write
-   the merged report. Remove `.superpowers/research/clones/` again
-   after your own researchers return. Then continue with the remaining
-   items of this step. Only when this fallback also produces no merged
-   report does the next item apply.
+   the merged report. Remove `<repo-root>/.superpowers/research/clones/`
+   again, at the anchored repository root, after your own researchers
+   return. Then continue with the remaining items of this step. Only
+   when this fallback also produces no merged report does the next
+   item apply.
 3. Verify `[MERGED_REPORT_FILE]` exists. Missing → report research as
    failed to the invoker: evidence gap, claims stay provisional. Never
    block the session. Any `docs/research/` entry already written by a
@@ -301,7 +303,14 @@ rung 1, never dispatch researchers from the main session.
    Do not halt unconditionally. Honest coverage statement: this
    comparison detects new paths and newly-modified previously-clean
    paths only — it cannot see writes to files that were already dirty
-   or untracked at snapshot time.
+   or untracked at snapshot time, and it cannot see writes to any
+   git-ignored path at all (`git status --porcelain` never reports
+   them). `.superpowers/research/` carries a self-written `.gitignore`
+   containing `*`, and the orchestrator adds `.superpowers/` to
+   `.git/info/exclude`, so a write anywhere under `.superpowers/` —
+   including `.superpowers/sdd/`, which holds orchestration
+   control-flow files — is invisible to this comparison, not merely
+   already dirty or untracked.
 
    Accepted residual risk: this expected-change filter treats any
    change under `docs/research/` as expected, not only changes to the
@@ -314,6 +323,18 @@ rung 1, never dispatch researchers from the main session.
    automatically once the comparison in this item finds no unexpected
    changes — no user review step stands between the write and the
    commit.
+
+   Accepted residual risk: `hooks/subagent-guard.js` exempts any
+   message opening with the `<!-- research report -->` marker from
+   skill-leakage blocking, and both the controller and researcher
+   prompt templates require that marker as the first line of their
+   returns. This means the guard never inspects the output of the
+   agents in this skill that consume the most untrusted external
+   content (fetched pages, registry metadata, cloned repository
+   files). Accepted as a trade-off: the marker is required precisely
+   so the invoking skill and the user can identify and read research
+   output, and the reports themselves are already handled as data,
+   not instructions, throughout this skill and its prompt templates.
 5. Skip this item entirely when item 3 reported research as failed
    (merged report missing) — leave any cache entries written so far
    uncommitted for the user (see item 3's disclosure). Otherwise,

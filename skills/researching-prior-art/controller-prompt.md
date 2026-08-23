@@ -177,7 +177,12 @@ subagent via the Agent tool:
        non-alphanumeric character with `-`; collapse repeated `-`.
        Examples: npm `lodash.merge` → `npm-lodash-merge`;
        `@tanstack/react-query` on npm → `npm-tanstack-react-query`; the
-       Stripe service → `service-stripe`. Header line:
+       Stripe service → `service-stripe`. **Validation:** after
+       applying this rule, the resulting candidate slug must match
+       `^[a-z0-9]+(-[a-z0-9]+)*$`. A slug that does not match must not
+       be used in any path: stop using that candidate slug in any
+       path, `git add`, or `git commit` command, and report the
+       candidate as unable to be cached. Header line:
        `_Researched: YYYY-MM-DD | registry: <registry> | canonical name: <exact name> | versions inspected: <list>_`
        Body: that candidate's durable findings with citations.
     3. Return a summary of at most 15 lines. Its first line is
