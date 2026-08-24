@@ -89,8 +89,26 @@ PROMPT="Invoke the superpowers-orchestrator:researching-prior-art skill on the g
 # --ignored=matching because .superpowers/ (self-.gitignore, written in Task 1
 # Step 0) and state.md (committed .gitignore) are excluded here — exactly the
 # paths the skill under test writes.
+#
+# The hash EXCLUDES the plugin's own session-artifact entries. The plugin's
+# session-start hooks write git-ignored session state (.omc/, .superpowers/,
+# context-snapshot.json, and the memory-stack files) into whatever repo the
+# CLI starts in. On a checkout whose first claude session is this test's
+# headless run — a fresh git worktree, for example — those entries appear
+# MID-RUN and would fail assertion (e) with no misanchored write having
+# happened (observed 2026-08-24). Excluding them does not weaken the check:
+# writes INSIDE an already-listed ignored directory were never visible to
+# this snapshot anyway (a `!!` entry does not change when the directory's
+# content does — the documented blind spot), so the filter only removes the
+# environment-dependent appearance of the entries themselves. Tracked-file
+# changes never match the `^!! ` prefix and always count.
+plugin_repo_snapshot() {
+    git -C "$PLUGIN_DIR" status --porcelain --ignored=matching \
+        | awk '!/^!! (\.omc\/|\.superpowers\/|context-snapshot\.json|state\.md|session-log\.md|known-issues\.md|project-map\.md)$/' \
+        | shasum | cut -d' ' -f1
+}
 PLUGIN_HEAD_BEFORE=$(git -C "$PLUGIN_DIR" rev-parse HEAD)
-PLUGIN_STATUS_BEFORE=$(git -C "$PLUGIN_DIR" status --porcelain --ignored=matching | shasum | cut -d' ' -f1)
+PLUGIN_STATUS_BEFORE=$(plugin_repo_snapshot)
 
 # Inner budget (1700s) sits below the runner's outer --timeout 1800 so a hang
 # is killed here first: the timeout assertion can fire and the keep-project
@@ -111,7 +129,7 @@ if [ "$CLAUDE_STATUS" -eq 124 ] || [ "$CLAUDE_STATUS" -eq 143 ]; then
 fi
 
 PLUGIN_HEAD_AFTER=$(git -C "$PLUGIN_DIR" rev-parse HEAD)
-PLUGIN_STATUS_AFTER=$(git -C "$PLUGIN_DIR" status --porcelain --ignored=matching | shasum | cut -d' ' -f1)
+PLUGIN_STATUS_AFTER=$(plugin_repo_snapshot)
 if [ "$PLUGIN_HEAD_AFTER" != "$PLUGIN_HEAD_BEFORE" ] || [ "$PLUGIN_STATUS_AFTER" != "$PLUGIN_STATUS_BEFORE" ]; then
     echo "FAIL(e): the run mutated the plugin dev repo (misanchored skill?)"
     echo "  Inspect: git -C $PLUGIN_DIR status --porcelain; git -C $PLUGIN_DIR diff"
