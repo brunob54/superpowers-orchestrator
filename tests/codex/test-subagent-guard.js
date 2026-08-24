@@ -354,6 +354,11 @@ test('Includes researching-prior-art skill in roster', () => {
   assert.ok(source.includes("'researching-prior-art'"), 'Missing researching-prior-art skill');
 });
 
+test('Blocks "spawn researching-prior-art" (spawn verb form) without marker', () => {
+  const out = runGuard('I will spawn researching-prior-art to look at the candidates.');
+  assert.strictEqual(out.decision, 'block');
+});
+
 test('Blocks "using researching-prior-art" without marker', () => {
   const out = runGuard('I finished by using researching-prior-art on the candidates.');
   assert.strictEqual(out.decision, 'block');

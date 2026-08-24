@@ -86,9 +86,12 @@ git add "$UNRELATED_FILE"
 PROMPT="Invoke the superpowers-orchestrator:researching-prior-art skill on the git repository at $TEST_PROJECT. Decision: verify that the npm package ms (pinned at $PINNED_VERSION in package.json) still fits this project's duration-parsing needs — this decision depends on version-sensitive external API behavior. Candidates: ms (npm, canonical name ms). N=2. Topic slug: ms-duration. Do not ask me any questions — proceed to completion."
 
 # Safety net: a misanchored run must not mutate the dev repo.
-# --ignored=matching because .superpowers/ (self-.gitignore, written in Task 1
-# Step 0) and state.md (committed .gitignore) are excluded here — exactly the
-# paths the skill under test writes.
+# --ignored=matching makes git status also report ignored paths that match
+# an ignore rule, as `!!` entries, instead of leaving them out. .superpowers/
+# (self-.gitignore, written in Task 1 Step 0) and state.md (committed
+# .gitignore) are ignored paths, and they are exactly the paths the skill
+# under test writes — so this flag is what makes a mutation to them show up
+# in the before/after snapshot comparison below.
 #
 # The hash EXCLUDES the plugin's own session-artifact entries. The plugin's
 # session-start hooks write git-ignored session state (.omc/, .superpowers/,

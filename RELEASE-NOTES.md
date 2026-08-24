@@ -31,12 +31,14 @@ before approaches are compared.
   gets a cheap re-verifier — a committed header can be planted or
   edited.
 - **Specs must carry the evidence.** Brainstorming's Design Contents
-  gains a required "Prior art and alternatives" section (with
-  per-finding dispositions); multi-doc-review's spec lens flags
+  gains a "Prior art and alternatives" section, required when the
+  research predicate matched for at least one decision in the design
+  (with per-finding dispositions); multi-doc-review's spec lens flags
   external-technology claims with neither a citation nor the label
   "unverified"; orchestrating-development's Phase 0 stops when a
-  predicate-matching spec lacks the section — a documented exception
-  to its thin-sequencer rule.
+  predicate-matching spec has neither the section nor the override
+  sentence ("No decision in this design matched the prior-art trigger
+  predicate.") — a documented exception to its thin-sequencer rule.
 - **Guard marker `<!-- research report -->`.** Research reports quote
   skill-like phrases from external docs; subagent-guard exempts
   marker-first messages and adds the new skill to its roster and

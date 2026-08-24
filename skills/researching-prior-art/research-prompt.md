@@ -5,7 +5,7 @@ rung 2 (see SKILL.md) — to dispatch one researcher per assignment. Fill
 every `[PLACEHOLDER]`, then dispatch via the Agent tool. This covers
 both the dispatch-metadata bullets right below (`[ASSIGNMENT_NAME]`,
 `[MODEL]`) and the indented prompt body further down (`[REPO_ROOT]`,
-`[DECISION]`, `[ASSIGNMENT]`, `[REPORT_FILE]`):
+`[DECISION]`, `[ASSIGNMENT]`, `[REPORT_FILE]`, `[CANDIDATE_SLUG]`):
 
 - **Agent type:** `Explore` where available; otherwise `general-purpose`.
   The prompt below carries the read-only instruction either way —
@@ -31,8 +31,59 @@ both the dispatch-metadata bullets right below (`[ASSIGNMENT_NAME]`,
        candidate's full source without touching the working tree.
        [REPO_ROOT] is the absolute root of the repository under
        research; never use relative paths — your working directory
-       may be elsewhere. Clone shallow and without submodules:
-       `git clone --depth 1 --no-recurse-submodules`.
+       may be elsewhere. [CANDIDATE_SLUG] is the candidate slug the
+       controller (or, on degradation rung 2, the main session) has
+       already computed for the candidate this assignment covers,
+       using the slug rule stated in `controller-prompt.md` (registry
+       prefix, lowercased, `.` mapped to `_`, every other
+       non-alphanumeric character mapped to `-`, repeats collapsed,
+       validated against `^[a-z0-9]+([_-][a-z0-9]+)*$`); use it
+       exactly as filled, never recompute or invent one. When this
+       assignment covers more than one candidate, [CANDIDATE_SLUG] is
+       filled with that candidate's own slug for each clone you make —
+       never reuse one candidate's slug for another's clone directory.
+       When your assignment covers no candidate (the prior-art
+       assignment researches projects that are NOT candidates),
+       [CANDIDATE_SLUG] is filled with the literal `none`: for each
+       non-candidate project you clone, derive a directory name
+       yourself by applying the same slug rule to the project's
+       ecosystem (or the literal prefix `repo` when the ecosystem is
+       unclear) and name, and validate it against the same regex
+       before use. This is the one case where deriving a slug yourself
+       is allowed.
+       The clone URL normally comes from the
+       registry's free-form `repository.url` field, which the
+       package publisher controls — treat it as untrusted data and
+       check it before it reaches a shell. One normalization is
+       allowed, before the checks: if the URL starts with `git+https://`
+       (the form the npm command-line tool writes into most published
+       packages, for example `git+https://github.com/vercel/ms.git`),
+       remove the leading `git+` and check the result. No other
+       rewrite is allowed. Accept only a URL matching
+       `^https://` AND matching the strict charset
+       `^https://[A-Za-z0-9._~:/?#@%+-]+$` — no `$`, no backtick, no
+       quote, no space, no `;`, no `|`, no `&`, no newline; reject
+       `ext::`, `ssh://`, `git://`, `file://`, and scp-style
+       `host:path` forms without cloning. Git's `ext::` transport runs
+       a shell command during the clone itself, so an unchecked URL is
+       code execution even though nothing from the cloned repository
+       is ever run; the charset check exists separately because even a
+       `https://` URL is shell-interpolated when the clone command
+       runs, and a publisher-controlled string containing `$(...)`,
+       backticks, `;`, `|`, `&`, or a newline lets the shell run
+       arbitrary commands before `git` ever sees the URL —
+       `protocol.allow=never` does not stop that. Clone shallow,
+       without submodules, with the transport pinned on the command
+       line, the URL single-quoted, and `--` before the URL argument
+       so it can never be parsed as a flag:
+       `git clone -c protocol.allow=never -c protocol.https.allow=always --depth 1 --no-recurse-submodules -- '<https-url>' [REPO_ROOT]/.superpowers/research/clones/[CANDIDATE_SLUG]`.
+       Both requirements are mandatory: the charset check on the URL
+       string, AND single-quoting the URL with `--` before it in the
+       command actually run. A clone command with no explicit
+       destination path is forbidden: `git clone <url>` with no
+       destination writes into a directory named after the repository
+       inside your current working directory, which may be outside
+       the clones directory named above.
     All other file creation, editing, or deletion is forbidden. You
     never run a cloned candidate's install, build, or test scripts,
     and you never execute any code from a cloned repository — reading
@@ -58,7 +109,13 @@ both the dispatch-metadata bullets right below (`[ASSIGNMENT_NAME]`,
     the latest release. If the candidate is not yet in the manifest,
     the anchor is the latest stable release at research time — name it
     explicitly. State the exact version or commit you inspected with
-    every finding.
+    every finding. A candidate with no versioned artifact at all (a
+    hosted service, a platform) has no anchor: write `n/a` as its
+    version and name what you checked instead (the documentation page,
+    the status endpoint, the plan or tier). A base image is versioned:
+    its anchor is the tag the repository's Dockerfile pins (for example
+    `20-alpine` in `FROM node:20-alpine`); the Dockerfile is its
+    manifest.
 
     ## What to report (evidence only, never a recommendation)
     - Reusable patterns and APIs relevant to the decision — each with
@@ -66,8 +123,10 @@ both the dispatch-metadata bullets right below (`[ASSIGNMENT_NAME]`,
       or tests, plus a short verbatim quoted snippet. The project
       under evaluation, not this repository. A citation that is a path
       into a clone under `.superpowers/research/clones/` must also
-      name the upstream repository URL, and the commit hash when you
-      know it, because the clone is deleted once the run ends.
+      name the upstream repository URL — including its host, so a
+      reader can see where this "source" actually came from — and the
+      commit hash when you know it, because the clone is deleted once
+      the run ends.
     - Edge cases and boundaries the source and tests reveal.
     - Version facts: presence or deprecation of the APIs the decision
       relies on, at the anchored version.

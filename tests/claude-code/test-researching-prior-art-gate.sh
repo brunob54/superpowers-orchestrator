@@ -79,6 +79,14 @@ if ! grep -qF "Reply with a number, or 0 to" "$OUT"; then
     echo "FAIL(a): gate reply instruction missing or paraphrased"
     FAILURES=$((FAILURES+1))
 fi
+if ! grep -qF "committed to this repository" "$OUT"; then
+    echo "FAIL(a): consent disclosure's repository-commit clause missing or paraphrased"
+    FAILURES=$((FAILURES+1))
+fi
+if ! grep -qF "cached under" "$OUT"; then
+    echo "FAIL(a): consent disclosure's caching clause missing or paraphrased"
+    FAILURES=$((FAILURES+1))
+fi
 
 # (b) Candidates and Suggested-N lines, by pattern
 if ! grep -qE "Candidates: .*(got|axios)" "$OUT"; then
