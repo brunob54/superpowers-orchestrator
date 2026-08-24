@@ -81,7 +81,10 @@ subagent via the Agent tool:
       read-only instruction either way). Fill the template's
       `[CANDIDATE_SLUG]` placeholder with the candidate slug (or
       slugs, one per candidate named, when an assignment names more
-      than one) computed under Paths above.
+      than one) computed under Paths above. For an assignment that
+      covers no candidate (the prior-art assignment), fill it with the
+      literal `none` — the template tells that researcher how to
+      derive directory names for non-candidate clones itself.
     - Also dispatch one Haiku-class re-verifier per cache hit listed
       in the cache state (fresh AND stale hits). A re-verifier's
       assignment is: confirm the candidate exists in its registry
@@ -205,10 +208,14 @@ subagent via the Agent tool:
        drop `@`; replace `.` with `_`; replace `/`, spaces, and every
        other non-alphanumeric character other than `.` with `-`;
        collapse repeated `-`. Giving `.` its own replacement (`_`, not
-       `-`) keeps the rule injective: npm `lodash.merge` →
-       `npm-lodash_merge` stays distinct from npm `lodash-merge` →
-       `npm-lodash-merge`, so the two cannot land on the same cache
-       file path. Examples: npm `lodash.merge` → `npm-lodash_merge`;
+       `-`) keeps the `.` and `-` variants of a name distinct: npm
+       `lodash.merge` → `npm-lodash_merge` never collides with npm
+       `lodash-merge` → `npm-lodash-merge`. The rule is not fully
+       injective (`_` and `-` both map to `-`; lowercasing merges case
+       variants): when two candidates of this invocation map to the
+       same slug, cache only the first, never overwrite it with the
+       second, and report the collision in your summary.
+       Examples: npm `lodash.merge` → `npm-lodash_merge`;
        `@tanstack/react-query` on npm → `npm-tanstack-react-query`; the
        Stripe service → `service-stripe`. **Validation:** after
        applying this rule, the resulting candidate slug must match

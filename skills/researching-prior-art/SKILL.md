@@ -204,14 +204,19 @@ a run with more than 10 cache hits. Keep the delete confined to
 candidate name: lowercase; drop `@`; replace `.` with `_`; replace `/`,
 spaces, and every other non-alphanumeric character other than `.` with
 `-`; collapse repeated `-`. Giving `.` its own replacement (`_`, not
-`-`) keeps the rule injective: npm `lodash.merge` → `npm-lodash_merge`
-stays distinct from npm `lodash-merge` → `npm-lodash-merge`, so the two
-cannot land on the same cache file path.
+`-`) keeps the `.` and `-` variants of a name distinct: npm
+`lodash.merge` → `npm-lodash_merge` never collides with npm
+`lodash-merge` → `npm-lodash-merge`.
 Examples: npm `lodash.merge` → `npm-lodash_merge`; `@tanstack/react-query`
 on npm → `npm-tanstack-react-query`; the Stripe service →
-`service-stripe`. The registry prefix, the distinct `.`→`_` mapping,
-and the header's canonical-name field together prevent cross-registry
-and typosquat collisions.
+`service-stripe`. The rule is not fully injective: `_` and `-` in a
+name both map to `-` (npm `ansi_up` and `ansi-up` share one slug), and
+lowercasing merges case variants. The header's canonical-name field
+catches such a collision at read time — a slug match with a different
+canonical name is not a hit — and at write time the rule is: when two
+candidates of one invocation map to the same slug, cache only the
+first, never overwrite it with the second, and report the collision
+to the invoker.
 
 **Validation:** after applying the slug rule above, each resulting
 candidate slug must match `^[a-z0-9]+([_-][a-z0-9]+)*$` — wider than
@@ -528,8 +533,10 @@ and 5 are conditional; each states its own condition.
      wrapper: `GIT_TERMINAL_PROMPT=0 git commit -m "chore(research):
      prior-art cache for <topic-slug>" --
      docs/research/<slug-1>.md docs/research/<slug-2>.md`.
-     `GIT_TERMINAL_PROMPT=0` is unconditional either way — it
-     suppresses a credential prompt so the call fails instead of
+     `GIT_TERMINAL_PROMPT=0` is unconditional either way. A plain
+     local commit asks for no credentials; the variable matters when a
+     pre-commit hook contacts a remote (a fetch, a push, an API call
+     through git) — it makes such a credential prompt fail instead of
      hanging with no tty to answer it.
    - 5j. **Run the command built in 5i.** Both `git add` and `git
      commit` are path-limited, so neither can sweep unrelated work in:
@@ -555,13 +562,12 @@ and 5 are conditional; each states its own condition.
    - 5l. **What counts as a commit failure.** A `git add` in 5f that
      exited non-zero, a failing pre-commit hook, a signing prompt that a
      `timeout`/`gtimeout` wrapper cut off (when 5h found one and 5i
-     used it), or the `timeout`/`gtimeout` command not being installed
-     — a 127 exit from actually invoking a wrapper that turned out to
-     be missing. Recognise that 127 exit for what it is, a missing
-     wrapper, not a real commit failure: 5h's `command -v` check
-     exists precisely so this cause should not arise, so treat it as
-     this cause only if 5h's check was skipped or its result not
-     honored.
+     used it), or an exit code of 127 from the commit command. Exit
+     127 means the shell did not find the wrapper that 5i put in front
+     of `git commit`. That is a missing wrapper, not a git failure.
+     5h's `command -v` probe exists to prevent it: it can only happen
+     when 5h was skipped or its result was ignored. Name the missing
+     wrapper as the cause when reporting it.
    - 5m. **What to do on a commit failure.** Unstage the same paths
      staged in 5f (`git restore --staged --
      docs/research/<slug-1>.md docs/research/<slug-2>.md`; this
@@ -569,8 +575,10 @@ and 5 are conditional; each states its own condition.
      unrelated commit does not silently pick up these paths), report
      "cache written, not committed", give the invoker 5a's disclosure
      sentence, and continue. A commit failure never blocks the
-     session, and the research result stays valid. (Detached HEAD is
-     handled separately in 5e, before the commit is attempted at all.)
+     session, and the research result stays valid. (A non-git project
+     and a detached HEAD are not commit failures: 5e skips the rest of
+     item 5 before anything is staged, so on those paths there is
+     nothing to unstage.)
 6. Report to the invoker: the merged report path, the cache reduction
    (if any), the re-verifier count, the status-comparison result, the
    cache-commit outcome (committed; "cache already up to date"; or
@@ -592,7 +600,7 @@ and 5 are conditional; each states its own condition.
 |---|---|
 | Controller subagent dies or times out (the Agent dispatch returns an error, or the platform's own timeout fires — no additional timer) | Still run step 6 items 1, 4 and 6: remove `.superpowers/research/clones/`, compare the working tree against the step-1 snapshot, and report. Item 4 matters most here — a failed controller is the case where stray writes are most likely. Item 5 then skips per 5a. Report the failure; the invoker states the evidence gap and continues with provisional claims (never blocks the session) |
 | Merged report file missing after return, and degradation rung 2 (step 6 item 2) was not applicable or also produced no merged report | Research counts as failed: evidence gap, provisional claims; any `docs/research/` entry already written stays uncommitted — tell the invoker it must be committed or removed before orchestrating-development's clean-tree check will pass |
-| Cache commit fails (the 5f `git add` exits non-zero, a failing pre-commit hook, a GPG signing prompt that a `timeout`/`gtimeout` wrapper cut off when one was available, or `timeout`/`gtimeout` not being installed), or is skipped because HEAD is detached | Unstage the paths staged in 5f, report "cache written, not committed"; tell the invoker `docs/research/` entries stay uncommitted and must be committed or removed before orchestrating-development's clean-tree check will pass; research result stays valid; never block the session |
+| Cache commit fails (the 5f `git add` exits non-zero, a failing pre-commit hook, a GPG signing prompt that a `timeout`/`gtimeout` wrapper cut off when one was available, or `timeout`/`gtimeout` not being installed), or is skipped by 5e (not a git repository, or HEAD detached) | If 5f staged the paths, unstage them (a 5e skip stages nothing — there is nothing to unstage); report "cache written, not committed"; tell the invoker `docs/research/` entries stay uncommitted and must be committed or removed before orchestrating-development's clean-tree check will pass; research result stays valid; never block the session |
 | Post-research status differs from the snapshot outside `docs/research/` and `.superpowers/research/` | Report the diff; the invoker presents it and asks the user whether to continue; on continue, `docs/research/` entries from this run stay uncommitted — tell the invoker they must be committed or removed before orchestrating-development's clean-tree check will pass |
 | Project is not a git repository | Cleanliness check skipped; the skip stated in the conversation. `[REPO_ROOT]` falls back to the invoker-named project directory, then to the session's current project directory, stating which was used (see Root anchoring); with neither available, the skill stops and says so |
 | All researcher reports discarded | Merged report contains only evidence gaps; surfaced to the user |

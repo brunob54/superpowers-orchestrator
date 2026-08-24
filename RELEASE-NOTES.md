@@ -36,8 +36,9 @@ before approaches are compared.
   (with per-finding dispositions); multi-doc-review's spec lens flags
   external-technology claims with neither a citation nor the label
   "unverified"; orchestrating-development's Phase 0 stops when a
-  predicate-matching spec lacks the section — a documented exception
-  to its thin-sequencer rule.
+  predicate-matching spec has neither the section nor the override
+  sentence ("No decision in this design matched the prior-art trigger
+  predicate.") — a documented exception to its thin-sequencer rule.
 - **Guard marker `<!-- research report -->`.** Research reports quote
   skill-like phrases from external docs; subagent-guard exempts
   marker-first messages and adds the new skill to its roster and

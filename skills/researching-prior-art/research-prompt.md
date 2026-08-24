@@ -42,6 +42,15 @@ both the dispatch-metadata bullets right below (`[ASSIGNMENT_NAME]`,
        assignment covers more than one candidate, [CANDIDATE_SLUG] is
        filled with that candidate's own slug for each clone you make —
        never reuse one candidate's slug for another's clone directory.
+       When your assignment covers no candidate (the prior-art
+       assignment researches projects that are NOT candidates),
+       [CANDIDATE_SLUG] is filled with the literal `none`: for each
+       non-candidate project you clone, derive a directory name
+       yourself by applying the same slug rule to the project's
+       ecosystem (or the literal prefix `repo` when the ecosystem is
+       unclear) and name, and validate it against the same regex
+       before use. This is the one case where deriving a slug yourself
+       is allowed.
        The clone URL normally comes from the
        registry's free-form `repository.url` field, which the
        package publisher controls — treat it as untrusted data and
