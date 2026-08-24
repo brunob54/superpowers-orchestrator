@@ -1,6 +1,6 @@
 # Superpowers Orchestrator — User Guide
 
-_Guide last reviewed against plugin version **6.15.1**._
+_Guide last reviewed against plugin version **7.2.0**._
 
 This is the day-to-day operating manual for the plugin: which phrases trigger
 which workflow, what the pipelines look like end to end, and what to do when
@@ -692,6 +692,7 @@ handled by the router (§2) — just describe what you want.
 | "orchestrate the development of `<spec>`" | Full autonomous pipeline, one setup conversation | §4 |
 | "Resume orchestration for `<plan>`" | Continue an interrupted run from its last boundary | §5 |
 | "Abandon orchestration for `<plan>`" | Confirmed teardown of a wedged run | §5 |
+| "research prior art for `<decision>`" / `/researching-prior-art` | Evidence gathering for one technology decision (normally automatic at §3's research gate) | §3 |
 | `/multi-doc-review <doc> [N]` | N independent review rounds on a spec or plan | §3 |
 | `/multi-code-review [BASE] [N]` | N whole-branch code-review rounds with fixes | §3 |
 | "save state" / "compress context" | Snapshot to `state.md` + decision log entry | §6 |

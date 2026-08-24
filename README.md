@@ -25,15 +25,16 @@ This repository is a fork of [obra/superpowers](https://github.com/obra/superpow
 
 ## What this repo adds
 
-Ten releases beyond the REPOZY v6.6.1 baseline. The five main additions — full guide with usage, details, and motivations in [docs/FORK-IMPROVEMENTS.md](docs/FORK-IMPROVEMENTS.md):
+Fifteen releases beyond the REPOZY v6.6.1 baseline. The six main additions — full guide with usage, details, and motivations in [docs/FORK-IMPROVEMENTS.md](docs/FORK-IMPROVEMENTS.md):
 
 - **SDD Batched Autonomous Mode (v6.7.0)** — execute a plan in resumable batches of N tasks, ending each batch at a fixed task cap (the requested count, default 3) with a `state.md` handoff; say "implement the next 3 tasks", then after `/clear`: "resume the plan". [Details](docs/FORK-IMPROVEMENTS.md#1-sdd-batched-autonomous-mode-v670)
 - **SDD Token-Optimized Review Flow (v6.8.0)** — port of upstream obra v6.0.0: one two-verdict task reviewer, file-based handoffs under `.superpowers/sdd/`, explicit per-dispatch model selection; automatic whenever subagent-driven-development executes a plan (~2x faster, ~50–60% fewer tokens per upstream measurement). [Details](docs/FORK-IMPROVEMENTS.md#2-sdd-token-optimized-review-flow-v680)
 - **multi-doc-review (v6.9.0)** — N independent clean-context review rounds with rotating lenses on every spec and plan before its approval gate, with a sidecar audit log; automatic at the gates, or direct: `/multi-doc-review docs/specs/<doc>.md 3`. [Details](docs/FORK-IMPROVEMENTS.md#3-multi-doc-review--n-round-independent-document-review-v690)
 - **multi-code-review (v6.10.0)** — N independent whole-branch code review rounds with rotating lenses (correctness/spec alignment, adversarial red-team, security, test quality) and fixes applied between rounds, with a sidecar audit log; automatic at subagent-driven-development's final review gate, or direct: `/multi-code-review [BASE] [N]`. [Details](docs/FORK-IMPROVEMENTS.md#4-multi-code-review--n-round-independent-whole-branch-code-review-v6100)
 - **orchestrating-development (v6.14.0)** — fully autonomous spec-to-merge-gate pipeline: from an approved design spec, runs plan writing, N plan-review rounds, batched implementation, and N code-review rounds via fresh-context controller subagents, stopping only on major errors and ending before merge/PR; one interactive Phase 0 collects review counts, batch cap, and branch/permission confirmations, then say "orchestrate development of docs/specs/<spec>.md". [Details](docs/FORK-IMPROVEMENTS.md#5-orchestrating-development--autonomous-spec-to-merge-gate-pipeline-v6140)
+- **researching-prior-art (v7.2.0)** — prior-art research gate for technology decisions: when a design decision would add or change a dependency, depend on version-sensitive external API behavior, or select a hosted service, brainstorming asks how many read-only research subagents to dispatch; findings are verified, merged into one evidence report, cached under `docs/research/`, and recorded in the spec's "Prior art and alternatives" section. Details in [RELEASE-NOTES.md](RELEASE-NOTES.md).
 
-Four further releases — `multi-doc-review` rename (v6.11.0), plan-scoped SDD workspace (v6.12.0), fresh-session plan handoff (v6.13.0), and cap-only batch boundary (v6.15.0) — are covered in [RELEASE-NOTES.md](RELEASE-NOTES.md).
+The remaining releases — `multi-doc-review` rename (v6.11.0), plan-scoped SDD workspace (v6.12.0), fresh-session plan handoff (v6.13.0), cap-only batch boundary (v6.15.0), statusline bridge installer (v6.15.1), the rename to superpowers-orchestrator (v7.0.0), the spec gate's fresh-session orchestration route (v7.0.1), and slug-stamped commit messages (v7.1.0) — are covered in [RELEASE-NOTES.md](RELEASE-NOTES.md).
 
 ## Inherited from the parent projects
 
@@ -101,7 +102,7 @@ flowchart TD
     subgraph SA["UserPromptSubmit — skill-activator.js"]
         Q1{"Micro task?"} -->|yes| Z1["no routing — zero overhead<br/>(e.g. fix typo on line 42)"]
         Q1 -->|no| PG["context-pressure gate: plan-execution starts<br/>blocked at ≥60% of the real model window<br/>(statusline bridge cache when installed)"]
-        PG --> SCORE["score against 25 skill rules →<br/>inject skill suggestions + matching<br/>session-log / known-issues memory"]
+        PG --> SCORE["score against 26 skill rules →<br/>inject skill suggestions + matching<br/>session-log / known-issues memory"]
     end
 
     SA --> RT
