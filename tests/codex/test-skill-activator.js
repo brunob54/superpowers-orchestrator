@@ -1298,6 +1298,45 @@ test('"code review my changes" does NOT route to multi-code-review', () => {
   assert.strictEqual(matchesMcr('code review my changes'), false);
 });
 
+// ── researching-prior-art ─────────────────────────────────────────────────────
+
+console.log('\nresearching-prior-art');
+
+function matchesRpa(prompt) {
+  return matchSkills(prompt).some(m => m.skill === 'researching-prior-art');
+}
+
+test('"research prior art for the candidate libraries" routes to researching-prior-art', () => {
+  assert.strictEqual(matchesRpa('research prior art for the candidate libraries'), true);
+});
+
+test('"run prior-art research on these npm packages" routes to researching-prior-art', () => {
+  assert.strictEqual(matchesRpa('run prior-art research on these npm packages'), true);
+});
+
+// These two carry zero of the rule's literal keywords (verified: 0 keyword
+// hits, score 2 — entirely from the intent pattern), so a pass can only come
+// through the "research the candidates" / "(research|verify) the
+// library|libraries|package|packages|dependency|dependencies" intent
+// patterns, not from keyword matching.
+test('"research candidates for this decision" routes to researching-prior-art (intent pattern only)', () => {
+  assert.strictEqual(matchesRpa('research candidates for this decision'), true);
+});
+
+test('"verify these dependencies before merging" routes to researching-prior-art (intent pattern only)', () => {
+  assert.strictEqual(matchesRpa('verify these dependencies before merging'), true);
+});
+
+test('"rename getUserData to fetchUserData" does NOT route to researching-prior-art', () => {
+  assert.strictEqual(matchesRpa('rename getUserData to fetchUserData'), false);
+});
+
+test('"update dependencies to latest" routes to dependency-management, not researching-prior-art', () => {
+  const matched = matchSkills('update dependencies to latest').map(m => m.skill);
+  assert.ok(matched.includes('dependency-management'), `Expected dependency-management, got: ${JSON.stringify(matched)}`);
+  assert.ok(!matched.includes('researching-prior-art'), `Unexpected researching-prior-art match: ${JSON.stringify(matched)}`);
+});
+
 // ── Result ────────────────────────────────────────────────────────────────────
 
 console.log(`\n${'─'.repeat(50)}`);

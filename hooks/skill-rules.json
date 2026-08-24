@@ -193,6 +193,13 @@
         "(resume|abandon)\\s+orchestration",
         "(run|execute|start)\\s+the\\s+(whole|full|entire)\\s+pipeline"
       ]
+    },
+    {
+      "skill": "researching-prior-art",
+      "type": "workflow",
+      "priority": "high",
+      "keywords": ["prior art", "prior-art research", "prior art research", "research prior art", "researching-prior-art", "research the candidates", "research this dependency", "verify the library"],
+      "intentPatterns": ["research\\s+(the\\s+)?prior[\\s-]?art", "prior[\\s-]?art\\s+research", "research\\s+(the\\s+)?candidates?", "(research|verify)\\s+(the\\s+|this\\s+|these\\s+)?(librar(y|ies)|packages?|dependenc(y|ies))"]
     }
   ]
 }

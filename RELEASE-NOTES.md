@@ -1,5 +1,52 @@
 # Superpowers Orchestrator Release Notes
 
+## v7.2.0 — prior-art research grounds technology decisions
+
+Field report: design sessions picked libraries, hosted services, and
+API versions from model memory. Memory is stale and version-blind, so
+the resulting specs carried unverifiable technology claims. Decisions
+that add a dependency now pass through verified external evidence
+before approaches are compared.
+
+- **New skill `researching-prior-art`.** Brainstorming gains a research
+  gate: when a decision would add or change a dependency-manifest
+  entry, depends on version-sensitive external API behavior, or
+  selects a hosted service, platform, or base image, it names the
+  candidates and asks the user for N (0 skips; the skip is recorded in
+  the spec). The sub-skill dispatches one controller subagent, which
+  runs N read-only researcher subagents in parallel — candidate source
+  reading, version verification anchored to the repo's own manifest,
+  registry existence and OpenSSF health, prior art — spot-fetches
+  citations, discards unusable reports, and merges the rest into
+  `.superpowers/research/<slug>-research-report.md`. Contradictions
+  are listed, never silently resolved. Platforms without the Agent
+  tool skip and state the evidence gap.
+- **Durable cache under `docs/research/`.** One committed file per
+  candidate (`<registry>-<name>.md`). Research writes these files and
+  the skill commits them for you, staging only the
+  `docs/research/` cache files by explicit path — nothing else in your
+  working tree is staged, and a commit that fails is reported but never
+  blocks the session. A hit younger than 90 days
+  removes that candidate's research assignment, but every hit still
+  gets a cheap re-verifier — a committed header can be planted or
+  edited.
+- **Specs must carry the evidence.** Brainstorming's Design Contents
+  gains a "Prior art and alternatives" section, required when the
+  research predicate matched for at least one decision in the design
+  (with per-finding dispositions); multi-doc-review's spec lens flags
+  external-technology claims with neither a citation nor the label
+  "unverified"; orchestrating-development's Phase 0 stops when a
+  predicate-matching spec has neither the section nor the override
+  sentence ("No decision in this design matched the prior-art trigger
+  predicate.") — a documented exception to its thin-sequencer rule.
+- **Guard marker `<!-- research report -->`.** Research reports quote
+  skill-like phrases from external docs; subagent-guard exempts
+  marker-first messages and adds the new skill to its roster and
+  alternation (unit-tested). Routing rule added to skill-rules.json
+  (26 rules covering 25 skills).
+- Docs synced: README counts and Skills Library, guide Stage 1,
+  lineage ranges.
+
 ## v7.1.0 — commit messages carry the workstream slug and stage
 
 Field report: a pipeline run produces many commits whose messages carry

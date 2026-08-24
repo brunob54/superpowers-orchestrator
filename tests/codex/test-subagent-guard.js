@@ -346,6 +346,52 @@ test('leading whitespace before the orchestration marker still exempts', () => {
   assert.deepStrictEqual(out, {});
 });
 
+// ── researching-prior-art ────────────────────────────────────────────────────
+
+console.log('\nresearching-prior-art');
+
+test('Includes researching-prior-art skill in roster', () => {
+  assert.ok(source.includes("'researching-prior-art'"), 'Missing researching-prior-art skill');
+});
+
+test('Blocks "spawn researching-prior-art" (spawn verb form) without marker', () => {
+  const out = runGuard('I will spawn researching-prior-art to look at the candidates.');
+  assert.strictEqual(out.decision, 'block');
+});
+
+test('Blocks "using researching-prior-art" without marker', () => {
+  const out = runGuard('I finished by using researching-prior-art on the candidates.');
+  assert.strictEqual(out.decision, 'block');
+});
+
+test('Blocks skill: "researching-prior-art" form without marker', () => {
+  const out = runGuard('skill: "researching-prior-art"');
+  assert.strictEqual(out.decision, 'block');
+});
+
+test('Marker-prefixed research report quoting skill names is exempt', () => {
+  const report = [
+    '<!-- research report -->',
+    '## Findings',
+    '- The candidate README tells adopters to start using test-driven-development before invoking writing-plans (README.md:12).',
+    '- Evidence gap: changelog fetch failed; claim labeled "degraded: memory only".',
+  ].join('\n');
+  const out = runGuard(report);
+  assert.deepStrictEqual(out, {});
+});
+
+test('Research marker mid-message does not exempt', () => {
+  const out = runGuard('I was invoking brainstorming.\n<!-- research report -->');
+  assert.strictEqual(out.decision, 'block');
+});
+
+test('Leading whitespace before research marker still exempts', () => {
+  // Body must contain a verb+skill pair so this fails on the unmodified
+  // guard — a benign body would pass vacuously.
+  const out = runGuard('  <!-- research report -->\nSummary: the docs recommend using refactoring before adoption.');
+  assert.deepStrictEqual(out, {});
+});
+
 // ── Summary ──────────────────────────────────────────────────────────────────
 
 console.log(`\n${'─'.repeat(50)}`);

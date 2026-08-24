@@ -115,6 +115,14 @@ Full workflow execution test (~10-30 minutes):
 - Subagents follow the skill correctly
 - Final code is functional and tested
 
+#### test-researching-prior-art.sh
+
+Merged-report contract of the researching-prior-art skill on a seeded fixture repo (slow; use `--timeout 1800`).
+
+#### test-researching-prior-art-gate.sh
+
+Brainstorming presents the research-gate message verbatim and dispatches nothing before the N answer (slow; use `--timeout 1800`).
+
 ## Adding New Tests
 
 1. Create new test file: `test-<skill-name>.sh`

@@ -112,7 +112,10 @@ Copy the cell for the doc type verbatim into `[LENS_INSTRUCTIONS]`.
 **Ambiguity & testability**
 - spec: Find: requirements interpretable two different ways — where two
   competent implementers would build different things; unverifiable claims;
-  undefined terms or thresholds an implementation would have to guess.
+  undefined terms or thresholds an implementation would have to guess;
+  claims about external technology (a library, framework, service, or
+  platform) that carry neither a source citation nor the label
+  "unverified" — flag every claim that has neither.
 - plan: Find: placeholder patterns (TBD, "add appropriate...", steps without
   code); vague steps; missing or unverifiable verification commands; steps
   interpretable two ways.

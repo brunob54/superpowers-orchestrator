@@ -1,6 +1,6 @@
 # Superpowers Orchestrator — User Guide
 
-_Guide last reviewed against plugin version **6.15.1**._
+_Guide last reviewed against plugin version **7.2.0**._
 
 This is the day-to-day operating manual for the plugin: which phrases trigger
 which workflow, what the pipelines look like end to end, and what to do when
@@ -147,6 +147,16 @@ spec to `docs/specs/YYYY-MM-DD-<name>-design.md` covering scope, non-goals,
 and the design itself. The spec then passes a self-review and — for
 non-trivial work — N independent `multi-doc-review` rounds before reaching
 you.
+
+When a design decision would add or change a dependency, depend on
+version-sensitive external API behavior, or select an external hosted
+service, brainstorming pauses at a **research gate**: it names the
+candidate technologies and asks how many read-only research subagents
+to dispatch (0 skips; a skip is recorded in the spec). On a non-zero
+count, findings are cached under `docs/research/` and committed to the
+current branch. The merged evidence report feeds the approach
+comparison, and the spec records what the research changed in a
+required "Prior art and alternatives" section.
 
 Two rules worth internalizing:
 
@@ -340,6 +350,10 @@ Authoritative detail:
 
 - **An approved spec** in `docs/specs/` — usually produced by `brainstorming`
   (§3). Orchestration starts *from* a spec; it does not design one.
+- **Spec content, when it matches the prior-art trigger predicate** (§3):
+  a "Prior art and alternatives" section, or the exact sentence "No
+  decision in this design matched the prior-art trigger predicate."
+  Missing both stops Phase 0 before planning starts.
 - **Claude Code only.** The pipeline needs nested subagent dispatch (the
   orchestrator spawns controllers, which spawn workers). On other platforms
   the skill refuses with one line.
@@ -428,6 +442,13 @@ inconsistency, the branch changed under it — appends a `## STOPPED` entry to
 the log with the reason, a pointer to the detail file, and the exact resume
 prompt to use. Nothing is lost: everything up to the stop is committed. See
 §5 for resuming, overriding parameters on resume, and abandoning a wedged run.
+
+Phase 0 itself can also refuse to start, before the log even exists: the
+prior-art intake check (see Prerequisites above) reads the spec, and when
+it matches the trigger predicate but carries neither the required section
+nor the override sentence, orchestration stops and reports directly —
+there is no `## STOPPED` log entry, because planning never began. Add the
+missing section or sentence to the spec and re-run orchestration.
 
 ### On completion
 
@@ -671,6 +692,7 @@ handled by the router (§2) — just describe what you want.
 | "orchestrate the development of `<spec>`" | Full autonomous pipeline, one setup conversation | §4 |
 | "Resume orchestration for `<plan>`" | Continue an interrupted run from its last boundary | §5 |
 | "Abandon orchestration for `<plan>`" | Confirmed teardown of a wedged run | §5 |
+| "research prior art for `<decision>`" / `/researching-prior-art` | Evidence gathering for one technology decision (normally automatic at §3's research gate) | §3 |
 | `/multi-doc-review <doc> [N]` | N independent review rounds on a spec or plan | §3 |
 | `/multi-code-review [BASE] [N]` | N whole-branch code-review rounds with fixes | §3 |
 | "save state" / "compress context" | Snapshot to `state.md` + decision log entry | §6 |
