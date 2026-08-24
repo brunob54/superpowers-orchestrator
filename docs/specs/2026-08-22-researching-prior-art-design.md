@@ -36,7 +36,11 @@ with a controller-subagent architecture.
   `.superpowers/research/` are expected. Honest
   coverage statement: this comparison detects new paths and
   newly-modified previously-clean paths only — it cannot see writes to
-  files that were already dirty or untracked at snapshot time. On an
+  files that were already dirty or untracked at snapshot time, and it
+  cannot see writes to any git-ignored path (`git status --porcelain`
+  never reports them; `.superpowers/research/` is always self-ignored,
+  and the rest of `.superpowers/` is ignored once orchestrating-development's
+  Phase 0 has added it to `.git/info/exclude`). On an
   unexpected change, the sub-skill reports the diff and brainstorming
   presents it to the user and asks whether to continue (concurrent
   tooling such as format-on-save can legitimately dirty the tree
@@ -175,8 +179,16 @@ sentence appears only when the choice is difficult to reverse):
 > On a non-zero reply, findings are cached under `docs/research/` and committed to this repository, on the branch checked out right now (`<branch>`).
 
 `<S>` = min(candidates + 3, 10). `<branch>` = the name of the branch
-checked out at the moment the gate fires (resolve with
-`git rev-parse --abbrev-ref HEAD`). A negative or non-numeric reply → ask
+checked out at the moment the gate fires, resolved in two steps: a
+non-zero exit from `git rev-parse --git-dir` means the project is not
+a git repository (fill `<branch>` with
+`not a git repository — the cache will not be committed`); otherwise a
+non-zero exit from `git symbolic-ref --short -q HEAD` means HEAD is
+detached (fill `<branch>` with
+`detached HEAD — the cache will not be committed`), and a zero exit
+gives the branch name as its output. `git rev-parse --abbrev-ref HEAD`
+is never used: it prints the literal `HEAD` on a detached HEAD and on a
+branch with no commits yet. A negative or non-numeric reply → ask
 once more; a second unusable reply → treat it as a skip, exactly as a `0`
 reply, and record the skip. There is no fallback to the suggested `<S>`:
 a non-zero N dispatches researchers and ends with a commit to the user's
@@ -233,9 +245,11 @@ every returned line must carry byte-identical wording.
 
 Brainstorming invokes via the Skill tool:
 `superpowers-orchestrator:researching-prior-art` with arguments carrying:
-the decision (one sentence, candidates named), the candidate list, N, and
-the topic slug (kebab-case, no date). The skill never asks the user
-anything — all user interaction already happened at the gate.
+the decision (one sentence, candidates named), the candidate list, N,
+the topic slug (kebab-case, no date), and the project directory (the
+absolute path of the project brainstorming's context inspection used —
+the sub-skill's non-git fallback for `[REPO_ROOT]`). The skill never asks
+the user anything — all user interaction already happened at the gate.
 
 ### Files
 
@@ -401,7 +415,10 @@ first-research cache file is untracked), then commits them. Both the
 `docs/research/<candidate-slug>.md` files, by explicit path, after a `--`
 separator — never `git add -A`, never a directory, never a bare `git
 commit`. Both commands stay path-limited, so unrelated staged work is
-never swept into the cache commit. It runs only after
+never swept into the cache commit. The `git add` exit status is checked:
+a non-zero exit (an ignored path, a held index lock) means nothing was
+staged and counts as a commit failure — the skill must not read an empty
+stage as "cache already up to date". It runs only after
 the post-research status comparison has found no unexpected changes: an
 unexpected change goes to the user first, so nothing is committed while
 the working tree state is unexplained. If the commit fails for any reason,
@@ -422,7 +439,8 @@ own condition.
 - Fresh (`Researched:` date younger than 90 days): the candidate's per-candidate assignment
   (angles 1+5) is removed and N is reduced by exactly 1 per cached
   candidate — but **every cache hit, fresh included, still gets the
-  Haiku-class re-verifier** (existence and current version), because the
+  Haiku-class re-verifier** (existence and the pinned or floor anchor
+  version — not the newest upstream release, which is context only), because the
   header is self-reported and a committed cache file can be planted or
   edited; a future-dated header is treated as invalid, not fresh.
   Post-cache N is floored at 1, unconditionally — never reduced to 0,
@@ -451,6 +469,15 @@ own condition.
   not pin (the predicate's "would add" branch), the anchor stays the
   latest stable release at research time, as in the researcher contract;
   the entry is invalidated when that release is not in the list.
+  **Candidates with no versioned artifact** (a hosted service, a
+  platform — the predicate's third branch) have no anchor: their header
+  carries `versions inspected: n/a`, the re-verifier checks existence
+  (the public documentation or status endpoint still answers under the
+  canonical name) and canonical name only, and the version-mismatch
+  rule does not apply. A base image is versioned: its anchor is the tag
+  the repository's Dockerfile pins, read by the same rule as a manifest
+  entry (the Dockerfile is its manifest). The 90-day `Researched:`
+  freshness test applies to every entry alike.
 - **Re-verifier outcomes (fresh and stale hits alike):** a mismatch —
   package missing from the registry, canonical-name difference, or an
   anchor version absent from the header's "versions inspected" —

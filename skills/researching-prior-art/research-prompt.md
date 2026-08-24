@@ -45,7 +45,12 @@ both the dispatch-metadata bullets right below (`[ASSIGNMENT_NAME]`,
        The clone URL normally comes from the
        registry's free-form `repository.url` field, which the
        package publisher controls — treat it as untrusted data and
-       check it before it reaches a shell. Accept only a URL matching
+       check it before it reaches a shell. One normalization is
+       allowed, before the checks: if the URL starts with `git+https://`
+       (the form the npm command-line tool writes into most published
+       packages, for example `git+https://github.com/vercel/ms.git`),
+       remove the leading `git+` and check the result. No other
+       rewrite is allowed. Accept only a URL matching
        `^https://` AND matching the strict charset
        `^https://[A-Za-z0-9._~:/?#@%+-]+$` — no `$`, no backtick, no
        quote, no space, no `;`, no `|`, no `&`, no newline; reject
@@ -95,7 +100,13 @@ both the dispatch-metadata bullets right below (`[ASSIGNMENT_NAME]`,
     the latest release. If the candidate is not yet in the manifest,
     the anchor is the latest stable release at research time — name it
     explicitly. State the exact version or commit you inspected with
-    every finding.
+    every finding. A candidate with no versioned artifact at all (a
+    hosted service, a platform) has no anchor: write `n/a` as its
+    version and name what you checked instead (the documentation page,
+    the status endpoint, the plan or tier). A base image is versioned:
+    its anchor is the tag the repository's Dockerfile pins (for example
+    `20-alpine` in `FROM node:20-alpine`); the Dockerfile is its
+    manifest.
 
     ## What to report (evidence only, never a recommendation)
     - Reusable patterns and APIs relevant to the decision — each with

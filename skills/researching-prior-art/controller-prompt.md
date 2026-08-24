@@ -92,6 +92,14 @@ subagent via the Agent tool:
       for the merged report; it is not the invalidation test. If the
       candidate is absent from this repository's manifest, the
       re-verifier reports that absence in place of a pinned version.
+      For a candidate with no versioned artifact (a hosted service, a
+      platform — its cache header says `versions inspected: n/a`),
+      "exists" means: its public documentation or status endpoint
+      still answers under the canonical name. The re-verifier then
+      checks existence and canonical name only and reports "no anchor
+      version". A base image is versioned: its anchor is the tag the
+      repository's Dockerfile pins, read by the same rule as a
+      manifest entry.
       Re-verifiers are in addition to the assignments above and
       outside the merge/split algorithm. Dispatch re-verifiers,
       and the follow-up researchers described under "Re-verifier
@@ -155,9 +163,13 @@ subagent via the Agent tool:
       invocation, no user interaction. A newer stable release
       upstream does not by itself invalidate the entry: the cached
       findings were written against the pinned version, and that
-      version is still the one this repository uses.
+      version is still the one this repository uses. When the cache
+      header says `versions inspected: n/a` (a candidate with no
+      versioned artifact), the version test does not apply: only
+      "missing" and "canonical-name difference" invalidate the entry.
     - Confirmed (the anchor version is present in the cache header's
-      "versions inspected" list): the cached findings count as
+      "versions inspected" list, or the header says `n/a` and the
+      candidate exists under its canonical name): the cached findings count as
       evidence, the candidate's research assignment stays removed, and
       you set the entry's `verified:` date to today — a separate field
       from `Researched:`, which you leave untouched. A re-verification

@@ -58,15 +58,16 @@ with the text `not a git repository — the cache will not be
 committed` and stop there; do not run `git symbolic-ref -q HEAD` in
 that case, its exit status does not distinguish a non-git project
 from a detached HEAD. When `git rev-parse --git-dir` succeeds, next
-run `git symbolic-ref -q HEAD`. A non-zero exit here means HEAD is
-detached — fill `<branch>` with the text
-`detached HEAD — the cache will not be committed` and do not run
-`git rev-parse --abbrev-ref HEAD` at all, because on a detached HEAD
-that command prints the literal string `HEAD`, which looks like a
-branch name and cannot be told apart from one by its output alone.
-Only when `git symbolic-ref -q HEAD` succeeds (HEAD is attached to a
-branch) does `<branch>` = the output of
-`git rev-parse --abbrev-ref HEAD`. A negative or
+run `git symbolic-ref --short -q HEAD`. A non-zero exit here means
+HEAD is detached — fill `<branch>` with the text
+`detached HEAD — the cache will not be committed`. A zero exit means
+HEAD is attached to a branch, and the command's output is the branch
+name: `<branch>` = that output. This works on a branch with no
+commits yet (a repository right after `git init`). Never use
+`git rev-parse --abbrev-ref HEAD` for this: on a detached HEAD it
+prints the literal string `HEAD`, and on a branch with no commits it
+fails and still prints `HEAD`, so in both cases its output looks
+like a branch name and is not one. A negative or
 non-numeric reply → ask once more; a second unusable reply → treat it
 as a skip, exactly as a `0` reply: state the skip and stop, and never
 fall back to the suggested `<S>`. A non-zero N dispatches researchers
@@ -225,7 +226,12 @@ report the candidate as unable to be cached.
 `_Researched: YYYY-MM-DD | registry: <registry> | canonical name: <exact name> | versions inspected: <list> | verified: YYYY-MM-DD_`
 The `verified:` field is absent until the entry's first confirmed
 re-verification; from then on it holds the date of the most recent
-confirmed re-verification. `Researched:` always holds the date the
+confirmed re-verification. `versions inspected:` holds the literal
+`n/a` when the candidate has no versioned artifact (a hosted service,
+a platform); the re-verifier then checks existence and canonical name
+only, and the version-mismatch rule does not apply to that entry. A
+base image is versioned: its anchor is the tag the repository's
+Dockerfile pins (the Dockerfile is its manifest). `Researched:` always holds the date the
 entry's findings were actually gathered — health, vulnerability, and
 maintenance evidence included — and a re-verification never touches
 it, because a re-verification does not re-gather that evidence (see
@@ -484,7 +490,13 @@ and 5 are conditional; each states its own condition.
      docs/research/<slug-2>.md`. Staging is required because
      `git commit -- <pathspec>` accepts only paths already in the index.
      An untracked first-research cache file would otherwise fail with
-     "pathspec ... did not match any file(s) known to git".
+     "pathspec ... did not match any file(s) known to git". Check the
+     exit status of this `git add`. A non-zero exit (for example the
+     user's `.gitignore` ignores `docs/`, so git refuses the path; or
+     `.git/index.lock` is held by another program) means nothing was
+     staged: do not run 5g — 5g would find an empty stage and wrongly
+     report "cache already up to date". Go straight to 5m instead,
+     treating the failed `git add` as a commit failure.
    - 5g. **No-change check, before committing.** Run `git diff --cached
      --quiet -- docs/research/<slug-1>.md docs/research/<slug-2>.md`
      (the same paths staged in 5f) at the anchored repository root.
@@ -540,8 +552,8 @@ and 5 are conditional; each states its own condition.
      timeout resolves the call one way or the other.
    - 5k. **Where.** Run every command in 5e-5j at the anchored
      repository root, not at the session's working directory.
-   - 5l. **What counts as a commit failure.** Not a git repository, a
-     failing pre-commit hook, a signing prompt that a
+   - 5l. **What counts as a commit failure.** A `git add` in 5f that
+     exited non-zero, a failing pre-commit hook, a signing prompt that a
      `timeout`/`gtimeout` wrapper cut off (when 5h found one and 5i
      used it), or the `timeout`/`gtimeout` command not being installed
      — a 127 exit from actually invoking a wrapper that turned out to
@@ -580,7 +592,7 @@ and 5 are conditional; each states its own condition.
 |---|---|
 | Controller subagent dies or times out (the Agent dispatch returns an error, or the platform's own timeout fires — no additional timer) | Still run step 6 items 1, 4 and 6: remove `.superpowers/research/clones/`, compare the working tree against the step-1 snapshot, and report. Item 4 matters most here — a failed controller is the case where stray writes are most likely. Item 5 then skips per 5a. Report the failure; the invoker states the evidence gap and continues with provisional claims (never blocks the session) |
 | Merged report file missing after return, and degradation rung 2 (step 6 item 2) was not applicable or also produced no merged report | Research counts as failed: evidence gap, provisional claims; any `docs/research/` entry already written stays uncommitted — tell the invoker it must be committed or removed before orchestrating-development's clean-tree check will pass |
-| Cache commit fails (no git repository, a failing pre-commit hook, a GPG signing prompt that a `timeout`/`gtimeout` wrapper cut off when one was available, or `timeout`/`gtimeout` not being installed), or is skipped because HEAD is detached | Unstage the paths staged in 5f, report "cache written, not committed"; tell the invoker `docs/research/` entries stay uncommitted and must be committed or removed before orchestrating-development's clean-tree check will pass; research result stays valid; never block the session |
+| Cache commit fails (the 5f `git add` exits non-zero, a failing pre-commit hook, a GPG signing prompt that a `timeout`/`gtimeout` wrapper cut off when one was available, or `timeout`/`gtimeout` not being installed), or is skipped because HEAD is detached | Unstage the paths staged in 5f, report "cache written, not committed"; tell the invoker `docs/research/` entries stay uncommitted and must be committed or removed before orchestrating-development's clean-tree check will pass; research result stays valid; never block the session |
 | Post-research status differs from the snapshot outside `docs/research/` and `.superpowers/research/` | Report the diff; the invoker presents it and asks the user whether to continue; on continue, `docs/research/` entries from this run stay uncommitted — tell the invoker they must be committed or removed before orchestrating-development's clean-tree check will pass |
 | Project is not a git repository | Cleanliness check skipped; the skip stated in the conversation. `[REPO_ROOT]` falls back to the invoker-named project directory, then to the session's current project directory, stating which was used (see Root anchoring); with neither available, the skill stops and says so |
 | All researcher reports discarded | Merged report contains only evidence gaps; surfaced to the user |

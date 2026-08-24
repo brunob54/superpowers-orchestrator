@@ -148,15 +148,16 @@ with the text `not a git repository — the cache will not be
 committed` and stop there; do not run `git symbolic-ref -q HEAD` in
 that case, its exit status does not distinguish a non-git project
 from a detached HEAD. When `git rev-parse --git-dir` succeeds, next
-run `git symbolic-ref -q HEAD`. A non-zero exit here means HEAD is
-detached — fill `<branch>` with the text
-`detached HEAD — the cache will not be committed` and do not run
-`git rev-parse --abbrev-ref HEAD` at all, because on a detached HEAD
-that command prints the literal string `HEAD`, which looks like a
-branch name and cannot be told apart from one by its output alone.
-Only when `git symbolic-ref -q HEAD` succeeds (HEAD is attached to a
-branch) does `<branch>` = the output of
-`git rev-parse --abbrev-ref HEAD`. A negative or non-numeric
+run `git symbolic-ref --short -q HEAD`. A non-zero exit here means
+HEAD is detached — fill `<branch>` with the text
+`detached HEAD — the cache will not be committed`. A zero exit means
+HEAD is attached to a branch, and the command's output is the branch
+name: `<branch>` = that output. This works on a branch with no
+commits yet (a repository right after `git init`). Never use
+`git rev-parse --abbrev-ref HEAD` for this: on a detached HEAD it
+prints the literal string `HEAD`, and on a branch with no commits it
+fails and still prints `HEAD`, so in both cases its output looks
+like a branch name and is not one. A negative or non-numeric
 reply → ask once more; a second unusable reply → treat it as a skip,
 exactly as a `0` reply, and record the skip in the spec's "Prior art
 and alternatives" section. Never fall back to the suggested `<S>`: a
