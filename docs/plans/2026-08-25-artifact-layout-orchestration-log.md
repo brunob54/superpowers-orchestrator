@@ -1,6 +1,6 @@
 # Orchestration Log — artifact-layout
 
-_Invocation 1 — 2026-08-25 — spec docs/specs/2026-08-25-artifact-layout-design.md — N_plan=4 N_code=4 cap=2 — branch feature/artifact-layout — BASE 0169f0e_
+_Invocation 1 — 2026-08-25 — spec docs/superpowers-orchestrator/2026-08-25-artifact-layout/specs/artifact-layout-design.md — N_plan=4 N_code=4 cap=2 — branch feature/artifact-layout — BASE 0169f0e_
 
 ## Phase 1 — Plan — DONE — 2026-08-25
 plan: docs/plans/2026-08-25-artifact-layout.md — 22 tasks
@@ -62,3 +62,8 @@ _Plan repair complete — 2026-08-25 — 28 defects fixed (d2f4784, bdc2df8, 15e
 ## Phase 3 — Batch 9 (tasks 17–18) — COMPLETE — commits 7ce3940..681caaa
 - Task 17: complete — commit 7ce3940 (every test fixture and prompt path moved to the artifact layout)
 - Task 18: complete — commit 214e870 (one-time Windows pathspec check recorded)
+
+## Phase 3 — Batch 10 (tasks 19–20) — COMPLETE — commits a222ecf..c191280
+- Task 19: complete — commit a222ecf (this repository's artifacts migrated to the topic layout; spec now at docs/superpowers-orchestrator/2026-08-25-artifact-layout/specs/artifact-layout-design.md)
+- Task 20: complete — commits 1a8ddff, c191280 (documentation repointed; one fix round for 13 markdown links written relative to docs/, which Step 1's gate cannot see)
+Note: Task 19 Step 4 rewrote this log's `_Invocation_` header to the moved spec path and Step 10 deliberately left it uncommitted for this phase-boundary commit.
