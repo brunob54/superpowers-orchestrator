@@ -21,8 +21,9 @@ source "$SCRIPT_DIR/test-helpers.sh"
 TEST_PROJECT=$(create_test_project)
 trap "cleanup_test_project '$TEST_PROJECT'" EXIT
 
-mkdir -p "$TEST_PROJECT/docs/specs"
-SPEC="$TEST_PROJECT/docs/specs/test-feature-design.md"
+TOPIC_DIR="$TEST_PROJECT/docs/superpowers-orchestrator/2026-08-25-test-feature"
+mkdir -p "$TOPIC_DIR/specs"
+SPEC="$TOPIC_DIR/specs/test-feature-design.md"
 cat > "$SPEC" << 'SPEC_EOF'
 # Test Feature Design
 
@@ -37,7 +38,7 @@ SPEC_SHA_BEFORE=$(shasum "$SPEC" | cut -d' ' -f1)
 
 PROMPT="Invoke the superpowers-orchestrator:multi-doc-review skill on the document $SPEC with N=2. Do not ask me any questions — use N=2 and proceed to completion."
 # Deliberately no doc-type statement: the spec's Testing Strategy requires this
-# test to exercise path-based inference (docs/specs/ -> spec); stating the type
+# test to exercise path-segment inference (nearest segment specs/ -> spec); stating the type
 # would override inference per the skill's Parameters rule.
 
 cd "$PLUGIN_DIR" && timeout 1800 claude -p "$PROMPT" \
@@ -45,7 +46,7 @@ cd "$PLUGIN_DIR" && timeout 1800 claude -p "$PROMPT" \
     --add-dir "$TEST_PROJECT" \
     2>&1 | tee "$TEST_PROJECT/output.txt" || true
 
-LOG="$TEST_PROJECT/docs/specs/test-feature-design-review-log.md"
+LOG="$TOPIC_DIR/specs/test-feature-design-review-log.md"
 FAILURES=0
 
 if [ ! -f "$LOG" ]; then

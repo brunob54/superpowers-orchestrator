@@ -140,6 +140,108 @@ else
     fi
 fi
 
+# ── Case 2: pipeline mode (TOPIC_DIR) ────────────────────────────────────────
+# The log and fix reports are committed under <topic>/implementation/, one
+# chore(review) commit per round, and the review package the log names must
+# not contain the log's own text (reviewer blinding).
+
+git checkout --quiet -b feature-pipeline-review "$BASE_SHA"
+cat > sum.js << 'DEFECT2_EOF'
+function sumFirstN(arr, n) {
+  // BUG (planted, blatant): off-by-one reads past n and past the array end
+  let total = 0;
+  for (let i = 0; i <= n; i++) total += arr[i];
+  return total;
+}
+module.exports = { sumFirstN };
+DEFECT2_EOF
+git add sum.js
+git commit --quiet -m "feature: extend sumFirstN (pipeline case)"
+
+TOPIC_DIR="$TEST_PROJECT/docs/superpowers-orchestrator/2026-08-25-sum-fix"
+PIPE_PROMPT="Invoke the superpowers-orchestrator:multi-code-review skill on the git repository at $TEST_PROJECT (review its current branch feature-pipeline-review) with BASE $BASE_SHA, N=2, and TOPIC_DIR $TOPIC_DIR. Do not ask me any questions — use N=2 and proceed to completion, treating any finding that would need my decision as user-decision in the log."
+
+# Snapshot the review-package count BEFORE this case runs. Case 1 already
+# wrote at least one package into the same project, so an absolute
+# "at least one package exists" control could never fail; only an increase
+# proves that this case's own loop built packages. The threshold is an
+# increase of at least TWO, one per round of this N=2 case — see the
+# (p5-control) comment below for why one is not enough.
+# `|| true` is required: the script runs under `set -euo pipefail` (line 18),
+# and when the glob matches nothing `ls` exits 2, `pipefail` propagates that
+# through `wc`/`tr`, and `set -e` would abort the whole script instead of
+# letting the control report. Same idiom as line 99 of this file.
+PKG_COUNT_BEFORE=$(ls "$TEST_PROJECT"/.superpowers/sdd/review-*.diff 2>/dev/null | wc -l | tr -d ' ' || true)
+
+cd "$PLUGIN_DIR" && timeout 1800 claude -p "$PIPE_PROMPT" \
+    --permission-mode bypassPermissions \
+    --add-dir "$TEST_PROJECT" \
+    2>&1 | tee "$TEST_PROJECT/output-pipeline.txt" || true
+
+cd "$TEST_PROJECT"
+PIPE_LOG="$TOPIC_DIR/implementation/sum-fix-review-log.md"
+
+if [ ! -f "$PIPE_LOG" ]; then
+    echo "FAIL(p1): no $PIPE_LOG created in pipeline mode"
+    FAILURES=$((FAILURES+1))
+else
+    # (p2) the log is committed, not left untracked
+    if ! git ls-files --error-unmatch "$PIPE_LOG" > /dev/null 2>&1; then
+        echo "FAIL(p2): the pipeline-mode review log is not tracked in the branch"
+        FAILURES=$((FAILURES+1))
+    fi
+    # (p3) one chore(review) commit per round
+    REVIEW_COMMITS=$(git log --format=%s "$BASE_SHA"..HEAD | grep -c '^chore(review): ' || true)
+    if [ "$REVIEW_COMMITS" -lt 2 ]; then
+        echo "FAIL(p3): expected at least 2 chore(review) commits, found $REVIEW_COMMITS"
+        FAILURES=$((FAILURES+1))
+    fi
+    # (p4) the working tree is clean at the end.
+    # The test project is a bare `mktemp -d` + `git init` with no .gitignore,
+    # and both cases write their `claude -p` transcript into it
+    # (`output.txt`, `output-pipeline.txt`). Those transcripts are test
+    # scaffolding, not a product of the loop, so exclude them — otherwise this
+    # assertion fails on every run whatever the skill does.
+    DIRT=$(git status --porcelain -- ':(top)' ':(top,exclude,glob)output*.txt')
+    if [ -n "$DIRT" ]; then
+        echo "FAIL(p4): working tree not clean after the pipeline-mode loop:"
+        echo "$DIRT"
+        FAILURES=$((FAILURES+1))
+    fi
+    # (p5) reviewer blinding: no review package contains the log's own text.
+    # Compare the package count against the pre-case snapshot. Without this
+    # control the loop below reports success when this case examined nothing
+    # it wrote — no package written, the `review-package` fallback path taken,
+    # or the workspace archived — and this is the plan's only end-to-end check
+    # that a real run does not hand the reviewer its own review log. The
+    # comparison must be an INCREASE, not "at least one": Case 1 ran in the
+    # same project and already left packages behind, so an absolute count
+    # could never fail.
+    #
+    # The increase must be at least TWO — one package per round of this N=2
+    # case. One new package is not enough: round 1's package is built before
+    # any `chore(review)` log commit exists in `BASE..HEAD`, so it cannot
+    # contain the log path and the (p5) grep below can never fail on it. Only
+    # a package regenerated AFTER round 1's log commit can catch an unblinded
+    # reviewer. A run that reuses round 1's package for round 2 — the exact
+    # failure this control exists to detect — leaves exactly one new package,
+    # which a "-le $PKG_COUNT_BEFORE" test would let through. Package files
+    # are named per range (`review-<base7>..<head7>.diff`), so a correct N=2
+    # run leaves two.
+    PKG_COUNT=$(ls .superpowers/sdd/review-*.diff 2>/dev/null | wc -l | tr -d ' ' || true)
+    if [ "$PKG_COUNT" -lt $((PKG_COUNT_BEFORE + 2)) ]; then
+        echo "FAIL(p5-control): fewer than 2 new review packages under .superpowers/sdd/ (before Case 2: $PKG_COUNT_BEFORE, after: $PKG_COUNT) — round 2 did not regenerate after round 1's chore(review) log commit, so the blinding assertion examined only packages built before the log existed"
+        FAILURES=$((FAILURES+1))
+    fi
+    for PKG in .superpowers/sdd/review-*.diff; do
+        [ -f "$PKG" ] || continue
+        if grep -q 'sum-fix-review-log.md' "$PKG"; then
+            echo "FAIL(p5): review package $PKG contains the review log path — the reviewer was not blinded"
+            FAILURES=$((FAILURES+1))
+        fi
+    done
+fi
+
 if [ "$FAILURES" -eq 0 ]; then
     echo "PASS: multi-code-review behavioral test"
 else
