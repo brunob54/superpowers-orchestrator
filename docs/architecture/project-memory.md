@@ -194,4 +194,4 @@ This fork (superpowers-orchestrator) implements the same episodic memory concept
 
 - `skills/context-management/SKILL.md` — full procedure for generating maps, saving state, and reading history
 - `hooks/stop-reminders.js` — the stop hook that auto-appends session entries
-- `docs/superpowers-orchestrator/specs/2026-03-16-meta-memory-behavioral-self-evolution.md` — proposed future extension: behavioral preference distillation across sessions
+- `docs/superpowers-orchestrator/2026-03-16-meta-memory-behavioral-self-evolution/specs/meta-memory-behavioral-self-evolution-design.md` — proposed future extension: behavioral preference distillation across sessions

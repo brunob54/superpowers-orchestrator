@@ -3,7 +3,7 @@
 #
 # Seeds a deliberately flawed spec, invokes the skill headlessly with N=2,
 # and asserts the review-log contract from
-# docs/specs/2026-07-19-multi-review-design.md:
+# docs/superpowers-orchestrator/2026-07-19-multi-review/specs/multi-review-design.md:
 #   (a) sidecar <doc-basename>-review-log.md exists with a Round 1 entry
 #   (b) doc modified OR all Critical/Important dispositions are rejections
 #   (c) log has a disposition line or an explicit no-findings verdict

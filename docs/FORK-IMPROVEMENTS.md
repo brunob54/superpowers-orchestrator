@@ -41,7 +41,7 @@ Long implementation plans cannot finish inside one context window. Without a bat
 
 Say any of (with a plan file present):
 
-- `implement the next 3 tasks from docs/plans/<plan>.md`
+- `implement the next 3 tasks from docs/superpowers-orchestrator/<date>-<slug>/plans/<slug>.md`
 - `execute the plan in batches`
 - after `/clear`: `resume the plan`
 
@@ -102,7 +102,7 @@ The flow is automatic whenever subagent-driven-development executes a plan — e
 
 ## 3. multi-doc-review — N-Round Independent Document Review (v6.9.0)
 
-*Named `multi-review` through v6.10.0; renamed in v6.11.0 to pair with `multi-code-review`. Historical documents under `docs/specs/` and `docs/plans/` keep the old name.*
+*Named `multi-review` through v6.10.0; renamed in v6.11.0 to pair with `multi-code-review`. The historical topic folder `docs/superpowers-orchestrator/2026-07-19-multi-review/` keeps the old name.*
 
 ### Summary
 
@@ -125,7 +125,7 @@ A single review — even a careful one — inherits the authoring conversation's
 ### How to use
 
 - **Automatic:** at the brainstorming spec gate and the writing-plans plan gate, the loop runs before the user-approval step and asks for N once if you haven't stated a count.
-- **Direct:** `/multi-doc-review docs/specs/<doc>.md 3` — or phrases like `review this spec 3 times` / `run independent review rounds on docs/plans/<plan>.md`.
+- **Direct:** `/multi-doc-review docs/superpowers-orchestrator/<date>-<slug>/specs/<slug>-design.md 3` — or phrases like `review this spec 3 times` / `run independent review rounds on docs/superpowers-orchestrator/<date>-<slug>/plans/<slug>.md`.
 - **Audit trail:** read `<doc-basename>-review-log.md` next to the document for per-round verdicts and every disposition.
 
 ### Where it lives
@@ -148,7 +148,7 @@ A single review — even a careful one — inherits the authoring conversation's
 - Each round dispatches **one clean-context reviewer subagent** under a **rotating lens**: correctness & spec alignment → adversarial red-team → security → test & coverage quality. Every lens carries a **prose adaptation** — for files that are instructions to an agent (skills, prompts, configs) rather than executable code, runtime-input attacks are vacuous, so the reviewer attacks *agent misexecution* instead.
 - Between rounds, **one fix subagent** handles that round's Critical/Important findings and the next round reviews a **freshly built package** of the fixed code.
 - **No fix ships unreviewed:** an exit that would leave the last round's fix unexamined triggers a same-lens verification re-review (capped at 3 cycles).
-- Sidecar audit log at `.superpowers/reviews/<branch-slug>-review-log.md`, git-ignored by a `*` rule so the branch under review can never author its own review record. Early exit after **two consecutive clean rounds**.
+- Sidecar audit log at `.superpowers/reviews/<branch-slug>-review-log.md` — or, in a pipeline run, `docs/superpowers-orchestrator/<date>-<slug>/implementation/<slug>-review-log.md`, committed — so a direct review is never part of the branch under review. Early exit after **two consecutive clean rounds**.
 
 ### Motivation
 
@@ -168,7 +168,7 @@ Dogfood evidence from building it: the design spec collected **33 findings acros
 
 - **Automatic:** at subagent-driven-development's final whole-branch review gate, replacing the former single-pass review.
 - **Direct:** `/multi-code-review [BASE] [N]` — or phrases like `review the branch 3 times` / `several independent code reviews of this branch`. Single-argument form: an integer 0–10 is N, anything else is a git ref.
-- **Audit trail:** `.superpowers/reviews/<branch-slug>-review-log.md` for per-round verdicts, dispositions, and fix commit SHAs.
+- **Audit trail:** `.superpowers/reviews/<branch-slug>-review-log.md` — or, in a pipeline run, `docs/superpowers-orchestrator/<date>-<slug>/implementation/<slug>-review-log.md`, committed — for per-round verdicts, dispositions, and fix commit SHAs.
 - **Claude Code only** — the loop requires the Agent tool; on Codex and Cursor the SDD gate keeps its single-pass final review.
 
 ### Where it lives
@@ -191,7 +191,7 @@ Dogfood evidence from building it: the design spec collected **33 findings acros
 - From an **approved design spec**, runs the whole development lifecycle autonomously: plan writing → N independent plan-review rounds → batched implementation → N independent whole-branch code-review rounds — **stopping only on major errors and ending before merge/PR**. The merge decision stays human.
 - One interactive **Phase 0** collects everything up front — plan/code review counts, batch task cap, branch point, and a permissions confirmation for the unattended run — then the user is never asked mid-flight; blockers become journaled `BLOCKED` stops with resume instructions, never silent guesses.
 - Four fresh-context **controller subagent templates** (plan-writer, doc-review-loop, batch-controller, code-review-loop) each drive one phase by invoking the existing skills (writing-plans, multi-doc-review, subagent-driven-development, multi-code-review); the orchestrator itself only fills template placeholders and reads compact structured returns (`PLAN_DONE` / `REVIEW_DONE` / `BATCH_DONE` / `BLOCKED` / …).
-- A **committed orchestration log** `docs/plans/<slug>-orchestration-log.md` records every phase boundary, and **resume / abandon** procedures reconstruct or tear down a run from durable artifacts alone (log, plan checkboxes, git history) — a fresh session can pick up a crashed run.
+- A **committed orchestration log** `docs/superpowers-orchestrator/<date>-<slug>/<slug>-orchestration-log.md` records every phase boundary, and **resume / abandon** procedures reconstruct or tear down a run from durable artifacts alone (log, plan checkboxes, git history) — a fresh session can pick up a crashed run.
 
 ### Motivation
 
@@ -208,8 +208,8 @@ The fork's stages were each automated individually — batched SDD execution (v6
 ### How to use
 
 - **From brainstorming:** when a spec passes its review gate, the gate message offers orchestration as an alternative to the manual writing-plans handoff.
-- **Direct:** `orchestrate development of docs/specs/<spec>.md` — then answer the Phase 0 questions once.
-- **After a stop:** `Resume orchestration for docs/plans/<plan>.md` (supply the blocking answer if the stop was a `BLOCKED`); `Abandon orchestration for docs/plans/<plan>.md` tears the run down with confirmation.
+- **Direct:** `orchestrate development of docs/superpowers-orchestrator/<date>-<slug>/specs/<slug>-design.md` — then answer the Phase 0 questions once.
+- **After a stop:** `Resume orchestration for docs/superpowers-orchestrator/<date>-<slug>/plans/<slug>.md` (supply the blocking answer if the stop was a `BLOCKED`); `Abandon orchestration for docs/superpowers-orchestrator/<date>-<slug>/plans/<slug>.md` tears the run down with confirmation.
 - **Claude Code only** — the pipeline requires the Agent tool with nested controller dispatch; it is not available on Codex or Cursor.
 
 ### Where it lives

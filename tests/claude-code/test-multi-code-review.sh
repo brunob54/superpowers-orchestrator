@@ -3,7 +3,7 @@
 #
 # Seeds a temp git repo with a base commit and a branch carrying a blatant
 # planted defect, invokes the skill headlessly with N=2, and asserts the
-# review-log contract from docs/specs/2026-07-27-multi-code-review-design.md:
+# review-log contract from docs/superpowers-orchestrator/2026-07-27-multi-code-review/specs/multi-code-review-design.md:
 #   (a) .superpowers/reviews/*-review-log.md exists with a Round 1 entry
 #   (b) every enumerated Critical/Important disposition uses the canonical
 #       vocabulary (fixed / rejected: / user-decision / unresolved:)
