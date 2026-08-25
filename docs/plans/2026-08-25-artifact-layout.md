@@ -768,7 +768,7 @@ git commit -m "fix(hooks): match the new-layout spec path in the orchestration i
 
 **Does NOT cover:** `hooks/stop-reminders.js` itself is unchanged. Its `specs/`/`plans/` regexes already match any parent folder, so a new-layout path is significant without a code change. This task only proves it, and proves that `implementation/` is NOT significant — an `implementation/` edit must not mark a session as decision-worthy, per the spec's non-goals.
 
-- [ ] **Step 1: Add the classification fixtures**
+- [x] **Step 1: Add the classification fixtures**
 
 There is no red state to produce here, by design: `hooks/stop-reminders.js` is
 unchanged (see "Does NOT cover"), so these fixtures pass as soon as they are
@@ -822,17 +822,17 @@ test('Does NOT treat implementation/*.md edits as significant', () => {
 });
 ```
 
-- [ ] **Step 2: Run the tests**
+- [x] **Step 2: Run the tests**
 
 Run: `node tests/codex/test-stop-reminders.js`
 Expected: PASS for all three. If the `implementation/` test fails, `hooks/stop-reminders.js` matched a path it must not — stop and report; do not widen the test.
 
-- [ ] **Step 3: Run the full hook unit suite**
+- [x] **Step 3: Run the full hook unit suite**
 
 Run: `bash tests/codex/run-unit-tests.sh`
 Expected: PASS
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add tests/codex/test-stop-reminders.js
