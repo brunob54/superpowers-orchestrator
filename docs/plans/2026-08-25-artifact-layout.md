@@ -87,7 +87,7 @@
 
 **Security flag:** `none`
 
-- [ ] **Step 1: Write the failing verification check**
+- [x] **Step 1: Write the failing verification check**
 
 ```bash
 cd /Users/bruno/Programming/AI/AI_Coding/My_tools/Superpowers
@@ -100,12 +100,12 @@ grep -q '^## Artifact Layout$' skills/brainstorming/SKILL.md \
 
 Step 4 changes the old path in **two** places — `SKILL.md:53` (the save instruction) and `SKILL.md:247` (the exit criterion) — so the gate carries one negative needle per place. A single bare `! grep -q 'docs/specs/'` would NOT work here: the "Topic folder derivation" bullet that Step 3 inserts names `docs/specs/<file>` itself, as the example of a path outside the layout, so the bare needle would still match after both edits and the gate could never pass.
 
-- [ ] **Step 2: Run it to verify it fails**
+- [x] **Step 2: Run it to verify it fails**
 
 Run: the command from Step 1
 Expected: prints `FAIL` — the section does not exist yet and `SKILL.md:53` and `SKILL.md:247` still name the old path.
 
-- [ ] **Step 3: Insert the section between the Checklist and the Process Flow**
+- [x] **Step 3: Insert the section between the Checklist and the Process Flow**
 
 Insert immediately before the line `## Process Flow` in `skills/brainstorming/SKILL.md`:
 
@@ -170,7 +170,7 @@ docs/superpowers-orchestrator/<YYYY-MM-DD>-<slug>/
   relocating the folder makes every document "outside the layout".
 ````
 
-- [ ] **Step 4: Update the two path statements in the checklist and the exit criteria**
+- [x] **Step 4: Update the two path statements in the checklist and the exit criteria**
 
 In `skills/brainstorming/SKILL.md`, replace line 53:
 
@@ -204,12 +204,12 @@ with:
   (`docs/superpowers-orchestrator/*/specs/`).
 ```
 
-- [ ] **Step 5: Run the verification check to confirm it passes**
+- [x] **Step 5: Run the verification check to confirm it passes**
 
 Run: the command from Step 1
 Expected: prints `PASS`
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add skills/brainstorming/SKILL.md
