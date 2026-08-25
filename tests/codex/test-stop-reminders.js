@@ -222,7 +222,7 @@ test('Detects hooks/*.js edits', () => {
 test('Detects specs/*.md edits (new pattern)', () => {
   const { homeDir, cwdDir, logDir } = makeTempDirs();
   try {
-    writeRecentEdit(logDir, 'docs/specs/test-spec.md');
+    writeRecentEdit(logDir, 'docs/superpowers-orchestrator/2026-08-25-foo/specs/foo-design.md');
     const { evaluatePayload } = loadHookWithHome(homeDir);
     const result = evaluatePayload({ cwd: cwdDir, session_id: TEST_SESSION_ID });
     const reason = result.reason || '';
@@ -235,11 +235,25 @@ test('Detects specs/*.md edits (new pattern)', () => {
 test('Detects plans/*.md edits (new pattern)', () => {
   const { homeDir, cwdDir, logDir } = makeTempDirs();
   try {
-    writeRecentEdit(logDir, 'docs/plans/test-plan.md');
+    writeRecentEdit(logDir, 'docs/superpowers-orchestrator/2026-08-25-foo/plans/foo.md');
     const { evaluatePayload } = loadHookWithHome(homeDir);
     const result = evaluatePayload({ cwd: cwdDir, session_id: TEST_SESSION_ID });
     const reason = result.reason || '';
     assert.ok(reason.includes('Decision log'), `plans/*.md edit should trigger decision log: ${reason}`);
+  } finally {
+    cleanup(homeDir, cwdDir);
+  }
+});
+
+test('Does NOT treat implementation/*.md edits as significant', () => {
+  const { homeDir, cwdDir, logDir } = makeTempDirs();
+  try {
+    writeRecentEdit(logDir, 'docs/superpowers-orchestrator/2026-08-25-foo/implementation/foo-review-log.md');
+    const { evaluatePayload } = loadHookWithHome(homeDir);
+    const result = evaluatePayload({ cwd: cwdDir, session_id: TEST_SESSION_ID });
+    const reason = result.reason || '';
+    assert.ok(!reason.includes('Decision log'),
+      `implementation/*.md edit must not trigger the decision log: ${reason}`);
   } finally {
     cleanup(homeDir, cwdDir);
   }
