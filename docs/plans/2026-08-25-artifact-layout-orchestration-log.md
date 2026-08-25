@@ -30,3 +30,7 @@ _Plan repair complete — 2026-08-25 — 28 defects fixed (d2f4784, bdc2df8, 15e
 ## Phase 3 — Batch 1 (tasks 1–2) — COMPLETE — commits 7996399..ecd6c72
 - Task 1: complete — commits 7996399..34d9452
 - Task 2: complete — commits a3f83f2..ecd6c72
+
+## Phase 3 — Batch 2 (tasks 3–4) — COMPLETE — commits 824e9bd..a42e128
+- Task 3: complete — commits 824e9bd..355d8ed
+- Task 4: complete — commits f067723..a42e128
