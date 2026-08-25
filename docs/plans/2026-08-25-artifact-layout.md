@@ -1534,7 +1534,7 @@ git commit -m "fix(multi-code-review): blind reviewers to committed review mater
 
 **Security flag:** `none`
 
-- [ ] **Step 1: Write the git-contract tests**
+- [x] **Step 1: Write the git-contract tests**
 
 These assertions have **no red state**, by design — the step is deliberately
 not called "write failing tests". They pin down behavior of `git` itself (a
@@ -1676,12 +1676,12 @@ fi
 use for the scripts directory and the workspace directory; reuse them rather
 than recomputing the paths.
 
-- [ ] **Step 2: Run the tests**
+- [x] **Step 2: Run the tests**
 
 Run: `bash tests/sdd-scripts/run-tests.sh`
 Expected: PASS — all new assertions plus every pre-existing one. These assertions test git's own behavior, which the skill text now depends on; a failure means the documented git contract does not hold on this git version. Report the git version (`git --version`) with any failure instead of adjusting the assertions.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add tests/sdd-scripts/run-tests.sh
