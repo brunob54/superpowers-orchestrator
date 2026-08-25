@@ -53,7 +53,7 @@ To inspect the start gate's pressure measurement yourself: `node hooks/skill-act
 
 ### References
 
-- Design spec: [specs/2026-07-06-sdd-batched-autonomous-mode-design.md](specs/2026-07-06-sdd-batched-autonomous-mode-design.md)
+- Design spec: [superpowers-orchestrator/2026-07-06-sdd-batched-autonomous-mode/specs/sdd-batched-autonomous-mode-design.md](superpowers-orchestrator/2026-07-06-sdd-batched-autonomous-mode/specs/sdd-batched-autonomous-mode-design.md)
 - Release notes: [../RELEASE-NOTES.md](../RELEASE-NOTES.md) — v6.7.0
 
 ---
@@ -94,7 +94,7 @@ The flow is automatic whenever subagent-driven-development executes a plan — e
 
 ### References
 
-- Design spec: [specs/2026-07-18-sdd-token-optimization-design.md](specs/2026-07-18-sdd-token-optimization-design.md)
+- Design spec: [superpowers-orchestrator/2026-07-18-sdd-token-optimization/specs/sdd-token-optimization-design.md](superpowers-orchestrator/2026-07-18-sdd-token-optimization/specs/sdd-token-optimization-design.md)
 - Release notes: [../RELEASE-NOTES.md](../RELEASE-NOTES.md) — v6.8.0
 - Upstream origin of the flow: obra/superpowers v6.0.0
 
@@ -113,7 +113,7 @@ The flow is automatic whenever subagent-driven-development executes a plan — e
 
 ### Motivation
 
-A single review — even a careful one — inherits the authoring conversation's blind spots: the reviewer has already accepted the document's framing. Independent clean-context rounds under different lenses keep finding real, disjoint issue classes. Dogfood evidence from building this very feature: its own spec collected **22 findings across 3 rounds** and its implementation plan **18 findings** — none of the rounds came back clean ([spec review log](specs/2026-07-19-multi-review-design-review-log.md), [plan review log](plans/2026-07-19-multi-review-review-log.md)).
+A single review — even a careful one — inherits the authoring conversation's blind spots: the reviewer has already accepted the document's framing. Independent clean-context rounds under different lenses keep finding real, disjoint issue classes. Dogfood evidence from building this very feature: its own spec collected **22 findings across 3 rounds** and its implementation plan **18 findings** — none of the rounds came back clean ([spec review log](superpowers-orchestrator/2026-07-19-multi-review/specs/multi-review-design-review-log.md), [plan review log](superpowers-orchestrator/2026-07-19-multi-review/plans/multi-review-review-log.md)).
 
 ### How it works
 
@@ -134,8 +134,8 @@ A single review — even a careful one — inherits the authoring conversation's
 
 ### References
 
-- Design spec: [specs/2026-07-19-multi-review-design.md](specs/2026-07-19-multi-review-design.md)
-- Review logs (dogfood evidence): [spec](specs/2026-07-19-multi-review-design-review-log.md), [plan](plans/2026-07-19-multi-review-review-log.md)
+- Design spec: [superpowers-orchestrator/2026-07-19-multi-review/specs/multi-review-design.md](superpowers-orchestrator/2026-07-19-multi-review/specs/multi-review-design.md)
+- Review logs (dogfood evidence): [spec](superpowers-orchestrator/2026-07-19-multi-review/specs/multi-review-design-review-log.md), [plan](superpowers-orchestrator/2026-07-19-multi-review/plans/multi-review-review-log.md)
 - Release notes: [../RELEASE-NOTES.md](../RELEASE-NOTES.md) — v6.9.0
 
 ---
@@ -154,7 +154,7 @@ A single review — even a careful one — inherits the authoring conversation's
 
 The v6.9.0 dogfood showed independent lenses finding *disjoint* issue classes on a document. Code has the same property, and subagent-driven-development's final whole-branch review was a single pass — one reviewer, one lens, one chance. This release reuses the v6.9.0 architecture so the two loops stay teachable as one pattern, and adds what code needs that documents do not: fixes applied between rounds, repackaged diffs, and a guarantee that no fix reaches the gate unreviewed.
 
-Dogfood evidence from building it: the design spec collected **33 findings across 4 rounds**, its implementation plan ran **10 rounds**, and the branch itself went through this very loop ([spec review log](specs/2026-07-27-multi-code-review-design-review-log.md), [plan review log](plans/2026-07-27-multi-code-review-review-log.md)).
+Dogfood evidence from building it: the design spec collected **33 findings across 4 rounds**, its implementation plan ran **10 rounds**, and the branch itself went through this very loop ([spec review log](superpowers-orchestrator/2026-07-27-multi-code-review/specs/multi-code-review-design-review-log.md), [plan review log](superpowers-orchestrator/2026-07-27-multi-code-review/plans/multi-code-review-review-log.md)).
 
 ### How it works
 
@@ -177,9 +177,9 @@ Dogfood evidence from building it: the design spec collected **33 findings acros
 
 ### References
 
-- Design spec: [specs/2026-07-27-multi-code-review-design.md](specs/2026-07-27-multi-code-review-design.md)
-- Implementation plan: [plans/2026-07-27-multi-code-review.md](plans/2026-07-27-multi-code-review.md)
-- Review logs (dogfood evidence): [spec](specs/2026-07-27-multi-code-review-design-review-log.md), [plan](plans/2026-07-27-multi-code-review-review-log.md)
+- Design spec: [superpowers-orchestrator/2026-07-27-multi-code-review/specs/multi-code-review-design.md](superpowers-orchestrator/2026-07-27-multi-code-review/specs/multi-code-review-design.md)
+- Implementation plan: [superpowers-orchestrator/2026-07-27-multi-code-review/plans/multi-code-review.md](superpowers-orchestrator/2026-07-27-multi-code-review/plans/multi-code-review.md)
+- Review logs (dogfood evidence): [spec](superpowers-orchestrator/2026-07-27-multi-code-review/specs/multi-code-review-design-review-log.md), [plan](superpowers-orchestrator/2026-07-27-multi-code-review/plans/multi-code-review-review-log.md)
 - Release notes: [../RELEASE-NOTES.md](../RELEASE-NOTES.md) — v6.10.0
 
 ---
@@ -203,7 +203,7 @@ The fork's stages were each automated individually — batched SDD execution (v6
 - Controllers dispatch their own nested workers (implementers, reviewers, fix subagents). `hooks/subagent-guard.js` records this sanctioned nesting and exempts returns opening with the `<!-- orchestration report -->` marker from skill-leakage blocking — free-text `BLOCKED` reasons may legitimately name skills.
 - A **Major-Error Stop Policy** enumerates the stop conditions (unresolved review findings, malformed returns after retry, failed phase-boundary commits, missing artifacts on resume, zero-checkbox plans); each writes a `STOPPED` entry with a one-line reason and the exact resume command.
 - The batch controller carries **mid-task crash recovery**: on retry it derives the review base from the last ledger line, falling back to the last `chore(plan): <slug> task <n> complete` commit and then the merge-base with the default branch — never its own starting HEAD — so a crashed attempt's commits can never bypass the task-review gate. A `[RESUME_ANSWER]` placeholder carries the user's answer when a `BLOCKED` run is resumed.
-- Dogfood evidence: the feature's own spec collected **35 findings across 4 review rounds**, its implementation plan **22 findings (all applied, none rejected)**, and the branch went through the v6.10.0 whole-branch loop before merging ([spec review log](specs/2026-08-04-orchestrating-development-design-review-log.md), [plan review log](plans/2026-08-04-orchestrating-development-review-log.md)).
+- Dogfood evidence: the feature's own spec collected **35 findings across 4 review rounds**, its implementation plan **22 findings (all applied, none rejected)**, and the branch went through the v6.10.0 whole-branch loop before merging ([spec review log](superpowers-orchestrator/2026-08-04-orchestrating-development/specs/orchestrating-development-design-review-log.md), [plan review log](superpowers-orchestrator/2026-08-04-orchestrating-development/plans/orchestrating-development-review-log.md)).
 
 ### How to use
 
@@ -218,7 +218,7 @@ The fork's stages were each automated individually — batched SDD execution (v6
 
 ### References
 
-- Design spec: [specs/2026-08-04-orchestrating-development-design.md](specs/2026-08-04-orchestrating-development-design.md)
-- Implementation plan: [plans/2026-08-04-orchestrating-development.md](plans/2026-08-04-orchestrating-development.md)
-- Review logs (dogfood evidence): [spec](specs/2026-08-04-orchestrating-development-design-review-log.md), [plan](plans/2026-08-04-orchestrating-development-review-log.md)
+- Design spec: [superpowers-orchestrator/2026-08-04-orchestrating-development/specs/orchestrating-development-design.md](superpowers-orchestrator/2026-08-04-orchestrating-development/specs/orchestrating-development-design.md)
+- Implementation plan: [superpowers-orchestrator/2026-08-04-orchestrating-development/plans/orchestrating-development.md](superpowers-orchestrator/2026-08-04-orchestrating-development/plans/orchestrating-development.md)
+- Review logs (dogfood evidence): [spec](superpowers-orchestrator/2026-08-04-orchestrating-development/specs/orchestrating-development-design-review-log.md), [plan](superpowers-orchestrator/2026-08-04-orchestrating-development/plans/orchestrating-development-review-log.md)
 - Release notes: [../RELEASE-NOTES.md](../RELEASE-NOTES.md) — v6.14.0
