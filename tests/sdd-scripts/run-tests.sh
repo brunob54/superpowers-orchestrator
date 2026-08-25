@@ -61,6 +61,7 @@ assert_stderr_silent() { # desc
 # pwd -P resolves macOS's /var -> /private/var symlink so path assertions
 # match what git rev-parse --show-toplevel prints.
 REPO=$(mktemp -d)
+: "${REPO:?mktemp failed — refusing to run with an empty repo path}"
 REPO=$(cd "$REPO" && pwd -P)
 # Stderr sink for the assertions above. Kept outside $REPO so it can never
 # appear in a `git status --porcelain` assertion.

@@ -122,7 +122,10 @@ docs/superpowers-orchestrator/<YYYY-MM-DD>-<slug>/
 
 ### Reusing an existing topic folder
 
-Before step 11 writes the design, list the candidate folders:
+Before step 11 writes the design, list the candidate folders. `<slug>` here
+is the already-normalized slug defined under "Artifact Layout" above — the
+topic name must be normalized to that form before it is substituted into
+this or any other command:
 
 ```bash
 find docs/superpowers-orchestrator -maxdepth 1 -type d \

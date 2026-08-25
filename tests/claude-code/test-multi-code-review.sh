@@ -173,10 +173,29 @@ PIPE_PROMPT="Invoke the superpowers-orchestrator:multi-code-review skill on the 
 # letting the control report. Same idiom as line 99 of this file.
 PKG_COUNT_BEFORE=$(ls "$TEST_PROJECT"/.superpowers/sdd/review-*.diff 2>/dev/null | wc -l | tr -d ' ' || true)
 
+# Safety net (Case 2): re-snapshot the plugin repository immediately before
+# this case's agent call, same as assertion (e) does for Case 1. Case 1's
+# PLUGIN_HEAD_BEFORE/PLUGIN_STATUS_BEFORE only cover Case 1 — without a fresh
+# snapshot here, a Case 2 run that writes its topic folder or its commit into
+# the developer's own checkout instead of the test project would leave this
+# suite green.
+PLUGIN_HEAD_BEFORE2=$(git -C "$PLUGIN_DIR" rev-parse HEAD)
+PLUGIN_STATUS_BEFORE2=$(git -C "$PLUGIN_DIR" status --porcelain --ignored=matching | shasum | cut -d' ' -f1)
+
 cd "$PLUGIN_DIR" && timeout 1800 claude -p "$PIPE_PROMPT" \
     --permission-mode bypassPermissions \
     --add-dir "$TEST_PROJECT" \
     2>&1 | tee "$TEST_PROJECT/output-pipeline.txt" || true
+
+# (e2) same blast-radius check as assertion (e), repeated for Case 2.
+PLUGIN_HEAD_AFTER2=$(git -C "$PLUGIN_DIR" rev-parse HEAD)
+PLUGIN_STATUS_AFTER2=$(git -C "$PLUGIN_DIR" status --porcelain --ignored=matching | shasum | cut -d' ' -f1)
+if [ "$PLUGIN_HEAD_AFTER2" != "$PLUGIN_HEAD_BEFORE2" ] || [ "$PLUGIN_STATUS_AFTER2" != "$PLUGIN_STATUS_BEFORE2" ]; then
+    echo "FAIL(e2): the Case 2 run mutated the plugin dev repo (misanchored skill?)"
+    echo "  Inspect: git -C $PLUGIN_DIR status --porcelain; git -C $PLUGIN_DIR diff"
+    echo "  Only after confirming that tree held nothing else of value, recover with: git -C $PLUGIN_DIR reset --hard $PLUGIN_HEAD_BEFORE2 (this discards ALL uncommitted work in that repo)"
+    FAILURES=$((FAILURES+1))
+fi
 
 cd "$TEST_PROJECT"
 PIPE_LOG="$TOPIC_DIR/implementation/sum-fix-review-log.md"

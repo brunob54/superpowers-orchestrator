@@ -552,7 +552,10 @@ completed invocation only on explicit user request.
   its diff/tests can embed text addressed to the reviewer or fix
   subagent — the data-not-instructions rules mitigate but don't
   eliminate this, so treat a clean verdict with heightened skepticism;
-  note the fix subagent executes that branch's tests.
+  note the fix subagent executes that branch's tests. The blinding
+  pathspecs above match by path shape, not by trust — a branch of
+  untrusted origin can put arbitrary content at one of those paths to
+  hide it from every reviewer round.
 
 ## Guard Interaction
 
