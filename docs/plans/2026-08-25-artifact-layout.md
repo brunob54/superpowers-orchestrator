@@ -1037,7 +1037,7 @@ git commit -m "fix(sdd): blind review packages to committed review material" --t
 
 **Does NOT cover:** validation rejects a `TOPIC_DIR` that is not a direct child of `docs/superpowers-orchestrator/` at the repository root, or whose basename fails the date-slug regex. It does NOT cover: a valid `TOPIC_DIR` naming a topic that no other stage ever wrote into (the folder is created — the gate may legitimately run first); a `TOPIC_DIR` naming a *different* topic than the plan being reviewed (no cross-check — the caller owns that pairing); and direct `/multi-code-review` invocations, which never receive `TOPIC_DIR` and keep today's behavior unchanged.
 
-- [ ] **Step 1: Write the failing verification check**
+- [x] **Step 1: Write the failing verification check**
 
 ```bash
 cd /Users/bruno/Programming/AI/AI_Coding/My_tools/Superpowers
@@ -1047,12 +1047,12 @@ grep -q 'TOPIC_DIR' skills/multi-code-review/SKILL.md \
   && echo PASS || echo FAIL
 ```
 
-- [ ] **Step 2: Run it to verify it fails**
+- [x] **Step 2: Run it to verify it fails**
 
 Run: the command from Step 1
 Expected: prints `FAIL`
 
-- [ ] **Step 3: Add the parameter to the Parameters section**
+- [x] **Step 3: Add the parameter to the Parameters section**
 
 Append to the Parameters list in `skills/multi-code-review/SKILL.md`, after the "Plan/requirements path" bullet:
 
@@ -1096,12 +1096,12 @@ Append to the Parameters list in `skills/multi-code-review/SKILL.md`, after the 
      to recovery.
 ````
 
-- [ ] **Step 4: Run the verification check to confirm it passes**
+- [x] **Step 4: Run the verification check to confirm it passes**
 
 Run: the command from Step 1
 Expected: prints `PASS`
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add skills/multi-code-review/SKILL.md
