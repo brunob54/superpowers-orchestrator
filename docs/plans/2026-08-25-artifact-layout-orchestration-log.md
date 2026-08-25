@@ -38,3 +38,7 @@ _Plan repair complete — 2026-08-25 — 28 defects fixed (d2f4784, bdc2df8, 15e
 ## Phase 3 — Batch 3 (tasks 5–6) — COMPLETE — commits 180601b..3305cb4
 - Task 5: complete — commits 180601b..2d0dcb6
 - Task 6: complete — commits f9eed8a..3305cb4
+
+## Phase 3 — Batch 4 (tasks 7–8) — COMPLETE — commits 7a5bd16..5d2e64a
+- Task 7: complete — commit 7a5bd16 (stop-reminders classifies new-layout paths)
+- Task 8: complete — commit 9ba62e4 (review packages blinded to committed review material)
