@@ -16,3 +16,5 @@ _Resumed — 2026-08-25 — four pre-flight conflicts answered by the user (Task
 ## STOPPED — 2026-08-25 — phase 3 — pre-flight review found four further conflicts (Tasks 2, 12, 14, 17); nothing implemented
 Detail: .superpowers/sdd/task-2-report.md
 Resume: Resume orchestration for docs/plans/2026-08-25-artifact-layout.md
+
+_Resumed — 2026-08-25 — second pre-flight set answered by the user (Tasks 2, 12, 14, 17); first set already applied as d2f4784_
