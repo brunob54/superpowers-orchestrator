@@ -111,5 +111,5 @@ fi
   git diff -U10 "${base}..${head}" -- "${blind_pathspecs[@]}"
 } > "$out"
 
-count=$(git rev-list --count "${base}..${head}")
+count=$(git rev-list --count "${base}..${head}" -- "${blind_pathspecs[@]}")
 echo "wrote ${out}: ${count} commit(s), $(wc -c < "$out" | tr -d ' ') bytes"

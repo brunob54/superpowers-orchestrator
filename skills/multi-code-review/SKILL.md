@@ -171,11 +171,11 @@ Sidecar log and fix reports, by mode:
   inside it (nothing else ignores `.superpowers/`). Nothing is committed.
 - **Pipeline mode** (`TOPIC_DIR` given):
   `<TOPIC_DIR>/implementation/<slug>-review-log.md`; fix reports beside it as
-  `<TOPIC_DIR>/implementation/<slug>-fix-reports.md`, with `<slug>` derived
-  from `TOPIC_DIR`'s basename. The folder is created on first write and gets
-  **no** `.gitignore` — the log is tracked by design. Pipeline mode changes
-  exactly four rules of this skill; each is stated next to the direct-mode
-  rule it replaces.
+  `<TOPIC_DIR>/implementation/<slug>-fix-reports.md`, with `<slug>` =
+  `TOPIC_DIR`'s basename minus the date prefix. The folder is created on
+  first write and gets **no** `.gitignore` — the log is tracked by design.
+  Pipeline mode changes exactly four rules of this skill; each is stated
+  next to the direct-mode rule it replaces.
 
 **Pipeline rule 1 — Log commits.** After every round, and after that round's
 fix commits:
@@ -452,7 +452,10 @@ clean for convergence but logs its Minor dispositions normally — never
 the "none" line. Note sonnet-floor substitutions on the round header
 line. Skipped invocations (N=0) get a one-line `skipped` entry carrying
 the same invocation-note fields (date, N, BASE..HEAD, raw branch name,
-invoker) plus `HEAD <sha>`; a failed round keeps the normal
+invoker) plus `HEAD <sha>` — in **direct mode** the raw
+`git rev-parse HEAD`; in **pipeline mode** the entry records the
+**effective HEAD**, never the raw `git rev-parse HEAD`, which at entry
+time is always the last round's log commit; a failed round keeps the normal
 `## Round <i> — <lens name> — <model>` header with
 `**Reviewer verdict:** inconclusive` and one disposition line
 `- inconclusive — <reason>`; verification re-reviews use the

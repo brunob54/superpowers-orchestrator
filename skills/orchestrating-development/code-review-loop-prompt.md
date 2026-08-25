@@ -50,7 +50,8 @@ Agent tool (general-purpose):
        next round automatically; the completion skip applies to
        `gate: orchestration` entries whose completion-marker HEAD and
        branch match. If the completion marker already matches the current
-       HEAD and branch, do not re-run anything: synthesize your
+       HEAD (the effective HEAD in pipeline mode) and branch, do not
+       re-run anything: synthesize your
        REVIEW_DONE return from the review log's recorded rounds and
        dispositions — a retry dispatched after only the final message was
        lost must not run the loop twice.

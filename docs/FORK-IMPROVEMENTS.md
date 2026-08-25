@@ -161,7 +161,7 @@ Dogfood evidence from building it: the design spec collected **33 findings acros
 - **Reviewer model:** inherits the session model with a **sonnet floor** — a haiku-tier or unrecognized session model dispatches reviewers on `sonnet`. This replaces subagent-driven-development's previous always-opus final-review rule. Fix subagents follow SDD's existing Model Selection table.
 - **A user-supplied BASE is never used raw:** it is charset-rejected (`^[A-Za-z0-9._/~^{}-]+$`) before anything touches a shell, resolved with `git rev-parse --verify`, and ancestry-checked against HEAD — a non-ancestor BASE would render untouched commits as deletions and the reviewer would report them as defects.
 - Convergence is judged from the reviewer's **enumerated findings**, never the count line and never post-triage — rejecting findings at triage cannot make a round clean.
-- **Once per gate** is keyed on the completion marker's *post-fix* HEAD plus the recorded branch name (an invocation-start HEAD would be defeated by the loop's own fix commits), and never honours a log that `git ls-files` reports as tracked in the branch under review.
+- **Once per gate** is keyed on the completion marker's *post-fix* HEAD plus the recorded branch name (an invocation-start HEAD would be defeated by the loop's own fix commits). The tracked-log condition — never honouring a log that `git ls-files` reports as tracked in the branch under review — applies in **direct mode** only; in **pipeline mode** the log is tracked by design, and the completion marker records the **effective HEAD** instead.
 - Reviewer reports reuse the guard-exempt marker `<!-- multi-review report -->`; the skill is in the `hooks/subagent-guard.js` roster.
 
 ### How to use
