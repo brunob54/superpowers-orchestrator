@@ -851,7 +851,7 @@ git commit -m "test(hooks): classify new-layout artifact paths in stop-reminders
 
 **Does NOT cover:** in `--commits` mode the explicit commit list (`git log -1 --oneline "$c"`) is NOT filtered — the caller names those commits itself and they are task commits, never `chore(review)` commits; only the stat and diff output is filtered there. The exclusions also do NOT hide a review log stored anywhere else under a different name; only the five documented name shapes and the `implementation/` folder are excluded.
 
-- [ ] **Step 1: Write failing tests**
+- [x] **Step 1: Write failing tests**
 
 Append to `tests/sdd-scripts/run-tests.sh`, immediately before the final `bold ""` / `Results:` block:
 
@@ -931,14 +931,14 @@ assert_file_not_contains "blinding: review log hidden when built from a subdirec
 # so it leaves no untracked entry behind for Task 12's clean-tree assertion.
 ```
 
-- [ ] **Step 2: Run the tests to verify they fail**
+- [x] **Step 2: Run the tests to verify they fail**
 
 Run: `bash tests/sdd-scripts/run-tests.sh`
 Expected: FAIL — ten assertions, because `review-package` currently diffs everything: the five `SECRET*` `assert_file_not_contains` checks on `$BPKG`, `blinding: review-only commit absent from the commit list` (a `git log --oneline` without pathspecs still lists the `chore(review)` commit), `blinding (--commits): implementation review log hidden`, `blinding: review log hidden when built from a subdirectory`, and the two `review file names absent from the stat summary` checks (one on `$BPKG`, one on `$BLIND_CPKG`).
 
 The two `assert_file_contains` checks for `VISIBLESOURCE` pass both before and after Step 3 — they are regression guards that catch a fix which blinds the package by shrinking the diff instead of by excluding review material.
 
-- [ ] **Step 3: Add the pathspec set to `review-package`**
+- [x] **Step 3: Add the pathspec set to `review-package`**
 
 In `skills/subagent-driven-development/scripts/review-package`, insert immediately after the `script_dir=` line:
 
@@ -1014,12 +1014,12 @@ with:
   git diff -U10 "${base}..${head}" -- "${blind_pathspecs[@]}"
 ```
 
-- [ ] **Step 4: Run the tests to verify they pass**
+- [x] **Step 4: Run the tests to verify they pass**
 
 Run: `bash tests/sdd-scripts/run-tests.sh`
 Expected: PASS — every assertion. That includes the pre-existing `range: alpha hunk present` and `--commits mode` assertions (which predate blinding and say nothing about it) *and* the three new `--commits` blinding assertions added in Step 1, which are what actually verify the two `git show` edits in Step 3. The two `review file names absent from the stat summary` assertions are the only ones that verify the two `git diff --stat` / `git show --stat` edits: every other blinding assertion keys on file content, which a `--stat` summary never prints.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add skills/subagent-driven-development/scripts/review-package tests/sdd-scripts/run-tests.sh
