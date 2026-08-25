@@ -29,6 +29,41 @@ creating `plans/` if it does not exist.
 - A spec that is **outside the layout** is handled by "Spec Outside the
   Layout" below — do not write a plan next to it.
 
+## Spec Outside the Layout
+
+A spec whose path is not `<D>/specs/<file>` — where `<D>` is a direct child
+of `docs/superpowers-orchestrator/` at the repository root whose basename
+matches the topic-folder shape defined in the "Artifact Layout" section of
+`skills/brainstorming/SKILL.md` — gets **no plan written beside it**. The
+`specs/` segment is required: the general derivation rule in that section
+also accepts `<D>/plans/<file>`, but a *spec* sitting in a `plans/` folder is
+outside the layout and gets the offer below, exactly as this task's "Does NOT
+cover" note states. The invariant this protects: every plan lives in a topic folder
+together with its spec.
+
+1. Compute `<slug>` = the spec basename with `YYYY-MM-DD-`, `-design` and
+   `.md` stripped, each only if present.
+2. Name the expected location:
+   `docs/superpowers-orchestrator/<today>-<slug>/specs/<slug>-design.md`. If a
+   folder matching `docs/superpowers-orchestrator/????-??-??-<slug>/` already
+   exists, reuse that folder instead of `<today>` (slug uniqueness). More than
+   one match → stop and report the ambiguity; write nothing.
+3. State the reason the spec is outside the layout — wrong parent directory,
+   or a folder name that does not match
+   `^[0-9]{4}-[0-9]{2}-[0-9]{2}-[a-z0-9]+(-[a-z0-9]+)*$` — next to the
+   expected location, so a spec already in the right place but wrongly named
+   is never described as a move onto itself.
+4. Ask the user **once** whether to move the spec there.
+   - **Yes:** `mkdir -p` the destination `specs/` folder first (`git mv` fails
+     when the destination directory does not exist), then `git mv` the spec to
+     `specs/<slug>-design.md` and — when it exists — its `-review-log.md`
+     sidecar to `specs/<slug>-design-review-log.md`. Use plain `mv` when the
+     project is not a git repository. The sidecar is renamed together with the
+     spec because the sidecar rule derives the log name from the document
+     name: a sidecar that kept its old basename would be orphaned and a later
+     spec review would start a new log. Then continue with the moved spec.
+   - **No:** stop. No plan is written.
+
 ## Plan Header
 
 ```markdown
