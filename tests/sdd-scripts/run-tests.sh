@@ -564,6 +564,51 @@ assert_file_contains "rule 4 drift check: SKILL.md still records effective_head 
 assert_file_contains "rule 4 drift check: SKILL.md still walks the range with git log --format" "$SKILL_MD" "git log --format='%H %s'"
 assert_file_contains "rule 4 drift check: SKILL.md still falls back to BASE when empty" "$SKILL_MD" '[ -n "$effective_head" ] ||'
 
+bold "TOPIC_DIR validation rule (multi-code-review)"
+
+# Rules 1, 2, and 4 above each got a behavioral block plus a drift check
+# against the documented text. The TOPIC_DIR validation rule (SKILL.md
+# "Validation, before round 1", steps 1 and 4) got neither: a test extracts
+# the basename regex straight out of SKILL.md and asserts what it accepts
+# and rejects, so an edit that drops the trailing `$` or otherwise loosens
+# the regex is caught here instead of only being caught by an agent
+# following the skill at review time. $SKILL_MD was defined above, ahead of
+# the rule 1 drift check, and reused here.
+TOPIC_REGEX=$(grep -oE '`\^\[0-9\][^`]*\$`' "$SKILL_MD" | head -1 | tr -d '`')
+if [ -n "$TOPIC_REGEX" ]; then
+  ok "TOPIC_DIR validation: basename regex extracted from SKILL.md"
+else
+  bad "TOPIC_DIR validation: basename regex extracted from SKILL.md (found nothing)"
+fi
+
+topic_regex_matches() { [[ "$1" =~ $TOPIC_REGEX ]]; }
+
+for good in "2026-08-25-artifact-layout" "2026-08-25-sum-fix"; do
+  if topic_regex_matches "$good"; then
+    ok "TOPIC_DIR validation: regex accepts $good"
+  else
+    bad "TOPIC_DIR validation: regex accepts $good"
+  fi
+done
+
+for bad_case in "2026-8-25-foo" "Foo-Bar" "foo" "2026-08-25-"; do
+  if topic_regex_matches "$bad_case"; then
+    bad "TOPIC_DIR validation: regex rejects $bad_case"
+  else
+    ok "TOPIC_DIR validation: regex rejects $bad_case"
+  fi
+done
+
+# Drift check: step 1's "direct child" requirement and step 4's
+# `git check-ignore -q` check are the two other load-bearing parts of the
+# validation rule with no behavioral test of their own (a fabricated
+# repository root and blinding pathspec, both required to exercise them for
+# real, are out of proportion to this rule's own risk) — assert their
+# documented wording directly, in the same style as the rule 1/2/4 drift
+# checks above.
+assert_file_contains "TOPIC_DIR validation drift check: SKILL.md still requires a direct child of docs/superpowers-orchestrator/" "$SKILL_MD" "must be a direct child of \`docs/superpowers-orchestrator/\`"
+assert_file_contains "TOPIC_DIR validation drift check: SKILL.md still requires git check-ignore -q to fail" "$SKILL_MD" "\`git check-ignore -q <log path>\` must **fail**"
+
 bold "recovery greps stay intact"
 
 # The batch controller finds task ticks with `git log --grep "task <n> complete"`
@@ -608,12 +653,23 @@ bold "archive naming with a dateless plan basename"
 # date prefix (`plans/<slug>.md` instead of `plans/<date>-<slug>.md`), so the
 # archive folder is named `<slug>`. The rule is unchanged; this asserts the
 # result, which the spec's testing strategy requires.
+#
+# Register a known outgoing plan explicitly, rather than relying on the
+# state the "symlinked plan path" block above happens to leave behind: that
+# block SKIPs on a filesystem without symlink support (e.g. Windows Git Bash
+# without developer mode, a platform this repository claims to support),
+# in which case no plan.ref exists here and the first switch below would
+# report no prior workspace at all instead of an archive slug.
+mkdir -p docs/superpowers-orchestrator/2026-08-25-prev/plans
+echo "# plan" > docs/superpowers-orchestrator/2026-08-25-prev/plans/prev.md
+"$SCRIPTS/sdd-workspace" docs/superpowers-orchestrator/2026-08-25-prev/plans/prev.md > /dev/null 2>/dev/null
+
 mkdir -p docs/superpowers-orchestrator/2026-08-25-baz/plans
 mkdir -p docs/superpowers-orchestrator/2026-08-25-qux/plans
 echo "# plan" > docs/superpowers-orchestrator/2026-08-25-baz/plans/baz.md
 echo "# plan" > docs/superpowers-orchestrator/2026-08-25-qux/plans/qux.md
 "$SCRIPTS/sdd-workspace" docs/superpowers-orchestrator/2026-08-25-baz/plans/baz.md > /dev/null 2>"$ERRF"
-assert_stderr_one "archive naming: switching to baz reports the prior plan's archive slug" "archived previous workspace to archive/planSym"
+assert_stderr_one "archive naming: switching to baz reports the prior plan's archive slug" "archived previous workspace to archive/prev"
 echo "leftover" > "$WS/task-1-notes.md"
 "$SCRIPTS/sdd-workspace" docs/superpowers-orchestrator/2026-08-25-qux/plans/qux.md > /dev/null 2>"$ERRF"
 assert_stderr_one "archive naming: switching to qux reports baz's archive slug" "archived previous workspace to archive/baz"

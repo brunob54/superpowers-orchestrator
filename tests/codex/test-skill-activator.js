@@ -1224,14 +1224,28 @@ test('"orchestrate the development of <spec>" ranks orchestrating-development fi
     ORCH);
 });
 
-// The path-shaped intent pattern is asserted directly: the verb-phrase
-// pattern above it already matches "orchestrate the development", so a
-// topSkill() assertion alone cannot tell whether the path pattern changed.
-test('the orchestrating-development path pattern matches a new-layout spec path', () => {
+// Shared lookup for the two tests below. If the 'specs' intent pattern is
+// ever deleted from hooks/skill-rules.json, `Array.prototype.find` returns
+// `undefined`; asserting here (rather than in each test) that the pattern
+// was actually found — a non-empty string — stops that from silently
+// passing as `new RegExp(undefined, 'i')` (which compiles to /undefined/i
+// and would make the "no longer matches" test vacuously true).
+function orchDevSpecPathPattern() {
   // hooks/skill-rules.json's top-level key is `rules`, an array of entries.
   const entry = require('../../hooks/skill-rules.json')
     .rules.find(s => s.skill === ORCH);
   const pathPattern = entry.intentPatterns.find(p => p.includes('specs'));
+  assert.ok(
+    typeof pathPattern === 'string' && pathPattern.length > 0,
+    `expected an intent pattern containing 'specs' on ${ORCH}, found: ${pathPattern}`);
+  return pathPattern;
+}
+
+// The path-shaped intent pattern is asserted directly: the verb-phrase
+// pattern above it already matches "orchestrate the development", so a
+// topSkill() assertion alone cannot tell whether the path pattern changed.
+test('the orchestrating-development path pattern matches a new-layout spec path', () => {
+  const pathPattern = orchDevSpecPathPattern();
   assert.ok(
     new RegExp(pathPattern, 'i').test(
       'orchestrate the development of docs/superpowers-orchestrator/2026-08-25-foo/specs/foo-design.md'),
@@ -1239,10 +1253,7 @@ test('the orchestrating-development path pattern matches a new-layout spec path'
 });
 
 test('the orchestrating-development path pattern no longer matches an old-layout spec path', () => {
-  // hooks/skill-rules.json's top-level key is `rules`, an array of entries.
-  const entry = require('../../hooks/skill-rules.json')
-    .rules.find(s => s.skill === ORCH);
-  const pathPattern = entry.intentPatterns.find(p => p.includes('specs'));
+  const pathPattern = orchDevSpecPathPattern();
   assert.ok(
     !new RegExp(pathPattern, 'i').test(
       'orchestrate the development of docs/specs/2026-08-04-foo-design.md'),

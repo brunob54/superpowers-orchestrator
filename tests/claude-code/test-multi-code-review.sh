@@ -18,6 +18,8 @@
 #        plugin dev repo, using a plugin-repo snapshot taken fresh right
 #        before the Case 2 agent call
 #   (p1) the pipeline-mode review log is created under TOPIC_DIR/implementation
+#   (p1b) the direct-mode sidecar log was NOT also written — TOPIC_DIR must
+#        select pipeline mode exclusively, not run both modes
 #   (p2) that log is committed, not left untracked
 #   (p3) at least one chore(review) commit per round
 #   (p4) the working tree is clean at the end (test transcripts excluded)
@@ -222,6 +224,20 @@ fi
 
 cd "$TEST_PROJECT"
 PIPE_LOG="$TOPIC_DIR/implementation/sum-fix-review-log.md"
+
+# (p1b) mode selection is only half-verified by (p1): a run that ALSO wrote
+# the direct-mode sidecar would still pass every assertion above. The
+# sidecar's branch-slug is the branch name with every non-alphanumeric run
+# replaced by "-" (skills/multi-code-review/SKILL.md); this case's branch
+# "feature-pipeline-review" has none, so the slug is unchanged. That sidecar
+# lives under .superpowers/reviews/, which carries a self-ignoring
+# .gitignore, so it is invisible to the (p4) clean-tree check below and must
+# be checked directly.
+DIRECT_SIDECAR=".superpowers/reviews/feature-pipeline-review-review-log.md"
+if [ -f "$DIRECT_SIDECAR" ]; then
+    echo "FAIL(p1b): direct-mode sidecar $DIRECT_SIDECAR also exists — TOPIC_DIR did not select pipeline mode exclusively"
+    FAILURES=$((FAILURES+1))
+fi
 
 if [ ! -f "$PIPE_LOG" ]; then
     echo "FAIL(p1): no $PIPE_LOG created in pipeline mode"
