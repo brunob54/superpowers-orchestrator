@@ -447,6 +447,130 @@ assert_file_not_contains "blinding: review log hidden when built from a subdirec
 # `subdir-for-anchor` is an empty directory; git stores no empty directories,
 # so it leaves no untracked entry behind for Task 12's clean-tree assertion.
 
+bold "pipeline-mode git rules (multi-code-review)"
+
+PTOPIC="docs/superpowers-orchestrator/2026-08-25-bar"
+PLOG="$PTOPIC/implementation/bar-review-log.md"
+mkdir -p "$PTOPIC/implementation"
+echo "unrelated source" > unrelated.txt
+git add unrelated.txt && git commit --quiet -m "base for pipeline rules"
+
+# Rule 1: `git add` + a path-limited commit commits an untracked log while
+# leaving an unrelated staged file staged.
+echo "round 1 verdict" > "$PLOG"
+echo "staged by the user" > user-staged.txt
+git add user-staged.txt
+git add -- "$PLOG"
+git commit --quiet -m "chore(review): bar round 1 log" -- "$PLOG"
+assert_eq "rule 1: log is committed" "$(git log -1 --format=%s)" "chore(review): bar round 1 log"
+assert_eq "rule 1: the user's staged file is still staged" "$(git diff --cached --name-only)" "user-staged.txt"
+
+# Rule 2: the precondition pathspec reports clean with only the log modified,
+# and dirty with a source file modified.
+git commit --quiet -m "keep the user file out of the way" -- user-staged.txt
+echo "round 2 verdict" >> "$PLOG"
+PRECOND=$(git status --porcelain -- ':(top)' ":(top,exclude)$PTOPIC/implementation/")
+assert_eq "rule 2: modified implementation log reads clean" "$PRECOND" ""
+echo "changed" >> unrelated.txt
+PRECOND2=$(git status --porcelain -- ':(top)' ":(top,exclude)$PTOPIC/implementation/")
+if [ -n "$PRECOND2" ]; then ok "rule 2: modified source file reads dirty"; else bad "rule 2: modified source file reads dirty"; fi
+git checkout --quiet -- unrelated.txt
+git add -- "$PLOG" && git commit --quiet -m "chore(review): bar round 2 log" -- "$PLOG"
+
+# Rule 4: the effective-HEAD walk skips leading chore(review) commits and
+# stops at the first other commit.
+#
+# The walk is used twice below, with two different range bases. Define it once
+# as a function rather than pasting the loop twice: two byte-identical copies
+# of a logic block are exactly what the review rubric treats as a defect, and
+# the repository's DRY rule forbids them. The function is NOT required to be
+# byte-identical to the version `multi-code-review/SKILL.md` documents — this
+# test asserts the walk's behavior, not the skill's wording.
+effective_head_of() {
+  local base="$1" sha subject effective_head=""
+  while read -r sha subject; do
+    case "$subject" in
+      'chore(review):'*) continue ;;
+      *) effective_head="$sha"; break ;;
+    esac
+  done < <(git log --format='%H %s' "$base..HEAD")
+  [ -n "$effective_head" ] || effective_head="$base"
+  printf '%s\n' "$effective_head"
+}
+
+PBASE=$(git rev-parse HEAD~3)
+echo "real work" > real-work.txt
+git add real-work.txt && git commit --quiet -m "feat: real work"
+REAL_WORK_SHA=$(git rev-parse HEAD)
+echo "round 3 verdict" >> "$PLOG"
+git add -- "$PLOG" && git commit --quiet -m "chore(review): bar round 3 log" -- "$PLOG"
+
+assert_eq "rule 4: effective HEAD skips the trailing review commit" \
+  "$(effective_head_of "$PBASE")" "$REAL_WORK_SHA"
+
+# Rule 4, degenerate case: a range holding only chore(review) commits falls
+# back to BASE.
+ONLY_BASE=$(git rev-parse HEAD~1)
+assert_eq "rule 4: review-only range falls back to BASE" \
+  "$(effective_head_of "$ONLY_BASE")" "$ONLY_BASE"
+
+bold "recovery greps stay intact"
+
+# The batch controller finds task ticks with `git log --grep "task <n> complete"`
+# and fix commits with the `review fixes (<slug>, round <i>)` subject. A
+# pipeline-mode log commit must match neither.
+#
+# Both greps run against commits that REALLY EXIST in this throwaway
+# repository: the three `chore(review): bar round <i> log` commits created
+# above, plus one genuine tick commit and one genuine fix commit created here.
+# Each grep therefore has a match it must find AND log commits it must not
+# find, so a pipeline-mode subject that started colliding with either recovery
+# pattern would fail this gate. (Matching a shell variable against a literal
+# with `case` could never fail — both sides are written in this same file.)
+echo "tick" > tick.txt
+git add tick.txt && git commit --quiet -m "chore(plan): bar task 1 complete"
+TICK_SHA=$(git rev-parse --short HEAD)
+echo "fix" > fix.txt
+git add fix.txt && git commit --quiet -m "review fixes (bar, round 1)"
+FIX_SHA=$(git rev-parse --short HEAD)
+
+# Control: each recovery grep finds its own commit. Without this the two
+# "matches no review-log commit" assertions below would also pass if the grep
+# matched nothing at all.
+assert_eq "recovery grep: 'task 1 complete' finds exactly the tick commit" \
+  "$(git log --grep 'task 1 complete' --format=%h | tr '\n' ' ' | sed 's/ *$//')" "$TICK_SHA"
+assert_eq "recovery grep: 'review fixes (' finds exactly the fix commit" \
+  "$(git log --grep 'review fixes (' --format=%h | tr '\n' ' ' | sed 's/ *$//')" "$FIX_SHA"
+
+# The real assertions: neither recovery pattern matches a pipeline-mode
+# `chore(review)` log commit.
+assert_eq "recovery grep: 'task 1 complete' matches no review-log commit" \
+  "$(git log --grep 'task 1 complete' --format=%s | grep -c 'chore(review)' | tr -d ' ')" "0"
+assert_eq "recovery grep: 'review fixes (' matches no review-log commit" \
+  "$(git log --grep 'review fixes (' --format=%s | grep -c 'chore(review)' | tr -d ' ')" "0"
+
+bold "archive naming with a dateless plan basename"
+
+# `sdd-workspace` names the archive folder from the OUTGOING plan's basename
+# minus its extension (script line ~112, `slug=$(basename -- "$current")`).
+# Archiving fires only when the plan identity changes, so the check switches
+# from one plan to another. Under the new layout the plan basename carries no
+# date prefix (`plans/<slug>.md` instead of `plans/<date>-<slug>.md`), so the
+# archive folder is named `<slug>`. The rule is unchanged; this asserts the
+# result, which the spec's testing strategy requires.
+mkdir -p docs/superpowers-orchestrator/2026-08-25-baz/plans
+mkdir -p docs/superpowers-orchestrator/2026-08-25-qux/plans
+echo "# plan" > docs/superpowers-orchestrator/2026-08-25-baz/plans/baz.md
+echo "# plan" > docs/superpowers-orchestrator/2026-08-25-qux/plans/qux.md
+"$SCRIPTS/sdd-workspace" docs/superpowers-orchestrator/2026-08-25-baz/plans/baz.md > /dev/null
+echo "leftover" > "$WS/task-1-notes.md"
+"$SCRIPTS/sdd-workspace" docs/superpowers-orchestrator/2026-08-25-qux/plans/qux.md > /dev/null
+if [ -d "$WS/archive/baz" ]; then
+  ok "archive naming: dateless plan basename yields archive/baz"
+else
+  bad "archive naming: expected $WS/archive/baz, found: $(ls "$WS/archive" 2>/dev/null | tr '\n' ' ')"
+fi
+
 bold ""
 bold "Results: $PASS passed, $FAIL failed"
 if [ "$FAIL" -gt 0 ]; then
