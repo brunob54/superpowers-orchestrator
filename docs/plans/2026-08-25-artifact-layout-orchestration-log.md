@@ -6,3 +6,7 @@ _Invocation 1 — 2026-08-25 — spec docs/specs/2026-08-25-artifact-layout-desi
 plan: docs/plans/2026-08-25-artifact-layout.md — 22 tasks
 
 ## Phase 2 — Plan review — rounds 4 — cap — unresolved 0
+
+## STOPPED — 2026-08-25 — phase 3 — pre-flight plan review found 4 conflicts (Tasks 11, 12, 19, 20); nothing implemented
+Detail: .superpowers/sdd/task-1-report.md
+Resume: Resume orchestration for docs/plans/2026-08-25-artifact-layout.md
