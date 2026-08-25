@@ -67,3 +67,9 @@ _Plan repair complete — 2026-08-25 — 28 defects fixed (d2f4784, bdc2df8, 15e
 - Task 19: complete — commit a222ecf (this repository's artifacts migrated to the topic layout; spec now at docs/superpowers-orchestrator/2026-08-25-artifact-layout/specs/artifact-layout-design.md)
 - Task 20: complete — commits 1a8ddff, c191280 (documentation repointed; one fix round for 13 markdown links written relative to docs/, which Step 1's gate cannot see)
 Note: Task 19 Step 4 rewrote this log's `_Invocation_` header to the moved spec path and Step 10 deliberately left it uncommitted for this phase-boundary commit.
+
+## Phase 3 — Batch 11 (tasks 21–22) — COMPLETE — commits e8fbc46..12a551d
+- Task 21: complete — commit e8fbc46
+- Task 22: complete — commit 12a551d (release and documentation)
+Phase 3 finished: 22/22 tasks, 140/140 checkboxes, tree clean at a5db784.
+Owed to the user (Task 22 Step 10, not runnable by an autonomous executor): push the branch, update the installed plugin, then run the two behavioral tests in a fresh session. Detail: .superpowers/sdd/task-22-report.md
