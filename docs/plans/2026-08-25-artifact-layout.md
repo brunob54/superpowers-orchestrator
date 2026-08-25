@@ -3081,7 +3081,7 @@ git commit -m "docs(guide): describe the per-topic artifact layout" --trailer "S
 
 **Security flag:** `none`
 
-- [ ] **Step 1: Write the failing verification check**
+- [x] **Step 1: Write the failing verification check**
 
 ```bash
 cd /Users/bruno/Programming/AI/AI_Coding/My_tools/Superpowers
@@ -3095,12 +3095,12 @@ test "$(cat VERSION)" = "7.3.0" \
   && echo PASS || echo FAIL
 ```
 
-- [ ] **Step 2: Run it to verify it fails**
+- [x] **Step 2: Run it to verify it fails**
 
 Run: the command from Step 1
 Expected: prints `FAIL` — everything still says 7.2.0.
 
-- [ ] **Step 3: Bump the version in all five places**
+- [x] **Step 3: Bump the version in all five places**
 
 ```bash
 cd /Users/bruno/Programming/AI/AI_Coding/My_tools/Superpowers
@@ -3113,7 +3113,7 @@ sed -i '' 's/v6\.7\.0–v7\.2\.0/v6.7.0–v7.3.0/g' README.md
 
 (On Linux use `sed -i` without the empty `''` argument.)
 
-- [ ] **Step 4: Add the git requirement to the README**
+- [x] **Step 4: Add the git requirement to the README**
 
 Insert immediately after the `## Installation` heading in `README.md`:
 
@@ -3124,7 +3124,7 @@ Insert immediately after the `## Installation` heading in `README.md`:
 need it.
 ```
 
-- [ ] **Step 5: Write the release-notes entry**
+- [x] **Step 5: Write the release-notes entry**
 
 Insert immediately after the `# Superpowers Orchestrator Release Notes` heading in `RELEASE-NOTES.md`:
 
@@ -3213,12 +3213,12 @@ git mv docs/plans/2026-08-25-artifact-layout-orchestration-log.md \
 (Skip any line whose source file does not exist.)
 ````
 
-- [ ] **Step 6: Run the verification check to confirm it passes**
+- [x] **Step 6: Run the verification check to confirm it passes**
 
 Run: the command from Step 1
 Expected: prints `PASS`
 
-- [ ] **Step 7: Run the fast test suites and confirm nothing regressed**
+- [x] **Step 7: Run the fast test suites and confirm nothing regressed**
 
 Run:
 
@@ -3231,7 +3231,7 @@ bash tests/smart-compress/run-tests.sh
 
 Expected: PASS for all three suites, with no failing assertions reported.
 
-- [ ] **Step 8: Confirm the README's How-It-Works counts are still correct**
+- [x] **Step 8: Confirm the README's How-It-Works counts are still correct**
 
 Run:
 
@@ -3244,7 +3244,7 @@ ls hooks/*.js | wc -l
 
 Expected, exactly: `## Skills Library (28 skills)` and `### Hooks (10 total)` in the README, `28` from the skills count, `10` from the hooks count. This change adds and removes no skill and no hook, so all four numbers must agree. If a heading disagrees with its count, correct the heading.
 
-- [ ] **Step 9: Commit the release**
+- [x] **Step 9: Commit the release**
 
 ```bash
 git add VERSION .claude-plugin/plugin.json .claude-plugin/marketplace.json plugin.universal.yaml README.md RELEASE-NOTES.md
@@ -3256,7 +3256,7 @@ resolves the version from the pushed GitHub repository, so an uncommitted
 version bump would leave the marketplace on 7.2.0 and Step 10's `7.3.0/`
 cache check could never pass.
 
-- [ ] **Step 10: Reinstall the plugin, then run the two behavioral suites**
+- [x] **Step 10: Reinstall the plugin, then run the two behavioral suites**
 
 This is the last step of the plan. The behavioral suites run the INSTALLED plugin copy under
 `~/.claude/plugins/cache/superpowers-orchestrator/`, not this working tree.
