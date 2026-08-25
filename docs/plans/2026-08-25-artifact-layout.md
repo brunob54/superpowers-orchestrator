@@ -227,7 +227,7 @@ git commit -m "docs(brainstorming): add the normative artifact layout section" -
 
 **Does NOT cover:** the check fires only when a folder whose basename matches `????-??-??-<slug>` already exists directly under `docs/superpowers-orchestrator/`. It does NOT fire for: a folder with the same slug under a different parent directory (that folder is invisible to every lookup in this layout and is left alone); a folder whose basename carries the slug but no date prefix (it is not a topic folder, so brainstorming creates the correctly named one beside it); a folder for a *different* slug that describes the same feature (no automatic detection — the user chooses the slug); and two folders that already exist for one slug (a pre-existing uniqueness violation — brainstorming reports both and asks the user to merge or rename before continuing, it never picks one).
 
-- [ ] **Step 1: Write the failing verification check**
+- [x] **Step 1: Write the failing verification check**
 
 ```bash
 cd /Users/bruno/Programming/AI/AI_Coding/My_tools/Superpowers
@@ -237,7 +237,7 @@ grep -q '^### Reusing an existing topic folder$' skills/brainstorming/SKILL.md \
   && echo PASS || echo FAIL
 ```
 
-- [ ] **Step 2: Run it to verify it fails**
+- [x] **Step 2: Run it to verify it fails**
 
 Run: the command from Step 1
 Expected: prints `FAIL` — the first and third needles do not match yet.
@@ -254,7 +254,7 @@ wrap that sentence across two lines, which no rule requires — and would stop
 discriminating the moment anyone reflows it. Only Step 3 writes the `###`
 heading.
 
-- [ ] **Step 3: Append the sub-section to the Artifact Layout section**
+- [x] **Step 3: Append the sub-section to the Artifact Layout section**
 
 Append at the end of the `## Artifact Layout` section added in Task 1, immediately before the `## Process Flow` heading:
 
@@ -318,12 +318,12 @@ prints nothing and exits 0 when there is no match, in every shell.
     reuse flow does not reach Phase 1.
 ````
 
-- [ ] **Step 4: Run the verification check to confirm it passes**
+- [x] **Step 4: Run the verification check to confirm it passes**
 
 Run: the command from Step 1
 Expected: prints `PASS`
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add skills/brainstorming/SKILL.md
