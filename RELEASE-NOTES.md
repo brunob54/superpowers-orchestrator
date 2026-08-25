@@ -1,5 +1,88 @@
 # Superpowers Orchestrator Release Notes
 
+## v7.3.0 — one folder per topic, committed code reviews
+
+Field report: the documents of one feature were spread over three flat
+directories, linked only by a shared `YYYY-MM-DD-<slug>` file-name prefix, and
+the code review history was never committed. Finding, archiving, or deleting
+"everything about feature X" meant matching prefixes across directories.
+
+- **One folder per topic.** Every document of a feature now lives under
+  `docs/superpowers-orchestrator/<YYYY-MM-DD>-<slug>/`, with one sub-folder
+  per pipeline stage:
+
+  ```
+  docs/superpowers-orchestrator/<YYYY-MM-DD>-<slug>/
+    specs/<slug>-design.md                 specs/<slug>-design-review-log.md
+    plans/<slug>.md                        plans/<slug>-review-log.md
+    plans/<slug>-open-decisions.md
+    implementation/<slug>-review-log.md    implementation/<slug>-fix-reports.md
+    <slug>-orchestration-log.md
+  ```
+
+  File names drop the date — the folder carries it — and keep the slug, so
+  editor tabs and grep results stay distinguishable across topics. The rule is
+  defined once, in the "Artifact Layout" section of the `brainstorming` skill;
+  every other skill states its own exact paths and cites that section.
+- **The plugin name returns to the path.** This reverses release v6.6.1, which
+  removed it. The reason: the plugin's output is now a folder tree of its own,
+  and separating it from the project's own `docs/` tree is worth the extra path
+  segment.
+- **Code reviews are committed.** A pipeline-driven `multi-code-review` run
+  receives a new optional input, `TOPIC_DIR`, and writes its review log and fix
+  reports under `<topic>/implementation/`, committing them after every round
+  with the subject `chore(review): <slug> round <i> log`. A direct
+  `/multi-code-review` run has no plan and therefore no topic folder: it keeps
+  today's git-ignored `.superpowers/reviews/` behavior exactly.
+- **Reviewers stay blind.** Committed review material is now part of the
+  branch, so every whole-branch diff handed to a reviewer excludes
+  `<topic>/implementation/` and the file-name shapes `*-review-log.md`,
+  `*-fix-reports.md`, `*-orchestration-log.md` and `*-open-decisions.md`. The
+  reviewer's read prohibition lists the same set. This also closes a
+  pre-existing leak: the committed spec and plan review-log sidecars were
+  visible in whole-branch diffs before.
+- **This repository was migrated** with `git mv`; document contents are
+  untouched. **Other projects are not migrated automatically:** existing
+  `docs/specs/` and `docs/plans/` files stay readable as plain files, and new
+  topics use the new layout. Skills, hooks and tests know only the new layout —
+  a spec or plan outside it stops the pipeline with a message naming the
+  expected location, and `writing-plans` offers to move the spec there.
+- **Minimum git version: 2.32**, stated explicitly for the first time (also in
+  the README). It is needed for `git commit --trailer` and assumed by the
+  pathspec magic above.
+- **After updating:** an existing `.superpowers/sdd/plan.ref` that points at a
+  moved plan makes the next `subagent-driven-development` run treat it as a
+  plan switch and archive the workspace under `archive/<old plan basename>/`.
+  This is expected after migration and loses nothing.
+
+**Residual risk (accepted):** a second clone of the same branch — another
+machine, or CI — that resumes the same committed in-progress review entry is
+not detected. Today's batched mode already resumes automatically without such
+detection; branch ownership prevents the scenario in practice, and a machine
+token in the invocation entry would add state for nothing.
+
+**Post-migration manual step for this repository:** the orchestration run that
+implemented this change kept its own plan and orchestration log at
+`docs/plans/2026-08-25-artifact-layout.md` and
+`docs/plans/2026-08-25-artifact-layout-orchestration-log.md`, because moving
+either mid-run would have broken every later checkbox-tick commit. After the
+run ends, move them by hand:
+
+```bash
+# Task 19 Step 4 created only `.../2026-08-25-artifact-layout/specs`. `git mv`
+# fails with "No such file or directory" when the destination directory does
+# not exist, so create `plans/` first.
+mkdir -p docs/superpowers-orchestrator/2026-08-25-artifact-layout/plans
+git mv docs/plans/2026-08-25-artifact-layout.md \
+       docs/superpowers-orchestrator/2026-08-25-artifact-layout/plans/artifact-layout.md
+git mv docs/plans/2026-08-25-artifact-layout-review-log.md \
+       docs/superpowers-orchestrator/2026-08-25-artifact-layout/plans/artifact-layout-review-log.md
+git mv docs/plans/2026-08-25-artifact-layout-orchestration-log.md \
+       docs/superpowers-orchestrator/2026-08-25-artifact-layout/artifact-layout-orchestration-log.md
+```
+
+(Skip any line whose source file does not exist.)
+
 ## v7.2.0 — prior-art research grounds technology decisions
 
 Field report: design sessions picked libraries, hosted services, and
