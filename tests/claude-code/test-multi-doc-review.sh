@@ -40,6 +40,15 @@ PROMPT="Invoke the superpowers-orchestrator:multi-doc-review skill on the docume
 # Deliberately no doc-type statement: the spec's Testing Strategy requires this
 # test to exercise path-segment inference (nearest segment specs/ -> spec); stating the type
 # would override inference per the skill's Parameters rule.
+# NOTE: no assertion below actually observes the inferred type. The review log
+# records no doc type, and the lens names are identical for the spec, plan, and
+# general doc types, so the log this run produces is byte-compatible with a
+# "general" inference. The transcript captured below (output.txt) cannot make
+# up the difference either: `claude -p` here uses the default plain-text output
+# (no --verbose, no --output-format stream-json), so it holds only the
+# top-level agent's final printed message, not the reviewer subagent's prompt
+# text — there is nothing in it a grep could key on to confirm "spec" was
+# actually inferred rather than assumed.
 
 cd "$PLUGIN_DIR" && timeout 1800 claude -p "$PROMPT" \
     --permission-mode bypassPermissions \

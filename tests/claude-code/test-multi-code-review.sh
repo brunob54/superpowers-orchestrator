@@ -198,10 +198,17 @@ PKG_COUNT_BEFORE=$(ls "$TEST_PROJECT"/.superpowers/sdd/review-*.diff 2>/dev/null
 PLUGIN_HEAD_BEFORE2=$(git -C "$PLUGIN_DIR" rev-parse HEAD)
 PLUGIN_STATUS_BEFORE2=$(git -C "$PLUGIN_DIR" status --porcelain --ignored=matching | shasum | cut -d' ' -f1)
 
+CLAUDE_STATUS2=0
 cd "$PLUGIN_DIR" && timeout 1800 claude -p "$PIPE_PROMPT" \
     --permission-mode bypassPermissions \
     --add-dir "$TEST_PROJECT" \
-    2>&1 | tee "$TEST_PROJECT/output-pipeline.txt" || true
+    2>&1 | tee "$TEST_PROJECT/output-pipeline.txt" || CLAUDE_STATUS2=${PIPESTATUS[0]}
+
+# (f2) same timeout-kill check as (f), repeated for Case 2.
+if [ "$CLAUDE_STATUS2" -eq 124 ] || [ "$CLAUDE_STATUS2" -eq 143 ]; then
+    echo "FAIL(f2): the Case 2 claude run was killed by the 1800s timeout (exit $CLAUDE_STATUS2) — the loop never finished"
+    FAILURES=$((FAILURES+1))
+fi
 
 # (e2) same blast-radius check as assertion (e), repeated for Case 2.
 PLUGIN_HEAD_AFTER2=$(git -C "$PLUGIN_DIR" rev-parse HEAD)
@@ -223,6 +230,16 @@ else
     # (p2) the log is committed, not left untracked
     if ! git ls-files --error-unmatch "$PIPE_LOG" > /dev/null 2>&1; then
         echo "FAIL(p2): the pipeline-mode review log is not tracked in the branch"
+        FAILURES=$((FAILURES+1))
+    fi
+    # (g2) the N=2 loop ran its second round, same check as (g) for Case 1.
+    if ! grep -q "^## Round 2 — " "$PIPE_LOG"; then
+        echo "FAIL(g2): pipeline review log has no '## Round 2' entry — the loop did not run both rounds"
+        FAILURES=$((FAILURES+1))
+    fi
+    # (h2) the loop reached its completion marker, same check as (h) for Case 1.
+    if ! grep -q "^_Completed — " "$PIPE_LOG"; then
+        echo "FAIL(h2): pipeline review log has no '_Completed — ' marker — the loop did not finish"
         FAILURES=$((FAILURES+1))
     fi
     # (p3) one chore(review) commit per round

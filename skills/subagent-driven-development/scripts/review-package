@@ -63,7 +63,7 @@ if [ "${1:-}" = "--commits" ]; then
     echo
     echo "## Commits"
     for c in "${commits[@]}"; do
-      git log -1 --oneline "$c" -- "${blind_pathspecs[@]}"
+      git log -1 --oneline --no-walk "$c" -- "${blind_pathspecs[@]}"
     done
     echo
     echo "## Files changed (per commit)"

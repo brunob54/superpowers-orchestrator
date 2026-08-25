@@ -434,8 +434,20 @@ BLIND_CPKG="$WS/blind-from-commits.diff"
 "$SCRIPTS/review-package" --commits "$BLIND_HEAD" --out "$BLIND_CPKG" >/dev/null 2>&1
 assert_file_contains "blinding (--commits): ordinary source change is visible" "$BLIND_CPKG" "VISIBLESOURCE"
 assert_file_not_contains "blinding (--commits): implementation review log hidden" "$BLIND_CPKG" "SECRETFINDING"
+# The remaining four secret needles from the range-mode check above, asserted
+# here too: range mode uses `git diff` and --commits mode uses `git show`, so
+# coverage on one command set does not transfer to the other.
+assert_file_not_contains "blinding (--commits): implementation fix reports hidden" "$BLIND_CPKG" "SECRETFIXREPORT"
+assert_file_not_contains "blinding (--commits): spec review-log sidecar hidden" "$BLIND_CPKG" "SECRETSIDECAR"
+assert_file_not_contains "blinding (--commits): orchestration log hidden" "$BLIND_CPKG" "SECRETORCH"
+assert_file_not_contains "blinding (--commits): open-decisions file hidden" "$BLIND_CPKG" "SECRETDECISIONS"
 # Same reasoning for `git show --stat` in --commits mode.
 assert_file_not_contains "blinding (--commits): review file names absent from the stat summary" "$BLIND_CPKG" "implementation/foo-review-log.md"
+# Positive control: the package's `## Commits` section must name THIS commit's
+# own subject. Without this, a regression that substitutes an unrelated
+# ancestor's subject (history simplification walking past a blinded diff)
+# would go undetected — see V1.
+assert_file_contains "blinding (--commits): ordinary commit's own subject appears in the commit list" "$BLIND_CPKG" "feature plus review material"
 
 # The commit list must be blinded in --commits mode too: a commit touching
 # ONLY review material must not appear, mirroring the range-mode assertion
@@ -443,6 +455,10 @@ assert_file_not_contains "blinding (--commits): review file names absent from th
 # above) already qualifies, so it is reused here rather than making a new one.
 BLIND_CPKG2="$WS/blind-from-commits-2.diff"
 "$SCRIPTS/review-package" --commits "$BLIND_HEAD2" --out "$BLIND_CPKG2" >/dev/null 2>&1
+# Positive control: without it, a missing or empty $BLIND_CPKG2 would make the
+# negative assertion below report PASS for the wrong reason (grep can't read
+# the file), so assert the package header is actually present first.
+assert_file_contains "blinding (--commits): review-only package still has its header" "$BLIND_CPKG2" "# Review package (explicit commits)"
 assert_file_not_contains "blinding (--commits): review-only commit absent from the commit list" "$BLIND_CPKG2" "chore(review)"
 
 # Run from a subdirectory and assert on the package CONTENT, not on the exit
@@ -462,6 +478,12 @@ assert_file_not_contains "blinding: review log hidden when built from a subdirec
 
 bold "pipeline-mode git rules (multi-code-review)"
 
+# Drift check target for rules 1, 2, and 4 below: a local re-implementation
+# alone cannot fail if the documented block in SKILL.md drifts or is edited
+# wrongly, so each rule's local test is paired with an assert_file_contains
+# against the fenced block SKILL.md actually documents.
+SKILL_MD="$(dirname "$(dirname "$SCRIPTS")")/multi-code-review/SKILL.md"
+
 PTOPIC="docs/superpowers-orchestrator/2026-08-25-bar"
 PLOG="$PTOPIC/implementation/bar-review-log.md"
 mkdir -p "$PTOPIC/implementation"
@@ -477,6 +499,8 @@ git add -- "$PLOG"
 git commit --quiet -m "chore(review): bar round 1 log" -- "$PLOG"
 assert_eq "rule 1: log is committed" "$(git log -1 --format=%s)" "chore(review): bar round 1 log"
 assert_eq "rule 1: the user's staged file is still staged" "$(git diff --cached --name-only)" "user-staged.txt"
+assert_file_contains "rule 1 drift check: SKILL.md still stages the log before committing" "$SKILL_MD" "git add -- <log> [<fix reports>]"
+assert_file_contains "rule 1 drift check: SKILL.md still commits with the generic chore(review) subject" "$SKILL_MD" 'git commit -m "chore(review): <slug> round <i> log" -- <log> [<fix reports>]'
 
 # Rule 2: the precondition pathspec reports clean with only the log modified,
 # and dirty with a source file modified.
@@ -489,6 +513,7 @@ PRECOND2=$(git status --porcelain -- ':(top)' ":(top,exclude)$PTOPIC/implementat
 if [ -n "$PRECOND2" ]; then ok "rule 2: modified source file reads dirty"; else bad "rule 2: modified source file reads dirty"; fi
 git checkout --quiet -- unrelated.txt
 git add -- "$PLOG" && git commit --quiet -m "chore(review): bar round 2 log" -- "$PLOG"
+assert_file_contains "rule 2 drift check: SKILL.md still excludes the topic's implementation folder" "$SKILL_MD" "git status --porcelain -- ':(top)' ':(top,exclude)docs/superpowers-orchestrator/<topic>/implementation/'"
 
 # Rule 4: the effective-HEAD walk skips leading chore(review) commits and
 # stops at the first other commit.
@@ -532,8 +557,8 @@ assert_eq "rule 4: review-only range falls back to BASE" \
 # documents. Without a check on that block, the two "rule 4" assertions above
 # only exercise the local helper, so they cannot fail if the documented block
 # drifts or is edited wrongly. Assert the load-bearing lines this helper
-# reproduces are still present in the SKILL.md block.
-SKILL_MD="$(dirname "$(dirname "$SCRIPTS")")/multi-code-review/SKILL.md"
+# reproduces are still present in the SKILL.md block. $SKILL_MD was defined
+# above, ahead of the rule 1 drift check, and reused here.
 assert_file_contains "rule 4 drift check: SKILL.md still skips chore(review) commits" "$SKILL_MD" "'chore(review):'*) continue ;;"
 assert_file_contains "rule 4 drift check: SKILL.md still records effective_head and stops" "$SKILL_MD" 'effective_head="$sha"; break ;;'
 assert_file_contains "rule 4 drift check: SKILL.md still walks the range with git log --format" "$SKILL_MD" "git log --format='%H %s'"
@@ -587,9 +612,11 @@ mkdir -p docs/superpowers-orchestrator/2026-08-25-baz/plans
 mkdir -p docs/superpowers-orchestrator/2026-08-25-qux/plans
 echo "# plan" > docs/superpowers-orchestrator/2026-08-25-baz/plans/baz.md
 echo "# plan" > docs/superpowers-orchestrator/2026-08-25-qux/plans/qux.md
-"$SCRIPTS/sdd-workspace" docs/superpowers-orchestrator/2026-08-25-baz/plans/baz.md > /dev/null
+"$SCRIPTS/sdd-workspace" docs/superpowers-orchestrator/2026-08-25-baz/plans/baz.md > /dev/null 2>"$ERRF"
+assert_stderr_one "archive naming: switching to baz reports the prior plan's archive slug" "archived previous workspace to archive/planSym"
 echo "leftover" > "$WS/task-1-notes.md"
-"$SCRIPTS/sdd-workspace" docs/superpowers-orchestrator/2026-08-25-qux/plans/qux.md > /dev/null
+"$SCRIPTS/sdd-workspace" docs/superpowers-orchestrator/2026-08-25-qux/plans/qux.md > /dev/null 2>"$ERRF"
+assert_stderr_one "archive naming: switching to qux reports baz's archive slug" "archived previous workspace to archive/baz"
 if [ -d "$WS/archive/baz" ]; then
   ok "archive naming: dateless plan basename yields archive/baz"
 else
