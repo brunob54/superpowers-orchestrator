@@ -58,3 +58,7 @@ _Plan repair complete — 2026-08-25 — 28 defects fixed (d2f4784, bdc2df8, 15e
 ## Phase 3 — Batch 8 (tasks 15–16) — COMPLETE — commits 57f181d..90a365d
 - Task 15: complete — commit 57f181d (orchestration passes TOPIC_DIR and the new plan path to its controllers)
 - Task 16: complete — commit 1f82671 (context-management looks for plans in the topic folder)
+
+## Phase 3 — Batch 9 (tasks 17–18) — COMPLETE — commits 7ce3940..681caaa
+- Task 17: complete — commit 7ce3940 (every test fixture and prompt path moved to the artifact layout)
+- Task 18: complete — commit 214e870 (one-time Windows pathspec check recorded)
