@@ -42,3 +42,7 @@ _Plan repair complete — 2026-08-25 — 28 defects fixed (d2f4784, bdc2df8, 15e
 ## Phase 3 — Batch 4 (tasks 7–8) — COMPLETE — commits 7a5bd16..5d2e64a
 - Task 7: complete — commit 7a5bd16 (stop-reminders classifies new-layout paths)
 - Task 8: complete — commit 9ba62e4 (review packages blinded to committed review material)
+
+## Phase 3 — Batch 5 (tasks 9–10) — COMPLETE — commits 7b14b14..a174478
+- Task 9: complete — commit 7b14b14 (multi-code-review gains the TOPIC_DIR input and its validation)
+- Task 10: complete — commit dfe5d7c (pipeline mode defined with its four rule changes)
