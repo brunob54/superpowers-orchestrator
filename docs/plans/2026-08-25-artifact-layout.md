@@ -2037,7 +2037,7 @@ git commit -m "docs(orchestration): derive and use the topic folder at intake an
 
 **Security flag:** `none`
 
-- [ ] **Step 1: Write the failing verification check**
+- [x] **Step 1: Write the failing verification check**
 
 ```bash
 cd /Users/bruno/Programming/AI/AI_Coding/My_tools/Superpowers
@@ -2049,12 +2049,12 @@ grep -q 'TOPIC_DIR' skills/orchestrating-development/code-review-loop-prompt.md 
   && echo PASS || echo FAIL
 ```
 
-- [ ] **Step 2: Run it to verify it fails**
+- [x] **Step 2: Run it to verify it fails**
 
 Run: the command from Step 1
 Expected: prints `FAIL`
 
-- [ ] **Step 3: Update the plan-writer prompt's output path**
+- [x] **Step 3: Update the plan-writer prompt's output path**
 
 In `skills/orchestrating-development/plan-writer-prompt.md`, replace:
 
@@ -2071,7 +2071,7 @@ with:
   `<topic folder>` is `docs/superpowers-orchestrator/<YYYY-MM-DD>-<slug>/`
 ```
 
-- [ ] **Step 4: Add TOPIC_DIR to the code-review-loop prompt**
+- [x] **Step 4: Add TOPIC_DIR to the code-review-loop prompt**
 
 In `skills/orchestrating-development/code-review-loop-prompt.md`, replace the write-scope line:
 
@@ -2112,7 +2112,7 @@ Add the placeholder to the Placeholders list, after `[PLAN_PATH]`:
   `docs/superpowers-orchestrator/<YYYY-MM-DD>-<slug>/` at the repository root
 ```
 
-- [ ] **Step 5: Extend the triage rule's artifact list**
+- [x] **Step 5: Extend the triage rule's artifact list**
 
 Replace:
 
@@ -2132,7 +2132,7 @@ with:
        `docs/superpowers-orchestrator/*/implementation/` — whether the
 ```
 
-- [ ] **Step 6: Bind the controller to the blinding pathspecs**
+- [x] **Step 6: Bind the controller to the blinding pathspecs**
 
 The controller runs `multi-code-review`'s procedure, which already carries the
 pathspecs, but the spec names this template as one of the places the rule must
@@ -2147,12 +2147,12 @@ appear. Add a fourth deviation to the "Deviations (binding)" list:
        the branch under review now contains its own review log.
 ```
 
-- [ ] **Step 7: Run the verification check to confirm it passes**
+- [x] **Step 7: Run the verification check to confirm it passes**
 
 Run: the command from Step 1
 Expected: prints `PASS`
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add skills/orchestrating-development/plan-writer-prompt.md skills/orchestrating-development/code-review-loop-prompt.md
