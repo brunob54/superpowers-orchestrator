@@ -1088,10 +1088,13 @@ grep -q 'effective HEAD' skills/multi-code-review/SKILL.md \
   && grep -q "':(top,exclude)docs/superpowers-orchestrator/<topic>/implementation/'" skills/multi-code-review/SKILL.md \
   && grep -q 'Tracked-log sentinel' skills/multi-code-review/SKILL.md \
   && grep -q 'in \*\*direct mode\*\*,' skills/multi-code-review/SKILL.md \
+  && grep -q '"Current HEAD" is mode-dependent' skills/multi-code-review/SKILL.md \
   && echo PASS || echo FAIL
 ```
 
-The last needle gates Step 7's **second** edit — the "After the Loop" paragraph. Without it the task passes with that paragraph still stating the raw-HEAD rule unconditionally, which contradicts pipeline rule 4.
+The fifth needle (`in **direct mode**,`) gates Step 7's **second** edit — the "After the Loop" paragraph. Without it the task passes with that paragraph still stating the raw-HEAD rule unconditionally, which contradicts pipeline rule 4.
+
+The sixth needle (`"Current HEAD" is mode-dependent`) gates Step 7's **third** edit — the `**Once per gate:**` paragraph, which has the same defect: unqualified it demands both the raw `git rev-parse HEAD` and an untracked log, so in pipeline mode (where the log is tracked by design, and where the raw HEAD at marker time is the round's own log commit) the skip could never fire. The two needles do not overlap: the second edit writes `in **direct mode**,` with a comma, the third writes `in **direct mode** it is the raw`.
 
 The second needle, `chore(review): <slug> round <i> log`, is already satisfied
 by the pending-commit recovery text that Task 9 Step 3 inserted, so it does not
@@ -1267,6 +1270,44 @@ reached> — HEAD <sha>_` with `<sha>` = in **direct mode**,
 effective HEAD as defined in "Pipeline rule 4" above — the raw HEAD at
 marker time is the round's own log commit, which would never match on a
 later comparison.
+```
+
+Then qualify the `**Once per gate:**` paragraph itself, for the same reason.
+Unqualified it demands the raw `git rev-parse HEAD` **and** an untracked log,
+and pipeline mode satisfies neither: its log is tracked by design (Step 3), and
+its raw HEAD at marker time is the round's own log commit. Left as it stands
+the skip can never fire in pipeline mode. In
+`skills/multi-code-review/SKILL.md`, replace:
+
+```markdown
+**Once per gate:** the SDD gate skips the loop only when this log holds a
+`gate: sdd` invocation entry whose completion-marker HEAD equals the
+current `git rev-parse HEAD` AND whose recorded raw branch name matches
+the current branch — and only when the log itself is not tracked in the
+branch under review (same `git ls-files --error-unmatch <log path>` check
+as the sentinel): a tracked log can never satisfy this skip either. A
+`skipped` (N=0) entry **counts as completed** for this check — skip when
+its recorded HEAD equals the current HEAD and the branch matches — and is
+never a resumable/in-progress entry for the sentinel.
+```
+
+with:
+
+```markdown
+**Once per gate:** the SDD gate skips the loop only when this log holds a
+`gate: sdd` invocation entry whose completion-marker HEAD equals the
+current HEAD AND whose recorded raw branch name matches the current
+branch. "Current HEAD" is mode-dependent: in **direct mode** it is the raw
+`git rev-parse HEAD`, and the skip additionally requires that the log
+itself is not tracked in the branch under review (same
+`git ls-files --error-unmatch <log path>` check as the sentinel) — in
+direct mode a tracked log can never satisfy this skip. In **pipeline
+mode** it is the **effective HEAD** defined in "Pipeline rule 4" above,
+and there is **no** tracked-log condition: in that mode the log is tracked
+by design. A `skipped` (N=0) entry **counts as completed** for this check
+— skip when its recorded HEAD equals the current HEAD under the same
+mode-dependent definition and the branch matches — and is never a
+resumable/in-progress entry for the sentinel.
 ```
 
 - [ ] **Step 8: Run the verification check to confirm it passes**
@@ -2203,7 +2244,11 @@ PIPE_PROMPT="Invoke the superpowers-orchestrator:multi-code-review skill on the 
 # wrote at least one package into the same project, so an absolute
 # "at least one package exists" control could never fail; only an increase
 # proves that this case's own loop built packages.
-PKG_COUNT_BEFORE=$(ls "$TEST_PROJECT"/.superpowers/sdd/review-*.diff 2>/dev/null | wc -l | tr -d ' ')
+# `|| true` is required: the script runs under `set -euo pipefail` (line 18),
+# and when the glob matches nothing `ls` exits 2, `pipefail` propagates that
+# through `wc`/`tr`, and `set -e` would abort the whole script instead of
+# letting the control report. Same idiom as line 99 of this file.
+PKG_COUNT_BEFORE=$(ls "$TEST_PROJECT"/.superpowers/sdd/review-*.diff 2>/dev/null | wc -l | tr -d ' ' || true)
 
 cd "$PLUGIN_DIR" && timeout 1800 claude -p "$PIPE_PROMPT" \
     --permission-mode bypassPermissions \
@@ -2249,7 +2294,7 @@ else
     # comparison must be an INCREASE, not "at least one": Case 1 ran in the
     # same project and already left packages behind, so an absolute count
     # could never fail.
-    PKG_COUNT=$(ls .superpowers/sdd/review-*.diff 2>/dev/null | wc -l | tr -d ' ')
+    PKG_COUNT=$(ls .superpowers/sdd/review-*.diff 2>/dev/null | wc -l | tr -d ' ' || true)
     if [ "$PKG_COUNT" -le "$PKG_COUNT_BEFORE" ]; then
         echo "FAIL(p5-control): no new review package under .superpowers/sdd/ (before Case 2: $PKG_COUNT_BEFORE, after: $PKG_COUNT) — the blinding assertion examined nothing this case wrote"
         FAILURES=$((FAILURES+1))
@@ -2349,7 +2394,8 @@ Run:
 cd /Users/bruno/Programming/AI/AI_Coding/My_tools/Superpowers
 grep -rn 'docs/plans\|docs/specs' tests/ tools/ \
   | grep -v 'docs/superpowers-orchestrator' \
-  | grep -v '^tests/sdd-scripts/run-tests.sh:'
+  | grep -v '^tests/sdd-scripts/run-tests.sh:' \
+  | grep -v '^tests/codex/test-skill-activator.js:.*docs/specs/2026-08-04-foo-design.md'
 ```
 
 The needles carry **no trailing slash**, on purpose. Six of the paths Step 4 changes are `mkdir -p` arguments with no trailing slash — `tests/explicit-skill-requests/run-test.sh:46`, `run-haiku-test.sh:15`, `run-multiturn-test.sh:19`, `run-claude-describes-sdd.sh:15`, `run-extended-multiturn-test.sh:15`, and `tests/claude-code/test-subagent-driven-development-integration.sh:46` — and a needle ending in `/` cannot see any of them. An executor could then update the plan path and the prompt path, forget the `mkdir -p`, and still pass: the test would later fail at `cat > .../plans/auth-system.md` because the directory was never created, and no suite this plan runs would catch it.
@@ -2357,6 +2403,8 @@ The needles carry **no trailing slash**, on purpose. Six of the paths Step 4 cha
 Expected: no output apart from the four comment lines naming the spec a test implements (`tests/claude-code/test-multi-doc-review.sh:6`, `test-multi-code-review.sh:6`, `test-researching-prior-art.sh:6`, `test-researching-prior-art-gate.sh:6`) — those move in Task 20. Any remaining fixture or prompt path is a miss — fix it before committing.
 
 `tests/sdd-scripts/run-tests.sh` is excluded on purpose. Its `docs/plans/planC.md` fixtures (the `CDPATH` shadow and embedded-newline cases) test `sdd-workspace` against a plan **outside** the layout, which Task 13 keeps as supported behavior — direct mode, no `TOPIC_DIR`. Moving those fixtures would delete that coverage.
+
+`tests/codex/test-skill-activator.js` is excluded on **one line only**: the negative assertion Task 6 Step 1 requires, which feeds `docs/specs/2026-08-04-foo-design.md` to the intent pattern and asserts the pattern no longer matches it. The old-layout path is the point of that test, so it must stay in the file. The filter matches the file name **and** that one string together, so any other old-layout path left in the same file still appears here.
 
 - [ ] **Step 6: Run the fast test suites**
 
@@ -2676,7 +2724,8 @@ are in.
 cd /Users/bruno/Programming/AI/AI_Coding/My_tools/Superpowers
 grep -rn 'docs/specs/2026-\|docs/plans/2026-\|docs/superpowers-orchestrator/specs/\|docs/superpowers-orchestrator/plans/' \
   RELEASE-NOTES.md README.md docs/FORK-IMPROVEMENTS.md docs/architecture/project-memory.md tests/ \
-  | grep -v '2026-08-25-artifact-layout'
+  | grep -v '2026-08-25-artifact-layout' \
+  | grep -v '^tests/codex/test-skill-activator.js:.*docs/specs/2026-08-04-foo-design.md'
 grep -n 'docs/specs/<\|docs/plans/<' README.md docs/FORK-IMPROVEMENTS.md
 grep -n 'Historical documents under' docs/FORK-IMPROVEMENTS.md
 ```
@@ -2693,6 +2742,15 @@ documents under `docs/specs/` and `docs/plans/` keep the old name", whose
 paths carry neither a date nor a `<` placeholder. Step 3 replaces that whole
 sentence, so the phrase must be gone afterwards.
 
+The fourth `grep -v` excludes exactly one line of
+`tests/codex/test-skill-activator.js`: the negative assertion Task 6 Step 1
+requires, which feeds `docs/specs/2026-08-04-foo-design.md` to the intent
+pattern and asserts the pattern no longer matches it. That line keeps an
+old-layout path on purpose — it is what proves the pattern stopped matching
+`docs/specs/` — so this gate must not demand its removal. The filter names the
+file **and** the string together, so any other old-layout path in that file
+still fails the gate.
+
 `docs/guide/README.md` is deliberately **not** in this scope: its 18
 old-layout path lines belong to Task 21, which runs after this task and
 carries its own gate for that file. Adding it here would make Step 4
@@ -2701,7 +2759,7 @@ unreachable.
 - [ ] **Step 2: Run it to verify it fails**
 
 Run: the command from Step 1
-Expected: FAIL — the command prints the stale references (RELEASE-NOTES.md:359, docs/architecture/project-memory.md:197, and the four test comment headers). It must print nothing from `tests/codex/test-skill-activator.js`: Task 6 already moved every date-prefixed fixture path in that file to the new layout.
+Expected: FAIL — the command prints the stale references (RELEASE-NOTES.md:359, docs/architecture/project-memory.md:197, and the four test comment headers). It must print nothing from `tests/codex/test-skill-activator.js`. Task 6 moved every date-prefixed fixture path in that file to the new layout **except one** — the negative assertion that feeds `docs/specs/2026-08-04-foo-design.md` to the intent pattern and asserts the pattern no longer matches it. That one line stays in the file on purpose, and Step 1's fourth `grep -v` removes it from this gate's output.
 
 - [ ] **Step 3: Update the links**
 
