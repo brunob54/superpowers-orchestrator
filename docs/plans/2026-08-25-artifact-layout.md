@@ -1383,7 +1383,7 @@ git commit -m "docs(multi-code-review): define pipeline mode and its four rule c
 
 **Does NOT cover:** the exclusion covers the five documented name shapes and the `implementation/` folder. It does NOT cover: review material a user stored under some other name; the *task-level* reviewer in `subagent-driven-development` reading files outside the diff on its own initiative (the read prohibition covers that, the pathspecs cannot); and fix subagents, which keep receiving findings through their brief and never through the log — unchanged.
 
-- [ ] **Step 1: Write the failing verification check**
+- [x] **Step 1: Write the failing verification check**
 
 ```bash
 cd /Users/bruno/Programming/AI/AI_Coding/My_tools/Superpowers
@@ -1410,12 +1410,12 @@ comparing four numbers by eye is how a wrong count gets missed.
 without this count the gate reports `PASS` with the Error Handling bullet still
 restating the un-blinded fallback commands — the exact leak Step 6 closes.
 
-- [ ] **Step 2: Run it to verify it fails**
+- [x] **Step 2: Run it to verify it fails**
 
 Run: the command from Step 1
 Expected: all four counts print `0`, then the verdict line prints `FAIL`.
 
-- [ ] **Step 3: Add the blinding pathspecs to the skill's diff commands**
+- [x] **Step 3: Add the blinding pathspecs to the skill's diff commands**
 
 In `skills/multi-code-review/SKILL.md`, insert a new sub-section immediately after the "Root anchoring" paragraph:
 
@@ -1442,7 +1442,7 @@ there and keeps one form everywhere. The exclusion also closes the
 pre-existing leak of the committed doc-review sidecars.
 ````
 
-- [ ] **Step 4: Extend the reviewer's read prohibition**
+- [x] **Step 4: Extend the reviewer's read prohibition**
 
 In `skills/multi-code-review/reviewer-prompt.md`, replace:
 
@@ -1461,7 +1461,7 @@ with:
       precedence over the
 ```
 
-- [ ] **Step 5: Blind the reviewer's fallback diff commands**
+- [x] **Step 5: Blind the reviewer's fallback diff commands**
 
 In `skills/multi-code-review/reviewer-prompt.md`, replace:
 
@@ -1480,7 +1480,7 @@ with:
     you must not read.
 ````
 
-- [ ] **Step 6: Correct the Error Handling bullet that describes that fallback**
+- [x] **Step 6: Correct the Error Handling bullet that describes that fallback**
 
 `skills/multi-code-review/SKILL.md` restates the reviewer template's fallback
 commands in its Error Handling list. Step 5 has just changed those commands, so
@@ -1507,7 +1507,7 @@ with:
   "Reviewer blinding — pathspecs" above) and log the fallback.
 ```
 
-- [ ] **Step 7: Run the verification check to confirm it passes**
+- [x] **Step 7: Run the verification check to confirm it passes**
 
 Run: the command from Step 1
 Expected: `skill: 1`, `reviewer: 1`, `read ban: 2`, `fallback: 1`, then the
@@ -1518,7 +1518,7 @@ appears on two separate lines of `reviewer-prompt.md` after this task — once i
 the read prohibition (Step 4) and once inside the blinded fallback command
 (Step 5). `grep -c` counts matching lines.
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add skills/multi-code-review/SKILL.md skills/multi-code-review/reviewer-prompt.md
