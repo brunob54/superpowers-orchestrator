@@ -73,3 +73,9 @@ Note: Task 19 Step 4 rewrote this log's `_Invocation_` header to the moved spec 
 - Task 22: complete — commit 12a551d (release and documentation)
 Phase 3 finished: 22/22 tasks, 140/140 checkboxes, tree clean at a5db784.
 Owed to the user (Task 22 Step 10, not runnable by an autonomous executor): push the branch, update the installed plugin, then run the two behavioral tests in a fresh session. Detail: .superpowers/sdd/task-22-report.md
+
+## Phase 4 — Code review — rounds 4 — cap — fixes 5 — unresolved 2 — user_decision 5
+
+## STOPPED — 2026-08-25 — phase 4 — 2 unresolved and 5 user-decision findings; Phase 5 and branch integration not reached
+Detail: .superpowers/reviews/feature-artifact-layout-review-log.md
+Resume: Resume orchestration for docs/plans/2026-08-25-artifact-layout.md
