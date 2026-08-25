@@ -639,7 +639,7 @@ git commit -m "docs(multi-doc-review): infer doc type from the nearest path segm
 
 **Security flag:** `none`
 
-- [ ] **Step 1: Write failing tests**
+- [x] **Step 1: Write failing tests**
 
 In `tests/codex/test-skill-activator.js`, replace the test at the `orchestrating-development routing` section:
 
@@ -721,12 +721,12 @@ Task 20 Step 1 both grep for exactly that:
 Line numbers are the pre-edit ones and shift as the tests above are replaced;
 match on the prompt string, not on the line number.
 
-- [ ] **Step 2: Run the tests to verify they fail**
+- [x] **Step 2: Run the tests to verify they fail**
 
 Run: `node tests/codex/test-skill-activator.js`
 Expected: FAIL — "path pattern ... should match a new-layout spec path" (the current pattern requires `docs/specs/` immediately).
 
-- [ ] **Step 3: Change the intent pattern**
+- [x] **Step 3: Change the intent pattern**
 
 In `hooks/skill-rules.json`, replace:
 
@@ -740,17 +740,17 @@ with:
         "orchestrate\\b[\\s\\S]{0,80}?docs[\\/]superpowers-orchestrator[\\/][^\\s]+[\\/]specs[\\/]",
 ```
 
-- [ ] **Step 4: Run the tests to verify they pass**
+- [x] **Step 4: Run the tests to verify they pass**
 
 Run: `node tests/codex/test-skill-activator.js`
 Expected: PASS — all tests, including the two new pattern assertions.
 
-- [ ] **Step 5: Run the full hook unit suite**
+- [x] **Step 5: Run the full hook unit suite**
 
 Run: `bash tests/codex/run-unit-tests.sh`
 Expected: PASS — no regression in the other hook tests.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add hooks/skill-rules.json tests/codex/test-skill-activator.js
