@@ -339,7 +339,7 @@ git commit -m "docs(brainstorming): reuse an existing topic folder instead of cr
 
 **Security flag:** `none`
 
-- [ ] **Step 1: Write the failing verification check**
+- [x] **Step 1: Write the failing verification check**
 
 ```bash
 cd /Users/bruno/Programming/AI/AI_Coding/My_tools/Superpowers
@@ -363,12 +363,12 @@ written twice. `<date>-<slug>` is also the spelling every other task in this
 plan uses, including Task 21 Step 3, which rewrites `docs/guide/README.md` to
 quote these same strings.
 
-- [ ] **Step 2: Run it to verify it fails**
+- [x] **Step 2: Run it to verify it fails**
 
 Run: the command from Step 1
 Expected: prints `old docs/plans/ occurrences: 6`, `old Spec header: 1`, `new plan path occurrences: 0`, then `FAIL`.
 
-- [ ] **Step 3: Replace the four path statements (Output Path, the plan-header Spec line, the slug rule, and the handoff paths)**
+- [x] **Step 3: Replace the four path statements (Output Path, the plan-header Spec line, the slug rule, and the handoff paths)**
 
 In `skills/writing-plans/SKILL.md`:
 
@@ -439,12 +439,12 @@ The Ready Message's first line is already covered by the replacement given above
 
 Leave the "Seed `state.md`" bullet (`path to the plan file`) unchanged — it names no directory, so it is correct under both layouts.
 
-- [ ] **Step 4: Run the verification check to confirm it passes**
+- [x] **Step 4: Run the verification check to confirm it passes**
 
 Run: the command from Step 1
 Expected: `old docs/plans/ occurrences: 0`, `old Spec header: 0`, `new plan path occurrences: 5`, then `PASS`. The five are Output Path, the Ready Message, and the three paste-prompt table rows.
 
-- [ ] **Step 5: Confirm the routing keywords survived the rewrite**
+- [x] **Step 5: Confirm the routing keywords survived the rewrite**
 
 Run:
 
@@ -457,7 +457,7 @@ grep -c 'Execute the plan at' skills/writing-plans/SKILL.md
 
 Expected: each prints `1`. These three phrases are tuned to the skill-activator's scoring; only the path inside them changed.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add skills/writing-plans/SKILL.md
