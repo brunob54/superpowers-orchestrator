@@ -50,11 +50,75 @@ Every project goes through this process. A todo list, a single-function utility,
    - **Critical** (design fails for a significant user scenario): revise the design before proceeding.
    - **Minor** (edge case, acceptable limitation): document as a non-goal in the design.
    Do not skip this step. An approach that survives adversarial questioning is an approach worth approving.
-11. Save approved design to `docs/specs/YYYY-MM-DD-<topic>-design.md`.
+11. Save approved design to
+   `docs/superpowers-orchestrator/<today>-<slug>/specs/<slug>-design.md`,
+   creating the folders (see **Artifact Layout** below; `<slug>` is the
+   normalized topic name, `<today>` is today's date). Before writing, run
+   the existing-folder check in **Artifact Layout — reusing an existing
+   topic folder**.
 12. **Spec self-review** — quick inline check for placeholders, contradictions, ambiguity, scope (see Spec Self-Review below). Fix issues inline; no subagent dispatch needed.
 13. **Multi-round spec review** — invoke `superpowers-orchestrator:multi-doc-review` on the saved spec (doc type `spec`). It asks for N if not already stated (default 3; 0 skips), runs at most once per gate, and writes its audit log to `<spec-basename>-review-log.md`. Skip on platforms without the Agent tool.
 14. **User reviews written spec** — present the User Review Gate message (below) verbatim, with `<path>` filled in. This is the skill's final message; do not paraphrase it or drop either option.
 15. If the user approves in-session: invoke `writing-plans`. If the user chooses orchestration: stop — they run it from a fresh session.
+
+## Artifact Layout
+
+This section is the single normative definition of where the pipeline's
+documents live. Other skills state their own exact paths and cite this
+section by name.
+
+```
+docs/superpowers-orchestrator/<YYYY-MM-DD>-<slug>/
+  specs/<slug>-design.md                 the design (spec)
+  specs/<slug>-design-review-log.md      sidecar written by multi-doc-review
+  plans/<slug>.md                        the plan
+  plans/<slug>-review-log.md             sidecar written by multi-doc-review
+  plans/<slug>-open-decisions.md         written by orchestrating-development
+  implementation/<slug>-review-log.md    code review log (multi-code-review)
+  implementation/<slug>-fix-reports.md   fix reports (multi-code-review)
+  <slug>-orchestration-log.md            written by orchestrating-development
+```
+
+- **Topic folder:** `docs/superpowers-orchestrator/<YYYY-MM-DD>-<slug>/`,
+  relative to the repository root (`git rev-parse --show-toplevel`; for a
+  project that is not a git repository, the project directory).
+- **Date:** the day brainstorming creates the topic folder. Later stages
+  never change it.
+- **Slug:** the topic folder's basename with the `YYYY-MM-DD-` prefix
+  removed. It must match `^[a-z0-9]+(-[a-z0-9]+)*$` — lowercase ASCII
+  letters, digits, single hyphens. Brainstorming normalizes the topic name
+  to this form before creating the folder (lowercase; every run of other
+  characters becomes one hyphen; leading and trailing hyphens dropped) and
+  refuses to create a folder whose name would not match.
+- **Slug uniqueness:** at most one `????-??-??-<slug>/` folder may exist
+  under `docs/superpowers-orchestrator/`. Every "folder for slug X" lookup
+  matches the folder basename against
+  `^[0-9]{4}-[0-9]{2}-[0-9]{2}-<slug>$` (shell glob `????-??-??-<slug>`),
+  never against `*-<slug>` — the latter would also match
+  `2026-01-01-user-auth/` when the slug is `auth`.
+- **Topic folder derivation** from a document path: the path must have the
+  form `<D>/specs/<file>` or `<D>/plans/<file>`, where `<D>` is a direct
+  child of `docs/superpowers-orchestrator/` at the repository root and the
+  basename of `<D>` matches
+  `^[0-9]{4}-[0-9]{2}-[0-9]{2}-[a-z0-9]+(-[a-z0-9]+)*$`. Then `<D>` is the
+  topic folder. Any other path — including every old-layout path such as
+  `docs/plans/<file>` or `docs/specs/<file>`, whose `plans/` parent is
+  `docs/` — is **outside the layout**. Canonicalize both sides before
+  comparing (`pwd -P` on the directory; `realpath` where available):
+  `git rev-parse --show-toplevel` returns the physical path while a caller
+  may hold the logical one, and a textual comparison would classify a
+  repository reached through a symlink as outside the layout.
+- **Stage folders are created on first write.** Git stores no empty
+  directories, so a topic that stops at the spec stage has only `specs/`.
+- **Sidecar rule:** a document's review log is
+  `<document path minus .md>-review-log.md`, in the same directory.
+- **One plan per topic:** `plans/<slug>.md` is replaced when the plan is
+  rewritten; earlier versions stay in git history.
+- **Orchestration log:** at the topic root, no date prefix. Each invocation
+  entry inside carries its own date.
+- The topic folder is always anchored at the **repository root**. A
+  sub-project inside a monorepo gets its documents at the monorepo root;
+  relocating the folder makes every document "outside the layout".
 
 ## Process Flow
 
@@ -244,7 +308,8 @@ Apply senior engineering judgment during design:
 
 - User approved the design.
 - Failure-mode check completed — critical failure modes resolved, minor ones documented as non-goals.
-- Design document exists at the required path (`docs/specs/`).
+- Design document exists at the required path
+  (`docs/superpowers-orchestrator/*/specs/`).
 - Spec self-review completed — placeholders, contradictions, ambiguity, and scope issues resolved.
 - Multi-doc-review loop completed or explicitly skipped (N=0) — every Critical/Important finding applied or rejected-with-reason in the review log.
 - Prior art is settled in one of two ways. Either the research predicate matched for at least one decision, and the spec contains a "Prior art and alternatives" section — research findings dispositioned (applied / overridden with reason / deferred), or the skip or failure recorded. Or no decision in this design matched the predicate, and the spec records that no decision matched the predicate.
