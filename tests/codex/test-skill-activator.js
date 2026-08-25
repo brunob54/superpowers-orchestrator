@@ -1162,18 +1162,18 @@ test('"execute the plan in batches" ranks SDD above executing-plans', () => {
 
 test('batch phrasing with a plan path in between still ranks SDD first', () => {
   assert.strictEqual(
-    topSkill('execute the plan in docs/plans/2026-08-02-foo.md in batches'), SDD);
+    topSkill('execute the plan in docs/superpowers-orchestrator/2026-08-02-foo/plans/foo.md in batches'), SDD);
 });
 
 test('"in batched autonomous mode" after a plan path ranks SDD first', () => {
   assert.strictEqual(
-    topSkill('Execute the plan at docs/plans/2026-08-02-foo.md in batched autonomous mode'),
+    topSkill('Execute the plan at docs/superpowers-orchestrator/2026-08-02-foo/plans/foo.md in batched autonomous mode'),
     SDD);
 });
 
 test('"implement the plan in batches" ranks SDD first', () => {
   assert.strictEqual(
-    topSkill('Implement the plan in batches, starting with docs/plans/foo.md'), SDD);
+    topSkill('Implement the plan in batches, starting with docs/superpowers-orchestrator/2026-08-02-foo/plans/foo.md'), SDD);
 });
 
 test('plain "execute the plan" still routes to executing-plans', () => {
@@ -1181,7 +1181,7 @@ test('plain "execute the plan" still routes to executing-plans', () => {
 });
 
 test('plain "execute the plan at <path>" still routes to executing-plans', () => {
-  assert.strictEqual(topSkill('Execute the plan at docs/plans/2026-08-02-foo.md'), EXEC);
+  assert.strictEqual(topSkill('Execute the plan at docs/superpowers-orchestrator/2026-08-02-foo/plans/foo.md'), EXEC);
 });
 
 test('"follow the plan" still routes to executing-plans', () => {
@@ -1201,13 +1201,13 @@ test('a plan mentioned far before unrelated "in batch" text is NOT hijacked', ()
 
 test('writing-plans paste prompt for batched mode routes to SDD', () => {
   assert.strictEqual(
-    topSkill('Use subagents in batched autonomous mode on docs/plans/2026-08-02-foo.md'),
+    topSkill('Use subagents in batched autonomous mode on docs/superpowers-orchestrator/2026-08-02-foo/plans/foo.md'),
     SDD);
 });
 
 test('writing-plans paste prompt for interactive SDD routes to SDD', () => {
   assert.strictEqual(
-    topSkill('Use subagents to implement docs/plans/2026-08-02-foo.md'), SDD);
+    topSkill('Use subagents to implement docs/superpowers-orchestrator/2026-08-02-foo/plans/foo.md'), SDD);
 });
 
 test('"resume the implementation talk after lunch" does NOT trigger SDD', () => {
@@ -1220,7 +1220,33 @@ const ORCH = 'orchestrating-development';
 
 test('"orchestrate the development of <spec>" ranks orchestrating-development first', () => {
   assert.strictEqual(
-    topSkill('orchestrate the development of docs/specs/2026-08-04-foo-design.md'), ORCH);
+    topSkill('orchestrate the development of docs/superpowers-orchestrator/2026-08-25-foo/specs/foo-design.md'),
+    ORCH);
+});
+
+// The path-shaped intent pattern is asserted directly: the verb-phrase
+// pattern above it already matches "orchestrate the development", so a
+// topSkill() assertion alone cannot tell whether the path pattern changed.
+test('the orchestrating-development path pattern matches a new-layout spec path', () => {
+  // hooks/skill-rules.json's top-level key is `rules`, an array of entries.
+  const entry = require('../../hooks/skill-rules.json')
+    .rules.find(s => s.skill === ORCH);
+  const pathPattern = entry.intentPatterns.find(p => p.includes('specs'));
+  assert.ok(
+    new RegExp(pathPattern, 'i').test(
+      'orchestrate the development of docs/superpowers-orchestrator/2026-08-25-foo/specs/foo-design.md'),
+    `path pattern ${pathPattern} should match a new-layout spec path`);
+});
+
+test('the orchestrating-development path pattern no longer matches an old-layout spec path', () => {
+  // hooks/skill-rules.json's top-level key is `rules`, an array of entries.
+  const entry = require('../../hooks/skill-rules.json')
+    .rules.find(s => s.skill === ORCH);
+  const pathPattern = entry.intentPatterns.find(p => p.includes('specs'));
+  assert.ok(
+    !new RegExp(pathPattern, 'i').test(
+      'orchestrate the development of docs/specs/2026-08-04-foo-design.md'),
+    `path pattern ${pathPattern} should not match an old-layout spec path`);
 });
 
 test('"run the whole pipeline autonomously from the spec" routes to orchestrating-development', () => {
@@ -1228,11 +1254,15 @@ test('"run the whole pipeline autonomously from the spec" routes to orchestratin
 });
 
 test('"Resume orchestration for <plan>" routes to orchestrating-development, not SDD', () => {
-  assert.strictEqual(topSkill('Resume orchestration for docs/plans/2026-08-04-foo.md'), ORCH);
+  assert.strictEqual(
+    topSkill('Resume orchestration for docs/superpowers-orchestrator/2026-08-04-foo/plans/foo.md'),
+    ORCH);
 });
 
 test('"Abandon orchestration for <plan>" routes to orchestrating-development', () => {
-  assert.strictEqual(topSkill('Abandon orchestration for docs/plans/2026-08-04-foo.md'), ORCH);
+  assert.strictEqual(
+    topSkill('Abandon orchestration for docs/superpowers-orchestrator/2026-08-04-foo/plans/foo.md'),
+    ORCH);
 });
 
 test('"orchestrate it" (the brainstorming-gate reply phrase) routes to orchestrating-development', () => {
@@ -1249,7 +1279,7 @@ test('non-regression: "execute the plan in batches" still ranks SDD first', () =
 
 test('non-regression: "resume the plan at <path>" still routes to SDD', () => {
   assert.strictEqual(
-    topSkill('Resume the plan at docs/plans/2026-08-04-foo.md (batched autonomous mode)'), SDD);
+    topSkill('Resume the plan at docs/superpowers-orchestrator/2026-08-04-foo/plans/foo.md (batched autonomous mode)'), SDD);
 });
 
 // ── Debug-prompt routing (Codex post-push checklist canonical prompt) ─────────

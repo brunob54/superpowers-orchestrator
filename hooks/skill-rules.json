@@ -188,7 +188,7 @@
       ],
       "intentPatterns": [
         "orchestrate\\s+(the\\s+)?(development|implementation|pipeline)",
-        "orchestrate\\b[\\s\\S]{0,80}?docs[\\/]specs[\\/]",
+        "orchestrate\\b[\\s\\S]{0,80}?docs[\\/]superpowers-orchestrator[\\/][^\\s]+[\\/]specs[\\/]",
         "\\borchestrate\\s+(it|this)\\b",
         "(resume|abandon)\\s+orchestration",
         "(run|execute|start)\\s+the\\s+(whole|full|entire)\\s+pipeline"
