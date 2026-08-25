@@ -124,6 +124,16 @@ If it is non-empty, stop and report — or, in interactive sessions only,
 proceed after the user explicitly consents to fixing on top of the
 pre-existing uncommitted changes.
 
+**Pipeline rule 2 — Working-tree precondition.** In pipeline mode the check
+excludes the topic's implementation folder:
+
+```bash
+git status --porcelain -- ':(top)' ':(top,exclude)docs/superpowers-orchestrator/<topic>/implementation/'
+```
+
+Without the exclusion the untracked log (round 1) or the modified log and fix
+reports (later rounds) would fail the check on every round.
+
 **Root anchoring:** everything this skill does — git commands, fix
 commits, packages, and `.superpowers/reviews/` — is rooted at the top
 level of the repository under review: resolve it once at invocation start
@@ -131,10 +141,50 @@ level of the repository under review: resolve it once at invocation start
 the current repo for the SDD gate) and run all commands from there, never
 from the session's incidental cwd.
 
-Sidecar log: `<repo-root>/.superpowers/reviews/<branch-slug>-review-log.md`;
-fix reports beside it as `<branch-slug>-fix-reports.md`. On first use create
-`.superpowers/reviews/` and write a `.gitignore` containing exactly `*`
-inside it (nothing else ignores `.superpowers/`).
+Sidecar log and fix reports, by mode:
+
+- **Direct mode** (no `TOPIC_DIR`):
+  `<repo-root>/.superpowers/reviews/<branch-slug>-review-log.md`; fix reports
+  beside it as `<branch-slug>-fix-reports.md`. On first use create
+  `.superpowers/reviews/` and write a `.gitignore` containing exactly `*`
+  inside it (nothing else ignores `.superpowers/`). Nothing is committed.
+- **Pipeline mode** (`TOPIC_DIR` given):
+  `<TOPIC_DIR>/implementation/<slug>-review-log.md`; fix reports beside it as
+  `<TOPIC_DIR>/implementation/<slug>-fix-reports.md`, with `<slug>` derived
+  from `TOPIC_DIR`'s basename. The folder is created on first write and gets
+  **no** `.gitignore` — the log is tracked by design. Pipeline mode changes
+  exactly four rules of this skill; each is stated next to the direct-mode
+  rule it replaces.
+
+**Pipeline rule 1 — Log commits.** After every round, and after that round's
+fix commits:
+
+```bash
+git add -- <log> [<fix reports>]
+git commit -m "chore(review): <slug> round <i> log" -- <log> [<fix reports>]
+```
+
+The fix-report file is included only once it exists — a fix subagent has to
+have written to it first. The `git add` is required because
+`git commit -- <path>` fails on a file git does not know yet; the
+path-limited commit keeps the user's other staged files staged and out of
+this commit. The fix subagent **never stages the fix-report file**, even
+though it appends to it: the rule below that has it stage "the files it
+changed" excludes the fix-report file, because the controller's round commit
+owns both files. The completion marker and any post-loop addendum are
+committed the same way, with subject
+`chore(review): <slug> completed`. Each round, and the loop itself, ends with
+a tree that is clean except for changes that already existed when the loop
+started — those are never swept into a `chore(review)` commit.
+
+**When the commit fails** — a pre-commit hook rejects it, a signing prompt
+gets no answer, or the index conflicts — stop the loop after that round and
+report the git output. Do **not** retry inside the run and do **not** start
+the next round: the log and the fix reports stay on disk, uncommitted, and
+the next invocation retries the pending commit before round 1 (see the
+`TOPIC_DIR` validation, step 5). Starting another round would append a second
+round's text to a log whose previous round was never committed, and the
+retry could then no longer tell the two apart.
 
 Detect detached HEAD with `git symbolic-ref -q HEAD`: it exits non-zero
 when HEAD is detached (`git rev-parse --abbrev-ref HEAD` does **not** —
@@ -164,6 +214,14 @@ resumed at its next round — in interactive sessions only after
 confirming with the user (it could be a live concurrent run; never
 interleave rounds with one), in Batched Autonomous Mode automatically
 (it is the prior batch's own interrupted loop).
+
+**Pipeline rule 3 — Tracked-log sentinel.** The rule above — "a log tracked
+in the branch is set aside as abandoned" — applies to **direct mode only**.
+In pipeline mode the log is tracked by design, so resumption uses the entry
+rules alone: an invocation entry with no completion marker whose invoker kind
+and BASE match is resumed at its next round; a mismatched entry is marked
+`abandoned` and a new invocation entry is appended to the **same file**. The
+file is never moved aside — its history is committed.
 
 ## Procedure
 
@@ -382,8 +440,11 @@ invoker) plus `HEAD <sha>`; a failed round keeps the normal
 ## After the Loop
 
 Append the completion marker `_Completed — <date> — <converged|cap
-reached> — HEAD <sha>_` with `<sha>` = `git rev-parse HEAD` **now**
-(post-fix). Then report to the host gate: rounds run, per-round finding
+reached> — HEAD <sha>_` with `<sha>` = in **direct mode**,
+`git rev-parse HEAD` **now** (post-fix); in **pipeline mode**, the
+effective HEAD as defined in "Pipeline rule 4" below, beside "Once per
+gate" — the raw HEAD at marker time is the round's own log commit, which
+would never match on a later comparison. Then report to the host gate: rounds run, per-round finding
 counts, fixes applied (commit SHAs), unresolved and user-decision items,
 converged vs cap reached, log path.
 
@@ -406,15 +467,46 @@ The host gate proceeds only when no unresolved Critical/Important or
 user-decision items remain — unresolved items block, exactly as
 unresolved review findings block in subagent-driven-development today.
 
+**Pipeline rule 4 — Completion marker and once-per-gate skip.** Define the
+**effective HEAD** as the newest commit in `BASE..HEAD` whose subject does not
+start with `chore(review):`:
+
+```bash
+effective_head=""
+while read -r sha subject; do
+  case "$subject" in
+    'chore(review):'*) continue ;;
+    *) effective_head="$sha"; break ;;
+  esac
+done < <(git log --format='%H %s' "$BASE..HEAD")
+[ -n "$effective_head" ] || effective_head="$BASE"
+```
+
+When every commit in the range is a `chore(review):` commit — N=0, or a
+branch that received only review commits — the effective HEAD is BASE.
+
+In pipeline mode the completion marker records the **effective HEAD**, never
+the raw `git rev-parse HEAD`, which at marker time is always the last round's
+log commit. The post-loop addendum updates the marker under the same
+definition. The once-per-gate skip and the orchestrator's retry protection
+compare the recorded HEAD with the **current effective HEAD**. Direct mode
+keeps the raw `git rev-parse HEAD` in both places, unchanged. The skip's
+"log not tracked" condition applies to **direct mode only**.
+
 **Once per gate:** the SDD gate skips the loop only when this log holds a
 `gate: sdd` invocation entry whose completion-marker HEAD equals the
-current `git rev-parse HEAD` AND whose recorded raw branch name matches
-the current branch — and only when the log itself is not tracked in the
-branch under review (same `git ls-files --error-unmatch <log path>` check
-as the sentinel): a tracked log can never satisfy this skip either. A
-`skipped` (N=0) entry **counts as completed** for this check — skip when
-its recorded HEAD equals the current HEAD and the branch matches — and is
-never a resumable/in-progress entry for the sentinel. Interrupted
+current HEAD AND whose recorded raw branch name matches the current
+branch. "Current HEAD" is mode-dependent: in **direct mode** it is the raw
+`git rev-parse HEAD`, and the skip additionally requires that the log
+itself is not tracked in the branch under review (same
+`git ls-files --error-unmatch <log path>` check as the sentinel) — in
+direct mode a tracked log can never satisfy this skip. In **pipeline
+mode** it is the **effective HEAD** defined in "Pipeline rule 4" above,
+and there is **no** tracked-log condition: in that mode the log is tracked
+by design. A `skipped` (N=0) entry **counts as completed** for this check
+— skip when its recorded HEAD equals the current HEAD under the same
+mode-dependent definition and the branch matches — and is never a
+resumable/in-progress entry for the sentinel. Interrupted
 invocations resume per the sentinel rules (Workspace and Log). Re-run a
 completed invocation only on explicit user request.
 
