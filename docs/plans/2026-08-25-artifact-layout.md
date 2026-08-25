@@ -475,7 +475,7 @@ git commit -m "docs(writing-plans): write plans into the topic folder" --trailer
 
 **Does NOT cover:** the move offer applies only when the spec path fails the topic-folder derivation. It does NOT cover: a spec inside a correctly named topic folder but in the wrong stage sub-folder (for example `<topic>/plans/foo-design.md`) — that path fails derivation as a spec and gets the same offer, whose expected location names `specs/`, so the move is a real move and never a move onto itself; a spec already at the expected location (derivation succeeds, no offer); a spec whose sidecar exists but whose spec file does not (writing-plans stops earlier — the spec path must exist); and a project that is not a git repository, where the move uses plain `mv` and no history is preserved.
 
-- [ ] **Step 1: Write the failing verification check**
+- [x] **Step 1: Write the failing verification check**
 
 ```bash
 cd /Users/bruno/Programming/AI/AI_Coding/My_tools/Superpowers
@@ -485,12 +485,12 @@ grep -q '^## Spec Outside the Layout$' skills/writing-plans/SKILL.md \
   && echo PASS || echo FAIL
 ```
 
-- [ ] **Step 2: Run it to verify it fails**
+- [x] **Step 2: Run it to verify it fails**
 
 Run: the command from Step 1
 Expected: prints `FAIL` — the section does not exist.
 
-- [ ] **Step 3: Add the section immediately after "Output Path"**
+- [x] **Step 3: Add the section immediately after "Output Path"**
 
 Insert in `skills/writing-plans/SKILL.md`, between the Output Path section and the Plan Header section:
 
@@ -531,12 +531,12 @@ together with its spec.
    - **No:** stop. No plan is written.
 ````
 
-- [ ] **Step 4: Run the verification check to confirm it passes**
+- [x] **Step 4: Run the verification check to confirm it passes**
 
 Run: the command from Step 1
 Expected: prints `PASS`
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add skills/writing-plans/SKILL.md
