@@ -231,7 +231,7 @@ git commit -m "docs(brainstorming): add the normative artifact layout section" -
 
 ```bash
 cd /Users/bruno/Programming/AI/AI_Coding/My_tools/Superpowers
-grep -qi 'reusing an existing topic folder' skills/brainstorming/SKILL.md \
+grep -q '^### Reusing an existing topic folder$' skills/brainstorming/SKILL.md \
   && grep -q '????-??-??-<slug>' skills/brainstorming/SKILL.md \
   && grep -q 'design-<old date>-review-log\.md' skills/brainstorming/SKILL.md \
   && echo PASS || echo FAIL
@@ -246,6 +246,14 @@ slug-uniqueness bullet Task 1 inserted, so it does not discriminate here; the
 verdict comes from the other two. It is kept so the gate still fails if a
 later edit removes that glob from the skill.
 
+The first needle is **anchored to the heading line** (`^### …$`) on purpose.
+Task 1 Step 4 already writes the phrase "reusing an existing topic folder"
+into the same file as inline prose. An unanchored, case-insensitive needle
+would therefore match Task 1's sentence — today only because Task 1 happens to
+wrap that sentence across two lines, which no rule requires — and would stop
+discriminating the moment anyone reflows it. Only Step 3 writes the `###`
+heading.
+
 - [ ] **Step 3: Append the sub-section to the Artifact Layout section**
 
 Append at the end of the `## Artifact Layout` section added in Task 1, immediately before the `## Process Flow` heading:
@@ -256,10 +264,19 @@ Append at the end of the `## Artifact Layout` section added in Task 1, immediate
 Before step 11 writes the design, list the candidate folders:
 
 ```bash
-ls -d docs/superpowers-orchestrator/????-??-??-<slug>/ 2>/dev/null
+find docs/superpowers-orchestrator -maxdepth 1 -type d \
+     -name '????-??-??-<slug>' 2>/dev/null
 ```
 
-- **Zero matches** — create `docs/superpowers-orchestrator/<today>-<slug>/specs/`
+`find` is used instead of `ls -d <glob>/` because an unmatched glob is not
+portable: `bash` passes the pattern through to `ls`, but `zsh` — the login
+shell on macOS, and the shell many agent sessions run commands under — treats
+it as a shell-level error ("no matches found"), never runs `ls`, and writes
+the message before the command's own `2>/dev/null` can suppress it. `find`
+prints nothing and exits 0 when there is no match, in every shell.
+
+- **Zero matches** (no output) — create
+  `docs/superpowers-orchestrator/<today>-<slug>/specs/`
   and write the design there.
 - **More than one match** — a slug-uniqueness violation that predates this
   run. Stop, list both folders, and ask the user to merge or rename them.
@@ -328,7 +345,7 @@ git commit -m "docs(brainstorming): reuse an existing topic folder instead of cr
 cd /Users/bruno/Programming/AI/AI_Coding/My_tools/Superpowers
 OLD_PLANS=$(grep -c 'docs/plans/' skills/writing-plans/SKILL.md)
 OLD_SPEC_HDR=$(grep -c '\*\*Spec:\*\* `docs/specs/' skills/writing-plans/SKILL.md)
-NEW_PATHS=$(grep -cF 'docs/superpowers-orchestrator/<topic-folder>/plans/<slug>.md' skills/writing-plans/SKILL.md)
+NEW_PATHS=$(grep -cF 'docs/superpowers-orchestrator/<date>-<slug>/plans/<slug>.md' skills/writing-plans/SKILL.md)
 echo "old docs/plans/ occurrences: $OLD_PLANS"
 echo "old Spec header:             $OLD_SPEC_HDR"
 echo "new plan path occurrences:   $NEW_PATHS"
@@ -337,6 +354,14 @@ echo "new plan path occurrences:   $NEW_PATHS"
 ```
 
 The three counts are printed for diagnosis, but the verdict is the `PASS`/`FAIL` line — the same form every other task uses. Comparing three numbers by eye is how an off-by-one (one table row left un-replaced) gets missed.
+
+The path is spelled `<date>-<slug>`, the topic folder's **basename**, not
+`<topic-folder>`: the derivation paragraph defines `<D>` (and therefore "the
+topic folder") as the full path `docs/superpowers-orchestrator/<date>-<slug>`,
+so `docs/superpowers-orchestrator/<topic-folder>/…` would read as that prefix
+written twice. `<date>-<slug>` is also the spelling every other task in this
+plan uses, including Task 21 Step 3, which rewrites `docs/guide/README.md` to
+quote these same strings.
 
 - [ ] **Step 2: Run it to verify it fails**
 
@@ -363,9 +388,10 @@ folder shape are defined in the "Artifact Layout" section of
 `<D>/specs/<file>` where `<D>` is a direct child of
 `docs/superpowers-orchestrator/` at the repository root and `<D>`'s basename
 matches `^[0-9]{4}-[0-9]{2}-[0-9]{2}-[a-z0-9]+(-[a-z0-9]+)*$`. Then `<D>` is
-the topic folder and `<slug>` is `<D>`'s basename minus the date prefix.
+the topic folder, its basename is `<date>-<slug>`, and `<slug>` is that
+basename minus the date prefix.
 
-Save to `docs/superpowers-orchestrator/<topic-folder>/plans/<slug>.md`,
+Save to `docs/superpowers-orchestrator/<date>-<slug>/plans/<slug>.md`,
 creating `plans/` if it does not exist.
 
 - User preferences for plan location override this default.
@@ -397,16 +423,16 @@ with:
 - **Slug** = the plan's file basename with the `YYYY-MM-DD-` date prefix and the `.md` extension stripped, each only if present. Every skill in the pipeline derives the slug with this same rule. Under the artifact layout the plan basename *is* the slug, so the rule yields it unchanged: `docs/superpowers-orchestrator/2026-08-17-auth-login/plans/auth-login.md` → `auth-login`.
 ```
 
-Replace the three handoff prompt paths and the Ready Message path: in the Ready Message block and in the paste-prompt table, replace every occurrence of `docs/plans/<filename>.md` with `docs/superpowers-orchestrator/<topic-folder>/plans/<slug>.md`. Apply it to all four lines:
+Replace the three handoff prompt paths and the Ready Message path: in the Ready Message block and in the paste-prompt table, replace every occurrence of `docs/plans/<filename>.md` with `docs/superpowers-orchestrator/<date>-<slug>/plans/<slug>.md`. Apply it to all four lines:
 
 ```markdown
-Plan saved to `docs/superpowers-orchestrator/<topic-folder>/plans/<slug>.md`. Ready to execute with **[Subagent-Driven / Inline Execution]** (<N> tasks[, <one-word reason>]).
+Plan saved to `docs/superpowers-orchestrator/<date>-<slug>/plans/<slug>.md`. Ready to execute with **[Subagent-Driven / Inline Execution]** (<N> tasks[, <one-word reason>]).
 ```
 
 ```markdown
-| Subagent-Driven, batched | `Use subagents in batched autonomous mode on docs/superpowers-orchestrator/<topic-folder>/plans/<slug>.md` | Never asks mid-batch; hands off at the context boundary |
-| Subagent-Driven, interactive | `Use subagents to implement docs/superpowers-orchestrator/<topic-folder>/plans/<slug>.md` | Per-task subagents; stops to ask on ambiguity or blockers |
-| Inline | `Execute the plan at docs/superpowers-orchestrator/<topic-folder>/plans/<slug>.md` | Continuous in-session execution with checkpoints |
+| Subagent-Driven, batched | `Use subagents in batched autonomous mode on docs/superpowers-orchestrator/<date>-<slug>/plans/<slug>.md` | Never asks mid-batch; hands off at the context boundary |
+| Subagent-Driven, interactive | `Use subagents to implement docs/superpowers-orchestrator/<date>-<slug>/plans/<slug>.md` | Per-task subagents; stops to ask on ambiguity or blockers |
+| Inline | `Execute the plan at docs/superpowers-orchestrator/<date>-<slug>/plans/<slug>.md` | Continuous in-session execution with checkpoints |
 ```
 
 The Ready Message's first line is already covered by the replacement given above; do not apply it twice.
@@ -471,9 +497,14 @@ Insert in `skills/writing-plans/SKILL.md`, between the Output Path section and t
 ````markdown
 ## Spec Outside the Layout
 
-A spec whose path does not derive a topic folder (rule in the "Artifact
-Layout" section of `skills/brainstorming/SKILL.md`) gets **no plan written
-beside it**. The invariant this protects: every plan lives in a topic folder
+A spec whose path is not `<D>/specs/<file>` — where `<D>` is a direct child
+of `docs/superpowers-orchestrator/` at the repository root whose basename
+matches the topic-folder shape defined in the "Artifact Layout" section of
+`skills/brainstorming/SKILL.md` — gets **no plan written beside it**. The
+`specs/` segment is required: the general derivation rule in that section
+also accepts `<D>/plans/<file>`, but a *spec* sitting in a `plans/` folder is
+outside the layout and gets the offer below, exactly as this task's "Does NOT
+cover" note states. The invariant this protects: every plan lives in a topic folder
 together with its spec.
 
 1. Compute `<slug>` = the spec basename with `YYYY-MM-DD-`, `-design` and
@@ -853,6 +884,13 @@ assert_file_not_contains "blinding: implementation fix reports hidden" "$BPKG" "
 assert_file_not_contains "blinding: spec review-log sidecar hidden" "$BPKG" "SECRETSIDECAR"
 assert_file_not_contains "blinding: orchestration log hidden" "$BPKG" "SECRETORCH"
 assert_file_not_contains "blinding: open-decisions file hidden" "$BPKG" "SECRETDECISIONS"
+# The five assertions above key on file CONTENT, which only the `git diff -U10`
+# body can carry. The `## Files changed` section is a `git diff --stat`, which
+# prints file NAMES and counts and no content at all, so a package whose
+# `--stat` is un-blinded passes every one of them while still listing
+# `…/implementation/foo-review-log.md` to the reviewer. This assertion keys on
+# the path, so it is the only one that reaches the `--stat` edit in Step 3.
+assert_file_not_contains "blinding: review file names absent from the stat summary" "$BPKG" "implementation/foo-review-log.md"
 
 # A commit that touches ONLY review material must not appear in the commit
 # list at all — a visible "chore(review)" subject with no hunks tells a
@@ -874,6 +912,8 @@ BLIND_CPKG="$WS/blind-from-commits.diff"
 "$SCRIPTS/review-package" --commits "$BLIND_HEAD" --out "$BLIND_CPKG" >/dev/null 2>&1
 assert_file_contains "blinding (--commits): ordinary source change is visible" "$BLIND_CPKG" "VISIBLESOURCE"
 assert_file_not_contains "blinding (--commits): implementation review log hidden" "$BLIND_CPKG" "SECRETFINDING"
+# Same reasoning for `git show --stat` in --commits mode.
+assert_file_not_contains "blinding (--commits): review file names absent from the stat summary" "$BLIND_CPKG" "implementation/foo-review-log.md"
 
 # Run from a subdirectory and assert on the package CONTENT, not on the exit
 # status: `review-package` exits 0 from anywhere, with or without the
@@ -894,7 +934,7 @@ assert_file_not_contains "blinding: review log hidden when built from a subdirec
 - [ ] **Step 2: Run the tests to verify they fail**
 
 Run: `bash tests/sdd-scripts/run-tests.sh`
-Expected: FAIL — eight assertions, because `review-package` currently diffs everything: the five `SECRET*` `assert_file_not_contains` checks on `$BPKG`, `blinding: review-only commit absent from the commit list` (a `git log --oneline` without pathspecs still lists the `chore(review)` commit), `blinding (--commits): implementation review log hidden`, and `blinding: review log hidden when built from a subdirectory`.
+Expected: FAIL — ten assertions, because `review-package` currently diffs everything: the five `SECRET*` `assert_file_not_contains` checks on `$BPKG`, `blinding: review-only commit absent from the commit list` (a `git log --oneline` without pathspecs still lists the `chore(review)` commit), `blinding (--commits): implementation review log hidden`, `blinding: review log hidden when built from a subdirectory`, and the two `review file names absent from the stat summary` checks (one on `$BPKG`, one on `$BLIND_CPKG`).
 
 The two `assert_file_contains` checks for `VISIBLESOURCE` pass both before and after Step 3 — they are regression guards that catch a fix which blinds the package by shrinking the diff instead of by excluding review material.
 
@@ -977,7 +1017,7 @@ with:
 - [ ] **Step 4: Run the tests to verify they pass**
 
 Run: `bash tests/sdd-scripts/run-tests.sh`
-Expected: PASS — every assertion. That includes the pre-existing `range: alpha hunk present` and `--commits mode` assertions (which predate blinding and say nothing about it) *and* the two new `--commits` blinding assertions added in Step 1, which are what actually verify the `git show` edits in Step 3.
+Expected: PASS — every assertion. That includes the pre-existing `range: alpha hunk present` and `--commits mode` assertions (which predate blinding and say nothing about it) *and* the three new `--commits` blinding assertions added in Step 1, which are what actually verify the two `git show` edits in Step 3. The two `review file names absent from the stat summary` assertions are the only ones that verify the two `git diff --stat` / `git show --stat` edits: every other blinding assertion keys on file content, which a `--stat` summary never prints.
 
 - [ ] **Step 5: Commit**
 
@@ -1089,6 +1129,8 @@ grep -q 'effective HEAD' skills/multi-code-review/SKILL.md \
   && grep -q 'Tracked-log sentinel' skills/multi-code-review/SKILL.md \
   && grep -q 'in \*\*direct mode\*\*,' skills/multi-code-review/SKILL.md \
   && grep -q '"Current HEAD" is mode-dependent' skills/multi-code-review/SKILL.md \
+  && grep -qF '<TOPIC_DIR>/implementation/<slug>-review-log.md' skills/multi-code-review/SKILL.md \
+  && grep -qF 'Pipeline rule 1 — Log commits' skills/multi-code-review/SKILL.md \
   && echo PASS || echo FAIL
 ```
 
@@ -1096,9 +1138,16 @@ The fifth needle (`in **direct mode**,`) gates Step 7's **second** edit — the 
 
 The sixth needle (`"Current HEAD" is mode-dependent`) gates Step 7's **third** edit — the `**Once per gate:**` paragraph, which has the same defect: unqualified it demands both the raw `git rev-parse HEAD` and an untracked log, so in pipeline mode (where the log is tracked by design, and where the raw HEAD at marker time is the round's own log commit) the skip could never fire. The two needles do not overlap: the second edit writes `in **direct mode**,` with a comma, the third writes `in **direct mode** it is the raw`.
 
+The seventh needle gates **Step 3** and the eighth gates **Step 4**. Without
+them the gate prints `PASS` with the two most important edits of this task
+never applied: Step 3 is where pipeline mode's log path is defined, and Step 4
+is the log-commit rule. Neither writes any of the first six needles, and the
+second needle is already satisfied before this task runs (see below), so
+nothing else in the gate reads them.
+
 The second needle, `chore(review): <slug> round <i> log`, is already satisfied
 by the pending-commit recovery text that Task 9 Step 3 inserted, so it does not
-discriminate here; the verdict comes from the other four needles. It is kept so
+discriminate here; the verdict comes from the other seven needles. It is kept so
 the gate still fails if a later edit removes that commit subject from the skill.
 
 - [ ] **Step 2: Run it to verify it fails**
@@ -1132,8 +1181,8 @@ Sidecar log and fix reports, by mode:
   `<TOPIC_DIR>/implementation/<slug>-fix-reports.md`, with `<slug>` derived
   from `TOPIC_DIR`'s basename. The folder is created on first write and gets
   **no** `.gitignore` — the log is tracked by design. Pipeline mode changes
-  exactly four rules of this skill; each is stated below next to the
-  direct-mode rule it replaces.
+  exactly four rules of this skill; each is stated next to the direct-mode
+  rule it replaces.
 ```
 
 - [ ] **Step 4: Add rule 1 (log commits) after the Sidecar paragraph**
@@ -1267,9 +1316,9 @@ with:
 Append the completion marker `_Completed — <date> — <converged|cap
 reached> — HEAD <sha>_` with `<sha>` = in **direct mode**,
 `git rev-parse HEAD` **now** (post-fix); in **pipeline mode**, the
-effective HEAD as defined in "Pipeline rule 4" above — the raw HEAD at
-marker time is the round's own log commit, which would never match on a
-later comparison.
+effective HEAD as defined in "Pipeline rule 4" below, beside "Once per
+gate" — the raw HEAD at marker time is the round's own log commit, which
+would never match on a later comparison.
 ```
 
 Then qualify the `**Once per gate:**` paragraph itself, for the same reason.
@@ -1342,22 +1391,29 @@ NEEDLE="':(top,exclude,glob)**/*-orchestration-log.md'"
 SKILL_COUNT=$(grep -cF -- "$NEEDLE" skills/multi-code-review/SKILL.md)
 REVIEWER_COUNT=$(grep -cF -- "$NEEDLE" skills/multi-code-review/reviewer-prompt.md)
 READ_BAN_COUNT=$(grep -cF 'docs/superpowers-orchestrator/*/implementation/' skills/multi-code-review/reviewer-prompt.md)
+FALLBACK_COUNT=$(grep -cF 'each carrying the pathspec set from' skills/multi-code-review/SKILL.md)
 echo "skill:    $SKILL_COUNT"
 echo "reviewer: $REVIEWER_COUNT"
 echo "read ban: $READ_BAN_COUNT"
+echo "fallback: $FALLBACK_COUNT"
 [ "$SKILL_COUNT" = "1" ] && [ "$REVIEWER_COUNT" = "1" ] && [ "$READ_BAN_COUNT" = "2" ] \
+  && [ "$FALLBACK_COUNT" = "1" ] \
   && echo PASS || echo FAIL
 ```
 
-The three counts are printed for diagnosis, but the verdict is the `PASS`/`FAIL`
+The four counts are printed for diagnosis, but the verdict is the `PASS`/`FAIL`
 line — the same form every other task uses. Step 2 expects `FAIL` and Step 7
 expects `PASS`; without a verdict line neither expectation is checkable, and
-comparing three numbers by eye is how a wrong count gets missed.
+comparing four numbers by eye is how a wrong count gets missed.
+
+`fallback` gates **Step 6**. Step 6 adds none of the other three strings, so
+without this count the gate reports `PASS` with the Error Handling bullet still
+restating the un-blinded fallback commands — the exact leak Step 6 closes.
 
 - [ ] **Step 2: Run it to verify it fails**
 
 Run: the command from Step 1
-Expected: all three counts print `0`, then the verdict line prints `FAIL`.
+Expected: all four counts print `0`, then the verdict line prints `FAIL`.
 
 - [ ] **Step 3: Add the blinding pathspecs to the skill's diff commands**
 
@@ -1454,8 +1510,8 @@ with:
 - [ ] **Step 7: Run the verification check to confirm it passes**
 
 Run: the command from Step 1
-Expected: `skill: 1`, `reviewer: 1`, `read ban: 2`, then the verdict line
-prints `PASS`.
+Expected: `skill: 1`, `reviewer: 1`, `read ban: 2`, `fallback: 1`, then the
+verdict line prints `PASS`.
 
 `read ban` is `2`, not `1`: the string `docs/superpowers-orchestrator/*/implementation/`
 appears on two separate lines of `reviewer-prompt.md` after this task — once in
@@ -1478,7 +1534,15 @@ git commit -m "fix(multi-code-review): blind reviewers to committed review mater
 
 **Security flag:** `none`
 
-- [ ] **Step 1: Write failing tests**
+- [ ] **Step 1: Write the git-contract tests**
+
+These assertions have **no red state**, by design — the step is deliberately
+not called "write failing tests". They pin down behavior of `git` itself (a
+path-limited commit, pathspec exclusion in `git status`, the effective-HEAD
+walk, `git log --grep`) plus `sdd-workspace`'s existing archive-slug rule, and
+this plan changes none of that. They pass before and after; what they protect
+is the git contract the skill text now depends on. Step 2 therefore expects
+`PASS`, not `FAIL`.
 
 Append to `tests/sdd-scripts/run-tests.sh`, after the blinding section added in Task 8 and before the final `Results:` block:
 
@@ -2461,15 +2525,20 @@ repository on Windows Git Bash:
 ```bash
 mkdir -p docs/x && echo one > docs/x/a.md && echo two > b.md
 git init -q && git add -A && git commit -q -m "first"
-echo changed >> docs/x/a.md && echo changed >> b.md && git commit -qam "second"
+echo changed >> docs/x/a.md && echo changed >> b.md
+# Run the status check while BOTH changes are still uncommitted. Committing
+# first would leave a clean tree, and `git status` would then print nothing
+# whether or not MSYS mangled the pathspec — a check that cannot fail.
 git status --porcelain -- ':(top)' ':(top,exclude)docs/x/'
+git commit -qam "second"
 git diff HEAD~1 -- ':(top,exclude,glob)**/*-review-log.md'
 ```
 
-Expected: the first command prints nothing about `docs/x/`, and the second
-prints the ordinary diff. If either command errors or shows the excluded
-paths, the conversion mangled the pathspecs: prefix every command carrying
-them, in the skills and in `review-package`, with `MSYS_NO_PATHCONV=1`.
+Expected: the first command prints exactly one line, ` M b.md`, and no line
+for `docs/x/a.md`; the second prints the ordinary diff. If the first command
+prints nothing at all, prints `docs/x/a.md`, or either command errors, the
+conversion mangled the pathspecs: prefix every command carrying them, in the
+skills and in `review-package`, with `MSYS_NO_PATHCONV=1`.
 ````
 
 - [ ] **Step 4: Run the verification check to confirm it passes**
@@ -2596,14 +2665,18 @@ sed -i '' "/^\*\*Spec:\*\*/s|$OLD_SPEC|$NEW_SPEC|" \
   docs/plans/2026-08-25-artifact-layout.md
 sed -i '' "/^_Invocation /s|$OLD_SPEC|$NEW_SPEC|" \
   docs/plans/2026-08-25-artifact-layout-orchestration-log.md
-grep -c "$NEW_SPEC" docs/plans/2026-08-25-artifact-layout.md \
-                    docs/plans/2026-08-25-artifact-layout-orchestration-log.md
+# Both greps are ANCHORED to the header line each `sed` rewrote. An unanchored
+# `grep -c "$NEW_SPEC" <plan>` would report at least 1 before the `sed` even
+# runs, because the plan file contains the `NEW_SPEC='…'` assignment three
+# lines above — so a `sed` that matched nothing would still look successful.
+grep -c "^\*\*Spec:\*\*.*$NEW_SPEC" docs/plans/2026-08-25-artifact-layout.md
+grep -c "^_Invocation .*$NEW_SPEC" docs/plans/2026-08-25-artifact-layout-orchestration-log.md
 ```
 
-(On Linux use `sed -i` without the empty `''` argument.) Expected: each file
-reports at least `1`. If the orchestration log reports `0`, check whether it
-recorded the spec under a different spelling before continuing — a resume that
-cannot match the recorded spec path stops the run.
+(On Linux use `sed -i` without the empty `''` argument.) Expected: each command
+prints `1`. If either prints `0`, the anchored `sed` matched nothing: check
+whether that file recorded the spec under a different spelling before
+continuing — a resume that cannot match the recorded spec path stops the run.
 
 - [ ] **Step 5: Move the seven March–April files out of the two flat folders**
 
@@ -2722,13 +2795,23 @@ are in.
 
 ```bash
 cd /Users/bruno/Programming/AI/AI_Coding/My_tools/Superpowers
-grep -rn 'docs/specs/2026-\|docs/plans/2026-\|docs/superpowers-orchestrator/specs/\|docs/superpowers-orchestrator/plans/' \
+DATED=$(grep -rn 'docs/specs/2026-\|docs/plans/2026-\|docs/superpowers-orchestrator/specs/\|docs/superpowers-orchestrator/plans/' \
   RELEASE-NOTES.md README.md docs/FORK-IMPROVEMENTS.md docs/architecture/project-memory.md tests/ \
   | grep -v '2026-08-25-artifact-layout' \
-  | grep -v '^tests/codex/test-skill-activator.js:.*docs/specs/2026-08-04-foo-design.md'
-grep -n 'docs/specs/<\|docs/plans/<' README.md docs/FORK-IMPROVEMENTS.md
-grep -n 'Historical documents under' docs/FORK-IMPROVEMENTS.md
+  | grep -v '^tests/codex/test-skill-activator.js:.*docs/specs/2026-08-04-foo-design.md' || true)
+GENERIC=$(grep -n 'docs/specs/<\|docs/plans/<' README.md docs/FORK-IMPROVEMENTS.md || true)
+HISTORICAL=$(grep -n 'Historical documents under' docs/FORK-IMPROVEMENTS.md || true)
+printf '%s\n' "$DATED" "$GENERIC" "$HISTORICAL"
+[ -z "$DATED$GENERIC$HISTORICAL" ] && echo PASS || echo FAIL
 ```
+
+The three greps are captured into variables, each guarded with `|| true`, and
+the verdict is the final `PASS`/`FAIL` line — the same form every other task
+uses. Written as three bare `grep` pipelines the block has two defects: a
+successful gate makes every `grep` exit `1` (nothing matched), which aborts the
+whole block under `set -euo pipefail` and reads as a failed command to anyone
+judging by exit status; and there is no single line to compare against Step 2's
+and Step 4's expectations.
 
 The second command is a separate gate for the **generic** path examples Step 3
 also replaces (`docs/specs/<doc>.md`, `docs/plans/<plan>.md`, and the rest).
@@ -2759,7 +2842,7 @@ unreachable.
 - [ ] **Step 2: Run it to verify it fails**
 
 Run: the command from Step 1
-Expected: FAIL — the command prints the stale references (RELEASE-NOTES.md:359, docs/architecture/project-memory.md:197, and the four test comment headers). It must print nothing from `tests/codex/test-skill-activator.js`. Task 6 moved every date-prefixed fixture path in that file to the new layout **except one** — the negative assertion that feeds `docs/specs/2026-08-04-foo-design.md` to the intent pattern and asserts the pattern no longer matches it. That one line stays in the file on purpose, and Step 1's fourth `grep -v` removes it from this gate's output.
+Expected: FAIL — the block prints the stale references (RELEASE-NOTES.md:359, docs/architecture/project-memory.md:197, the four test comment headers, the generic-path lines and the "Historical documents under" line), then the verdict line prints `FAIL`. It must print nothing from `tests/codex/test-skill-activator.js`. Task 6 moved every date-prefixed fixture path in that file to the new layout **except one** — the negative assertion that feeds `docs/specs/2026-08-04-foo-design.md` to the intent pattern and asserts the pattern no longer matches it. That one line stays in the file on purpose, and Step 1's fourth `grep -v` removes it from this gate's output.
 
 - [ ] **Step 3: Update the links**
 
@@ -2788,7 +2871,7 @@ with:
 *Named `multi-review` through v6.10.0; renamed in v6.11.0 to pair with `multi-code-review`. The historical topic folder `docs/superpowers-orchestrator/2026-07-19-multi-review/` keeps the old name.*
 ```
 
-In `docs/FORK-IMPROVEMENTS.md`, replace the four user-facing path examples so they name the layout:
+In `docs/FORK-IMPROVEMENTS.md`, apply the seven replacements below so the user-facing paths name the layout. There are seven bullets, not four: stopping early leaves `docs/FORK-IMPROVEMENTS.md` lines 171, 194 and 212 un-updated, and only line 151's omission would be caught by a gate.
 
 - `implement the next 3 tasks from docs/plans/<plan>.md` → `implement the next 3 tasks from docs/superpowers-orchestrator/<date>-<slug>/plans/<slug>.md`
 - `/multi-doc-review docs/specs/<doc>.md 3` → `/multi-doc-review docs/superpowers-orchestrator/<date>-<slug>/specs/<slug>-design.md 3`
@@ -2796,7 +2879,7 @@ In `docs/FORK-IMPROVEMENTS.md`, replace the four user-facing path examples so th
 - `orchestrate development of docs/specs/<spec>.md` → `orchestrate development of docs/superpowers-orchestrator/<date>-<slug>/specs/<slug>-design.md`
 - `Resume orchestration for docs/plans/<plan>.md` and `Abandon orchestration for docs/plans/<plan>.md` → the same with `docs/superpowers-orchestrator/<date>-<slug>/plans/<slug>.md`
 - the committed orchestration log path `docs/plans/<slug>-orchestration-log.md` → `docs/superpowers-orchestrator/<date>-<slug>/<slug>-orchestration-log.md`
-- the two `.superpowers/reviews/<branch-slug>-review-log.md` mentions gain "— or, in a pipeline run, `docs/superpowers-orchestrator/<date>-<slug>/implementation/<slug>-review-log.md`, committed"
+- the `.superpowers/reviews/<branch-slug>-review-log.md` mention at `docs/FORK-IMPROVEMENTS.md:171` gains "— or, in a pipeline run, `docs/superpowers-orchestrator/<date>-<slug>/implementation/<slug>-review-log.md`, committed". The **only other** such mention, at line 151, is NOT touched by this bullet: it is handled entirely by the whole-bullet replacement below. Applying both to line 151 would rewrite it first and then leave the whole-bullet replacement with no verbatim match"
 
 The `docs/FORK-IMPROVEMENTS.md:151` bullet needs more than the path: its
 trailing clause states the git-ignore rule as an unconditional property of the
@@ -2824,8 +2907,8 @@ In `README.md`, replace the two path examples on lines 32 and 34:
 
 - [ ] **Step 4: Run the verification check to confirm it passes**
 
-Run: all three commands from Step 1
-Expected: PASS — none of the three prints anything.
+Run: the block from Step 1
+Expected: the three greps print nothing, then the verdict line prints `PASS`.
 
 - [ ] **Step 5: Commit**
 
@@ -3102,6 +3185,10 @@ either mid-run would have broken every later checkbox-tick commit. After the
 run ends, move them by hand:
 
 ```bash
+# Task 19 Step 4 created only `.../2026-08-25-artifact-layout/specs`. `git mv`
+# fails with "No such file or directory" when the destination directory does
+# not exist, so create `plans/` first.
+mkdir -p docs/superpowers-orchestrator/2026-08-25-artifact-layout/plans
 git mv docs/plans/2026-08-25-artifact-layout.md \
        docs/superpowers-orchestrator/2026-08-25-artifact-layout/plans/artifact-layout.md
 git mv docs/plans/2026-08-25-artifact-layout-review-log.md \
