@@ -76,8 +76,19 @@ digraph sdd_process {
    - For tasks centered on frontend/UI, apply `frontend-design` standards to guide structure, styling, and accessibility.
 4. Run the final whole-branch review loop: invoke the `multi-code-review`
    skill with BASE = the branch's merge-base (`git merge-base main HEAD`
-   or the BASE recorded before Task 1), the plan path, and the ledger's
-   carried Minor-findings list. Ask the user for N unless a count was
+   or the BASE recorded before Task 1), the plan path, the ledger's
+   carried Minor-findings list, and — when one exists — `TOPIC_DIR`.
+   Derive `TOPIC_DIR` from the plan path recorded in
+   `.superpowers/sdd/plan.ref` using the derivation rule in the "Artifact
+   Layout" section of `skills/brainstorming/SKILL.md`: the plan must be
+   `<D>/plans/<file>` with `<D>` a direct child of
+   `docs/superpowers-orchestrator/` at the repository root whose basename
+   matches `^[0-9]{4}-[0-9]{2}-[0-9]{2}-[a-z0-9]+(-[a-z0-9]+)*$`; then
+   `TOPIC_DIR` is `<D>`, as an absolute path, and the review log and fix
+   reports are committed under `<D>/implementation/`. A plan **outside the
+   layout** derives no topic folder: pass no `TOPIC_DIR`, so the review runs
+   in direct mode under `.superpowers/reviews/`, and say so in the
+   completion message. Ask the user for N unless a count was
    already stated (default 3; N=0 skips on explicit user choice). The
    loop's unresolved Critical/Important and user-decision items block
    completion exactly as unresolved review findings do. On platforms
