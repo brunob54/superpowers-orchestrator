@@ -2804,7 +2804,7 @@ are in.
 
 **Does NOT cover:** references **inside** the moved historical documents themselves — the spec keeps their contents untouched. It also does NOT cover `README.md:252`, whose `"docs/plans/..."` is an illustrative entry in a context-engine dependency map for an arbitrary project, not a link to a document this repository moved.
 
-- [ ] **Step 1: Write the failing verification check**
+- [x] **Step 1: Write the failing verification check**
 
 ```bash
 cd /Users/bruno/Programming/AI/AI_Coding/My_tools/Superpowers
@@ -2852,12 +2852,12 @@ old-layout path lines belong to Task 21, which runs after this task and
 carries its own gate for that file. Adding it here would make Step 4
 unreachable.
 
-- [ ] **Step 2: Run it to verify it fails**
+- [x] **Step 2: Run it to verify it fails**
 
 Run: the command from Step 1
 Expected: FAIL — the block prints the stale references (RELEASE-NOTES.md:359, docs/architecture/project-memory.md:197, the four test comment headers, the generic-path lines and the "Historical documents under" line), then the verdict line prints `FAIL`. It must print nothing from `tests/codex/test-skill-activator.js`. Task 6 moved every date-prefixed fixture path in that file to the new layout **except one** — the negative assertion that feeds `docs/specs/2026-08-04-foo-design.md` to the intent pattern and asserts the pattern no longer matches it. That one line stays in the file on purpose, and Step 1's fourth `grep -v` removes it from this gate's output.
 
-- [ ] **Step 3: Update the links**
+- [x] **Step 3: Update the links**
 
 Apply these exact replacements:
 
@@ -2918,12 +2918,12 @@ In `README.md`, replace the two path examples on lines 32 and 34:
 - `/multi-doc-review docs/specs/<doc>.md 3` → `/multi-doc-review docs/superpowers-orchestrator/<date>-<slug>/specs/<slug>-design.md 3`
 - `orchestrate development of docs/specs/<spec>.md` → `orchestrate development of docs/superpowers-orchestrator/<date>-<slug>/specs/<slug>-design.md`
 
-- [ ] **Step 4: Run the verification check to confirm it passes**
+- [x] **Step 4: Run the verification check to confirm it passes**
 
 Run: the block from Step 1
 Expected: the three greps print nothing, then the verdict line prints `PASS`.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add RELEASE-NOTES.md README.md docs/FORK-IMPROVEMENTS.md docs/architecture/project-memory.md tests/claude-code/
