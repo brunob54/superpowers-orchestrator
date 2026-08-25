@@ -1767,7 +1767,7 @@ git commit -m "docs(sdd): pass TOPIC_DIR to the final whole-branch review gate" 
 
 **Does NOT cover:** the intake rule stops the run when the spec derives no topic folder. It does NOT cover: moving the spec — the orchestrator never moves files and never asks a question after Phase 0, so the user does the move; a spec inside a valid topic folder whose `specs/` sub-folder holds several designs (the first matching path given by the user is used — no disambiguation); and `docs/research/` handling and every `state.md` rule, which are unchanged.
 
-- [ ] **Step 1: Write the failing verification check**
+- [x] **Step 1: Write the failing verification check**
 
 ```bash
 cd /Users/bruno/Programming/AI/AI_Coding/My_tools/Superpowers
@@ -1780,12 +1780,12 @@ cd /Users/bruno/Programming/AI/AI_Coding/My_tools/Superpowers
 
 The first two conditions require the literal strings `docs/plans/` and `docs/specs/` to be **absent** from the file after Steps 3–8. That holds only because no replacement text in this task writes either string: Step 3's prose says "an old flat-directory spec path included" instead of naming the old path. Keep it that way — a new sentence that names `docs/specs/` literally would make Step 9 unreachable.
 
-- [ ] **Step 2: Run it to verify it fails**
+- [x] **Step 2: Run it to verify it fails**
 
 Run: the command from Step 1
 Expected: prints `FAIL`
 
-- [ ] **Step 3: Add the intake rule to Phase 0 step 4**
+- [x] **Step 3: Add the intake rule to Phase 0 step 4**
 
 In `skills/orchestrating-development/SKILL.md`, replace the opening of step 4:
 
@@ -1820,7 +1820,7 @@ with:
    user's unrelated changes.
 ```
 
-- [ ] **Step 4: Update the slug derivation and the prior-run glob in step 5**
+- [x] **Step 4: Update the slug derivation and the prior-run glob in step 5**
 
 Replace:
 
@@ -1854,7 +1854,7 @@ with:
    except zero matches.
 ```
 
-- [ ] **Step 5: Update the log, plan and open-decisions paths**
+- [x] **Step 5: Update the log, plan and open-decisions paths**
 
 Replace:
 
@@ -1899,7 +1899,7 @@ The controller's write scope therefore adds `<topic folder>/implementation/`.
 The open-decisions file is `<topic folder>/plans/<slug>-open-decisions.md`.
 ```
 
-- [ ] **Step 6: Update Phase 5 step 3, the log format block and the state.md block**
+- [x] **Step 6: Update Phase 5 step 3, the log format block and the state.md block**
 
 Replace in Phase 5 step 3:
 
@@ -1962,7 +1962,7 @@ with:
 Spec: <topic folder>/specs/<slug>-design.md  Plan: <topic folder>/plans/<slug>.md
 ```
 
-- [ ] **Step 7: Update the Resume procedure**
+- [x] **Step 7: Update the Resume procedure**
 
 Replace resume step 0:
 
@@ -2011,16 +2011,16 @@ with:
    more than one match is an "ambiguous slug" stop —
 ```
 
-- [ ] **Step 8: Update the skill description's trigger phrase**
+- [x] **Step 8: Update the skill description's trigger phrase**
 
 In the YAML front matter, replace `"orchestrate docs/specs/..."` with `"orchestrate docs/superpowers-orchestrator/<topic>/specs/..."`.
 
-- [ ] **Step 9: Run the verification check to confirm it passes**
+- [x] **Step 9: Run the verification check to confirm it passes**
 
 Run: the command from Step 1
 Expected: prints `PASS`
 
-- [ ] **Step 10: Commit**
+- [x] **Step 10: Commit**
 
 ```bash
 git add skills/orchestrating-development/SKILL.md
