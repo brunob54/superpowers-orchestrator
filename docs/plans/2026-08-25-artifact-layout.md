@@ -1119,7 +1119,7 @@ git commit -m "docs(multi-code-review): add the TOPIC_DIR input and its validati
 
 **Does NOT cover:** pipeline mode changes only the four rules stated below. It does NOT change: lens rotation, convergence, the verification re-review cycle cap, the reviewer or fix-subagent model rules, or the fix subagent's own commit subject. It does NOT cover a run that switches mode mid-loop (a resumed invocation always re-derives its mode from whether `TOPIC_DIR` was passed), and it does NOT cover a direct run finding a pipeline-mode log — the two modes write to different paths and never meet.
 
-- [ ] **Step 1: Write the failing verification check**
+- [x] **Step 1: Write the failing verification check**
 
 ```bash
 cd /Users/bruno/Programming/AI/AI_Coding/My_tools/Superpowers
@@ -1150,12 +1150,12 @@ by the pending-commit recovery text that Task 9 Step 3 inserted, so it does not
 discriminate here; the verdict comes from the other seven needles. It is kept so
 the gate still fails if a later edit removes that commit subject from the skill.
 
-- [ ] **Step 2: Run it to verify it fails**
+- [x] **Step 2: Run it to verify it fails**
 
 Run: the command from Step 1
 Expected: prints `FAIL`
 
-- [ ] **Step 3: Replace the Sidecar log paragraph in "Workspace and Log"**
+- [x] **Step 3: Replace the Sidecar log paragraph in "Workspace and Log"**
 
 Replace:
 
@@ -1185,7 +1185,7 @@ Sidecar log and fix reports, by mode:
   rule it replaces.
 ```
 
-- [ ] **Step 4: Add rule 1 (log commits) after the Sidecar paragraph**
+- [x] **Step 4: Add rule 1 (log commits) after the Sidecar paragraph**
 
 Insert:
 
@@ -1221,7 +1221,7 @@ round's text to a log whose previous round was never committed, and the
 retry could then no longer tell the two apart.
 ````
 
-- [ ] **Step 5: Add rule 2 (working-tree precondition) to the precondition paragraph**
+- [x] **Step 5: Add rule 2 (working-tree precondition) to the precondition paragraph**
 
 Replace:
 
@@ -1253,7 +1253,7 @@ Without the exclusion the untracked log (round 1) or the modified log and fix
 reports (later rounds) would fail the check on every round.
 ````
 
-- [ ] **Step 6: Add rule 3 (tracked-log sentinel) to the In-progress sentinel paragraph**
+- [x] **Step 6: Add rule 3 (tracked-log sentinel) to the In-progress sentinel paragraph**
 
 Append immediately after the existing "In-progress sentinel" paragraph:
 
@@ -1267,7 +1267,7 @@ and BASE match is resumed at its next round; a mismatched entry is marked
 file is never moved aside — its history is committed.
 ```
 
-- [ ] **Step 7: Add rule 4 (effective HEAD) to "After the Loop" and "Once per gate"**
+- [x] **Step 7: Add rule 4 (effective HEAD) to "After the Loop" and "Once per gate"**
 
 Insert immediately before the `**Once per gate:**` paragraph:
 
@@ -1359,12 +1359,12 @@ mode-dependent definition and the branch matches — and is never a
 resumable/in-progress entry for the sentinel.
 ```
 
-- [ ] **Step 8: Run the verification check to confirm it passes**
+- [x] **Step 8: Run the verification check to confirm it passes**
 
 Run: the command from Step 1
 Expected: prints `PASS`
 
-- [ ] **Step 9: Commit**
+- [x] **Step 9: Commit**
 
 ```bash
 git add skills/multi-code-review/SKILL.md
