@@ -1275,15 +1275,25 @@ git commit -m "docs(multi-code-review): define pipeline mode and its four rule c
 ```bash
 cd /Users/bruno/Programming/AI/AI_Coding/My_tools/Superpowers
 NEEDLE="':(top,exclude,glob)**/*-orchestration-log.md'"
-echo "skill:    $(grep -cF -- "$NEEDLE" skills/multi-code-review/SKILL.md)"
-echo "reviewer: $(grep -cF -- "$NEEDLE" skills/multi-code-review/reviewer-prompt.md)"
-echo "read ban: $(grep -cF 'docs/superpowers-orchestrator/*/implementation/' skills/multi-code-review/reviewer-prompt.md)"
+SKILL_COUNT=$(grep -cF -- "$NEEDLE" skills/multi-code-review/SKILL.md)
+REVIEWER_COUNT=$(grep -cF -- "$NEEDLE" skills/multi-code-review/reviewer-prompt.md)
+READ_BAN_COUNT=$(grep -cF 'docs/superpowers-orchestrator/*/implementation/' skills/multi-code-review/reviewer-prompt.md)
+echo "skill:    $SKILL_COUNT"
+echo "reviewer: $REVIEWER_COUNT"
+echo "read ban: $READ_BAN_COUNT"
+[ "$SKILL_COUNT" = "1" ] && [ "$REVIEWER_COUNT" = "1" ] && [ "$READ_BAN_COUNT" = "2" ] \
+  && echo PASS || echo FAIL
 ```
+
+The three counts are printed for diagnosis, but the verdict is the `PASS`/`FAIL`
+line — the same form every other task uses. Step 2 expects `FAIL` and Step 7
+expects `PASS`; without a verdict line neither expectation is checkable, and
+comparing three numbers by eye is how a wrong count gets missed.
 
 - [ ] **Step 2: Run it to verify it fails**
 
 Run: the command from Step 1
-Expected: FAIL — all three counts print `0`.
+Expected: all three counts print `0`, then the verdict line prints `FAIL`.
 
 - [ ] **Step 3: Add the blinding pathspecs to the skill's diff commands**
 
@@ -1380,7 +1390,8 @@ with:
 - [ ] **Step 7: Run the verification check to confirm it passes**
 
 Run: the command from Step 1
-Expected: PASS — `skill: 1`, `reviewer: 1`, `read ban: 2`.
+Expected: `skill: 1`, `reviewer: 1`, `read ban: 2`, then the verdict line
+prints `PASS`.
 
 `read ban` is `2`, not `1`: the string `docs/superpowers-orchestrator/*/implementation/`
 appears on two separate lines of `reviewer-prompt.md` after this task — once in
@@ -1475,17 +1486,35 @@ bold "recovery greps stay intact"
 # The batch controller finds task ticks with `git log --grep "task <n> complete"`
 # and fix commits with the `review fixes (<slug>, round <i>)` subject. A
 # pipeline-mode log commit must match neither.
-REVIEW_LOG_SUBJECT="chore(review): bar round 1 log"
-case "$REVIEW_LOG_SUBJECT" in
-  *"task 1 complete"*) bad "recovery grep: log subject must not match the task-tick pattern" ;;
-  *) ok "recovery grep: log subject does not match the task-tick pattern" ;;
-esac
-case "$REVIEW_LOG_SUBJECT" in
-  *"review fixes ("*) bad "recovery grep: log subject must not match the fix-commit pattern" ;;
-  *) ok "recovery grep: log subject does not match the fix-commit pattern" ;;
-esac
-assert_eq "recovery grep: git log --grep 'task 1 complete' finds no review log commit" \
+#
+# Both greps run against commits that REALLY EXIST in this throwaway
+# repository: the three `chore(review): bar round <i> log` commits created
+# above, plus one genuine tick commit and one genuine fix commit created here.
+# Each grep therefore has a match it must find AND log commits it must not
+# find, so a pipeline-mode subject that started colliding with either recovery
+# pattern would fail this gate. (Matching a shell variable against a literal
+# with `case` could never fail — both sides are written in this same file.)
+echo "tick" > tick.txt
+git add tick.txt && git commit --quiet -m "chore(plan): bar task 1 complete"
+TICK_SHA=$(git rev-parse --short HEAD)
+echo "fix" > fix.txt
+git add fix.txt && git commit --quiet -m "review fixes (bar, round 1)"
+FIX_SHA=$(git rev-parse --short HEAD)
+
+# Control: each recovery grep finds its own commit. Without this the two
+# "matches no review-log commit" assertions below would also pass if the grep
+# matched nothing at all.
+assert_eq "recovery grep: 'task 1 complete' finds exactly the tick commit" \
+  "$(git log --grep 'task 1 complete' --format=%h | tr '\n' ' ' | sed 's/ *$//')" "$TICK_SHA"
+assert_eq "recovery grep: 'review fixes (' finds exactly the fix commit" \
+  "$(git log --grep 'review fixes (' --format=%h | tr '\n' ' ' | sed 's/ *$//')" "$FIX_SHA"
+
+# The real assertions: neither recovery pattern matches a pipeline-mode
+# `chore(review)` log commit.
+assert_eq "recovery grep: 'task 1 complete' matches no review-log commit" \
   "$(git log --grep 'task 1 complete' --format=%s | grep -c 'chore(review)' | tr -d ' ')" "0"
+assert_eq "recovery grep: 'review fixes (' matches no review-log commit" \
+  "$(git log --grep 'review fixes (' --format=%s | grep -c 'chore(review)' | tr -d ' ')" "0"
 
 bold "archive naming with a dateless plan basename"
 
@@ -2468,10 +2497,19 @@ cd /Users/bruno/Programming/AI/AI_Coding/My_tools/Superpowers
 OLD_SPEC='docs/specs/2026-08-25-artifact-layout-design.md'
 NEW_SPEC='docs/superpowers-orchestrator/2026-08-25-artifact-layout/specs/artifact-layout-design.md'
 # The plan header stores the spec as an absolute path; the orchestration log
-# may store either form. Replace the repository-relative tail in both, which
+# stores the repository-relative form. Replacing the repository-relative tail
 # rewrites the absolute form too.
-sed -i '' "s|$OLD_SPEC|$NEW_SPEC|g" \
-  docs/plans/2026-08-25-artifact-layout.md \
+#
+# Each substitution is ANCHORED to the single header line that holds the
+# reference — `**Spec:**` in the plan, `_Invocation ` in the orchestration log.
+# An unanchored global `s|...|...|g` must NOT be used here: the old spec path
+# also occurs inside this task's own code blocks (the `git mv` above and the
+# `OLD_SPEC=` assignment three lines up), so a global substitution would
+# rewrite the plan's own commands and turn any retry of this step into a
+# silent no-op.
+sed -i '' "/^\*\*Spec:\*\*/s|$OLD_SPEC|$NEW_SPEC|" \
+  docs/plans/2026-08-25-artifact-layout.md
+sed -i '' "/^_Invocation /s|$OLD_SPEC|$NEW_SPEC|" \
   docs/plans/2026-08-25-artifact-layout-orchestration-log.md
 grep -c "$NEW_SPEC" docs/plans/2026-08-25-artifact-layout.md \
                     docs/plans/2026-08-25-artifact-layout-orchestration-log.md
@@ -2664,6 +2702,25 @@ In `docs/FORK-IMPROVEMENTS.md`, replace the four user-facing path examples so th
 - `Resume orchestration for docs/plans/<plan>.md` and `Abandon orchestration for docs/plans/<plan>.md` → the same with `docs/superpowers-orchestrator/<date>-<slug>/plans/<slug>.md`
 - the committed orchestration log path `docs/plans/<slug>-orchestration-log.md` → `docs/superpowers-orchestrator/<date>-<slug>/<slug>-orchestration-log.md`
 - the two `.superpowers/reviews/<branch-slug>-review-log.md` mentions gain "— or, in a pipeline run, `docs/superpowers-orchestrator/<date>-<slug>/implementation/<slug>-review-log.md`, committed"
+
+The `docs/FORK-IMPROVEMENTS.md:151` bullet needs more than the path: its
+trailing clause states the git-ignore rule as an unconditional property of the
+skill, which pipeline mode contradicts and Task 22's release note announces.
+Replace the whole bullet:
+
+```markdown
+- Sidecar audit log at `.superpowers/reviews/<branch-slug>-review-log.md`, git-ignored by a `*` rule so the branch under review can never author its own review record. Early exit after **two consecutive clean rounds**.
+```
+
+with:
+
+```markdown
+- Sidecar audit log at `.superpowers/reviews/<branch-slug>-review-log.md` — or, in a pipeline run, `docs/superpowers-orchestrator/<date>-<slug>/implementation/<slug>-review-log.md`, committed — so a direct review is never part of the branch under review. Early exit after **two consecutive clean rounds**.
+```
+
+The git-ignore claim is dropped rather than qualified: it was the *mechanism*
+for a property that pipeline mode achieves differently, and leaving it in would
+make the bullet disagree with Task 22's release note.
 
 In `README.md`, replace the two path examples on lines 32 and 34:
 
