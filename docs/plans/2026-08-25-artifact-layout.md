@@ -2237,7 +2237,7 @@ git commit -m "docs(context-management): look for plans in the topic folder" --t
 
 **Does NOT cover:** the researching-prior-art behavioral tests keep their `docs/research/` allow-list unchanged — that cache does not move. Comment lines naming the spec a test implements are updated in Task 20 together with the other links, not here. `tests/claude-code/test-batched-autonomous-mode.sh` needs no change: it holds no spec or plan path fixture — it asks the model about the skill file's Resume Procedure — which was confirmed with `grep -n 'docs/plans\|docs/specs' tests/claude-code/test-batched-autonomous-mode.sh` returning nothing.
 
-- [ ] **Step 1: Update the multi-doc-review fixture to the new layout**
+- [x] **Step 1: Update the multi-doc-review fixture to the new layout**
 
 In `tests/claude-code/test-multi-doc-review.sh`, replace:
 
@@ -2278,7 +2278,7 @@ with:
 # test to exercise path-segment inference (nearest segment specs/ -> spec); stating the type
 ```
 
-- [ ] **Step 2: Add the TOPIC_DIR case to the multi-code-review behavioral test**
+- [x] **Step 2: Add the TOPIC_DIR case to the multi-code-review behavioral test**
 
 In `tests/claude-code/test-multi-code-review.sh`, insert a second case between the existing direct-mode assertion block (the `if [ -z "$LOG" ] …` block, closed by the `fi` at line 141) and the file's final `if [ "$FAILURES" -eq 0 ]` summary block (line 143). Do **not** append at the end of the file: the summary block prints the verdict and calls `exit`, so every `FAILURES=$((FAILURES+1))` placed after it would have no effect and all five Case-2 assertions would pass vacuously.
 
@@ -2386,7 +2386,7 @@ else
 fi
 ```
 
-- [ ] **Step 3: Update the shared plan helper and the sdd integration fixture**
+- [x] **Step 3: Update the shared plan helper and the sdd integration fixture**
 
 In `tests/claude-code/test-helpers.sh`, replace:
 
@@ -2426,7 +2426,7 @@ cat > docs/superpowers-orchestrator/2026-08-25-implementation-plan/plans/impleme
 
 and replace both prompt strings' plan path `docs/plans/implementation-plan.md` with `docs/superpowers-orchestrator/2026-08-25-implementation-plan/plans/implementation-plan.md`.
 
-- [ ] **Step 4: Update the routing-test prompts**
+- [x] **Step 4: Update the routing-test prompts**
 
 In each of `tests/explicit-skill-requests/run-test.sh`, `run-haiku-test.sh`, `run-multiturn-test.sh`, `run-extended-multiturn-test.sh` and `run-claude-describes-sdd.sh`, replace:
 
@@ -2463,7 +2463,7 @@ I have a plan document at docs/superpowers-orchestrator/2024-01-15-auth-system/p
 
 In `tools/autoimprove/test-cases.json`, replace `docs/plans/auth-system.md` with `docs/superpowers-orchestrator/2026-08-25-auth-system/plans/auth-system.md` in the prompt at line 28.
 
-- [ ] **Step 5: Verify no old-layout fixture path is left**
+- [x] **Step 5: Verify no old-layout fixture path is left**
 
 Run:
 
@@ -2483,7 +2483,7 @@ Expected: no output apart from the four comment lines naming the spec a test imp
 
 `tests/codex/test-skill-activator.js` is excluded on **one line only**: the negative assertion Task 6 Step 1 requires, which feeds `docs/specs/2026-08-04-foo-design.md` to the intent pattern and asserts the pattern no longer matches it. The old-layout path is the point of that test, so it must stay in the file. The filter matches the file name **and** that one string together, so any other old-layout path left in the same file still appears here.
 
-- [ ] **Step 6: Run the fast test suites**
+- [x] **Step 6: Run the fast test suites**
 
 Run:
 
@@ -2494,7 +2494,7 @@ bash tests/sdd-scripts/run-tests.sh
 
 Expected: PASS both. The behavioral suites (`tests/claude-code/`) need the plugin reinstalled first and are run in Task 22's verification, not here.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add tests/ tools/autoimprove/test-cases.json
