@@ -2510,19 +2510,19 @@ git commit -m "test: move every fixture and prompt path to the artifact layout" 
 
 **Security flag:** `none`
 
-- [ ] **Step 1: Write the failing verification check**
+- [x] **Step 1: Write the failing verification check**
 
 ```bash
 cd /Users/bruno/Programming/AI/AI_Coding/My_tools/Superpowers
 grep -q 'MSYS_NO_PATHCONV' tests/codex/post-push-validation-checklist.md && echo PASS || echo FAIL
 ```
 
-- [ ] **Step 2: Run it to verify it fails**
+- [x] **Step 2: Run it to verify it fails**
 
 Run: the command from Step 1
 Expected: prints `FAIL`
 
-- [ ] **Step 3: Append the check**
+- [x] **Step 3: Append the check**
 
 Append to `tests/codex/post-push-validation-checklist.md`:
 
@@ -2554,12 +2554,12 @@ conversion mangled the pathspecs: prefix every command carrying them, in the
 skills and in `review-package`, with `MSYS_NO_PATHCONV=1`.
 ````
 
-- [ ] **Step 4: Run the verification check to confirm it passes**
+- [x] **Step 4: Run the verification check to confirm it passes**
 
 Run: the command from Step 1
 Expected: prints `PASS`
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add tests/codex/post-push-validation-checklist.md
