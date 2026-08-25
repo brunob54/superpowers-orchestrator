@@ -26,3 +26,7 @@ Resume: Resume orchestration for docs/plans/2026-08-25-artifact-layout.md
 _Plan repair — 2026-08-25 — third pre-flight set (Tasks 6, 10, 17) answered by the user; followed by a one-off executability pass over all 22 tasks (5 parallel reviewers, run-the-commands lens) before Phase 3 restarts. Twelve defects fixed across d2f4784, bdc2df8 and this pass._
 
 _Plan repair complete — 2026-08-25 — 28 defects fixed (d2f4784, bdc2df8, 15e82bc, 9637cbc, d43a710), 13 user-decided; 22 tasks / 140 checkboxes all unchecked. Phase 3 restarted at batch 1 with pre-flight review disabled (already run three times plus the executability pass)._
+
+## Phase 3 — Batch 1 (tasks 1–2) — COMPLETE — commits 7996399..ecd6c72
+- Task 1: complete — commits 7996399..34d9452
+- Task 2: complete — commits a3f83f2..ecd6c72
