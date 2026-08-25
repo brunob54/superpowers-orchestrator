@@ -233,14 +233,18 @@ git commit -m "docs(brainstorming): add the normative artifact layout section" -
 cd /Users/bruno/Programming/AI/AI_Coding/My_tools/Superpowers
 grep -qi 'reusing an existing topic folder' skills/brainstorming/SKILL.md \
   && grep -q '????-??-??-<slug>' skills/brainstorming/SKILL.md \
-  && grep -q 'design-review-log\.<old date>\.md' skills/brainstorming/SKILL.md \
+  && grep -q 'design-<old date>-review-log\.md' skills/brainstorming/SKILL.md \
   && echo PASS || echo FAIL
 ```
 
 - [ ] **Step 2: Run it to verify it fails**
 
 Run: the command from Step 1
-Expected: prints `FAIL` — none of the three phrases exist yet.
+Expected: prints `FAIL` — the first and third needles do not match yet.
+The second needle, `????-??-??-<slug>`, is already satisfied by the
+slug-uniqueness bullet Task 1 inserted, so it does not discriminate here; the
+verdict comes from the other two. It is kept so the gate still fails if a
+later edit removes that glob from the skill.
 
 - [ ] **Step 3: Append the sub-section to the Artifact Layout section**
 
@@ -279,8 +283,22 @@ ls -d docs/superpowers-orchestrator/????-??-??-<slug>/ 2>/dev/null
   - The spec gate's review appends its rounds to the existing
     `specs/<slug>-design-review-log.md` — a log that then describes two
     documents. Offer to move that sidecar aside as
-    `specs/<slug>-design-review-log.<old date>.md` before the gate, where
-    `<old date>` is the topic folder's date prefix.
+    `specs/<slug>-design-<old date>-review-log.md` before the gate, where
+    `<old date>` is the topic folder's date prefix. The archived name must
+    still end in `-review-log.md`: the blinding pathspec set uses
+    `':(top,exclude,glob)**/*-review-log.md'`, and `multi-code-review`'s
+    reviewer read prohibition names the same shape. A name such as
+    `specs/<slug>-design-review-log.<old date>.md` ends in the date instead,
+    so neither would cover it and a blinded reviewer could read the previous
+    review log.
+  - Commit that move immediately, as part of the same step: `git mv` the
+    sidecar to the archived name, then commit both paths — for example
+    `git commit -m "chore(docs): archive the previous <slug> design review
+    log" -- <old path> <new path>`. A `git mv` of a tracked file that is left
+    uncommitted appears in `git status --porcelain` as a staged rename (a
+    third path), and `orchestrating-development`'s Phase 0 clean-tree check
+    stops the run on any dirt it does not recognize. Without this commit the
+    reuse flow does not reach Phase 1.
 ````
 
 - [ ] **Step 4: Run the verification check to confirm it passes**
@@ -1075,6 +1093,11 @@ grep -q 'effective HEAD' skills/multi-code-review/SKILL.md \
 
 The last needle gates Step 7's **second** edit — the "After the Loop" paragraph. Without it the task passes with that paragraph still stating the raw-HEAD rule unconditionally, which contradicts pipeline rule 4.
 
+The second needle, `chore(review): <slug> round <i> log`, is already satisfied
+by the pending-commit recovery text that Task 9 Step 3 inserted, so it does not
+discriminate here; the verdict comes from the other four needles. It is kept so
+the gate still fails if a later edit removes that commit subject from the skill.
+
 - [ ] **Step 2: Run it to verify it fails**
 
 Run: the command from Step 1
@@ -1451,6 +1474,25 @@ git add -- "$PLOG" && git commit --quiet -m "chore(review): bar round 2 log" -- 
 
 # Rule 4: the effective-HEAD walk skips leading chore(review) commits and
 # stops at the first other commit.
+#
+# The walk is used twice below, with two different range bases. Define it once
+# as a function rather than pasting the loop twice: two byte-identical copies
+# of a logic block are exactly what the review rubric treats as a defect, and
+# the repository's DRY rule forbids them. The function is NOT required to be
+# byte-identical to the version `multi-code-review/SKILL.md` documents — this
+# test asserts the walk's behavior, not the skill's wording.
+effective_head_of() {
+  local base="$1" sha subject effective_head=""
+  while read -r sha subject; do
+    case "$subject" in
+      'chore(review):'*) continue ;;
+      *) effective_head="$sha"; break ;;
+    esac
+  done < <(git log --format='%H %s' "$base..HEAD")
+  [ -n "$effective_head" ] || effective_head="$base"
+  printf '%s\n' "$effective_head"
+}
+
 PBASE=$(git rev-parse HEAD~3)
 echo "real work" > real-work.txt
 git add real-work.txt && git commit --quiet -m "feat: real work"
@@ -1458,28 +1500,14 @@ REAL_WORK_SHA=$(git rev-parse HEAD)
 echo "round 3 verdict" >> "$PLOG"
 git add -- "$PLOG" && git commit --quiet -m "chore(review): bar round 3 log" -- "$PLOG"
 
-effective_head=""
-while read -r sha subject; do
-  case "$subject" in
-    'chore(review):'*) continue ;;
-    *) effective_head="$sha"; break ;;
-  esac
-done < <(git log --format='%H %s' "$PBASE..HEAD")
-[ -n "$effective_head" ] || effective_head="$PBASE"
-assert_eq "rule 4: effective HEAD skips the trailing review commit" "$effective_head" "$REAL_WORK_SHA"
+assert_eq "rule 4: effective HEAD skips the trailing review commit" \
+  "$(effective_head_of "$PBASE")" "$REAL_WORK_SHA"
 
 # Rule 4, degenerate case: a range holding only chore(review) commits falls
 # back to BASE.
 ONLY_BASE=$(git rev-parse HEAD~1)
-effective_head=""
-while read -r sha subject; do
-  case "$subject" in
-    'chore(review):'*) continue ;;
-    *) effective_head="$sha"; break ;;
-  esac
-done < <(git log --format='%H %s' "$ONLY_BASE..HEAD")
-[ -n "$effective_head" ] || effective_head="$ONLY_BASE"
-assert_eq "rule 4: review-only range falls back to BASE" "$effective_head" "$ONLY_BASE"
+assert_eq "rule 4: review-only range falls back to BASE" \
+  "$(effective_head_of "$ONLY_BASE")" "$ONLY_BASE"
 
 bold "recovery greps stay intact"
 
@@ -2171,6 +2199,12 @@ git commit --quiet -m "feature: extend sumFirstN (pipeline case)"
 TOPIC_DIR="$TEST_PROJECT/docs/superpowers-orchestrator/2026-08-25-sum-fix"
 PIPE_PROMPT="Invoke the superpowers-orchestrator:multi-code-review skill on the git repository at $TEST_PROJECT (review its current branch feature-pipeline-review) with BASE $BASE_SHA, N=2, and TOPIC_DIR $TOPIC_DIR. Do not ask me any questions — use N=2 and proceed to completion, treating any finding that would need my decision as user-decision in the log."
 
+# Snapshot the review-package count BEFORE this case runs. Case 1 already
+# wrote at least one package into the same project, so an absolute
+# "at least one package exists" control could never fail; only an increase
+# proves that this case's own loop built packages.
+PKG_COUNT_BEFORE=$(ls "$TEST_PROJECT"/.superpowers/sdd/review-*.diff 2>/dev/null | wc -l | tr -d ' ')
+
 cd "$PLUGIN_DIR" && timeout 1800 claude -p "$PIPE_PROMPT" \
     --permission-mode bypassPermissions \
     --add-dir "$TEST_PROJECT" \
@@ -2207,14 +2241,17 @@ else
         FAILURES=$((FAILURES+1))
     fi
     # (p5) reviewer blinding: no review package contains the log's own text.
-    # Count the packages FIRST. Without this control the loop below reports
-    # success when it examined nothing at all — no package written, the
-    # `review-package` fallback path taken, or the workspace archived — and
-    # this is the plan's only end-to-end check that a real run does not hand
-    # the reviewer its own review log.
+    # Compare the package count against the pre-case snapshot. Without this
+    # control the loop below reports success when this case examined nothing
+    # it wrote — no package written, the `review-package` fallback path taken,
+    # or the workspace archived — and this is the plan's only end-to-end check
+    # that a real run does not hand the reviewer its own review log. The
+    # comparison must be an INCREASE, not "at least one": Case 1 ran in the
+    # same project and already left packages behind, so an absolute count
+    # could never fail.
     PKG_COUNT=$(ls .superpowers/sdd/review-*.diff 2>/dev/null | wc -l | tr -d ' ')
-    if [ "$PKG_COUNT" -lt 1 ]; then
-        echo "FAIL(p5-control): no review package under .superpowers/sdd/ — the blinding assertion examined nothing"
+    if [ "$PKG_COUNT" -le "$PKG_COUNT_BEFORE" ]; then
+        echo "FAIL(p5-control): no new review package under .superpowers/sdd/ (before Case 2: $PKG_COUNT_BEFORE, after: $PKG_COUNT) — the blinding assertion examined nothing this case wrote"
         FAILURES=$((FAILURES+1))
     fi
     for PKG in .superpowers/sdd/review-*.diff; do
