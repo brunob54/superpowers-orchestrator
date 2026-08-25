@@ -1699,7 +1699,7 @@ git commit -m "test(sdd): verify the pipeline-mode git rules on a throwaway repo
 
 **Does NOT cover:** the gate passes `TOPIC_DIR` only when the plan path recorded in `.superpowers/sdd/plan.ref` derives a topic folder. It does NOT cover: a plan at a user-preferred path outside the layout (the final review then runs in direct mode, and the completion message says so); a `plan.ref` that is missing or empty (an existing `sdd-workspace` condition, unchanged); and the archive folder naming or the commit-message slug, both of which keep today's rule and yield the same result under the new layout.
 
-- [ ] **Step 1: Write the failing verification check**
+- [x] **Step 1: Write the failing verification check**
 
 ```bash
 cd /Users/bruno/Programming/AI/AI_Coding/My_tools/Superpowers
@@ -1708,12 +1708,12 @@ grep -q 'TOPIC_DIR' skills/subagent-driven-development/SKILL.md \
   && echo PASS || echo FAIL
 ```
 
-- [ ] **Step 2: Run it to verify it fails**
+- [x] **Step 2: Run it to verify it fails**
 
 Run: the command from Step 1
 Expected: prints `FAIL` — `TOPIC_DIR` does not appear.
 
-- [ ] **Step 3: Extend the final-review gate**
+- [x] **Step 3: Extend the final-review gate**
 
 In `skills/subagent-driven-development/SKILL.md`, replace the first sentence of step 4:
 
@@ -1744,12 +1744,12 @@ with:
    completion message.
 ```
 
-- [ ] **Step 4: Run the verification check to confirm it passes**
+- [x] **Step 4: Run the verification check to confirm it passes**
 
 Run: the command from Step 1
 Expected: prints `PASS`
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add skills/subagent-driven-development/SKILL.md
