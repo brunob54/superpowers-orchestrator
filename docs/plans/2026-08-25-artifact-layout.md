@@ -2168,7 +2168,7 @@ git commit -m "docs(orchestration): pass TOPIC_DIR and the new plan path to the 
 
 **Security flag:** `none`
 
-- [ ] **Step 1: Write the failing verification check**
+- [x] **Step 1: Write the failing verification check**
 
 ```bash
 cd /Users/bruno/Programming/AI/AI_Coding/My_tools/Superpowers
@@ -2176,12 +2176,12 @@ grep -q 'docs/superpowers-orchestrator/\*/plans/\*.md' skills/context-management
   && echo PASS || echo FAIL
 ```
 
-- [ ] **Step 2: Run it to verify it fails**
+- [x] **Step 2: Run it to verify it fails**
 
 Run: the command from Step 1
 Expected: prints `FAIL`
 
-- [ ] **Step 3: Update the two plan-lookup lines**
+- [x] **Step 3: Update the two plan-lookup lines**
 
 In `skills/context-management/SKILL.md`, replace:
 
@@ -2207,12 +2207,12 @@ with:
    If a plan exists, state.md should say "Executing plan at docs/superpowers-orchestrator/<date>-<slug>/plans/<slug>.md, currently on Task 3" — not copy the full task list.
 ```
 
-- [ ] **Step 4: Run the verification check to confirm it passes**
+- [x] **Step 4: Run the verification check to confirm it passes**
 
 Run: the command from Step 1
 Expected: prints `PASS`
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add skills/context-management/SKILL.md
