@@ -120,6 +120,64 @@ docs/superpowers-orchestrator/<YYYY-MM-DD>-<slug>/
   sub-project inside a monorepo gets its documents at the monorepo root;
   relocating the folder makes every document "outside the layout".
 
+### Reusing an existing topic folder
+
+Before step 11 writes the design, list the candidate folders:
+
+```bash
+find docs/superpowers-orchestrator -maxdepth 1 -type d \
+     -name '????-??-??-<slug>' 2>/dev/null
+```
+
+`find` is used instead of `ls -d <glob>/` because an unmatched glob is not
+portable: `bash` passes the pattern through to `ls`, but `zsh` — the login
+shell on macOS, and the shell many agent sessions run commands under — treats
+it as a shell-level error ("no matches found"), never runs `ls`, and writes
+the message before the command's own `2>/dev/null` can suppress it. `find`
+prints nothing and exits 0 when there is no match, in every shell.
+
+- **Zero matches** (no output) — create
+  `docs/superpowers-orchestrator/<today>-<slug>/specs/`
+  and write the design there.
+- **More than one match** — a slug-uniqueness violation that predates this
+  run. Stop, list both folders, and ask the user to merge or rename them.
+  Never pick one, never create a third.
+- **Exactly one match** — ask the user **once**, in a single message:
+  reuse that folder (the design is written into its `specs/`, overwriting an
+  existing `specs/<slug>-design.md`) or choose a different slug. Never create
+  a second folder for the same slug.
+
+  The question must list the files already in that folder and state the
+  consequences of reuse:
+
+  - Existing `plans/`, `implementation/` and orchestration-log files are left
+    untouched.
+  - `orchestrating-development`'s Phase 0 precondition requires that the plan
+    path and the orchestration-log path do NOT already exist — it will stop
+    until the user deletes or renames them.
+  - A later `multi-code-review` continues round numbering in the existing
+    `implementation/<slug>-review-log.md`: a new invocation entry is appended
+    to the same file.
+  - The spec gate's review appends its rounds to the existing
+    `specs/<slug>-design-review-log.md` — a log that then describes two
+    documents. Offer to move that sidecar aside as
+    `specs/<slug>-design-<old date>-review-log.md` before the gate, where
+    `<old date>` is the topic folder's date prefix. The archived name must
+    still end in `-review-log.md`: the blinding pathspec set uses
+    `':(top,exclude,glob)**/*-review-log.md'`, and `multi-code-review`'s
+    reviewer read prohibition names the same shape. A name such as
+    `specs/<slug>-design-review-log.<old date>.md` ends in the date instead,
+    so neither would cover it and a blinded reviewer could read the previous
+    review log.
+  - Commit that move immediately, as part of the same step: `git mv` the
+    sidecar to the archived name, then commit both paths — for example
+    `git commit -m "chore(docs): archive the previous <slug> design review
+    log" -- <old path> <new path>`. A `git mv` of a tracked file that is left
+    uncommitted appears in `git status --porcelain` as a staged rename (a
+    third path), and `orchestrating-development`'s Phase 0 clean-tree check
+    stops the run on any dirt it does not recognize. Without this commit the
+    reuse flow does not reach Phase 1.
+
 ## Process Flow
 
 ```dot
