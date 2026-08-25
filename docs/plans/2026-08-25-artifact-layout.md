@@ -2939,7 +2939,7 @@ git commit -m "docs: repoint every link at the moved documents" --trailer "Sessi
 
 **Security flag:** `none`
 
-- [ ] **Step 1: Write the failing verification check**
+- [x] **Step 1: Write the failing verification check**
 
 ```bash
 cd /Users/bruno/Programming/AI/AI_Coding/My_tools/Superpowers
@@ -2949,12 +2949,12 @@ cd /Users/bruno/Programming/AI/AI_Coding/My_tools/Superpowers
   && echo PASS || echo FAIL
 ```
 
-- [ ] **Step 2: Run it to verify it fails**
+- [x] **Step 2: Run it to verify it fails**
 
 Run: the command from Step 1
 Expected: prints `FAIL`
 
-- [ ] **Step 3: Update the two pipeline diagrams**
+- [x] **Step 3: Update the two pipeline diagrams**
 
 In the first mermaid diagram, replace:
 
@@ -2992,7 +2992,7 @@ with:
     A["orchestrate the development of docs/superpowers-orchestrator/&lt;date&gt;-&lt;slug&gt;/specs/&lt;slug&gt;-design.md"] --> P0
 ```
 
-- [ ] **Step 4: Update the prose path examples**
+- [x] **Step 4: Update the prose path examples**
 
 Replace each of the following, in order of appearance:
 
@@ -3019,7 +3019,7 @@ In the "What happens while you're away" table, replace the two artifact cells:
 | `` `docs/plans/<date>-<slug>.md` `` | `` `docs/superpowers-orchestrator/<date>-<slug>/plans/<slug>.md` `` |
 | `` `.superpowers/reviews/` log `` | `` `<topic>/implementation/<slug>-review-log.md`, committed `` |
 
-- [ ] **Step 5: Add the layout section and the committed-artifacts note**
+- [x] **Step 5: Add the layout section and the committed-artifacts note**
 
 Insert a short section immediately after the first pipeline diagram:
 
@@ -3060,12 +3060,12 @@ with:
    source of truth;
 ```
 
-- [ ] **Step 6: Run the verification check to confirm it passes**
+- [x] **Step 6: Run the verification check to confirm it passes**
 
 Run: the command from Step 1
 Expected: prints `PASS`
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add docs/guide/README.md
