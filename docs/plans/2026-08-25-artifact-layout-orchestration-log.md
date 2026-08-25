@@ -46,3 +46,7 @@ _Plan repair complete — 2026-08-25 — 28 defects fixed (d2f4784, bdc2df8, 15e
 ## Phase 3 — Batch 5 (tasks 9–10) — COMPLETE — commits 7b14b14..a174478
 - Task 9: complete — commit 7b14b14 (multi-code-review gains the TOPIC_DIR input and its validation)
 - Task 10: complete — commit dfe5d7c (pipeline mode defined with its four rule changes)
+
+## Phase 3 — Batch 6 (tasks 11–12) — COMPLETE — commits 860dc2a..6faf2d7
+- Task 11: complete — commit 860dc2a (reviewers blinded to committed review material; security-flagged)
+- Task 12: complete — commit 32ddfd4 (pipeline-mode git rules verified on a throwaway repository)
