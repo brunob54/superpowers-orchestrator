@@ -2307,7 +2307,9 @@ PIPE_PROMPT="Invoke the superpowers-orchestrator:multi-code-review skill on the 
 # Snapshot the review-package count BEFORE this case runs. Case 1 already
 # wrote at least one package into the same project, so an absolute
 # "at least one package exists" control could never fail; only an increase
-# proves that this case's own loop built packages.
+# proves that this case's own loop built packages. The threshold is an
+# increase of at least TWO, one per round of this N=2 case — see the
+# (p5-control) comment below for why one is not enough.
 # `|| true` is required: the script runs under `set -euo pipefail` (line 18),
 # and when the glob matches nothing `ls` exits 2, `pipefail` propagates that
 # through `wc`/`tr`, and `set -e` would abort the whole script instead of
@@ -2358,9 +2360,20 @@ else
     # comparison must be an INCREASE, not "at least one": Case 1 ran in the
     # same project and already left packages behind, so an absolute count
     # could never fail.
+    #
+    # The increase must be at least TWO — one package per round of this N=2
+    # case. One new package is not enough: round 1's package is built before
+    # any `chore(review)` log commit exists in `BASE..HEAD`, so it cannot
+    # contain the log path and the (p5) grep below can never fail on it. Only
+    # a package regenerated AFTER round 1's log commit can catch an unblinded
+    # reviewer. A run that reuses round 1's package for round 2 — the exact
+    # failure this control exists to detect — leaves exactly one new package,
+    # which a "-le $PKG_COUNT_BEFORE" test would let through. Package files
+    # are named per range (`review-<base7>..<head7>.diff`), so a correct N=2
+    # run leaves two.
     PKG_COUNT=$(ls .superpowers/sdd/review-*.diff 2>/dev/null | wc -l | tr -d ' ' || true)
-    if [ "$PKG_COUNT" -le "$PKG_COUNT_BEFORE" ]; then
-        echo "FAIL(p5-control): no new review package under .superpowers/sdd/ (before Case 2: $PKG_COUNT_BEFORE, after: $PKG_COUNT) — the blinding assertion examined nothing this case wrote"
+    if [ "$PKG_COUNT" -lt $((PKG_COUNT_BEFORE + 2)) ]; then
+        echo "FAIL(p5-control): fewer than 2 new review packages under .superpowers/sdd/ (before Case 2: $PKG_COUNT_BEFORE, after: $PKG_COUNT) — round 2 did not regenerate after round 1's chore(review) log commit, so the blinding assertion examined only packages built before the log existed"
         FAILURES=$((FAILURES+1))
     fi
     for PKG in .superpowers/sdd/review-*.diff; do
