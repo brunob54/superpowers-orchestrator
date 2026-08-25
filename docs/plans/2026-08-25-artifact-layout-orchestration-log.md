@@ -18,3 +18,7 @@ Detail: .superpowers/sdd/task-2-report.md
 Resume: Resume orchestration for docs/plans/2026-08-25-artifact-layout.md
 
 _Resumed — 2026-08-25 — second pre-flight set answered by the user (Tasks 2, 12, 14, 17); first set already applied as d2f4784_
+
+## STOPPED — 2026-08-25 — phase 3 — third pre-flight conflict set (Tasks 6, 10, 17); nothing implemented
+Detail: .superpowers/sdd/task-1-report.md
+Resume: Resume orchestration for docs/plans/2026-08-25-artifact-layout.md
