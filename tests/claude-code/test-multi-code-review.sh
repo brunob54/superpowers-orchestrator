@@ -12,6 +12,22 @@
 #   (f) the run was not killed by the timeout
 #   (g)/(h) the loop ran Round 2 and wrote its completion marker
 #
+# Case 2 (pipeline mode, TOPIC_DIR) repeats the setup on a second branch and
+# adds:
+#   (e2) same blast-radius check as (e): the Case 2 run did not mutate the
+#        plugin dev repo, using a plugin-repo snapshot taken fresh right
+#        before the Case 2 agent call
+#   (p1) the pipeline-mode review log is created under TOPIC_DIR/implementation
+#   (p2) that log is committed, not left untracked
+#   (p3) at least one chore(review) commit per round
+#   (p4) the working tree is clean at the end (test transcripts excluded)
+#   (p5) reviewer blinding: no review package contains the log's own path
+#   (p5-control) positive control for (p5): at least 2 new review packages
+#        were written during Case 2, so (p5) actually examined a package
+#        built after round 1's chore(review) log commit existed — gated on
+#        round 1 having produced a "review fixes (" commit, since otherwise
+#        round 2 legitimately reuses round 1's package name
+#
 # Requires the INSTALLED plugin to include multi-code-review — reinstall the
 # plugin cache after editing skills/ before running this.
 
@@ -247,10 +263,21 @@ else
     # which a "-le $PKG_COUNT_BEFORE" test would let through. Package files
     # are named per range (`review-<base7>..<head7>.diff`), so a correct N=2
     # run leaves two.
-    PKG_COUNT=$(ls .superpowers/sdd/review-*.diff 2>/dev/null | wc -l | tr -d ' ' || true)
-    if [ "$PKG_COUNT" -lt $((PKG_COUNT_BEFORE + 2)) ]; then
-        echo "FAIL(p5-control): fewer than 2 new review packages under .superpowers/sdd/ (before Case 2: $PKG_COUNT_BEFORE, after: $PKG_COUNT) — round 2 did not regenerate after round 1's chore(review) log commit, so the blinding assertion examined only packages built before the log existed"
-        FAILURES=$((FAILURES+1))
+    # The +2 threshold only holds when round 1 actually produced a fix commit.
+    # If round 1 found nothing to fix, the effective HEAD (see "Pipeline rule 4"
+    # in skills/multi-code-review/SKILL.md) is unchanged between round 1 and
+    # round 2, so round 2 legitimately regenerates a package under the
+    # identical `review-<base7>..<head7>.diff` name instead of a new one — that
+    # is correct behaviour, not the reused-package bug this control looks for.
+    FIX_COMMITS=$(git log --format=%s "$BASE_SHA"..HEAD | grep -c '^review fixes (' || true)
+    if [ "$FIX_COMMITS" -lt 1 ]; then
+        echo "SKIP(p5-control): round 1 produced no 'review fixes (' commit, so a same-name package regeneration in round 2 is expected — the +2 threshold does not apply"
+    else
+        PKG_COUNT=$(ls .superpowers/sdd/review-*.diff 2>/dev/null | wc -l | tr -d ' ' || true)
+        if [ "$PKG_COUNT" -lt $((PKG_COUNT_BEFORE + 2)) ]; then
+            echo "FAIL(p5-control): fewer than 2 new review packages under .superpowers/sdd/ (before Case 2: $PKG_COUNT_BEFORE, after: $PKG_COUNT) — round 2 did not regenerate after round 1's chore(review) log commit, so the blinding assertion examined only packages built before the log existed"
+            FAILURES=$((FAILURES+1))
+        fi
     fi
     for PKG in .superpowers/sdd/review-*.diff; do
         [ -f "$PKG" ] || continue
@@ -265,6 +292,6 @@ if [ "$FAILURES" -eq 0 ]; then
     echo "PASS: multi-code-review behavioral test"
 else
     trap - EXIT
-    echo "FAILED: $FAILURES assertion(s); project kept for debugging: $TEST_PROJECT (transcript in output.txt — clean up manually)"
+    echo "FAILED: $FAILURES assertion(s); project kept for debugging: $TEST_PROJECT (transcripts in output.txt and output-pipeline.txt — clean up manually)"
     exit 1
 fi

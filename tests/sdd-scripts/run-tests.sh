@@ -417,6 +417,10 @@ echo "SECRETFINDING round 2 verdict" >> docs/superpowers-orchestrator/2026-08-25
 git add -A && git commit --quiet -m "chore(review): foo round 2 log"
 BLIND_HEAD2=$(git rev-parse HEAD)
 BPKG2=$("$SCRIPTS/review-package" "$BLIND_BASE" "$BLIND_HEAD2" 2>/dev/null | sed 's/^wrote //; s/:.*$//')
+# Positive control: without it, a missing or empty $BPKG2 would make the
+# negative assertion below report PASS for the wrong reason (grep can't read
+# the file), so assert visible source is actually present first.
+assert_file_contains "blinding: ordinary source still visible in the commit-list check" "$BPKG2" "VISIBLESOURCE"
 assert_file_not_contains "blinding: review-only commit absent from the commit list" "$BPKG2" "chore(review)"
 
 # --commits mode must be blinded too. The spec requires blinding in BOTH
@@ -432,6 +436,14 @@ assert_file_contains "blinding (--commits): ordinary source change is visible" "
 assert_file_not_contains "blinding (--commits): implementation review log hidden" "$BLIND_CPKG" "SECRETFINDING"
 # Same reasoning for `git show --stat` in --commits mode.
 assert_file_not_contains "blinding (--commits): review file names absent from the stat summary" "$BLIND_CPKG" "implementation/foo-review-log.md"
+
+# The commit list must be blinded in --commits mode too: a commit touching
+# ONLY review material must not appear, mirroring the range-mode assertion
+# above. $BLIND_HEAD2 (the "chore(review): foo round 2 log" commit created
+# above) already qualifies, so it is reused here rather than making a new one.
+BLIND_CPKG2="$WS/blind-from-commits-2.diff"
+"$SCRIPTS/review-package" --commits "$BLIND_HEAD2" --out "$BLIND_CPKG2" >/dev/null 2>&1
+assert_file_not_contains "blinding (--commits): review-only commit absent from the commit list" "$BLIND_CPKG2" "chore(review)"
 
 # Run from a subdirectory and assert on the package CONTENT, not on the exit
 # status: `review-package` exits 0 from anywhere, with or without the
@@ -514,6 +526,18 @@ assert_eq "rule 4: effective HEAD skips the trailing review commit" \
 ONLY_BASE=$(git rev-parse HEAD~1)
 assert_eq "rule 4: review-only range falls back to BASE" \
   "$(effective_head_of "$ONLY_BASE")" "$ONLY_BASE"
+
+# Drift check: the DRY comment above waives byte-identity between
+# effective_head_of() and the fenced bash block skills/multi-code-review/SKILL.md
+# documents. Without a check on that block, the two "rule 4" assertions above
+# only exercise the local helper, so they cannot fail if the documented block
+# drifts or is edited wrongly. Assert the load-bearing lines this helper
+# reproduces are still present in the SKILL.md block.
+SKILL_MD="$(dirname "$(dirname "$SCRIPTS")")/multi-code-review/SKILL.md"
+assert_file_contains "rule 4 drift check: SKILL.md still skips chore(review) commits" "$SKILL_MD" "'chore(review):'*) continue ;;"
+assert_file_contains "rule 4 drift check: SKILL.md still records effective_head and stops" "$SKILL_MD" 'effective_head="$sha"; break ;;'
+assert_file_contains "rule 4 drift check: SKILL.md still walks the range with git log --format" "$SKILL_MD" "git log --format='%H %s'"
+assert_file_contains "rule 4 drift check: SKILL.md still falls back to BASE when empty" "$SKILL_MD" '[ -n "$effective_head" ] ||'
 
 bold "recovery greps stay intact"
 
