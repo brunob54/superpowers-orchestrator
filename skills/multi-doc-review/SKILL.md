@@ -27,9 +27,11 @@ rounds' findings — that independence is the point.
   direct invocations. Default **3**. Valid N is an integer 0–10; anything
   else → 3. N = 0 skips the loop and logs a `skipped` entry.
 - **Doc type:** gate invocations pass it (brainstorming → `spec`,
-  writing-plans → `plan`). Direct invocations infer from path: under
-  `docs/specs/` → `spec`, under `docs/plans/` → `plan`, else `general`; an
-  explicit user statement overrides. If a `general`-inferred document carries
+  writing-plans → `plan`). Direct invocations infer from the
+  **repository-relative** path (so a clone that itself lives under a
+  directory named `plans/` is not affected): the **directory segment nearest
+  the file** decides — `specs/` → `spec`; `plans/` → `plan`; anything else →
+  `general`. An explicit user statement overrides. If a `general`-inferred document carries
   a `**Spec:**` header line it is probably a plan at a user-preferred path —
   warn and ask the user to confirm the type instead of proceeding silently.
 - **Spec path (plan reviews only):** gate invocations pass it. Direct
