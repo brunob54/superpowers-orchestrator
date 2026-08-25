@@ -296,3 +296,29 @@ Use this summary block after the run:
 - Ship decision: PASS / PARTIAL / FAIL
 - Blocking issues:
 ```
+
+## One-time: git pathspec magic under Windows Git Bash
+
+The reviewer-blinding pathspecs (`skills/multi-code-review/SKILL.md`,
+`skills/subagent-driven-development/scripts/review-package`) start with `:(`.
+Under Windows Git Bash (MSYS) argument path conversion is **assumed** to leave
+such arguments untouched. This is unverified. Run once, in a throwaway
+repository on Windows Git Bash:
+
+```bash
+mkdir -p docs/x && echo one > docs/x/a.md && echo two > b.md
+git init -q && git add -A && git commit -q -m "first"
+echo changed >> docs/x/a.md && echo changed >> b.md
+# Run the status check while BOTH changes are still uncommitted. Committing
+# first would leave a clean tree, and `git status` would then print nothing
+# whether or not MSYS mangled the pathspec — a check that cannot fail.
+git status --porcelain -- ':(top)' ':(top,exclude)docs/x/'
+git commit -qam "second"
+git diff HEAD~1 -- ':(top,exclude,glob)**/*-review-log.md'
+```
+
+Expected: the first command prints exactly one line, ` M b.md`, and no line
+for `docs/x/a.md`; the second prints the ordinary diff. If the first command
+prints nothing at all, prints `docs/x/a.md`, or either command errors, the
+conversion mangled the pathspecs: prefix every command carrying them, in the
+skills and in `review-package`, with `MSYS_NO_PATHCONV=1`.
