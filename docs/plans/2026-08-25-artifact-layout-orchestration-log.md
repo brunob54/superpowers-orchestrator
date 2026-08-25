@@ -22,3 +22,5 @@ _Resumed — 2026-08-25 — second pre-flight set answered by the user (Tasks 2,
 ## STOPPED — 2026-08-25 — phase 3 — third pre-flight conflict set (Tasks 6, 10, 17); nothing implemented
 Detail: .superpowers/sdd/task-1-report.md
 Resume: Resume orchestration for docs/plans/2026-08-25-artifact-layout.md
+
+_Plan repair — 2026-08-25 — third pre-flight set (Tasks 6, 10, 17) answered by the user; followed by a one-off executability pass over all 22 tasks (5 parallel reviewers, run-the-commands lens) before Phase 3 restarts. Twelve defects fixed across d2f4784, bdc2df8 and this pass._
