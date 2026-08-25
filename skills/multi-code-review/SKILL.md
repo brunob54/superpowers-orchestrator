@@ -78,6 +78,44 @@ final review on such platforms; that fallback lives there, not here.)
   requirements document; without one, lens 1 drops spec-alignment and
   reviews correctness only — log "alignment not reviewed".
 
+- **`TOPIC_DIR` (optional):** an absolute path to a topic folder under the
+  repository root (layout defined in the "Artifact Layout" section of
+  `skills/brainstorming/SKILL.md`). Two invocation forms:
+  `/multi-code-review [BASE] [N]` — direct, no `TOPIC_DIR`; and the pipeline
+  gate call — with `TOPIC_DIR`. Presence of `TOPIC_DIR` selects
+  **pipeline mode**; absence selects **direct mode**.
+
+  **Validation, before round 1:**
+  1. `TOPIC_DIR` must be a direct child of `docs/superpowers-orchestrator/`
+     at the repository root, and its basename must match
+     `^[0-9]{4}-[0-9]{2}-[0-9]{2}-[a-z0-9]+(-[a-z0-9]+)*$`. Canonicalize both
+     the repository root and `TOPIC_DIR` before comparing (`pwd -P`, or
+     `realpath` where available). Anything else — a path outside the root,
+     `docs/reviews/foo/`, a folder without a date prefix — **stops the skill
+     with an error naming the path, before any round**. Without this stop the
+     precondition pathspec and the diff exclusion, both written for the layout
+     form, would silently miss the folder.
+  2. `<slug>` = `TOPIC_DIR`'s basename minus the date prefix. `<topic>` =
+     `TOPIC_DIR` with `<repo root>/` stripped — pathspecs carrying `:(top)`
+     are repository-relative.
+  3. A valid `TOPIC_DIR` that does not exist yet is **created**; the caller
+     may invoke the gate before any other stage wrote into the folder. No
+     `.gitignore` is written inside it.
+  4. `git check-ignore -q <log path>` must **fail** (that is: the log path
+     must not be ignored). A project `.gitignore` matching `implementation/`
+     or `*-review-log.md` would otherwise surface only as a failed commit
+     after a full round. If it succeeds, stop and report the ignoring rule.
+  5. If the log or the fix-report file differs from HEAD — a previous round's
+     `chore(review)` commit failed or was interrupted — retry that pending
+     commit **first**, with the same subject rule. On repeated failure return
+     `BLOCKED` with the git output and name the manual commit the user must
+     run:
+     `git add -- <paths> && git commit -m "chore(review): <slug> round <i> log" -- <paths>`.
+     Without this retry an on-disk entry carrying a completion marker would
+     read as completed, the once-per-gate skip would fire, and the
+     orchestrator's Phase 5 clean-tree check would stop the run with no path
+     to recovery.
+
 ## Workspace and Log
 
 **Working-tree precondition:** before any fix subagent is dispatched
