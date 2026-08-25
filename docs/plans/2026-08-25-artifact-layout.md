@@ -4,7 +4,7 @@
 
 **Goal:** Move every pipeline document of one feature into a single per-topic folder `docs/superpowers-orchestrator/<YYYY-MM-DD>-<slug>/` with stage sub-folders `specs/`, `plans/`, `implementation/`, commit the pipeline's code-review logs under `implementation/`, and update every writer, reader, hook, test and guide page accordingly.
 
-**Spec:** `/Users/bruno/Programming/AI/AI_Coding/My_tools/Superpowers/docs/specs/2026-08-25-artifact-layout-design.md`
+**Spec:** `/Users/bruno/Programming/AI/AI_Coding/My_tools/Superpowers/docs/superpowers-orchestrator/2026-08-25-artifact-layout/specs/artifact-layout-design.md`
 
 **Architecture:** The layout rule is written once, as a normative "Artifact Layout" section inside `skills/brainstorming/SKILL.md`. Every other skill states its own exact paths next to a citation of that section by name — subagents read only their own prompt, so no skill may rely on a lookup elsewhere. `multi-code-review` gains one optional input, `TOPIC_DIR`; with it, the skill runs in *pipeline mode* (log and fix reports committed under `<TOPIC_DIR>/implementation/`), without it in *direct mode* (today's git-ignored `.superpowers/reviews/`, unchanged). Reviewer blinding is preserved by adding git pathspec exclusions to every whole-branch diff command and by extending the reviewer's read prohibition.
 
@@ -2578,7 +2578,7 @@ git commit -m "docs(tests): record the one-time Windows pathspec check" --traile
 
 **Does NOT cover:** the two files this orchestration run is holding open — `docs/plans/2026-08-25-artifact-layout.md` (this plan; `subagent-driven-development/SKILL.md:74` stages it by explicit path on every checkbox tick) and `docs/plans/2026-08-25-artifact-layout-orchestration-log.md` (committed by the orchestrator at every phase boundary). Moving either mid-run would break every later commit. They are moved by hand after the run ends; Task 22 records that step in the release notes. It also does NOT cover `.superpowers/reviews/` in this repository (transient, untouched) and does NOT rewrite references **inside** the moved documents (they are historical records).
 
-- [ ] **Step 1: Write the failing verification check**
+- [x] **Step 1: Write the failing verification check**
 
 ```bash
 cd /Users/bruno/Programming/AI/AI_Coding/My_tools/Superpowers
@@ -2590,12 +2590,12 @@ test ! -d docs/specs \
   && echo PASS || echo FAIL
 ```
 
-- [ ] **Step 2: Run it to verify it fails**
+- [x] **Step 2: Run it to verify it fails**
 
 Run: the command from Step 1
 Expected: prints `FAIL`
 
-- [ ] **Step 3: Move the seven `docs/specs/` + `docs/plans/` topics**
+- [x] **Step 3: Move the seven `docs/specs/` + `docs/plans/` topics**
 
 ```bash
 cd /Users/bruno/Programming/AI/AI_Coding/My_tools/Superpowers
@@ -2633,7 +2633,7 @@ move_topic 2026-08-22 researching-prior-art
 
 The `multi-review` topic keeps its historical slug: the skill was renamed to `multi-doc-review` later, and the folder records the name the documents use. The topic folder's date is the **spec's** date; a plan written on a later day keeps that topic folder, so `move_topic` looks the plan up by glob rather than assuming the spec's date.
 
-- [ ] **Step 4: Move this spec and its review log, then repoint the two references the running orchestration holds**
+- [x] **Step 4: Move this spec and its review log, then repoint the two references the running orchestration holds**
 
 ```bash
 cd /Users/bruno/Programming/AI/AI_Coding/My_tools/Superpowers
@@ -2691,7 +2691,7 @@ prints `1`. If either prints `0`, the anchored `sed` matched nothing: check
 whether that file recorded the spec under a different spelling before
 continuing — a resume that cannot match the recorded spec path stops the run.
 
-- [ ] **Step 5: Move the seven March–April files out of the two flat folders**
+- [x] **Step 5: Move the seven March–April files out of the two flat folders**
 
 ```bash
 cd /Users/bruno/Programming/AI/AI_Coding/My_tools/Superpowers
@@ -2727,7 +2727,7 @@ git mv "$SO/plans/2026-04-14-flawless-audit-plan.md" \
 rmdir "$SO/specs" "$SO/plans"
 ```
 
-- [ ] **Step 6: Classify and move the stray file at the `docs/` root**
+- [x] **Step 6: Classify and move the stray file at the `docs/` root**
 
 `docs/2026-08-22-prior-art-research-step-design.md` is **not** a duplicate: `docs/specs/2026-08-22-researching-prior-art-design.md` names it explicitly as its "Rationale record" and states that the spec is the normative distillation. It is a separate document belonging to the `researching-prior-art` topic, so it moves into that topic's `specs/`, keeping its basename minus the date prefix:
 
@@ -2737,7 +2737,7 @@ git mv docs/2026-08-22-prior-art-research-step-design.md \
        docs/superpowers-orchestrator/2026-08-22-researching-prior-art/specs/prior-art-research-step-design.md
 ```
 
-- [ ] **Step 7: Drop the stale `.gitignore` entry**
+- [x] **Step 7: Drop the stale `.gitignore` entry**
 
 Line 19 of `.gitignore` ignores a path under the now-deleted flat `specs/` folder. Delete the line:
 
@@ -2745,12 +2745,12 @@ Line 19 of `.gitignore` ignores a path under the now-deleted flat `specs/` folde
 docs/superpowers-orchestrator/specs/2026-03-23-extension-ecosystem-design.md
 ```
 
-- [ ] **Step 8: Run the verification check to confirm it passes**
+- [x] **Step 8: Run the verification check to confirm it passes**
 
 Run: the command from Step 1
 Expected: prints `PASS`
 
-- [ ] **Step 9: Confirm every move preserved history and nothing was lost**
+- [x] **Step 9: Confirm every move preserved history and nothing was lost**
 
 Run:
 
@@ -2769,7 +2769,7 @@ The third filter excludes this run's own live files. `docs/plans/2026-08-25-arti
 
 Expected: the first command prints `only renames and the .gitignore edit` (every move is staged as a rename `R`); `docs/plans/` holds exactly the two live files `2026-08-25-artifact-layout.md` and `2026-08-25-artifact-layout-orchestration-log.md` (plus this plan's own `-review-log.md` sidecar if the plan review wrote one); the directory listing shows 15 lines — the parent `docs/superpowers-orchestrator` plus **14 topic folders** (7 from `docs/specs`+`docs/plans`, 1 for `artifact-layout`, 1 for `autoimprove`, and 5 for the remaining March–April files) — and no `specs` or `plans` folder directly under `docs/superpowers-orchestrator/`.
 
-- [ ] **Step 10: Commit**
+- [x] **Step 10: Commit**
 
 ```bash
 git add -A -- docs .gitignore
