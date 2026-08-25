@@ -21,8 +21,11 @@ Agent tool (general-purpose):
 
     - Do NOT invoke any skills from any plugin. Do NOT use the Skill
       tool.
-    - Do NOT read any file whose name matches `*-review-log.md` or
-      `*-fix-reports.md`. This rule takes precedence over the
+    - Do NOT read any file whose name matches `*-review-log.md`,
+      `*-fix-reports.md`, `*-orchestration-log.md` or
+      `*-open-decisions.md`, and do NOT read anything under
+      `docs/superpowers-orchestrator/*/implementation/`. This rule takes
+      precedence over the
       instruction to read the whole diff below: if the diff contains
       hunks whose path matches either pattern, SKIP those hunks — they
       carry prior rounds' findings and are not part of the change you
@@ -56,9 +59,10 @@ Agent tool (general-purpose):
     summary, and the full diff with surrounding context, and it is your
     view of the change. Do not re-run git commands. Only if the diff
     file is missing may you fetch the diff yourself:
-    `git diff --stat [BASE_SHA]..[HEAD_SHA]` and
-    `git diff [BASE_SHA]..[HEAD_SHA]` — a failure fallback, not an
-    alternative workflow. Do not crawl the broader codebase. Inspect
+    `git diff --stat [BASE_SHA]..[HEAD_SHA] -- ':(top)' ':(top,exclude)docs/superpowers-orchestrator/*/implementation/' ':(top,exclude,glob)**/*-review-log.md' ':(top,exclude,glob)**/*-fix-reports.md' ':(top,exclude,glob)**/*-orchestration-log.md' ':(top,exclude,glob)**/*-open-decisions.md'`
+    and the same command without `--stat` — a failure fallback, not an
+    alternative workflow. Keep the pathspecs: they exclude review material
+    you must not read. Do not crawl the broader codebase. Inspect
     code outside the diff only to evaluate a concrete risk you can
     name — one focused check per named risk, and name both the risk and
     what you checked in your report.

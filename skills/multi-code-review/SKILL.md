@@ -141,6 +141,27 @@ level of the repository under review: resolve it once at invocation start
 the current repo for the SDD gate) and run all commands from there, never
 from the session's incidental cwd.
 
+**Reviewer blinding — pathspecs.** Committed review material is part of the
+branch. Every whole-branch diff handed to a reviewer — in this skill, in
+`subagent-driven-development/scripts/review-package`, in the orchestrator's
+`code-review-loop-prompt.md`, and in the reviewer's own fallback commands —
+is produced with this pathspec set, verbatim:
+
+```
+-- ':(top)' ':(top,exclude)docs/superpowers-orchestrator/*/implementation/' ':(top,exclude,glob)**/*-review-log.md' ':(top,exclude,glob)**/*-fix-reports.md' ':(top,exclude,glob)**/*-orchestration-log.md' ':(top,exclude,glob)**/*-open-decisions.md'
+```
+
+The last two matter on a resumed run: after a Phase 4 stop the orchestrator
+commits the orchestration log and the open-decisions file, both of which quote
+prior findings. The `top` magic anchors every pathspec at the repository root,
+which makes the commands independent of the current directory — a plain `-- .`
+is relative to the cwd, and the sdd per-task caller of `review-package` may run
+from any directory, where `-- .` would silently restrict the diff to that
+subtree and the exclusions would never match. This skill already anchors its
+commands at the repository root ("Root anchoring" above); `:(top)` is harmless
+there and keeps one form everywhere. The exclusion also closes the
+pre-existing leak of the committed doc-review sidecars.
+
 Sidecar log and fix reports, by mode:
 
 - **Direct mode** (no `TOPIC_DIR`):
@@ -519,7 +540,8 @@ completed invocation only on explicit user request.
   `none — fetch the diff yourself via the git commands below` (the
   template's sanctioned no-package form; its Diff Under Review fallback
   has the reviewer run `git diff --stat BASE..HEAD` and
-  `git diff BASE..HEAD` itself) and log the fallback.
+  `git diff BASE..HEAD` itself, each carrying the pathspec set from
+  "Reviewer blinding — pathspecs" above) and log the fallback.
 - Fix subagent fails twice → findings `unresolved: <reason>`, blocking;
   loop continues.
 - Invalid N → 3. N = 0 → skip, log.
