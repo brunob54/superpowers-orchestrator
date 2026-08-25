@@ -373,6 +373,80 @@ else
   echo "  SKIP: ln -s not supported on this filesystem — symlinked plan path tests skipped"
 fi
 
+bold "review-package (reviewer blinding)"
+
+# A commit that carries both an ordinary source change and committed review
+# material: the package must show the source hunk and hide the review files.
+mkdir -p docs/superpowers-orchestrator/2026-08-25-foo/implementation
+mkdir -p docs/superpowers-orchestrator/2026-08-25-foo/specs
+echo "base for blinding" > blind-base.txt
+git add blind-base.txt && git commit --quiet -m "base commit for blinding"
+BLIND_BASE=$(git rev-parse HEAD)
+
+echo "SECRETFINDING round 1 verdict" > docs/superpowers-orchestrator/2026-08-25-foo/implementation/foo-review-log.md
+echo "SECRETFIXREPORT ran the tests" > docs/superpowers-orchestrator/2026-08-25-foo/implementation/foo-fix-reports.md
+echo "SECRETSIDECAR spec round 1" > docs/superpowers-orchestrator/2026-08-25-foo/specs/foo-design-review-log.md
+echo "SECRETORCH phase 1 done" > docs/superpowers-orchestrator/2026-08-25-foo/foo-orchestration-log.md
+echo "SECRETDECISIONS open item" > docs/superpowers-orchestrator/2026-08-25-foo/plans-open.tmp
+mkdir -p docs/superpowers-orchestrator/2026-08-25-foo/plans
+mv docs/superpowers-orchestrator/2026-08-25-foo/plans-open.tmp docs/superpowers-orchestrator/2026-08-25-foo/plans/foo-open-decisions.md
+echo "VISIBLESOURCE" > blind-src.txt
+git add -A && git commit --quiet -m "feature plus review material"
+BLIND_HEAD=$(git rev-parse HEAD)
+
+BPKG=$("$SCRIPTS/review-package" "$BLIND_BASE" "$BLIND_HEAD" 2>/dev/null | sed 's/^wrote //; s/:.*$//')
+assert_file_contains "blinding: ordinary source change is visible" "$BPKG" "VISIBLESOURCE"
+assert_file_not_contains "blinding: implementation review log hidden" "$BPKG" "SECRETFINDING"
+assert_file_not_contains "blinding: implementation fix reports hidden" "$BPKG" "SECRETFIXREPORT"
+assert_file_not_contains "blinding: spec review-log sidecar hidden" "$BPKG" "SECRETSIDECAR"
+assert_file_not_contains "blinding: orchestration log hidden" "$BPKG" "SECRETORCH"
+assert_file_not_contains "blinding: open-decisions file hidden" "$BPKG" "SECRETDECISIONS"
+# The five assertions above key on file CONTENT, which only the `git diff -U10`
+# body can carry. The `## Files changed` section is a `git diff --stat`, which
+# prints file NAMES and counts and no content at all, so a package whose
+# `--stat` is un-blinded passes every one of them while still listing
+# `…/implementation/foo-review-log.md` to the reviewer. This assertion keys on
+# the path, so it is the only one that reaches the `--stat` edit in Step 3.
+assert_file_not_contains "blinding: review file names absent from the stat summary" "$BPKG" "implementation/foo-review-log.md"
+
+# A commit that touches ONLY review material must not appear in the commit
+# list at all — a visible "chore(review)" subject with no hunks tells a
+# reviewer that review rounds happened.
+echo "SECRETFINDING round 2 verdict" >> docs/superpowers-orchestrator/2026-08-25-foo/implementation/foo-review-log.md
+git add -A && git commit --quiet -m "chore(review): foo round 2 log"
+BLIND_HEAD2=$(git rev-parse HEAD)
+BPKG2=$("$SCRIPTS/review-package" "$BLIND_BASE" "$BLIND_HEAD2" 2>/dev/null | sed 's/^wrote //; s/:.*$//')
+assert_file_not_contains "blinding: review-only commit absent from the commit list" "$BPKG2" "chore(review)"
+
+# --commits mode must be blinded too. The spec requires blinding in BOTH
+# modes, and the wave-execution path uses this one. Same commit, addressed by
+# SHA instead of by range.
+# Write it into $WS (the `.superpowers/sdd/` workspace, which carries a
+# self-ignoring `.gitignore`), NOT into the repository root: a stray untracked
+# file at the root would make Task 12's `git status --porcelain` assertion
+# report dirty. The variable name avoids `CPKG`, already bound at line ~179.
+BLIND_CPKG="$WS/blind-from-commits.diff"
+"$SCRIPTS/review-package" --commits "$BLIND_HEAD" --out "$BLIND_CPKG" >/dev/null 2>&1
+assert_file_contains "blinding (--commits): ordinary source change is visible" "$BLIND_CPKG" "VISIBLESOURCE"
+assert_file_not_contains "blinding (--commits): implementation review log hidden" "$BLIND_CPKG" "SECRETFINDING"
+# Same reasoning for `git show --stat` in --commits mode.
+assert_file_not_contains "blinding (--commits): review file names absent from the stat summary" "$BLIND_CPKG" "implementation/foo-review-log.md"
+
+# Run from a subdirectory and assert on the package CONTENT, not on the exit
+# status: `review-package` exits 0 from anywhere, with or without the
+# pathspecs, so an exit-status check would pass for every implementation. The
+# content check is the real discriminator — with a relative scope such as
+# `-- .` the diff would be restricted to `subdir-for-anchor/` and VISIBLESOURCE
+# would be missing; ':(top)' anchors every pathspec at the repository root.
+mkdir -p subdir-for-anchor
+BLIND_SUBPKG="$WS/blind-from-subdir.diff"
+( cd subdir-for-anchor && "$SCRIPTS/review-package" "$BLIND_BASE" "$BLIND_HEAD" "$BLIND_SUBPKG" >/dev/null 2>&1 )
+assert_file_contains "blinding: source visible when the package is built from a subdirectory" "$BLIND_SUBPKG" "VISIBLESOURCE"
+assert_file_not_contains "blinding: review log hidden when built from a subdirectory" "$BLIND_SUBPKG" "SECRETFINDING"
+
+# `subdir-for-anchor` is an empty directory; git stores no empty directories,
+# so it leaves no untracked entry behind for Task 12's clean-tree assertion.
+
 bold ""
 bold "Results: $PASS passed, $FAIL failed"
 if [ "$FAIL" -gt 0 ]; then

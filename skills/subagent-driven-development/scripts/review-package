@@ -24,6 +24,20 @@ usage() {
 
 script_dir=$(cd "$(dirname "$0")" && pwd)
 
+# Reviewer blinding: committed review material is part of the branch but must
+# never reach a reviewer. ':(top)' anchors every pathspec at the repository
+# root so the package is identical no matter which directory the caller runs
+# from — a plain '-- .' would be relative to the cwd and silently shrink the
+# diff. Keep this list in step with multi-code-review/SKILL.md.
+blind_pathspecs=(
+  ':(top)'
+  ':(top,exclude)docs/superpowers-orchestrator/*/implementation/'
+  ':(top,exclude,glob)**/*-review-log.md'
+  ':(top,exclude,glob)**/*-fix-reports.md'
+  ':(top,exclude,glob)**/*-orchestration-log.md'
+  ':(top,exclude,glob)**/*-open-decisions.md'
+)
+
 if [ "${1:-}" = "--commits" ]; then
   shift
   out=""
@@ -54,12 +68,12 @@ if [ "${1:-}" = "--commits" ]; then
     echo
     echo "## Files changed (per commit)"
     for c in "${commits[@]}"; do
-      git show --stat --format="%h %s" "$c"
+      git show --stat --format="%h %s" "$c" -- "${blind_pathspecs[@]}"
       echo
     done
     echo "## Diff"
     for c in "${commits[@]}"; do
-      git show -U10 --format="### commit %h %s" "$c"
+      git show -U10 --format="### commit %h %s" "$c" -- "${blind_pathspecs[@]}"
       echo
     done
   } > "$out"
@@ -88,13 +102,13 @@ fi
   echo "# Review package: ${base}..${head}"
   echo
   echo "## Commits"
-  git log --oneline "${base}..${head}"
+  git log --oneline "${base}..${head}" -- "${blind_pathspecs[@]}"
   echo
   echo "## Files changed"
-  git diff --stat "${base}..${head}"
+  git diff --stat "${base}..${head}" -- "${blind_pathspecs[@]}"
   echo
   echo "## Diff"
-  git diff -U10 "${base}..${head}"
+  git diff -U10 "${base}..${head}" -- "${blind_pathspecs[@]}"
 } > "$out"
 
 count=$(git rev-list --count "${base}..${head}")
