@@ -555,7 +555,7 @@ git commit -m "docs(writing-plans): refuse to plan next to a spec outside the la
 
 **Does NOT cover:** the segment rule decides on the directory segment nearest the file. It does NOT cover: a document directly at the topic-folder root (for example the orchestration log) — no `specs/` or `plans/` segment is nearest, so it infers `general`, which is correct; a document under a `specs/` or `plans/` directory that is not a topic folder at all — it still infers `spec`/`plan`, which is the intended tolerant behavior for user-preferred locations; and an explicit user statement, which continues to override inference.
 
-- [ ] **Step 1: Write the failing verification check**
+- [x] **Step 1: Write the failing verification check**
 
 ```bash
 cd /Users/bruno/Programming/AI/AI_Coding/My_tools/Superpowers
@@ -573,12 +573,12 @@ third condition greps for the bare string `docs/specs/` because that string
 occurs exactly once in the file today (in the rule Step 3 replaces) and zero
 times afterwards, which makes it a gate that actually changes state.
 
-- [ ] **Step 2: Run it to verify it fails**
+- [x] **Step 2: Run it to verify it fails**
 
 Run: the command from Step 1
 Expected: prints `FAIL`
 
-- [ ] **Step 3: Replace the inference rule in `skills/multi-doc-review/SKILL.md`**
+- [x] **Step 3: Replace the inference rule in `skills/multi-doc-review/SKILL.md`**
 
 Replace:
 
@@ -600,7 +600,7 @@ with:
   `general`. An explicit user statement overrides.
 ```
 
-- [ ] **Step 4: Update the reviewer isolation wording**
+- [x] **Step 4: Update the reviewer isolation wording**
 
 In `skills/multi-doc-review/reviewer-prompt.md`, replace:
 
@@ -617,12 +617,12 @@ with:
       `docs/superpowers-orchestrator/*/plans/` — [DOC_SCOPE_RULE].
 ```
 
-- [ ] **Step 5: Run the verification check to confirm it passes**
+- [x] **Step 5: Run the verification check to confirm it passes**
 
 Run: the command from Step 1
 Expected: prints `PASS`
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add skills/multi-doc-review/SKILL.md skills/multi-doc-review/reviewer-prompt.md
