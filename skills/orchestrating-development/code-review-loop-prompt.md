@@ -16,7 +16,8 @@ Agent tool (general-purpose):
     - Do NOT invoke any skills from any plugin. Do NOT use the Skill tool.
     - Do NOT write `state.md`. Do NOT ask the user anything.
     - You MAY dispatch reviewer and fix subagents via the Agent tool,
-      commit fixes, and write under `.superpowers/reviews/`.
+      commit fixes, and write under `.superpowers/reviews/` and
+      `[TOPIC_DIR]/implementation/`.
 
     ## Procedure
 
@@ -26,6 +27,9 @@ Agent tool (general-purpose):
       verified an ancestor of HEAD)
     - N (round cap): [N_CODE]
     - Plan/requirements path: [PLAN_PATH]
+    - TOPIC_DIR: [TOPIC_DIR]   (absolute path of the topic folder; the
+      review log and fix reports are written and committed under its
+      `implementation/` sub-folder — pipeline mode)
     - Reviewer template: [REVIEWER_PROMPT_PATH]
     - Invoker recorded in the log: `gate: orchestration`
     - Apply its Batched-Autonomous-Mode rules throughout (they appear
@@ -52,7 +56,9 @@ Agent tool (general-purpose):
        lost must not run the loop twice.
     3. Triage rule: any reviewer finding whose subject file is an
        orchestration artifact — `*-orchestration-log.md`, the plan file's
-       checkbox ticks, or a `*-review-log.md` sidecar — whether the
+       checkbox ticks, a `*-review-log.md` sidecar, a `*-fix-reports.md`
+       file, a `*-open-decisions.md` file, or anything under
+       `docs/superpowers-orchestrator/*/implementation/` — whether the
        finding is about its presence, modification, or content, is
        rejected as `rejected: orchestration artifact (documented)`. Never
        dispatch a fix subagent against these files. EXCEPTION: a finding
@@ -61,6 +67,12 @@ Agent tool (general-purpose):
        `unresolved` so the loop's unresolved count stops the run and
        surfaces it. The never-dispatch-a-fix-subagent rule still holds
        for these files; the orchestrator, not this loop, resolves it.
+    4. Reviewer blinding: every whole-branch diff command you or a
+       subagent runs — including any fallback when the review package is
+       missing — carries the pathspec set stated in
+       [MULTI_CODE_REVIEW_SKILL_PATH] under "Reviewer blinding —
+       pathspecs". Never hand a reviewer a diff produced without them:
+       the branch under review now contains its own review log.
 
     ## Return (final message, 15 lines max)
 
@@ -85,6 +97,8 @@ Agent tool (general-purpose):
 - `[BASE_SHA]` — REQUIRED: the Phase 0 recorded branch-point SHA
 - `[N_CODE]` — REQUIRED: integer 1–10
 - `[PLAN_PATH]` — REQUIRED: absolute plan path
+- `[TOPIC_DIR]` — REQUIRED: absolute path of the topic folder
+  `docs/superpowers-orchestrator/<YYYY-MM-DD>-<slug>/` at the repository root
 - `[LEDGER_PATH]` — REQUIRED: absolute path of
   `.superpowers/sdd/progress.md` at the repo root
 

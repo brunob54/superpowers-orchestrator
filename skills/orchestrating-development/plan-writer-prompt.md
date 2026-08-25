@@ -59,7 +59,8 @@ Agent tool (general-purpose):
   `../writing-plans/SKILL.md` resolved from this skill's base directory
 - `[SPEC_PATH]` — REQUIRED: absolute path of the approved spec
 - `[PLAN_PATH]` — REQUIRED: absolute output path
-  `docs/plans/YYYY-MM-DD-<slug>.md` computed by the orchestrator
+  `<topic folder>/plans/<slug>.md` computed by the orchestrator, where
+  `<topic folder>` is `docs/superpowers-orchestrator/<YYYY-MM-DD>-<slug>/`
 - `[RESUME_ANSWER]` — OPTIONAL: omitted, together with its `## Resume
   Answer` heading, on a first dispatch; filled only when re-dispatching
   after a `BLOCKED` stop, with the user's answer to the question that
