@@ -849,9 +849,11 @@ git commit -m "test(hooks): classify new-layout artifact paths in stop-reminders
 
 **Security flag:** `none`
 
-**Does NOT cover:** in `--commits` mode the explicit commit list (`git log -1 --oneline "$c"`) is NOT filtered — the caller names those commits itself and they are task commits, never `chore(review)` commits; only the stat and diff output is filtered there. The exclusions also do NOT hide a review log stored outside `docs/superpowers-orchestrator/`, whatever its name, nor a non-markdown file under `implementation/`; only the files matching `docs/superpowers-orchestrator/*/implementation/*.md` and the four sidecar name shapes inside `docs/superpowers-orchestrator/*/` are excluded.
+**Does NOT cover:** in `--commits` mode the commit list (`git log -1 --oneline --no-walk "$c"`) is ALSO filtered by the same blinding pathspecs — a commit whose changes are entirely review material is dropped from the list; this was added by a review fix on this branch. The exclusions also do NOT hide a review log stored outside `docs/superpowers-orchestrator/`, whatever its name, nor a non-markdown file under `implementation/`; only the files matching `docs/superpowers-orchestrator/*/implementation/*.md` and the four sidecar name shapes inside `docs/superpowers-orchestrator/*/` are excluded.
 
 - [x] **Step 1: Write failing tests**
+
+_Note: the shipped suite in tests/sdd-scripts/run-tests.sh is authoritative — review fixes on this branch added assertions (positive controls, the --commits review-only package, the SKILL.md drift checks, the TOPIC_DIR regex section) that this embedded copy does not show._
 
 Append to `tests/sdd-scripts/run-tests.sh`, immediately before the final `bold ""` / `Results:` block:
 
@@ -1577,6 +1579,8 @@ walk, `git log --grep`) plus `sdd-workspace`'s existing archive-slug rule, and
 this plan changes none of that. They pass before and after; what they protect
 is the git contract the skill text now depends on. Step 2 therefore expects
 `PASS`, not `FAIL`.
+
+_Note: the shipped suite in tests/sdd-scripts/run-tests.sh is authoritative — review fixes on this branch added assertions (positive controls, the --commits review-only package, the SKILL.md drift checks, the TOPIC_DIR regex section) that this embedded copy does not show._
 
 Append to `tests/sdd-scripts/run-tests.sh`, after the blinding section added in Task 8 and before the final `Results:` block:
 

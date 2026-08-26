@@ -405,9 +405,8 @@ This is the full cross-platform hook inventory for the plugin. Claude Code gets 
 ## Installation
 
 **Requirements:** git **2.32 or newer**. The pipeline's commit trailers
-(`git commit --trailer`) and its pathspec magic (`:(top)`, `:(exclude)`,
-`:(glob)` — used to keep review material out of every reviewer's diff) both
-need it.
+(`git commit --trailer`) and its pathspec magic (`:(top)`, `:(exclude)` —
+used to keep review material out of every reviewer's diff) both need it.
 
 ### Claude Code
 
