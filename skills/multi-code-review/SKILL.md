@@ -105,11 +105,12 @@ final review on such platforms; that fallback lives there, not here.)
      must not be ignored). A project `.gitignore` matching `implementation/`
      or `*-review-log.md` would otherwise surface only as a failed commit
      after a full round. If it succeeds, stop and report the ignoring rule.
-  5. If the log or the fix-report file differs from HEAD — a previous round's
-     `chore(review)` commit failed or was interrupted — retry that pending
-     commit **first**, with the same subject rule. On repeated failure return
-     `BLOCKED` with the git output and name the manual commit the user must
-     run:
+  5. If the log or the fix-report file differs from HEAD, or exists but is
+     untracked (`git ls-files --error-unmatch <path>` fails) — a previous
+     round's `chore(review)` commit failed or was interrupted — retry that
+     pending commit **first**, with the same subject rule. On repeated
+     failure return `BLOCKED` with the git output and name the manual
+     commit the user must run:
      `git add -- <paths> && git commit -m "chore(review): <slug> round <i> log" -- <paths>`.
      Without this retry an on-disk entry carrying a completion marker would
      read as completed, the once-per-gate skip would fire, and the

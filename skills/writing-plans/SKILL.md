@@ -47,7 +47,11 @@ together with its spec.
    `docs/superpowers-orchestrator/<today>-<slug>/specs/<slug>-design.md`. If a
    folder matching `docs/superpowers-orchestrator/????-??-??-<slug>/` already
    exists, reuse that folder instead of `<today>` (slug uniqueness). More than
-   one match → stop and report the ambiguity; write nothing.
+   one match → stop and report the ambiguity; write nothing. If the reused
+   folder already holds `specs/<slug>-design.md` or its
+   `specs/<slug>-design-review-log.md` sidecar, stop and report the
+   collision — a different spec already owns that slug — and move and write
+   nothing.
 3. State the reason the spec is outside the layout — wrong parent directory,
    or a folder name that does not match
    `^[0-9]{4}-[0-9]{2}-[0-9]{2}-[a-z0-9]+(-[a-z0-9]+)*$` — next to the
