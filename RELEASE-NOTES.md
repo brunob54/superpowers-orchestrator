@@ -35,12 +35,17 @@ the code review history was never committed. Finding, archiving, or deleting
   `/multi-code-review` run has no plan and therefore no topic folder: it keeps
   today's git-ignored `.superpowers/reviews/` behavior exactly.
 - **Reviewers stay blind.** Committed review material is now part of the
-  branch, so every whole-branch diff handed to a reviewer excludes
-  `<topic>/implementation/` and the file-name shapes `*-review-log.md`,
-  `*-fix-reports.md`, `*-orchestration-log.md` and `*-open-decisions.md`. The
-  reviewer's read prohibition lists the same set. This also closes a
+  branch, so every whole-branch diff handed to a reviewer excludes the
+  markdown files under `<topic>/implementation/` and the files inside
+  `docs/superpowers-orchestrator/*/` whose names match `*-review-log.md`,
+  `*-fix-reports.md`, `*-orchestration-log.md` or `*-open-decisions.md`.
+  The reviewer's read prohibition lists the same set. This also closes a
   pre-existing leak: the committed spec and plan review-log sidecars were
-  visible in whole-branch diffs before.
+  visible in whole-branch diffs before. Only files inside
+  `docs/superpowers-orchestrator/` are ever hidden: that folder holds
+  plugin output only, and a project must not put its own files there. A
+  `*-review-log.md` anywhere else, or a non-markdown file under
+  `implementation/`, stays visible to reviewers.
 - **This repository was migrated** with `git mv`; document contents are
   untouched. **Other projects are not migrated automatically:** existing
   `docs/specs/` and `docs/plans/` files stay readable as plain files, and new

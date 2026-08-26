@@ -28,14 +28,19 @@ script_dir=$(cd "$(dirname "$0")" && pwd)
 # never reach a reviewer. ':(top)' anchors every pathspec at the repository
 # root so the package is identical no matter which directory the caller runs
 # from — a plain '-- .' would be relative to the cwd and silently shrink the
-# diff. Keep this list in step with multi-code-review/SKILL.md.
+# diff. Every exclusion is limited to the plugin's own output folder
+# (docs/superpowers-orchestrator/) and the folder entry to markdown files, so a
+# branch cannot hide an arbitrary file by giving it one of these names. A plain
+# '*' in a git pathspec matches across '/', which is what lets '*/' stand for
+# the topic folder; no 'glob' magic is used. Keep this list in step with
+# multi-code-review/SKILL.md.
 blind_pathspecs=(
   ':(top)'
-  ':(top,exclude)docs/superpowers-orchestrator/*/implementation/'
-  ':(top,exclude,glob)**/*-review-log.md'
-  ':(top,exclude,glob)**/*-fix-reports.md'
-  ':(top,exclude,glob)**/*-orchestration-log.md'
-  ':(top,exclude,glob)**/*-open-decisions.md'
+  ':(top,exclude)docs/superpowers-orchestrator/*/implementation/*.md'
+  ':(top,exclude)docs/superpowers-orchestrator/*/*-review-log.md'
+  ':(top,exclude)docs/superpowers-orchestrator/*/*-fix-reports.md'
+  ':(top,exclude)docs/superpowers-orchestrator/*/*-orchestration-log.md'
+  ':(top,exclude)docs/superpowers-orchestrator/*/*-open-decisions.md'
 )
 
 if [ "${1:-}" = "--commits" ]; then

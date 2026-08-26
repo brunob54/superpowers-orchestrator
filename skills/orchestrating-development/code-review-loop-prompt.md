@@ -56,10 +56,11 @@ Agent tool (general-purpose):
        dispositions — a retry dispatched after only the final message was
        lost must not run the loop twice.
     3. Triage rule: any reviewer finding whose subject file is an
-       orchestration artifact — `*-orchestration-log.md`, the plan file's
-       checkbox ticks, a `*-review-log.md` sidecar, a `*-fix-reports.md`
-       file, a `*-open-decisions.md` file, or anything under
-       `docs/superpowers-orchestrator/*/implementation/` — whether the
+       orchestration artifact — the plan file's checkbox ticks, a file
+       under `docs/superpowers-orchestrator/*/` whose name matches
+       `*-orchestration-log.md`, `*-review-log.md`, `*-fix-reports.md` or
+       `*-open-decisions.md`, or a file matching
+       `docs/superpowers-orchestrator/*/implementation/*.md` — whether the
        finding is about its presence, modification, or content, is
        rejected as `rejected: orchestration artifact (documented)`. Never
        dispatch a fix subagent against these files. EXCEPTION: a finding

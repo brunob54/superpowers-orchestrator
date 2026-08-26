@@ -5,7 +5,7 @@ description: >
   from an approved spec: plan writing, N plan-review rounds, batched
   implementation, and N code-review rounds run autonomously, stopping only
   on major errors, ending before merge/PR. Triggers on: "orchestrate the
-  development", "orchestrate docs/superpowers-orchestrator/<topic>/specs/...",
+  development", "orchestrate docs/superpowers-orchestrator/<date>-<slug>/specs/...",
   "run the whole pipeline autonomously", "resume orchestration", "abandon
   orchestration". Requires the Agent tool with nested dispatch (Claude Code
   only).
@@ -326,7 +326,7 @@ Trigger: `Resume orchestration for <plan-or-spec path>`.
    the clean-tree check to pass:
 
    ```bash
-   git status --porcelain -- ':(top)' ':(top,exclude)docs/superpowers-orchestrator/<topic>/implementation/'
+   git status --porcelain -- ':(top)' ':(top,exclude)<topic>/implementation/*'
    ```
 
    must be empty (else stop). The exclusion mirrors multi-code-review's

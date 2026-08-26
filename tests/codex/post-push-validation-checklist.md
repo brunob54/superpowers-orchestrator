@@ -314,7 +314,7 @@ echo changed >> docs/x/a.md && echo changed >> b.md
 # whether or not MSYS mangled the pathspec — a check that cannot fail.
 git status --porcelain -- ':(top)' ':(top,exclude)docs/x/'
 git commit -qam "second"
-git diff HEAD~1 -- ':(top,exclude,glob)**/*-review-log.md'
+git diff HEAD~1 -- ':(top,exclude)docs/superpowers-orchestrator/*/*-review-log.md'
 ```
 
 Expected: the first command prints exactly one line, ` M b.md`, and no line

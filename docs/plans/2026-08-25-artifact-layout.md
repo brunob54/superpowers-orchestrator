@@ -29,7 +29,7 @@
 - One plan per topic: `plans/<slug>.md` is replaced when the plan is rewritten. Orchestration log sits at the topic root, no date prefix.
 - No dual-layout support. Skills, hooks and tests know only the new layout.
 - The blinding pathspec set, used verbatim in every whole-branch diff command:
-  `-- ':(top)' ':(top,exclude)docs/superpowers-orchestrator/*/implementation/' ':(top,exclude,glob)**/*-review-log.md' ':(top,exclude,glob)**/*-fix-reports.md' ':(top,exclude,glob)**/*-orchestration-log.md' ':(top,exclude,glob)**/*-open-decisions.md'`
+  `-- ':(top)' ':(top,exclude)docs/superpowers-orchestrator/*/implementation/*.md' ':(top,exclude)docs/superpowers-orchestrator/*/*-review-log.md' ':(top,exclude)docs/superpowers-orchestrator/*/*-fix-reports.md' ':(top,exclude)docs/superpowers-orchestrator/*/*-orchestration-log.md' ':(top,exclude)docs/superpowers-orchestrator/*/*-open-decisions.md'`
 - Direct `/multi-code-review` runs (no `TOPIC_DIR`) keep exactly today's behavior: `.superpowers/reviews/`, a `.gitignore` containing `*`, nothing committed, sentinel and skip rules unchanged.
 - Migration of existing documents uses `git mv` only; file contents are untouched. References inside the moved historical documents are left as they are.
 - Not in scope: `docs/research/`, `state.md`, `session-log.md`, `known-issues.md`, `project-map.md`, `context-snapshot.json`, the `.superpowers/sdd/` workspace, `hooks/stop-reminders.js` significance rules, and Codex/Cursor/OpenCode hook wiring.
@@ -303,7 +303,7 @@ prints nothing and exits 0 when there is no match, in every shell.
     `specs/<slug>-design-<old date>-review-log.md` before the gate, where
     `<old date>` is the topic folder's date prefix. The archived name must
     still end in `-review-log.md`: the blinding pathspec set uses
-    `':(top,exclude,glob)**/*-review-log.md'`, and `multi-code-review`'s
+    `':(top,exclude)docs/superpowers-orchestrator/*/*-review-log.md'`, and `multi-code-review`'s
     reviewer read prohibition names the same shape. A name such as
     `specs/<slug>-design-review-log.<old date>.md` ends in the date instead,
     so neither would cover it and a blinded reviewer could read the previous
@@ -849,7 +849,7 @@ git commit -m "test(hooks): classify new-layout artifact paths in stop-reminders
 
 **Security flag:** `none`
 
-**Does NOT cover:** in `--commits` mode the explicit commit list (`git log -1 --oneline "$c"`) is NOT filtered — the caller names those commits itself and they are task commits, never `chore(review)` commits; only the stat and diff output is filtered there. The exclusions also do NOT hide a review log stored anywhere else under a different name; only the five documented name shapes and the `implementation/` folder are excluded.
+**Does NOT cover:** in `--commits` mode the explicit commit list (`git log -1 --oneline "$c"`) is NOT filtered — the caller names those commits itself and they are task commits, never `chore(review)` commits; only the stat and diff output is filtered there. The exclusions also do NOT hide a review log stored outside `docs/superpowers-orchestrator/`, whatever its name, nor a non-markdown file under `implementation/`; only the files matching `docs/superpowers-orchestrator/*/implementation/*.md` and the four sidecar name shapes inside `docs/superpowers-orchestrator/*/` are excluded.
 
 - [x] **Step 1: Write failing tests**
 
@@ -874,6 +874,16 @@ echo "SECRETDECISIONS open item" > docs/superpowers-orchestrator/2026-08-25-foo/
 mkdir -p docs/superpowers-orchestrator/2026-08-25-foo/plans
 mv docs/superpowers-orchestrator/2026-08-25-foo/plans-open.tmp docs/superpowers-orchestrator/2026-08-25-foo/plans/foo-open-decisions.md
 echo "VISIBLESOURCE" > blind-src.txt
+# The folder rule and the anchoring (multi-code-review/SKILL.md, "Reviewer
+# blinding — pathspecs"): a markdown file under implementation/ is hidden
+# whatever its name; a non-markdown file there is visible; and a file outside
+# docs/superpowers-orchestrator/ is visible even when its name or its folder
+# matches a sidecar pattern.
+echo "SECRETLEAK note whose name matches no sidecar pattern" > docs/superpowers-orchestrator/2026-08-25-foo/implementation/leak-check.md
+echo "VISIBLEIMPLJS" > docs/superpowers-orchestrator/2026-08-25-foo/implementation/code.js
+mkdir -p notes src/implementation
+echo "VISIBLENOTES" > notes/x-review-log.md
+echo "VISIBLESRCIMPL" > src/implementation/real.js
 git add -A && git commit --quiet -m "feature plus review material"
 BLIND_HEAD=$(git rev-parse HEAD)
 
@@ -884,6 +894,10 @@ assert_file_not_contains "blinding: implementation fix reports hidden" "$BPKG" "
 assert_file_not_contains "blinding: spec review-log sidecar hidden" "$BPKG" "SECRETSIDECAR"
 assert_file_not_contains "blinding: orchestration log hidden" "$BPKG" "SECRETORCH"
 assert_file_not_contains "blinding: open-decisions file hidden" "$BPKG" "SECRETDECISIONS"
+assert_file_not_contains "blinding: markdown under implementation/ hidden whatever its name" "$BPKG" "SECRETLEAK"
+assert_file_contains "blinding: non-markdown file under implementation/ visible" "$BPKG" "VISIBLEIMPLJS"
+assert_file_contains "blinding: *-review-log.md outside the plugin folder visible" "$BPKG" "VISIBLENOTES"
+assert_file_contains "blinding: implementation/ folder outside the plugin folder visible" "$BPKG" "VISIBLESRCIMPL"
 # The five assertions above key on file CONTENT, which only the `git diff -U10`
 # body can carry. The `## Files changed` section is a `git diff --stat`, which
 # prints file NAMES and counts and no content at all, so a package whose
@@ -912,6 +926,10 @@ BLIND_CPKG="$WS/blind-from-commits.diff"
 "$SCRIPTS/review-package" --commits "$BLIND_HEAD" --out "$BLIND_CPKG" >/dev/null 2>&1
 assert_file_contains "blinding (--commits): ordinary source change is visible" "$BLIND_CPKG" "VISIBLESOURCE"
 assert_file_not_contains "blinding (--commits): implementation review log hidden" "$BLIND_CPKG" "SECRETFINDING"
+assert_file_not_contains "blinding (--commits): markdown under implementation/ hidden whatever its name" "$BLIND_CPKG" "SECRETLEAK"
+assert_file_contains "blinding (--commits): non-markdown file under implementation/ visible" "$BLIND_CPKG" "VISIBLEIMPLJS"
+assert_file_contains "blinding (--commits): *-review-log.md outside the plugin folder visible" "$BLIND_CPKG" "VISIBLENOTES"
+assert_file_contains "blinding (--commits): implementation/ folder outside the plugin folder visible" "$BLIND_CPKG" "VISIBLESRCIMPL"
 # Same reasoning for `git show --stat` in --commits mode.
 assert_file_not_contains "blinding (--commits): review file names absent from the stat summary" "$BLIND_CPKG" "implementation/foo-review-log.md"
 
@@ -934,9 +952,9 @@ assert_file_not_contains "blinding: review log hidden when built from a subdirec
 - [x] **Step 2: Run the tests to verify they fail**
 
 Run: `bash tests/sdd-scripts/run-tests.sh`
-Expected: FAIL — ten assertions, because `review-package` currently diffs everything: the five `SECRET*` `assert_file_not_contains` checks on `$BPKG`, `blinding: review-only commit absent from the commit list` (a `git log --oneline` without pathspecs still lists the `chore(review)` commit), `blinding (--commits): implementation review log hidden`, `blinding: review log hidden when built from a subdirectory`, and the two `review file names absent from the stat summary` checks (one on `$BPKG`, one on `$BLIND_CPKG`).
+Expected: FAIL — eleven assertions, because `review-package` currently diffs everything: the six `SECRET*` `assert_file_not_contains` checks on `$BPKG` (the five sidecar names and `leak-check.md`), `blinding: review-only commit absent from the commit list` (a `git log --oneline` without pathspecs still lists the `chore(review)` commit), `blinding (--commits): implementation review log hidden`, `blinding: review log hidden when built from a subdirectory`, and the two `review file names absent from the stat summary` checks (one on `$BPKG`, one on `$BLIND_CPKG`).
 
-The two `assert_file_contains` checks for `VISIBLESOURCE` pass both before and after Step 3 — they are regression guards that catch a fix which blinds the package by shrinking the diff instead of by excluding review material.
+The `assert_file_contains` checks — `VISIBLESOURCE`, plus the `VISIBLEIMPLJS`, `VISIBLENOTES` and `VISIBLESRCIMPL` needles that prove the `.md` narrowing and the anchoring to the plugin folder — pass both before and after Step 3. They are regression guards that catch a fix which blinds the package by shrinking the diff, or by matching more than the plugin's own review material, instead of by excluding only that material.
 
 - [x] **Step 3: Add the pathspec set to `review-package`**
 
@@ -947,14 +965,19 @@ In `skills/subagent-driven-development/scripts/review-package`, insert immediate
 # never reach a reviewer. ':(top)' anchors every pathspec at the repository
 # root so the package is identical no matter which directory the caller runs
 # from — a plain '-- .' would be relative to the cwd and silently shrink the
-# diff. Keep this list in step with multi-code-review/SKILL.md.
+# diff. Every exclusion is limited to the plugin's own output folder
+# (docs/superpowers-orchestrator/) and the folder entry to markdown files, so a
+# branch cannot hide an arbitrary file by giving it one of these names. A plain
+# '*' in a git pathspec matches across '/', which is what lets '*/' stand for
+# the topic folder; no 'glob' magic is used. Keep this list in step with
+# multi-code-review/SKILL.md.
 blind_pathspecs=(
   ':(top)'
-  ':(top,exclude)docs/superpowers-orchestrator/*/implementation/'
-  ':(top,exclude,glob)**/*-review-log.md'
-  ':(top,exclude,glob)**/*-fix-reports.md'
-  ':(top,exclude,glob)**/*-orchestration-log.md'
-  ':(top,exclude,glob)**/*-open-decisions.md'
+  ':(top,exclude)docs/superpowers-orchestrator/*/implementation/*.md'
+  ':(top,exclude)docs/superpowers-orchestrator/*/*-review-log.md'
+  ':(top,exclude)docs/superpowers-orchestrator/*/*-fix-reports.md'
+  ':(top,exclude)docs/superpowers-orchestrator/*/*-orchestration-log.md'
+  ':(top,exclude)docs/superpowers-orchestrator/*/*-open-decisions.md'
 )
 ```
 
@@ -1017,7 +1040,7 @@ with:
 - [x] **Step 4: Run the tests to verify they pass**
 
 Run: `bash tests/sdd-scripts/run-tests.sh`
-Expected: PASS — every assertion. That includes the pre-existing `range: alpha hunk present` and `--commits mode` assertions (which predate blinding and say nothing about it) *and* the three new `--commits` blinding assertions added in Step 1, which are what actually verify the two `git show` edits in Step 3. The two `review file names absent from the stat summary` assertions are the only ones that verify the two `git diff --stat` / `git show --stat` edits: every other blinding assertion keys on file content, which a `--stat` summary never prints.
+Expected: PASS — every assertion. That includes the pre-existing `range: alpha hunk present` and `--commits mode` assertions (which predate blinding and say nothing about it) *and* the new `--commits` blinding assertions added in Step 1, which are what actually verify the two `git show` edits in Step 3. The two `review file names absent from the stat summary` assertions are the only ones that verify the two `git diff --stat` / `git show --stat` edits: every other blinding assertion keys on file content, which a `--stat` summary never prints.
 
 - [x] **Step 5: Commit**
 
@@ -1125,7 +1148,7 @@ git commit -m "docs(multi-code-review): add the TOPIC_DIR input and its validati
 cd /Users/bruno/Programming/AI/AI_Coding/My_tools/Superpowers
 grep -q 'effective HEAD' skills/multi-code-review/SKILL.md \
   && grep -q 'chore(review): <slug> round <i> log' skills/multi-code-review/SKILL.md \
-  && grep -q "':(top,exclude)docs/superpowers-orchestrator/<topic>/implementation/'" skills/multi-code-review/SKILL.md \
+  && grep -qF "':(top,exclude)<topic>/implementation/*'" skills/multi-code-review/SKILL.md \
   && grep -q 'Tracked-log sentinel' skills/multi-code-review/SKILL.md \
   && grep -q 'in \*\*direct mode\*\*,' skills/multi-code-review/SKILL.md \
   && grep -q '"Current HEAD" is mode-dependent' skills/multi-code-review/SKILL.md \
@@ -1246,7 +1269,7 @@ pre-existing uncommitted changes.
 excludes the topic's implementation folder:
 
 ```bash
-git status --porcelain -- ':(top)' ':(top,exclude)docs/superpowers-orchestrator/<topic>/implementation/'
+git status --porcelain -- ':(top)' ':(top,exclude)<topic>/implementation/*'
 ```
 
 Without the exclusion the untracked log (round 1) or the modified log and fix
@@ -1381,16 +1404,16 @@ git commit -m "docs(multi-code-review): define pipeline mode and its four rule c
 
 **Security flag:** `security` *(the change controls what review material a reviewer subagent can read; a gap here leaks prior rounds' findings into later rounds and destroys the independence the loop is built on)*
 
-**Does NOT cover:** the exclusion covers the five documented name shapes and the `implementation/` folder. It does NOT cover: review material a user stored under some other name; the *task-level* reviewer in `subagent-driven-development` reading files outside the diff on its own initiative (the read prohibition covers that, the pathspecs cannot); and fix subagents, which keep receiving findings through their brief and never through the log — unchanged.
+**Does NOT cover:** the exclusion covers the four sidecar name shapes inside `docs/superpowers-orchestrator/*/` and the files matching `docs/superpowers-orchestrator/*/implementation/*.md`. It does NOT cover: review material a user stored under some other name, or anywhere outside the plugin folder; the *task-level* reviewer in `subagent-driven-development` reading files outside the diff on its own initiative (the read prohibition covers that, the pathspecs cannot); and fix subagents, which keep receiving findings through their brief and never through the log — unchanged.
 
 - [x] **Step 1: Write the failing verification check**
 
 ```bash
 cd /Users/bruno/Programming/AI/AI_Coding/My_tools/Superpowers
-NEEDLE="':(top,exclude,glob)**/*-orchestration-log.md'"
+NEEDLE="':(top,exclude)docs/superpowers-orchestrator/*/*-orchestration-log.md'"
 SKILL_COUNT=$(grep -cF -- "$NEEDLE" skills/multi-code-review/SKILL.md)
 REVIEWER_COUNT=$(grep -cF -- "$NEEDLE" skills/multi-code-review/reviewer-prompt.md)
-READ_BAN_COUNT=$(grep -cF 'docs/superpowers-orchestrator/*/implementation/' skills/multi-code-review/reviewer-prompt.md)
+READ_BAN_COUNT=$(grep -cF 'docs/superpowers-orchestrator/*/implementation/*.md' skills/multi-code-review/reviewer-prompt.md)
 FALLBACK_COUNT=$(grep -cF 'each carrying the pathspec set from' skills/multi-code-review/SKILL.md)
 echo "skill:    $SKILL_COUNT"
 echo "reviewer: $REVIEWER_COUNT"
@@ -1427,8 +1450,16 @@ branch. Every whole-branch diff handed to a reviewer — in this skill, in
 is produced with this pathspec set, verbatim:
 
 ```
--- ':(top)' ':(top,exclude)docs/superpowers-orchestrator/*/implementation/' ':(top,exclude,glob)**/*-review-log.md' ':(top,exclude,glob)**/*-fix-reports.md' ':(top,exclude,glob)**/*-orchestration-log.md' ':(top,exclude,glob)**/*-open-decisions.md'
+-- ':(top)' ':(top,exclude)docs/superpowers-orchestrator/*/implementation/*.md' ':(top,exclude)docs/superpowers-orchestrator/*/*-review-log.md' ':(top,exclude)docs/superpowers-orchestrator/*/*-fix-reports.md' ':(top,exclude)docs/superpowers-orchestrator/*/*-orchestration-log.md' ':(top,exclude)docs/superpowers-orchestrator/*/*-open-decisions.md'
 ```
+
+Every exclusion is anchored to `docs/superpowers-orchestrator/`, the plugin's
+own output folder, and the folder entry is limited to markdown files — see the
+"untrusted origin" bullet under Error Handling for why. No `glob` magic is
+used: a plain `*` in a git pathspec matches across `/`, which is what lets
+`*/` stand for the topic folder and `*-review-log.md` for a sidecar at any
+depth below it. A wildcard pathspec that ends in `/` matches no file at all,
+which is why the folder entry names `*.md` and not the folder.
 
 The last two matter on a resumed run: after a Phase 4 stop the orchestrator
 commits the orchestration log and the open-decisions file, both of which quote
@@ -1454,11 +1485,12 @@ In `skills/multi-code-review/reviewer-prompt.md`, replace:
 with:
 
 ```markdown
-    - Do NOT read any file whose name matches `*-review-log.md`,
-      `*-fix-reports.md`, `*-orchestration-log.md` or
-      `*-open-decisions.md`, and do NOT read anything under
-      `docs/superpowers-orchestrator/*/implementation/`. This rule takes
-      precedence over the
+    - Do NOT read any file under `.superpowers/reviews/`. Do NOT read any
+      file under `docs/superpowers-orchestrator/*/` whose name matches
+      `*-review-log.md`, `*-fix-reports.md`, `*-orchestration-log.md` or
+      `*-open-decisions.md`, and do NOT read any file matching
+      `docs/superpowers-orchestrator/*/implementation/*.md`. This rule
+      takes precedence over the
 ```
 
 - [x] **Step 5: Blind the reviewer's fallback diff commands**
@@ -1474,7 +1506,7 @@ In `skills/multi-code-review/reviewer-prompt.md`, replace:
 with:
 
 ````markdown
-    `git diff --stat [BASE_SHA]..[HEAD_SHA] -- ':(top)' ':(top,exclude)docs/superpowers-orchestrator/*/implementation/' ':(top,exclude,glob)**/*-review-log.md' ':(top,exclude,glob)**/*-fix-reports.md' ':(top,exclude,glob)**/*-orchestration-log.md' ':(top,exclude,glob)**/*-open-decisions.md'`
+    `git diff --stat [BASE_SHA]..[HEAD_SHA] -- ':(top)' ':(top,exclude)docs/superpowers-orchestrator/*/implementation/*.md' ':(top,exclude)docs/superpowers-orchestrator/*/*-review-log.md' ':(top,exclude)docs/superpowers-orchestrator/*/*-fix-reports.md' ':(top,exclude)docs/superpowers-orchestrator/*/*-orchestration-log.md' ':(top,exclude)docs/superpowers-orchestrator/*/*-open-decisions.md'`
     and the same command without `--stat` — a failure fallback, not an
     alternative workflow. Keep the pathspecs: they exclude review material
     you must not read.
@@ -1513,7 +1545,7 @@ Run: the command from Step 1
 Expected: `skill: 1`, `reviewer: 1`, `read ban: 2`, `fallback: 1`, then the
 verdict line prints `PASS`.
 
-`read ban` is `2`, not `1`: the string `docs/superpowers-orchestrator/*/implementation/`
+`read ban` is `2`, not `1`: the string `docs/superpowers-orchestrator/*/implementation/*.md`
 appears on two separate lines of `reviewer-prompt.md` after this task — once in
 the read prohibition (Step 4) and once inside the blinded fallback command
 (Step 5). `grep -c` counts matching lines.
@@ -1569,10 +1601,10 @@ assert_eq "rule 1: the user's staged file is still staged" "$(git diff --cached 
 # and dirty with a source file modified.
 git commit --quiet -m "keep the user file out of the way" -- user-staged.txt
 echo "round 2 verdict" >> "$PLOG"
-PRECOND=$(git status --porcelain -- ':(top)' ":(top,exclude)$PTOPIC/implementation/")
+PRECOND=$(git status --porcelain -- ':(top)' ":(top,exclude)$PTOPIC/implementation/*")
 assert_eq "rule 2: modified implementation log reads clean" "$PRECOND" ""
 echo "changed" >> unrelated.txt
-PRECOND2=$(git status --porcelain -- ':(top)' ":(top,exclude)$PTOPIC/implementation/")
+PRECOND2=$(git status --porcelain -- ':(top)' ":(top,exclude)$PTOPIC/implementation/*")
 if [ -n "$PRECOND2" ]; then ok "rule 2: modified source file reads dirty"; else bad "rule 2: modified source file reads dirty"; fi
 git checkout --quiet -- unrelated.txt
 git add -- "$PLOG" && git commit --quiet -m "chore(review): bar round 2 log" -- "$PLOG"
@@ -1983,7 +2015,7 @@ with:
    the clean-tree check to pass:
 
    ```bash
-   git status --porcelain -- ':(top)' ':(top,exclude)docs/superpowers-orchestrator/<topic>/implementation/'
+   git status --porcelain -- ':(top)' ':(top,exclude)<topic>/implementation/*'
    ```
 
    must be empty (else stop). The exclusion mirrors multi-code-review's
@@ -2013,7 +2045,7 @@ with:
 
 - [x] **Step 8: Update the skill description's trigger phrase**
 
-In the YAML front matter, replace `"orchestrate docs/specs/..."` with `"orchestrate docs/superpowers-orchestrator/<topic>/specs/..."`.
+In the YAML front matter, replace `"orchestrate docs/specs/..."` with `"orchestrate docs/superpowers-orchestrator/<date>-<slug>/specs/..."`.
 
 - [x] **Step 9: Run the verification check to confirm it passes**
 
@@ -2126,10 +2158,11 @@ with:
 
 ```markdown
     3. Triage rule: any reviewer finding whose subject file is an
-       orchestration artifact — `*-orchestration-log.md`, the plan file's
-       checkbox ticks, a `*-review-log.md` sidecar, a `*-fix-reports.md`
-       file, a `*-open-decisions.md` file, or anything under
-       `docs/superpowers-orchestrator/*/implementation/` — whether the
+       orchestration artifact — the plan file's checkbox ticks, a file
+       under `docs/superpowers-orchestrator/*/` whose name matches
+       `*-orchestration-log.md`, `*-review-log.md`, `*-fix-reports.md` or
+       `*-open-decisions.md`, or a file matching
+       `docs/superpowers-orchestrator/*/implementation/*.md` — whether the
 ```
 
 - [x] **Step 6: Bind the controller to the blinding pathspecs**
@@ -2544,7 +2577,7 @@ echo changed >> docs/x/a.md && echo changed >> b.md
 # whether or not MSYS mangled the pathspec — a check that cannot fail.
 git status --porcelain -- ':(top)' ':(top,exclude)docs/x/'
 git commit -qam "second"
-git diff HEAD~1 -- ':(top,exclude,glob)**/*-review-log.md'
+git diff HEAD~1 -- ':(top,exclude)docs/superpowers-orchestrator/*/*-review-log.md'
 ```
 
 Expected: the first command prints exactly one line, ` M b.md`, and no line
@@ -3164,12 +3197,17 @@ the code review history was never committed. Finding, archiving, or deleting
   `/multi-code-review` run has no plan and therefore no topic folder: it keeps
   today's git-ignored `.superpowers/reviews/` behavior exactly.
 - **Reviewers stay blind.** Committed review material is now part of the
-  branch, so every whole-branch diff handed to a reviewer excludes
-  `<topic>/implementation/` and the file-name shapes `*-review-log.md`,
-  `*-fix-reports.md`, `*-orchestration-log.md` and `*-open-decisions.md`. The
-  reviewer's read prohibition lists the same set. This also closes a
+  branch, so every whole-branch diff handed to a reviewer excludes the
+  markdown files under `<topic>/implementation/` and the files inside
+  `docs/superpowers-orchestrator/*/` whose names match `*-review-log.md`,
+  `*-fix-reports.md`, `*-orchestration-log.md` or `*-open-decisions.md`.
+  The reviewer's read prohibition lists the same set. This also closes a
   pre-existing leak: the committed spec and plan review-log sidecars were
-  visible in whole-branch diffs before.
+  visible in whole-branch diffs before. Only files inside
+  `docs/superpowers-orchestrator/` are ever hidden: that folder holds
+  plugin output only, and a project must not put its own files there. A
+  `*-review-log.md` anywhere else, or a non-markdown file under
+  `implementation/`, stays visible to reviewers.
 - **This repository was migrated** with `git mv`; document contents are
   untouched. **Other projects are not migrated automatically:** existing
   `docs/specs/` and `docs/plans/` files stay readable as plain files, and new

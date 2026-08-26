@@ -128,7 +128,7 @@ pre-existing uncommitted changes.
 excludes the topic's implementation folder:
 
 ```bash
-git status --porcelain -- ':(top)' ':(top,exclude)docs/superpowers-orchestrator/<topic>/implementation/'
+git status --porcelain -- ':(top)' ':(top,exclude)<topic>/implementation/*'
 ```
 
 Without the exclusion the untracked log (round 1) or the modified log and fix
@@ -148,8 +148,16 @@ branch. Every whole-branch diff handed to a reviewer — in this skill, in
 is produced with this pathspec set, verbatim:
 
 ```
--- ':(top)' ':(top,exclude)docs/superpowers-orchestrator/*/implementation/' ':(top,exclude,glob)**/*-review-log.md' ':(top,exclude,glob)**/*-fix-reports.md' ':(top,exclude,glob)**/*-orchestration-log.md' ':(top,exclude,glob)**/*-open-decisions.md'
+-- ':(top)' ':(top,exclude)docs/superpowers-orchestrator/*/implementation/*.md' ':(top,exclude)docs/superpowers-orchestrator/*/*-review-log.md' ':(top,exclude)docs/superpowers-orchestrator/*/*-fix-reports.md' ':(top,exclude)docs/superpowers-orchestrator/*/*-orchestration-log.md' ':(top,exclude)docs/superpowers-orchestrator/*/*-open-decisions.md'
 ```
+
+Every exclusion is anchored to `docs/superpowers-orchestrator/`, the plugin's
+own output folder, and the folder entry is limited to markdown files — see the
+"untrusted origin" bullet under Error Handling for why. No `glob` magic is
+used: a plain `*` in a git pathspec matches across `/`, which is what lets
+`*/` stand for the topic folder and `*-review-log.md` for a sidecar at any
+depth below it. A wildcard pathspec that ends in `/` matches no file at all,
+which is why the folder entry names `*.md` and not the folder.
 
 The last two matter on a resumed run: after a Phase 4 stop the orchestrator
 commits the orchestration log and the open-decisions file, both of which quote
@@ -553,9 +561,16 @@ completed invocation only on explicit user request.
   subagent — the data-not-instructions rules mitigate but don't
   eliminate this, so treat a clean verdict with heightened skepticism;
   note the fix subagent executes that branch's tests. The blinding
-  pathspecs above match by path shape, not by trust — a branch of
-  untrusted origin can put arbitrary content at one of those paths to
-  hide it from every reviewer round.
+  pathspecs above hide only markdown files inside
+  `docs/superpowers-orchestrator/*/` whose names match the plugin's own
+  sidecar patterns (`*-review-log.md`, `*-fix-reports.md`,
+  `*-orchestration-log.md`, `*-open-decisions.md`, and every `*.md`
+  under an `implementation/` sub-folder). That folder holds plugin
+  output only, and a project must not put its own files there: a file a
+  branch places there under one of those names is hidden from every
+  reviewer round. A file anywhere else — a `*-review-log.md` outside the
+  plugin folder, a non-markdown file under `implementation/` — stays
+  visible, whatever its name.
 
 ## Guard Interaction
 

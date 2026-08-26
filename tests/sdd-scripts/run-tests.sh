@@ -392,6 +392,16 @@ echo "SECRETDECISIONS open item" > docs/superpowers-orchestrator/2026-08-25-foo/
 mkdir -p docs/superpowers-orchestrator/2026-08-25-foo/plans
 mv docs/superpowers-orchestrator/2026-08-25-foo/plans-open.tmp docs/superpowers-orchestrator/2026-08-25-foo/plans/foo-open-decisions.md
 echo "VISIBLESOURCE" > blind-src.txt
+# The folder rule and the anchoring (multi-code-review/SKILL.md, "Reviewer
+# blinding — pathspecs"): a markdown file under implementation/ is hidden
+# whatever its name; a non-markdown file there is visible; and a file outside
+# docs/superpowers-orchestrator/ is visible even when its name or its folder
+# matches a sidecar pattern.
+echo "SECRETLEAK note whose name matches no sidecar pattern" > docs/superpowers-orchestrator/2026-08-25-foo/implementation/leak-check.md
+echo "VISIBLEIMPLJS" > docs/superpowers-orchestrator/2026-08-25-foo/implementation/code.js
+mkdir -p notes src/implementation
+echo "VISIBLENOTES" > notes/x-review-log.md
+echo "VISIBLESRCIMPL" > src/implementation/real.js
 git add -A && git commit --quiet -m "feature plus review material"
 BLIND_HEAD=$(git rev-parse HEAD)
 
@@ -402,6 +412,10 @@ assert_file_not_contains "blinding: implementation fix reports hidden" "$BPKG" "
 assert_file_not_contains "blinding: spec review-log sidecar hidden" "$BPKG" "SECRETSIDECAR"
 assert_file_not_contains "blinding: orchestration log hidden" "$BPKG" "SECRETORCH"
 assert_file_not_contains "blinding: open-decisions file hidden" "$BPKG" "SECRETDECISIONS"
+assert_file_not_contains "blinding: markdown under implementation/ hidden whatever its name" "$BPKG" "SECRETLEAK"
+assert_file_contains "blinding: non-markdown file under implementation/ visible" "$BPKG" "VISIBLEIMPLJS"
+assert_file_contains "blinding: *-review-log.md outside the plugin folder visible" "$BPKG" "VISIBLENOTES"
+assert_file_contains "blinding: implementation/ folder outside the plugin folder visible" "$BPKG" "VISIBLESRCIMPL"
 # The five assertions above key on file CONTENT, which only the `git diff -U10`
 # body can carry. The `## Files changed` section is a `git diff --stat`, which
 # prints file NAMES and counts and no content at all, so a package whose
@@ -441,6 +455,10 @@ assert_file_not_contains "blinding (--commits): implementation fix reports hidde
 assert_file_not_contains "blinding (--commits): spec review-log sidecar hidden" "$BLIND_CPKG" "SECRETSIDECAR"
 assert_file_not_contains "blinding (--commits): orchestration log hidden" "$BLIND_CPKG" "SECRETORCH"
 assert_file_not_contains "blinding (--commits): open-decisions file hidden" "$BLIND_CPKG" "SECRETDECISIONS"
+assert_file_not_contains "blinding (--commits): markdown under implementation/ hidden whatever its name" "$BLIND_CPKG" "SECRETLEAK"
+assert_file_contains "blinding (--commits): non-markdown file under implementation/ visible" "$BLIND_CPKG" "VISIBLEIMPLJS"
+assert_file_contains "blinding (--commits): *-review-log.md outside the plugin folder visible" "$BLIND_CPKG" "VISIBLENOTES"
+assert_file_contains "blinding (--commits): implementation/ folder outside the plugin folder visible" "$BLIND_CPKG" "VISIBLESRCIMPL"
 # Same reasoning for `git show --stat` in --commits mode.
 assert_file_not_contains "blinding (--commits): review file names absent from the stat summary" "$BLIND_CPKG" "implementation/foo-review-log.md"
 # Positive control: the package's `## Commits` section must name THIS commit's
@@ -506,14 +524,14 @@ assert_file_contains "rule 1 drift check: SKILL.md still commits with the generi
 # and dirty with a source file modified.
 git commit --quiet -m "keep the user file out of the way" -- user-staged.txt
 echo "round 2 verdict" >> "$PLOG"
-PRECOND=$(git status --porcelain -- ':(top)' ":(top,exclude)$PTOPIC/implementation/")
+PRECOND=$(git status --porcelain -- ':(top)' ":(top,exclude)$PTOPIC/implementation/*")
 assert_eq "rule 2: modified implementation log reads clean" "$PRECOND" ""
 echo "changed" >> unrelated.txt
-PRECOND2=$(git status --porcelain -- ':(top)' ":(top,exclude)$PTOPIC/implementation/")
+PRECOND2=$(git status --porcelain -- ':(top)' ":(top,exclude)$PTOPIC/implementation/*")
 if [ -n "$PRECOND2" ]; then ok "rule 2: modified source file reads dirty"; else bad "rule 2: modified source file reads dirty"; fi
 git checkout --quiet -- unrelated.txt
 git add -- "$PLOG" && git commit --quiet -m "chore(review): bar round 2 log" -- "$PLOG"
-assert_file_contains "rule 2 drift check: SKILL.md still excludes the topic's implementation folder" "$SKILL_MD" "git status --porcelain -- ':(top)' ':(top,exclude)docs/superpowers-orchestrator/<topic>/implementation/'"
+assert_file_contains "rule 2 drift check: SKILL.md still excludes the topic's implementation folder" "$SKILL_MD" "git status --porcelain -- ':(top)' ':(top,exclude)<topic>/implementation/*'"
 
 # Rule 4: the effective-HEAD walk skips leading chore(review) commits and
 # stops at the first other commit.

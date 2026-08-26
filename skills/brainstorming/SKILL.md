@@ -167,7 +167,7 @@ prints nothing and exits 0 when there is no match, in every shell.
     `specs/<slug>-design-<old date>-review-log.md` before the gate, where
     `<old date>` is the topic folder's date prefix. The archived name must
     still end in `-review-log.md`: the blinding pathspec set uses
-    `':(top,exclude,glob)**/*-review-log.md'`, and `multi-code-review`'s
+    `':(top,exclude)docs/superpowers-orchestrator/*/*-review-log.md'`, and `multi-code-review`'s
     reviewer read prohibition names the same shape. A name such as
     `specs/<slug>-design-review-log.<old date>.md` ends in the date instead,
     so neither would cover it and a blinded reviewer could read the previous

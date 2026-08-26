@@ -51,6 +51,13 @@ document:
   log adds no new exposure, and a machine token in the invocation entry
   would add state for a scenario branch ownership already prevents.
   Recorded as a residual risk in the release note.
+- Hiding review material stored outside the plugin's own folder. The
+  blinding pathspecs (section 6) hide only markdown files inside
+  `docs/superpowers-orchestrator/*/` whose names match the plugin's own
+  sidecar patterns. That folder holds plugin output only, and a project
+  must not put its own files there; a file anywhere else stays visible
+  to reviewers, whatever its name. Recorded as a residual risk in the
+  release note.
 
 No decision in this design matched the prior-art trigger predicate.
 
@@ -240,7 +247,7 @@ Definitions:
   (`SKILL.md:300-303`, today `git status --porcelain` empty with only
   `state.md` and `.superpowers/` excluded) gains the same exclusion as
   multi-code-review's precondition:
-  `git status --porcelain -- ':(top)' ':(top,exclude)docs/superpowers-orchestrator/<topic>/implementation/'`.
+  `git status --porcelain -- ':(top)' ':(top,exclude)<topic>/implementation/*'`.
   Reason: an interruption between a round's first log write and its
   `chore(review)` commit (controller death, failed commit) leaves
   `implementation/` modified or untracked; without the exclusion, resume
@@ -318,7 +325,7 @@ Definitions:
      they are never swept into a `chore(review)` commit).
   2. **Working-tree precondition.** The `git status --porcelain` check
      before a fix dispatch excludes the topic's implementation folder:
-     `git status --porcelain -- ':(top)' ':(top,exclude)docs/superpowers-orchestrator/<topic>/implementation/'`.
+     `git status --porcelain -- ':(top)' ':(top,exclude)<topic>/implementation/*'`.
      Without the exclusion the untracked log (round 1) or the modified
      log and fix reports (later rounds) would fail the check on every
      round.
@@ -396,7 +403,17 @@ required:
 
 1. **Diff exclusion.** Every whole-branch diff handed to a reviewer is
    produced with the pathspecs
-   `-- ':(top)' ':(top,exclude)docs/superpowers-orchestrator/*/implementation/' ':(top,exclude,glob)**/*-review-log.md' ':(top,exclude,glob)**/*-fix-reports.md' ':(top,exclude,glob)**/*-orchestration-log.md' ':(top,exclude,glob)**/*-open-decisions.md'`.
+   `-- ':(top)' ':(top,exclude)docs/superpowers-orchestrator/*/implementation/*.md' ':(top,exclude)docs/superpowers-orchestrator/*/*-review-log.md' ':(top,exclude)docs/superpowers-orchestrator/*/*-fix-reports.md' ':(top,exclude)docs/superpowers-orchestrator/*/*-orchestration-log.md' ':(top,exclude)docs/superpowers-orchestrator/*/*-open-decisions.md'`.
+   Every exclusion is anchored to `docs/superpowers-orchestrator/`, the
+   plugin's own output folder, and the folder entry is limited to
+   markdown files: a file outside that folder is never hidden, whatever
+   its name, and a non-markdown file under `implementation/` is shown.
+   Without the anchor, a branch could hide any file from every reviewer
+   round by giving it one of these names. No `glob` magic is used: a
+   plain `*` in a git pathspec matches across `/`, which is what lets
+   `*/` stand for the topic folder and `*-review-log.md` for a sidecar
+   at any depth below it. A wildcard pathspec that ends in `/` matches
+   no file at all, which is why the folder entry names `*.md`.
    The last two matter on a resumed run: after a Phase 4 stop the
    orchestrator commits the orchestration log and the open-decisions
    file, both of which quote prior findings; without the exclusion every
@@ -422,15 +439,19 @@ required:
    doc-review sidecars.
 2. **Read prohibition.** `multi-code-review/reviewer-prompt.md:24-25`
    already lists `*-review-log.md` and `*-fix-reports.md`; it gains
-   `*-orchestration-log.md`, `*-open-decisions.md`, and "anything under
-   `docs/superpowers-orchestrator/*/implementation/`".
-   The orchestrator's triage rule
+   `*-orchestration-log.md`, `*-open-decisions.md`, and every file
+   matching `docs/superpowers-orchestrator/*/implementation/*.md`, with
+   all four name shapes limited to files under
+   `docs/superpowers-orchestrator/*/` — the same surface as the diff
+   exclusion, so the read prohibition cannot hide what the pathspecs
+   show. The orchestrator's triage rule
    (`code-review-loop-prompt.md:53-55`), which discards findings whose
    subject file is an orchestration artifact, extends its list from
    `*-orchestration-log.md`, plan checkbox ticks and `*-review-log.md` to
-   `*-fix-reports.md` and the `implementation/` folder — so a reviewer
-   that still sees these files (fallback path) produces no spurious
-   finding per round.
+   `*-fix-reports.md` and `implementation/*.md`, limited to the same
+   folder — so a reviewer that still sees these files (fallback path)
+   produces no spurious finding per round, and a finding about a file
+   outside that folder is never discarded by name.
 
 Fix subagents keep receiving the findings through their brief, never
 through the log — unchanged.
@@ -531,8 +552,13 @@ Unit tests (fast, run first):
 - `tests/sdd-scripts/run-tests.sh`: `review-package` output excludes a
   committed `implementation/foo-review-log.md`, a `*-review-log.md`
   sidecar under `specs/`, and includes an ordinary source change from the
-  same commits. Archive folder naming with a dateless plan basename
-  yields the same slug.
+  same commits. The same run proves the folder rule and the anchoring on
+  a throwaway repository, with the real `review-package` script:
+  `implementation/leak-check.md` (a name that matches no sidecar
+  pattern) is excluded; `implementation/code.js`, `notes/x-review-log.md`
+  and `src/implementation/real.js` (outside the plugin folder) are
+  included. Archive folder naming with a dateless plan basename yields
+  the same slug.
 
 Behavioral tests (real `claude` CLI, slow):
 
@@ -574,7 +600,7 @@ stops at the first other commit.
 One-time platform check, recorded in
 `tests/codex/post-push-validation-checklist.md`: under Windows Git Bash,
 run `git status --porcelain -- ':(top)' ':(top,exclude)docs/x/'` and
-`git diff HEAD~1 -- ':(top,exclude,glob)**/*-review-log.md'` in a
+`git diff HEAD~1 -- ':(top,exclude)docs/superpowers-orchestrator/*/*-review-log.md'` in a
 throwaway repository and confirm the pathspecs are not rewritten (the
 output must exclude the named paths). If they are rewritten, prefix the
 commands in the skills with `MSYS_NO_PATHCONV=1` (section 6, Git
