@@ -511,11 +511,13 @@ while read -r sha subject; do
     *) effective_head="$sha"; break ;;
   esac
 done < <(git log --format='%H %s' "$BASE..HEAD")
-[ -n "$effective_head" ] || effective_head="$BASE"
+[ -n "$effective_head" ] || effective_head=$(git rev-parse "$BASE")
 ```
 
 When every commit in the range is a `chore(review):` commit — N=0, or a
-branch that received only review commits — the effective HEAD is BASE.
+branch that received only review commits — the effective HEAD is BASE,
+resolved with `git rev-parse`: `BASE` may have been given as a ref name or
+a short SHA, and the completion marker must record a full SHA.
 
 In pipeline mode the completion marker records the **effective HEAD**, never
 the raw `git rev-parse HEAD`, which at marker time is always the last round's

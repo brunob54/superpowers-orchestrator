@@ -550,7 +550,7 @@ effective_head_of() {
       *) effective_head="$sha"; break ;;
     esac
   done < <(git log --format='%H %s' "$base..HEAD")
-  [ -n "$effective_head" ] || effective_head="$base"
+  [ -n "$effective_head" ] || effective_head=$(git rev-parse "$base")
   printf '%s\n' "$effective_head"
 }
 
@@ -569,6 +569,10 @@ assert_eq "rule 4: effective HEAD skips the trailing review commit" \
 ONLY_BASE=$(git rev-parse HEAD~1)
 assert_eq "rule 4: review-only range falls back to BASE" \
   "$(effective_head_of "$ONLY_BASE")" "$ONLY_BASE"
+# The fallback must normalize BASE: given as a short SHA (or a ref name),
+# the result is still the full SHA the completion marker records.
+assert_eq "rule 4: review-only range given a short BASE falls back to the full SHA" \
+  "$(effective_head_of "$(git rev-parse --short "$ONLY_BASE")")" "$ONLY_BASE"
 
 # Drift check: the DRY comment above waives byte-identity between
 # effective_head_of() and the fenced bash block skills/multi-code-review/SKILL.md
@@ -580,7 +584,7 @@ assert_eq "rule 4: review-only range falls back to BASE" \
 assert_file_contains "rule 4 drift check: SKILL.md still skips chore(review) commits" "$SKILL_MD" "'chore(review):'*) continue ;;"
 assert_file_contains "rule 4 drift check: SKILL.md still records effective_head and stops" "$SKILL_MD" 'effective_head="$sha"; break ;;'
 assert_file_contains "rule 4 drift check: SKILL.md still walks the range with git log --format" "$SKILL_MD" "git log --format='%H %s'"
-assert_file_contains "rule 4 drift check: SKILL.md still falls back to BASE when empty" "$SKILL_MD" '[ -n "$effective_head" ] ||'
+assert_file_contains "rule 4 drift check: SKILL.md still falls back to the resolved BASE when empty" "$SKILL_MD" '[ -n "$effective_head" ] || effective_head=$(git rev-parse "$BASE")'
 
 bold "TOPIC_DIR validation rule (multi-code-review)"
 
