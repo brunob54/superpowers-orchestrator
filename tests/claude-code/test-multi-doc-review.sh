@@ -38,8 +38,9 @@ SPEC_SHA_BEFORE=$(shasum "$SPEC" | cut -d' ' -f1)
 
 PROMPT="Invoke the superpowers-orchestrator:multi-doc-review skill on the document $SPEC with N=2. Do not ask me any questions — use N=2 and proceed to completion."
 # Deliberately no doc-type statement: the spec's Testing Strategy requires this
-# test to exercise path-segment inference (nearest segment specs/ -> spec); stating the type
-# would override inference per the skill's Parameters rule.
+# test to run the skill on a new-layout spec path (nearest segment specs/ ->
+# spec); stating the type would override inference per the skill's Parameters
+# rule. This test does not observe the inferred doc type — see the NOTE below.
 # NOTE: no assertion below actually observes the inferred type. The review log
 # records no doc type, and the lens names are identical for the spec, plan, and
 # general doc types, so the log this run produces is byte-compatible with a

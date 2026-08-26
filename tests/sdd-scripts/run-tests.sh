@@ -416,7 +416,7 @@ assert_file_not_contains "blinding: markdown under implementation/ hidden whatev
 assert_file_contains "blinding: non-markdown file under implementation/ visible" "$BPKG" "VISIBLEIMPLJS"
 assert_file_contains "blinding: *-review-log.md outside the plugin folder visible" "$BPKG" "VISIBLENOTES"
 assert_file_contains "blinding: implementation/ folder outside the plugin folder visible" "$BPKG" "VISIBLESRCIMPL"
-# The five assertions above key on file CONTENT, which only the `git diff -U10`
+# The six assertions above key on file CONTENT, which only the `git diff -U10`
 # body can carry. The `## Files changed` section is a `git diff --stat`, which
 # prints file NAMES and counts and no content at all, so a package whose
 # `--stat` is un-blinded passes every one of them while still listing
@@ -494,6 +494,24 @@ assert_file_not_contains "blinding: review log hidden when built from a subdirec
 # `subdir-for-anchor` is an empty directory; git stores no empty directories,
 # so it leaves no untracked entry behind for Task 12's clean-tree assertion.
 
+# Drift check: `blind_pathspecs` in review-package is the pathspec set a
+# script actually executes; multi-code-review/SKILL.md and reviewer-prompt.md
+# each copy it verbatim in prose, held in step with it only by a comment.
+# Read the six entries out of review-package itself, rather than retyping
+# them here, so a future edit to the array is caught even if the two docs are
+# never touched.
+SKILL_MD="$(dirname "$(dirname "$SCRIPTS")")/multi-code-review/SKILL.md"
+REVIEWER_PROMPT_MD="$(dirname "$(dirname "$SCRIPTS")")/multi-code-review/reviewer-prompt.md"
+BLIND_PATHSPECS=()
+while IFS= read -r entry; do
+  BLIND_PATHSPECS+=("$entry")
+done < <(sed -n '/^blind_pathspecs=($/,/^)$/p' "$SCRIPTS/review-package" | grep -oE "':[^']*'" | sed "s/^'//; s/'\$//")
+assert_eq "blinding drift check: blind_pathspecs has exactly six entries" "${#BLIND_PATHSPECS[@]}" "6"
+for entry in "${BLIND_PATHSPECS[@]}"; do
+  assert_file_contains "blinding drift check: SKILL.md still lists $entry" "$SKILL_MD" "$entry"
+  assert_file_contains "blinding drift check: reviewer-prompt.md still lists $entry" "$REVIEWER_PROMPT_MD" "$entry"
+done
+
 bold "pipeline-mode git rules (multi-code-review)"
 
 # Drift check target for rules 1, 2, and 4 below: a local re-implementation
@@ -511,6 +529,13 @@ git add unrelated.txt && git commit --quiet -m "base for pipeline rules"
 # Rule 1: `git add` + a path-limited commit commits an untracked log while
 # leaving an unrelated staged file staged.
 echo "round 1 verdict" > "$PLOG"
+# Before anything under $PTOPIC has ever been `git add`ed, the whole topic
+# folder is untracked and git collapses it to a single "?? $PTOPIC/" line
+# instead of listing the log file inside it. The exclude pathspec still has
+# to hide that collapsed line, or the very first pipeline invocation for a
+# topic would read dirty.
+PRECOND_UNTRACKED_FOLDER=$(git status --porcelain -- ':(top)' ":(top,exclude)$PTOPIC/implementation/*")
+assert_eq "rule 2: brand-new topic folder (untracked, collapsed to one line) reads clean" "$PRECOND_UNTRACKED_FOLDER" ""
 echo "staged by the user" > user-staged.txt
 git add user-staged.txt
 git add -- "$PLOG"
@@ -523,6 +548,14 @@ assert_file_contains "rule 1 drift check: SKILL.md still commits with the generi
 # Rule 2: the precondition pathspec reports clean with only the log modified,
 # and dirty with a source file modified.
 git commit --quiet -m "keep the user file out of the way" -- user-staged.txt
+# By round 2 the topic's implementation folder is already tracked (it holds
+# the committed round-1 log), but a fresh round's log or fix-report file
+# starts out untracked inside it. The exclude pathspec has to hide that
+# untracked file too, not only a modification to the already-tracked log.
+echo "not yet staged" > "$PTOPIC/implementation/bar-fix-reports.md"
+PRECOND_UNTRACKED_IN_TRACKED_FOLDER=$(git status --porcelain -- ':(top)' ":(top,exclude)$PTOPIC/implementation/*")
+assert_eq "rule 2: untracked file in an already-tracked implementation folder reads clean" "$PRECOND_UNTRACKED_IN_TRACKED_FOLDER" ""
+rm -f "$PTOPIC/implementation/bar-fix-reports.md"
 echo "round 2 verdict" >> "$PLOG"
 PRECOND=$(git status --porcelain -- ':(top)' ":(top,exclude)$PTOPIC/implementation/*")
 assert_eq "rule 2: modified implementation log reads clean" "$PRECOND" ""
