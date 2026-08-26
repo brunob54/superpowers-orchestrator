@@ -244,10 +244,16 @@ PIPE_PROMPT="Invoke the superpowers-orchestrator:multi-code-review skill on the 
 # and when the glob matches nothing `ls` exits 2, `pipefail` propagates that
 # through `wc`/`tr`, and `set -e` would abort the whole script instead of
 # letting the control report. Same idiom as line 99 of this file.
-PKG_COUNT_BEFORE=$(ls "$TEST_PROJECT"/.superpowers/sdd/review-*.diff 2>/dev/null | wc -l | tr -d ' ' || true)
+# The glob here is RELATIVE (cwd is already $TEST_PROJECT, set by Case 1's
+# "cd $TEST_PROJECT" above) because the after-run listings this snapshot is
+# compared against — (p5-control)/(p5-control2) below — use the same
+# relative glob after their own "cd $TEST_PROJECT". `comm -13` compares
+# these as plain strings, so an absolute path here would never match a
+# relative one there and every post-run package would be misreported as new.
+PKG_COUNT_BEFORE=$(ls .superpowers/sdd/review-*.diff 2>/dev/null | wc -l | tr -d ' ' || true)
 # Same snapshot, as a file listing rather than a count — (p5-control2) below
 # needs the actual NEW filenames, not just how many there are.
-PKGS_BEFORE=$(ls "$TEST_PROJECT"/.superpowers/sdd/review-*.diff 2>/dev/null || true)
+PKGS_BEFORE=$(ls .superpowers/sdd/review-*.diff 2>/dev/null || true)
 
 # Safety net (Case 2): re-snapshot the plugin repository immediately before
 # this case's agent call, same as assertion (e) does for Case 1. Case 1's
@@ -382,6 +388,17 @@ else
     # `review-<base7>..<head7>.diff`, so the text after `..` and before
     # `.diff` is the HEAD short SHA that package was built against.
     NEW_PKGS=$(comm -13 <(printf '%s\n' "$PKGS_BEFORE" | sort) <(ls .superpowers/sdd/review-*.diff 2>/dev/null | sort))
+    # (p5-control3) self-check: NEW_PKGS must hold exactly the packages this
+    # case added, no more and no less — this is what would have caught the
+    # before/after path-form mismatch this control used to have, where every
+    # pre-existing package was misreported as new. Confirm its entry count
+    # against the arithmetic difference between the two package-count
+    # snapshots above.
+    NEW_PKGS_COUNT=$(printf '%s\n' "$NEW_PKGS" | grep -c . || true)
+    if [ "$NEW_PKGS_COUNT" -ne $((PKG_COUNT - PKG_COUNT_BEFORE)) ]; then
+        echo "FAIL(p5-control3): NEW_PKGS has $NEW_PKGS_COUNT entries but PKG_COUNT ($PKG_COUNT) - PKG_COUNT_BEFORE ($PKG_COUNT_BEFORE) = $((PKG_COUNT - PKG_COUNT_BEFORE)) — the before/after package listings are not in the same form"
+        FAILURES=$((FAILURES+1))
+    fi
     FOUND_REVIEW_RANGE_PKG=0
     for PKG in $NEW_PKGS; do
         HEAD7=$(basename "$PKG" .diff | sed -E 's/^review-[0-9a-f]+\.\.//')

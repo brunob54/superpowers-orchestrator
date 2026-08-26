@@ -2323,7 +2323,9 @@ with:
 
 - [x] **Step 2: Add the TOPIC_DIR case to the multi-code-review behavioral test**
 
-In `tests/claude-code/test-multi-code-review.sh`, four edits. Every fenced block below is the file's text verbatim; a re-review compares them against the file.
+In `tests/claude-code/test-multi-code-review.sh`, four edits.
+
+_Note: the shipped suite in tests/claude-code/test-multi-code-review.sh is authoritative — review fixes on this branch changed the Case 2 checks (exact-subject (p3a)/(p3b), an ungated (p5-control) and a (p5-control2) range check) that this embedded copy does not show._
 
 (a) Extend the header comment — after the Case 1 assertion list — with the Case 2 assertions:
 

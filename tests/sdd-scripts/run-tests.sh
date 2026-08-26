@@ -441,12 +441,26 @@ assert_file_not_contains "blinding: review file names absent from the stat summa
 echo "SECRETFINDING round 2 verdict" >> docs/superpowers-orchestrator/2026-08-25-foo/implementation/foo-review-log.md
 git add -A && git commit --quiet -m "chore(review): foo round 2 log"
 BLIND_HEAD2=$(git rev-parse HEAD)
-BPKG2=$("$SCRIPTS/review-package" "$BLIND_BASE" "$BLIND_HEAD2" 2>/dev/null | sed 's/^wrote //; s/:.*$//')
+BLIND_OUT2=$("$SCRIPTS/review-package" "$BLIND_BASE" "$BLIND_HEAD2" 2>/dev/null)
+BPKG2=$(printf '%s\n' "$BLIND_OUT2" | sed 's/^wrote //; s/:.*$//')
 # Positive control: without it, a missing or empty $BPKG2 would make the
 # negative assertion below report PASS for the wrong reason (grep can't read
 # the file), so assert visible source is actually present first.
 assert_file_contains "blinding: ordinary source still visible in the commit-list check" "$BPKG2" "VISIBLESOURCE"
+# Positive control on the `## Commits` section itself: the assertions above
+# key on the diff body, not this section, so a regression where
+# `git log --oneline` prints nothing for this range would still pass them.
+# Assert the visible commit's own subject appears here before checking that
+# the review-only commit's subject does not.
+assert_file_contains "blinding: ordinary commit's own subject appears in the commit list" "$BPKG2" "feature plus review material"
 assert_file_not_contains "blinding: review-only commit absent from the commit list" "$BPKG2" "chore(review)"
+# The printed summary line is also a blinding surface: `git rev-list --count`
+# uses the same blind pathspecs, so a regression that counted the
+# chore(review) commit anyway would go unnoticed since the test discards this
+# line. $BLIND_HEAD2 adds exactly one commit that touches only blinded paths,
+# so the pathspec-limited count over $BLIND_BASE..$BLIND_HEAD2 must stay 1.
+BLIND_COUNT2=$(printf '%s\n' "$BLIND_OUT2" | sed -E 's/.*: ([0-9]+) commit\(s\).*/\1/')
+assert_eq "blinding: printed commit count excludes the review-only commit" "$BLIND_COUNT2" "1"
 
 # --commits mode must be blinded too. The spec requires blinding in BOTH
 # modes, and the wave-execution path uses this one. Same commit, addressed by
@@ -561,6 +575,10 @@ echo "round 1 verdict" > "$PLOG"
 # to hide that collapsed line, or the very first pipeline invocation for a
 # topic would read dirty.
 PRECOND_UNTRACKED_FOLDER=$(git status --porcelain -- ':(top)' ":(top,exclude)$PTOPIC/implementation/*")
+# Positive control: without it, an ignored or never-created topic folder
+# would also read clean above for the wrong reason. Confirm the untracked
+# folder is actually visible to `git status` when the exclusion is dropped.
+assert_eq "rule 2 positive control: without the exclusion, the untracked topic folder is visible" "$(git status --porcelain -- ':(top)')" "?? $PTOPIC/"
 assert_eq "rule 2: brand-new topic folder (untracked, collapsed to one line) reads clean" "$PRECOND_UNTRACKED_FOLDER" ""
 echo "staged by the user" > user-staged.txt
 git add user-staged.txt
@@ -580,6 +598,10 @@ git commit --quiet -m "keep the user file out of the way" -- user-staged.txt
 # untracked file too, not only a modification to the already-tracked log.
 echo "not yet staged" > "$PTOPIC/implementation/bar-fix-reports.md"
 PRECOND_UNTRACKED_IN_TRACKED_FOLDER=$(git status --porcelain -- ':(top)' ":(top,exclude)$PTOPIC/implementation/*")
+# Positive control: without it, an ignored or never-created fix-reports file
+# would also read clean above for the wrong reason. Confirm the untracked
+# file is actually visible to `git status` when the exclusion is dropped.
+assert_eq "rule 2 positive control: without the exclusion, the untracked fix-reports file is visible" "$(git status --porcelain -- ':(top)')" "?? $PTOPIC/implementation/bar-fix-reports.md"
 assert_eq "rule 2: untracked file in an already-tracked implementation folder reads clean" "$PRECOND_UNTRACKED_IN_TRACKED_FOLDER" ""
 rm -f "$PTOPIC/implementation/bar-fix-reports.md"
 echo "round 2 verdict" >> "$PLOG"
