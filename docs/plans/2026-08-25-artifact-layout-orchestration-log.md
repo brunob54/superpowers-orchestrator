@@ -79,3 +79,5 @@ Owed to the user (Task 22 Step 10, not runnable by an autonomous executor): push
 ## STOPPED — 2026-08-25 — phase 4 — 2 unresolved and 5 user-decision findings; Phase 5 and branch integration not reached
 Detail: .superpowers/reviews/feature-artifact-layout-review-log.md
 Resume: Resume orchestration for docs/plans/2026-08-25-artifact-layout.md
+
+_Invocation 2 — 2026-08-26 — resumed — eight Phase 4 findings decided by the orchestrator on the user's delegation (D1-D8; two functional pathspec bugs reproduced on git 2.50.1 before deciding); fixes d088ce7, f68b103, 9cfe4c7, 2b56db5; D6 (behavioral re-run) stays owed to the user. Phase 4 re-dispatched over BASE 0169f0e with N_code=4 unchanged._
