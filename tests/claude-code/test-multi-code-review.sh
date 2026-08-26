@@ -23,12 +23,18 @@
 #   (p2) that log is committed, not left untracked
 #   (p3) at least one chore(review) commit per round
 #   (p4) the working tree is clean at the end (test transcripts excluded)
-#   (p5) reviewer blinding: no review package contains the log's own path
+#   (p5) reviewer blinding: no review package contains the path of the log
+#        or of the fix-reports file
 #   (p5-control) positive control for (p5): at least 2 new review packages
 #        were written during Case 2, so (p5) actually examined a package
 #        built after round 1's chore(review) log commit existed — gated on
 #        round 1 having produced a "review fixes (" commit, since otherwise
 #        round 2 legitimately reuses round 1's package name
+#   (p6) when round 1 produced a fix commit, the fix-reports file exists
+#        under TOPIC_DIR/implementation, and (p7) it is committed
+#   (setup) Case 2 starts on a clean tree and a fresh branch from the base
+#        commit; a failure there is recorded like any other assertion and
+#        the summary still prints (see the guard before Case 2)
 #
 # Requires the INSTALLED plugin to include multi-code-review — reinstall the
 # plugin cache after editing skills/ before running this.
@@ -42,6 +48,27 @@ source "$SCRIPT_DIR/test-helpers.sh"
 
 TEST_PROJECT=$(create_test_project)
 trap "cleanup_test_project '$TEST_PROJECT'" EXIT
+
+# Uncommitted changes in the test project, transcripts excluded. The project
+# is a bare `mktemp -d` + `git init` with no .gitignore, and both cases write
+# their `claude -p` transcript into it (`output.txt`, `output-pipeline.txt`).
+# Those transcripts are test scaffolding, not a product of the loop, so a
+# check that counted them would fail on every run whatever the skill does.
+project_dirt() {
+    git status --porcelain -- ':(top)' ':(top,exclude,glob)output*.txt'
+}
+
+# Print the summary and exit. On failure the EXIT trap is disarmed first, so
+# the project and its transcripts survive for debugging.
+finish() {
+    if [ "$FAILURES" -eq 0 ]; then
+        echo "PASS: multi-code-review behavioral test"
+        exit 0
+    fi
+    trap - EXIT
+    echo "FAILED: $FAILURES assertion(s); project kept for debugging: $TEST_PROJECT (transcripts in output.txt and output-pipeline.txt — clean up manually)"
+    exit 1
+}
 
 cd "$TEST_PROJECT"
 git init --quiet
@@ -163,7 +190,26 @@ fi
 # chore(review) commit per round, and the review package the log names must
 # not contain the log's own text (reviewer blinding).
 
-git checkout --quiet -b feature-pipeline-review "$BASE_SHA"
+# Guard the branch switch. This script runs under `set -euo pipefail`, so a
+# `git checkout` that fails here — a dirty tree left by Case 1 that the
+# checkout would overwrite, or a branch of the same name that already exists —
+# would abort the script before the summary prints, and the EXIT trap would
+# delete the project with its transcripts. Record each condition as a numbered
+# setup failure instead and, since Case 2 must start from $BASE_SHA on a fresh
+# branch and a clean tree, go straight to the summary when it cannot.
+SETUP_DIRT=$(project_dirt)
+if [ -n "$SETUP_DIRT" ]; then
+    echo "FAIL(setup): working tree not clean after Case 1 — Case 2 cannot start from a clean $BASE_SHA:"
+    echo "$SETUP_DIRT"
+    FAILURES=$((FAILURES+1))
+    finish
+fi
+if ! CHECKOUT_ERROR=$(git checkout --quiet -b feature-pipeline-review "$BASE_SHA" 2>&1); then
+    echo "FAIL(setup): could not create branch feature-pipeline-review from $BASE_SHA:"
+    echo "$CHECKOUT_ERROR"
+    FAILURES=$((FAILURES+1))
+    finish
+fi
 cat > sum.js << 'DEFECT2_EOF'
 function sumFirstN(arr, n) {
   // BUG (planted, blatant): off-by-one reads past n and past the array end
@@ -264,13 +310,9 @@ else
         echo "FAIL(p3): expected at least 2 chore(review) commits, found $REVIEW_COMMITS"
         FAILURES=$((FAILURES+1))
     fi
-    # (p4) the working tree is clean at the end.
-    # The test project is a bare `mktemp -d` + `git init` with no .gitignore,
-    # and both cases write their `claude -p` transcript into it
-    # (`output.txt`, `output-pipeline.txt`). Those transcripts are test
-    # scaffolding, not a product of the loop, so exclude them — otherwise this
-    # assertion fails on every run whatever the skill does.
-    DIRT=$(git status --porcelain -- ':(top)' ':(top,exclude,glob)output*.txt')
+    # (p4) the working tree is clean at the end (transcripts excluded — see
+    #      project_dirt above).
+    DIRT=$(project_dirt)
     if [ -n "$DIRT" ]; then
         echo "FAIL(p4): working tree not clean after the pipeline-mode loop:"
         echo "$DIRT"
@@ -311,20 +353,31 @@ else
             echo "FAIL(p5-control): fewer than 2 new review packages under .superpowers/sdd/ (before Case 2: $PKG_COUNT_BEFORE, after: $PKG_COUNT) — round 2 did not regenerate after round 1's chore(review) log commit, so the blinding assertion examined only packages built before the log existed"
             FAILURES=$((FAILURES+1))
         fi
-    fi
-    for PKG in .superpowers/sdd/review-*.diff; do
-        [ -f "$PKG" ] || continue
-        if grep -q 'sum-fix-review-log.md' "$PKG"; then
-            echo "FAIL(p5): review package $PKG contains the review log path — the reviewer was not blinded"
+        # (p6)/(p7) a round that dispatched a fix subagent also wrote the
+        # fix-reports file next to the log, and committed it — the skill
+        # commits "<log> [<fix reports>]" together in the chore(review) commit.
+        # Gated on the same condition: without a fix commit there is no fix
+        # report to write.
+        PIPE_FIX_REPORTS="$TOPIC_DIR/implementation/sum-fix-fix-reports.md"
+        if [ ! -f "$PIPE_FIX_REPORTS" ]; then
+            echo "FAIL(p6): round 1 produced a fix commit but $PIPE_FIX_REPORTS does not exist"
+            FAILURES=$((FAILURES+1))
+        elif ! git ls-files --error-unmatch "$PIPE_FIX_REPORTS" > /dev/null 2>&1; then
+            echo "FAIL(p7): the pipeline-mode fix-reports file is not tracked in the branch"
             FAILURES=$((FAILURES+1))
         fi
+    fi
+    # The fix-reports file quotes what each fix subagent did, so it must be
+    # blinded the same way as the log: both paths are needles here.
+    for PKG in .superpowers/sdd/review-*.diff; do
+        [ -f "$PKG" ] || continue
+        for NEEDLE in sum-fix-review-log.md sum-fix-fix-reports.md; do
+            if grep -q "$NEEDLE" "$PKG"; then
+                echo "FAIL(p5): review package $PKG contains $NEEDLE — the reviewer was not blinded"
+                FAILURES=$((FAILURES+1))
+            fi
+        done
     done
 fi
 
-if [ "$FAILURES" -eq 0 ]; then
-    echo "PASS: multi-code-review behavioral test"
-else
-    trap - EXIT
-    echo "FAILED: $FAILURES assertion(s); project kept for debugging: $TEST_PROJECT (transcripts in output.txt and output-pipeline.txt — clean up manually)"
-    exit 1
-fi
+finish
