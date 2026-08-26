@@ -26,6 +26,9 @@ assert_file_contains() { # desc file needle
 assert_file_not_contains() { # desc file needle
   if grep -qF -- "$3" "$2"; then bad "$1 (must not contain: $3)"; else ok "$1"; fi
 }
+assert_file_matches() { # desc file extended-regex
+  if grep -qE -- "$3" "$2"; then ok "$1"; else bad "$1 (no match for: $3)"; fi
+}
 # sdd-workspace's arg-less stderr backstops (scoping line / legacy warning) and
 # its archive notices are asserted from $ERRF, not left to scroll past a green
 # run. Capture with `2>"$ERRF"` at the call site, then assert here.
@@ -422,6 +425,14 @@ assert_file_contains "blinding: implementation/ folder outside the plugin folder
 # `--stat` is un-blinded passes every one of them while still listing
 # `…/implementation/foo-review-log.md` to the reviewer. This assertion keys on
 # the path, so it is the only one that reaches the `--stat` edit in Step 3.
+# It is negative-only: if the whole `## Files changed` section were dropped,
+# or its command broke, the needle would also be absent and this would still
+# pass for the wrong reason. Pair it with a positive control on blind-src.txt
+# (short, so `--stat` never abbreviates it, unlike the long
+# implementation/code.js path). The regex tolerates `--stat`'s column
+# padding, which varies with how many files are in the diff — this suite
+# reuses one repo across every section, so that count is not fixed.
+assert_file_matches "blinding: a visible file's stat line is present" "$BPKG" 'blind-src\.txt +\| +[0-9]+ \+'
 assert_file_not_contains "blinding: review file names absent from the stat summary" "$BPKG" "implementation/foo-review-log.md"
 
 # A commit that touches ONLY review material must not appear in the commit
@@ -459,12 +470,15 @@ assert_file_not_contains "blinding (--commits): markdown under implementation/ h
 assert_file_contains "blinding (--commits): non-markdown file under implementation/ visible" "$BLIND_CPKG" "VISIBLEIMPLJS"
 assert_file_contains "blinding (--commits): *-review-log.md outside the plugin folder visible" "$BLIND_CPKG" "VISIBLENOTES"
 assert_file_contains "blinding (--commits): implementation/ folder outside the plugin folder visible" "$BLIND_CPKG" "VISIBLESRCIMPL"
-# Same reasoning for `git show --stat` in --commits mode.
+# Same reasoning for `git show --stat` in --commits mode, paired with the
+# same positive control.
+assert_file_matches "blinding (--commits): a visible file's stat line is present" "$BLIND_CPKG" 'blind-src\.txt +\| +[0-9]+ \+'
 assert_file_not_contains "blinding (--commits): review file names absent from the stat summary" "$BLIND_CPKG" "implementation/foo-review-log.md"
 # Positive control: the package's `## Commits` section must name THIS commit's
-# own subject. Without this, a regression that substitutes an unrelated
-# ancestor's subject (history simplification walking past a blinded diff)
-# would go undetected — see V1.
+# own subject. $BLIND_HEAD's own diff already touches visible paths (e.g.
+# VISIBLESOURCE), so `git log -1 --no-walk` finds a match at the commit
+# itself and this holds whether or not `--no-walk` is present — the
+# assertion on $BLIND_CPKG2 below is the one that isolates the walk.
 assert_file_contains "blinding (--commits): ordinary commit's own subject appears in the commit list" "$BLIND_CPKG" "feature plus review material"
 
 # The commit list must be blinded in --commits mode too: a commit touching
@@ -478,6 +492,18 @@ BLIND_CPKG2="$WS/blind-from-commits-2.diff"
 # the file), so assert the package header is actually present first.
 assert_file_contains "blinding (--commits): review-only package still has its header" "$BLIND_CPKG2" "# Review package (explicit commits)"
 assert_file_not_contains "blinding (--commits): review-only commit absent from the commit list" "$BLIND_CPKG2" "chore(review)"
+# Discriminating control: $BLIND_HEAD2 touches ONLY review material, which
+# the pathspecs exclude, so `git log -1 --no-walk` finds no match at the
+# commit itself and prints nothing here. Without `--no-walk`
+# (review-package:71), `git log -1` would instead walk past this blinded
+# commit to the previous one that DOES touch a visible path — $BLIND_HEAD —
+# and print ITS subject, "feature plus review material", here. The assertion
+# above (on $BLIND_CPKG) cannot catch this: $BLIND_HEAD's own diff already
+# matches the pathspec, so it passes with or without `--no-walk`. A
+# regression that substitutes an unrelated ancestor's subject (history
+# simplification walking past a blinded diff) would go undetected without
+# this assertion — see V1.
+assert_file_not_contains "blinding (--commits): review-only package does not leak an ancestor's subject via history walk" "$BLIND_CPKG2" "feature plus review material"
 
 # Run from a subdirectory and assert on the package CONTENT, not on the exit
 # status: `review-package` exits 0 from anywhere, with or without the
