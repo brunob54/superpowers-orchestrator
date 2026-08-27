@@ -2403,9 +2403,9 @@ _Note: the shipped suite in tests/claude-code/test-multi-code-review.sh is autho
 #        select pipeline mode exclusively, not run both modes
 #   (p2) that log is committed, not left untracked
 #   (h3) the completion marker records the effective HEAD (Pipeline rule 4,
-#        SKILL.md): a real commit, not a chore(review) log commit, equal to
-#        the path-limited `git log -1` lookup over BASE..HEAD with the
-#        blinding pathspecs read out of review-package
+#        SKILL.md): a real commit, equal to the path-limited `git log -1`
+#        lookup over BASE..HEAD with the blinding pathspecs read out of
+#        review-package
 #   (p3) each round's chore(review) log commit has the exact subject
 #        "chore(review): <slug> round <i> log" (Pipeline rule 1, SKILL.md)
 #   (p4) the working tree is clean at the end (test transcripts excluded)
@@ -2591,13 +2591,11 @@ else
     # in skills/multi-code-review/SKILL.md): the newest commit in BASE..HEAD
     # that changes at least one path outside the blinding pathspec set. The
     # raw HEAD at marker time is the round's own chore(review) log commit and
-    # would never match a later once-per-gate comparison. Three checks: the
-    # marker names a real commit, that commit is not a chore(review) log
-    # commit, and it equals the path-limited lookup computed here. The
-    # subject check is specific to this fixture: the seeded branch carries no
-    # `chore(review):`-titled commit of its own, so every commit with that
-    # subject is one of the loop's log commits, and a marker naming one is
-    # the raw HEAD. (Rule 4 itself keys on content, not on the subject.) The
+    # would never match a later once-per-gate comparison. Two checks: the
+    # marker names a real commit, and it equals the path-limited lookup
+    # computed here. A log commit touches only blinded paths, so the
+    # content-based effective HEAD can never be the log commit itself — that
+    # is what (h3b) proves. The
     # pathspec set is read out of review-package itself — the set a script
     # actually executes — so this check follows the set instead of retyping
     # it. `|| true` keeps `set -e` from aborting the run when (h2) already
@@ -2607,24 +2605,18 @@ else
         echo "FAIL(h3a): the completion marker's HEAD '$MARKER_SHA' is not a commit in the test project"
         FAILURES=$((FAILURES+1))
     else
-        MARKER_SUBJECT=$(git log -1 --format=%s "$MARKER_SHA")
-        case "$MARKER_SUBJECT" in
-            "chore(review): "*)
-                echo "FAIL(h3b): the completion marker records a chore(review) log commit ('$MARKER_SUBJECT') — the raw HEAD, not the effective HEAD"
-                FAILURES=$((FAILURES+1)) ;;
-        esac
         BLIND_PATHSPECS=()
         while IFS= read -r ENTRY; do
             BLIND_PATHSPECS+=("$ENTRY")
         done < <(sed -n '/^blind_pathspecs=($/,/^)$/p' "$PLUGIN_DIR/skills/subagent-driven-development/scripts/review-package" | grep -oE "':[^']*'" | sed "s/^'//; s/'\$//")
         if [ "${#BLIND_PATHSPECS[@]}" -eq 0 ]; then
-            echo "FAIL(h3c): could not read blind_pathspecs out of review-package — the effective HEAD cannot be computed"
+            echo "FAIL(h3b): could not read blind_pathspecs out of review-package — the effective HEAD cannot be computed"
             FAILURES=$((FAILURES+1))
         else
             EXPECTED_EFFECTIVE_HEAD=$(git log -1 --full-history --format=%H "$BASE_SHA..HEAD" -- "${BLIND_PATHSPECS[@]}")
             [ -n "$EXPECTED_EFFECTIVE_HEAD" ] || EXPECTED_EFFECTIVE_HEAD=$(git rev-parse "$BASE_SHA")
             if [ "$(git rev-parse "$MARKER_SHA")" != "$EXPECTED_EFFECTIVE_HEAD" ]; then
-                echo "FAIL(h3c): the completion marker records $MARKER_SHA but the effective HEAD of $BASE_SHA..HEAD is $EXPECTED_EFFECTIVE_HEAD"
+                echo "FAIL(h3b): the completion marker records $MARKER_SHA but the effective HEAD of $BASE_SHA..HEAD is $EXPECTED_EFFECTIVE_HEAD"
                 FAILURES=$((FAILURES+1))
             fi
         fi
