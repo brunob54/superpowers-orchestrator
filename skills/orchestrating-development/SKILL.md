@@ -82,6 +82,9 @@ the same question batch below).
    `skills/brainstorming/SKILL.md`) — a spec outside the layout, an old
    flat-directory spec path included, is a pre-log stop: report the expected
    location `docs/superpowers-orchestrator/<date>-<slug>/specs/<slug>-design.md`
+   — `<slug>` = the spec basename with `YYYY-MM-DD-`, `-design` and `.md`
+   stripped, each only if present, then normalized by the "Slug" rule in
+   the "Artifact Layout" section of `skills/brainstorming/SKILL.md` —
    and tell the user to `git mv` the spec and, when it exists, its
    `-review-log.md` sidecar there, naming both destination paths
    (`specs/<slug>-design.md` and `specs/<slug>-design-review-log.md`). The
@@ -153,13 +156,17 @@ the same question batch below).
    — never derived from the spec basename. If the branch exists: locate the
    existing orchestration log with the glob
    `docs/superpowers-orchestrator/????-??-??-<slug>/<slug>-orchestration-log.md`.
-   Zero matches → no prior run. Exactly one match → compare its recorded spec
-   path with the invoked spec: same spec → report "prior run", suggest the
-   resume prompt; different/missing → report "unrelated prior run with the
-   same slug", tell the user to rename the spec or clear the old branch. More
-   than one match → stop with "ambiguous slug: <folders>" (slug uniqueness is
-   violated; the user must merge or rename before any run). Stop in every case
-   except zero matches.
+   Zero matches → stop with "branch feature/<slug> exists but no
+   orchestration log was found: rename the spec or delete the branch" (a
+   `git checkout -b` onto the existing branch fails, and switching to it
+   would run on a branch whose state was never checked). Exactly one match →
+   compare its recorded spec path with the invoked spec: same spec → report
+   "prior run", suggest the resume prompt; different/missing → report
+   "unrelated prior run with the same slug", tell the user to rename the spec
+   or clear the old branch. More than one match → stop with "ambiguous slug:
+   <folders>" (slug uniqueness is violated; the user must merge or rename
+   before any run). Stop in every case: only a branch that does not exist
+   yet is created.
 6. **Commit inputs:** if the spec/sidecar were dirty in step 4, commit them
    (`docs(spec): <slug> design`).
 7. **Log:** create `<topic folder>/<slug>-orchestration-log.md` — at the topic

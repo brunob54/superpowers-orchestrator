@@ -191,7 +191,10 @@ Definitions:
 - Spec outside the layout (section 7): writing-plans does not write a
   plan next to a spec that is outside the layout. It computes `<slug>` =
   the spec basename with `YYYY-MM-DD-`, `-design` and `.md` stripped, each
-  only if present, names the expected location
+  only if present, then normalized by the "Slug" rule of section 4 (the
+  same normalization brainstorming applies to a topic name; without it a
+  basename such as `MyFeature-design.md` never satisfies the layout check
+  and the move offer repeats on every run), names the expected location
   `docs/superpowers-orchestrator/<today>-<slug>/specs/<slug>-design.md`
   (an existing `????-??-??-<slug>/` folder is reused instead, slug uniqueness), and
   asks the user once whether to move the spec there. On yes: `mkdir -p`
@@ -267,12 +270,16 @@ Definitions:
   `plan-writer-prompt.md:62` (output plan path), Phase 5 step 3 (reports
   the code review log path — now `<topic folder>/implementation/…`), and
   the Phase 1 plan-path sentence (`docs/plans/YYYY-MM-DD-<slug>.md`).
-- Prior-run detection and resume: glob
+- Prior-run detection and resume, when `feature/<slug>` already exists:
+  glob
   `docs/superpowers-orchestrator/????-??-??-<slug>/<slug>-orchestration-log.md`.
-  Zero matches → no prior run. One match → compare its recorded spec path
-  with the invoked spec, as today. More than one match → stop with
-  "ambiguous slug: <folders>" (slug uniqueness violated; the user must
-  merge or rename before any run).
+  Zero matches → stop with "branch feature/<slug> exists but no
+  orchestration log was found: rename the spec or delete the branch". One
+  match → compare its recorded spec path with the invoked spec, as today.
+  More than one match → stop with "ambiguous slug: <folders>" (slug
+  uniqueness violated; the user must merge or rename before any run). The
+  run stops in every case; only a branch that does not exist yet is
+  created.
 - Log: `<topic folder>/<slug>-orchestration-log.md`, created in step 7,
   committed as today. The log header records the spec path and the plan
   path in the new form.

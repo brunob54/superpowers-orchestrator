@@ -42,7 +42,11 @@ cover" note states. The invariant this protects: every plan lives in a topic fol
 together with its spec.
 
 1. Compute `<slug>` = the spec basename with `YYYY-MM-DD-`, `-design` and
-   `.md` stripped, each only if present.
+   `.md` stripped, each only if present, then normalized by the "Slug" rule
+   in the "Artifact Layout" section of `skills/brainstorming/SKILL.md` (the
+   same normalization brainstorming applies to a topic name). Without it, a
+   basename such as `MyFeature-design.md` yields a folder name that fails
+   the layout check, and the offer below repeats on every run.
 2. Name the expected location:
    `docs/superpowers-orchestrator/<today>-<slug>/specs/<slug>-design.md`. If a
    folder matching `docs/superpowers-orchestrator/????-??-??-<slug>/` already
