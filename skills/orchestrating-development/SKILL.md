@@ -90,13 +90,15 @@ the same question batch below).
    git does not track yet), naming both destination paths
    (`specs/<slug>-design.md` and `specs/<slug>-design-review-log.md`). When
    that spec belongs to a run that stopped under the pre-7.3.0 layout — a
-   plan or an orchestration log for it exists at the old flat paths — point
+   plan or an orchestration log for it exists at the old flat paths (a
+   `<date>-<slug>.md` plan or a `<date>-<slug>-orchestration-log.md` log in
+   the former flat plans directory) — point
    to the migration recipe in the v7.3.0 release note instead: it moves
    every document of the run, not only the spec. The
    orchestrator never moves files itself and never asks a question after
    Phase 0. Then test the computed log path (step 7) FIRST, before the plan
    path. The log exists → a prior orchestration of this slug. Do NOT stop
-   with a bare "already exists"; apply step 5's recorded-spec comparison
+   with a bare "already exists"; apply the recorded-spec comparison
    here — read the spec path from the most recent `_Invocation` line that
    records one (a resumed override line, `_Invocation <k> — … — resumed_`,
    records no spec path — the per-parameter rule of Resume step 5):
@@ -404,10 +406,15 @@ Trigger: `Resume orchestration for <plan-or-spec path>`.
    after the stop — re-dispatch Phase 4 whether or not the resume prompt
    carries answers: the controller ALWAYS starts a new invocation over the
    new content, journaling the addendum first when answers are present. An
-   answer never requests a re-review by itself. Present the question and
-   stop ONLY when the effective HEAD is unchanged AND the resume prompt
-   gives no answers (a re-dispatch in that state would return BLOCKED —
-   never a silent no-op).
+   answer never requests a re-review by itself. If no review log exists at
+   `<topic folder>/implementation/<slug>-review-log.md` — a run migrated
+   from the pre-7.3.0 layout and stopped in Phase 4: its old log was
+   untracked and is not migrated — re-dispatch Phase 4 without answers
+   (the stop's open items belong to that old log); the controller starts
+   invocation 1. Present the question and stop ONLY when the review log
+   exists, the effective HEAD is unchanged AND the resume prompt gives no
+   answers (a re-dispatch in that state would return BLOCKED — never a
+   silent no-op).
 4. Otherwise continue at the first incomplete phase/batch. Your own log's
    phase entries are the primary re-run guard; the sub-skills' logs are
    the backstop.

@@ -59,8 +59,9 @@ the code review history was never committed. Finding, archiving, or deleting
   lets a re-dispatched controller reuse a finished review instead of running
   it again — now applies only when the recorded invocation ended with
   `unresolved = 0` and `user_decision = 0`; with open items, no answers and
-  no new code since the stop, the controller stops with a request for
-  answers (`BLOCKED: … resume with answers`) instead of re-running; code
+  no new code since the stop, the orchestrator re-presents the open items
+  and stops (Resume step 3) — a controller dispatched in that state returns
+  `BLOCKED: … resume with answers` only as the retry backstop; code
   committed after the stop re-runs the review on resume, with or without
   answers.
 - **A skipped review is committed too.** In pipeline mode an N=0 run writes
@@ -93,9 +94,10 @@ token in the invocation entry would add state for nothing.
 stopped before this release keeps its documents at the old flat paths, and
 neither `orchestrate` nor `Resume orchestration` finds them there: the
 orchestrator stops at intake because the old spec or plan path is outside
-the layout, or at resume because no orchestration log is found in the
-layout, and each of those stops points here. Move the documents by hand,
-then resume:
+the layout, at the branch check because the branch exists but no
+orchestration log is found in the layout (only the spec was moved), or at
+resume because no orchestration log is found in the layout, and each of
+those stops points here. Move the documents by hand, then resume:
 
 1. Create `docs/superpowers-orchestrator/<date>-<slug>/` with the
    sub-folders `specs/` and `plans/` — `<date>` is the run's start date and

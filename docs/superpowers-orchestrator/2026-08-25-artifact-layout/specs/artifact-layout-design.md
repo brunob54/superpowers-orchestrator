@@ -330,8 +330,13 @@ Definitions:
   code was committed after the stop — Phase 4 is re-dispatched with or
   without answers, and the controller ALWAYS starts a new invocation over
   the new content (with answers, the addendum is journaled and committed
-  first). Resume presents the question and stops only when the effective
-  HEAD is unchanged AND no answers were given. Without answers, a
+  first). When no review log exists at `<topic folder>/implementation/` —
+  a run migrated from the pre-7.3.0 layout and stopped in Phase 4, whose
+  untracked old log is not migrated (section 8) — Resume step 3
+  re-dispatches Phase 4 without answers and the controller starts
+  invocation 1. Resume presents the question and stops only when the
+  review log exists, the effective HEAD is unchanged AND no answers were
+  given. Without answers, a
   re-dispatch over an unchanged effective HEAD returns `BLOCKED` (section
   5.6, rule 4) — never a silent no-op. The addendum is idempotent, because
   a retry after a lost return carries the same answers again: an answered
@@ -426,7 +431,9 @@ Definitions:
      invoker are journaled idempotently (an id already decided is skipped,
      a fix already committed is not dispatched again), and a new
      invocation starts only when the effective HEAD has moved past the
-     completion marker (section 5.4, "Phase 4 stop and resume").
+     completion marker (section 5.4, "Phase 4 stop and resume"); a latest
+     entry without a completion marker is an interrupted invocation,
+     resumed at its next round and never followed by a further entry.
 - Without `TOPIC_DIR` (direct mode): exactly today's behavior —
   `.superpowers/reviews/<branch-slug>-review-log.md`,
   `<branch-slug>-fix-reports.md`, `.gitignore` containing `*`, nothing

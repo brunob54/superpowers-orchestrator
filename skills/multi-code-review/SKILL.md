@@ -536,10 +536,11 @@ rule 1); an item decided without a code change no longer counts as
 unresolved or user-decision; an accepted finding follows the
 finding-governs path above. An answer never requests a re-review by itself:
 when the effective HEAD (Pipeline rule 4) has moved past that entry's
-completion marker — code was committed after the stop — the controller
-ALWAYS starts a new invocation entry once the addendum is committed, with
-or without answers; over an unchanged effective HEAD no new invocation
-runs. The addendum is idempotent, because a retry after a lost return
+completion marker (compared before the addendum is written) — code was
+committed after the stop — the controller ALWAYS starts a new invocation
+entry once any addendum is committed, with or without answers; over an
+unchanged effective HEAD no new invocation runs. The addendum is
+idempotent, because a retry after a lost return
 carries the same answers again: an id that already holds a `decided
 (user)` line is skipped, and an accepted fix whose fix commit already
 exists (found in `git log` by the `<sha>` the `fixed` line records or by

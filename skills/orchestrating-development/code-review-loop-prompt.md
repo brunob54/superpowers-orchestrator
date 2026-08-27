@@ -100,19 +100,25 @@ Agent tool (general-purpose):
        entry, named by their review-log ids. The CURRENT entry is the
        LATEST `_Invocation` entry in the review log — the last one in file
        order — never an older entry selected by its BASE (every entry of
-       one orchestration run carries the same BASE). First decide whether
-       a new invocation is due: compute the effective HEAD (Pipeline rule
-       4) and compare it with that entry's completion-marker HEAD; it has
-       moved when code was committed after the stop. Then append a
-       post-loop addendum to that entry recording, for each item the
-       answer names, the disposition `decided (user): <answer>`. An item
-       the answer resolves without a code change leaves the `unresolved`
-       and `user_decision` counts of your return; an item the answer
-       accepts as a finding to fix follows the skill's "Resolving
-       user-decision and unresolved items" rule (one fix subagent, one
-       verification re-review, `fixed — <summary> → <sha>` disposition in
-       the same addendum). Commit the addendum under Pipeline rule 1 with
-       subject `chore(review): <slug> decisions`. When the effective HEAD
+       one orchestration run carries the same BASE). A latest entry
+       WITHOUT a completion marker is an interrupted invocation: resume
+       it at its next round under Deviation 2; no further entry is
+       started. Otherwise, first decide whether a new invocation is due:
+       compute the effective HEAD (Pipeline rule 4) and compare it with
+       that entry's completion-marker HEAD, before the addendum is
+       written; it has moved when code was committed after the stop.
+       Then append a post-loop addendum to that entry recording, for
+       each item the answer names, the disposition
+       `decided (user): <answer>`. An item the answer resolves without a
+       code change leaves the `unresolved` and `user_decision` counts of
+       your return; an item the answer accepts as a finding to fix
+       follows the skill's "Resolving user-decision and unresolved items"
+       rule (one fix subagent, one verification re-review,
+       `fixed — <summary> → <sha>` disposition in the same addendum).
+       When the effective HEAD had moved, skip that verification
+       re-review: the new invocation that always follows reviews the fix.
+       Commit the addendum under Pipeline rule 1 with subject
+       `chore(review): <slug> decisions`. When the effective HEAD
        had moved past the marker — new code after the stop — the
        controller ALWAYS starts a new invocation entry over the current
        effective HEAD once the addendum is committed — the completion

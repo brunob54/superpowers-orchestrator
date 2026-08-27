@@ -1462,8 +1462,9 @@ resumable/in-progress entry for the sentinel.
   decided without a code change leaves the counts; an accepted finding
   follows the finding-governs path; an answer never requests a re-review by
   itself — the controller ALWAYS starts a new invocation when the effective
-  HEAD has moved past the entry's completion marker, with or without
-  answers, and never over an unchanged effective HEAD; and the addendum is
+  HEAD has moved past the entry's completion marker (compared before the
+  addendum is written), with or without answers, and never over an
+  unchanged effective HEAD; and the addendum is
   idempotent (an id already decided is skipped, a fix already committed is
   not dispatched again).
 - **The skipped entry is committed.** The log-format paragraph's sentence
@@ -1683,7 +1684,7 @@ is the git contract the skill text now depends on. Step 2 therefore expects
 
 _Note: the shipped suite in tests/sdd-scripts/run-tests.sh is authoritative — review fixes on this branch added assertions (positive controls, the --commits review-only package, the SKILL.md drift checks, the TOPIC_DIR regex section) that this embedded copy does not show._
 
-The four SKILL.md drift checks that review fixes added after this task
+Four of the SKILL.md drift checks that review fixes added after this task
 (none of which the embedded copy below shows) each pin one sentence of
 `skills/multi-code-review/SKILL.md` with `assert_file_contains`, so a later
 edit of the skill that drops the sentence fails this suite: (1) Pipeline
@@ -1988,13 +1989,15 @@ with:
    git does not track yet), naming both destination paths
    (`specs/<slug>-design.md` and `specs/<slug>-design-review-log.md`). When
    that spec belongs to a run that stopped under the pre-7.3.0 layout — a
-   plan or an orchestration log for it exists at the old flat paths — point
+   plan or an orchestration log for it exists at the old flat paths (a
+   `<date>-<slug>.md` plan or a `<date>-<slug>-orchestration-log.md` log in
+   the former flat plans directory) — point
    to the migration recipe in the v7.3.0 release note instead: it moves
    every document of the run, not only the spec. The
    orchestrator never moves files itself and never asks a question after
    Phase 0. Then test the computed log path (step 7) FIRST, before the plan
    path. The log exists → a prior orchestration of this slug. Do NOT stop
-   with a bare "already exists"; apply step 5's recorded-spec comparison
+   with a bare "already exists"; apply the recorded-spec comparison
    here — read the spec path from the most recent `_Invocation` line that
    records one (a resumed override line, `_Invocation <k> — … — resumed_`,
    records no spec path — the per-parameter rule of Resume step 5):
@@ -2243,10 +2246,14 @@ with:
   entry's completion-marker HEAD, Phase 4 is re-dispatched with or without
   answers and the controller ALWAYS starts a new invocation over the new
   content, journaling the addendum first when answers are present; an
-  answer never requests a re-review by itself. The question is presented
-  and the run stops ONLY when the effective HEAD is unchanged AND no
-  answers were given (a re-dispatch in that state returns BLOCKED — never a
-  silent no-op).
+  answer never requests a re-review by itself. A third trigger covers a
+  run migrated from the pre-7.3.0 layout and stopped in Phase 4: when no
+  review log exists at `<topic folder>/implementation/<slug>-review-log.md`
+  (the old untracked log is not migrated), Phase 4 is re-dispatched
+  without answers and the controller starts invocation 1. The question is
+  presented and the run stops ONLY when the review log exists, the
+  effective HEAD is unchanged AND no answers were given (a re-dispatch in
+  that state returns BLOCKED — never a silent no-op).
 
 - [x] **Step 8: Update the skill description's trigger phrase**
 
@@ -2397,19 +2404,25 @@ Add a fifth deviation after the blinding deviation of Step 6:
        entry, named by their review-log ids. The CURRENT entry is the
        LATEST `_Invocation` entry in the review log — the last one in file
        order — never an older entry selected by its BASE (every entry of
-       one orchestration run carries the same BASE). First decide whether
-       a new invocation is due: compute the effective HEAD (Pipeline rule
-       4) and compare it with that entry's completion-marker HEAD; it has
-       moved when code was committed after the stop. Then append a
-       post-loop addendum to that entry recording, for each item the
-       answer names, the disposition `decided (user): <answer>`. An item
-       the answer resolves without a code change leaves the `unresolved`
-       and `user_decision` counts of your return; an item the answer
-       accepts as a finding to fix follows the skill's "Resolving
-       user-decision and unresolved items" rule (one fix subagent, one
-       verification re-review, `fixed — <summary> → <sha>` disposition in
-       the same addendum). Commit the addendum under Pipeline rule 1 with
-       subject `chore(review): <slug> decisions`. When the effective HEAD
+       one orchestration run carries the same BASE). A latest entry
+       WITHOUT a completion marker is an interrupted invocation: resume
+       it at its next round under Deviation 2; no further entry is
+       started. Otherwise, first decide whether a new invocation is due:
+       compute the effective HEAD (Pipeline rule 4) and compare it with
+       that entry's completion-marker HEAD, before the addendum is
+       written; it has moved when code was committed after the stop.
+       Then append a post-loop addendum to that entry recording, for
+       each item the answer names, the disposition
+       `decided (user): <answer>`. An item the answer resolves without a
+       code change leaves the `unresolved` and `user_decision` counts of
+       your return; an item the answer accepts as a finding to fix
+       follows the skill's "Resolving user-decision and unresolved items"
+       rule (one fix subagent, one verification re-review,
+       `fixed — <summary> → <sha>` disposition in the same addendum).
+       When the effective HEAD had moved, skip that verification
+       re-review: the new invocation that always follows reviews the fix.
+       Commit the addendum under Pipeline rule 1 with subject
+       `chore(review): <slug> decisions`. When the effective HEAD
        had moved past the marker — new code after the stop — the
        controller ALWAYS starts a new invocation entry over the current
        effective HEAD once the addendum is committed — the completion
@@ -3772,8 +3785,9 @@ the code review history was never committed. Finding, archiving, or deleting
   lets a re-dispatched controller reuse a finished review instead of running
   it again — now applies only when the recorded invocation ended with
   `unresolved = 0` and `user_decision = 0`; with open items, no answers and
-  no new code since the stop, the controller stops with a request for
-  answers (`BLOCKED: … resume with answers`) instead of re-running; code
+  no new code since the stop, the orchestrator re-presents the open items
+  and stops (Resume step 3) — a controller dispatched in that state returns
+  `BLOCKED: … resume with answers` only as the retry backstop; code
   committed after the stop re-runs the review on resume, with or without
   answers.
 - **A skipped review is committed too.** In pipeline mode an N=0 run writes
@@ -3806,9 +3820,10 @@ token in the invocation entry would add state for nothing.
 stopped before this release keeps its documents at the old flat paths, and
 neither `orchestrate` nor `Resume orchestration` finds them there: the
 orchestrator stops at intake because the old spec or plan path is outside
-the layout, or at resume because no orchestration log is found in the
-layout, and each of those stops points here. Move the documents by hand,
-then resume:
+the layout, at the branch check because the branch exists but no
+orchestration log is found in the layout (only the spec was moved), or at
+resume because no orchestration log is found in the layout, and each of
+those stops points here. Move the documents by hand, then resume:
 
 1. Create `docs/superpowers-orchestrator/<date>-<slug>/` with the
    sub-folders `specs/` and `plans/` — `<date>` is the run's start date and
