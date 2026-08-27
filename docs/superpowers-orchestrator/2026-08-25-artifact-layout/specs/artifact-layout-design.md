@@ -338,7 +338,9 @@ Definitions:
      changed" — the fix-report file is excluded from that rule): the
      controller's round commit owns both files. The completion
      marker and any post-loop addendum are committed the same way with
-     subject `chore(review): <slug> completed`. Each round and the loop
+     subject `chore(review): <slug> completed`; a `skipped` (N=0) entry
+     the same way with subject `chore(review): <slug> skipped`. Each
+     round and the loop
      itself end with a tree that is clean except for changes that
      already existed when the loop started (the precondition in rule 2
      lets an interactive user consent to fixing on top of such changes;

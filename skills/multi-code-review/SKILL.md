@@ -112,7 +112,10 @@ final review on such platforms; that fallback lives there, not here.)
   5. If the log or the fix-report file differs from HEAD, or exists but is
      untracked (`git ls-files --error-unmatch <path>` fails) — a previous
      round's `chore(review)` commit failed or was interrupted — retry that
-     pending commit **first**, with the same subject rule. On repeated
+     pending commit **first**, with the same subject rule: the pending
+     commit is a round log (`chore(review): <slug> round <i> log`), the
+     completion marker (`chore(review): <slug> completed`), or a `skipped`
+     entry (`chore(review): <slug> skipped`). On repeated
      failure return `BLOCKED` with the git output and name the manual
      commit the user must run:
      `git add -- <paths> && git commit -m "chore(review): <slug> round <i> log" -- <paths>`.
@@ -220,7 +223,10 @@ though it appends to it: the rule below that has it stage "the files it
 changed" excludes the fix-report file, because the controller's round commit
 owns both files. The completion marker and any post-loop addendum are
 committed the same way, with subject
-`chore(review): <slug> completed`. Each round, and the loop itself, ends with
+`chore(review): <slug> completed`. A `skipped` (N=0) entry is committed the
+same way, with subject `chore(review): <slug> skipped` — the log is tracked
+by design, and an entry left uncommitted would read as dirt at the next
+boundary. Each round, and the loop itself, ends with
 a tree that is clean except for changes that already existed when the loop
 started — those are never swept into a `chore(review)` commit.
 
@@ -480,8 +486,10 @@ line. Skipped invocations (N=0) get a one-line `skipped` entry carrying
 the same invocation-note fields (date, N, BASE..HEAD, raw branch name,
 invoker) plus `HEAD <sha>` — in **direct mode** the raw
 `git rev-parse HEAD`; in **pipeline mode** the entry records the
-**effective HEAD**, never the raw `git rev-parse HEAD`, which at entry
-time is always the last round's log commit; a failed round keeps the normal
+**effective HEAD**, never the raw `git rev-parse HEAD`: the entry is
+itself committed (`chore(review): <slug> skipped`, Pipeline rule 1), so a
+raw HEAD would be stale as soon as that commit lands, and the commit
+changes only the log; a failed round keeps the normal
 `## Round <i> — <lens name> — <model>` header with
 `**Reviewer verdict:** inconclusive` and one disposition line
 `- inconclusive — <reason>`; verification re-reviews use the

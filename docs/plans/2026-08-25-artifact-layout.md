@@ -1265,7 +1265,10 @@ though it appends to it: the rule below that has it stage "the files it
 changed" excludes the fix-report file, because the controller's round commit
 owns both files. The completion marker and any post-loop addendum are
 committed the same way, with subject
-`chore(review): <slug> completed`. Each round, and the loop itself, ends with
+`chore(review): <slug> completed`. A `skipped` (N=0) entry is committed the
+same way, with subject `chore(review): <slug> skipped` — the log is tracked
+by design, and an entry left uncommitted would read as dirt at the next
+boundary. Each round, and the loop itself, ends with
 a tree that is clean except for changes that already existed when the loop
 started — those are never swept into a `chore(review)` commit.
 

@@ -636,6 +636,11 @@ assert_eq "rule 1: log is committed" "$(git log -1 --format=%s)" "chore(review):
 assert_eq "rule 1: the user's staged file is still staged" "$(git diff --cached --name-only)" "user-staged.txt"
 assert_file_contains "rule 1 drift check: SKILL.md still stages the log before committing" "$SKILL_MD" "git add -- <log> [<fix reports>]"
 assert_file_contains "rule 1 drift check: SKILL.md still commits with the generic chore(review) subject" "$SKILL_MD" 'git commit -m "chore(review): <slug> round <i> log" -- <log> [<fix reports>]'
+# The skipped (N=0) entry is committed too (rule 1), and the validation
+# step 5 retry names its subject among the commits it may retry. Both
+# places must keep naming the subject, or the entry is left uncommitted.
+assert_file_contains "rule 1 drift check: SKILL.md still commits the skipped (N=0) entry with the skipped subject" "$SKILL_MD" 'same way, with subject `chore(review): <slug> skipped`'
+assert_file_contains "validation step 5 drift check: SKILL.md still names the skipped subject among the commits it retries" "$SKILL_MD" 'entry (`chore(review): <slug> skipped`)'
 
 # Rule 2: the precondition pathspec reports clean with only the log modified,
 # and dirty with a source file modified.
