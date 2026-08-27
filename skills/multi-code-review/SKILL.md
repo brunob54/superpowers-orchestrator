@@ -101,10 +101,14 @@ final review on such platforms; that fallback lives there, not here.)
   3. A valid `TOPIC_DIR` that does not exist yet is **created**; the caller
      may invoke the gate before any other stage wrote into the folder. No
      `.gitignore` is written inside it.
-  4. `git check-ignore -q <log path>` must **fail** (that is: the log path
-     must not be ignored). A project `.gitignore` matching `implementation/`
-     or `*-review-log.md` would otherwise surface only as a failed commit
-     after a full round. If it succeeds, stop and report the ignoring rule.
+  4. `git check-ignore -q <log path>` must **fail**, and
+     `git check-ignore -q <fix-report path>` must fail as well — that is:
+     neither path may be ignored (`check-ignore` evaluates the path against
+     the ignore rules, so the fix-report file does not need to exist yet).
+     A project `.gitignore` matching `implementation/`, `*-review-log.md`,
+     or `*-fix-reports.md` would otherwise surface only as a failed commit
+     after a full round. If either check succeeds, stop and report the
+     ignoring rule.
   5. If the log or the fix-report file differs from HEAD, or exists but is
      untracked (`git ls-files --error-unmatch <path>` fails) — a previous
      round's `chore(review)` commit failed or was interrupted — retry that

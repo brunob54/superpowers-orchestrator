@@ -264,7 +264,8 @@ Append at the end of the `## Artifact Layout` section added in Task 1, immediate
 Before step 11 writes the design, list the candidate folders:
 
 ```bash
-find docs/superpowers-orchestrator -maxdepth 1 -type d \
+REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
+find "$REPO_ROOT/docs/superpowers-orchestrator" -maxdepth 1 -type d \
      -name '????-??-??-<slug>' 2>/dev/null
 ```
 
@@ -273,11 +274,13 @@ portable: `bash` passes the pattern through to `ls`, but `zsh` — the login
 shell on macOS, and the shell many agent sessions run commands under — treats
 it as a shell-level error ("no matches found"), never runs `ls`, and writes
 the message before the command's own `2>/dev/null` can suppress it. `find`
-prints nothing and exits 0 when there is no match, in every shell.
+prints nothing when there is no match, in every shell; it exits non-zero only
+when the parent folder does not exist yet (the first topic in a repository),
+and the decision below keys on the output, never on the exit status.
 
 - **Zero matches** (no output) — create
-  `docs/superpowers-orchestrator/<today>-<slug>/specs/`
-  and write the design there.
+  `docs/superpowers-orchestrator/<today>-<slug>/specs/` under the same
+  repository-root anchor and write the design there.
 - **More than one match** — a slug-uniqueness violation that predates this
   run. Stop, list both folders, and ask the user to merge or rename them.
   Never pick one, never create a third.
@@ -311,11 +314,15 @@ prints nothing and exits 0 when there is no match, in every shell.
   - Commit that move immediately, as part of the same step: `git mv` the
     sidecar to the archived name, then commit both paths — for example
     `git commit -m "chore(docs): archive the previous <slug> design review
-    log" -- <old path> <new path>`. A `git mv` of a tracked file that is left
-    uncommitted appears in `git status --porcelain` as a staged rename (a
-    third path), and `orchestrating-development`'s Phase 0 clean-tree check
-    stops the run on any dirt it does not recognize. Without this commit the
-    reuse flow does not reach Phase 1.
+    log" -- <old path> <new path>`. When the sidecar is untracked (`git
+    ls-files --error-unmatch <old path>` fails), move it with plain `mv`,
+    then `git add -- <new path>` and commit with `-- <new path>` only — the
+    old path is unknown to git and must not appear in the commit pathspec. A
+    `git mv` of a tracked file that is left uncommitted appears in `git
+    status --porcelain` as a staged rename (a third path), and
+    `orchestrating-development`'s Phase 0 clean-tree check stops the run on
+    any dirt it does not recognize. Without this commit the reuse flow does
+    not reach Phase 1.
 ````
 
 - [x] **Step 4: Run the verification check to confirm it passes**
@@ -527,11 +534,15 @@ together with its spec.
    - **Yes:** `mkdir -p` the destination `specs/` folder first (`git mv` fails
      when the destination directory does not exist), then `git mv` the spec to
      `specs/<slug>-design.md` and — when it exists — its `-review-log.md`
-     sidecar to `specs/<slug>-design-review-log.md`. Use plain `mv` when the
-     project is not a git repository. The sidecar is renamed together with the
-     spec because the sidecar rule derives the log name from the document
-     name: a sidecar that kept its old basename would be orphaned and a later
-     spec review would start a new log. Then continue with the moved spec.
+     sidecar to `specs/<slug>-design-review-log.md`. A file git does not track
+     yet (`git ls-files --error-unmatch <path>` fails — the normal state of a
+     spec that was written and never committed) cannot be moved with `git mv`:
+     move it with plain `mv` and `git add` the destination path instead. Use
+     plain `mv` when the project is not a git repository. The sidecar is
+     renamed together with the spec because the sidecar rule derives the log
+     name from the document name: a sidecar that kept its old basename would be
+     orphaned and a later spec review would start a new log. Then continue with
+     the moved spec.
    - **No:** stop. No plan is written.
 ````
 
@@ -1123,10 +1134,14 @@ Append to the Parameters list in `skills/multi-code-review/SKILL.md`, after the 
   3. A valid `TOPIC_DIR` that does not exist yet is **created**; the caller
      may invoke the gate before any other stage wrote into the folder. No
      `.gitignore` is written inside it.
-  4. `git check-ignore -q <log path>` must **fail** (that is: the log path
-     must not be ignored). A project `.gitignore` matching `implementation/`
-     or `*-review-log.md` would otherwise surface only as a failed commit
-     after a full round. If it succeeds, stop and report the ignoring rule.
+  4. `git check-ignore -q <log path>` must **fail**, and
+     `git check-ignore -q <fix-report path>` must fail as well — that is:
+     neither path may be ignored (`check-ignore` evaluates the path against
+     the ignore rules, so the fix-report file does not need to exist yet).
+     A project `.gitignore` matching `implementation/`, `*-review-log.md`,
+     or `*-fix-reports.md` would otherwise surface only as a failed commit
+     after a full round. If either check succeeds, stop and report the
+     ignoring rule.
   5. If the log or the fix-report file differs from HEAD — a previous round's
      `chore(review)` commit failed or was interrupted — retry that pending
      commit **first**, with the same subject rule. On repeated failure return
@@ -1905,7 +1920,8 @@ with:
    stripped, each only if present, then normalized by the "Slug" rule in
    the "Artifact Layout" section of `skills/brainstorming/SKILL.md` —
    and tell the user to `git mv` the spec and, when it exists, its
-   `-review-log.md` sidecar there, naming both destination paths
+   `-review-log.md` sidecar there (plain `mv` followed by `git add` for a file
+   git does not track yet), naming both destination paths
    (`specs/<slug>-design.md` and `specs/<slug>-design-review-log.md`). The
    orchestrator never moves files itself and never asks a question after
    Phase 0. Then: the computed plan path and log path (step 7) do not already

@@ -65,11 +65,15 @@ together with its spec.
    - **Yes:** `mkdir -p` the destination `specs/` folder first (`git mv` fails
      when the destination directory does not exist), then `git mv` the spec to
      `specs/<slug>-design.md` and — when it exists — its `-review-log.md`
-     sidecar to `specs/<slug>-design-review-log.md`. Use plain `mv` when the
-     project is not a git repository. The sidecar is renamed together with the
-     spec because the sidecar rule derives the log name from the document
-     name: a sidecar that kept its old basename would be orphaned and a later
-     spec review would start a new log. Then continue with the moved spec.
+     sidecar to `specs/<slug>-design-review-log.md`. A file git does not track
+     yet (`git ls-files --error-unmatch <path>` fails — the normal state of a
+     spec that was written and never committed) cannot be moved with `git mv`:
+     move it with plain `mv` and `git add` the destination path instead. Use
+     plain `mv` when the project is not a git repository. The sidecar is
+     renamed together with the spec because the sidecar rule derives the log
+     name from the document name: a sidecar that kept its old basename would be
+     orphaned and a later spec review would start a new log. Then continue with
+     the moved spec.
    - **No:** stop. No plan is written.
 
 ## Plan Header

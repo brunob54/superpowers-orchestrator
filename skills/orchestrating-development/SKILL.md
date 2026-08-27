@@ -86,7 +86,8 @@ the same question batch below).
    stripped, each only if present, then normalized by the "Slug" rule in
    the "Artifact Layout" section of `skills/brainstorming/SKILL.md` —
    and tell the user to `git mv` the spec and, when it exists, its
-   `-review-log.md` sidecar there, naming both destination paths
+   `-review-log.md` sidecar there (plain `mv` followed by `git add` for a file
+   git does not track yet), naming both destination paths
    (`specs/<slug>-design.md` and `specs/<slug>-design-review-log.md`). The
    orchestrator never moves files itself and never asks a question after
    Phase 0. Then: the computed plan path and log path (step 7) do not already

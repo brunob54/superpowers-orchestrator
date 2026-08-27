@@ -128,7 +128,8 @@ topic name must be normalized to that form before it is substituted into
 this or any other command:
 
 ```bash
-find docs/superpowers-orchestrator -maxdepth 1 -type d \
+REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
+find "$REPO_ROOT/docs/superpowers-orchestrator" -maxdepth 1 -type d \
      -name '????-??-??-<slug>' 2>/dev/null
 ```
 
@@ -137,11 +138,13 @@ portable: `bash` passes the pattern through to `ls`, but `zsh` — the login
 shell on macOS, and the shell many agent sessions run commands under — treats
 it as a shell-level error ("no matches found"), never runs `ls`, and writes
 the message before the command's own `2>/dev/null` can suppress it. `find`
-prints nothing and exits 0 when there is no match, in every shell.
+prints nothing when there is no match, in every shell; it exits non-zero only
+when the parent folder does not exist yet (the first topic in a repository),
+and the decision below keys on the output, never on the exit status.
 
 - **Zero matches** (no output) — create
-  `docs/superpowers-orchestrator/<today>-<slug>/specs/`
-  and write the design there.
+  `docs/superpowers-orchestrator/<today>-<slug>/specs/` under the same
+  repository-root anchor and write the design there.
 - **More than one match** — a slug-uniqueness violation that predates this
   run. Stop, list both folders, and ask the user to merge or rename them.
   Never pick one, never create a third.
@@ -175,11 +178,15 @@ prints nothing and exits 0 when there is no match, in every shell.
   - Commit that move immediately, as part of the same step: `git mv` the
     sidecar to the archived name, then commit both paths — for example
     `git commit -m "chore(docs): archive the previous <slug> design review
-    log" -- <old path> <new path>`. A `git mv` of a tracked file that is left
-    uncommitted appears in `git status --porcelain` as a staged rename (a
-    third path), and `orchestrating-development`'s Phase 0 clean-tree check
-    stops the run on any dirt it does not recognize. Without this commit the
-    reuse flow does not reach Phase 1.
+    log" -- <old path> <new path>`. When the sidecar is untracked (`git
+    ls-files --error-unmatch <old path>` fails), move it with plain `mv`,
+    then `git add -- <new path>` and commit with `-- <new path>` only — the
+    old path is unknown to git and must not appear in the commit pathspec. A
+    `git mv` of a tracked file that is left uncommitted appears in `git
+    status --porcelain` as a staged rename (a third path), and
+    `orchestrating-development`'s Phase 0 clean-tree check stops the run on
+    any dirt it does not recognize. Without this commit the reuse flow does
+    not reach Phase 1.
 
 ## Process Flow
 
