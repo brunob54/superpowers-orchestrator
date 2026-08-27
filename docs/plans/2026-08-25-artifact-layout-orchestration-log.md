@@ -90,3 +90,9 @@ Detail: .superpowers/reviews/feature-artifact-layout-review-log.md
 Resume: Resume orchestration for docs/plans/2026-08-25-artifact-layout.md
 
 _Invocation 3 — 2026-08-27 — N_code=2 — resumed — six invocation-2 findings decided by the orchestrator on the user's delegation (E1-E6); fixes 018f1cc, f2dd7d8, 4de4312, 5f1ee98, 01bc421. N_code lowered from 4 to 2 as a bounded verification: the standing behavioral-suite item (owed to the user) alone keeps user_decision ≥ 1, so a full loop cannot pass regardless of round count._
+
+## Phase 4 — Code review (invocation 3) — rounds 2 — cap — fixes 2 — unresolved 0 — user_decision 5
+
+## STOPPED — 2026-08-27 — phase 4 — 4 new plan-mandated user-decision items (rounds 9–10) plus the standing behavioral-suite re-run; Phase 5 not reached
+Detail: .superpowers/reviews/feature-artifact-layout-review-log.md
+Resume: Resume orchestration for docs/plans/2026-08-25-artifact-layout.md
