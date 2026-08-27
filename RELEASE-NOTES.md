@@ -89,9 +89,11 @@ token in the invocation entry would add state for nothing.
 
 **Migrating a run stopped under the old layout (any project):** a run that
 stopped before this release keeps its documents at the old flat paths, and
-neither `orchestrate` nor `Resume orchestration` finds them there (the
-orchestrator's Phase 0 step 5 and Resume step 0 stop and point here). Move
-the documents by hand, then resume:
+neither `orchestrate` nor `Resume orchestration` finds them there: the
+orchestrator stops at intake because the old spec or plan path is outside
+the layout, or at resume because no orchestration log is found in the
+layout, and each of those stops points here. Move the documents by hand,
+then resume:
 
 1. Create `docs/superpowers-orchestrator/<date>-<slug>/` with the
    sub-folders `specs/` and `plans/` — `<date>` is the run's start date and

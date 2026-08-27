@@ -68,7 +68,10 @@ Agent tool (general-purpose):
        `BLOCKED: previous invocation left <n> open items and the effective
        HEAD is unchanged; resume with answers` — never re-run and never
        synthesize. With a `## Resume Answer` section present, Deviation 5
-       applies.
+       applies. When the effective HEAD has moved past that entry's
+       completion marker, neither the skip nor the BLOCKED return applies:
+       a new invocation entry runs over the new content, with or without a
+       `## Resume Answer` section (Deviation 5).
     3. Triage rule: any reviewer finding whose subject file is an
        orchestration artifact — the plan file's checkbox ticks, a file
        under `docs/superpowers-orchestrator/*/` whose name matches
@@ -94,18 +97,40 @@ Agent tool (general-purpose):
     5. Resume answer: the `## Resume Answer` section, when present, holds
        the user's decisions on the open items — the `user-decision` and
        `unresolved` dispositions — of the review log's CURRENT invocation
-       entry (the entry with your BASE), named by their review-log ids.
-       Append a post-loop addendum to that entry recording, for each item
-       the answer names, the disposition `decided (user): <answer>`. An
-       item the answer resolves without a code change leaves the
-       `unresolved` and `user_decision` counts of your return; an item
-       the answer accepts as a finding to fix follows the skill's
-       "Resolving user-decision and unresolved items" rule (one fix
-       subagent, one verification re-review, `fixed` disposition in the
-       same addendum). If the answer requests a re-review, the completion
-       skip of Deviation 2 is bypassed and a new invocation runs. Commit
-       the addendum under Pipeline rule 1 with subject
-       `chore(review): <slug> decisions`.
+       entry, named by their review-log ids. The CURRENT entry is the
+       LATEST `_Invocation` entry in the review log — the last one in file
+       order — never an older entry selected by its BASE (every entry of
+       one orchestration run carries the same BASE). First decide whether
+       a new invocation is due: compute the effective HEAD (Pipeline rule
+       4) and compare it with that entry's completion-marker HEAD; it has
+       moved when code was committed after the stop. Then append a
+       post-loop addendum to that entry recording, for each item the
+       answer names, the disposition `decided (user): <answer>`. An item
+       the answer resolves without a code change leaves the `unresolved`
+       and `user_decision` counts of your return; an item the answer
+       accepts as a finding to fix follows the skill's "Resolving
+       user-decision and unresolved items" rule (one fix subagent, one
+       verification re-review, `fixed — <summary> → <sha>` disposition in
+       the same addendum). Commit the addendum under Pipeline rule 1 with
+       subject `chore(review): <slug> decisions`. When the effective HEAD
+       had moved past the marker — new code after the stop — the
+       controller ALWAYS starts a new invocation entry over the current
+       effective HEAD once the addendum is committed — the completion
+       skip of Deviation 2 does not apply; when it had not, no new
+       invocation runs: an answer alone never requests a re-review, and
+       the re-evaluated counts are the result.
+       Idempotence — a retry after a lost return carries the same
+       `## Resume Answer` again: for each answered id, skip the item when
+       the latest invocation entry already holds a `decided (user)` line
+       for it (when the previous attempt had already started the new
+       invocation, the latest entry is that new one and the `decided
+       (user)` lines stand in the entry before it — an id already decided
+       there is spent as well: journal nothing for it on the new entry);
+       for a `fix it` answer, also skip the fix dispatch when the fix
+       commit already exists — search `git log` for the `<sha>` the
+       addendum's `fixed` line records, or for the fix commit subject
+       `review fixes (<slug>, round <i>)`. A retry journals nothing twice
+       and dispatches no fix twice.
 
     ## Return (final message, 15 lines max)
 

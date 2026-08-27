@@ -250,9 +250,16 @@ Definitions:
   sidecar there (`git mv`; the message names both destination paths,
   `specs/<slug>-design.md` and `specs/<slug>-design-review-log.md`) — the
   orchestrator never moves files itself and never asks a question after
-  Phase 0.
+  Phase 0. When the spec belongs to a run that stopped under the pre-7.3.0
+  layout (a plan or an orchestration log for it exists at the old flat
+  paths), the message points to the migration recipe in the v7.3.0 release
+  note instead (section 8), which moves every document of the run.
 - Resume step 0 ("derive `feature/<slug>` from the named path") derives
-  the slug from the topic folder, same rule. Its clean-tree check
+  the slug from the topic folder, same rule; a named path outside the
+  layout is a stop that points to the same recipe. Resume step 1's no-log
+  stop (no orchestration log matches the glob) points to the recipe for a
+  run stopped under the pre-7.3.0 layout and otherwise suggests a fresh
+  orchestration. Its clean-tree check
   (`SKILL.md:300-303`, today `git status --porcelain` empty with only
   `state.md` and `.superpowers/` excluded) gains the same exclusion as
   multi-code-review's precondition:
@@ -281,12 +288,19 @@ Definitions:
   orchestration log was found: rename the spec or delete the branch" (for a
   run stopped under the pre-7.3.0 layout, the message points to the
   migration recipe in the v7.3.0 release note). One match → compare its
-  recorded spec path with the invoked spec, as today. The same comparison
-  runs earlier, in Phase 0 step 4, when the computed log path already
-  exists: the orchestrator does not stop with a bare "already exists" —
-  same spec → "prior run" with the resume prompt; different or missing →
-  "unrelated prior run with the same slug: rename the spec or clear the
-  old topic folder"; both stop.
+  recorded spec path with the invoked spec, as today; the recorded spec
+  path is read from the most recent `_Invocation` line that records one —
+  a resumed override line (`_Invocation <k> — … — resumed_`) records no
+  spec path (the per-parameter rule of Resume step 5). The same comparison
+  runs earlier, in Phase 0 step 4, where the computed log path is tested
+  BEFORE the computed plan path: the log exists → the orchestrator does not
+  stop with a bare "already exists" — same spec → "prior run" with the
+  resume prompt; different or missing → "unrelated prior run with the same
+  slug: rename the spec or clear the old topic folder"; both stop. Only
+  when no log exists and the plan path exists does the orchestrator stop
+  with the bare "plan exists without a log: remove or rename it" — a run
+  stopped after Phase 1 has both files and takes the log branch, so that
+  bare stop is never its outcome.
   More than one match → stop with "ambiguous slug: <folders>" (slug
   uniqueness violated; the user must merge or rename before any run). The
   run stops in every case; only a branch that does not exist yet is
@@ -306,12 +320,24 @@ Definitions:
   those ids re-dispatches the code-review-loop controller with the answers
   in the template's optional `[RESUME_ANSWER]` placeholder (same shape as
   the plan-writer and batch-controller templates); the controller records
-  each answer as `decided (user): <answer>` in a post-loop addendum
-  committed as `chore(review): <slug> decisions`, drops the items decided
-  without a code change from the counts, and re-reviews only when an
-  answer asks for it. Without answers, a re-dispatch over an unchanged
-  effective HEAD returns `BLOCKED` (section 5.6, rule 4) — never a silent
-  no-op.
+  each answer as `decided (user): <answer>` in a post-loop addendum on the
+  review log's LATEST `_Invocation` entry — the current entry is always the
+  latest one, never an older entry selected by its BASE — committed as
+  `chore(review): <slug> decisions`, and drops the items decided without a
+  code change from the counts. An answer never requests a re-review by
+  itself. Resume step 3 has a second trigger: when the effective HEAD
+  (section 5.6, rule 4) has moved past that entry's completion marker —
+  code was committed after the stop — Phase 4 is re-dispatched with or
+  without answers, and the controller ALWAYS starts a new invocation over
+  the new content (with answers, the addendum is journaled and committed
+  first). Resume presents the question and stops only when the effective
+  HEAD is unchanged AND no answers were given. Without answers, a
+  re-dispatch over an unchanged effective HEAD returns `BLOCKED` (section
+  5.6, rule 4) — never a silent no-op. The addendum is idempotent, because
+  a retry after a lost return carries the same answers again: an answered
+  id that already holds a `decided (user)` line is skipped, and a `fix it`
+  answer whose fix commit already exists (found in `git log` by the `<sha>`
+  or the subject the addendum recorded) is not dispatched again.
 - `docs/research/` handling and every `state.md` rule: unchanged.
 
 ### 5.5 subagent-driven-development
@@ -396,7 +422,11 @@ Definitions:
      items, an unchanged effective HEAD and no decisions supplied by the
      invoker, the loop returns `BLOCKED: previous invocation left <n>
      open items and the effective HEAD is unchanged; resume with answers`
-     instead of re-running or synthesizing.
+     instead of re-running or synthesizing. Decisions supplied by the
+     invoker are journaled idempotently (an id already decided is skipped,
+     a fix already committed is not dispatched again), and a new
+     invocation starts only when the effective HEAD has moved past the
+     completion marker (section 5.4, "Phase 4 stop and resume").
 - Without `TOPIC_DIR` (direct mode): exactly today's behavior —
   `.superpowers/reviews/<branch-slug>-review-log.md`,
   `<branch-slug>-fix-reports.md`, `.gitignore` containing `*`, nothing
@@ -420,8 +450,8 @@ Definitions:
   round's `chore(review)` commit failed or was interrupted), the pending
   commit is retried first with the same subject rule — on repeated
   failure the skill returns `BLOCKED` with the git output and names the
-  manual commit (`git add -- <paths> && git commit -m "chore(review):
-  <slug> round <i> log" -- <paths>`) the user must run. Without this
+  manual commit (`git add -- <paths> && git commit -m "<the pending
+  subject>" -- <paths>`) the user must run. Without this
   retry, an on-disk entry with a completion marker would be read as
   completed, the once-per-gate skip would fire, and the orchestrator's
   Phase 5 clean-tree check would stop the run with no path to recovery.
@@ -599,8 +629,11 @@ the spec, the plan, their `-review-log.md` sidecars and the orchestration
 log into it, dropping the date prefix from the file names; edit the
 recorded paths (the orchestration log's `_Invocation` header `spec` path
 and `plan:` line, the plan's `**Spec:**` header); commit; then
-`Resume orchestration for <new plan path>`. The orchestrator's zero-match
-stop (Phase 0 step 5) and Resume step 0 point to that recipe.
+`Resume orchestration for <new plan path>`. Every orchestrator stop that
+such a run can reach points to that recipe: the topic-folder derivation
+failure (Phase 0 step 4 and Resume step 0 — the old paths are outside the
+layout), the zero-match stop (Phase 0 step 5, reached when only the spec
+was moved), and Resume step 1's no-log stop.
 
 ## 9. Testing strategy
 

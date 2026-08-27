@@ -747,6 +747,13 @@ assert_file_not_contains "rule 4 drift check: SKILL.md no longer keys the effect
 # open items; with open items, unchanged content and no answers, the loop
 # returns BLOCKED instead of re-running. Pin the condition.
 assert_file_contains "rule 4 drift check: SKILL.md still limits the once-per-gate skip to unresolved = 0 and user_decision = 0" "$SKILL_MD" '`unresolved = 0` and `user_decision = 0`'
+# Resume after new code: when the effective HEAD has moved past the latest
+# entry's completion marker, the orchestrator's code-review-loop controller
+# always starts a new invocation — an answer alone never requests a
+# re-review. The controller template holds the canonical copy of that rule
+# (Deviation 5); pin the sentence there.
+CODE_REVIEW_LOOP_PROMPT_MD="$(dirname "$(dirname "$SCRIPTS")")/orchestrating-development/code-review-loop-prompt.md"
+assert_file_contains "resume drift check: code-review-loop-prompt.md still always starts a new invocation after the effective HEAD moved" "$CODE_REVIEW_LOOP_PROMPT_MD" 'controller ALWAYS starts a new invocation entry over the current'
 
 bold "TOPIC_DIR validation rule (multi-code-review)"
 

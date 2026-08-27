@@ -119,7 +119,7 @@ final review on such platforms; that fallback lives there, not here.)
      (`chore(review): <slug> decisions`). On repeated
      failure return `BLOCKED` with the git output and name the manual
      commit the user must run:
-     `git add -- <paths> && git commit -m "chore(review): <slug> round <i> log" -- <paths>`.
+     `git add -- <paths> && git commit -m "<the pending subject>" -- <paths>`.
      Without this retry an on-disk entry carrying a completion marker would
      read as completed, the once-per-gate skip would fire, and the
      orchestrator's Phase 5 clean-tree check would stop the run with no path
@@ -226,8 +226,9 @@ owns both files. The completion marker and any post-loop addendum are
 committed the same way, with subject
 `chore(review): <slug> completed`. A `skipped` (N=0) entry is committed the
 same way, with subject `chore(review): <slug> skipped` — the log is tracked
-by design, and an entry left uncommitted would read as dirt at the next
-boundary. A post-loop addendum that records the invoker-supplied decisions
+by design, and an entry left uncommitted would show as an uncommitted
+change at the next boundary. A post-loop addendum that records the
+invoker-supplied decisions
 on open items (disposition `decided (user): <answer>`, "Resolving
 user-decision and unresolved items" below) is committed the same way,
 with subject `chore(review): <slug> decisions`. Each round, and the loop
@@ -529,11 +530,20 @@ no loop re-run needed.
 In pipeline mode the decisions may arrive on a later dispatch instead — the
 orchestrator's `[RESUME_ANSWER]` placeholder carries the user's answers to
 the open items by review-log id: each named item gets the disposition
-`decided (user): <answer>` in a post-loop addendum committed as
-`chore(review): <slug> decisions` (Pipeline rule 1); an item decided
-without a code change no longer counts as unresolved or user-decision; an
-accepted finding follows the finding-governs path above; a request for a
-re-review bypasses the once-per-gate skip and starts a new invocation.
+`decided (user): <answer>` in a post-loop addendum on the log's LATEST
+invocation entry, committed as `chore(review): <slug> decisions` (Pipeline
+rule 1); an item decided without a code change no longer counts as
+unresolved or user-decision; an accepted finding follows the
+finding-governs path above. An answer never requests a re-review by itself:
+when the effective HEAD (Pipeline rule 4) has moved past that entry's
+completion marker — code was committed after the stop — the controller
+ALWAYS starts a new invocation entry once the addendum is committed, with
+or without answers; over an unchanged effective HEAD no new invocation
+runs. The addendum is idempotent, because a retry after a lost return
+carries the same answers again: an id that already holds a `decided
+(user)` line is skipped, and an accepted fix whose fix commit already
+exists (found in `git log` by the `<sha>` the `fixed` line records or by
+the fix commit subject) is not dispatched again.
 
 The host gate proceeds only when no unresolved Critical/Important or
 user-decision items remain — unresolved items block, exactly as
@@ -573,8 +583,9 @@ keeps the raw `git rev-parse HEAD` in both places, unchanged. The skip's
 The once-per-gate skip applies only to an invocation entry that ended with
 `unresolved = 0` and `user_decision = 0` — after any post-loop addendum, no
 `unresolved:` and no `user-decision` disposition line is still in force.
-When those counts are non-zero, the effective HEAD is unchanged, and the
-invoker supplies no decisions for the open items, the loop returns
+When, in pipeline mode, those counts are non-zero, the effective HEAD is
+unchanged, and the invoker supplies no decisions for the open items, the
+loop returns
 `BLOCKED: previous invocation left <n> open items and the effective HEAD is
 unchanged; resume with answers` instead of re-running the rounds or
 synthesizing a result: a re-dispatch over the same content would only

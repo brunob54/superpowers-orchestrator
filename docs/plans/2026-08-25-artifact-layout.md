@@ -1142,12 +1142,17 @@ Append to the Parameters list in `skills/multi-code-review/SKILL.md`, after the 
      or `*-fix-reports.md` would otherwise surface only as a failed commit
      after a full round. If either check succeeds, stop and report the
      ignoring rule.
-  5. If the log or the fix-report file differs from HEAD — a previous round's
-     `chore(review)` commit failed or was interrupted — retry that pending
-     commit **first**, with the same subject rule. On repeated failure return
-     `BLOCKED` with the git output and name the manual commit the user must
-     run:
-     `git add -- <paths> && git commit -m "chore(review): <slug> round <i> log" -- <paths>`.
+  5. If the log or the fix-report file differs from HEAD, or exists but is
+     untracked (`git ls-files --error-unmatch <path>` fails) — a previous
+     round's `chore(review)` commit failed or was interrupted — retry that
+     pending commit **first**, with the same subject rule: the pending
+     commit is a round log (`chore(review): <slug> round <i> log`), the
+     completion marker (`chore(review): <slug> completed`), or a `skipped`
+     entry (`chore(review): <slug> skipped`), or a decisions addendum
+     (`chore(review): <slug> decisions`). On repeated
+     failure return `BLOCKED` with the git output and name the manual
+     commit the user must run:
+     `git add -- <paths> && git commit -m "<the pending subject>" -- <paths>`.
      Without this retry an on-disk entry carrying a completion marker would
      read as completed, the once-per-gate skip would fire, and the
      orchestrator's Phase 5 clean-tree check would stop the run with no path
@@ -1267,8 +1272,9 @@ owns both files. The completion marker and any post-loop addendum are
 committed the same way, with subject
 `chore(review): <slug> completed`. A `skipped` (N=0) entry is committed the
 same way, with subject `chore(review): <slug> skipped` — the log is tracked
-by design, and an entry left uncommitted would read as dirt at the next
-boundary. A post-loop addendum that records the invoker-supplied decisions
+by design, and an entry left uncommitted would show as an uncommitted
+change at the next boundary. A post-loop addendum that records the
+invoker-supplied decisions
 on open items (disposition `decided (user): <answer>`, "Resolving
 user-decision and unresolved items" below) is committed the same way,
 with subject `chore(review): <slug> decisions`. Each round, and the loop
@@ -1371,8 +1377,9 @@ keeps the raw `git rev-parse HEAD` in both places, unchanged. The skip's
 The once-per-gate skip applies only to an invocation entry that ended with
 `unresolved = 0` and `user_decision = 0` — after any post-loop addendum, no
 `unresolved:` and no `user-decision` disposition line is still in force.
-When those counts are non-zero, the effective HEAD is unchanged, and the
-invoker supplies no decisions for the open items, the loop returns
+When, in pipeline mode, those counts are non-zero, the effective HEAD is
+unchanged, and the invoker supplies no decisions for the open items, the
+loop returns
 `BLOCKED: previous invocation left <n> open items and the effective HEAD is
 unchanged; resume with answers` instead of re-running the rounds or
 synthesizing a result: a re-dispatch over the same content would only
@@ -1442,6 +1449,28 @@ Pipeline rule 4: the entry ended with `unresolved = 0` and
 mode-dependent definition and the branch matches — and is never a
 resumable/in-progress entry for the sentinel.
 ```
+
+**Later edits on this branch (review fixes; recorded here, not restated in full):**
+
+- **Decisions on a later dispatch.** Immediately after the "Resolving
+  user-decision and unresolved items" paragraph, a paragraph beginning
+  `In pipeline mode the decisions may arrive on a later dispatch instead`
+  states that the orchestrator's `[RESUME_ANSWER]` placeholder carries the
+  user's answers by review-log id; each answer becomes
+  `decided (user): <answer>` in a post-loop addendum on the log's LATEST
+  invocation entry, committed as `chore(review): <slug> decisions`; an item
+  decided without a code change leaves the counts; an accepted finding
+  follows the finding-governs path; an answer never requests a re-review by
+  itself — the controller ALWAYS starts a new invocation when the effective
+  HEAD has moved past the entry's completion marker, with or without
+  answers, and never over an unchanged effective HEAD; and the addendum is
+  idempotent (an id already decided is skipped, a fix already committed is
+  not dispatched again).
+- **The skipped entry is committed.** The log-format paragraph's sentence
+  on `skipped` (N=0) entries records that in pipeline mode the entry
+  carries the effective HEAD, never the raw `git rev-parse HEAD`, because
+  the entry is itself committed (`chore(review): <slug> skipped`, Pipeline
+  rule 1) and a raw HEAD would be stale as soon as that commit lands.
 
 - [x] **Step 8: Run the verification check to confirm it passes**
 
@@ -1653,6 +1682,21 @@ is the git contract the skill text now depends on. Step 2 therefore expects
 `PASS`, not `FAIL`.
 
 _Note: the shipped suite in tests/sdd-scripts/run-tests.sh is authoritative — review fixes on this branch added assertions (positive controls, the --commits review-only package, the SKILL.md drift checks, the TOPIC_DIR regex section) that this embedded copy does not show._
+
+The four SKILL.md drift checks that review fixes added after this task
+(none of which the embedded copy below shows) each pin one sentence of
+`skills/multi-code-review/SKILL.md` with `assert_file_contains`, so a later
+edit of the skill that drops the sentence fails this suite: (1) Pipeline
+rule 1 still commits the `skipped` (N=0) entry with the subject
+`chore(review): <slug> skipped`; (2) validation step 5 still names that
+skipped subject among the pending commits it retries; (3) Pipeline rule 1
+still commits the decisions addendum with the subject
+`chore(review): <slug> decisions`; (4) Pipeline rule 4 still limits the
+once-per-gate skip to an entry that ended with `unresolved = 0` and
+`user_decision = 0`. A fifth check pins the resume rule in
+`skills/orchestrating-development/code-review-loop-prompt.md`: after the
+effective HEAD has moved past the completion marker, the controller ALWAYS
+starts a new invocation entry.
 
 Append to `tests/sdd-scripts/run-tests.sh`, after the blinding section added in Task 8 and before the final `Results:` block:
 
@@ -1942,17 +1986,26 @@ with:
    and tell the user to `git mv` the spec and, when it exists, its
    `-review-log.md` sidecar there (plain `mv` followed by `git add` for a file
    git does not track yet), naming both destination paths
-   (`specs/<slug>-design.md` and `specs/<slug>-design-review-log.md`). The
+   (`specs/<slug>-design.md` and `specs/<slug>-design-review-log.md`). When
+   that spec belongs to a run that stopped under the pre-7.3.0 layout — a
+   plan or an orchestration log for it exists at the old flat paths — point
+   to the migration recipe in the v7.3.0 release note instead: it moves
+   every document of the run, not only the spec. The
    orchestrator never moves files itself and never asks a question after
-   Phase 0. Then: the computed plan path (step 7) must not exist yet — stop
-   and report if it does. The computed log path (step 7) may exist: that is
-   a prior orchestration of this slug. Do NOT stop with a bare "already
-   exists"; apply step 5's recorded-spec comparison here — read the spec
-   path from the log's latest `_Invocation` header: recorded spec equals the
-   invoked spec → report "prior run" and print
+   Phase 0. Then test the computed log path (step 7) FIRST, before the plan
+   path. The log exists → a prior orchestration of this slug. Do NOT stop
+   with a bare "already exists"; apply step 5's recorded-spec comparison
+   here — read the spec path from the most recent `_Invocation` line that
+   records one (a resumed override line, `_Invocation <k> — … — resumed_`,
+   records no spec path — the per-parameter rule of Resume step 5):
+   recorded spec equals the invoked spec → report "prior run" and print
    `Resume orchestration for <plan path>`; different or missing → report
    "unrelated prior run with the same slug: rename the spec or clear the old
    topic folder". Both outcomes stop (step 5 keeps the branch-exists cases).
+   Only when NO log exists and the computed plan path (step 7) exists →
+   stop with "plan exists without a log: remove or rename it". The order
+   matters: a run stopped after Phase 1 has both files and takes the log
+   branch above, so it is never given this bare stop.
    Next, `git status --porcelain --untracked-files=all` empty EXCEPT the spec
    and its `-review-log.md` sidecar under the topic folder's `specs/`
    (brainstorming leaves them uncommitted). `--untracked-files=all` is
@@ -2125,12 +2178,13 @@ Replace resume step 0:
 with:
 
 ````markdown
-0. Derive the **topic folder** from the named path (same rule as Phase 0),
-   then `feature/<slug>` from the topic folder's basename minus its date
-   prefix; verify the branch exists (else stop — nothing to resume; for a run
-   stopped under the pre-7.3.0 layout, follow the migration recipe in the
-   v7.3.0 release note) and check it out; re-ensure the exclude entries
-   (Phase 0 step 3) FIRST, then require
+0. Derive the **topic folder** from the named path (same rule as Phase 0)
+   — a path outside the layout, an old flat-directory plan path included, is
+   a stop: for a run stopped under the pre-7.3.0 layout, follow the
+   migration recipe in the v7.3.0 release note — then `feature/<slug>` from
+   the topic folder's basename minus its date prefix; verify the branch
+   exists (else stop — nothing to resume) and check it out; re-ensure the
+   exclude entries (Phase 0 step 3) FIRST, then require
    the clean-tree check to pass:
 
    ```bash
@@ -2161,6 +2215,38 @@ with:
    `docs/superpowers-orchestrator/????-??-??-<slug>/<slug>-orchestration-log.md`;
    more than one match is an "ambiguous slug" stop —
 ```
+
+**Later edits on this branch (review fixes; recorded here, not restated in full):**
+
+- **Phase 4 stop paragraph.** The Phase 4 section's dispatch paragraph
+  states that `unresolved > 0` or `user_decision > 0` is a major error that
+  stops the run, that the stop entry points to the review log and lists the
+  open items by their review-log ids, and that Resume step 3 re-dispatches
+  the phase with the answers in `[RESUME_ANSWER]`.
+- **`Open:` lines in the stop entry.** The Orchestration Log Format's stop
+  block explanation adds: for a Phase 4 stop, `Detail:` names the review
+  log and is followed by one line per open item —
+  `Open: [<id>] <user-decision|unresolved> — <summary>` — so the resume
+  prompt can answer each item by id.
+- **Resume step 1's no-log stop.** The tail of Resume step 1 (a required
+  artifact missing) now reads: stop and report what is missing; for a run
+  stopped under the pre-7.3.0 layout — its log and plan sit at the old
+  flat paths, outside the glob — follow the migration recipe in the v7.3.0
+  release note; otherwise start a fresh orchestration; never reconstruct
+  it. The Major Errors paragraph summarizes the same rule.
+- **Resume step 3.** Rewritten for Phase 4: the resume prompt answers the
+  open items by id (`[I2]: plan governs; [C3]: fix it`); the controller
+  records each answer as `decided (user): <answer>` in the review log's
+  LATEST `_Invocation` entry and re-evaluates the counts (template
+  Deviation 5). A Phase 4 stop has a second resume trigger: when the
+  effective HEAD (multi-code-review's Pipeline rule 4) has moved past that
+  entry's completion-marker HEAD, Phase 4 is re-dispatched with or without
+  answers and the controller ALWAYS starts a new invocation over the new
+  content, journaling the addendum first when answers are present; an
+  answer never requests a re-review by itself. The question is presented
+  and the run stops ONLY when the effective HEAD is unchanged AND no
+  answers were given (a re-dispatch in that state returns BLOCKED — never a
+  silent no-op).
 
 - [x] **Step 8: Update the skill description's trigger phrase**
 
@@ -2296,7 +2382,10 @@ Replace Deviation 2 with:
        `BLOCKED: previous invocation left <n> open items and the effective
        HEAD is unchanged; resume with answers` — never re-run and never
        synthesize. With a `## Resume Answer` section present, Deviation 5
-       applies.
+       applies. When the effective HEAD has moved past that entry's
+       completion marker, neither the skip nor the BLOCKED return applies:
+       a new invocation entry runs over the new content, with or without a
+       `## Resume Answer` section (Deviation 5).
 ```
 
 Add a fifth deviation after the blinding deviation of Step 6:
@@ -2305,18 +2394,40 @@ Add a fifth deviation after the blinding deviation of Step 6:
     5. Resume answer: the `## Resume Answer` section, when present, holds
        the user's decisions on the open items — the `user-decision` and
        `unresolved` dispositions — of the review log's CURRENT invocation
-       entry (the entry with your BASE), named by their review-log ids.
-       Append a post-loop addendum to that entry recording, for each item
-       the answer names, the disposition `decided (user): <answer>`. An
-       item the answer resolves without a code change leaves the
-       `unresolved` and `user_decision` counts of your return; an item
-       the answer accepts as a finding to fix follows the skill's
-       "Resolving user-decision and unresolved items" rule (one fix
-       subagent, one verification re-review, `fixed` disposition in the
-       same addendum). If the answer requests a re-review, the completion
-       skip of Deviation 2 is bypassed and a new invocation runs. Commit
-       the addendum under Pipeline rule 1 with subject
-       `chore(review): <slug> decisions`.
+       entry, named by their review-log ids. The CURRENT entry is the
+       LATEST `_Invocation` entry in the review log — the last one in file
+       order — never an older entry selected by its BASE (every entry of
+       one orchestration run carries the same BASE). First decide whether
+       a new invocation is due: compute the effective HEAD (Pipeline rule
+       4) and compare it with that entry's completion-marker HEAD; it has
+       moved when code was committed after the stop. Then append a
+       post-loop addendum to that entry recording, for each item the
+       answer names, the disposition `decided (user): <answer>`. An item
+       the answer resolves without a code change leaves the `unresolved`
+       and `user_decision` counts of your return; an item the answer
+       accepts as a finding to fix follows the skill's "Resolving
+       user-decision and unresolved items" rule (one fix subagent, one
+       verification re-review, `fixed — <summary> → <sha>` disposition in
+       the same addendum). Commit the addendum under Pipeline rule 1 with
+       subject `chore(review): <slug> decisions`. When the effective HEAD
+       had moved past the marker — new code after the stop — the
+       controller ALWAYS starts a new invocation entry over the current
+       effective HEAD once the addendum is committed — the completion
+       skip of Deviation 2 does not apply; when it had not, no new
+       invocation runs: an answer alone never requests a re-review, and
+       the re-evaluated counts are the result.
+       Idempotence — a retry after a lost return carries the same
+       `## Resume Answer` again: for each answered id, skip the item when
+       the latest invocation entry already holds a `decided (user)` line
+       for it (when the previous attempt had already started the new
+       invocation, the latest entry is that new one and the `decided
+       (user)` lines stand in the entry before it — an id already decided
+       there is spent as well: journal nothing for it on the new entry);
+       for a `fix it` answer, also skip the fix dispatch when the fix
+       commit already exists — search `git log` for the `<sha>` the
+       addendum's `fixed` line records, or for the fix commit subject
+       `review fixes (<slug>, round <i>)`. A retry journals nothing twice
+       and dispatches no fix twice.
 ```
 
 Add the placeholder entry after `[LEDGER_PATH]`:
@@ -3691,9 +3802,11 @@ token in the invocation entry would add state for nothing.
 
 **Migrating a run stopped under the old layout (any project):** a run that
 stopped before this release keeps its documents at the old flat paths, and
-neither `orchestrate` nor `Resume orchestration` finds them there (the
-orchestrator's Phase 0 step 5 and Resume step 0 stop and point here). Move
-the documents by hand, then resume:
+neither `orchestrate` nor `Resume orchestration` finds them there: the
+orchestrator stops at intake because the old spec or plan path is outside
+the layout, or at resume because no orchestration log is found in the
+layout, and each of those stops points here. Move the documents by hand,
+then resume:
 
 1. Create `docs/superpowers-orchestrator/<date>-<slug>/` with the
    sub-folders `specs/` and `plans/` — `<date>` is the run's start date and
