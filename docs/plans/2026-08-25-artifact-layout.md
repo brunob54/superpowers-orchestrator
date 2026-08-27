@@ -1481,8 +1481,10 @@ resumable/in-progress entry for the sentinel.
   of an accepted fix is skipped (the new invocation reviews the fix) and
   the addendum leaves the entry's marker unchanged while the new entry's
   `_Invocation` line is committed together with it; the addendum is
-  idempotent (an id already decided is skipped, a fix already committed is
-  not dispatched again); with no review log under `implementation/` (a
+  idempotent (an id already decided is skipped; a fix already committed —
+  found by its recorded `<sha>`, or by its subject searched only in
+  `<that entry's completion-marker sha>..HEAD` — is not dispatched
+  again); with no review log under `implementation/` (a
   migrated run) the decisions are ignored and invocation 1 starts.
 - **The skipped entry is committed.** The log-format paragraph's sentence
   on `skipped` (N=0) entries records that in pipeline mode the entry
@@ -2275,9 +2277,13 @@ with:
   that entry at its next round, journaling nothing twice — the ids in the
   old `## STOPPED` entry may already be `decided (user)`. The question is
   presented and the run stops ONLY when the review log exists, its latest
-  entry carries a completion marker, the effective HEAD is unchanged AND
-  no answers were given (a re-dispatch in that state returns BLOCKED —
-  never a silent no-op).
+  entry carries a completion marker, the effective HEAD is unchanged, no
+  answers were given AND at least one of the stop's open ids has no
+  `decided (user)` line in that entry (a re-dispatch in that state returns
+  BLOCKED — never a silent no-op); when every open id is already decided
+  (a resume from another session after the addendum was journaled), Phase
+  4 is re-dispatched without answers and the controller synthesizes the
+  return from the log — already-decided ids are never re-presented.
 
 - [x] **Step 8: Update the skill description's trigger phrase**
 
@@ -2470,10 +2476,13 @@ Add a fifth deviation after the blinding deviation of Step 6:
        (user)` lines stand in the entry before it — an id already decided
        there is spent as well: journal nothing for it on the new entry);
        for a `fix it` answer, also skip the fix dispatch when the fix
-       commit already exists — search `git log` for the `<sha>` the
-       addendum's `fixed` line records, or for the fix commit subject
-       `review fixes (<slug>, round <i>)`. A retry journals nothing twice
-       and dispatches no fix twice.
+       commit already exists — first search `git log` for the `<sha>` the
+       addendum's `fixed` line records; when it recorded none, search for
+       the fix commit subject `review fixes (<slug>, round <i>)` limited
+       to the range `<that entry's completion-marker sha>..HEAD` — the
+       post-loop fix always lands after the marker, and round `<i>`'s
+       in-loop fix commit, which reuses the same subject, lies before it.
+       A retry journals nothing twice and dispatches no fix twice.
 ```
 
 Add the placeholder entry after `[LEDGER_PATH]`:

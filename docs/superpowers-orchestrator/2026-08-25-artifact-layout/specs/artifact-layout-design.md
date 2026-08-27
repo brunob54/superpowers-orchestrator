@@ -344,14 +344,22 @@ Definitions:
   case takes precedence over presenting the question, because the ids in
   the old `## STOPPED` entry may already be decided. Resume presents the
   question and stops only when the review log exists, its latest entry
-  carries a completion marker, the effective HEAD is unchanged AND no
-  answers were given. Without answers, a
+  carries a completion marker, the effective HEAD is unchanged, no answers
+  were given AND at least one of the stop's open ids has no
+  `decided (user)` line in that entry; when every open id is already
+  decided (a resume from another session after the addendum was
+  journaled), Resume step 3 re-dispatches Phase 4 without answers and the
+  controller synthesizes the return from the log — already-decided ids are
+  never re-presented. Without answers, a
   re-dispatch over an unchanged effective HEAD returns `BLOCKED` (section
   5.6, rule 4) — never a silent no-op. The addendum is idempotent, because
   a retry after a lost return carries the same answers again: an answered
   id that already holds a `decided (user)` line is skipped, and a `fix it`
   answer whose fix commit already exists (found in `git log` by the `<sha>`
-  or the subject the addendum recorded) is not dispatched again.
+  the addendum recorded or, failing that, by the fix commit subject
+  searched only in `<that entry's completion-marker sha>..HEAD` — after
+  the marker, where round `<i>`'s in-loop fix commit with the same subject
+  cannot match) is not dispatched again.
 - `docs/research/` handling and every `state.md` rule: unchanged.
 
 ### 5.5 subagent-driven-development
@@ -443,8 +451,10 @@ Definitions:
      invoker, the loop returns `BLOCKED: previous invocation left <n>
      open items and the effective HEAD is unchanged; resume with answers`
      instead of re-running or synthesizing. Decisions supplied by the
-     invoker are journaled idempotently (an id already decided is skipped,
-     a fix already committed is not dispatched again), and a new
+     invoker are journaled idempotently (an id already decided is skipped;
+     a fix already committed — found by its recorded `<sha>`, or by its
+     subject searched only in `<that entry's completion-marker sha>..HEAD`
+     — is not dispatched again), and a new
      invocation starts only when the effective HEAD has moved past the
      completion marker (section 5.4, "Phase 4 stop and resume"); a latest
      entry without a completion marker is an interrupted invocation,

@@ -420,9 +420,14 @@ Trigger: `Resume orchestration for <plan-or-spec path>`.
    the question and stop", because the ids in the old `## STOPPED` entry
    may already be `decided (user)`. Present the question and stop ONLY
    when the review log exists, its latest entry carries a completion
-   marker, the effective HEAD is unchanged AND the resume prompt gives no
-   answers (a re-dispatch in that state would return BLOCKED — never a
-   silent no-op).
+   marker, the effective HEAD is unchanged, the resume prompt gives no
+   answers AND at least one of the stop's open ids has no
+   `decided (user)` line in that entry (a re-dispatch in that state would
+   return BLOCKED — never a silent no-op). When every open id is already
+   decided there — a resume from another session after the addendum
+   journaled the answers and re-evaluated the counts — re-dispatch Phase 4
+   without answers: the controller synthesizes the return from the log
+   (template Deviation 2); already-decided ids are never re-presented.
 4. Otherwise continue at the first incomplete phase/batch. Your own log's
    phase entries are the primary re-run guard; the sub-skills' logs are
    the backstop.

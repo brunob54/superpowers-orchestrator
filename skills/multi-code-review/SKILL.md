@@ -518,8 +518,8 @@ report. Finding governs → one fix subagent for all accepted findings,
 then one verification re-review; disposition becomes
 `fixed — <summary> → <sha>` in a
 post-loop addendum, and the completion marker's HEAD is updated (in
-pipeline mode only while the effective HEAD is unchanged — Pipeline rule
-4). When the
+pipeline mode only while the effective HEAD is unchanged, compared before
+the addendum is written — Pipeline rule 4). When the
 accepted findings originate in different rounds, `<i>` — for the fix
 commit subject and the `## Round <i> verification <c>` header alike — is the
 **highest** originating round, and the single verification re-review runs
@@ -551,8 +551,11 @@ with it, in the same commit (Pipeline rule 4). Over an unchanged effective
 HEAD no new invocation runs. The addendum is idempotent, because a retry
 after a lost return carries the same answers again: an id that already
 holds a `decided (user)` line is skipped, and an accepted fix whose fix
-commit already exists (found in `git log` by the `<sha>` the `fixed` line
-records or by the fix commit subject) is not dispatched again. With no
+commit already exists is not dispatched again — found in `git log` by the
+`<sha>` the `fixed` line records or, when none was recorded, by the fix
+commit subject searched only in `<that entry's completion-marker sha>..HEAD`
+(the post-loop fix lands after the marker; round `<i>`'s in-loop fix
+commit reuses the same subject and lies before it). With no
 review log under `<TOPIC_DIR>/implementation/` (a run migrated from the
 pre-7.3.0 layout), invoker-supplied decisions are ignored and invocation 1
 starts.

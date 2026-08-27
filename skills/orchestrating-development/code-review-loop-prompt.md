@@ -142,10 +142,13 @@ Agent tool (general-purpose):
        (user)` lines stand in the entry before it — an id already decided
        there is spent as well: journal nothing for it on the new entry);
        for a `fix it` answer, also skip the fix dispatch when the fix
-       commit already exists — search `git log` for the `<sha>` the
-       addendum's `fixed` line records, or for the fix commit subject
-       `review fixes (<slug>, round <i>)`. A retry journals nothing twice
-       and dispatches no fix twice.
+       commit already exists — first search `git log` for the `<sha>` the
+       addendum's `fixed` line records; when it recorded none, search for
+       the fix commit subject `review fixes (<slug>, round <i>)` limited
+       to the range `<that entry's completion-marker sha>..HEAD` — the
+       post-loop fix always lands after the marker, and round `<i>`'s
+       in-loop fix commit, which reuses the same subject, lies before it.
+       A retry journals nothing twice and dispatches no fix twice.
 
     ## Return (final message, 15 lines max)
 
