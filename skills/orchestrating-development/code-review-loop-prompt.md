@@ -97,7 +97,10 @@ Agent tool (general-purpose):
     5. Resume answer: the `## Resume Answer` section, when present, holds
        the user's decisions on the open items — the `user-decision` and
        `unresolved` dispositions — of the review log's CURRENT invocation
-       entry, named by their review-log ids. The CURRENT entry is the
+       entry, named by their review-log ids. No review log at
+       `[TOPIC_DIR]/implementation/` (a run migrated from the pre-7.3.0
+       layout): ignore the `## Resume Answer` section and start
+       invocation 1. The CURRENT entry is the
        LATEST `_Invocation` entry in the review log — the last one in file
        order — never an older entry selected by its BASE (every entry of
        one orchestration run carries the same BASE). A latest entry
@@ -124,7 +127,13 @@ Agent tool (general-purpose):
        effective HEAD once the addendum is committed — the completion
        skip of Deviation 2 does not apply; when it had not, no new
        invocation runs: an answer alone never requests a re-review, and
-       the re-evaluated counts are the result.
+       the re-evaluated counts are the result. In the moved case the
+       addendum leaves that entry's completion marker unchanged, and the
+       new entry's `_Invocation` line is written and committed together
+       with the addendum, in the same `chore(review): <slug> decisions`
+       commit, so that a retry always finds either that new entry (no
+       marker → resume it) or its completion; only in the unchanged case
+       does the addendum update the marker.
        Idempotence — a retry after a lost return carries the same
        `## Resume Answer` again: for each answered id, skip the item when
        the latest invocation entry already holds a `decided (user)` line

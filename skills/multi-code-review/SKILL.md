@@ -517,7 +517,9 @@ mode journals and ends the batch instead): present each once, at this
 report. Finding governs → one fix subagent for all accepted findings,
 then one verification re-review; disposition becomes
 `fixed — <summary> → <sha>` in a
-post-loop addendum, and the completion marker's HEAD is updated. When the
+post-loop addendum, and the completion marker's HEAD is updated (in
+pipeline mode only while the effective HEAD is unchanged — Pipeline rule
+4). When the
 accepted findings originate in different rounds, `<i>` — for the fix
 commit subject and the `## Round <i> verification <c>` header alike — is the
 **highest** originating round, and the single verification re-review runs
@@ -531,20 +533,29 @@ In pipeline mode the decisions may arrive on a later dispatch instead — the
 orchestrator's `[RESUME_ANSWER]` placeholder carries the user's answers to
 the open items by review-log id: each named item gets the disposition
 `decided (user): <answer>` in a post-loop addendum on the log's LATEST
-invocation entry, committed as `chore(review): <slug> decisions` (Pipeline
-rule 1); an item decided without a code change no longer counts as
-unresolved or user-decision; an accepted finding follows the
-finding-governs path above. An answer never requests a re-review by itself:
-when the effective HEAD (Pipeline rule 4) has moved past that entry's
-completion marker (compared before the addendum is written) — code was
-committed after the stop — the controller ALWAYS starts a new invocation
-entry once any addendum is committed, with or without answers; over an
-unchanged effective HEAD no new invocation runs. The addendum is
-idempotent, because a retry after a lost return
-carries the same answers again: an id that already holds a `decided
-(user)` line is skipped, and an accepted fix whose fix commit already
-exists (found in `git log` by the `<sha>` the `fixed` line records or by
-the fix commit subject) is not dispatched again.
+completed invocation entry — a latest entry without a completion marker is
+an interrupted invocation, resumed at its next round (Pipeline rule 3)
+with nothing journaled twice — committed as
+`chore(review): <slug> decisions` (Pipeline rule 1); an item decided
+without a code change no longer counts as unresolved or user-decision; an
+accepted finding follows the finding-governs path above.
+An answer never requests a re-review by itself: when the effective HEAD
+(Pipeline rule 4) has moved past that entry's completion marker — compared
+before the addendum is written — because code was committed after the
+stop, the controller ALWAYS starts a new invocation entry
+once any addendum is committed, with or without answers; in that case the
+verification re-review of an accepted fix is skipped (the new invocation
+reviews the fix), and the addendum leaves that entry's completion marker
+unchanged while the new entry's `_Invocation` line is committed together
+with it, in the same commit (Pipeline rule 4). Over an unchanged effective
+HEAD no new invocation runs. The addendum is idempotent, because a retry
+after a lost return carries the same answers again: an id that already
+holds a `decided (user)` line is skipped, and an accepted fix whose fix
+commit already exists (found in `git log` by the `<sha>` the `fixed` line
+records or by the fix commit subject) is not dispatched again. With no
+review log under `<TOPIC_DIR>/implementation/` (a run migrated from the
+pre-7.3.0 layout), invoker-supplied decisions are ignored and invocation 1
+starts.
 
 The host gate proceeds only when no unresolved Critical/Important or
 user-decision items remain — unresolved items block, exactly as
@@ -575,8 +586,15 @@ that git's default history simplification would drop.
 
 In pipeline mode the completion marker records the **effective HEAD**, never
 the raw `git rev-parse HEAD`, which at marker time is always the last round's
-log commit. The post-loop addendum updates the marker under the same
-definition. The once-per-gate skip and the orchestrator's retry protection
+log commit. A post-loop addendum updates the marker under the same
+definition only while the effective HEAD is unchanged. In the moved case (the
+effective HEAD has moved past the entry's marker, compared before the addendum
+is written) the addendum leaves that entry's completion marker unchanged, and
+the new invocation entry's `_Invocation` line is committed together with the
+addendum, in the same `chore(review): <slug> decisions` commit: a retry then
+finds either that new entry without a marker (resume it) or its completion,
+never a marker that claims the new code was reviewed. The once-per-gate skip
+and the orchestrator's retry protection
 compare the recorded HEAD with the **current effective HEAD**. Direct mode
 keeps the raw `git rev-parse HEAD` in both places, unchanged. The skip's
 "log not tracked" condition applies to **direct mode only**.
@@ -606,7 +624,11 @@ what the commit changes and never by its subject — and there is **no**
 tracked-log condition: in that mode the log is tracked by design. In
 pipeline mode the skip additionally requires the open-item condition of
 Pipeline rule 4: the entry ended with `unresolved = 0` and
-`user_decision = 0`. A `skipped` (N=0) entry **counts as completed** for this check
+`user_decision = 0`. The entry compared is the latest COMPLETED one: a
+decisions addendum written in the moved case leaves its entry's marker
+unchanged and appends a new entry (Pipeline rule 4), and a latest entry
+without a marker is resumed, never skipped (Pipeline rule 3). A `skipped`
+(N=0) entry **counts as completed** for this check
 — skip when its recorded HEAD equals the current HEAD under the same
 mode-dependent definition and the branch matches — and is never a
 resumable/in-progress entry for the sentinel. Interrupted

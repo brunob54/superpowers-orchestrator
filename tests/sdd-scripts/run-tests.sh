@@ -754,6 +754,12 @@ assert_file_contains "rule 4 drift check: SKILL.md still limits the once-per-gat
 # (Deviation 5); pin the sentence there.
 CODE_REVIEW_LOOP_PROMPT_MD="$(dirname "$(dirname "$SCRIPTS")")/orchestrating-development/code-review-loop-prompt.md"
 assert_file_contains "resume drift check: code-review-loop-prompt.md still always starts a new invocation after the effective HEAD moved" "$CODE_REVIEW_LOOP_PROMPT_MD" 'controller ALWAYS starts a new invocation entry over the current'
+# In the moved case (effective HEAD past the entry's marker) the decisions
+# addendum must not update that entry's completion marker; the new entry's
+# _Invocation line is committed together with it, so a retry never reads a
+# marker that claims the new code was reviewed. Pin the Pipeline rule 4
+# sentence.
+assert_file_contains "rule 4 drift check: SKILL.md still leaves the completion marker unchanged when the addendum is written in the moved case" "$SKILL_MD" "the addendum leaves that entry's completion marker unchanged"
 
 bold "TOPIC_DIR validation rule (multi-code-review)"
 

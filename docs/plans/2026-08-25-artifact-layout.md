@@ -1368,8 +1368,15 @@ that git's default history simplification would drop.
 
 In pipeline mode the completion marker records the **effective HEAD**, never
 the raw `git rev-parse HEAD`, which at marker time is always the last round's
-log commit. The post-loop addendum updates the marker under the same
-definition. The once-per-gate skip and the orchestrator's retry protection
+log commit. A post-loop addendum updates the marker under the same
+definition only while the effective HEAD is unchanged. In the moved case (the
+effective HEAD has moved past the entry's marker, compared before the addendum
+is written) the addendum leaves that entry's completion marker unchanged, and
+the new invocation entry's `_Invocation` line is committed together with the
+addendum, in the same `chore(review): <slug> decisions` commit: a retry then
+finds either that new entry without a marker (resume it) or its completion,
+never a marker that claims the new code was reviewed. The once-per-gate skip
+and the orchestrator's retry protection
 compare the recorded HEAD with the **current effective HEAD**. Direct mode
 keeps the raw `git rev-parse HEAD` in both places, unchanged. The skip's
 "log not tracked" condition applies to **direct mode only**.
@@ -1444,7 +1451,11 @@ what the commit changes and never by its subject — and there is **no**
 tracked-log condition: in that mode the log is tracked by design. In
 pipeline mode the skip additionally requires the open-item condition of
 Pipeline rule 4: the entry ended with `unresolved = 0` and
-`user_decision = 0`. A `skipped` (N=0) entry **counts as completed** for this check
+`user_decision = 0`. The entry compared is the latest COMPLETED one: a
+decisions addendum written in the moved case leaves its entry's marker
+unchanged and appends a new entry (Pipeline rule 4), and a latest entry
+without a marker is resumed, never skipped (Pipeline rule 3). A `skipped`
+(N=0) entry **counts as completed** for this check
 — skip when its recorded HEAD equals the current HEAD under the same
 mode-dependent definition and the branch matches — and is never a
 resumable/in-progress entry for the sentinel.
@@ -1458,15 +1469,21 @@ resumable/in-progress entry for the sentinel.
   states that the orchestrator's `[RESUME_ANSWER]` placeholder carries the
   user's answers by review-log id; each answer becomes
   `decided (user): <answer>` in a post-loop addendum on the log's LATEST
-  invocation entry, committed as `chore(review): <slug> decisions`; an item
+  completed invocation entry (a latest entry without a completion marker
+  is an interrupted invocation, resumed at its next round), committed as
+  `chore(review): <slug> decisions`; an item
   decided without a code change leaves the counts; an accepted finding
   follows the finding-governs path; an answer never requests a re-review by
   itself — the controller ALWAYS starts a new invocation when the effective
   HEAD has moved past the entry's completion marker (compared before the
   addendum is written), with or without answers, and never over an
-  unchanged effective HEAD; and the addendum is
+  unchanged effective HEAD; in the moved case the verification re-review
+  of an accepted fix is skipped (the new invocation reviews the fix) and
+  the addendum leaves the entry's marker unchanged while the new entry's
+  `_Invocation` line is committed together with it; the addendum is
   idempotent (an id already decided is skipped, a fix already committed is
-  not dispatched again).
+  not dispatched again); with no review log under `implementation/` (a
+  migrated run) the decisions are ignored and invocation 1 starts.
 - **The skipped entry is committed.** The log-format paragraph's sentence
   on `skipped` (N=0) entries records that in pipeline mode the entry
   carries the effective HEAD, never the raw `git rev-parse HEAD`, because
@@ -2250,10 +2267,17 @@ with:
   run migrated from the pre-7.3.0 layout and stopped in Phase 4: when no
   review log exists at `<topic folder>/implementation/<slug>-review-log.md`
   (the old untracked log is not migrated), Phase 4 is re-dispatched
-  without answers and the controller starts invocation 1. The question is
-  presented and the run stops ONLY when the review log exists, the
-  effective HEAD is unchanged AND no answers were given (a re-dispatch in
-  that state returns BLOCKED — never a silent no-op).
+  without answers — answers given are reported back as not applicable —
+  and the controller starts invocation 1. A fourth case takes precedence
+  over presenting the question: a latest review-log entry WITHOUT a
+  completion marker is an interrupted invocation, so Phase 4 is
+  re-dispatched (with the answers when given) and the controller resumes
+  that entry at its next round, journaling nothing twice — the ids in the
+  old `## STOPPED` entry may already be `decided (user)`. The question is
+  presented and the run stops ONLY when the review log exists, its latest
+  entry carries a completion marker, the effective HEAD is unchanged AND
+  no answers were given (a re-dispatch in that state returns BLOCKED —
+  never a silent no-op).
 
 - [x] **Step 8: Update the skill description's trigger phrase**
 
@@ -2401,7 +2425,10 @@ Add a fifth deviation after the blinding deviation of Step 6:
     5. Resume answer: the `## Resume Answer` section, when present, holds
        the user's decisions on the open items — the `user-decision` and
        `unresolved` dispositions — of the review log's CURRENT invocation
-       entry, named by their review-log ids. The CURRENT entry is the
+       entry, named by their review-log ids. No review log at
+       `[TOPIC_DIR]/implementation/` (a run migrated from the pre-7.3.0
+       layout): ignore the `## Resume Answer` section and start
+       invocation 1. The CURRENT entry is the
        LATEST `_Invocation` entry in the review log — the last one in file
        order — never an older entry selected by its BASE (every entry of
        one orchestration run carries the same BASE). A latest entry
@@ -2428,7 +2455,13 @@ Add a fifth deviation after the blinding deviation of Step 6:
        effective HEAD once the addendum is committed — the completion
        skip of Deviation 2 does not apply; when it had not, no new
        invocation runs: an answer alone never requests a re-review, and
-       the re-evaluated counts are the result.
+       the re-evaluated counts are the result. In the moved case the
+       addendum leaves that entry's completion marker unchanged, and the
+       new entry's `_Invocation` line is written and committed together
+       with the addendum, in the same `chore(review): <slug> decisions`
+       commit, so that a retry always finds either that new entry (no
+       marker → resume it) or its completion; only in the unchanged case
+       does the addendum update the marker.
        Idempotence — a retry after a lost return carries the same
        `## Resume Answer` again: for each answered id, skip the item when
        the latest invocation entry already holds a `decided (user)` line

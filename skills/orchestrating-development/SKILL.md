@@ -410,9 +410,17 @@ Trigger: `Resume orchestration for <plan-or-spec path>`.
    `<topic folder>/implementation/<slug>-review-log.md` — a run migrated
    from the pre-7.3.0 layout and stopped in Phase 4: its old log was
    untracked and is not migrated — re-dispatch Phase 4 without answers
-   (the stop's open items belong to that old log); the controller starts
-   invocation 1. Present the question and stop ONLY when the review log
-   exists, the effective HEAD is unchanged AND the resume prompt gives no
+   (the stop's open items belong to that old log; answers the resume
+   prompt gives are not applicable and are reported back as such); the
+   controller starts invocation 1. A latest review-log entry WITHOUT a
+   completion marker is an interrupted invocation: re-dispatch Phase 4 —
+   with the answers when the resume prompt gives them — and the controller
+   resumes that entry at its next round (template Deviations 2 and 5);
+   nothing is journaled twice. This case takes precedence over "present
+   the question and stop", because the ids in the old `## STOPPED` entry
+   may already be `decided (user)`. Present the question and stop ONLY
+   when the review log exists, its latest entry carries a completion
+   marker, the effective HEAD is unchanged AND the resume prompt gives no
    answers (a re-dispatch in that state would return BLOCKED — never a
    silent no-op).
 4. Otherwise continue at the first incomplete phase/batch. Your own log's

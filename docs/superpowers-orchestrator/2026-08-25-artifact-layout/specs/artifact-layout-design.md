@@ -330,13 +330,22 @@ Definitions:
   code was committed after the stop — Phase 4 is re-dispatched with or
   without answers, and the controller ALWAYS starts a new invocation over
   the new content (with answers, the addendum is journaled and committed
-  first). When no review log exists at `<topic folder>/implementation/` —
-  a run migrated from the pre-7.3.0 layout and stopped in Phase 4, whose
-  untracked old log is not migrated (section 8) — Resume step 3
-  re-dispatches Phase 4 without answers and the controller starts
-  invocation 1. Resume presents the question and stops only when the
-  review log exists, the effective HEAD is unchanged AND no answers were
-  given. Without answers, a
+  first; it leaves the previous entry's completion marker unchanged, and
+  the new entry's `_Invocation` line is committed in the same commit —
+  section 5.6, rule 4). When no review log exists at
+  `<topic folder>/implementation/` — a run migrated from the pre-7.3.0
+  layout and stopped in Phase 4, whose untracked old log is not migrated
+  (section 8) — Resume step 3 re-dispatches Phase 4 without answers and
+  the controller starts invocation 1; answers given with that resume are
+  reported back as not applicable. A latest review-log entry without a
+  completion marker is an interrupted invocation: Resume step 3
+  re-dispatches Phase 4 — with the answers when given — and the controller
+  resumes that entry at its next round, journaling nothing twice; this
+  case takes precedence over presenting the question, because the ids in
+  the old `## STOPPED` entry may already be decided. Resume presents the
+  question and stops only when the review log exists, its latest entry
+  carries a completion marker, the effective HEAD is unchanged AND no
+  answers were given. Without answers, a
   re-dispatch over an unchanged effective HEAD returns `BLOCKED` (section
   5.6, rule 4) — never a silent no-op. The addendum is idempotent, because
   a retry after a lost return carries the same answers again: an answered
@@ -417,8 +426,14 @@ Definitions:
      In pipeline mode
      the completion marker records the effective HEAD — never the raw
      `git rev-parse HEAD`, which at marker time is always the last
-     round's log commit. The post-loop addendum updates the marker with
-     the same definition. The once-per-gate skip and the orchestrator's
+     round's log commit. A post-loop addendum updates the marker with the
+     same definition only while the effective HEAD is unchanged; in the
+     moved case (the effective HEAD has moved past the entry's marker) the
+     addendum leaves that entry's completion marker unchanged, and the new
+     invocation entry's `_Invocation` line is committed together with the
+     addendum in the same `chore(review): <slug> decisions` commit, so a
+     retry finds either the new entry without a marker (resumed) or its
+     completion. The once-per-gate skip and the orchestrator's
      retry protection compare the recorded HEAD with the current
      effective HEAD. Direct mode keeps the raw `git rev-parse HEAD` in
      both places, as today. The "log not tracked" condition of the skip
@@ -434,6 +449,9 @@ Definitions:
      completion marker (section 5.4, "Phase 4 stop and resume"); a latest
      entry without a completion marker is an interrupted invocation,
      resumed at its next round and never followed by a further entry.
+     With no review log under `<TOPIC_DIR>/implementation/` (a run
+     migrated from the pre-7.3.0 layout), invoker-supplied decisions are
+     ignored and invocation 1 starts.
 - Without `TOPIC_DIR` (direct mode): exactly today's behavior —
   `.superpowers/reviews/<branch-slug>-review-log.md`,
   `<branch-slug>-fix-reports.md`, `.gitignore` containing `*`, nothing
@@ -636,7 +654,11 @@ the spec, the plan, their `-review-log.md` sidecars and the orchestration
 log into it, dropping the date prefix from the file names; edit the
 recorded paths (the orchestration log's `_Invocation` header `spec` path
 and `plan:` line, the plan's `**Spec:**` header); commit; then
-`Resume orchestration for <new plan path>`. Every orchestrator stop that
+`Resume orchestration for <new plan path>`. The code review log of a run
+stopped in Phase 4 is not migrated — under the old layout it lived in the
+untracked `.superpowers/reviews/` folder — so after migration a Phase 4
+stop re-runs the final code review (Resume step 3 starts invocation 1;
+section 5.4). Every orchestrator stop that
 such a run can reach points to that recipe: the topic-folder derivation
 failure (Phase 0 step 4 and Resume step 0 — the old paths are outside the
 layout), the zero-match stop (Phase 0 step 5, reached when only the spec
