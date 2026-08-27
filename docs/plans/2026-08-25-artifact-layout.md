@@ -2388,7 +2388,7 @@ with:
 
 In `tests/claude-code/test-multi-code-review.sh`, four edits.
 
-_Note: the shipped suite in tests/claude-code/test-multi-code-review.sh is authoritative — review fixes on this branch changed the Case 2 checks (exact-subject (p3a)/(p3b), an ungated (p5-control) and a (p5-control2) range check) that this embedded copy does not show._
+_Note: the shipped suite in tests/claude-code/test-multi-code-review.sh is authoritative. Review fixes on this branch changed the Case 2 checks (exact-subject (p3a)/(p3b), an ungated (p5-control), a (p5-control2) range check, and the (h3) effective-HEAD check on the completion marker); the fenced blocks below were re-synchronized afterwards and are verbatim copies of the shipped file._
 
 (a) Extend the header comment — after the Case 1 assertion list — with the Case 2 assertions:
 
@@ -2402,15 +2402,28 @@ _Note: the shipped suite in tests/claude-code/test-multi-code-review.sh is autho
 #   (p1b) the direct-mode sidecar log was NOT also written — TOPIC_DIR must
 #        select pipeline mode exclusively, not run both modes
 #   (p2) that log is committed, not left untracked
-#   (p3) at least one chore(review) commit per round
+#   (h3) the completion marker records the effective HEAD (Pipeline rule 4,
+#        SKILL.md): a real commit, not a chore(review) log commit, equal to
+#        the path-limited `git log -1` lookup over BASE..HEAD with the
+#        blinding pathspecs read out of review-package
+#   (p3) each round's chore(review) log commit has the exact subject
+#        "chore(review): <slug> round <i> log" (Pipeline rule 1, SKILL.md)
 #   (p4) the working tree is clean at the end (test transcripts excluded)
 #   (p5) reviewer blinding: no review package contains the path of the log
 #        or of the fix-reports file
 #   (p5-control) positive control for (p5): at least 2 new review packages
 #        were written during Case 2, so (p5) actually examined a package
-#        built after round 1's chore(review) log commit existed — gated on
-#        round 1 having produced a "review fixes (" commit, since otherwise
-#        round 2 legitimately reuses round 1's package name
+#        built after round 1's chore(review) log commit existed. This holds
+#        unconditionally: Pipeline rule 1 always lands a
+#        "chore(review): <slug> round 1 log" commit before round 2 starts,
+#        so round 2's package (SKILL.md Procedure step 1: regenerated
+#        whenever commits landed since the last package) always gets a new
+#        `review-<base7>..<head7>.diff` name, fix commit or not.
+#   (p5-control2) the count alone does not prove that any examined package's
+#        range actually contained a chore(review) commit — the range where
+#        blinding matters. Confirmed by resolving each NEW package's <head7>
+#        back to a commit subject and requiring at least one to be a
+#        chore(review) commit.
 #   (p6) when round 1 produced a fix commit, the fix-reports file exists
 #        under TOPIC_DIR/implementation, and (p7) it is committed
 #   (setup) Case 2 starts on a clean tree and a fresh branch from the base
@@ -2496,7 +2509,16 @@ PIPE_PROMPT="Invoke the superpowers-orchestrator:multi-code-review skill on the 
 # and when the glob matches nothing `ls` exits 2, `pipefail` propagates that
 # through `wc`/`tr`, and `set -e` would abort the whole script instead of
 # letting the control report. Same idiom as line 99 of this file.
-PKG_COUNT_BEFORE=$(ls "$TEST_PROJECT"/.superpowers/sdd/review-*.diff 2>/dev/null | wc -l | tr -d ' ' || true)
+# The glob here is RELATIVE (cwd is already $TEST_PROJECT, set by Case 1's
+# "cd $TEST_PROJECT" above) because the after-run listings this snapshot is
+# compared against — (p5-control)/(p5-control2) below — use the same
+# relative glob after their own "cd $TEST_PROJECT". `comm -13` compares
+# these as plain strings, so an absolute path here would never match a
+# relative one there and every post-run package would be misreported as new.
+PKG_COUNT_BEFORE=$(ls .superpowers/sdd/review-*.diff 2>/dev/null | wc -l | tr -d ' ' || true)
+# Same snapshot, as a file listing rather than a count — (p5-control2) below
+# needs the actual NEW filenames, not just how many there are.
+PKGS_BEFORE=$(ls .superpowers/sdd/review-*.diff 2>/dev/null || true)
 
 # Safety net (Case 2): re-snapshot the plugin repository immediately before
 # this case's agent call, same as assertion (e) does for Case 1. Case 1's
@@ -2565,10 +2587,63 @@ else
         echo "FAIL(h2): pipeline review log has no '_Completed — ' marker — the loop did not finish"
         FAILURES=$((FAILURES+1))
     fi
-    # (p3) one chore(review) commit per round
-    REVIEW_COMMITS=$(git log --format=%s "$BASE_SHA"..HEAD | grep -c '^chore(review): ' || true)
-    if [ "$REVIEW_COMMITS" -lt 2 ]; then
-        echo "FAIL(p3): expected at least 2 chore(review) commits, found $REVIEW_COMMITS"
+    # (h3) the completion marker records the EFFECTIVE HEAD (Pipeline rule 4
+    # in skills/multi-code-review/SKILL.md): the newest commit in BASE..HEAD
+    # that changes at least one path outside the blinding pathspec set. The
+    # raw HEAD at marker time is the round's own chore(review) log commit and
+    # would never match a later once-per-gate comparison. Three checks: the
+    # marker names a real commit, that commit is not a chore(review) log
+    # commit, and it equals the path-limited lookup computed here. The
+    # subject check is specific to this fixture: the seeded branch carries no
+    # `chore(review):`-titled commit of its own, so every commit with that
+    # subject is one of the loop's log commits, and a marker naming one is
+    # the raw HEAD. (Rule 4 itself keys on content, not on the subject.) The
+    # pathspec set is read out of review-package itself — the set a script
+    # actually executes — so this check follows the set instead of retyping
+    # it. `|| true` keeps `set -e` from aborting the run when (h2) already
+    # reported a missing marker.
+    MARKER_SHA=$(grep '^_Completed — ' "$PIPE_LOG" | tail -n 1 | sed -E 's/.*HEAD ([0-9a-f]+)_?[[:space:]]*$/\1/' || true)
+    if ! git rev-parse --verify --quiet "${MARKER_SHA}^{commit}" > /dev/null 2>&1; then
+        echo "FAIL(h3a): the completion marker's HEAD '$MARKER_SHA' is not a commit in the test project"
+        FAILURES=$((FAILURES+1))
+    else
+        MARKER_SUBJECT=$(git log -1 --format=%s "$MARKER_SHA")
+        case "$MARKER_SUBJECT" in
+            "chore(review): "*)
+                echo "FAIL(h3b): the completion marker records a chore(review) log commit ('$MARKER_SUBJECT') — the raw HEAD, not the effective HEAD"
+                FAILURES=$((FAILURES+1)) ;;
+        esac
+        BLIND_PATHSPECS=()
+        while IFS= read -r ENTRY; do
+            BLIND_PATHSPECS+=("$ENTRY")
+        done < <(sed -n '/^blind_pathspecs=($/,/^)$/p' "$PLUGIN_DIR/skills/subagent-driven-development/scripts/review-package" | grep -oE "':[^']*'" | sed "s/^'//; s/'\$//")
+        if [ "${#BLIND_PATHSPECS[@]}" -eq 0 ]; then
+            echo "FAIL(h3c): could not read blind_pathspecs out of review-package — the effective HEAD cannot be computed"
+            FAILURES=$((FAILURES+1))
+        else
+            EXPECTED_EFFECTIVE_HEAD=$(git log -1 --full-history --format=%H "$BASE_SHA..HEAD" -- "${BLIND_PATHSPECS[@]}")
+            [ -n "$EXPECTED_EFFECTIVE_HEAD" ] || EXPECTED_EFFECTIVE_HEAD=$(git rev-parse "$BASE_SHA")
+            if [ "$(git rev-parse "$MARKER_SHA")" != "$EXPECTED_EFFECTIVE_HEAD" ]; then
+                echo "FAIL(h3c): the completion marker records $MARKER_SHA but the effective HEAD of $BASE_SHA..HEAD is $EXPECTED_EFFECTIVE_HEAD"
+                FAILURES=$((FAILURES+1))
+            fi
+        fi
+    fi
+    # (p3) each round's log commit uses the EXACT generic subject from
+    # Pipeline rule 1 in skills/multi-code-review/SKILL.md:
+    # "chore(review): <slug> round <i> log". "at least 2 chore(review)
+    # commits" is not enough: the completion commit "chore(review): <slug>
+    # completed" (same rule) also matches that count, so a run that skipped
+    # round 2's own log commit but landed the completion commit would still
+    # pass. <slug> = TOPIC_DIR's basename minus the date prefix ("Sidecar
+    # log and fix reports", pipeline mode, SKILL.md) — "sum-fix" for this
+    # fixture's TOPIC_DIR (docs/superpowers-orchestrator/2026-08-25-sum-fix).
+    if ! git log --format=%s "$BASE_SHA"..HEAD | grep -qxF "chore(review): sum-fix round 1 log"; then
+        echo "FAIL(p3a): no commit with subject 'chore(review): sum-fix round 1 log'"
+        FAILURES=$((FAILURES+1))
+    fi
+    if ! git log --format=%s "$BASE_SHA"..HEAD | grep -qxF "chore(review): sum-fix round 2 log"; then
+        echo "FAIL(p3b): no commit with subject 'chore(review): sum-fix round 2 log'"
         FAILURES=$((FAILURES+1))
     fi
     # (p4) the working tree is clean at the end (transcripts excluded — see
@@ -2599,26 +2674,57 @@ else
     # which a "-le $PKG_COUNT_BEFORE" test would let through. Package files
     # are named per range (`review-<base7>..<head7>.diff`), so a correct N=2
     # run leaves two.
-    # The +2 threshold only holds when round 1 actually produced a fix commit.
-    # If round 1 found nothing to fix, the effective HEAD (see "Pipeline rule 4"
-    # in skills/multi-code-review/SKILL.md) is unchanged between round 1 and
-    # round 2, so round 2 legitimately regenerates a package under the
-    # identical `review-<base7>..<head7>.diff` name instead of a new one — that
-    # is correct behaviour, not the reused-package bug this control looks for.
+    #
+    # This holds UNCONDITIONALLY — no gate on round 1 having produced a fix
+    # commit. Pipeline rule 1 in skills/multi-code-review/SKILL.md always
+    # lands a "chore(review): <slug> round 1 log" commit before round 2
+    # starts, and Procedure step 1 there regenerates the package "whenever
+    # commits landed since the last package" — so round 2's package always
+    # carries a new HEAD short SHA and therefore a new
+    # `review-<base7>..<head7>.diff` name, fix commit or not.
+    PKG_COUNT=$(ls .superpowers/sdd/review-*.diff 2>/dev/null | wc -l | tr -d ' ' || true)
+    if [ "$PKG_COUNT" -lt $((PKG_COUNT_BEFORE + 2)) ]; then
+        echo "FAIL(p5-control): fewer than 2 new review packages under .superpowers/sdd/ (before Case 2: $PKG_COUNT_BEFORE, after: $PKG_COUNT) — round 2 did not regenerate after round 1's chore(review) log commit, so the blinding assertion examined only packages built before the log existed"
+        FAILURES=$((FAILURES+1))
+    fi
+    # (p5-control2) the count alone does not prove that any package the (p5)
+    # loop below actually examined had a range that contained a
+    # chore(review) commit — the one case where blinding matters. Resolve
+    # each NEW package (present now, absent from the pre-case $PKGS_BEFORE
+    # snapshot) back to the commit its filename names: package files are
+    # `review-<base7>..<head7>.diff`, so the text after `..` and before
+    # `.diff` is the HEAD short SHA that package was built against.
+    NEW_PKGS=$(comm -13 <(printf '%s\n' "$PKGS_BEFORE" | sort) <(ls .superpowers/sdd/review-*.diff 2>/dev/null | sort))
+    # (p5-control3) self-check: NEW_PKGS must hold exactly the packages this
+    # case added, no more and no less — this is what would have caught the
+    # before/after path-form mismatch this control used to have, where every
+    # pre-existing package was misreported as new. Confirm its entry count
+    # against the arithmetic difference between the two package-count
+    # snapshots above.
+    NEW_PKGS_COUNT=$(printf '%s\n' "$NEW_PKGS" | grep -c . || true)
+    if [ "$NEW_PKGS_COUNT" -ne $((PKG_COUNT - PKG_COUNT_BEFORE)) ]; then
+        echo "FAIL(p5-control3): NEW_PKGS has $NEW_PKGS_COUNT entries but PKG_COUNT ($PKG_COUNT) - PKG_COUNT_BEFORE ($PKG_COUNT_BEFORE) = $((PKG_COUNT - PKG_COUNT_BEFORE)) — the before/after package listings are not in the same form"
+        FAILURES=$((FAILURES+1))
+    fi
+    FOUND_REVIEW_RANGE_PKG=0
+    for PKG in $NEW_PKGS; do
+        HEAD7=$(basename "$PKG" .diff | sed -E 's/^review-[0-9a-f]+\.\.//')
+        SUBJECT=$(git log -1 --format=%s "$HEAD7" 2>/dev/null || true)
+        case "$SUBJECT" in
+            "chore(review): "*) FOUND_REVIEW_RANGE_PKG=1 ;;
+        esac
+    done
+    if [ "$FOUND_REVIEW_RANGE_PKG" -ne 1 ]; then
+        echo "FAIL(p5-control2): none of the new review packages' HEAD commit is a chore(review) commit — the (p5) blinding check never examined a package whose range actually included review material. New packages: $NEW_PKGS"
+        FAILURES=$((FAILURES+1))
+    fi
+    # (p6)/(p7) a round that dispatched a fix subagent also wrote the
+    # fix-reports file next to the log, and committed it — the skill
+    # commits "<log> [<fix reports>]" together in the chore(review) commit.
+    # Gated on round 1 having produced a fix commit: without one there is no
+    # fix report to write.
     FIX_COMMITS=$(git log --format=%s "$BASE_SHA"..HEAD | grep -c '^review fixes (' || true)
-    if [ "$FIX_COMMITS" -lt 1 ]; then
-        echo "SKIP(p5-control): round 1 produced no 'review fixes (' commit, so a same-name package regeneration in round 2 is expected — the +2 threshold does not apply"
-    else
-        PKG_COUNT=$(ls .superpowers/sdd/review-*.diff 2>/dev/null | wc -l | tr -d ' ' || true)
-        if [ "$PKG_COUNT" -lt $((PKG_COUNT_BEFORE + 2)) ]; then
-            echo "FAIL(p5-control): fewer than 2 new review packages under .superpowers/sdd/ (before Case 2: $PKG_COUNT_BEFORE, after: $PKG_COUNT) — round 2 did not regenerate after round 1's chore(review) log commit, so the blinding assertion examined only packages built before the log existed"
-            FAILURES=$((FAILURES+1))
-        fi
-        # (p6)/(p7) a round that dispatched a fix subagent also wrote the
-        # fix-reports file next to the log, and committed it — the skill
-        # commits "<log> [<fix reports>]" together in the chore(review) commit.
-        # Gated on the same condition: without a fix commit there is no fix
-        # report to write.
+    if [ "$FIX_COMMITS" -ge 1 ]; then
         PIPE_FIX_REPORTS="$TOPIC_DIR/implementation/sum-fix-fix-reports.md"
         if [ ! -f "$PIPE_FIX_REPORTS" ]; then
             echo "FAIL(p6): round 1 produced a fix commit but $PIPE_FIX_REPORTS does not exist"
