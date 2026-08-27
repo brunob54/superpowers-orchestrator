@@ -12,7 +12,7 @@
 
 **Assumptions:**
 
-- Assumes git >= 2.32 — will NOT work if the user's git does not support the pathspec magic `top`, `exclude` and `glob`, or `git commit --trailer`. The release note (Task 22) states this floor for the first time.
+- Assumes git >= 2.32 — will NOT work if the user's git does not support the pathspec magic `top` and `exclude`, or `git commit --trailer`. The release note (Task 22) states this floor for the first time.
 - Assumes `git commit -- <path>` fails on a path git does not yet track — will NOT work if a future git version changes this; every pipeline-mode commit therefore runs `git add -- <paths>` first.
 - Assumes git stores no empty directories — will NOT work as described if a topic that stopped at the spec stage is expected to show an empty `plans/` folder after a fresh clone. Stage folders are created on first write only.
 - Assumes Windows Git Bash (MSYS) leaves arguments beginning with `:(` untouched. This is UNVERIFIED. Task 18 records a one-time manual check; if the conversion mangles them, the documented workaround is `MSYS_NO_PATHCONV=1` in front of those commands.
@@ -3479,9 +3479,8 @@ Insert immediately after the `## Installation` heading in `README.md`:
 
 ```markdown
 **Requirements:** git **2.32 or newer**. The pipeline's commit trailers
-(`git commit --trailer`) and its pathspec magic (`:(top)`, `:(exclude)`,
-`:(glob)` — used to keep review material out of every reviewer's diff) both
-need it.
+(`git commit --trailer`) and its pathspec magic (`:(top)`, `:(exclude)` —
+used to keep review material out of every reviewer's diff) both need it.
 ```
 
 - [x] **Step 5: Write the release-notes entry**
@@ -3542,8 +3541,10 @@ the code review history was never committed. Finding, archiving, or deleting
   untouched. **Other projects are not migrated automatically:** existing
   `docs/specs/` and `docs/plans/` files stay readable as plain files, and new
   topics use the new layout. Skills, hooks and tests know only the new layout —
-  a spec or plan outside it stops the pipeline with a message naming the
-  expected location, and `writing-plans` offers to move the spec there.
+  a spec outside the layout stops orchestration with a message naming the
+  expected location, `writing-plans` offers to move the spec there, and the
+  subagent-driven-development review gate runs a plan outside the layout in
+  direct mode (log under `.superpowers/reviews/`).
 - **Minimum git version: 2.32**, stated explicitly for the first time (also in
   the README). It is needed for `git commit --trailer` and assumed by the
   pathspec magic above.

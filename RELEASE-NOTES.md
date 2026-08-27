@@ -53,8 +53,10 @@ the code review history was never committed. Finding, archiving, or deleting
   untouched. **Other projects are not migrated automatically:** existing
   `docs/specs/` and `docs/plans/` files stay readable as plain files, and new
   topics use the new layout. Skills, hooks and tests know only the new layout —
-  a spec or plan outside it stops the pipeline with a message naming the
-  expected location, and `writing-plans` offers to move the spec there.
+  a spec outside the layout stops orchestration with a message naming the
+  expected location, `writing-plans` offers to move the spec there, and the
+  subagent-driven-development review gate runs a plan outside the layout in
+  direct mode (log under `.superpowers/reviews/`).
 - **Minimum git version: 2.32**, stated explicitly for the first time (also in
   the README). It is needed for `git commit --trailer` and assumed by the
   pathspec magic above.

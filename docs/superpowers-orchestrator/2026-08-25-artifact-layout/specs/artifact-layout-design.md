@@ -197,7 +197,11 @@ Definitions:
   and the move offer repeats on every run), names the expected location
   `docs/superpowers-orchestrator/<today>-<slug>/specs/<slug>-design.md`
   (an existing `????-??-??-<slug>/` folder is reused instead, slug uniqueness), and
-  asks the user once whether to move the spec there. On yes: `mkdir -p`
+  asks the user once whether to move the spec there. If the reused folder
+  already holds `specs/<slug>-design.md` or its
+  `specs/<slug>-design-review-log.md` sidecar, writing-plans stops and
+  reports the collision — a different spec already owns that slug — and
+  moves and writes nothing. On yes: `mkdir -p`
   of the `specs/` folder (git mv fails when the destination directory
   does not exist), then `git mv`
   (plain `mv` when the project is not a git repository) of the spec to
@@ -481,8 +485,8 @@ required:
 Fix subagents keep receiving the findings through their brief, never
 through the log — unchanged.
 
-**Git assumptions** (sections 4, 5.6 and 6): pathspec magic `top`,
-`exclude` and `glob` is documented in `gitglossary(7)` ("pathspec");
+**Git assumptions** (sections 4, 5.6 and 6): pathspec magic `top` and
+`exclude` is documented in `gitglossary(7)` ("pathspec");
 `git commit -- <path>` on a file git does not track fails, and a
 path-limited commit leaves other staged files staged, per
 `git-commit(1)`; git stores no empty directories; `git mv` fails when
@@ -619,8 +623,9 @@ repository: the `git add` + path-limited `git commit` sequence commits an
 untracked log while leaving an unrelated staged file staged; the
 precondition command with the `:(top,exclude)` pathspec reports clean
 with a modified `implementation/` log and dirty with a modified source
-file; the effective-HEAD walk skips a top `chore(review):` commit and
-stops at the first other commit.
+file; the effective-HEAD rule returns the newest commit in `BASE..HEAD`
+that changes a path outside the blinding pathspec set, so a top
+`chore(review):` commit that changes only review material is skipped.
 
 One-time platform check, recorded in
 `tests/codex/post-push-validation-checklist.md`: under Windows Git Bash,
