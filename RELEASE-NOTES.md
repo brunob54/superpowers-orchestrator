@@ -52,15 +52,17 @@ the code review history was never committed. Finding, archiving, or deleting
 - **A Phase 4 stop is resumable with answers.** When the final code review
   leaves open items (`unresolved` or `user_decision` findings), the
   orchestrator's `## STOPPED` entry lists them by their review-log ids.
-  `Resume orchestration for <plan> — <id>: <answer>` hands the answers to the
+  `Resume orchestration for <plan> — [<id>]: <answer>` hands the answers to the
   code-review-loop controller, which journals each one as
   `decided (user): <answer>` in a committed addendum
   (`chore(review): <slug> decisions`). The completion skip — the rule that
   lets a re-dispatched controller reuse a finished review instead of running
   it again — now applies only when the recorded invocation ended with
-  `unresolved = 0` and `user_decision = 0`; with open items and no answers,
-  the controller asks for answers (`BLOCKED: … resume with answers`) instead
-  of silently re-running or stopping again.
+  `unresolved = 0` and `user_decision = 0`; with open items, no answers and
+  no new code since the stop, the controller stops with a request for
+  answers (`BLOCKED: … resume with answers`) instead of re-running; code
+  committed after the stop re-runs the review on resume, with or without
+  answers.
 - **A skipped review is committed too.** In pipeline mode an N=0 run writes
   its `skipped` entry into the tracked review log and commits it as
   `chore(review): <slug> skipped`, so the log never stays modified after a
@@ -105,11 +107,20 @@ then resume:
 3. `git mv` the plan and, when it exists, its `-review-log.md` sidecar into
    `plans/`, dropping the date prefix (`docs/plans/<date>-<slug>.md` becomes
    `plans/<slug>.md`).
-4. `git mv` the orchestration log to the topic root as
+4. `git mv` the open-decisions file, when present, into `plans/` as well
+   (`docs/plans/<date>-<slug>-open-decisions.md` becomes
+   `plans/<slug>-open-decisions.md`).
+5. `git mv` the orchestration log to the topic root as
    `<slug>-orchestration-log.md`.
-5. Edit the orchestration log's `_Invocation` header `spec` path and its
+6. Edit the orchestration log's `_Invocation` header `spec` path and its
    `plan:` line, and the plan's `**Spec:**` header line, to the new paths.
-6. Commit, then `Resume orchestration for <new plan path>`.
+7. Commit, then `Resume orchestration for <new plan path>`.
+
+The code review log of a run stopped in Phase 4 is not migrated: under the
+old layout it lived in the untracked `.superpowers/reviews/` folder, and
+the new layout expects it under `<topic>/implementation/`. After migration
+a Phase 4 stop therefore re-runs the final code review instead of resuming
+it.
 
 **Post-migration manual step for this repository:** the orchestration run that
 implemented this change kept its own plan and orchestration log at
