@@ -260,7 +260,10 @@ recorded branch point, N_code, plan path, ledger path
 `REVIEW_DONE rounds=<r> outcome=<converged|cap> fixes=<n> unresolved=<n>
 user_decision=<n>` or `BLOCKED: <reason>`. `unresolved > 0` or
 `user_decision > 0` → major error → stop (the findings are journaled in
-the review log; point the stop entry there). On success: append and
+the review log; point the stop entry there and list the open items by
+their review-log ids — stop entry format below — so a resume prompt can
+answer them by id; Resume step 3 re-dispatches this phase with the
+answers in `[RESUME_ANSWER]`). On success: append and
 commit the Phase 4 log entry before Phase 5 begins.
 
 The filled `code-review-loop-prompt.md` passes `TOPIC_DIR` = the topic folder
@@ -312,7 +315,11 @@ Resume: Resume orchestration for docs/superpowers-orchestrator/<date>-<slug>/pla
 (For a Phase 1 stop the plan may not exist: the Resume line names the
 spec path instead, and resume re-dispatches the plan-writer with the
 answer the resume prompt must supply, carried in the template's
-`[RESUME_ANSWER]` placeholder.) Skipped loops write the
+`[RESUME_ANSWER]` placeholder. For a Phase 4 stop, `Detail:` names the
+review log and is followed by one line per open item —
+`Open: [<id>] <user-decision|unresolved> — <summary>`, `<id>` as in the
+review log — so the resume prompt can answer each item by id.) Skipped
+loops write the
 `skipped (N_x=0)` line shapes from Phase 0. Round-by-round detail lives
 in the sub-skills' own logs — never duplicate it here. Commit the log at
 every boundary: Phase 0, after Phases 1–2, after each batch, after
@@ -370,7 +377,16 @@ Trigger: `Resume orchestration for <plan-or-spec path>`.
    prompt does not answer → present the question and stop. When the
    resume prompt does answer it, re-dispatch the stopped phase's
    controller with that answer in the template's `[RESUME_ANSWER]`
-   placeholder — the only channel for it.
+   placeholder — the only channel for it. Phases whose stop carries
+   answerable items: Phase 1 (the plan-writer's BLOCKED question), Phase 3
+   (a batch controller's BLOCKED task), and Phase 4 — its stop lists the
+   review log's open items by id, and the resume prompt answers them by
+   id (for example `[I2]: plan governs; [C3]: fix it`); the code-review-loop
+   controller records each answer as `decided (user): <answer>` in the
+   review log, re-evaluates the counts, and re-reviews only when an answer
+   asks for it (template Deviation 5). Without answers, re-dispatching
+   Phase 4 over an unchanged effective HEAD returns BLOCKED — never a
+   silent no-op.
 4. Otherwise continue at the first incomplete phase/batch. Your own log's
    phase entries are the primary re-run guard; the sub-skills' logs are
    the backstop.

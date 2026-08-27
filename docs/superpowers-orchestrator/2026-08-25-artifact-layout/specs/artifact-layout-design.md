@@ -300,6 +300,18 @@ Definitions:
   `TOPIC_DIR` = the topic folder (absolute path) to the controller, which
   passes it on to `multi-code-review` (section 5.6). The controller's
   write scope adds `<topic folder>/implementation/`.
+- Phase 4 stop and resume: `unresolved > 0` or `user_decision > 0` stops
+  the run; the `## STOPPED` entry names the review log and lists the open
+  items by their review-log ids. `Resume orchestration` with answers to
+  those ids re-dispatches the code-review-loop controller with the answers
+  in the template's optional `[RESUME_ANSWER]` placeholder (same shape as
+  the plan-writer and batch-controller templates); the controller records
+  each answer as `decided (user): <answer>` in a post-loop addendum
+  committed as `chore(review): <slug> decisions`, drops the items decided
+  without a code change from the counts, and re-reviews only when an
+  answer asks for it. Without answers, a re-dispatch over an unchanged
+  effective HEAD returns `BLOCKED` (section 5.6, rule 4) — never a silent
+  no-op.
 - `docs/research/` handling and every `state.md` rule: unchanged.
 
 ### 5.5 subagent-driven-development
@@ -339,8 +351,10 @@ Definitions:
      controller's round commit owns both files. The completion
      marker and any post-loop addendum are committed the same way with
      subject `chore(review): <slug> completed`; a `skipped` (N=0) entry
-     the same way with subject `chore(review): <slug> skipped`. Each
-     round and the loop
+     the same way with subject `chore(review): <slug> skipped`; a
+     post-loop addendum recording the user's decisions on open items
+     (`decided (user): <answer>`) the same way with subject
+     `chore(review): <slug> decisions`. Each round and the loop
      itself end with a tree that is clean except for changes that
      already existed when the loop started (the precondition in rule 2
      lets an interactive user consent to fixing on top of such changes;
@@ -377,7 +391,12 @@ Definitions:
      retry protection compare the recorded HEAD with the current
      effective HEAD. Direct mode keeps the raw `git rev-parse HEAD` in
      both places, as today. The "log not tracked" condition of the skip
-     applies to direct mode only.
+     applies to direct mode only. The skip applies only to an invocation
+     that ended with `unresolved = 0` and `user_decision = 0`; with open
+     items, an unchanged effective HEAD and no decisions supplied by the
+     invoker, the loop returns `BLOCKED: previous invocation left <n>
+     open items and the effective HEAD is unchanged; resume with answers`
+     instead of re-running or synthesizing.
 - Without `TOPIC_DIR` (direct mode): exactly today's behavior —
   `.superpowers/reviews/<branch-slug>-review-log.md`,
   `<branch-slug>-fix-reports.md`, `.gitignore` containing `*`, nothing

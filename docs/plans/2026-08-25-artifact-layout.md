@@ -1268,7 +1268,11 @@ committed the same way, with subject
 `chore(review): <slug> completed`. A `skipped` (N=0) entry is committed the
 same way, with subject `chore(review): <slug> skipped` — the log is tracked
 by design, and an entry left uncommitted would read as dirt at the next
-boundary. Each round, and the loop itself, ends with
+boundary. A post-loop addendum that records the invoker-supplied decisions
+on open items (disposition `decided (user): <answer>`, "Resolving
+user-decision and unresolved items" below) is committed the same way,
+with subject `chore(review): <slug> decisions`. Each round, and the loop
+itself, ends with
 a tree that is clean except for changes that already existed when the loop
 started — those are never swept into a `chore(review)` commit.
 
@@ -1363,6 +1367,16 @@ definition. The once-per-gate skip and the orchestrator's retry protection
 compare the recorded HEAD with the **current effective HEAD**. Direct mode
 keeps the raw `git rev-parse HEAD` in both places, unchanged. The skip's
 "log not tracked" condition applies to **direct mode only**.
+
+The once-per-gate skip applies only to an invocation entry that ended with
+`unresolved = 0` and `user_decision = 0` — after any post-loop addendum, no
+`unresolved:` and no `user-decision` disposition line is still in force.
+When those counts are non-zero, the effective HEAD is unchanged, and the
+invoker supplies no decisions for the open items, the loop returns
+`BLOCKED: previous invocation left <n> open items and the effective HEAD is
+unchanged; resume with answers` instead of re-running the rounds or
+synthesizing a result: a re-dispatch over the same content would only
+reproduce the same open items.
 ````
 
 Then qualify the "After the Loop" paragraph itself. It is the paragraph a
@@ -1420,7 +1434,10 @@ direct mode a tracked log can never satisfy this skip. In **pipeline
 mode** it is the **effective HEAD** defined in "Pipeline rule 4" above —
 the newest commit in `BASE..HEAD` that changes reviewable content, found by
 what the commit changes and never by its subject — and there is **no**
-tracked-log condition: in that mode the log is tracked by design. A `skipped` (N=0) entry **counts as completed** for this check
+tracked-log condition: in that mode the log is tracked by design. In
+pipeline mode the skip additionally requires the open-item condition of
+Pipeline rule 4: the entry ended with `unresolved = 0` and
+`user_decision = 0`. A `skipped` (N=0) entry **counts as completed** for this check
 — skip when its recorded HEAD equals the current HEAD under the same
 mode-dependent definition and the branch matches — and is never a
 resumable/in-progress entry for the sentinel.
@@ -2244,6 +2261,72 @@ Add the placeholder to the Placeholders list, after `[PLAN_PATH]`:
 ```markdown
 - `[TOPIC_DIR]` — REQUIRED: absolute path of the topic folder
   `docs/superpowers-orchestrator/<YYYY-MM-DD>-<slug>/` at the repository root
+```
+
+Add the optional Resume Answer section — the shape `plan-writer-prompt.md`
+and `batch-controller-prompt.md` use — between the Procedure parameters and
+the "Deviations (binding)" heading:
+
+```markdown
+    ## Resume Answer (omit this whole section on a first dispatch)
+
+    [RESUME_ANSWER]
+```
+
+Replace Deviation 2 with:
+
+```markdown
+    2. Sentinel and once-per-gate: treat a `gate: orchestration` entry as
+       a matching invoker kind — an entry with your BASE and no
+       completion marker is your own interrupted loop: resume it at the
+       next round automatically; the completion skip applies only to a
+       `gate: orchestration` entry whose completion-marker HEAD and
+       branch match AND whose recorded invocation ended with
+       `unresolved = 0` and `user_decision = 0` (Pipeline rule 4). If
+       such an entry's completion marker already matches the current
+       HEAD (in pipeline mode the effective HEAD: the newest commit in
+       `BASE..HEAD` that changes a path outside the blinding pathspec
+       set, whatever its subject — Pipeline rule 4) and branch, do not
+       re-run anything: synthesize your
+       REVIEW_DONE return from the review log's recorded rounds and
+       dispositions — a retry dispatched after only the final message was
+       lost must not run the loop twice. When the counts are non-zero,
+       the effective HEAD is unchanged, and no `## Resume Answer` section
+       is present, return
+       `BLOCKED: previous invocation left <n> open items and the effective
+       HEAD is unchanged; resume with answers` — never re-run and never
+       synthesize. With a `## Resume Answer` section present, Deviation 5
+       applies.
+```
+
+Add a fifth deviation after the blinding deviation of Step 6:
+
+```markdown
+    5. Resume answer: the `## Resume Answer` section, when present, holds
+       the user's decisions on the open items — the `user-decision` and
+       `unresolved` dispositions — of the review log's CURRENT invocation
+       entry (the entry with your BASE), named by their review-log ids.
+       Append a post-loop addendum to that entry recording, for each item
+       the answer names, the disposition `decided (user): <answer>`. An
+       item the answer resolves without a code change leaves the
+       `unresolved` and `user_decision` counts of your return; an item
+       the answer accepts as a finding to fix follows the skill's
+       "Resolving user-decision and unresolved items" rule (one fix
+       subagent, one verification re-review, `fixed` disposition in the
+       same addendum). If the answer requests a re-review, the completion
+       skip of Deviation 2 is bypassed and a new invocation runs. Commit
+       the addendum under Pipeline rule 1 with subject
+       `chore(review): <slug> decisions`.
+```
+
+Add the placeholder entry after `[LEDGER_PATH]`:
+
+```markdown
+- `[RESUME_ANSWER]` — OPTIONAL: omitted, together with its `## Resume
+  Answer` heading, on a first dispatch; filled only when re-dispatching
+  after a stop that left `unresolved` or `user_decision` items, with the
+  user's decisions on those items by review-log id. Authoritative — the
+  controller records them as `decided (user): <answer>` (Deviation 5)
 ```
 
 - [x] **Step 5: Extend the triage rule's artifact list**

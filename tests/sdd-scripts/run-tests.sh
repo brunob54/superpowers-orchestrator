@@ -641,6 +641,9 @@ assert_file_contains "rule 1 drift check: SKILL.md still commits with the generi
 # places must keep naming the subject, or the entry is left uncommitted.
 assert_file_contains "rule 1 drift check: SKILL.md still commits the skipped (N=0) entry with the skipped subject" "$SKILL_MD" 'same way, with subject `chore(review): <slug> skipped`'
 assert_file_contains "validation step 5 drift check: SKILL.md still names the skipped subject among the commits it retries" "$SKILL_MD" 'entry (`chore(review): <slug> skipped`)'
+# The decisions addendum (the user's answers to open items, supplied on a
+# later dispatch) is committed under rule 1 with its own subject.
+assert_file_contains "rule 1 drift check: SKILL.md still commits the decisions addendum with the decisions subject" "$SKILL_MD" 'with subject `chore(review): <slug> decisions`'
 
 # Rule 2: the precondition pathspec reports clean with only the log modified,
 # and dirty with a source file modified.
@@ -740,6 +743,10 @@ SKILL_SET=$(printf "'%s' " "${BLIND_PATHSPECS[@]}" | sed 's/ $//')
 assert_file_contains "rule 4 drift check: SKILL.md still looks the effective HEAD up by content, with the blinding pathspecs" "$SKILL_MD" "effective_head=\$(git log -1 --full-history --format=%H \"\$BASE..HEAD\" -- $SKILL_SET)"
 assert_file_contains "rule 4 drift check: SKILL.md still falls back to the resolved BASE when empty" "$SKILL_MD" '[ -n "$effective_head" ] || effective_head=$(git rev-parse "$BASE")'
 assert_file_not_contains "rule 4 drift check: SKILL.md no longer keys the effective HEAD on the commit subject" "$SKILL_MD" "'chore(review):'*) continue ;;"
+# The once-per-gate skip applies only to an invocation that ended with no
+# open items; with open items, unchanged content and no answers, the loop
+# returns BLOCKED instead of re-running. Pin the condition.
+assert_file_contains "rule 4 drift check: SKILL.md still limits the once-per-gate skip to unresolved = 0 and user_decision = 0" "$SKILL_MD" '`unresolved = 0` and `user_decision = 0`'
 
 bold "TOPIC_DIR validation rule (multi-code-review)"
 

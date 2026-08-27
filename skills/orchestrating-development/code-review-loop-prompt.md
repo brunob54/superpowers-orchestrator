@@ -38,6 +38,10 @@ Agent tool (general-purpose):
       findings are journaled in the log and reported in your return,
       never presented interactively.
 
+    ## Resume Answer (omit this whole section on a first dispatch)
+
+    [RESUME_ANSWER]
+
     ## Deviations (binding)
 
     1. Carried Minor findings: read [LEDGER_PATH] and fill the reviewer
@@ -47,16 +51,24 @@ Agent tool (general-purpose):
     2. Sentinel and once-per-gate: treat a `gate: orchestration` entry as
        a matching invoker kind — an entry with your BASE and no
        completion marker is your own interrupted loop: resume it at the
-       next round automatically; the completion skip applies to
-       `gate: orchestration` entries whose completion-marker HEAD and
-       branch match. If the completion marker already matches the current
+       next round automatically; the completion skip applies only to a
+       `gate: orchestration` entry whose completion-marker HEAD and
+       branch match AND whose recorded invocation ended with
+       `unresolved = 0` and `user_decision = 0` (Pipeline rule 4). If
+       such an entry's completion marker already matches the current
        HEAD (in pipeline mode the effective HEAD: the newest commit in
        `BASE..HEAD` that changes a path outside the blinding pathspec
        set, whatever its subject — Pipeline rule 4) and branch, do not
        re-run anything: synthesize your
        REVIEW_DONE return from the review log's recorded rounds and
        dispositions — a retry dispatched after only the final message was
-       lost must not run the loop twice.
+       lost must not run the loop twice. When the counts are non-zero,
+       the effective HEAD is unchanged, and no `## Resume Answer` section
+       is present, return
+       `BLOCKED: previous invocation left <n> open items and the effective
+       HEAD is unchanged; resume with answers` — never re-run and never
+       synthesize. With a `## Resume Answer` section present, Deviation 5
+       applies.
     3. Triage rule: any reviewer finding whose subject file is an
        orchestration artifact — the plan file's checkbox ticks, a file
        under `docs/superpowers-orchestrator/*/` whose name matches
@@ -79,6 +91,21 @@ Agent tool (general-purpose):
        [MULTI_CODE_REVIEW_SKILL_PATH] under "Reviewer blinding —
        pathspecs". Never hand a reviewer a diff produced without them:
        the branch under review now contains its own review log.
+    5. Resume answer: the `## Resume Answer` section, when present, holds
+       the user's decisions on the open items — the `user-decision` and
+       `unresolved` dispositions — of the review log's CURRENT invocation
+       entry (the entry with your BASE), named by their review-log ids.
+       Append a post-loop addendum to that entry recording, for each item
+       the answer names, the disposition `decided (user): <answer>`. An
+       item the answer resolves without a code change leaves the
+       `unresolved` and `user_decision` counts of your return; an item
+       the answer accepts as a finding to fix follows the skill's
+       "Resolving user-decision and unresolved items" rule (one fix
+       subagent, one verification re-review, `fixed` disposition in the
+       same addendum). If the answer requests a re-review, the completion
+       skip of Deviation 2 is bypassed and a new invocation runs. Commit
+       the addendum under Pipeline rule 1 with subject
+       `chore(review): <slug> decisions`.
 
     ## Return (final message, 15 lines max)
 
@@ -107,6 +134,11 @@ Agent tool (general-purpose):
   `docs/superpowers-orchestrator/<YYYY-MM-DD>-<slug>/` at the repository root
 - `[LEDGER_PATH]` — REQUIRED: absolute path of
   `.superpowers/sdd/progress.md` at the repo root
+- `[RESUME_ANSWER]` — OPTIONAL: omitted, together with its `## Resume
+  Answer` heading, on a first dispatch; filled only when re-dispatching
+  after a stop that left `unresolved` or `user_decision` items, with the
+  user's decisions on those items by review-log id. Authoritative — the
+  controller records them as `decided (user): <answer>` (Deviation 5)
 
 **Nothing else may be added to the prompt.**
 

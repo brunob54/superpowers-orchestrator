@@ -115,7 +115,8 @@ final review on such platforms; that fallback lives there, not here.)
      pending commit **first**, with the same subject rule: the pending
      commit is a round log (`chore(review): <slug> round <i> log`), the
      completion marker (`chore(review): <slug> completed`), or a `skipped`
-     entry (`chore(review): <slug> skipped`). On repeated
+     entry (`chore(review): <slug> skipped`), or a decisions addendum
+     (`chore(review): <slug> decisions`). On repeated
      failure return `BLOCKED` with the git output and name the manual
      commit the user must run:
      `git add -- <paths> && git commit -m "chore(review): <slug> round <i> log" -- <paths>`.
@@ -226,7 +227,11 @@ committed the same way, with subject
 `chore(review): <slug> completed`. A `skipped` (N=0) entry is committed the
 same way, with subject `chore(review): <slug> skipped` — the log is tracked
 by design, and an entry left uncommitted would read as dirt at the next
-boundary. Each round, and the loop itself, ends with
+boundary. A post-loop addendum that records the invoker-supplied decisions
+on open items (disposition `decided (user): <answer>`, "Resolving
+user-decision and unresolved items" below) is committed the same way,
+with subject `chore(review): <slug> decisions`. Each round, and the loop
+itself, ends with
 a tree that is clean except for changes that already existed when the loop
 started — those are never swept into a `chore(review)` commit.
 
@@ -521,6 +526,15 @@ items: the user chooses re-dispatch, manual fix, or accept-risk with
 documented rationale (logged). The gate condition is then re-evaluated —
 no loop re-run needed.
 
+In pipeline mode the decisions may arrive on a later dispatch instead — the
+orchestrator's `[RESUME_ANSWER]` placeholder carries the user's answers to
+the open items by review-log id: each named item gets the disposition
+`decided (user): <answer>` in a post-loop addendum committed as
+`chore(review): <slug> decisions` (Pipeline rule 1); an item decided
+without a code change no longer counts as unresolved or user-decision; an
+accepted finding follows the finding-governs path above; a request for a
+re-review bypasses the once-per-gate skip and starts a new invocation.
+
 The host gate proceeds only when no unresolved Critical/Important or
 user-decision items remain — unresolved items block, exactly as
 unresolved review findings block in subagent-driven-development today.
@@ -556,6 +570,16 @@ compare the recorded HEAD with the **current effective HEAD**. Direct mode
 keeps the raw `git rev-parse HEAD` in both places, unchanged. The skip's
 "log not tracked" condition applies to **direct mode only**.
 
+The once-per-gate skip applies only to an invocation entry that ended with
+`unresolved = 0` and `user_decision = 0` — after any post-loop addendum, no
+`unresolved:` and no `user-decision` disposition line is still in force.
+When those counts are non-zero, the effective HEAD is unchanged, and the
+invoker supplies no decisions for the open items, the loop returns
+`BLOCKED: previous invocation left <n> open items and the effective HEAD is
+unchanged; resume with answers` instead of re-running the rounds or
+synthesizing a result: a re-dispatch over the same content would only
+reproduce the same open items.
+
 **Once per gate:** the SDD gate skips the loop only when this log holds a
 `gate: sdd` invocation entry whose completion-marker HEAD equals the
 current HEAD AND whose recorded raw branch name matches the current
@@ -567,7 +591,10 @@ direct mode a tracked log can never satisfy this skip. In **pipeline
 mode** it is the **effective HEAD** defined in "Pipeline rule 4" above —
 the newest commit in `BASE..HEAD` that changes reviewable content, found by
 what the commit changes and never by its subject — and there is **no**
-tracked-log condition: in that mode the log is tracked by design. A `skipped` (N=0) entry **counts as completed** for this check
+tracked-log condition: in that mode the log is tracked by design. In
+pipeline mode the skip additionally requires the open-item condition of
+Pipeline rule 4: the entry ended with `unresolved = 0` and
+`user_decision = 0`. A `skipped` (N=0) entry **counts as completed** for this check
 — skip when its recorded HEAD equals the current HEAD under the same
 mode-dependent definition and the branch matches — and is never a
 resumable/in-progress entry for the sentinel. Interrupted
