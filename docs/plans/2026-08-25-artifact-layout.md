@@ -29,7 +29,7 @@
 - One plan per topic: `plans/<slug>.md` is replaced when the plan is rewritten. Orchestration log sits at the topic root, no date prefix.
 - No dual-layout support. Skills, hooks and tests know only the new layout.
 - The blinding pathspec set, used verbatim in every whole-branch diff command:
-  `-- ':(top)' ':(top,exclude)docs/superpowers-orchestrator/*/implementation/*.md' ':(top,exclude)docs/superpowers-orchestrator/*/*-review-log.md' ':(top,exclude)docs/superpowers-orchestrator/*/*-fix-reports.md' ':(top,exclude)docs/superpowers-orchestrator/*/*-orchestration-log.md' ':(top,exclude)docs/superpowers-orchestrator/*/*-open-decisions.md'`
+  `-- ':(top)' ':(top,exclude)docs/superpowers-orchestrator/*/*-review-log.md' ':(top,exclude)docs/superpowers-orchestrator/*/*-fix-reports.md' ':(top,exclude)docs/superpowers-orchestrator/*/*-orchestration-log.md' ':(top,exclude)docs/superpowers-orchestrator/*/*-open-decisions.md' ':(top,exclude)docs/specs/*-review-log.md' ':(top,exclude)docs/plans/*-review-log.md' ':(top,exclude)docs/plans/*-orchestration-log.md' ':(top,exclude)docs/plans/*-open-decisions.md'`
 - Direct `/multi-code-review` runs (no `TOPIC_DIR`) keep exactly today's behavior: `.superpowers/reviews/`, a `.gitignore` containing `*`, nothing committed, sentinel and skip rules unchanged.
 - Migration of existing documents uses `git mv` only; file contents are untouched. References inside the moved historical documents are left as they are.
 - Not in scope: `docs/research/`, `state.md`, `session-log.md`, `known-issues.md`, `project-map.md`, `context-snapshot.json`, the `.superpowers/sdd/` workspace, `hooks/stop-reminders.js` significance rules, and Codex/Cursor/OpenCode hook wiring.
@@ -849,7 +849,7 @@ git commit -m "test(hooks): classify new-layout artifact paths in stop-reminders
 
 **Security flag:** `none`
 
-**Does NOT cover:** in `--commits` mode the commit list (`git log -1 --oneline --no-walk "$c"`) is ALSO filtered by the same blinding pathspecs — a commit whose changes are entirely review material is dropped from the list; this was added by a review fix on this branch. The exclusions also do NOT hide a review log stored outside `docs/superpowers-orchestrator/`, whatever its name, nor a non-markdown file under `implementation/`; only the files matching `docs/superpowers-orchestrator/*/implementation/*.md` and the four sidecar name shapes inside `docs/superpowers-orchestrator/*/` are excluded.
+**Does NOT cover:** in `--commits` mode the commit list (`git log -1 --oneline --no-walk "$c"`) is ALSO filtered by the same blinding pathspecs — a commit whose changes are entirely review material is dropped from the list; this was added by a review fix on this branch. The exclusions also do NOT hide a review log stored outside `docs/superpowers-orchestrator/`, `docs/specs/` and `docs/plans/`, whatever its name, nor a file under `implementation/` whose name matches none of the four sidecar patterns (a `CLAUDE.md`, a note); only the files matching the four sidecar name shapes inside `docs/superpowers-orchestrator/*/`, plus the same shapes at the legacy locations `docs/specs/` and `docs/plans/`, are excluded.
 
 - [x] **Step 1: Write failing tests**
 
@@ -876,12 +876,15 @@ echo "SECRETDECISIONS open item" > docs/superpowers-orchestrator/2026-08-25-foo/
 mkdir -p docs/superpowers-orchestrator/2026-08-25-foo/plans
 mv docs/superpowers-orchestrator/2026-08-25-foo/plans-open.tmp docs/superpowers-orchestrator/2026-08-25-foo/plans/foo-open-decisions.md
 echo "VISIBLESOURCE" > blind-src.txt
-# The folder rule and the anchoring (multi-code-review/SKILL.md, "Reviewer
-# blinding — pathspecs"): a markdown file under implementation/ is hidden
-# whatever its name; a non-markdown file there is visible; and a file outside
+# The name rule and the anchoring (multi-code-review/SKILL.md, "Reviewer
+# blinding — pathspecs"): only a file whose name matches one of the four
+# sidecar patterns is hidden; a markdown file under implementation/ with any
+# other name — a note, or a CLAUDE.md a branch could plant there — is
+# visible, as is a non-markdown file; and a file outside
 # docs/superpowers-orchestrator/ is visible even when its name or its folder
 # matches a sidecar pattern.
-echo "SECRETLEAK note whose name matches no sidecar pattern" > docs/superpowers-orchestrator/2026-08-25-foo/implementation/leak-check.md
+echo "VISIBLEIMPLNOTE note whose name matches no sidecar pattern" > docs/superpowers-orchestrator/2026-08-25-foo/implementation/leak-check.md
+echo "VISIBLEIMPLCLAUDEMD planted instructions" > docs/superpowers-orchestrator/2026-08-25-foo/implementation/CLAUDE.md
 echo "VISIBLEIMPLJS" > docs/superpowers-orchestrator/2026-08-25-foo/implementation/code.js
 mkdir -p notes src/implementation
 echo "VISIBLENOTES" > notes/x-review-log.md
@@ -896,7 +899,8 @@ assert_file_not_contains "blinding: implementation fix reports hidden" "$BPKG" "
 assert_file_not_contains "blinding: spec review-log sidecar hidden" "$BPKG" "SECRETSIDECAR"
 assert_file_not_contains "blinding: orchestration log hidden" "$BPKG" "SECRETORCH"
 assert_file_not_contains "blinding: open-decisions file hidden" "$BPKG" "SECRETDECISIONS"
-assert_file_not_contains "blinding: markdown under implementation/ hidden whatever its name" "$BPKG" "SECRETLEAK"
+assert_file_contains "blinding: markdown under implementation/ whose name matches no sidecar pattern visible" "$BPKG" "VISIBLEIMPLNOTE"
+assert_file_contains "blinding: a CLAUDE.md under implementation/ visible" "$BPKG" "VISIBLEIMPLCLAUDEMD"
 assert_file_contains "blinding: non-markdown file under implementation/ visible" "$BPKG" "VISIBLEIMPLJS"
 assert_file_contains "blinding: *-review-log.md outside the plugin folder visible" "$BPKG" "VISIBLENOTES"
 assert_file_contains "blinding: implementation/ folder outside the plugin folder visible" "$BPKG" "VISIBLESRCIMPL"
@@ -928,7 +932,8 @@ BLIND_CPKG="$WS/blind-from-commits.diff"
 "$SCRIPTS/review-package" --commits "$BLIND_HEAD" --out "$BLIND_CPKG" >/dev/null 2>&1
 assert_file_contains "blinding (--commits): ordinary source change is visible" "$BLIND_CPKG" "VISIBLESOURCE"
 assert_file_not_contains "blinding (--commits): implementation review log hidden" "$BLIND_CPKG" "SECRETFINDING"
-assert_file_not_contains "blinding (--commits): markdown under implementation/ hidden whatever its name" "$BLIND_CPKG" "SECRETLEAK"
+assert_file_contains "blinding (--commits): markdown under implementation/ whose name matches no sidecar pattern visible" "$BLIND_CPKG" "VISIBLEIMPLNOTE"
+assert_file_contains "blinding (--commits): a CLAUDE.md under implementation/ visible" "$BLIND_CPKG" "VISIBLEIMPLCLAUDEMD"
 assert_file_contains "blinding (--commits): non-markdown file under implementation/ visible" "$BLIND_CPKG" "VISIBLEIMPLJS"
 assert_file_contains "blinding (--commits): *-review-log.md outside the plugin folder visible" "$BLIND_CPKG" "VISIBLENOTES"
 assert_file_contains "blinding (--commits): implementation/ folder outside the plugin folder visible" "$BLIND_CPKG" "VISIBLESRCIMPL"
@@ -967,19 +972,28 @@ In `skills/subagent-driven-development/scripts/review-package`, insert immediate
 # never reach a reviewer. ':(top)' anchors every pathspec at the repository
 # root so the package is identical no matter which directory the caller runs
 # from — a plain '-- .' would be relative to the cwd and silently shrink the
-# diff. Every exclusion is limited to the plugin's own output folder
-# (docs/superpowers-orchestrator/) and the folder entry to markdown files, so a
-# branch cannot hide an arbitrary file by giving it one of these names. A plain
-# '*' in a git pathspec matches across '/', which is what lets '*/' stand for
-# the topic folder; no 'glob' magic is used. Keep this list in step with
+# diff. Only a file whose name matches one of the plugin's four sidecar
+# patterns is excluded, and only inside the plugin's own output folder
+# (docs/superpowers-orchestrator/) or at the two legacy locations
+# (docs/specs/, docs/plans/) the plugin wrote to before the topic-folder
+# layout. Every other file is visible, so a branch cannot hide an arbitrary
+# file by placing it in one of these folders. The legacy entries exist for a
+# sidecar moved with 'git mv': git pairs a rename only when both sides of the
+# move are in the diff, so excluding the destination alone would turn the move
+# into a deletion hunk carrying the sidecar's whole old content. A plain '*'
+# in a git pathspec matches across '/', which is what lets '*/' stand for the
+# topic folder; no 'glob' magic is used. Keep this list in step with
 # multi-code-review/SKILL.md.
 blind_pathspecs=(
   ':(top)'
-  ':(top,exclude)docs/superpowers-orchestrator/*/implementation/*.md'
   ':(top,exclude)docs/superpowers-orchestrator/*/*-review-log.md'
   ':(top,exclude)docs/superpowers-orchestrator/*/*-fix-reports.md'
   ':(top,exclude)docs/superpowers-orchestrator/*/*-orchestration-log.md'
   ':(top,exclude)docs/superpowers-orchestrator/*/*-open-decisions.md'
+  ':(top,exclude)docs/specs/*-review-log.md'
+  ':(top,exclude)docs/plans/*-review-log.md'
+  ':(top,exclude)docs/plans/*-orchestration-log.md'
+  ':(top,exclude)docs/plans/*-open-decisions.md'
 )
 ```
 
@@ -1408,7 +1422,7 @@ git commit -m "docs(multi-code-review): define pipeline mode and its four rule c
 
 **Security flag:** `security` *(the change controls what review material a reviewer subagent can read; a gap here leaks prior rounds' findings into later rounds and destroys the independence the loop is built on)*
 
-**Does NOT cover:** the exclusion covers the four sidecar name shapes inside `docs/superpowers-orchestrator/*/` and the files matching `docs/superpowers-orchestrator/*/implementation/*.md`. It does NOT cover: review material a user stored under some other name, or anywhere outside the plugin folder; the *task-level* reviewer in `subagent-driven-development` reading files outside the diff on its own initiative (the read prohibition covers that, the pathspecs cannot); and fix subagents, which keep receiving findings through their brief and never through the log — unchanged.
+**Does NOT cover:** the exclusion covers the four sidecar name shapes inside `docs/superpowers-orchestrator/*/` and the same shapes at the legacy locations `docs/specs/` and `docs/plans/`. It does NOT cover: review material a user stored under some other name, or anywhere outside those folders; the *task-level* reviewer in `subagent-driven-development` reading files outside the diff on its own initiative (the read prohibition covers that, the pathspecs cannot); and fix subagents, which keep receiving findings through their brief and never through the log — unchanged.
 
 - [x] **Step 1: Write the failing verification check**
 
@@ -1417,7 +1431,7 @@ cd /Users/bruno/Programming/AI/AI_Coding/My_tools/Superpowers
 NEEDLE="':(top,exclude)docs/superpowers-orchestrator/*/*-orchestration-log.md'"
 SKILL_COUNT=$(grep -cF -- "$NEEDLE" skills/multi-code-review/SKILL.md)
 REVIEWER_COUNT=$(grep -cF -- "$NEEDLE" skills/multi-code-review/reviewer-prompt.md)
-READ_BAN_COUNT=$(grep -cF 'docs/superpowers-orchestrator/*/implementation/*.md' skills/multi-code-review/reviewer-prompt.md)
+READ_BAN_COUNT=$(grep -cF 'docs/specs/*-review-log.md' skills/multi-code-review/reviewer-prompt.md)
 FALLBACK_COUNT=$(grep -cF 'each carrying the pathspec set from' skills/multi-code-review/SKILL.md)
 echo "skill:    $SKILL_COUNT"
 echo "reviewer: $REVIEWER_COUNT"
@@ -1454,20 +1468,33 @@ branch. Every whole-branch diff handed to a reviewer — in this skill, in
 is produced with this pathspec set, verbatim:
 
 ```
--- ':(top)' ':(top,exclude)docs/superpowers-orchestrator/*/implementation/*.md' ':(top,exclude)docs/superpowers-orchestrator/*/*-review-log.md' ':(top,exclude)docs/superpowers-orchestrator/*/*-fix-reports.md' ':(top,exclude)docs/superpowers-orchestrator/*/*-orchestration-log.md' ':(top,exclude)docs/superpowers-orchestrator/*/*-open-decisions.md'
+-- ':(top)' ':(top,exclude)docs/superpowers-orchestrator/*/*-review-log.md' ':(top,exclude)docs/superpowers-orchestrator/*/*-fix-reports.md' ':(top,exclude)docs/superpowers-orchestrator/*/*-orchestration-log.md' ':(top,exclude)docs/superpowers-orchestrator/*/*-open-decisions.md' ':(top,exclude)docs/specs/*-review-log.md' ':(top,exclude)docs/plans/*-review-log.md' ':(top,exclude)docs/plans/*-orchestration-log.md' ':(top,exclude)docs/plans/*-open-decisions.md'
 ```
 
-Every exclusion is anchored to `docs/superpowers-orchestrator/`, the plugin's
-own output folder, and the folder entry is limited to markdown files — see the
-"untrusted origin" bullet under Error Handling for why. No `glob` magic is
-used: a plain `*` in a git pathspec matches across `/`, which is what lets
-`*/` stand for the topic folder and `*-review-log.md` for a sidecar at any
-depth below it. A wildcard pathspec that ends in `/` matches no file at all,
-which is why the folder entry names `*.md` and not the folder.
+Every exclusion names one of the plugin's four sidecar patterns
+(`*-review-log.md`, `*-fix-reports.md`, `*-orchestration-log.md`,
+`*-open-decisions.md`) and is anchored to a folder the plugin writes to:
+`docs/superpowers-orchestrator/`, its own output folder, or one of the two
+legacy locations (`docs/specs/`, `docs/plans/`) it wrote to before the
+topic-folder layout. Nothing else is hidden — a file under `implementation/`
+whose name matches none of the four patterns (a `CLAUDE.md`, a note) is
+shown — see the "untrusted origin" bullet under Error Handling for why. No
+`glob` magic is used: a plain `*` in a git pathspec matches across `/`, which
+is what lets `*/` stand for the topic folder and `*-review-log.md` for a
+sidecar at any depth below it.
 
-The last two matter on a resumed run: after a Phase 4 stop the orchestrator
-commits the orchestration log and the open-decisions file, both of which quote
-prior findings. The `top` magic anchors every pathspec at the repository root,
+The four legacy entries exist for sidecars moved out of the old layout with
+`git mv`: git pairs a rename only when both sides of the move are in the
+diff, so with the destination excluded and the source not, the move would
+appear as a deletion of the source, and that deletion hunk carries the
+sidecar's whole old content — every prior finding. Excluding the source
+paths too removes the hunk; a moved file that is not a sidecar (the spec
+itself) still appears as an ordinary rename.
+
+The orchestration-log and open-decisions entries matter on a resumed run:
+after a Phase 4 stop the orchestrator commits the orchestration log and the
+open-decisions file, both of which quote prior findings. The `top` magic
+anchors every pathspec at the repository root,
 which makes the commands independent of the current directory — a plain `-- .`
 is relative to the cwd, and the sdd per-task caller of `review-package` may run
 from any directory, where `-- .` would silently restrict the diff to that
@@ -1492,8 +1519,10 @@ with:
     - Do NOT read any file under `.superpowers/reviews/`. Do NOT read any
       file under `docs/superpowers-orchestrator/*/` whose name matches
       `*-review-log.md`, `*-fix-reports.md`, `*-orchestration-log.md` or
-      `*-open-decisions.md`, and do NOT read any file matching
-      `docs/superpowers-orchestrator/*/implementation/*.md`. This rule
+      `*-open-decisions.md`, and do NOT read any file at the legacy
+      sidecar locations `docs/specs/*-review-log.md`,
+      `docs/plans/*-review-log.md`, `docs/plans/*-orchestration-log.md`
+      or `docs/plans/*-open-decisions.md`. This rule
       takes precedence over the
 ```
 
@@ -1510,7 +1539,7 @@ In `skills/multi-code-review/reviewer-prompt.md`, replace:
 with:
 
 ````markdown
-    `git diff --stat [BASE_SHA]..[HEAD_SHA] -- ':(top)' ':(top,exclude)docs/superpowers-orchestrator/*/implementation/*.md' ':(top,exclude)docs/superpowers-orchestrator/*/*-review-log.md' ':(top,exclude)docs/superpowers-orchestrator/*/*-fix-reports.md' ':(top,exclude)docs/superpowers-orchestrator/*/*-orchestration-log.md' ':(top,exclude)docs/superpowers-orchestrator/*/*-open-decisions.md'`
+    `git diff --stat [BASE_SHA]..[HEAD_SHA] -- ':(top)' ':(top,exclude)docs/superpowers-orchestrator/*/*-review-log.md' ':(top,exclude)docs/superpowers-orchestrator/*/*-fix-reports.md' ':(top,exclude)docs/superpowers-orchestrator/*/*-orchestration-log.md' ':(top,exclude)docs/superpowers-orchestrator/*/*-open-decisions.md' ':(top,exclude)docs/specs/*-review-log.md' ':(top,exclude)docs/plans/*-review-log.md' ':(top,exclude)docs/plans/*-orchestration-log.md' ':(top,exclude)docs/plans/*-open-decisions.md'`
     and the same command without `--stat` — a failure fallback, not an
     alternative workflow. Keep the pathspecs: they exclude review material
     you must not read.
@@ -1549,10 +1578,10 @@ Run: the command from Step 1
 Expected: `skill: 1`, `reviewer: 1`, `read ban: 2`, `fallback: 1`, then the
 verdict line prints `PASS`.
 
-`read ban` is `2`, not `1`: the string `docs/superpowers-orchestrator/*/implementation/*.md`
-appears on two separate lines of `reviewer-prompt.md` after this task — once in
-the read prohibition (Step 4) and once inside the blinded fallback command
-(Step 5). `grep -c` counts matching lines.
+`read ban` is `2`, not `1`: the string `docs/specs/*-review-log.md` (the first
+legacy sidecar location) appears on two separate lines of `reviewer-prompt.md`
+after this task — once in the read prohibition (Step 4) and once inside the
+blinded fallback command (Step 5). `grep -c` counts matching lines.
 
 - [x] **Step 8: Commit**
 
@@ -2171,8 +2200,10 @@ with:
        orchestration artifact — the plan file's checkbox ticks, a file
        under `docs/superpowers-orchestrator/*/` whose name matches
        `*-orchestration-log.md`, `*-review-log.md`, `*-fix-reports.md` or
-       `*-open-decisions.md`, or a file matching
-       `docs/superpowers-orchestrator/*/implementation/*.md` — whether the
+       `*-open-decisions.md`, or a file at a legacy sidecar location
+       (`docs/specs/*-review-log.md`, `docs/plans/*-review-log.md`,
+       `docs/plans/*-orchestration-log.md`,
+       `docs/plans/*-open-decisions.md`) — whether the
 ```
 
 - [x] **Step 6: Bind the controller to the blinding pathspecs**
@@ -3363,17 +3394,20 @@ the code review history was never committed. Finding, archiving, or deleting
   `/multi-code-review` run has no plan and therefore no topic folder: it keeps
   today's git-ignored `.superpowers/reviews/` behavior exactly.
 - **Reviewers stay blind.** Committed review material is now part of the
-  branch, so every whole-branch diff handed to a reviewer excludes the
-  markdown files under `<topic>/implementation/` and the files inside
-  `docs/superpowers-orchestrator/*/` whose names match `*-review-log.md`,
-  `*-fix-reports.md`, `*-orchestration-log.md` or `*-open-decisions.md`.
-  The reviewer's read prohibition lists the same set. This also closes a
-  pre-existing leak: the committed spec and plan review-log sidecars were
-  visible in whole-branch diffs before. Only files inside
-  `docs/superpowers-orchestrator/` are ever hidden: that folder holds
-  plugin output only, and a project must not put its own files there. A
-  `*-review-log.md` anywhere else, or a non-markdown file under
-  `implementation/`, stays visible to reviewers.
+  branch, so every whole-branch diff handed to a reviewer excludes the files
+  whose names match the plugin's four sidecar patterns — `*-review-log.md`,
+  `*-fix-reports.md`, `*-orchestration-log.md`, `*-open-decisions.md` —
+  inside `docs/superpowers-orchestrator/*/` and at the legacy locations
+  `docs/specs/` and `docs/plans/` (a sidecar moved out of those folders with
+  `git mv` would otherwise appear as a deletion hunk carrying its whole old
+  content). The reviewer's read prohibition lists the same set. This also
+  closes a pre-existing leak: the committed spec and plan review-log sidecars
+  were visible in whole-branch diffs before. Only a file matching one of the
+  four names inside those folders is ever hidden; every other file is
+  visible — a `*-review-log.md` anywhere else, or a file under
+  `implementation/` whose name matches none of the four patterns (a
+  `CLAUDE.md`, a note), reaches every reviewer. The plugin folder holds
+  plugin output only, and a project must not put its own files there.
 - **This repository was migrated** with `git mv`; document contents are
   untouched. **Other projects are not migrated automatically:** existing
   `docs/specs/` and `docs/plans/` files stay readable as plain files, and new

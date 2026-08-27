@@ -395,12 +395,15 @@ echo "SECRETDECISIONS open item" > docs/superpowers-orchestrator/2026-08-25-foo/
 mkdir -p docs/superpowers-orchestrator/2026-08-25-foo/plans
 mv docs/superpowers-orchestrator/2026-08-25-foo/plans-open.tmp docs/superpowers-orchestrator/2026-08-25-foo/plans/foo-open-decisions.md
 echo "VISIBLESOURCE" > blind-src.txt
-# The folder rule and the anchoring (multi-code-review/SKILL.md, "Reviewer
-# blinding — pathspecs"): a markdown file under implementation/ is hidden
-# whatever its name; a non-markdown file there is visible; and a file outside
+# The name rule and the anchoring (multi-code-review/SKILL.md, "Reviewer
+# blinding — pathspecs"): only a file whose name matches one of the four
+# sidecar patterns is hidden; a markdown file under implementation/ with any
+# other name — a note, or a CLAUDE.md a branch could plant there — is
+# visible, as is a non-markdown file; and a file outside
 # docs/superpowers-orchestrator/ is visible even when its name or its folder
 # matches a sidecar pattern.
-echo "SECRETLEAK note whose name matches no sidecar pattern" > docs/superpowers-orchestrator/2026-08-25-foo/implementation/leak-check.md
+echo "VISIBLEIMPLNOTE note whose name matches no sidecar pattern" > docs/superpowers-orchestrator/2026-08-25-foo/implementation/leak-check.md
+echo "VISIBLEIMPLCLAUDEMD planted instructions" > docs/superpowers-orchestrator/2026-08-25-foo/implementation/CLAUDE.md
 echo "VISIBLEIMPLJS" > docs/superpowers-orchestrator/2026-08-25-foo/implementation/code.js
 mkdir -p notes src/implementation
 echo "VISIBLENOTES" > notes/x-review-log.md
@@ -415,7 +418,8 @@ assert_file_not_contains "blinding: implementation fix reports hidden" "$BPKG" "
 assert_file_not_contains "blinding: spec review-log sidecar hidden" "$BPKG" "SECRETSIDECAR"
 assert_file_not_contains "blinding: orchestration log hidden" "$BPKG" "SECRETORCH"
 assert_file_not_contains "blinding: open-decisions file hidden" "$BPKG" "SECRETDECISIONS"
-assert_file_not_contains "blinding: markdown under implementation/ hidden whatever its name" "$BPKG" "SECRETLEAK"
+assert_file_contains "blinding: markdown under implementation/ whose name matches no sidecar pattern visible" "$BPKG" "VISIBLEIMPLNOTE"
+assert_file_contains "blinding: a CLAUDE.md under implementation/ visible" "$BPKG" "VISIBLEIMPLCLAUDEMD"
 assert_file_contains "blinding: non-markdown file under implementation/ visible" "$BPKG" "VISIBLEIMPLJS"
 assert_file_contains "blinding: *-review-log.md outside the plugin folder visible" "$BPKG" "VISIBLENOTES"
 assert_file_contains "blinding: implementation/ folder outside the plugin folder visible" "$BPKG" "VISIBLESRCIMPL"
@@ -480,7 +484,8 @@ assert_file_not_contains "blinding (--commits): implementation fix reports hidde
 assert_file_not_contains "blinding (--commits): spec review-log sidecar hidden" "$BLIND_CPKG" "SECRETSIDECAR"
 assert_file_not_contains "blinding (--commits): orchestration log hidden" "$BLIND_CPKG" "SECRETORCH"
 assert_file_not_contains "blinding (--commits): open-decisions file hidden" "$BLIND_CPKG" "SECRETDECISIONS"
-assert_file_not_contains "blinding (--commits): markdown under implementation/ hidden whatever its name" "$BLIND_CPKG" "SECRETLEAK"
+assert_file_contains "blinding (--commits): markdown under implementation/ whose name matches no sidecar pattern visible" "$BLIND_CPKG" "VISIBLEIMPLNOTE"
+assert_file_contains "blinding (--commits): a CLAUDE.md under implementation/ visible" "$BLIND_CPKG" "VISIBLEIMPLCLAUDEMD"
 assert_file_contains "blinding (--commits): non-markdown file under implementation/ visible" "$BLIND_CPKG" "VISIBLEIMPLJS"
 assert_file_contains "blinding (--commits): *-review-log.md outside the plugin folder visible" "$BLIND_CPKG" "VISIBLENOTES"
 assert_file_contains "blinding (--commits): implementation/ folder outside the plugin folder visible" "$BLIND_CPKG" "VISIBLESRCIMPL"
@@ -534,19 +539,62 @@ assert_file_not_contains "blinding: review log hidden when built from a subdirec
 # `subdir-for-anchor` is an empty directory; git stores no empty directories,
 # so it leaves no untracked entry behind for Task 12's clean-tree assertion.
 
+# A sidecar moved with `git mv` out of a legacy location (`docs/specs/`,
+# `docs/plans/`) into the topic folder. Git pairs a rename only when both
+# sides of the move are in the diff: with the destination excluded and the
+# source not, the move degrades to a deletion of the source, and that
+# deletion hunk carries the sidecar's WHOLE old content — every prior
+# finding — into the package. The four legacy-location entries exclude the
+# source side too. A moved file that is NOT a sidecar (the spec itself) is an
+# ordinary rename the reviewer must still see.
+mkdir -p docs/specs docs/plans
+echo "SECRETLEGACYSPECLOG spec round 1 verdict" > docs/specs/x-design-review-log.md
+echo "SECRETLEGACYPLANLOG plan round 1 verdict" > docs/plans/x-review-log.md
+echo "SECRETLEGACYORCH phase 1 done" > docs/plans/x-orchestration-log.md
+echo "SECRETLEGACYDECISIONS open item" > docs/plans/x-open-decisions.md
+echo "VISIBLELEGACYSPEC design text" > docs/specs/x-design.md
+git add -A && git commit --quiet -m "legacy-layout documents"
+LEGACY_BASE=$(git rev-parse HEAD)
+LEGACY_TOPIC=docs/superpowers-orchestrator/2026-08-25-x
+mkdir -p "$LEGACY_TOPIC/specs" "$LEGACY_TOPIC/plans"
+git mv docs/specs/x-design-review-log.md "$LEGACY_TOPIC/specs/x-design-review-log.md"
+git mv docs/plans/x-review-log.md "$LEGACY_TOPIC/plans/x-review-log.md"
+git mv docs/plans/x-orchestration-log.md "$LEGACY_TOPIC/x-orchestration-log.md"
+git mv docs/plans/x-open-decisions.md "$LEGACY_TOPIC/plans/x-open-decisions.md"
+git mv docs/specs/x-design.md "$LEGACY_TOPIC/specs/x-design.md"
+git commit --quiet -m "migrate x to the topic folder"
+LEGACY_HEAD=$(git rev-parse HEAD)
+LEGACY_PKG=$("$SCRIPTS/review-package" "$LEGACY_BASE" "$LEGACY_HEAD" 2>/dev/null | sed 's/^wrote //; s/:.*$//')
+# Positive control first: the moved spec is listed as a rename, so a missing
+# or empty package cannot make the negative assertions below pass.
+assert_file_contains "blinding (legacy move): the moved spec is still listed" "$LEGACY_PKG" "rename to $LEGACY_TOPIC/specs/x-design.md"
+for legacy_path in docs/specs/x-design-review-log.md docs/plans/x-review-log.md docs/plans/x-orchestration-log.md docs/plans/x-open-decisions.md; do
+  assert_file_not_contains "blinding (legacy move): no deletion entry for $legacy_path" "$LEGACY_PKG" "$legacy_path"
+done
+for needle in SECRETLEGACYSPECLOG SECRETLEGACYPLANLOG SECRETLEGACYORCH SECRETLEGACYDECISIONS; do
+  assert_file_not_contains "blinding (legacy move): moved sidecar content absent ($needle)" "$LEGACY_PKG" "$needle"
+done
+# The same move addressed by SHA: --commits mode uses `git show`, not
+# `git diff`, so range-mode coverage does not transfer.
+LEGACY_CPKG="$WS/blind-legacy-move.diff"
+"$SCRIPTS/review-package" --commits "$LEGACY_HEAD" --out "$LEGACY_CPKG" >/dev/null 2>&1
+assert_file_contains "blinding (legacy move, --commits): the moved spec is still listed" "$LEGACY_CPKG" "rename to $LEGACY_TOPIC/specs/x-design.md"
+assert_file_not_contains "blinding (legacy move, --commits): no deletion entry for the moved spec sidecar" "$LEGACY_CPKG" "docs/specs/x-design-review-log.md"
+assert_file_not_contains "blinding (legacy move, --commits): moved sidecar content absent" "$LEGACY_CPKG" "SECRETLEGACYSPECLOG"
+
 # Drift check: `blind_pathspecs` in review-package is the pathspec set a
 # script actually executes; multi-code-review/SKILL.md and reviewer-prompt.md
 # each copy it verbatim in prose, held in step with it only by a comment.
-# Read the six entries out of review-package itself, rather than retyping
-# them here, so a future edit to the array is caught even if the two docs are
-# never touched.
+# Read the entries — ':(top)' plus the eight exclusions — out of
+# review-package itself, rather than retyping them here, so a future edit to
+# the array is caught even if the two docs are never touched.
 SKILL_MD="$(dirname "$(dirname "$SCRIPTS")")/multi-code-review/SKILL.md"
 REVIEWER_PROMPT_MD="$(dirname "$(dirname "$SCRIPTS")")/multi-code-review/reviewer-prompt.md"
 BLIND_PATHSPECS=()
 while IFS= read -r entry; do
   BLIND_PATHSPECS+=("$entry")
 done < <(sed -n '/^blind_pathspecs=($/,/^)$/p' "$SCRIPTS/review-package" | grep -oE "':[^']*'" | sed "s/^'//; s/'\$//")
-assert_eq "blinding drift check: blind_pathspecs has exactly six entries" "${#BLIND_PATHSPECS[@]}" "6"
+assert_eq "blinding drift check: blind_pathspecs has exactly nine entries (':(top)' plus eight exclusions)" "${#BLIND_PATHSPECS[@]}" "9"
 for entry in "${BLIND_PATHSPECS[@]}"; do
   assert_file_contains "blinding drift check: SKILL.md still lists $entry" "$SKILL_MD" "$entry"
   assert_file_contains "blinding drift check: reviewer-prompt.md still lists $entry" "$REVIEWER_PROMPT_MD" "$entry"

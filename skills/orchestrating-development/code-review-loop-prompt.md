@@ -59,8 +59,10 @@ Agent tool (general-purpose):
        orchestration artifact — the plan file's checkbox ticks, a file
        under `docs/superpowers-orchestrator/*/` whose name matches
        `*-orchestration-log.md`, `*-review-log.md`, `*-fix-reports.md` or
-       `*-open-decisions.md`, or a file matching
-       `docs/superpowers-orchestrator/*/implementation/*.md` — whether the
+       `*-open-decisions.md`, or a file at a legacy sidecar location
+       (`docs/specs/*-review-log.md`, `docs/plans/*-review-log.md`,
+       `docs/plans/*-orchestration-log.md`,
+       `docs/plans/*-open-decisions.md`) — whether the
        finding is about its presence, modification, or content, is
        rejected as `rejected: orchestration artifact (documented)`. Never
        dispatch a fix subagent against these files. EXCEPTION: a finding

@@ -35,17 +35,20 @@ the code review history was never committed. Finding, archiving, or deleting
   `/multi-code-review` run has no plan and therefore no topic folder: it keeps
   today's git-ignored `.superpowers/reviews/` behavior exactly.
 - **Reviewers stay blind.** Committed review material is now part of the
-  branch, so every whole-branch diff handed to a reviewer excludes the
-  markdown files under `<topic>/implementation/` and the files inside
-  `docs/superpowers-orchestrator/*/` whose names match `*-review-log.md`,
-  `*-fix-reports.md`, `*-orchestration-log.md` or `*-open-decisions.md`.
-  The reviewer's read prohibition lists the same set. This also closes a
-  pre-existing leak: the committed spec and plan review-log sidecars were
-  visible in whole-branch diffs before. Only files inside
-  `docs/superpowers-orchestrator/` are ever hidden: that folder holds
-  plugin output only, and a project must not put its own files there. A
-  `*-review-log.md` anywhere else, or a non-markdown file under
-  `implementation/`, stays visible to reviewers.
+  branch, so every whole-branch diff handed to a reviewer excludes the files
+  whose names match the plugin's four sidecar patterns — `*-review-log.md`,
+  `*-fix-reports.md`, `*-orchestration-log.md`, `*-open-decisions.md` —
+  inside `docs/superpowers-orchestrator/*/` and at the legacy locations
+  `docs/specs/` and `docs/plans/` (a sidecar moved out of those folders with
+  `git mv` would otherwise appear as a deletion hunk carrying its whole old
+  content). The reviewer's read prohibition lists the same set. This also
+  closes a pre-existing leak: the committed spec and plan review-log sidecars
+  were visible in whole-branch diffs before. Only a file matching one of the
+  four names inside those folders is ever hidden; every other file is
+  visible — a `*-review-log.md` anywhere else, or a file under
+  `implementation/` whose name matches none of the four patterns (a
+  `CLAUDE.md`, a note), reaches every reviewer. The plugin folder holds
+  plugin output only, and a project must not put its own files there.
 - **This repository was migrated** with `git mv`; document contents are
   untouched. **Other projects are not migrated automatically:** existing
   `docs/specs/` and `docs/plans/` files stay readable as plain files, and new

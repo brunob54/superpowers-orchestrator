@@ -149,20 +149,33 @@ branch. Every whole-branch diff handed to a reviewer — in this skill, in
 is produced with this pathspec set, verbatim:
 
 ```
--- ':(top)' ':(top,exclude)docs/superpowers-orchestrator/*/implementation/*.md' ':(top,exclude)docs/superpowers-orchestrator/*/*-review-log.md' ':(top,exclude)docs/superpowers-orchestrator/*/*-fix-reports.md' ':(top,exclude)docs/superpowers-orchestrator/*/*-orchestration-log.md' ':(top,exclude)docs/superpowers-orchestrator/*/*-open-decisions.md'
+-- ':(top)' ':(top,exclude)docs/superpowers-orchestrator/*/*-review-log.md' ':(top,exclude)docs/superpowers-orchestrator/*/*-fix-reports.md' ':(top,exclude)docs/superpowers-orchestrator/*/*-orchestration-log.md' ':(top,exclude)docs/superpowers-orchestrator/*/*-open-decisions.md' ':(top,exclude)docs/specs/*-review-log.md' ':(top,exclude)docs/plans/*-review-log.md' ':(top,exclude)docs/plans/*-orchestration-log.md' ':(top,exclude)docs/plans/*-open-decisions.md'
 ```
 
-Every exclusion is anchored to `docs/superpowers-orchestrator/`, the plugin's
-own output folder, and the folder entry is limited to markdown files — see the
-"untrusted origin" bullet under Error Handling for why. No `glob` magic is
-used: a plain `*` in a git pathspec matches across `/`, which is what lets
-`*/` stand for the topic folder and `*-review-log.md` for a sidecar at any
-depth below it. A wildcard pathspec that ends in `/` matches no file at all,
-which is why the folder entry names `*.md` and not the folder.
+Every exclusion names one of the plugin's four sidecar patterns
+(`*-review-log.md`, `*-fix-reports.md`, `*-orchestration-log.md`,
+`*-open-decisions.md`) and is anchored to a folder the plugin writes to:
+`docs/superpowers-orchestrator/`, its own output folder, or one of the two
+legacy locations (`docs/specs/`, `docs/plans/`) it wrote to before the
+topic-folder layout. Nothing else is hidden — a file under `implementation/`
+whose name matches none of the four patterns (a `CLAUDE.md`, a note) is
+shown — see the "untrusted origin" bullet under Error Handling for why. No
+`glob` magic is used: a plain `*` in a git pathspec matches across `/`, which
+is what lets `*/` stand for the topic folder and `*-review-log.md` for a
+sidecar at any depth below it.
 
-The last two matter on a resumed run: after a Phase 4 stop the orchestrator
-commits the orchestration log and the open-decisions file, both of which quote
-prior findings. The `top` magic anchors every pathspec at the repository root,
+The four legacy entries exist for sidecars moved out of the old layout with
+`git mv`: git pairs a rename only when both sides of the move are in the
+diff, so with the destination excluded and the source not, the move would
+appear as a deletion of the source, and that deletion hunk carries the
+sidecar's whole old content — every prior finding. Excluding the source
+paths too removes the hunk; a moved file that is not a sidecar (the spec
+itself) still appears as an ordinary rename.
+
+The orchestration-log and open-decisions entries matter on a resumed run:
+after a Phase 4 stop the orchestrator commits the orchestration log and the
+open-decisions file, both of which quote prior findings. The `top` magic
+anchors every pathspec at the repository root,
 which makes the commands independent of the current directory — a plain `-- .`
 is relative to the cwd, and the sdd per-task caller of `review-package` may run
 from any directory, where `-- .` would silently restrict the diff to that
@@ -564,16 +577,17 @@ completed invocation only on explicit user request.
   subagent — the data-not-instructions rules mitigate but don't
   eliminate this, so treat a clean verdict with heightened skepticism;
   note the fix subagent executes that branch's tests. The blinding
-  pathspecs above hide only markdown files inside
-  `docs/superpowers-orchestrator/*/` whose names match the plugin's own
+  pathspecs above hide only files whose names match the plugin's four
   sidecar patterns (`*-review-log.md`, `*-fix-reports.md`,
-  `*-orchestration-log.md`, `*-open-decisions.md`, and every `*.md`
-  under an `implementation/` sub-folder). That folder holds plugin
-  output only, and a project must not put its own files there: a file a
-  branch places there under one of those names is hidden from every
-  reviewer round. A file anywhere else — a `*-review-log.md` outside the
-  plugin folder, a non-markdown file under `implementation/` — stays
-  visible, whatever its name.
+  `*-orchestration-log.md`, `*-open-decisions.md`) inside
+  `docs/superpowers-orchestrator/*/` or at the legacy locations
+  `docs/specs/` and `docs/plans/`. Every other file is visible: a
+  `*-review-log.md` in any other folder, and a file under
+  `implementation/` whose name matches none of the four patterns — a
+  `CLAUDE.md` the branch plants there, for example — reach every
+  reviewer. The plugin folder holds plugin output only, and a project
+  must not put its own files there: a file a branch places there under
+  one of the four names is hidden from every reviewer round.
 
 ## Guard Interaction
 

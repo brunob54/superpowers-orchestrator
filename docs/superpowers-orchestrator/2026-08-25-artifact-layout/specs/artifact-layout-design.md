@@ -51,13 +51,15 @@ document:
   log adds no new exposure, and a machine token in the invocation entry
   would add state for a scenario branch ownership already prevents.
   Recorded as a residual risk in the release note.
-- Hiding review material stored outside the plugin's own folder. The
-  blinding pathspecs (section 6) hide only markdown files inside
-  `docs/superpowers-orchestrator/*/` whose names match the plugin's own
-  sidecar patterns. That folder holds plugin output only, and a project
-  must not put its own files there; a file anywhere else stays visible
-  to reviewers, whatever its name. Recorded as a residual risk in the
-  release note.
+- Hiding review material stored outside the plugin's own folders. The
+  blinding pathspecs (section 6) hide only files whose names match the
+  plugin's four sidecar patterns, inside `docs/superpowers-orchestrator/*/`
+  or at the legacy locations `docs/specs/` and `docs/plans/`. The plugin
+  folder holds plugin output only, and a project must not put its own
+  files there; every other file — a `*-review-log.md` elsewhere, or a
+  file under `implementation/` whose name matches none of the four
+  patterns — stays visible to reviewers. Recorded as a residual risk in
+  the release note.
 
 No decision in this design matched the prior-art trigger predicate.
 
@@ -403,18 +405,29 @@ required:
 
 1. **Diff exclusion.** Every whole-branch diff handed to a reviewer is
    produced with the pathspecs
-   `-- ':(top)' ':(top,exclude)docs/superpowers-orchestrator/*/implementation/*.md' ':(top,exclude)docs/superpowers-orchestrator/*/*-review-log.md' ':(top,exclude)docs/superpowers-orchestrator/*/*-fix-reports.md' ':(top,exclude)docs/superpowers-orchestrator/*/*-orchestration-log.md' ':(top,exclude)docs/superpowers-orchestrator/*/*-open-decisions.md'`.
-   Every exclusion is anchored to `docs/superpowers-orchestrator/`, the
-   plugin's own output folder, and the folder entry is limited to
-   markdown files: a file outside that folder is never hidden, whatever
-   its name, and a non-markdown file under `implementation/` is shown.
+   `-- ':(top)' ':(top,exclude)docs/superpowers-orchestrator/*/*-review-log.md' ':(top,exclude)docs/superpowers-orchestrator/*/*-fix-reports.md' ':(top,exclude)docs/superpowers-orchestrator/*/*-orchestration-log.md' ':(top,exclude)docs/superpowers-orchestrator/*/*-open-decisions.md' ':(top,exclude)docs/specs/*-review-log.md' ':(top,exclude)docs/plans/*-review-log.md' ':(top,exclude)docs/plans/*-orchestration-log.md' ':(top,exclude)docs/plans/*-open-decisions.md'`.
+   Every exclusion names one of the plugin's four sidecar patterns and
+   is anchored to a folder the plugin writes to:
+   `docs/superpowers-orchestrator/`, its own output folder, or one of the
+   two legacy locations (`docs/specs/`, `docs/plans/`) it wrote to before
+   the topic-folder layout. Nothing else is hidden: a file outside those
+   folders is never hidden, whatever its name, and a file under
+   `implementation/` whose name matches none of the four patterns (a
+   `CLAUDE.md`, a note) is shown — hidden, such a file would reach the
+   controller, which reads that folder every round, and no reviewer.
    Without the anchor, a branch could hide any file from every reviewer
    round by giving it one of these names. No `glob` magic is used: a
    plain `*` in a git pathspec matches across `/`, which is what lets
    `*/` stand for the topic folder and `*-review-log.md` for a sidecar
-   at any depth below it. A wildcard pathspec that ends in `/` matches
-   no file at all, which is why the folder entry names `*.md`.
-   The last two matter on a resumed run: after a Phase 4 stop the
+   at any depth below it. The four legacy entries exist for sidecars
+   moved out of the old layout with `git mv`: git pairs a rename only
+   when both sides of the move are in the diff, so with the destination
+   excluded and the source not, the move appears as a deletion of the
+   source whose hunk carries the sidecar's whole old content; excluding
+   the source paths too removes the hunk, while a moved file that is not
+   a sidecar still appears as an ordinary rename.
+   The orchestration-log and open-decisions entries matter on a resumed
+   run: after a Phase 4 stop the
    orchestrator commits the orchestration log and the open-decisions
    file, both of which quote prior findings; without the exclusion every
    reviewer of the resumed loop would read them in the diff. In
@@ -439,19 +452,20 @@ required:
    doc-review sidecars.
 2. **Read prohibition.** `multi-code-review/reviewer-prompt.md:24-25`
    already lists `*-review-log.md` and `*-fix-reports.md`; it gains
-   `*-orchestration-log.md`, `*-open-decisions.md`, and every file
-   matching `docs/superpowers-orchestrator/*/implementation/*.md`, with
-   all four name shapes limited to files under
-   `docs/superpowers-orchestrator/*/` — the same surface as the diff
+   `*-orchestration-log.md` and `*-open-decisions.md`, with all four
+   name shapes limited to files under `docs/superpowers-orchestrator/*/`,
+   plus the four legacy sidecar locations (`docs/specs/*-review-log.md`,
+   `docs/plans/*-review-log.md`, `docs/plans/*-orchestration-log.md`,
+   `docs/plans/*-open-decisions.md`) — the same surface as the diff
    exclusion, so the read prohibition cannot hide what the pathspecs
    show. The orchestrator's triage rule
    (`code-review-loop-prompt.md:53-55`), which discards findings whose
    subject file is an orchestration artifact, extends its list from
    `*-orchestration-log.md`, plan checkbox ticks and `*-review-log.md` to
-   `*-fix-reports.md` and `implementation/*.md`, limited to the same
-   folder — so a reviewer that still sees these files (fallback path)
+   `*-fix-reports.md` and `*-open-decisions.md`, limited to the same
+   folders — so a reviewer that still sees these files (fallback path)
    produces no spurious finding per round, and a finding about a file
-   outside that folder is never discarded by name.
+   outside those folders is never discarded by name.
 
 Fix subagents keep receiving the findings through their brief, never
 through the log — unchanged.
