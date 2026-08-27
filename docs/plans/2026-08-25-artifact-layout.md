@@ -3651,6 +3651,22 @@ the code review history was never committed. Finding, archiving, or deleting
   `implementation/` whose name matches none of the four patterns (a
   `CLAUDE.md`, a note), reaches every reviewer. The plugin folder holds
   plugin output only, and a project must not put its own files there.
+- **A Phase 4 stop is resumable with answers.** When the final code review
+  leaves open items (`unresolved` or `user_decision` findings), the
+  orchestrator's `## STOPPED` entry lists them by their review-log ids.
+  `Resume orchestration for <plan> — <id>: <answer>` hands the answers to the
+  code-review-loop controller, which journals each one as
+  `decided (user): <answer>` in a committed addendum
+  (`chore(review): <slug> decisions`). The completion skip — the rule that
+  lets a re-dispatched controller reuse a finished review instead of running
+  it again — now applies only when the recorded invocation ended with
+  `unresolved = 0` and `user_decision = 0`; with open items and no answers,
+  the controller asks for answers (`BLOCKED: … resume with answers`) instead
+  of silently re-running or stopping again.
+- **A skipped review is committed too.** In pipeline mode an N=0 run writes
+  its `skipped` entry into the tracked review log and commits it as
+  `chore(review): <slug> skipped`, so the log never stays modified after a
+  skipped gate.
 - **This repository was migrated** with `git mv`; document contents are
   untouched. **Other projects are not migrated automatically:** existing
   `docs/specs/` and `docs/plans/` files stay readable as plain files, and new
