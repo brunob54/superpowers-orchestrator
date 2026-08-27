@@ -90,8 +90,16 @@ the same question batch below).
    git does not track yet), naming both destination paths
    (`specs/<slug>-design.md` and `specs/<slug>-design-review-log.md`). The
    orchestrator never moves files itself and never asks a question after
-   Phase 0. Then: the computed plan path and log path (step 7) do not already
-   exist; `git status --porcelain --untracked-files=all` empty EXCEPT the spec
+   Phase 0. Then: the computed plan path (step 7) must not exist yet — stop
+   and report if it does. The computed log path (step 7) may exist: that is
+   a prior orchestration of this slug. Do NOT stop with a bare "already
+   exists"; apply step 5's recorded-spec comparison here — read the spec
+   path from the log's latest `_Invocation` header: recorded spec equals the
+   invoked spec → report "prior run" and print
+   `Resume orchestration for <plan path>`; different or missing → report
+   "unrelated prior run with the same slug: rename the spec or clear the old
+   topic folder". Both outcomes stop (step 5 keeps the branch-exists cases).
+   Next, `git status --porcelain --untracked-files=all` empty EXCEPT the spec
    and its `-review-log.md` sidecar under the topic folder's `specs/`
    (brainstorming leaves them uncommitted). `--untracked-files=all` is
    required: after brainstorming the topic folder is a **new untracked
@@ -160,9 +168,11 @@ the same question batch below).
    Zero matches → stop with "branch feature/<slug> exists but no
    orchestration log was found: rename the spec or delete the branch" (a
    `git checkout -b` onto the existing branch fails, and switching to it
-   would run on a branch whose state was never checked). Exactly one match →
-   compare its recorded spec path with the invoked spec: same spec → report
-   "prior run", suggest the resume prompt; different/missing → report
+   would run on a branch whose state was never checked; for a run stopped
+   under the pre-7.3.0 layout, follow the migration recipe in the v7.3.0
+   release note). Exactly one match → the recorded-spec comparison of step 4:
+   same spec → report "prior run", print
+   `Resume orchestration for <plan path>`; different/missing → report
    "unrelated prior run with the same slug", tell the user to rename the spec
    or clear the old branch. More than one match → stop with "ambiguous slug:
    <folders>" (slug uniqueness is violated; the user must merge or rename
@@ -329,8 +339,10 @@ Trigger: `Resume orchestration for <plan-or-spec path>`.
 
 0. Derive the **topic folder** from the named path (same rule as Phase 0),
    then `feature/<slug>` from the topic folder's basename minus its date
-   prefix; verify the branch exists (else stop — nothing to resume) and check
-   it out; re-ensure the exclude entries (Phase 0 step 3) FIRST, then require
+   prefix; verify the branch exists (else stop — nothing to resume; for a run
+   stopped under the pre-7.3.0 layout, follow the migration recipe in the
+   v7.3.0 release note) and check it out; re-ensure the exclude entries
+   (Phase 0 step 3) FIRST, then require
    the clean-tree check to pass:
 
    ```bash

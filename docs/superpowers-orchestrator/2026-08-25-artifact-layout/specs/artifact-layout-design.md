@@ -278,8 +278,15 @@ Definitions:
   glob
   `docs/superpowers-orchestrator/????-??-??-<slug>/<slug>-orchestration-log.md`.
   Zero matches → stop with "branch feature/<slug> exists but no
-  orchestration log was found: rename the spec or delete the branch". One
-  match → compare its recorded spec path with the invoked spec, as today.
+  orchestration log was found: rename the spec or delete the branch" (for a
+  run stopped under the pre-7.3.0 layout, the message points to the
+  migration recipe in the v7.3.0 release note). One match → compare its
+  recorded spec path with the invoked spec, as today. The same comparison
+  runs earlier, in Phase 0 step 4, when the computed log path already
+  exists: the orchestrator does not stop with a bare "already exists" —
+  same spec → "prior run" with the resume prompt; different or missing →
+  "unrelated prior run with the same slug: rename the spec or clear the
+  old topic folder"; both stop.
   More than one match → stop with "ambiguous slug: <folders>" (slug
   uniqueness violated; the user must merge or rename before any run). The
   run stops in every case; only a branch that does not exist yet is
@@ -564,7 +571,15 @@ Every move is preceded by `mkdir -p` of the destination stage folder.
 
 Other projects using the plugin: no automatic migration. Their existing
 `docs/specs/` and `docs/plans/` files stay readable as plain files; new
-topics use the new layout. The release note says so.
+topics use the new layout. The release note says so. A run that stopped
+under the old layout is moved by hand with the recipe in the v7.3.0
+release note: create the topic folder with `specs/` and `plans/`; `git mv`
+the spec, the plan, their `-review-log.md` sidecars and the orchestration
+log into it, dropping the date prefix from the file names; edit the
+recorded paths (the orchestration log's `_Invocation` header `spec` path
+and `plan:` line, the plan's `**Spec:**` header); commit; then
+`Resume orchestration for <new plan path>`. The orchestrator's zero-match
+stop (Phase 0 step 5) and Resume step 0 point to that recipe.
 
 ## 9. Testing strategy
 

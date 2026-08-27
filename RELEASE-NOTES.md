@@ -71,6 +71,28 @@ not detected. Today's batched mode already resumes automatically without such
 detection; branch ownership prevents the scenario in practice, and a machine
 token in the invocation entry would add state for nothing.
 
+**Migrating a run stopped under the old layout (any project):** a run that
+stopped before this release keeps its documents at the old flat paths, and
+neither `orchestrate` nor `Resume orchestration` finds them there (the
+orchestrator's Phase 0 step 5 and Resume step 0 stop and point here). Move
+the documents by hand, then resume:
+
+1. Create `docs/superpowers-orchestrator/<date>-<slug>/` with the
+   sub-folders `specs/` and `plans/` — `<date>` is the run's start date and
+   `<slug>` its slug (the old file names minus the `YYYY-MM-DD-` prefix and,
+   for the spec, the `-design` suffix).
+2. `git mv` the spec and, when it exists, its `-review-log.md` sidecar into
+   `specs/`, dropping the date prefix from the file names
+   (`docs/specs/<date>-<slug>-design.md` becomes `specs/<slug>-design.md`).
+3. `git mv` the plan and, when it exists, its `-review-log.md` sidecar into
+   `plans/`, dropping the date prefix (`docs/plans/<date>-<slug>.md` becomes
+   `plans/<slug>.md`).
+4. `git mv` the orchestration log to the topic root as
+   `<slug>-orchestration-log.md`.
+5. Edit the orchestration log's `_Invocation` header `spec` path and its
+   `plan:` line, and the plan's `**Spec:**` header line, to the new paths.
+6. Commit, then `Resume orchestration for <new plan path>`.
+
 **Post-migration manual step for this repository:** the orchestration run that
 implemented this change kept its own plan and orchestration log at
 `docs/plans/2026-08-25-artifact-layout.md` and
