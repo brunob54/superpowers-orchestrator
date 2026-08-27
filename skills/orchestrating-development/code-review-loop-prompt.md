@@ -50,7 +50,9 @@ Agent tool (general-purpose):
        next round automatically; the completion skip applies to
        `gate: orchestration` entries whose completion-marker HEAD and
        branch match. If the completion marker already matches the current
-       HEAD (the effective HEAD in pipeline mode) and branch, do not
+       HEAD (in pipeline mode the effective HEAD: the newest commit in
+       `BASE..HEAD` that changes a path outside the blinding pathspec
+       set, whatever its subject — Pipeline rule 4) and branch, do not
        re-run anything: synthesize your
        REVIEW_DONE return from the review log's recorded rounds and
        dispositions — a retry dispatched after only the final message was

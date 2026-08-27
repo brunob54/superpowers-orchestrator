@@ -662,23 +662,24 @@ git checkout --quiet -- unrelated.txt
 git add -- "$PLOG" && git commit --quiet -m "chore(review): bar round 2 log" -- "$PLOG"
 assert_file_contains "rule 2 drift check: SKILL.md still excludes the topic's implementation folder" "$SKILL_MD" "git status --porcelain -- ':(top)' ':(top,exclude)<topic>/implementation/*'"
 
-# Rule 4: the effective-HEAD walk skips leading chore(review) commits and
-# stops at the first other commit.
+# Rule 4: the effective HEAD is the newest commit in BASE..HEAD that changes
+# at least one path outside the blinding pathspec set — reviewable content.
+# The commit subject plays no part: the loop's own `chore(review): <slug>
+# round <i> log` commits are skipped because they change only the sidecar,
+# not because of their subject.
 #
-# The walk is used twice below, with two different range bases. Define it once
-# as a function rather than pasting the loop twice: two byte-identical copies
-# of a logic block are exactly what the review rubric treats as a defect, and
-# the repository's DRY rule forbids them. The function is NOT required to be
+# The lookup is used several times below, with different range bases. Define
+# it once as a function rather than pasting the command repeatedly: two
+# byte-identical copies of a logic block are exactly what the review rubric
+# treats as a defect, and the repository's DRY rule forbids them. The
+# function reads the pathspec set out of review-package ($BLIND_PATHSPECS,
+# extracted by the blinding drift check above) instead of retyping it, so it
+# follows the set the script actually executes. It is NOT required to be
 # byte-identical to the version `multi-code-review/SKILL.md` documents — this
-# test asserts the walk's behavior, not the skill's wording.
+# test asserts the lookup's behavior, not the skill's wording.
 effective_head_of() {
-  local base="$1" sha subject effective_head=""
-  while read -r sha subject; do
-    case "$subject" in
-      'chore(review):'*) continue ;;
-      *) effective_head="$sha"; break ;;
-    esac
-  done < <(git log --format='%H %s' "$base..HEAD")
+  local base="$1" effective_head
+  effective_head=$(git log -1 --full-history --format=%H "$base..HEAD" -- "${BLIND_PATHSPECS[@]}")
   [ -n "$effective_head" ] || effective_head=$(git rev-parse "$base")
   printf '%s\n' "$effective_head"
 }
@@ -693,27 +694,47 @@ git add -- "$PLOG" && git commit --quiet -m "chore(review): bar round 3 log" -- 
 assert_eq "rule 4: effective HEAD skips the trailing review commit" \
   "$(effective_head_of "$PBASE")" "$REAL_WORK_SHA"
 
-# Rule 4, degenerate case: a range holding only chore(review) commits falls
-# back to BASE.
+# Rule 4 keys on CONTENT, not on the commit subject. (i) A user commit whose
+# subject starts with `chore(review):` but changes code is the effective
+# HEAD: a subject-based walk would skip it, and the once-per-gate check would
+# then treat the branch as already reviewed.
+echo "code change under a review-looking subject" > b.txt
+git add b.txt && git commit --quiet -m "chore(review): x"
+CODE_UNDER_REVIEW_SUBJECT_SHA=$(git rev-parse HEAD)
+assert_eq "rule 4 (i): a chore(review)-titled commit that changes code is the effective HEAD" \
+  "$(effective_head_of "$PBASE")" "$CODE_UNDER_REVIEW_SUBJECT_SHA"
+# (ii) A commit with an ordinary subject that changes only the review log is
+# NOT the effective HEAD: it stays at the previous content commit.
+echo "round 4 verdict" >> "$PLOG"
+git add -- "$PLOG" && git commit --quiet -m "feat: y" -- "$PLOG"
+assert_eq "rule 4 (ii): a feat-titled commit that changes only the review log is not the effective HEAD" \
+  "$(effective_head_of "$PBASE")" "$CODE_UNDER_REVIEW_SUBJECT_SHA"
+
+# (iii) Rule 4, degenerate case: a range with no content commit — here only
+# the `feat: y` sidecar commit — falls back to BASE.
 ONLY_BASE=$(git rev-parse HEAD~1)
-assert_eq "rule 4: review-only range falls back to BASE" \
+assert_eq "rule 4 (iii): a range with no content commit falls back to BASE" \
   "$(effective_head_of "$ONLY_BASE")" "$ONLY_BASE"
 # The fallback must normalize BASE: given as a short SHA (or a ref name),
 # the result is still the full SHA the completion marker records.
-assert_eq "rule 4: review-only range given a short BASE falls back to the full SHA" \
+assert_eq "rule 4 (iii): a range with no content commit given a short BASE falls back to the full SHA" \
   "$(effective_head_of "$(git rev-parse --short "$ONLY_BASE")")" "$ONLY_BASE"
 
 # Drift check: the DRY comment above waives byte-identity between
 # effective_head_of() and the fenced bash block skills/multi-code-review/SKILL.md
-# documents. Without a check on that block, the two "rule 4" assertions above
+# documents. Without a check on that block, the "rule 4" assertions above
 # only exercise the local helper, so they cannot fail if the documented block
 # drifts or is edited wrongly. Assert the load-bearing lines this helper
-# reproduces are still present in the SKILL.md block. $SKILL_MD was defined
-# above, ahead of the rule 1 drift check, and reused here.
-assert_file_contains "rule 4 drift check: SKILL.md still skips chore(review) commits" "$SKILL_MD" "'chore(review):'*) continue ;;"
-assert_file_contains "rule 4 drift check: SKILL.md still records effective_head and stops" "$SKILL_MD" 'effective_head="$sha"; break ;;'
-assert_file_contains "rule 4 drift check: SKILL.md still walks the range with git log --format" "$SKILL_MD" "git log --format='%H %s'"
+# reproduces are still present in the SKILL.md block: the path-limited
+# `git log -1` lookup carrying the same pathspec set review-package executes
+# (rebuilt from $BLIND_PATHSPECS in the one-line quoted form the skill
+# uses), the BASE fallback, and the absence of the former subject-based
+# walk. $SKILL_MD was defined above, ahead of the rule 1 drift check, and
+# reused here.
+SKILL_SET=$(printf "'%s' " "${BLIND_PATHSPECS[@]}" | sed 's/ $//')
+assert_file_contains "rule 4 drift check: SKILL.md still looks the effective HEAD up by content, with the blinding pathspecs" "$SKILL_MD" "effective_head=\$(git log -1 --full-history --format=%H \"\$BASE..HEAD\" -- $SKILL_SET)"
 assert_file_contains "rule 4 drift check: SKILL.md still falls back to the resolved BASE when empty" "$SKILL_MD" '[ -n "$effective_head" ] || effective_head=$(git rev-parse "$BASE")'
+assert_file_not_contains "rule 4 drift check: SKILL.md no longer keys the effective HEAD on the commit subject" "$SKILL_MD" "'chore(review):'*) continue ;;"
 
 bold "TOPIC_DIR validation rule (multi-code-review)"
 

@@ -1312,24 +1312,27 @@ Insert immediately before the `**Once per gate:**` paragraph:
 
 ````markdown
 **Pipeline rule 4 — Completion marker and once-per-gate skip.** Define the
-**effective HEAD** as the newest commit in `BASE..HEAD` whose subject does not
-start with `chore(review):`:
+**effective HEAD** as the newest commit in `BASE..HEAD` that changes at least
+one path outside the blinding pathspec set ("Reviewer blinding — pathspecs"
+above) — the newest commit that carries reviewable content. The commit
+subject plays no part in the definition:
 
 ```bash
-effective_head=""
-while read -r sha subject; do
-  case "$subject" in
-    'chore(review):'*) continue ;;
-    *) effective_head="$sha"; break ;;
-  esac
-done < <(git log --format='%H %s' "$BASE..HEAD")
+effective_head=$(git log -1 --full-history --format=%H "$BASE..HEAD" -- ':(top)' ':(top,exclude)docs/superpowers-orchestrator/*/*-review-log.md' ':(top,exclude)docs/superpowers-orchestrator/*/*-fix-reports.md' ':(top,exclude)docs/superpowers-orchestrator/*/*-orchestration-log.md' ':(top,exclude)docs/superpowers-orchestrator/*/*-open-decisions.md' ':(top,exclude)docs/specs/*-review-log.md' ':(top,exclude)docs/plans/*-review-log.md' ':(top,exclude)docs/plans/*-orchestration-log.md' ':(top,exclude)docs/plans/*-open-decisions.md')
 [ -n "$effective_head" ] || effective_head=$(git rev-parse "$BASE")
 ```
 
-When every commit in the range is a `chore(review):` commit — N=0, or a
-branch that received only review commits — the effective HEAD is BASE,
-resolved with `git rev-parse`: `BASE` may have been given as a ref name or
-a short SHA, and the completion marker must record a full SHA.
+When no commit in the range changes such a path — N=0, or a branch that
+received only sidecar commits — the effective HEAD is BASE, resolved with
+`git rev-parse`: `BASE` may have been given as a ref name or a short SHA,
+and the completion marker must record a full SHA. Keying on content rather
+than on the subject is what keeps the once-per-gate skip safe: a user
+commit whose subject starts with `chore(review):` but changes code IS the
+effective HEAD and re-opens the gate; a commit with any other subject that
+changes only the review log is NOT, exactly like the loop's own
+`chore(review): <slug> round <i> log` commits. `--full-history` keeps every
+commit that touches a matching path, including one on the side of a merge
+that git's default history simplification would drop.
 
 In pipeline mode the completion marker records the **effective HEAD**, never
 the raw `git rev-parse HEAD`, which at marker time is always the last round's
@@ -1392,9 +1395,10 @@ branch. "Current HEAD" is mode-dependent: in **direct mode** it is the raw
 itself is not tracked in the branch under review (same
 `git ls-files --error-unmatch <log path>` check as the sentinel) — in
 direct mode a tracked log can never satisfy this skip. In **pipeline
-mode** it is the **effective HEAD** defined in "Pipeline rule 4" above,
-and there is **no** tracked-log condition: in that mode the log is tracked
-by design. A `skipped` (N=0) entry **counts as completed** for this check
+mode** it is the **effective HEAD** defined in "Pipeline rule 4" above —
+the newest commit in `BASE..HEAD` that changes reviewable content, found by
+what the commit changes and never by its subject — and there is **no**
+tracked-log condition: in that mode the log is tracked by design. A `skipped` (N=0) entry **counts as completed** for this check
 — skip when its recorded HEAD equals the current HEAD under the same
 mode-dependent definition and the branch matches — and is never a
 resumable/in-progress entry for the sentinel.
@@ -1603,8 +1607,8 @@ git commit -m "fix(multi-code-review): blind reviewers to committed review mater
 
 These assertions have **no red state**, by design — the step is deliberately
 not called "write failing tests". They pin down behavior of `git` itself (a
-path-limited commit, pathspec exclusion in `git status`, the effective-HEAD
-walk, `git log --grep`) plus `sdd-workspace`'s existing archive-slug rule, and
+path-limited commit, pathspec exclusion in `git status`, the path-limited
+effective-HEAD lookup, `git log --grep`) plus `sdd-workspace`'s existing archive-slug rule, and
 this plan changes none of that. They pass before and after; what they protect
 is the git contract the skill text now depends on. Step 2 therefore expects
 `PASS`, not `FAIL`.
@@ -1644,23 +1648,24 @@ if [ -n "$PRECOND2" ]; then ok "rule 2: modified source file reads dirty"; else 
 git checkout --quiet -- unrelated.txt
 git add -- "$PLOG" && git commit --quiet -m "chore(review): bar round 2 log" -- "$PLOG"
 
-# Rule 4: the effective-HEAD walk skips leading chore(review) commits and
-# stops at the first other commit.
+# Rule 4: the effective HEAD is the newest commit in BASE..HEAD that changes
+# at least one path outside the blinding pathspec set — reviewable content.
+# The commit subject plays no part: the loop's own `chore(review): <slug>
+# round <i> log` commits are skipped because they change only the sidecar,
+# not because of their subject.
 #
-# The walk is used twice below, with two different range bases. Define it once
-# as a function rather than pasting the loop twice: two byte-identical copies
-# of a logic block are exactly what the review rubric treats as a defect, and
-# the repository's DRY rule forbids them. The function is NOT required to be
+# The lookup is used several times below, with different range bases. Define
+# it once as a function rather than pasting the command repeatedly: two
+# byte-identical copies of a logic block are exactly what the review rubric
+# treats as a defect, and the repository's DRY rule forbids them. The
+# function reads the pathspec set out of review-package ($BLIND_PATHSPECS,
+# extracted by the blinding drift check above) instead of retyping it, so it
+# follows the set the script actually executes. It is NOT required to be
 # byte-identical to the version `multi-code-review/SKILL.md` documents — this
-# test asserts the walk's behavior, not the skill's wording.
+# test asserts the lookup's behavior, not the skill's wording.
 effective_head_of() {
-  local base="$1" sha subject effective_head=""
-  while read -r sha subject; do
-    case "$subject" in
-      'chore(review):'*) continue ;;
-      *) effective_head="$sha"; break ;;
-    esac
-  done < <(git log --format='%H %s' "$base..HEAD")
+  local base="$1" effective_head
+  effective_head=$(git log -1 --full-history --format=%H "$base..HEAD" -- "${BLIND_PATHSPECS[@]}")
   [ -n "$effective_head" ] || effective_head=$(git rev-parse "$base")
   printf '%s\n' "$effective_head"
 }
@@ -1675,14 +1680,30 @@ git add -- "$PLOG" && git commit --quiet -m "chore(review): bar round 3 log" -- 
 assert_eq "rule 4: effective HEAD skips the trailing review commit" \
   "$(effective_head_of "$PBASE")" "$REAL_WORK_SHA"
 
-# Rule 4, degenerate case: a range holding only chore(review) commits falls
-# back to BASE.
+# Rule 4 keys on CONTENT, not on the commit subject. (i) A user commit whose
+# subject starts with `chore(review):` but changes code is the effective
+# HEAD: a subject-based walk would skip it, and the once-per-gate check would
+# then treat the branch as already reviewed.
+echo "code change under a review-looking subject" > b.txt
+git add b.txt && git commit --quiet -m "chore(review): x"
+CODE_UNDER_REVIEW_SUBJECT_SHA=$(git rev-parse HEAD)
+assert_eq "rule 4 (i): a chore(review)-titled commit that changes code is the effective HEAD" \
+  "$(effective_head_of "$PBASE")" "$CODE_UNDER_REVIEW_SUBJECT_SHA"
+# (ii) A commit with an ordinary subject that changes only the review log is
+# NOT the effective HEAD: it stays at the previous content commit.
+echo "round 4 verdict" >> "$PLOG"
+git add -- "$PLOG" && git commit --quiet -m "feat: y" -- "$PLOG"
+assert_eq "rule 4 (ii): a feat-titled commit that changes only the review log is not the effective HEAD" \
+  "$(effective_head_of "$PBASE")" "$CODE_UNDER_REVIEW_SUBJECT_SHA"
+
+# (iii) Rule 4, degenerate case: a range with no content commit — here only
+# the `feat: y` sidecar commit — falls back to BASE.
 ONLY_BASE=$(git rev-parse HEAD~1)
-assert_eq "rule 4: review-only range falls back to BASE" \
+assert_eq "rule 4 (iii): a range with no content commit falls back to BASE" \
   "$(effective_head_of "$ONLY_BASE")" "$ONLY_BASE"
 # The fallback must normalize BASE: given as a short SHA (or a ref name),
 # the result is still the full SHA the completion marker records.
-assert_eq "rule 4: review-only range given a short BASE falls back to the full SHA" \
+assert_eq "rule 4 (iii): a range with no content commit given a short BASE falls back to the full SHA" \
   "$(effective_head_of "$(git rev-parse --short "$ONLY_BASE")")" "$ONLY_BASE"
 
 bold "recovery greps stay intact"

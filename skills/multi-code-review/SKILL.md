@@ -514,24 +514,27 @@ user-decision items remain — unresolved items block, exactly as
 unresolved review findings block in subagent-driven-development today.
 
 **Pipeline rule 4 — Completion marker and once-per-gate skip.** Define the
-**effective HEAD** as the newest commit in `BASE..HEAD` whose subject does not
-start with `chore(review):`:
+**effective HEAD** as the newest commit in `BASE..HEAD` that changes at least
+one path outside the blinding pathspec set ("Reviewer blinding — pathspecs"
+above) — the newest commit that carries reviewable content. The commit
+subject plays no part in the definition:
 
 ```bash
-effective_head=""
-while read -r sha subject; do
-  case "$subject" in
-    'chore(review):'*) continue ;;
-    *) effective_head="$sha"; break ;;
-  esac
-done < <(git log --format='%H %s' "$BASE..HEAD")
+effective_head=$(git log -1 --full-history --format=%H "$BASE..HEAD" -- ':(top)' ':(top,exclude)docs/superpowers-orchestrator/*/*-review-log.md' ':(top,exclude)docs/superpowers-orchestrator/*/*-fix-reports.md' ':(top,exclude)docs/superpowers-orchestrator/*/*-orchestration-log.md' ':(top,exclude)docs/superpowers-orchestrator/*/*-open-decisions.md' ':(top,exclude)docs/specs/*-review-log.md' ':(top,exclude)docs/plans/*-review-log.md' ':(top,exclude)docs/plans/*-orchestration-log.md' ':(top,exclude)docs/plans/*-open-decisions.md')
 [ -n "$effective_head" ] || effective_head=$(git rev-parse "$BASE")
 ```
 
-When every commit in the range is a `chore(review):` commit — N=0, or a
-branch that received only review commits — the effective HEAD is BASE,
-resolved with `git rev-parse`: `BASE` may have been given as a ref name or
-a short SHA, and the completion marker must record a full SHA.
+When no commit in the range changes such a path — N=0, or a branch that
+received only sidecar commits — the effective HEAD is BASE, resolved with
+`git rev-parse`: `BASE` may have been given as a ref name or a short SHA,
+and the completion marker must record a full SHA. Keying on content rather
+than on the subject is what keeps the once-per-gate skip safe: a user
+commit whose subject starts with `chore(review):` but changes code IS the
+effective HEAD and re-opens the gate; a commit with any other subject that
+changes only the review log is NOT, exactly like the loop's own
+`chore(review): <slug> round <i> log` commits. `--full-history` keeps every
+commit that touches a matching path, including one on the side of a merge
+that git's default history simplification would drop.
 
 In pipeline mode the completion marker records the **effective HEAD**, never
 the raw `git rev-parse HEAD`, which at marker time is always the last round's
@@ -549,9 +552,10 @@ branch. "Current HEAD" is mode-dependent: in **direct mode** it is the raw
 itself is not tracked in the branch under review (same
 `git ls-files --error-unmatch <log path>` check as the sentinel) — in
 direct mode a tracked log can never satisfy this skip. In **pipeline
-mode** it is the **effective HEAD** defined in "Pipeline rule 4" above,
-and there is **no** tracked-log condition: in that mode the log is tracked
-by design. A `skipped` (N=0) entry **counts as completed** for this check
+mode** it is the **effective HEAD** defined in "Pipeline rule 4" above —
+the newest commit in `BASE..HEAD` that changes reviewable content, found by
+what the commit changes and never by its subject — and there is **no**
+tracked-log condition: in that mode the log is tracked by design. A `skipped` (N=0) entry **counts as completed** for this check
 — skip when its recorded HEAD equals the current HEAD under the same
 mode-dependent definition and the branch matches — and is never a
 resumable/in-progress entry for the sentinel. Interrupted

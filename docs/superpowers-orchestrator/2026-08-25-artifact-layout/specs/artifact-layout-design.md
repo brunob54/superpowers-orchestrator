@@ -340,11 +340,15 @@ Definitions:
      to the same file (the file is never moved aside — its history is
      committed).
   4. **Completion marker and once-per-gate skip.** Define the
-     *effective HEAD* as the newest commit in `BASE..HEAD` whose subject
-     does not start with `chore(review):` (walk `git log --format='%H
-     %s' BASE..HEAD` and stop at the first such commit); when every
-     commit in that range is a `chore(review):` commit (N=0, or a branch
-     that received only review commits), the effective HEAD is BASE.
+     *effective HEAD* as the newest commit in `BASE..HEAD` that changes
+     at least one path outside the blinding pathspec set of section 6
+     (`git log -1 --full-history --format=%H BASE..HEAD -- <the blinding
+     pathspecs>`); the commit subject plays no part, so a user commit
+     titled `chore(review): …` that changes code is the effective HEAD
+     and a commit with any other subject that changes only a sidecar is
+     not. When no commit in that range changes such a path (N=0, or a
+     branch that received only sidecar commits), the effective HEAD is
+     BASE.
      In pipeline mode
      the completion marker records the effective HEAD — never the raw
      `git rev-parse HEAD`, which at marker time is always the last
