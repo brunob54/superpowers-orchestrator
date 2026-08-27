@@ -96,3 +96,12 @@ _Invocation 3 — 2026-08-27 — N_code=2 — resumed — six invocation-2 findi
 ## STOPPED — 2026-08-27 — phase 4 — 4 new plan-mandated user-decision items (rounds 9–10) plus the standing behavioral-suite re-run; Phase 5 not reached
 Detail: .superpowers/reviews/feature-artifact-layout-review-log.md
 Resume: Resume orchestration for docs/plans/2026-08-25-artifact-layout.md
+
+## Phase 4 — closed by the orchestrator — 2026-08-27 — HEAD 5e9d202
+Invocation 3's four plan-mandated items were decided on the user's delegation (F1-F4) and applied (fbcb8f9, fcf4f20, 949d6b1, 8f4d93e). That diff was then reviewed by fresh-context readers three times, each review followed by one fix commit (71519c2+110d942, 6334a49, 7791485, 5e9d202); Important findings fell 5 → 2 → 2 → 2, all in the resume path's ordering and crash windows, all applied. The last commit (5e9d202) was verified by copy checks (93), drift checks and the fast suites only — no further fresh review, by decision, to bound the iteration.
+Evidence at 5e9d202: tree clean; BASE 0169f0e is an ancestor; 22/22 tasks, 140/140 checkboxes; tests/sdd-scripts 193 passed / 0 failed; tests/codex unit 9/9 suites; tests/smart-compress 87/0; `bash -n` clean on both behavioral suites, run-tests.sh and review-package.
+
+## STOPPED — 2026-08-27 — phase 4 — single open item: the behavioral suites have not been re-run since 12a551d (needs the plugin reinstalled at 7.3.0 and a fresh session; not runnable by an autonomous controller)
+Open: [I5] behavioral suites re-run — tests/claude-code/test-multi-doc-review.sh and test-multi-code-review.sh via run-skill-tests.sh --verbose --timeout 1800, after `/plugin update superpowers-orchestrator` and confirming the cached VERSION prints 7.3.0
+Detail: .superpowers/sdd/task-22-report.md (verbatim steps); .superpowers/reviews/feature-artifact-layout-review-log.md (review record)
+Resume: Resume orchestration for docs/plans/2026-08-25-artifact-layout.md — [I5]: behavioral suites re-run green at <sha> (or: failed — <one line>)
