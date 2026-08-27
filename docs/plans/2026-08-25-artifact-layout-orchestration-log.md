@@ -105,3 +105,5 @@ Evidence at 5e9d202: tree clean; BASE 0169f0e is an ancestor; 22/22 tasks, 140/1
 Open: [I5] behavioral suites re-run — tests/claude-code/test-multi-doc-review.sh and test-multi-code-review.sh via run-skill-tests.sh --verbose --timeout 1800, after `/plugin update superpowers-orchestrator` and confirming the cached VERSION prints 7.3.0
 Detail: .superpowers/sdd/task-22-report.md (verbatim steps); .superpowers/reviews/feature-artifact-layout-review-log.md (review record)
 Resume: Resume orchestration for docs/plans/2026-08-25-artifact-layout.md — [I5]: behavioral suites re-run green at <sha> (or: failed — <one line>)
+_Decided — 2026-08-27 — [I5]: behavioral suites re-run green at 413c414 (multi-doc-review 1/1 in 170 s, multi-code-review 1/1 in 431 s — direct and pipeline cases; installed plugin 7.3.0 from the marketplace clone at 413c414). Note: `run-skill-tests.sh --test` takes a file name relative to tests/claude-code/, not a repo path; the path form in .superpowers/sdd/task-22-report.md silently skips._
+_Completed — 2026-08-27 — HEAD 413c414_
