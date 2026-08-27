@@ -26,6 +26,9 @@ assert_file_contains() { # desc file needle
 assert_file_not_contains() { # desc file needle
   if grep -qF -- "$3" "$2"; then bad "$1 (must not contain: $3)"; else ok "$1"; fi
 }
+assert_file_matches() { # desc file extended-regex
+  if grep -qE -- "$3" "$2"; then ok "$1"; else bad "$1 (no match for: $3)"; fi
+}
 # sdd-workspace's arg-less stderr backstops (scoping line / legacy warning) and
 # its archive notices are asserted from $ERRF, not left to scroll past a green
 # run. Capture with `2>"$ERRF"` at the call site, then assert here.
@@ -61,6 +64,7 @@ assert_stderr_silent() { # desc
 # pwd -P resolves macOS's /var -> /private/var symlink so path assertions
 # match what git rev-parse --show-toplevel prints.
 REPO=$(mktemp -d)
+: "${REPO:?mktemp failed — refusing to run with an empty repo path}"
 REPO=$(cd "$REPO" && pwd -P)
 # Stderr sink for the assertions above. Kept outside $REPO so it can never
 # appear in a `git status --porcelain` assertion.
@@ -371,6 +375,505 @@ if ln -s realdir symlink-to-real 2>/dev/null && [ -L symlink-to-real ]; then
   if [ ! -d "$WS/archive" ]; then ok "symlinked plan path: no archive on repeat call"; else bad "symlinked plan path: no archive on repeat call"; fi
 else
   echo "  SKIP: ln -s not supported on this filesystem — symlinked plan path tests skipped"
+fi
+
+bold "review-package (reviewer blinding)"
+
+# A commit that carries both an ordinary source change and committed review
+# material: the package must show the source hunk and hide the review files.
+mkdir -p docs/superpowers-orchestrator/2026-08-25-foo/implementation
+mkdir -p docs/superpowers-orchestrator/2026-08-25-foo/specs
+echo "base for blinding" > blind-base.txt
+git add blind-base.txt && git commit --quiet -m "base commit for blinding"
+BLIND_BASE=$(git rev-parse HEAD)
+
+echo "SECRETFINDING round 1 verdict" > docs/superpowers-orchestrator/2026-08-25-foo/implementation/foo-review-log.md
+echo "SECRETFIXREPORT ran the tests" > docs/superpowers-orchestrator/2026-08-25-foo/implementation/foo-fix-reports.md
+echo "SECRETSIDECAR spec round 1" > docs/superpowers-orchestrator/2026-08-25-foo/specs/foo-design-review-log.md
+echo "SECRETORCH phase 1 done" > docs/superpowers-orchestrator/2026-08-25-foo/foo-orchestration-log.md
+echo "SECRETDECISIONS open item" > docs/superpowers-orchestrator/2026-08-25-foo/plans-open.tmp
+mkdir -p docs/superpowers-orchestrator/2026-08-25-foo/plans
+mv docs/superpowers-orchestrator/2026-08-25-foo/plans-open.tmp docs/superpowers-orchestrator/2026-08-25-foo/plans/foo-open-decisions.md
+echo "VISIBLESOURCE" > blind-src.txt
+# The name rule and the anchoring (multi-code-review/SKILL.md, "Reviewer
+# blinding — pathspecs"): only a file whose name matches one of the four
+# sidecar patterns is hidden; a markdown file under implementation/ with any
+# other name — a note, or a CLAUDE.md a branch could plant there — is
+# visible, as is a non-markdown file; and a file outside
+# docs/superpowers-orchestrator/ is visible even when its name or its folder
+# matches a sidecar pattern.
+echo "VISIBLEIMPLNOTE note whose name matches no sidecar pattern" > docs/superpowers-orchestrator/2026-08-25-foo/implementation/leak-check.md
+echo "VISIBLEIMPLCLAUDEMD planted instructions" > docs/superpowers-orchestrator/2026-08-25-foo/implementation/CLAUDE.md
+echo "VISIBLEIMPLJS" > docs/superpowers-orchestrator/2026-08-25-foo/implementation/code.js
+mkdir -p notes src/implementation
+echo "VISIBLENOTES" > notes/x-review-log.md
+echo "VISIBLESRCIMPL" > src/implementation/real.js
+git add -A && git commit --quiet -m "feature plus review material"
+BLIND_HEAD=$(git rev-parse HEAD)
+
+BPKG=$("$SCRIPTS/review-package" "$BLIND_BASE" "$BLIND_HEAD" 2>/dev/null | sed 's/^wrote //; s/:.*$//')
+assert_file_contains "blinding: ordinary source change is visible" "$BPKG" "VISIBLESOURCE"
+assert_file_not_contains "blinding: implementation review log hidden" "$BPKG" "SECRETFINDING"
+assert_file_not_contains "blinding: implementation fix reports hidden" "$BPKG" "SECRETFIXREPORT"
+assert_file_not_contains "blinding: spec review-log sidecar hidden" "$BPKG" "SECRETSIDECAR"
+assert_file_not_contains "blinding: orchestration log hidden" "$BPKG" "SECRETORCH"
+assert_file_not_contains "blinding: open-decisions file hidden" "$BPKG" "SECRETDECISIONS"
+assert_file_contains "blinding: markdown under implementation/ whose name matches no sidecar pattern visible" "$BPKG" "VISIBLEIMPLNOTE"
+assert_file_contains "blinding: a CLAUDE.md under implementation/ visible" "$BPKG" "VISIBLEIMPLCLAUDEMD"
+assert_file_contains "blinding: non-markdown file under implementation/ visible" "$BPKG" "VISIBLEIMPLJS"
+assert_file_contains "blinding: *-review-log.md outside the plugin folder visible" "$BPKG" "VISIBLENOTES"
+assert_file_contains "blinding: implementation/ folder outside the plugin folder visible" "$BPKG" "VISIBLESRCIMPL"
+# The six assertions above key on file CONTENT, which only the `git diff -U10`
+# body can carry. The `## Files changed` section is a `git diff --stat`, which
+# prints file NAMES and counts and no content at all, so a package whose
+# `--stat` is un-blinded passes every one of them while still listing
+# `…/implementation/foo-review-log.md` to the reviewer. This assertion keys on
+# the path, so it is the only one that reaches the `--stat` edit in Step 3.
+# It is negative-only: if the whole `## Files changed` section were dropped,
+# or its command broke, the needle would also be absent and this would still
+# pass for the wrong reason. Pair it with a positive control on blind-src.txt
+# (short, so `--stat` never abbreviates it, unlike the long
+# implementation/code.js path). The regex tolerates `--stat`'s column
+# padding, which varies with how many files are in the diff — this suite
+# reuses one repo across every section, so that count is not fixed.
+assert_file_matches "blinding: a visible file's stat line is present" "$BPKG" 'blind-src\.txt +\| +[0-9]+ \+'
+assert_file_not_contains "blinding: review file names absent from the stat summary" "$BPKG" "implementation/foo-review-log.md"
+
+# A commit that touches ONLY review material must not appear in the commit
+# list at all — a visible "chore(review)" subject with no hunks tells a
+# reviewer that review rounds happened.
+echo "SECRETFINDING round 2 verdict" >> docs/superpowers-orchestrator/2026-08-25-foo/implementation/foo-review-log.md
+git add -A && git commit --quiet -m "chore(review): foo round 2 log"
+BLIND_HEAD2=$(git rev-parse HEAD)
+BLIND_OUT2=$("$SCRIPTS/review-package" "$BLIND_BASE" "$BLIND_HEAD2" 2>/dev/null)
+BPKG2=$(printf '%s\n' "$BLIND_OUT2" | sed 's/^wrote //; s/:.*$//')
+# Positive control: without it, a missing or empty $BPKG2 would make the
+# negative assertion below report PASS for the wrong reason (grep can't read
+# the file), so assert visible source is actually present first.
+assert_file_contains "blinding: ordinary source still visible in the commit-list check" "$BPKG2" "VISIBLESOURCE"
+# Positive control on the `## Commits` section itself: the assertions above
+# key on the diff body, not this section, so a regression where
+# `git log --oneline` prints nothing for this range would still pass them.
+# Assert the visible commit's own subject appears here before checking that
+# the review-only commit's subject does not.
+assert_file_contains "blinding: ordinary commit's own subject appears in the commit list" "$BPKG2" "feature plus review material"
+assert_file_not_contains "blinding: review-only commit absent from the commit list" "$BPKG2" "chore(review)"
+# The printed summary line is also a blinding surface: `git rev-list --count`
+# uses the same blind pathspecs, so a regression that counted the
+# chore(review) commit anyway would go unnoticed since the test discards this
+# line. $BLIND_HEAD2 adds exactly one commit that touches only blinded paths,
+# so the pathspec-limited count over $BLIND_BASE..$BLIND_HEAD2 must stay 1.
+BLIND_COUNT2=$(printf '%s\n' "$BLIND_OUT2" | sed -E 's/.*: ([0-9]+) commit\(s\).*/\1/')
+assert_eq "blinding: printed commit count excludes the review-only commit" "$BLIND_COUNT2" "1"
+
+# --commits mode must be blinded too. The spec requires blinding in BOTH
+# modes, and the wave-execution path uses this one. Same commit, addressed by
+# SHA instead of by range.
+# Write it into $WS (the `.superpowers/sdd/` workspace, which carries a
+# self-ignoring `.gitignore`), NOT into the repository root: a stray untracked
+# file at the root would make Task 12's `git status --porcelain` assertion
+# report dirty. The variable name avoids `CPKG`, already bound at line ~179.
+BLIND_CPKG="$WS/blind-from-commits.diff"
+"$SCRIPTS/review-package" --commits "$BLIND_HEAD" --out "$BLIND_CPKG" >/dev/null 2>&1
+assert_file_contains "blinding (--commits): ordinary source change is visible" "$BLIND_CPKG" "VISIBLESOURCE"
+assert_file_not_contains "blinding (--commits): implementation review log hidden" "$BLIND_CPKG" "SECRETFINDING"
+# The remaining four secret needles from the range-mode check above, asserted
+# here too: range mode uses `git diff` and --commits mode uses `git show`, so
+# coverage on one command set does not transfer to the other.
+assert_file_not_contains "blinding (--commits): implementation fix reports hidden" "$BLIND_CPKG" "SECRETFIXREPORT"
+assert_file_not_contains "blinding (--commits): spec review-log sidecar hidden" "$BLIND_CPKG" "SECRETSIDECAR"
+assert_file_not_contains "blinding (--commits): orchestration log hidden" "$BLIND_CPKG" "SECRETORCH"
+assert_file_not_contains "blinding (--commits): open-decisions file hidden" "$BLIND_CPKG" "SECRETDECISIONS"
+assert_file_contains "blinding (--commits): markdown under implementation/ whose name matches no sidecar pattern visible" "$BLIND_CPKG" "VISIBLEIMPLNOTE"
+assert_file_contains "blinding (--commits): a CLAUDE.md under implementation/ visible" "$BLIND_CPKG" "VISIBLEIMPLCLAUDEMD"
+assert_file_contains "blinding (--commits): non-markdown file under implementation/ visible" "$BLIND_CPKG" "VISIBLEIMPLJS"
+assert_file_contains "blinding (--commits): *-review-log.md outside the plugin folder visible" "$BLIND_CPKG" "VISIBLENOTES"
+assert_file_contains "blinding (--commits): implementation/ folder outside the plugin folder visible" "$BLIND_CPKG" "VISIBLESRCIMPL"
+# Same reasoning for `git show --stat` in --commits mode, paired with the
+# same positive control.
+assert_file_matches "blinding (--commits): a visible file's stat line is present" "$BLIND_CPKG" 'blind-src\.txt +\| +[0-9]+ \+'
+assert_file_not_contains "blinding (--commits): review file names absent from the stat summary" "$BLIND_CPKG" "implementation/foo-review-log.md"
+# Positive control: the package's `## Commits` section must name THIS commit's
+# own subject. $BLIND_HEAD's own diff already touches visible paths (e.g.
+# VISIBLESOURCE), so `git log -1 --no-walk` finds a match at the commit
+# itself and this holds whether or not `--no-walk` is present — the
+# assertion on $BLIND_CPKG2 below is the one that isolates the walk.
+assert_file_contains "blinding (--commits): ordinary commit's own subject appears in the commit list" "$BLIND_CPKG" "feature plus review material"
+
+# The commit list must be blinded in --commits mode too: a commit touching
+# ONLY review material must not appear, mirroring the range-mode assertion
+# above. $BLIND_HEAD2 (the "chore(review): foo round 2 log" commit created
+# above) already qualifies, so it is reused here rather than making a new one.
+BLIND_CPKG2="$WS/blind-from-commits-2.diff"
+"$SCRIPTS/review-package" --commits "$BLIND_HEAD2" --out "$BLIND_CPKG2" >/dev/null 2>&1
+# Positive control: without it, a missing or empty $BLIND_CPKG2 would make the
+# negative assertion below report PASS for the wrong reason (grep can't read
+# the file), so assert the package header is actually present first.
+assert_file_contains "blinding (--commits): review-only package still has its header" "$BLIND_CPKG2" "# Review package (explicit commits)"
+assert_file_not_contains "blinding (--commits): review-only commit absent from the commit list" "$BLIND_CPKG2" "chore(review)"
+# Discriminating control: $BLIND_HEAD2 touches ONLY review material, which
+# the pathspecs exclude, so `git log -1 --no-walk` finds no match at the
+# commit itself and prints nothing here. Without `--no-walk`
+# (review-package:71), `git log -1` would instead walk past this blinded
+# commit to the previous one that DOES touch a visible path — $BLIND_HEAD —
+# and print ITS subject, "feature plus review material", here. The assertion
+# above (on $BLIND_CPKG) cannot catch this: $BLIND_HEAD's own diff already
+# matches the pathspec, so it passes with or without `--no-walk`. A
+# regression that substitutes an unrelated ancestor's subject (history
+# simplification walking past a blinded diff) would go undetected without
+# this assertion — see V1.
+assert_file_not_contains "blinding (--commits): review-only package does not leak an ancestor's subject via history walk" "$BLIND_CPKG2" "feature plus review material"
+
+# Run from a subdirectory and assert on the package CONTENT, not on the exit
+# status: `review-package` exits 0 from anywhere, with or without the
+# pathspecs, so an exit-status check would pass for every implementation. The
+# content check is the real discriminator — with a relative scope such as
+# `-- .` the diff would be restricted to `subdir-for-anchor/` and VISIBLESOURCE
+# would be missing; ':(top)' anchors every pathspec at the repository root.
+mkdir -p subdir-for-anchor
+BLIND_SUBPKG="$WS/blind-from-subdir.diff"
+( cd subdir-for-anchor && "$SCRIPTS/review-package" "$BLIND_BASE" "$BLIND_HEAD" "$BLIND_SUBPKG" >/dev/null 2>&1 )
+assert_file_contains "blinding: source visible when the package is built from a subdirectory" "$BLIND_SUBPKG" "VISIBLESOURCE"
+assert_file_not_contains "blinding: review log hidden when built from a subdirectory" "$BLIND_SUBPKG" "SECRETFINDING"
+
+# `subdir-for-anchor` is an empty directory; git stores no empty directories,
+# so it leaves no untracked entry behind for Task 12's clean-tree assertion.
+
+# A sidecar moved with `git mv` out of a legacy location (`docs/specs/`,
+# `docs/plans/`) into the topic folder. Git pairs a rename only when both
+# sides of the move are in the diff: with the destination excluded and the
+# source not, the move degrades to a deletion of the source, and that
+# deletion hunk carries the sidecar's WHOLE old content — every prior
+# finding — into the package. The four legacy-location entries exclude the
+# source side too. A moved file that is NOT a sidecar (the spec itself) is an
+# ordinary rename the reviewer must still see.
+mkdir -p docs/specs docs/plans
+echo "SECRETLEGACYSPECLOG spec round 1 verdict" > docs/specs/x-design-review-log.md
+echo "SECRETLEGACYPLANLOG plan round 1 verdict" > docs/plans/x-review-log.md
+echo "SECRETLEGACYORCH phase 1 done" > docs/plans/x-orchestration-log.md
+echo "SECRETLEGACYDECISIONS open item" > docs/plans/x-open-decisions.md
+echo "VISIBLELEGACYSPEC design text" > docs/specs/x-design.md
+git add -A && git commit --quiet -m "legacy-layout documents"
+LEGACY_BASE=$(git rev-parse HEAD)
+LEGACY_TOPIC=docs/superpowers-orchestrator/2026-08-25-x
+mkdir -p "$LEGACY_TOPIC/specs" "$LEGACY_TOPIC/plans"
+git mv docs/specs/x-design-review-log.md "$LEGACY_TOPIC/specs/x-design-review-log.md"
+git mv docs/plans/x-review-log.md "$LEGACY_TOPIC/plans/x-review-log.md"
+git mv docs/plans/x-orchestration-log.md "$LEGACY_TOPIC/x-orchestration-log.md"
+git mv docs/plans/x-open-decisions.md "$LEGACY_TOPIC/plans/x-open-decisions.md"
+git mv docs/specs/x-design.md "$LEGACY_TOPIC/specs/x-design.md"
+git commit --quiet -m "migrate x to the topic folder"
+LEGACY_HEAD=$(git rev-parse HEAD)
+LEGACY_PKG=$("$SCRIPTS/review-package" "$LEGACY_BASE" "$LEGACY_HEAD" 2>/dev/null | sed 's/^wrote //; s/:.*$//')
+# Positive control first: the moved spec is listed as a rename, so a missing
+# or empty package cannot make the negative assertions below pass.
+assert_file_contains "blinding (legacy move): the moved spec is still listed" "$LEGACY_PKG" "rename to $LEGACY_TOPIC/specs/x-design.md"
+for legacy_path in docs/specs/x-design-review-log.md docs/plans/x-review-log.md docs/plans/x-orchestration-log.md docs/plans/x-open-decisions.md; do
+  assert_file_not_contains "blinding (legacy move): no deletion entry for $legacy_path" "$LEGACY_PKG" "$legacy_path"
+done
+for needle in SECRETLEGACYSPECLOG SECRETLEGACYPLANLOG SECRETLEGACYORCH SECRETLEGACYDECISIONS; do
+  assert_file_not_contains "blinding (legacy move): moved sidecar content absent ($needle)" "$LEGACY_PKG" "$needle"
+done
+# The same move addressed by SHA: --commits mode uses `git show`, not
+# `git diff`, so range-mode coverage does not transfer.
+LEGACY_CPKG="$WS/blind-legacy-move.diff"
+"$SCRIPTS/review-package" --commits "$LEGACY_HEAD" --out "$LEGACY_CPKG" >/dev/null 2>&1
+assert_file_contains "blinding (legacy move, --commits): the moved spec is still listed" "$LEGACY_CPKG" "rename to $LEGACY_TOPIC/specs/x-design.md"
+assert_file_not_contains "blinding (legacy move, --commits): no deletion entry for the moved spec sidecar" "$LEGACY_CPKG" "docs/specs/x-design-review-log.md"
+assert_file_not_contains "blinding (legacy move, --commits): moved sidecar content absent" "$LEGACY_CPKG" "SECRETLEGACYSPECLOG"
+
+# Drift check: `blind_pathspecs` in review-package is the pathspec set a
+# script actually executes; multi-code-review/SKILL.md and reviewer-prompt.md
+# each copy it verbatim in prose, held in step with it only by a comment.
+# Read the entries — ':(top)' plus the eight exclusions — out of
+# review-package itself, rather than retyping them here, so a future edit to
+# the array is caught even if the two docs are never touched.
+SKILL_MD="$(dirname "$(dirname "$SCRIPTS")")/multi-code-review/SKILL.md"
+REVIEWER_PROMPT_MD="$(dirname "$(dirname "$SCRIPTS")")/multi-code-review/reviewer-prompt.md"
+BLIND_PATHSPECS=()
+while IFS= read -r entry; do
+  BLIND_PATHSPECS+=("$entry")
+done < <(sed -n '/^blind_pathspecs=($/,/^)$/p' "$SCRIPTS/review-package" | grep -oE "':[^']*'" | sed "s/^'//; s/'\$//")
+assert_eq "blinding drift check: blind_pathspecs has exactly nine entries (':(top)' plus eight exclusions)" "${#BLIND_PATHSPECS[@]}" "9"
+for entry in "${BLIND_PATHSPECS[@]}"; do
+  assert_file_contains "blinding drift check: SKILL.md still lists $entry" "$SKILL_MD" "$entry"
+  assert_file_contains "blinding drift check: reviewer-prompt.md still lists $entry" "$REVIEWER_PROMPT_MD" "$entry"
+done
+
+bold "pipeline-mode git rules (multi-code-review)"
+
+# Drift check target for rules 1, 2, and 4 below: a local re-implementation
+# alone cannot fail if the documented block in SKILL.md drifts or is edited
+# wrongly, so each rule's local test is paired with an assert_file_contains
+# against the fenced block SKILL.md actually documents.
+SKILL_MD="$(dirname "$(dirname "$SCRIPTS")")/multi-code-review/SKILL.md"
+
+PTOPIC="docs/superpowers-orchestrator/2026-08-25-bar"
+PLOG="$PTOPIC/implementation/bar-review-log.md"
+mkdir -p "$PTOPIC/implementation"
+echo "unrelated source" > unrelated.txt
+git add unrelated.txt && git commit --quiet -m "base for pipeline rules"
+
+# Rule 1: `git add` + a path-limited commit commits an untracked log while
+# leaving an unrelated staged file staged.
+echo "round 1 verdict" > "$PLOG"
+# Before anything under $PTOPIC has ever been `git add`ed, the whole topic
+# folder is untracked and git collapses it to a single "?? $PTOPIC/" line
+# instead of listing the log file inside it. The exclude pathspec still has
+# to hide that collapsed line, or the very first pipeline invocation for a
+# topic would read dirty.
+PRECOND_UNTRACKED_FOLDER=$(git status --porcelain -- ':(top)' ":(top,exclude)$PTOPIC/implementation/*")
+# Positive control: without it, an ignored or never-created topic folder
+# would also read clean above for the wrong reason. Confirm the untracked
+# folder is actually visible to `git status` when the exclusion is dropped.
+assert_eq "rule 2 positive control: without the exclusion, the untracked topic folder is visible" "$(git status --porcelain -- ':(top)')" "?? $PTOPIC/"
+assert_eq "rule 2: brand-new topic folder (untracked, collapsed to one line) reads clean" "$PRECOND_UNTRACKED_FOLDER" ""
+echo "staged by the user" > user-staged.txt
+git add user-staged.txt
+git add -- "$PLOG"
+git commit --quiet -m "chore(review): bar round 1 log" -- "$PLOG"
+assert_eq "rule 1: log is committed" "$(git log -1 --format=%s)" "chore(review): bar round 1 log"
+assert_eq "rule 1: the user's staged file is still staged" "$(git diff --cached --name-only)" "user-staged.txt"
+assert_file_contains "rule 1 drift check: SKILL.md still stages the log before committing" "$SKILL_MD" "git add -- <log> [<fix reports>]"
+assert_file_contains "rule 1 drift check: SKILL.md still commits with the generic chore(review) subject" "$SKILL_MD" 'git commit -m "chore(review): <slug> round <i> log" -- <log> [<fix reports>]'
+# The skipped (N=0) entry is committed too (rule 1), and the validation
+# step 5 retry names its subject among the commits it may retry. Both
+# places must keep naming the subject, or the entry is left uncommitted.
+assert_file_contains "rule 1 drift check: SKILL.md still commits the skipped (N=0) entry with the skipped subject" "$SKILL_MD" 'same way, with subject `chore(review): <slug> skipped`'
+assert_file_contains "validation step 5 drift check: SKILL.md still names the skipped subject among the commits it retries" "$SKILL_MD" 'entry (`chore(review): <slug> skipped`)'
+# The decisions addendum (the user's answers to open items, supplied on a
+# later dispatch) is committed under rule 1 with its own subject.
+assert_file_contains "rule 1 drift check: SKILL.md still commits the decisions addendum with the decisions subject" "$SKILL_MD" 'with subject `chore(review): <slug> decisions`'
+
+# Rule 2: the precondition pathspec reports clean with only the log modified,
+# and dirty with a source file modified.
+git commit --quiet -m "keep the user file out of the way" -- user-staged.txt
+# By round 2 the topic's implementation folder is already tracked (it holds
+# the committed round-1 log), but a fresh round's log or fix-report file
+# starts out untracked inside it. The exclude pathspec has to hide that
+# untracked file too, not only a modification to the already-tracked log.
+echo "not yet staged" > "$PTOPIC/implementation/bar-fix-reports.md"
+PRECOND_UNTRACKED_IN_TRACKED_FOLDER=$(git status --porcelain -- ':(top)' ":(top,exclude)$PTOPIC/implementation/*")
+# Positive control: without it, an ignored or never-created fix-reports file
+# would also read clean above for the wrong reason. Confirm the untracked
+# file is actually visible to `git status` when the exclusion is dropped.
+assert_eq "rule 2 positive control: without the exclusion, the untracked fix-reports file is visible" "$(git status --porcelain -- ':(top)')" "?? $PTOPIC/implementation/bar-fix-reports.md"
+assert_eq "rule 2: untracked file in an already-tracked implementation folder reads clean" "$PRECOND_UNTRACKED_IN_TRACKED_FOLDER" ""
+rm -f "$PTOPIC/implementation/bar-fix-reports.md"
+echo "round 2 verdict" >> "$PLOG"
+PRECOND=$(git status --porcelain -- ':(top)' ":(top,exclude)$PTOPIC/implementation/*")
+assert_eq "rule 2: modified implementation log reads clean" "$PRECOND" ""
+echo "changed" >> unrelated.txt
+PRECOND2=$(git status --porcelain -- ':(top)' ":(top,exclude)$PTOPIC/implementation/*")
+if [ -n "$PRECOND2" ]; then ok "rule 2: modified source file reads dirty"; else bad "rule 2: modified source file reads dirty"; fi
+git checkout --quiet -- unrelated.txt
+git add -- "$PLOG" && git commit --quiet -m "chore(review): bar round 2 log" -- "$PLOG"
+assert_file_contains "rule 2 drift check: SKILL.md still excludes the topic's implementation folder" "$SKILL_MD" "git status --porcelain -- ':(top)' ':(top,exclude)<topic>/implementation/*'"
+
+# Rule 4: the effective HEAD is the newest commit in BASE..HEAD that changes
+# at least one path outside the blinding pathspec set — reviewable content.
+# The commit subject plays no part: the loop's own `chore(review): <slug>
+# round <i> log` commits are skipped because they change only the sidecar,
+# not because of their subject.
+#
+# The lookup is used several times below, with different range bases. Define
+# it once as a function rather than pasting the command repeatedly: two
+# byte-identical copies of a logic block are exactly what the review rubric
+# treats as a defect, and the repository's DRY rule forbids them. The
+# function reads the pathspec set out of review-package ($BLIND_PATHSPECS,
+# extracted by the blinding drift check above) instead of retyping it, so it
+# follows the set the script actually executes. It is NOT required to be
+# byte-identical to the version `multi-code-review/SKILL.md` documents — this
+# test asserts the lookup's behavior, not the skill's wording.
+effective_head_of() {
+  local base="$1" effective_head
+  effective_head=$(git log -1 --full-history --format=%H "$base..HEAD" -- "${BLIND_PATHSPECS[@]}")
+  [ -n "$effective_head" ] || effective_head=$(git rev-parse "$base")
+  printf '%s\n' "$effective_head"
+}
+
+PBASE=$(git rev-parse HEAD~3)
+echo "real work" > real-work.txt
+git add real-work.txt && git commit --quiet -m "feat: real work"
+REAL_WORK_SHA=$(git rev-parse HEAD)
+echo "round 3 verdict" >> "$PLOG"
+git add -- "$PLOG" && git commit --quiet -m "chore(review): bar round 3 log" -- "$PLOG"
+
+assert_eq "rule 4: effective HEAD skips the trailing review commit" \
+  "$(effective_head_of "$PBASE")" "$REAL_WORK_SHA"
+
+# Rule 4 keys on CONTENT, not on the commit subject. (i) A user commit whose
+# subject starts with `chore(review):` but changes code is the effective
+# HEAD: a subject-based walk would skip it, and the once-per-gate check would
+# then treat the branch as already reviewed.
+echo "code change under a review-looking subject" > b.txt
+git add b.txt && git commit --quiet -m "chore(review): x"
+CODE_UNDER_REVIEW_SUBJECT_SHA=$(git rev-parse HEAD)
+assert_eq "rule 4 (i): a chore(review)-titled commit that changes code is the effective HEAD" \
+  "$(effective_head_of "$PBASE")" "$CODE_UNDER_REVIEW_SUBJECT_SHA"
+# (ii) A commit with an ordinary subject that changes only the review log is
+# NOT the effective HEAD: it stays at the previous content commit.
+echo "round 4 verdict" >> "$PLOG"
+git add -- "$PLOG" && git commit --quiet -m "feat: y" -- "$PLOG"
+assert_eq "rule 4 (ii): a feat-titled commit that changes only the review log is not the effective HEAD" \
+  "$(effective_head_of "$PBASE")" "$CODE_UNDER_REVIEW_SUBJECT_SHA"
+
+# (iii) Rule 4, degenerate case: a range with no content commit — here only
+# the `feat: y` sidecar commit — falls back to BASE.
+ONLY_BASE=$(git rev-parse HEAD~1)
+assert_eq "rule 4 (iii): a range with no content commit falls back to BASE" \
+  "$(effective_head_of "$ONLY_BASE")" "$ONLY_BASE"
+# The fallback must normalize BASE: given as a short SHA (or a ref name),
+# the result is still the full SHA the completion marker records.
+assert_eq "rule 4 (iii): a range with no content commit given a short BASE falls back to the full SHA" \
+  "$(effective_head_of "$(git rev-parse --short "$ONLY_BASE")")" "$ONLY_BASE"
+
+# Drift check: the DRY comment above waives byte-identity between
+# effective_head_of() and the fenced bash block skills/multi-code-review/SKILL.md
+# documents. Without a check on that block, the "rule 4" assertions above
+# only exercise the local helper, so they cannot fail if the documented block
+# drifts or is edited wrongly. Assert the load-bearing lines this helper
+# reproduces are still present in the SKILL.md block: the path-limited
+# `git log -1` lookup carrying the same pathspec set review-package executes
+# (rebuilt from $BLIND_PATHSPECS in the one-line quoted form the skill
+# uses), the BASE fallback, and the absence of the former subject-based
+# walk. $SKILL_MD was defined above, ahead of the rule 1 drift check, and
+# reused here.
+SKILL_SET=$(printf "'%s' " "${BLIND_PATHSPECS[@]}" | sed 's/ $//')
+assert_file_contains "rule 4 drift check: SKILL.md still looks the effective HEAD up by content, with the blinding pathspecs" "$SKILL_MD" "effective_head=\$(git log -1 --full-history --format=%H \"\$BASE..HEAD\" -- $SKILL_SET)"
+assert_file_contains "rule 4 drift check: SKILL.md still falls back to the resolved BASE when empty" "$SKILL_MD" '[ -n "$effective_head" ] || effective_head=$(git rev-parse "$BASE")'
+assert_file_not_contains "rule 4 drift check: SKILL.md no longer keys the effective HEAD on the commit subject" "$SKILL_MD" "'chore(review):'*) continue ;;"
+# The once-per-gate skip applies only to an invocation that ended with no
+# open items; with open items, unchanged content and no answers, the loop
+# returns BLOCKED instead of re-running. Pin the condition.
+assert_file_contains "rule 4 drift check: SKILL.md still limits the once-per-gate skip to unresolved = 0 and user_decision = 0" "$SKILL_MD" '`unresolved = 0` and `user_decision = 0`'
+# Resume after new code: when the effective HEAD has moved past the latest
+# entry's completion marker, the orchestrator's code-review-loop controller
+# always starts a new invocation — an answer alone never requests a
+# re-review. The controller template holds the canonical copy of that rule
+# (Deviation 5); pin the sentence there.
+CODE_REVIEW_LOOP_PROMPT_MD="$(dirname "$(dirname "$SCRIPTS")")/orchestrating-development/code-review-loop-prompt.md"
+assert_file_contains "resume drift check: code-review-loop-prompt.md still always starts a new invocation after the effective HEAD moved" "$CODE_REVIEW_LOOP_PROMPT_MD" 'controller ALWAYS starts a new invocation entry over the current'
+# In the moved case (effective HEAD past the entry's marker) the decisions
+# addendum must not update that entry's completion marker; the new entry's
+# _Invocation line is committed together with it, so a retry never reads a
+# marker that claims the new code was reviewed. Pin the Pipeline rule 4
+# sentence.
+assert_file_contains "rule 4 drift check: SKILL.md still leaves the completion marker unchanged when the addendum is written in the moved case" "$SKILL_MD" "the addendum leaves that entry's completion marker unchanged"
+
+bold "TOPIC_DIR validation rule (multi-code-review)"
+
+# Rules 1, 2, and 4 above each got a behavioral block plus a drift check
+# against the documented text. The TOPIC_DIR validation rule (SKILL.md
+# "Validation, before round 1", steps 1 and 4) got neither: a test extracts
+# the basename regex straight out of SKILL.md and asserts what it accepts
+# and rejects, so an edit that drops the trailing `$` or otherwise loosens
+# the regex is caught here instead of only being caught by an agent
+# following the skill at review time. $SKILL_MD was defined above, ahead of
+# the rule 1 drift check, and reused here.
+TOPIC_REGEX=$(grep -oE '`\^\[0-9\][^`]*\$`' "$SKILL_MD" | head -1 | tr -d '`')
+if [ -n "$TOPIC_REGEX" ]; then
+  ok "TOPIC_DIR validation: basename regex extracted from SKILL.md"
+else
+  bad "TOPIC_DIR validation: basename regex extracted from SKILL.md (found nothing)"
+fi
+
+topic_regex_matches() { [[ "$1" =~ $TOPIC_REGEX ]]; }
+
+for good in "2026-08-25-artifact-layout" "2026-08-25-sum-fix"; do
+  if topic_regex_matches "$good"; then
+    ok "TOPIC_DIR validation: regex accepts $good"
+  else
+    bad "TOPIC_DIR validation: regex accepts $good"
+  fi
+done
+
+for bad_case in "2026-8-25-foo" "Foo-Bar" "foo" "2026-08-25-"; do
+  if topic_regex_matches "$bad_case"; then
+    bad "TOPIC_DIR validation: regex rejects $bad_case"
+  else
+    ok "TOPIC_DIR validation: regex rejects $bad_case"
+  fi
+done
+
+# Drift check: step 1's "direct child" requirement and step 4's
+# `git check-ignore -q` check are the two other load-bearing parts of the
+# validation rule with no behavioral test of their own (a fabricated
+# repository root and blinding pathspec, both required to exercise them for
+# real, are out of proportion to this rule's own risk) — assert their
+# documented wording directly, in the same style as the rule 1/2/4 drift
+# checks above.
+assert_file_contains "TOPIC_DIR validation drift check: SKILL.md still requires a direct child of docs/superpowers-orchestrator/" "$SKILL_MD" "must be a direct child of \`docs/superpowers-orchestrator/\`"
+assert_file_contains "TOPIC_DIR validation drift check: SKILL.md still requires git check-ignore -q to fail" "$SKILL_MD" "\`git check-ignore -q <log path>\` must **fail**"
+
+bold "recovery greps stay intact"
+
+# The batch controller finds task ticks with `git log --grep "task <n> complete"`
+# and fix commits with the `review fixes (<slug>, round <i>)` subject. A
+# pipeline-mode log commit must match neither.
+#
+# Both greps run against commits that REALLY EXIST in this throwaway
+# repository: the three `chore(review): bar round <i> log` commits created
+# above, plus one genuine tick commit and one genuine fix commit created here.
+# Each grep therefore has a match it must find AND log commits it must not
+# find, so a pipeline-mode subject that started colliding with either recovery
+# pattern would fail this gate. (Matching a shell variable against a literal
+# with `case` could never fail — both sides are written in this same file.)
+echo "tick" > tick.txt
+git add tick.txt && git commit --quiet -m "chore(plan): bar task 1 complete"
+TICK_SHA=$(git rev-parse --short HEAD)
+echo "fix" > fix.txt
+git add fix.txt && git commit --quiet -m "review fixes (bar, round 1)"
+FIX_SHA=$(git rev-parse --short HEAD)
+
+# Control: each recovery grep finds its own commit. Without this the two
+# "matches no review-log commit" assertions below would also pass if the grep
+# matched nothing at all.
+assert_eq "recovery grep: 'task 1 complete' finds exactly the tick commit" \
+  "$(git log --grep 'task 1 complete' --format=%h | tr '\n' ' ' | sed 's/ *$//')" "$TICK_SHA"
+assert_eq "recovery grep: 'review fixes (' finds exactly the fix commit" \
+  "$(git log --grep 'review fixes (' --format=%h | tr '\n' ' ' | sed 's/ *$//')" "$FIX_SHA"
+
+# The real assertions: neither recovery pattern matches a pipeline-mode
+# `chore(review)` log commit.
+assert_eq "recovery grep: 'task 1 complete' matches no review-log commit" \
+  "$(git log --grep 'task 1 complete' --format=%s | grep -c 'chore(review)' | tr -d ' ')" "0"
+assert_eq "recovery grep: 'review fixes (' matches no review-log commit" \
+  "$(git log --grep 'review fixes (' --format=%s | grep -c 'chore(review)' | tr -d ' ')" "0"
+
+bold "archive naming with a dateless plan basename"
+
+# `sdd-workspace` names the archive folder from the OUTGOING plan's basename
+# minus its extension (script line ~112, `slug=$(basename -- "$current")`).
+# Archiving fires only when the plan identity changes, so the check switches
+# from one plan to another. Under the new layout the plan basename carries no
+# date prefix (`plans/<slug>.md` instead of `plans/<date>-<slug>.md`), so the
+# archive folder is named `<slug>`. The rule is unchanged; this asserts the
+# result, which the spec's testing strategy requires.
+#
+# Register a known outgoing plan explicitly, rather than relying on the
+# state the "symlinked plan path" block above happens to leave behind: that
+# block SKIPs on a filesystem without symlink support (e.g. Windows Git Bash
+# without developer mode, a platform this repository claims to support),
+# in which case no plan.ref exists here and the first switch below would
+# report no prior workspace at all instead of an archive slug.
+mkdir -p docs/superpowers-orchestrator/2026-08-25-prev/plans
+echo "# plan" > docs/superpowers-orchestrator/2026-08-25-prev/plans/prev.md
+"$SCRIPTS/sdd-workspace" docs/superpowers-orchestrator/2026-08-25-prev/plans/prev.md > /dev/null 2>/dev/null
+
+mkdir -p docs/superpowers-orchestrator/2026-08-25-baz/plans
+mkdir -p docs/superpowers-orchestrator/2026-08-25-qux/plans
+echo "# plan" > docs/superpowers-orchestrator/2026-08-25-baz/plans/baz.md
+echo "# plan" > docs/superpowers-orchestrator/2026-08-25-qux/plans/qux.md
+"$SCRIPTS/sdd-workspace" docs/superpowers-orchestrator/2026-08-25-baz/plans/baz.md > /dev/null 2>"$ERRF"
+assert_stderr_one "archive naming: switching to baz reports the prior plan's archive slug" "archived previous workspace to archive/prev"
+echo "leftover" > "$WS/task-1-notes.md"
+"$SCRIPTS/sdd-workspace" docs/superpowers-orchestrator/2026-08-25-qux/plans/qux.md > /dev/null 2>"$ERRF"
+assert_stderr_one "archive naming: switching to qux reports baz's archive slug" "archived previous workspace to archive/baz"
+if [ -d "$WS/archive/baz" ]; then
+  ok "archive naming: dateless plan basename yields archive/baz"
+else
+  bad "archive naming: expected $WS/archive/baz, found: $(ls "$WS/archive" 2>/dev/null | tr '\n' ' ')"
 fi
 
 bold ""

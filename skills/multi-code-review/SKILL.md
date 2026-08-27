@@ -78,6 +78,53 @@ final review on such platforms; that fallback lives there, not here.)
   requirements document; without one, lens 1 drops spec-alignment and
   reviews correctness only — log "alignment not reviewed".
 
+- **`TOPIC_DIR` (optional):** an absolute path to a topic folder under the
+  repository root (layout defined in the "Artifact Layout" section of
+  `skills/brainstorming/SKILL.md`). Two invocation forms:
+  `/multi-code-review [BASE] [N]` — direct, no `TOPIC_DIR`; and the pipeline
+  gate call — with `TOPIC_DIR`. Presence of `TOPIC_DIR` selects
+  **pipeline mode**; absence selects **direct mode**.
+
+  **Validation, before round 1:**
+  1. `TOPIC_DIR` must be a direct child of `docs/superpowers-orchestrator/`
+     at the repository root, and its basename must match
+     `^[0-9]{4}-[0-9]{2}-[0-9]{2}-[a-z0-9]+(-[a-z0-9]+)*$`. Canonicalize both
+     the repository root and `TOPIC_DIR` before comparing (`pwd -P`, or
+     `realpath` where available). Anything else — a path outside the root,
+     `docs/reviews/foo/`, a folder without a date prefix — **stops the skill
+     with an error naming the path, before any round**. Without this stop the
+     precondition pathspec and the diff exclusion, both written for the layout
+     form, would silently miss the folder.
+  2. `<slug>` = `TOPIC_DIR`'s basename minus the date prefix. `<topic>` =
+     `TOPIC_DIR` with `<repo root>/` stripped — pathspecs carrying `:(top)`
+     are repository-relative.
+  3. A valid `TOPIC_DIR` that does not exist yet is **created**; the caller
+     may invoke the gate before any other stage wrote into the folder. No
+     `.gitignore` is written inside it.
+  4. `git check-ignore -q <log path>` must **fail**, and
+     `git check-ignore -q <fix-report path>` must fail as well — that is:
+     neither path may be ignored (`check-ignore` evaluates the path against
+     the ignore rules, so the fix-report file does not need to exist yet).
+     A project `.gitignore` matching `implementation/`, `*-review-log.md`,
+     or `*-fix-reports.md` would otherwise surface only as a failed commit
+     after a full round. If either check succeeds, stop and report the
+     ignoring rule.
+  5. If the log or the fix-report file differs from HEAD, or exists but is
+     untracked (`git ls-files --error-unmatch <path>` fails) — a previous
+     round's `chore(review)` commit failed or was interrupted — retry that
+     pending commit **first**, with the same subject rule: the pending
+     commit is a round log (`chore(review): <slug> round <i> log`), the
+     completion marker (`chore(review): <slug> completed`), or a `skipped`
+     entry (`chore(review): <slug> skipped`), or a decisions addendum
+     (`chore(review): <slug> decisions`). On repeated
+     failure return `BLOCKED` with the git output and name the manual
+     commit the user must run:
+     `git add -- <paths> && git commit -m "<the pending subject>" -- <paths>`.
+     Without this retry an on-disk entry carrying a completion marker would
+     read as completed, the once-per-gate skip would fire, and the
+     orchestrator's Phase 5 clean-tree check would stop the run with no path
+     to recovery.
+
 ## Workspace and Log
 
 **Working-tree precondition:** before any fix subagent is dispatched
@@ -86,6 +133,16 @@ If it is non-empty, stop and report — or, in interactive sessions only,
 proceed after the user explicitly consents to fixing on top of the
 pre-existing uncommitted changes.
 
+**Pipeline rule 2 — Working-tree precondition.** In pipeline mode the check
+excludes the topic's implementation folder:
+
+```bash
+git status --porcelain -- ':(top)' ':(top,exclude)<topic>/implementation/*'
+```
+
+Without the exclusion the untracked log (round 1) or the modified log and fix
+reports (later rounds) would fail the check on every round.
+
 **Root anchoring:** everything this skill does — git commands, fix
 commits, packages, and `.superpowers/reviews/` — is rooted at the top
 level of the repository under review: resolve it once at invocation start
@@ -93,10 +150,100 @@ level of the repository under review: resolve it once at invocation start
 the current repo for the SDD gate) and run all commands from there, never
 from the session's incidental cwd.
 
-Sidecar log: `<repo-root>/.superpowers/reviews/<branch-slug>-review-log.md`;
-fix reports beside it as `<branch-slug>-fix-reports.md`. On first use create
-`.superpowers/reviews/` and write a `.gitignore` containing exactly `*`
-inside it (nothing else ignores `.superpowers/`).
+**Reviewer blinding — pathspecs.** Committed review material is part of the
+branch. Every whole-branch diff handed to a reviewer — in this skill, in
+`subagent-driven-development/scripts/review-package`, in the orchestrator's
+`code-review-loop-prompt.md`, and in the reviewer's own fallback commands —
+is produced with this pathspec set, verbatim:
+
+```
+-- ':(top)' ':(top,exclude)docs/superpowers-orchestrator/*/*-review-log.md' ':(top,exclude)docs/superpowers-orchestrator/*/*-fix-reports.md' ':(top,exclude)docs/superpowers-orchestrator/*/*-orchestration-log.md' ':(top,exclude)docs/superpowers-orchestrator/*/*-open-decisions.md' ':(top,exclude)docs/specs/*-review-log.md' ':(top,exclude)docs/plans/*-review-log.md' ':(top,exclude)docs/plans/*-orchestration-log.md' ':(top,exclude)docs/plans/*-open-decisions.md'
+```
+
+Every exclusion names one of the plugin's four sidecar patterns
+(`*-review-log.md`, `*-fix-reports.md`, `*-orchestration-log.md`,
+`*-open-decisions.md`) and is anchored to a folder the plugin writes to:
+`docs/superpowers-orchestrator/`, its own output folder, or one of the two
+legacy locations (`docs/specs/`, `docs/plans/`) it wrote to before the
+topic-folder layout. Nothing else is hidden — a file under `implementation/`
+whose name matches none of the four patterns (a `CLAUDE.md`, a note) is
+shown — see the "untrusted origin" bullet under Error Handling for why. No
+`glob` magic is used: a plain `*` in a git pathspec matches across `/`, which
+is what lets `*/` stand for the topic folder and `*-review-log.md` for a
+sidecar at any depth below it.
+
+The four legacy entries exist for sidecars moved out of the old layout with
+`git mv`: git pairs a rename only when both sides of the move are in the
+diff, so with the destination excluded and the source not, the move would
+appear as a deletion of the source, and that deletion hunk carries the
+sidecar's whole old content — every prior finding. Excluding the source
+paths too removes the hunk; a moved file that is not a sidecar (the spec
+itself) still appears as an ordinary rename.
+
+The orchestration-log and open-decisions entries matter on a resumed run:
+after a Phase 4 stop the orchestrator commits the orchestration log and the
+open-decisions file, both of which quote prior findings. The `top` magic
+anchors every pathspec at the repository root,
+which makes the commands independent of the current directory — a plain `-- .`
+is relative to the cwd, and the sdd per-task caller of `review-package` may run
+from any directory, where `-- .` would silently restrict the diff to that
+subtree and the exclusions would never match. This skill already anchors its
+commands at the repository root ("Root anchoring" above); `:(top)` is harmless
+there and keeps one form everywhere. The exclusion also closes the
+pre-existing leak of the committed doc-review sidecars.
+
+Sidecar log and fix reports, by mode:
+
+- **Direct mode** (no `TOPIC_DIR`):
+  `<repo-root>/.superpowers/reviews/<branch-slug>-review-log.md`; fix reports
+  beside it as `<branch-slug>-fix-reports.md`. On first use create
+  `.superpowers/reviews/` and write a `.gitignore` containing exactly `*`
+  inside it (nothing else ignores `.superpowers/`). Nothing is committed.
+- **Pipeline mode** (`TOPIC_DIR` given):
+  `<TOPIC_DIR>/implementation/<slug>-review-log.md`; fix reports beside it as
+  `<TOPIC_DIR>/implementation/<slug>-fix-reports.md`, with `<slug>` =
+  `TOPIC_DIR`'s basename minus the date prefix. The folder is created on
+  first write and gets **no** `.gitignore` — the log is tracked by design.
+  Pipeline mode changes exactly four rules of this skill; each is stated
+  next to the direct-mode rule it replaces.
+
+**Pipeline rule 1 — Log commits.** After every round, and after that round's
+fix commits:
+
+```bash
+git add -- <log> [<fix reports>]
+git commit -m "chore(review): <slug> round <i> log" -- <log> [<fix reports>]
+```
+
+The fix-report file is included only once it exists — a fix subagent has to
+have written to it first. The `git add` is required because
+`git commit -- <path>` fails on a file git does not know yet; the
+path-limited commit keeps the user's other staged files staged and out of
+this commit. The fix subagent **never stages the fix-report file**, even
+though it appends to it: the rule below that has it stage "the files it
+changed" excludes the fix-report file, because the controller's round commit
+owns both files. The completion marker and any post-loop addendum are
+committed the same way, with subject
+`chore(review): <slug> completed`. A `skipped` (N=0) entry is committed the
+same way, with subject `chore(review): <slug> skipped` — the log is tracked
+by design, and an entry left uncommitted would show as an uncommitted
+change at the next boundary. A post-loop addendum that records the
+invoker-supplied decisions
+on open items (disposition `decided (user): <answer>`, "Resolving
+user-decision and unresolved items" below) is committed the same way,
+with subject `chore(review): <slug> decisions`. Each round, and the loop
+itself, ends with
+a tree that is clean except for changes that already existed when the loop
+started — those are never swept into a `chore(review)` commit.
+
+**When the commit fails** — a pre-commit hook rejects it, a signing prompt
+gets no answer, or the index conflicts — stop the loop after that round and
+report the git output. Do **not** retry inside the run and do **not** start
+the next round: the log and the fix reports stay on disk, uncommitted, and
+the next invocation retries the pending commit before round 1 (see the
+`TOPIC_DIR` validation, step 5). Starting another round would append a second
+round's text to a log whose previous round was never committed, and the
+retry could then no longer tell the two apart.
 
 Detect detached HEAD with `git symbolic-ref -q HEAD`: it exits non-zero
 when HEAD is detached (`git rev-parse --abbrev-ref HEAD` does **not** —
@@ -126,6 +273,14 @@ resumed at its next round — in interactive sessions only after
 confirming with the user (it could be a live concurrent run; never
 interleave rounds with one), in Batched Autonomous Mode automatically
 (it is the prior batch's own interrupted loop).
+
+**Pipeline rule 3 — Tracked-log sentinel.** The rule above — "a log tracked
+in the branch is set aside as abandoned" — applies to **direct mode only**.
+In pipeline mode the log is tracked by design, so resumption uses the entry
+rules alone: an invocation entry with no completion marker whose invoker kind
+and BASE match is resumed at its next round; a mismatched entry is marked
+`abandoned` and a new invocation entry is appended to the **same file**. The
+file is never moved aside — its history is committed.
 
 ## Procedure
 
@@ -335,7 +490,12 @@ clean for convergence but logs its Minor dispositions normally — never
 the "none" line. Note sonnet-floor substitutions on the round header
 line. Skipped invocations (N=0) get a one-line `skipped` entry carrying
 the same invocation-note fields (date, N, BASE..HEAD, raw branch name,
-invoker) plus `HEAD <sha>`; a failed round keeps the normal
+invoker) plus `HEAD <sha>` — in **direct mode** the raw
+`git rev-parse HEAD`; in **pipeline mode** the entry records the
+**effective HEAD**, never the raw `git rev-parse HEAD`: the entry is
+itself committed (`chore(review): <slug> skipped`, Pipeline rule 1), so a
+raw HEAD would be stale as soon as that commit lands, and the commit
+changes only the log; a failed round keeps the normal
 `## Round <i> — <lens name> — <model>` header with
 `**Reviewer verdict:** inconclusive` and one disposition line
 `- inconclusive — <reason>`; verification re-reviews use the
@@ -344,8 +504,11 @@ invoker) plus `HEAD <sha>`; a failed round keeps the normal
 ## After the Loop
 
 Append the completion marker `_Completed — <date> — <converged|cap
-reached> — HEAD <sha>_` with `<sha>` = `git rev-parse HEAD` **now**
-(post-fix). Then report to the host gate: rounds run, per-round finding
+reached> — HEAD <sha>_` with `<sha>` = in **direct mode**,
+`git rev-parse HEAD` **now** (post-fix); in **pipeline mode**, the
+effective HEAD as defined in "Pipeline rule 4" below, beside "Once per
+gate" — the raw HEAD at marker time is the round's own log commit, which
+would never match on a later comparison. Then report to the host gate: rounds run, per-round finding
 counts, fixes applied (commit SHAs), unresolved and user-decision items,
 converged vs cap reached, log path.
 
@@ -354,7 +517,9 @@ mode journals and ends the batch instead): present each once, at this
 report. Finding governs → one fix subagent for all accepted findings,
 then one verification re-review; disposition becomes
 `fixed — <summary> → <sha>` in a
-post-loop addendum, and the completion marker's HEAD is updated. When the
+post-loop addendum, and the completion marker's HEAD is updated (in
+pipeline mode only while the effective HEAD is unchanged, compared before
+the addendum is written — Pipeline rule 4). When the
 accepted findings originate in different rounds, `<i>` — for the fix
 commit subject and the `## Round <i> verification <c>` header alike — is the
 **highest** originating round, and the single verification re-review runs
@@ -364,19 +529,112 @@ items: the user chooses re-dispatch, manual fix, or accept-risk with
 documented rationale (logged). The gate condition is then re-evaluated —
 no loop re-run needed.
 
+In pipeline mode the decisions may arrive on a later dispatch instead — the
+orchestrator's `[RESUME_ANSWER]` placeholder carries the user's answers to
+the open items by review-log id: each named item gets the disposition
+`decided (user): <answer>` in a post-loop addendum on the log's LATEST
+completed invocation entry — a latest entry without a completion marker is
+an interrupted invocation, resumed at its next round (Pipeline rule 3)
+with nothing journaled twice — committed as
+`chore(review): <slug> decisions` (Pipeline rule 1); an item decided
+without a code change no longer counts as unresolved or user-decision; an
+accepted finding follows the finding-governs path above.
+An answer never requests a re-review by itself: when the effective HEAD
+(Pipeline rule 4) has moved past that entry's completion marker — compared
+before the addendum is written — because code was committed after the
+stop, the controller ALWAYS starts a new invocation entry
+once any addendum is committed, with or without answers; in that case the
+verification re-review of an accepted fix is skipped (the new invocation
+reviews the fix), and the addendum leaves that entry's completion marker
+unchanged while the new entry's `_Invocation` line is committed together
+with it, in the same commit (Pipeline rule 4). Over an unchanged effective
+HEAD no new invocation runs. The addendum is idempotent, because a retry
+after a lost return carries the same answers again: an id that already
+holds a `decided (user)` line is skipped, and an accepted fix whose fix
+commit already exists is not dispatched again — found in `git log` by the
+`<sha>` the `fixed` line records or, when none was recorded, by the fix
+commit subject searched only in `<that entry's completion-marker sha>..HEAD`
+(the post-loop fix lands after the marker; round `<i>`'s in-loop fix
+commit reuses the same subject and lies before it). With no
+review log under `<TOPIC_DIR>/implementation/` (a run migrated from the
+pre-7.3.0 layout), invoker-supplied decisions are ignored and invocation 1
+starts.
+
 The host gate proceeds only when no unresolved Critical/Important or
 user-decision items remain — unresolved items block, exactly as
 unresolved review findings block in subagent-driven-development today.
 
+**Pipeline rule 4 — Completion marker and once-per-gate skip.** Define the
+**effective HEAD** as the newest commit in `BASE..HEAD` that changes at least
+one path outside the blinding pathspec set ("Reviewer blinding — pathspecs"
+above) — the newest commit that carries reviewable content. The commit
+subject plays no part in the definition:
+
+```bash
+effective_head=$(git log -1 --full-history --format=%H "$BASE..HEAD" -- ':(top)' ':(top,exclude)docs/superpowers-orchestrator/*/*-review-log.md' ':(top,exclude)docs/superpowers-orchestrator/*/*-fix-reports.md' ':(top,exclude)docs/superpowers-orchestrator/*/*-orchestration-log.md' ':(top,exclude)docs/superpowers-orchestrator/*/*-open-decisions.md' ':(top,exclude)docs/specs/*-review-log.md' ':(top,exclude)docs/plans/*-review-log.md' ':(top,exclude)docs/plans/*-orchestration-log.md' ':(top,exclude)docs/plans/*-open-decisions.md')
+[ -n "$effective_head" ] || effective_head=$(git rev-parse "$BASE")
+```
+
+When no commit in the range changes such a path — N=0, or a branch that
+received only sidecar commits — the effective HEAD is BASE, resolved with
+`git rev-parse`: `BASE` may have been given as a ref name or a short SHA,
+and the completion marker must record a full SHA. Keying on content rather
+than on the subject is what keeps the once-per-gate skip safe: a user
+commit whose subject starts with `chore(review):` but changes code IS the
+effective HEAD and re-opens the gate; a commit with any other subject that
+changes only the review log is NOT, exactly like the loop's own
+`chore(review): <slug> round <i> log` commits. `--full-history` keeps every
+commit that touches a matching path, including one on the side of a merge
+that git's default history simplification would drop.
+
+In pipeline mode the completion marker records the **effective HEAD**, never
+the raw `git rev-parse HEAD`, which at marker time is always the last round's
+log commit. A post-loop addendum updates the marker under the same
+definition only while the effective HEAD is unchanged. In the moved case (the
+effective HEAD has moved past the entry's marker, compared before the addendum
+is written) the addendum leaves that entry's completion marker unchanged, and
+the new invocation entry's `_Invocation` line is committed together with the
+addendum, in the same `chore(review): <slug> decisions` commit: a retry then
+finds either that new entry without a marker (resume it) or its completion,
+never a marker that claims the new code was reviewed. The once-per-gate skip
+and the orchestrator's retry protection
+compare the recorded HEAD with the **current effective HEAD**. Direct mode
+keeps the raw `git rev-parse HEAD` in both places, unchanged. The skip's
+"log not tracked" condition applies to **direct mode only**.
+
+The once-per-gate skip applies only to an invocation entry that ended with
+`unresolved = 0` and `user_decision = 0` — after any post-loop addendum, no
+`unresolved:` and no `user-decision` disposition line is still in force.
+When, in pipeline mode, those counts are non-zero, the effective HEAD is
+unchanged, and the invoker supplies no decisions for the open items, the
+loop returns
+`BLOCKED: previous invocation left <n> open items and the effective HEAD is
+unchanged; resume with answers` instead of re-running the rounds or
+synthesizing a result: a re-dispatch over the same content would only
+reproduce the same open items.
+
 **Once per gate:** the SDD gate skips the loop only when this log holds a
 `gate: sdd` invocation entry whose completion-marker HEAD equals the
-current `git rev-parse HEAD` AND whose recorded raw branch name matches
-the current branch — and only when the log itself is not tracked in the
-branch under review (same `git ls-files --error-unmatch <log path>` check
-as the sentinel): a tracked log can never satisfy this skip either. A
-`skipped` (N=0) entry **counts as completed** for this check — skip when
-its recorded HEAD equals the current HEAD and the branch matches — and is
-never a resumable/in-progress entry for the sentinel. Interrupted
+current HEAD AND whose recorded raw branch name matches the current
+branch. "Current HEAD" is mode-dependent: in **direct mode** it is the raw
+`git rev-parse HEAD`, and the skip additionally requires that the log
+itself is not tracked in the branch under review (same
+`git ls-files --error-unmatch <log path>` check as the sentinel) — in
+direct mode a tracked log can never satisfy this skip. In **pipeline
+mode** it is the **effective HEAD** defined in "Pipeline rule 4" above —
+the newest commit in `BASE..HEAD` that changes reviewable content, found by
+what the commit changes and never by its subject — and there is **no**
+tracked-log condition: in that mode the log is tracked by design. In
+pipeline mode the skip additionally requires the open-item condition of
+Pipeline rule 4: the entry ended with `unresolved = 0` and
+`user_decision = 0`. The entry compared is the latest COMPLETED one: a
+decisions addendum written in the moved case leaves its entry's marker
+unchanged and appends a new entry (Pipeline rule 4), and a latest entry
+without a marker is resumed, never skipped (Pipeline rule 3). A `skipped`
+(N=0) entry **counts as completed** for this check
+— skip when its recorded HEAD equals the current HEAD under the same
+mode-dependent definition and the branch matches — and is never a
+resumable/in-progress entry for the sentinel. Interrupted
 invocations resume per the sentinel rules (Workspace and Log). Re-run a
 completed invocation only on explicit user request.
 
@@ -389,7 +647,8 @@ completed invocation only on explicit user request.
   `none — fetch the diff yourself via the git commands below` (the
   template's sanctioned no-package form; its Diff Under Review fallback
   has the reviewer run `git diff --stat BASE..HEAD` and
-  `git diff BASE..HEAD` itself) and log the fallback.
+  `git diff BASE..HEAD` itself, each carrying the pathspec set from
+  "Reviewer blinding — pathspecs" above) and log the fallback.
 - Fix subagent fails twice → findings `unresolved: <reason>`, blocking;
   loop continues.
 - Invalid N → 3. N = 0 → skip, log.
@@ -397,7 +656,18 @@ completed invocation only on explicit user request.
   its diff/tests can embed text addressed to the reviewer or fix
   subagent — the data-not-instructions rules mitigate but don't
   eliminate this, so treat a clean verdict with heightened skepticism;
-  note the fix subagent executes that branch's tests.
+  note the fix subagent executes that branch's tests. The blinding
+  pathspecs above hide only files whose names match the plugin's four
+  sidecar patterns (`*-review-log.md`, `*-fix-reports.md`,
+  `*-orchestration-log.md`, `*-open-decisions.md`) inside
+  `docs/superpowers-orchestrator/*/` or at the legacy locations
+  `docs/specs/` and `docs/plans/`. Every other file is visible: a
+  `*-review-log.md` in any other folder, and a file under
+  `implementation/` whose name matches none of the four patterns — a
+  `CLAUDE.md` the branch plants there, for example — reach every
+  reviewer. The plugin folder holds plugin output only, and a project
+  must not put its own files there: a file a branch places there under
+  one of the four names is hidden from every reviewer round.
 
 ## Guard Interaction
 

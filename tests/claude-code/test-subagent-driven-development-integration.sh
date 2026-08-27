@@ -43,10 +43,10 @@ cat > package.json <<'EOF'
 }
 EOF
 
-mkdir -p src test docs/plans
+mkdir -p src test docs/superpowers-orchestrator/2026-08-25-implementation-plan/plans
 
 # Create a simple implementation plan
-cat > docs/plans/implementation-plan.md <<'EOF'
+cat > docs/superpowers-orchestrator/2026-08-25-implementation-plan/plans/implementation-plan.md <<'EOF'
 # Test Implementation Plan
 
 This is a minimal plan to test the subagent-driven-development workflow.
@@ -122,7 +122,7 @@ OUTPUT_FILE="$TEST_PROJECT/claude-output.txt"
 
 # Create prompt file
 cat > "$TEST_PROJECT/prompt.txt" <<'EOF'
-I want you to execute the implementation plan at docs/plans/implementation-plan.md using the subagent-driven-development skill.
+I want you to execute the implementation plan at docs/superpowers-orchestrator/2026-08-25-implementation-plan/plans/implementation-plan.md using the subagent-driven-development skill.
 
 IMPORTANT: Follow the skill exactly. I will be verifying that you:
 1. Read the plan once at the beginning
@@ -137,7 +137,7 @@ EOF
 # Note: We use a longer timeout since this is integration testing
 # Use --allowed-tools to enable tool usage in headless mode
 # IMPORTANT: Run from superpowers directory so local dev skills are available
-PROMPT="Change to directory $TEST_PROJECT and then execute the implementation plan at docs/plans/implementation-plan.md using the subagent-driven-development skill.
+PROMPT="Change to directory $TEST_PROJECT and then execute the implementation plan at docs/superpowers-orchestrator/2026-08-25-implementation-plan/plans/implementation-plan.md using the subagent-driven-development skill.
 
 IMPORTANT: Follow the skill exactly. I will be verifying that you:
 1. Read the plan once at the beginning

@@ -3,7 +3,7 @@
 #
 # Seeds a temp git repo and asks for a headless brainstorm of a decision that
 # matches the research trigger predicate (adds a dependency-manifest entry).
-# Asserts, per docs/specs/2026-08-22-researching-prior-art-design.md:
+# Asserts, per docs/superpowers-orchestrator/2026-08-22-researching-prior-art/specs/researching-prior-art-design.md:
 #   (a) the gate message's fixed lines appear exactly
 #   (b) the Candidates and Suggested-N lines match by pattern
 #   (c) the bracketed reversibility sentence is absent (the seeded decision

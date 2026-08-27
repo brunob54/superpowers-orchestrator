@@ -50,11 +50,143 @@ Every project goes through this process. A todo list, a single-function utility,
    - **Critical** (design fails for a significant user scenario): revise the design before proceeding.
    - **Minor** (edge case, acceptable limitation): document as a non-goal in the design.
    Do not skip this step. An approach that survives adversarial questioning is an approach worth approving.
-11. Save approved design to `docs/specs/YYYY-MM-DD-<topic>-design.md`.
+11. Save approved design to
+   `docs/superpowers-orchestrator/<today>-<slug>/specs/<slug>-design.md`,
+   creating the folders (see **Artifact Layout** below; `<slug>` is the
+   normalized topic name, `<today>` is today's date). Before writing, run
+   the existing-folder check in **Artifact Layout — reusing an existing
+   topic folder**.
 12. **Spec self-review** — quick inline check for placeholders, contradictions, ambiguity, scope (see Spec Self-Review below). Fix issues inline; no subagent dispatch needed.
 13. **Multi-round spec review** — invoke `superpowers-orchestrator:multi-doc-review` on the saved spec (doc type `spec`). It asks for N if not already stated (default 3; 0 skips), runs at most once per gate, and writes its audit log to `<spec-basename>-review-log.md`. Skip on platforms without the Agent tool.
 14. **User reviews written spec** — present the User Review Gate message (below) verbatim, with `<path>` filled in. This is the skill's final message; do not paraphrase it or drop either option.
 15. If the user approves in-session: invoke `writing-plans`. If the user chooses orchestration: stop — they run it from a fresh session.
+
+## Artifact Layout
+
+This section is the single normative definition of where the pipeline's
+documents live. Other skills state their own exact paths and cite this
+section by name.
+
+```
+docs/superpowers-orchestrator/<YYYY-MM-DD>-<slug>/
+  specs/<slug>-design.md                 the design (spec)
+  specs/<slug>-design-review-log.md      sidecar written by multi-doc-review
+  plans/<slug>.md                        the plan
+  plans/<slug>-review-log.md             sidecar written by multi-doc-review
+  plans/<slug>-open-decisions.md         written by orchestrating-development
+  implementation/<slug>-review-log.md    code review log (multi-code-review)
+  implementation/<slug>-fix-reports.md   fix reports (multi-code-review)
+  <slug>-orchestration-log.md            written by orchestrating-development
+```
+
+- **Topic folder:** `docs/superpowers-orchestrator/<YYYY-MM-DD>-<slug>/`,
+  relative to the repository root (`git rev-parse --show-toplevel`; for a
+  project that is not a git repository, the project directory).
+- **Date:** the day brainstorming creates the topic folder. Later stages
+  never change it.
+- **Slug:** the topic folder's basename with the `YYYY-MM-DD-` prefix
+  removed. It must match `^[a-z0-9]+(-[a-z0-9]+)*$` — lowercase ASCII
+  letters, digits, single hyphens. Brainstorming normalizes the topic name
+  to this form before creating the folder (lowercase; every run of other
+  characters becomes one hyphen; leading and trailing hyphens dropped) and
+  refuses to create a folder whose name would not match.
+- **Slug uniqueness:** at most one `????-??-??-<slug>/` folder may exist
+  under `docs/superpowers-orchestrator/`. Every "folder for slug X" lookup
+  matches the folder basename against
+  `^[0-9]{4}-[0-9]{2}-[0-9]{2}-<slug>$` (shell glob `????-??-??-<slug>`),
+  never against `*-<slug>` — the latter would also match
+  `2026-01-01-user-auth/` when the slug is `auth`.
+- **Topic folder derivation** from a document path: the path must have the
+  form `<D>/specs/<file>` or `<D>/plans/<file>`, where `<D>` is a direct
+  child of `docs/superpowers-orchestrator/` at the repository root and the
+  basename of `<D>` matches
+  `^[0-9]{4}-[0-9]{2}-[0-9]{2}-[a-z0-9]+(-[a-z0-9]+)*$`. Then `<D>` is the
+  topic folder. Any other path — including every old-layout path such as
+  `docs/plans/<file>` or `docs/specs/<file>`, whose `plans/` parent is
+  `docs/` — is **outside the layout**. Canonicalize both sides before
+  comparing (`pwd -P` on the directory; `realpath` where available):
+  `git rev-parse --show-toplevel` returns the physical path while a caller
+  may hold the logical one, and a textual comparison would classify a
+  repository reached through a symlink as outside the layout.
+- **Stage folders are created on first write.** Git stores no empty
+  directories, so a topic that stops at the spec stage has only `specs/`.
+- **Sidecar rule:** a document's review log is
+  `<document path minus .md>-review-log.md`, in the same directory.
+- **One plan per topic:** `plans/<slug>.md` is replaced when the plan is
+  rewritten; earlier versions stay in git history.
+- **Orchestration log:** at the topic root, no date prefix. Each invocation
+  entry inside carries its own date.
+- The topic folder is always anchored at the **repository root**. A
+  sub-project inside a monorepo gets its documents at the monorepo root;
+  relocating the folder makes every document "outside the layout".
+
+### Reusing an existing topic folder
+
+Before step 11 writes the design, list the candidate folders. `<slug>` here
+is the already-normalized slug defined under "Artifact Layout" above — the
+topic name must be normalized to that form before it is substituted into
+this or any other command:
+
+```bash
+REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
+find "$REPO_ROOT/docs/superpowers-orchestrator" -maxdepth 1 -type d \
+     -name '????-??-??-<slug>' 2>/dev/null
+```
+
+`find` is used instead of `ls -d <glob>/` because an unmatched glob is not
+portable: `bash` passes the pattern through to `ls`, but `zsh` — the login
+shell on macOS, and the shell many agent sessions run commands under — treats
+it as a shell-level error ("no matches found"), never runs `ls`, and writes
+the message before the command's own `2>/dev/null` can suppress it. `find`
+prints nothing when there is no match, in every shell; it exits non-zero only
+when the parent folder does not exist yet (the first topic in a repository),
+and the decision below keys on the output, never on the exit status.
+
+- **Zero matches** (no output) — create
+  `docs/superpowers-orchestrator/<today>-<slug>/specs/` under the same
+  repository-root anchor and write the design there.
+- **More than one match** — a slug-uniqueness violation that predates this
+  run. Stop, list both folders, and ask the user to merge or rename them.
+  Never pick one, never create a third.
+- **Exactly one match** — ask the user **once**, in a single message:
+  reuse that folder (the design is written into its `specs/`, overwriting an
+  existing `specs/<slug>-design.md`) or choose a different slug. Never create
+  a second folder for the same slug.
+
+  The question must list the files already in that folder and state the
+  consequences of reuse:
+
+  - Existing `plans/`, `implementation/` and orchestration-log files are left
+    untouched.
+  - `orchestrating-development`'s Phase 0 precondition requires that the plan
+    path and the orchestration-log path do NOT already exist — it will stop
+    until the user deletes or renames them.
+  - A later `multi-code-review` continues round numbering in the existing
+    `implementation/<slug>-review-log.md`: a new invocation entry is appended
+    to the same file.
+  - The spec gate's review appends its rounds to the existing
+    `specs/<slug>-design-review-log.md` — a log that then describes two
+    documents. Offer to move that sidecar aside as
+    `specs/<slug>-design-<old date>-review-log.md` before the gate, where
+    `<old date>` is the topic folder's date prefix. The archived name must
+    still end in `-review-log.md`: the blinding pathspec set uses
+    `':(top,exclude)docs/superpowers-orchestrator/*/*-review-log.md'`, and `multi-code-review`'s
+    reviewer read prohibition names the same shape. A name such as
+    `specs/<slug>-design-review-log.<old date>.md` ends in the date instead,
+    so neither would cover it and a blinded reviewer could read the previous
+    review log.
+  - Commit that move immediately, as part of the same step: `git mv` the
+    sidecar to the archived name, then commit both paths — for example
+    `git commit -m "chore(docs): archive the previous <slug> design review
+    log" -- <old path> <new path>`. When the sidecar is untracked (`git
+    ls-files --error-unmatch <old path>` fails), move it with plain `mv`,
+    then `git add -- <new path>` and commit with `-- <new path>` only — the
+    old path is unknown to git and must not appear in the commit pathspec. A
+    `git mv` of a tracked file that is left uncommitted appears in `git
+    status --porcelain` as a staged rename (a third path), and
+    `orchestrating-development`'s Phase 0 clean-tree check stops the run on
+    any dirt it does not recognize. Without this commit the reuse flow does
+    not reach Phase 1.
 
 ## Process Flow
 
@@ -244,7 +376,8 @@ Apply senior engineering judgment during design:
 
 - User approved the design.
 - Failure-mode check completed — critical failure modes resolved, minor ones documented as non-goals.
-- Design document exists at the required path (`docs/specs/`).
+- Design document exists at the required path
+  (`docs/superpowers-orchestrator/*/specs/`).
 - Spec self-review completed — placeholders, contradictions, ambiguity, and scope issues resolved.
 - Multi-doc-review loop completed or explicitly skipped (N=0) — every Critical/Important finding applied or rejected-with-reason in the review log.
 - Prior art is settled in one of two ways. Either the research predicate matched for at least one decision, and the spec contains a "Prior art and alternatives" section — research findings dispositioned (applied / overridden with reason / deferred), or the skip or failure recorded. Or no decision in this design matched the predicate, and the spec records that no decision matched the predicate.

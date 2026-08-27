@@ -3,7 +3,7 @@
 #
 # Seeds a temp git repo whose package.json names a real small library (ms),
 # invokes the skill headlessly with a fixed decision and N=2, and asserts the
-# contract from docs/specs/2026-08-22-researching-prior-art-design.md:
+# contract from docs/superpowers-orchestrator/2026-08-22-researching-prior-art/specs/researching-prior-art-design.md:
 #   (a) .superpowers/research/<slug>-research-report.md exists
 #   (b) its first line is exactly the research report marker
 #   (c) it contains at least one citation (URL or clone file path), and a

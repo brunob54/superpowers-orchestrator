@@ -69,10 +69,10 @@ Check the hit count before reading results. This tells you whether to narrow or 
    - Open questions/risks
 
    **state.md vs plan.md:**
-   - `plan.md` (or `docs/.../plans/*.md`): the authoritative task list with checkboxes. Owned by `executing-plans`. Updated as tasks complete.
+   - `plan.md` (or `docs/superpowers-orchestrator/*/plans/*.md`): the authoritative task list with checkboxes. Owned by `executing-plans`. Updated as tasks complete.
    - `state.md`: a session-boundary snapshot of *where you are* in the plan — current task, blockers, what's verified. It references the plan but does not duplicate the task list.
    
-   If a plan exists, state.md should say "Executing plan at docs/.../plan.md, currently on Task 3" — not copy the full task list.
+   If a plan exists, state.md should say "Executing plan at docs/superpowers-orchestrator/<date>-<slug>/plans/<slug>.md, currently on Task 3" — not copy the full task list.
 
 2. Write `state.md` at the project root with concise sections:
    - `Current Goal`

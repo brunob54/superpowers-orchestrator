@@ -13,8 +13,68 @@ Create an implementation plan another agent can execute with minimal ambiguity.
 
 ## Output Path
 
-Save to `docs/plans/YYYY-MM-DD-<feature-name>.md`.
+Derive the **topic folder** from the spec path (the derivation rule and the
+folder shape are defined in the "Artifact Layout" section of
+`skills/brainstorming/SKILL.md`): the spec must be
+`<D>/specs/<file>` where `<D>` is a direct child of
+`docs/superpowers-orchestrator/` at the repository root and `<D>`'s basename
+matches `^[0-9]{4}-[0-9]{2}-[0-9]{2}-[a-z0-9]+(-[a-z0-9]+)*$`. Then `<D>` is
+the topic folder, its basename is `<date>-<slug>`, and `<slug>` is that
+basename minus the date prefix.
+
+Save to `docs/superpowers-orchestrator/<date>-<slug>/plans/<slug>.md`,
+creating `plans/` if it does not exist.
+
 - User preferences for plan location override this default.
+- A spec that is **outside the layout** is handled by "Spec Outside the
+  Layout" below — do not write a plan next to it.
+
+## Spec Outside the Layout
+
+A spec whose path is not `<D>/specs/<file>` — where `<D>` is a direct child
+of `docs/superpowers-orchestrator/` at the repository root whose basename
+matches the topic-folder shape defined in the "Artifact Layout" section of
+`skills/brainstorming/SKILL.md` — gets **no plan written beside it**. The
+`specs/` segment is required: the general derivation rule in that section
+also accepts `<D>/plans/<file>`, but a *spec* sitting in a `plans/` folder is
+outside the layout and gets the offer below, exactly as this task's "Does NOT
+cover" note states. The invariant this protects: every plan lives in a topic folder
+together with its spec.
+
+1. Compute `<slug>` = the spec basename with `YYYY-MM-DD-`, `-design` and
+   `.md` stripped, each only if present, then normalized by the "Slug" rule
+   in the "Artifact Layout" section of `skills/brainstorming/SKILL.md` (the
+   same normalization brainstorming applies to a topic name). Without it, a
+   basename such as `MyFeature-design.md` yields a folder name that fails
+   the layout check, and the offer below repeats on every run.
+2. Name the expected location:
+   `docs/superpowers-orchestrator/<today>-<slug>/specs/<slug>-design.md`. If a
+   folder matching `docs/superpowers-orchestrator/????-??-??-<slug>/` already
+   exists, reuse that folder instead of `<today>` (slug uniqueness). More than
+   one match → stop and report the ambiguity; write nothing. If the reused
+   folder already holds `specs/<slug>-design.md` or its
+   `specs/<slug>-design-review-log.md` sidecar, stop and report the
+   collision — a different spec already owns that slug — and move and write
+   nothing.
+3. State the reason the spec is outside the layout — wrong parent directory,
+   or a folder name that does not match
+   `^[0-9]{4}-[0-9]{2}-[0-9]{2}-[a-z0-9]+(-[a-z0-9]+)*$` — next to the
+   expected location, so a spec already in the right place but wrongly named
+   is never described as a move onto itself.
+4. Ask the user **once** whether to move the spec there.
+   - **Yes:** `mkdir -p` the destination `specs/` folder first (`git mv` fails
+     when the destination directory does not exist), then `git mv` the spec to
+     `specs/<slug>-design.md` and — when it exists — its `-review-log.md`
+     sidecar to `specs/<slug>-design-review-log.md`. A file git does not track
+     yet (`git ls-files --error-unmatch <path>` fails — the normal state of a
+     spec that was written and never committed) cannot be moved with `git mv`:
+     move it with plain `mv` and `git add` the destination path instead. Use
+     plain `mv` when the project is not a git repository. The sidecar is
+     renamed together with the spec because the sidecar rule derives the log
+     name from the document name: a sidecar that kept its old basename would be
+     orphaned and a later spec review would start a new log. Then continue with
+     the moved spec.
+   - **No:** stop. No plan is written.
 
 ## Plan Header
 
@@ -24,7 +84,7 @@ Save to `docs/plans/YYYY-MM-DD-<feature-name>.md`.
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers-orchestrator:subagent-driven-development (recommended) or superpowers-orchestrator:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** <single sentence>
-**Spec:** `docs/specs/<the spec this plan implements>.md` *(multi-doc-review reads this line to locate the spec on direct plan reviews)*
+**Spec:** `docs/superpowers-orchestrator/<YYYY-MM-DD>-<slug>/specs/<slug>-design.md` *(multi-doc-review reads this line to locate the spec on direct plan reviews; an old-layout path here would produce a plan whose spec is outside the layout)*
 **Architecture:** <2-4 sentences>
 **Tech Stack:** <languages/libraries/tools>
 **Assumptions:** <list the key assumptions this plan rests on. For each, state what it excludes: "Assumes X — will NOT work if Y."> *(skip only if the plan contains zero conditional logic)*
@@ -105,7 +165,7 @@ git commit -m "<type>(<scope>): <what changed>" --trailer "Session: <slug>" --tr
 
 Every commit made while executing a plan must say which workstream and which stage it belongs to — without this, a branch full of task commits is unreadable later.
 
-- **Slug** = the plan's file basename with the `YYYY-MM-DD-` date prefix and the `.md` extension stripped: `docs/plans/2026-08-17-auth-login.md` → `auth-login`. Every skill in the pipeline derives the slug with this same rule.
+- **Slug** = the plan's file basename with the `YYYY-MM-DD-` date prefix and the `.md` extension stripped, each only if present. Every skill in the pipeline derives the slug with this same rule. Under the artifact layout the plan basename *is* the slug, so the rule yields it unchanged: `docs/superpowers-orchestrator/2026-08-17-auth-login/plans/auth-login.md` → `auth-login`.
 - Step 5 of each task carries the full commit command: a conventional subject describing the change, plus two trailers (a trailer is a `Key: value` line at the end of the commit message, the same mechanism as `Co-Authored-By`):
   - `Session: <slug>` — the workstream.
   - `Stage: task <N>/<total>` — position in the pipeline.
@@ -184,7 +244,7 @@ seed is what makes it safe to start execution in a fresh session.
 ### Ready Message
 
 ```
-Plan saved to `docs/plans/<filename>.md`. Ready to execute with **[Subagent-Driven / Inline Execution]** (<N> tasks[, <one-word reason>]).
+Plan saved to `docs/superpowers-orchestrator/<date>-<slug>/plans/<slug>.md`. Ready to execute with **[Subagent-Driven / Inline Execution]** (<N> tasks[, <one-word reason>]).
 
 Recommended: start execution in a fresh session (`/clear` in Claude Code) — this session's planning context is no longer needed for execution and only spends the first batch's context budget before Task 1 begins. The plan file and `state.md` carry everything execution needs. Then paste:
 
@@ -199,9 +259,9 @@ distinguish them:
 
 | Approach | Paste prompt | Behavior |
 |---|---|---|
-| Subagent-Driven, batched | `Use subagents in batched autonomous mode on docs/plans/<filename>.md` | Never asks mid-batch; hands off at the context boundary |
-| Subagent-Driven, interactive | `Use subagents to implement docs/plans/<filename>.md` | Per-task subagents; stops to ask on ambiguity or blockers |
-| Inline | `Execute the plan at docs/plans/<filename>.md` | Continuous in-session execution with checkpoints |
+| Subagent-Driven, batched | `Use subagents in batched autonomous mode on docs/superpowers-orchestrator/<date>-<slug>/plans/<slug>.md` | Never asks mid-batch; hands off at the context boundary |
+| Subagent-Driven, interactive | `Use subagents to implement docs/superpowers-orchestrator/<date>-<slug>/plans/<slug>.md` | Per-task subagents; stops to ask on ambiguity or blockers |
+| Inline | `Execute the plan at docs/superpowers-orchestrator/<date>-<slug>/plans/<slug>.md` | Continuous in-session execution with checkpoints |
 
 **Use these prompts verbatim — they are tuned to the skill-activator's
 scoring, not just readable.** Two failure modes they avoid: a prompt matching

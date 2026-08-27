@@ -41,7 +41,7 @@ Long implementation plans cannot finish inside one context window. Without a bat
 
 Say any of (with a plan file present):
 
-- `implement the next 3 tasks from docs/plans/<plan>.md`
+- `implement the next 3 tasks from docs/superpowers-orchestrator/<date>-<slug>/plans/<slug>.md`
 - `execute the plan in batches`
 - after `/clear`: `resume the plan`
 
@@ -53,7 +53,7 @@ To inspect the start gate's pressure measurement yourself: `node hooks/skill-act
 
 ### References
 
-- Design spec: [specs/2026-07-06-sdd-batched-autonomous-mode-design.md](specs/2026-07-06-sdd-batched-autonomous-mode-design.md)
+- Design spec: [superpowers-orchestrator/2026-07-06-sdd-batched-autonomous-mode/specs/sdd-batched-autonomous-mode-design.md](superpowers-orchestrator/2026-07-06-sdd-batched-autonomous-mode/specs/sdd-batched-autonomous-mode-design.md)
 - Release notes: [../RELEASE-NOTES.md](../RELEASE-NOTES.md) — v6.7.0
 
 ---
@@ -94,7 +94,7 @@ The flow is automatic whenever subagent-driven-development executes a plan — e
 
 ### References
 
-- Design spec: [specs/2026-07-18-sdd-token-optimization-design.md](specs/2026-07-18-sdd-token-optimization-design.md)
+- Design spec: [superpowers-orchestrator/2026-07-18-sdd-token-optimization/specs/sdd-token-optimization-design.md](superpowers-orchestrator/2026-07-18-sdd-token-optimization/specs/sdd-token-optimization-design.md)
 - Release notes: [../RELEASE-NOTES.md](../RELEASE-NOTES.md) — v6.8.0
 - Upstream origin of the flow: obra/superpowers v6.0.0
 
@@ -102,7 +102,7 @@ The flow is automatic whenever subagent-driven-development executes a plan — e
 
 ## 3. multi-doc-review — N-Round Independent Document Review (v6.9.0)
 
-*Named `multi-review` through v6.10.0; renamed in v6.11.0 to pair with `multi-code-review`. Historical documents under `docs/specs/` and `docs/plans/` keep the old name.*
+*Named `multi-review` through v6.10.0; renamed in v6.11.0 to pair with `multi-code-review`. The historical topic folder `docs/superpowers-orchestrator/2026-07-19-multi-review/` keeps the old name.*
 
 ### Summary
 
@@ -113,7 +113,7 @@ The flow is automatic whenever subagent-driven-development executes a plan — e
 
 ### Motivation
 
-A single review — even a careful one — inherits the authoring conversation's blind spots: the reviewer has already accepted the document's framing. Independent clean-context rounds under different lenses keep finding real, disjoint issue classes. Dogfood evidence from building this very feature: its own spec collected **22 findings across 3 rounds** and its implementation plan **18 findings** — none of the rounds came back clean ([spec review log](specs/2026-07-19-multi-review-design-review-log.md), [plan review log](plans/2026-07-19-multi-review-review-log.md)).
+A single review — even a careful one — inherits the authoring conversation's blind spots: the reviewer has already accepted the document's framing. Independent clean-context rounds under different lenses keep finding real, disjoint issue classes. Dogfood evidence from building this very feature: its own spec collected **22 findings across 3 rounds** and its implementation plan **18 findings** — none of the rounds came back clean ([spec review log](superpowers-orchestrator/2026-07-19-multi-review/specs/multi-review-design-review-log.md), [plan review log](superpowers-orchestrator/2026-07-19-multi-review/plans/multi-review-review-log.md)).
 
 ### How it works
 
@@ -125,7 +125,7 @@ A single review — even a careful one — inherits the authoring conversation's
 ### How to use
 
 - **Automatic:** at the brainstorming spec gate and the writing-plans plan gate, the loop runs before the user-approval step and asks for N once if you haven't stated a count.
-- **Direct:** `/multi-doc-review docs/specs/<doc>.md 3` — or phrases like `review this spec 3 times` / `run independent review rounds on docs/plans/<plan>.md`.
+- **Direct:** `/multi-doc-review docs/superpowers-orchestrator/<date>-<slug>/specs/<slug>-design.md 3` — or phrases like `review this spec 3 times` / `run independent review rounds on docs/superpowers-orchestrator/<date>-<slug>/plans/<slug>.md`.
 - **Audit trail:** read `<doc-basename>-review-log.md` next to the document for per-round verdicts and every disposition.
 
 ### Where it lives
@@ -134,8 +134,8 @@ A single review — even a careful one — inherits the authoring conversation's
 
 ### References
 
-- Design spec: [specs/2026-07-19-multi-review-design.md](specs/2026-07-19-multi-review-design.md)
-- Review logs (dogfood evidence): [spec](specs/2026-07-19-multi-review-design-review-log.md), [plan](plans/2026-07-19-multi-review-review-log.md)
+- Design spec: [superpowers-orchestrator/2026-07-19-multi-review/specs/multi-review-design.md](superpowers-orchestrator/2026-07-19-multi-review/specs/multi-review-design.md)
+- Review logs (dogfood evidence): [spec](superpowers-orchestrator/2026-07-19-multi-review/specs/multi-review-design-review-log.md), [plan](superpowers-orchestrator/2026-07-19-multi-review/plans/multi-review-review-log.md)
 - Release notes: [../RELEASE-NOTES.md](../RELEASE-NOTES.md) — v6.9.0
 
 ---
@@ -148,27 +148,27 @@ A single review — even a careful one — inherits the authoring conversation's
 - Each round dispatches **one clean-context reviewer subagent** under a **rotating lens**: correctness & spec alignment → adversarial red-team → security → test & coverage quality. Every lens carries a **prose adaptation** — for files that are instructions to an agent (skills, prompts, configs) rather than executable code, runtime-input attacks are vacuous, so the reviewer attacks *agent misexecution* instead.
 - Between rounds, **one fix subagent** handles that round's Critical/Important findings and the next round reviews a **freshly built package** of the fixed code.
 - **No fix ships unreviewed:** an exit that would leave the last round's fix unexamined triggers a same-lens verification re-review (capped at 3 cycles).
-- Sidecar audit log at `.superpowers/reviews/<branch-slug>-review-log.md`, git-ignored by a `*` rule so the branch under review can never author its own review record. Early exit after **two consecutive clean rounds**.
+- Sidecar audit log at `.superpowers/reviews/<branch-slug>-review-log.md` — or, in a pipeline run, `docs/superpowers-orchestrator/<date>-<slug>/implementation/<slug>-review-log.md`, committed — so a direct review is never part of the branch under review. Early exit after **two consecutive clean rounds**.
 
 ### Motivation
 
 The v6.9.0 dogfood showed independent lenses finding *disjoint* issue classes on a document. Code has the same property, and subagent-driven-development's final whole-branch review was a single pass — one reviewer, one lens, one chance. This release reuses the v6.9.0 architecture so the two loops stay teachable as one pattern, and adds what code needs that documents do not: fixes applied between rounds, repackaged diffs, and a guarantee that no fix reaches the gate unreviewed.
 
-Dogfood evidence from building it: the design spec collected **33 findings across 4 rounds**, its implementation plan ran **10 rounds**, and the branch itself went through this very loop ([spec review log](specs/2026-07-27-multi-code-review-design-review-log.md), [plan review log](plans/2026-07-27-multi-code-review-review-log.md)).
+Dogfood evidence from building it: the design spec collected **33 findings across 4 rounds**, its implementation plan ran **10 rounds**, and the branch itself went through this very loop ([spec review log](superpowers-orchestrator/2026-07-27-multi-code-review/specs/multi-code-review-design-review-log.md), [plan review log](superpowers-orchestrator/2026-07-27-multi-code-review/plans/multi-code-review-review-log.md)).
 
 ### How it works
 
 - **Reviewer model:** inherits the session model with a **sonnet floor** — a haiku-tier or unrecognized session model dispatches reviewers on `sonnet`. This replaces subagent-driven-development's previous always-opus final-review rule. Fix subagents follow SDD's existing Model Selection table.
 - **A user-supplied BASE is never used raw:** it is charset-rejected (`^[A-Za-z0-9._/~^{}-]+$`) before anything touches a shell, resolved with `git rev-parse --verify`, and ancestry-checked against HEAD — a non-ancestor BASE would render untouched commits as deletions and the reviewer would report them as defects.
 - Convergence is judged from the reviewer's **enumerated findings**, never the count line and never post-triage — rejecting findings at triage cannot make a round clean.
-- **Once per gate** is keyed on the completion marker's *post-fix* HEAD plus the recorded branch name (an invocation-start HEAD would be defeated by the loop's own fix commits), and never honours a log that `git ls-files` reports as tracked in the branch under review.
+- **Once per gate** is keyed on the completion marker's *post-fix* HEAD plus the recorded branch name (an invocation-start HEAD would be defeated by the loop's own fix commits). The tracked-log condition — never honouring a log that `git ls-files` reports as tracked in the branch under review — applies in **direct mode** only; in **pipeline mode** the log is tracked by design, and the completion marker records the **effective HEAD** instead.
 - Reviewer reports reuse the guard-exempt marker `<!-- multi-review report -->`; the skill is in the `hooks/subagent-guard.js` roster.
 
 ### How to use
 
 - **Automatic:** at subagent-driven-development's final whole-branch review gate, replacing the former single-pass review.
 - **Direct:** `/multi-code-review [BASE] [N]` — or phrases like `review the branch 3 times` / `several independent code reviews of this branch`. Single-argument form: an integer 0–10 is N, anything else is a git ref.
-- **Audit trail:** `.superpowers/reviews/<branch-slug>-review-log.md` for per-round verdicts, dispositions, and fix commit SHAs.
+- **Audit trail:** `.superpowers/reviews/<branch-slug>-review-log.md` — or, in a pipeline run, `docs/superpowers-orchestrator/<date>-<slug>/implementation/<slug>-review-log.md`, committed — for per-round verdicts, dispositions, and fix commit SHAs.
 - **Claude Code only** — the loop requires the Agent tool; on Codex and Cursor the SDD gate keeps its single-pass final review.
 
 ### Where it lives
@@ -177,9 +177,9 @@ Dogfood evidence from building it: the design spec collected **33 findings acros
 
 ### References
 
-- Design spec: [specs/2026-07-27-multi-code-review-design.md](specs/2026-07-27-multi-code-review-design.md)
-- Implementation plan: [plans/2026-07-27-multi-code-review.md](plans/2026-07-27-multi-code-review.md)
-- Review logs (dogfood evidence): [spec](specs/2026-07-27-multi-code-review-design-review-log.md), [plan](plans/2026-07-27-multi-code-review-review-log.md)
+- Design spec: [superpowers-orchestrator/2026-07-27-multi-code-review/specs/multi-code-review-design.md](superpowers-orchestrator/2026-07-27-multi-code-review/specs/multi-code-review-design.md)
+- Implementation plan: [superpowers-orchestrator/2026-07-27-multi-code-review/plans/multi-code-review.md](superpowers-orchestrator/2026-07-27-multi-code-review/plans/multi-code-review.md)
+- Review logs (dogfood evidence): [spec](superpowers-orchestrator/2026-07-27-multi-code-review/specs/multi-code-review-design-review-log.md), [plan](superpowers-orchestrator/2026-07-27-multi-code-review/plans/multi-code-review-review-log.md)
 - Release notes: [../RELEASE-NOTES.md](../RELEASE-NOTES.md) — v6.10.0
 
 ---
@@ -191,7 +191,7 @@ Dogfood evidence from building it: the design spec collected **33 findings acros
 - From an **approved design spec**, runs the whole development lifecycle autonomously: plan writing → N independent plan-review rounds → batched implementation → N independent whole-branch code-review rounds — **stopping only on major errors and ending before merge/PR**. The merge decision stays human.
 - One interactive **Phase 0** collects everything up front — plan/code review counts, batch task cap, branch point, and a permissions confirmation for the unattended run — then the user is never asked mid-flight; blockers become journaled `BLOCKED` stops with resume instructions, never silent guesses.
 - Four fresh-context **controller subagent templates** (plan-writer, doc-review-loop, batch-controller, code-review-loop) each drive one phase by invoking the existing skills (writing-plans, multi-doc-review, subagent-driven-development, multi-code-review); the orchestrator itself only fills template placeholders and reads compact structured returns (`PLAN_DONE` / `REVIEW_DONE` / `BATCH_DONE` / `BLOCKED` / …).
-- A **committed orchestration log** `docs/plans/<slug>-orchestration-log.md` records every phase boundary, and **resume / abandon** procedures reconstruct or tear down a run from durable artifacts alone (log, plan checkboxes, git history) — a fresh session can pick up a crashed run.
+- A **committed orchestration log** `docs/superpowers-orchestrator/<date>-<slug>/<slug>-orchestration-log.md` records every phase boundary, and **resume / abandon** procedures reconstruct or tear down a run from durable artifacts alone (log, plan checkboxes, git history) — a fresh session can pick up a crashed run.
 
 ### Motivation
 
@@ -203,13 +203,13 @@ The fork's stages were each automated individually — batched SDD execution (v6
 - Controllers dispatch their own nested workers (implementers, reviewers, fix subagents). `hooks/subagent-guard.js` records this sanctioned nesting and exempts returns opening with the `<!-- orchestration report -->` marker from skill-leakage blocking — free-text `BLOCKED` reasons may legitimately name skills.
 - A **Major-Error Stop Policy** enumerates the stop conditions (unresolved review findings, malformed returns after retry, failed phase-boundary commits, missing artifacts on resume, zero-checkbox plans); each writes a `STOPPED` entry with a one-line reason and the exact resume command.
 - The batch controller carries **mid-task crash recovery**: on retry it derives the review base from the last ledger line, falling back to the last `chore(plan): <slug> task <n> complete` commit and then the merge-base with the default branch — never its own starting HEAD — so a crashed attempt's commits can never bypass the task-review gate. A `[RESUME_ANSWER]` placeholder carries the user's answer when a `BLOCKED` run is resumed.
-- Dogfood evidence: the feature's own spec collected **35 findings across 4 review rounds**, its implementation plan **22 findings (all applied, none rejected)**, and the branch went through the v6.10.0 whole-branch loop before merging ([spec review log](specs/2026-08-04-orchestrating-development-design-review-log.md), [plan review log](plans/2026-08-04-orchestrating-development-review-log.md)).
+- Dogfood evidence: the feature's own spec collected **35 findings across 4 review rounds**, its implementation plan **22 findings (all applied, none rejected)**, and the branch went through the v6.10.0 whole-branch loop before merging ([spec review log](superpowers-orchestrator/2026-08-04-orchestrating-development/specs/orchestrating-development-design-review-log.md), [plan review log](superpowers-orchestrator/2026-08-04-orchestrating-development/plans/orchestrating-development-review-log.md)).
 
 ### How to use
 
 - **From brainstorming:** when a spec passes its review gate, the gate message offers orchestration as an alternative to the manual writing-plans handoff.
-- **Direct:** `orchestrate development of docs/specs/<spec>.md` — then answer the Phase 0 questions once.
-- **After a stop:** `Resume orchestration for docs/plans/<plan>.md` (supply the blocking answer if the stop was a `BLOCKED`); `Abandon orchestration for docs/plans/<plan>.md` tears the run down with confirmation.
+- **Direct:** `orchestrate development of docs/superpowers-orchestrator/<date>-<slug>/specs/<slug>-design.md` — then answer the Phase 0 questions once.
+- **After a stop:** `Resume orchestration for docs/superpowers-orchestrator/<date>-<slug>/plans/<slug>.md` (supply the blocking answer if the stop was a `BLOCKED`); `Abandon orchestration for docs/superpowers-orchestrator/<date>-<slug>/plans/<slug>.md` tears the run down with confirmation.
 - **Claude Code only** — the pipeline requires the Agent tool with nested controller dispatch; it is not available on Codex or Cursor.
 
 ### Where it lives
@@ -218,7 +218,7 @@ The fork's stages were each automated individually — batched SDD execution (v6
 
 ### References
 
-- Design spec: [specs/2026-08-04-orchestrating-development-design.md](specs/2026-08-04-orchestrating-development-design.md)
-- Implementation plan: [plans/2026-08-04-orchestrating-development.md](plans/2026-08-04-orchestrating-development.md)
-- Review logs (dogfood evidence): [spec](specs/2026-08-04-orchestrating-development-design-review-log.md), [plan](plans/2026-08-04-orchestrating-development-review-log.md)
+- Design spec: [superpowers-orchestrator/2026-08-04-orchestrating-development/specs/orchestrating-development-design.md](superpowers-orchestrator/2026-08-04-orchestrating-development/specs/orchestrating-development-design.md)
+- Implementation plan: [superpowers-orchestrator/2026-08-04-orchestrating-development/plans/orchestrating-development.md](superpowers-orchestrator/2026-08-04-orchestrating-development/plans/orchestrating-development.md)
+- Review logs (dogfood evidence): [spec](superpowers-orchestrator/2026-08-04-orchestrating-development/specs/orchestrating-development-design-review-log.md), [plan](superpowers-orchestrator/2026-08-04-orchestrating-development/plans/orchestrating-development-review-log.md)
 - Release notes: [../RELEASE-NOTES.md](../RELEASE-NOTES.md) — v6.14.0

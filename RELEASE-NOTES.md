@@ -1,5 +1,151 @@
 # Superpowers Orchestrator Release Notes
 
+## v7.3.0 — one folder per topic, committed code reviews
+
+Field report: the documents of one feature were spread over three flat
+directories, linked only by a shared `YYYY-MM-DD-<slug>` file-name prefix, and
+the code review history was never committed. Finding, archiving, or deleting
+"everything about feature X" meant matching prefixes across directories.
+
+- **One folder per topic.** Every document of a feature now lives under
+  `docs/superpowers-orchestrator/<YYYY-MM-DD>-<slug>/`, with one sub-folder
+  per pipeline stage:
+
+  ```
+  docs/superpowers-orchestrator/<YYYY-MM-DD>-<slug>/
+    specs/<slug>-design.md                 specs/<slug>-design-review-log.md
+    plans/<slug>.md                        plans/<slug>-review-log.md
+    plans/<slug>-open-decisions.md
+    implementation/<slug>-review-log.md    implementation/<slug>-fix-reports.md
+    <slug>-orchestration-log.md
+  ```
+
+  File names drop the date — the folder carries it — and keep the slug, so
+  editor tabs and grep results stay distinguishable across topics. The rule is
+  defined once, in the "Artifact Layout" section of the `brainstorming` skill;
+  every other skill states its own exact paths and cites that section.
+- **The plugin name returns to the path.** This reverses release v6.6.1, which
+  removed it. The reason: the plugin's output is now a folder tree of its own,
+  and separating it from the project's own `docs/` tree is worth the extra path
+  segment.
+- **Code reviews are committed.** A pipeline-driven `multi-code-review` run
+  receives a new optional input, `TOPIC_DIR`, and writes its review log and fix
+  reports under `<topic>/implementation/`, committing them after every round
+  with the subject `chore(review): <slug> round <i> log`. A direct
+  `/multi-code-review` run has no plan and therefore no topic folder: it keeps
+  today's git-ignored `.superpowers/reviews/` behavior exactly.
+- **Reviewers stay blind.** Committed review material is now part of the
+  branch, so every whole-branch diff handed to a reviewer excludes the files
+  whose names match the plugin's four sidecar patterns — `*-review-log.md`,
+  `*-fix-reports.md`, `*-orchestration-log.md`, `*-open-decisions.md` —
+  inside `docs/superpowers-orchestrator/*/` and at the legacy locations
+  `docs/specs/` and `docs/plans/` (a sidecar moved out of those folders with
+  `git mv` would otherwise appear as a deletion hunk carrying its whole old
+  content). The reviewer's read prohibition lists the same set. This also
+  closes a pre-existing leak: the committed spec and plan review-log sidecars
+  were visible in whole-branch diffs before. Only a file matching one of the
+  four names inside those folders is ever hidden; every other file is
+  visible — a `*-review-log.md` anywhere else, or a file under
+  `implementation/` whose name matches none of the four patterns (a
+  `CLAUDE.md`, a note), reaches every reviewer. The plugin folder holds
+  plugin output only, and a project must not put its own files there.
+- **A Phase 4 stop is resumable with answers.** When the final code review
+  leaves open items (`unresolved` or `user_decision` findings), the
+  orchestrator's `## STOPPED` entry lists them by their review-log ids.
+  `Resume orchestration for <plan> — [<id>]: <answer>` hands the answers to the
+  code-review-loop controller, which journals each one as
+  `decided (user): <answer>` in a committed addendum
+  (`chore(review): <slug> decisions`). The completion skip — the rule that
+  lets a re-dispatched controller reuse a finished review instead of running
+  it again — now applies only when the recorded invocation ended with
+  `unresolved = 0` and `user_decision = 0`; with open items, no answers and
+  no new code since the stop, the orchestrator re-presents the open items
+  and stops (Resume step 3) — a controller dispatched in that state returns
+  `BLOCKED: … resume with answers` only as the retry backstop; code
+  committed after the stop re-runs the review on resume, with or without
+  answers.
+- **A skipped review is committed too.** In pipeline mode an N=0 run writes
+  its `skipped` entry into the tracked review log and commits it as
+  `chore(review): <slug> skipped`, so the log never stays modified after a
+  skipped gate.
+- **This repository was migrated** with `git mv`; document contents are
+  untouched. **Other projects are not migrated automatically:** existing
+  `docs/specs/` and `docs/plans/` files stay readable as plain files, and new
+  topics use the new layout. Skills, hooks and tests know only the new layout —
+  a spec outside the layout stops orchestration with a message naming the
+  expected location, `writing-plans` offers to move the spec there, and the
+  subagent-driven-development review gate runs a plan outside the layout in
+  direct mode (log under `.superpowers/reviews/`).
+- **Minimum git version: 2.32**, stated explicitly for the first time (also in
+  the README). It is needed for `git commit --trailer` and assumed by the
+  pathspec magic above.
+- **After updating:** an existing `.superpowers/sdd/plan.ref` that points at a
+  moved plan makes the next `subagent-driven-development` run treat it as a
+  plan switch and archive the workspace under `archive/<old plan basename>/`.
+  This is expected after migration and loses nothing.
+
+**Residual risk (accepted):** a second clone of the same branch — another
+machine, or CI — that resumes the same committed in-progress review entry is
+not detected. Today's batched mode already resumes automatically without such
+detection; branch ownership prevents the scenario in practice, and a machine
+token in the invocation entry would add state for nothing.
+
+**Migrating a run stopped under the old layout (any project):** a run that
+stopped before this release keeps its documents at the old flat paths, and
+neither `orchestrate` nor `Resume orchestration` finds them there: the
+orchestrator stops at intake because the old spec or plan path is outside
+the layout, at the branch check because the branch exists but no
+orchestration log is found in the layout (only the spec was moved), or at
+resume because no orchestration log is found in the layout, and each of
+those stops points here. Move the documents by hand, then resume:
+
+1. Create `docs/superpowers-orchestrator/<date>-<slug>/` with the
+   sub-folders `specs/` and `plans/` — `<date>` is the run's start date and
+   `<slug>` its slug (the old file names minus the `YYYY-MM-DD-` prefix and,
+   for the spec, the `-design` suffix).
+2. `git mv` the spec and, when it exists, its `-review-log.md` sidecar into
+   `specs/`, dropping the date prefix from the file names
+   (`docs/specs/<date>-<slug>-design.md` becomes `specs/<slug>-design.md`).
+3. `git mv` the plan and, when it exists, its `-review-log.md` sidecar into
+   `plans/`, dropping the date prefix (`docs/plans/<date>-<slug>.md` becomes
+   `plans/<slug>.md`).
+4. `git mv` the open-decisions file, when present, into `plans/` as well
+   (`docs/plans/<date>-<slug>-open-decisions.md` becomes
+   `plans/<slug>-open-decisions.md`).
+5. `git mv` the orchestration log to the topic root as
+   `<slug>-orchestration-log.md`.
+6. Edit the orchestration log's `_Invocation` header `spec` path and its
+   `plan:` line, and the plan's `**Spec:**` header line, to the new paths.
+7. Commit, then `Resume orchestration for <new plan path>`.
+
+The code review log of a run stopped in Phase 4 is not migrated: under the
+old layout it lived in the untracked `.superpowers/reviews/` folder, and
+the new layout expects it under `<topic>/implementation/`. After migration
+a Phase 4 stop therefore re-runs the final code review instead of resuming
+it.
+
+**Post-migration manual step for this repository:** the orchestration run that
+implemented this change kept its own plan and orchestration log at
+`docs/plans/2026-08-25-artifact-layout.md` and
+`docs/plans/2026-08-25-artifact-layout-orchestration-log.md`, because moving
+either mid-run would have broken every later checkbox-tick commit. After the
+run ends, move them by hand:
+
+```bash
+# Task 19 Step 4 created only `.../2026-08-25-artifact-layout/specs`. `git mv`
+# fails with "No such file or directory" when the destination directory does
+# not exist, so create `plans/` first.
+mkdir -p docs/superpowers-orchestrator/2026-08-25-artifact-layout/plans
+git mv docs/plans/2026-08-25-artifact-layout.md \
+       docs/superpowers-orchestrator/2026-08-25-artifact-layout/plans/artifact-layout.md
+git mv docs/plans/2026-08-25-artifact-layout-review-log.md \
+       docs/superpowers-orchestrator/2026-08-25-artifact-layout/plans/artifact-layout-review-log.md
+git mv docs/plans/2026-08-25-artifact-layout-orchestration-log.md \
+       docs/superpowers-orchestrator/2026-08-25-artifact-layout/artifact-layout-orchestration-log.md
+```
+
+(Skip any line whose source file does not exist.)
+
 ## v7.2.0 — prior-art research grounds technology decisions
 
 Field report: design sessions picked libraries, hosted services, and
@@ -356,7 +502,7 @@ Batched Autonomous Mode: resumable, context-bounded plan execution.
 
 ### New Features
 
-**Batched Autonomous Mode (subagent-driven-development)** — Execute up to N plan tasks per session, each via a fresh subagent with full review gates, ending the batch when context pressure reaches 60% (measured live via the new `--pressure` CLI on the skill-activator hook, with a conservative 3-task fallback cap when measurement fails). Execution inside a batch is strictly sequential and fully autonomous: blockers and plan ambiguities end the batch early with a journaled question instead of a guess, superseding the interactive escalation paths. At batch end the orchestrator writes a handoff into `state.md` (100-line cap, no cumulative re-summarizing) and prints exact resume instructions; after `/clear`, "resume the plan" reconciles position from plan.md checkboxes + git (authoritative) against the state.md narrative, refuses to run past unanswered blocking questions, and starts the next batch. Plan-complete batches skip resume instructions and route to the final whole-branch review. Spec: `docs/specs/2026-07-06-sdd-batched-autonomous-mode-design.md`.
+**Batched Autonomous Mode (subagent-driven-development)** — Execute up to N plan tasks per session, each via a fresh subagent with full review gates, ending the batch when context pressure reaches 60% (measured live via the new `--pressure` CLI on the skill-activator hook, with a conservative 3-task fallback cap when measurement fails). Execution inside a batch is strictly sequential and fully autonomous: blockers and plan ambiguities end the batch early with a journaled question instead of a guess, superseding the interactive escalation paths. At batch end the orchestrator writes a handoff into `state.md` (100-line cap, no cumulative re-summarizing) and prints exact resume instructions; after `/clear`, "resume the plan" reconciles position from plan.md checkboxes + git (authoritative) against the state.md narrative, refuses to run past unanswered blocking questions, and starts the next batch. Plan-complete batches skip resume instructions and route to the final whole-branch review. Spec: `docs/superpowers-orchestrator/2026-07-06-sdd-batched-autonomous-mode/specs/sdd-batched-autonomous-mode-design.md`.
 
 **`--pressure` CLI on skill-activator** — `node hooks/skill-activator.js --pressure [cwd]` reports the current session's context pressure as JSON by reading the most recently modified session JSONL, reusing the v6.6.1 pressure-gate estimation. Prints `{"error":"unmeasurable"}` when no usable session data exists.
 

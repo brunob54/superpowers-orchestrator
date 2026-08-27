@@ -3,7 +3,7 @@
 #
 # Seeds a deliberately flawed spec, invokes the skill headlessly with N=2,
 # and asserts the review-log contract from
-# docs/specs/2026-07-19-multi-review-design.md:
+# docs/superpowers-orchestrator/2026-07-19-multi-review/specs/multi-review-design.md:
 #   (a) sidecar <doc-basename>-review-log.md exists with a Round 1 entry
 #   (b) doc modified OR all Critical/Important dispositions are rejections
 #   (c) log has a disposition line or an explicit no-findings verdict
@@ -21,8 +21,9 @@ source "$SCRIPT_DIR/test-helpers.sh"
 TEST_PROJECT=$(create_test_project)
 trap "cleanup_test_project '$TEST_PROJECT'" EXIT
 
-mkdir -p "$TEST_PROJECT/docs/specs"
-SPEC="$TEST_PROJECT/docs/specs/test-feature-design.md"
+TOPIC_DIR="$TEST_PROJECT/docs/superpowers-orchestrator/2026-08-25-test-feature"
+mkdir -p "$TOPIC_DIR/specs"
+SPEC="$TOPIC_DIR/specs/test-feature-design.md"
 cat > "$SPEC" << 'SPEC_EOF'
 # Test Feature Design
 
@@ -37,15 +38,25 @@ SPEC_SHA_BEFORE=$(shasum "$SPEC" | cut -d' ' -f1)
 
 PROMPT="Invoke the superpowers-orchestrator:multi-doc-review skill on the document $SPEC with N=2. Do not ask me any questions — use N=2 and proceed to completion."
 # Deliberately no doc-type statement: the spec's Testing Strategy requires this
-# test to exercise path-based inference (docs/specs/ -> spec); stating the type
-# would override inference per the skill's Parameters rule.
+# test to run the skill on a new-layout spec path (nearest segment specs/ ->
+# spec); stating the type would override inference per the skill's Parameters
+# rule. This test does not observe the inferred doc type — see the NOTE below.
+# NOTE: no assertion below actually observes the inferred type. The review log
+# records no doc type, and the lens names are identical for the spec, plan, and
+# general doc types, so the log this run produces is byte-compatible with a
+# "general" inference. The transcript captured below (output.txt) cannot make
+# up the difference either: `claude -p` here uses the default plain-text output
+# (no --verbose, no --output-format stream-json), so it holds only the
+# top-level agent's final printed message, not the reviewer subagent's prompt
+# text — there is nothing in it a grep could key on to confirm "spec" was
+# actually inferred rather than assumed.
 
 cd "$PLUGIN_DIR" && timeout 1800 claude -p "$PROMPT" \
     --permission-mode bypassPermissions \
     --add-dir "$TEST_PROJECT" \
     2>&1 | tee "$TEST_PROJECT/output.txt" || true
 
-LOG="$TEST_PROJECT/docs/specs/test-feature-design-review-log.md"
+LOG="$TOPIC_DIR/specs/test-feature-design-review-log.md"
 FAILURES=0
 
 if [ ! -f "$LOG" ]; then

@@ -22,8 +22,9 @@ Agent tool (general-purpose):
 
     - Do NOT invoke any skills from any plugin. Do NOT use the Skill tool.
     - Do NOT read any file whose name matches `*-review-log.md`.
-    - Do NOT read any other documents under `docs/specs/` or `docs/plans/`
-      — [DOC_SCOPE_RULE].
+    - Do NOT read any other documents under
+      `docs/superpowers-orchestrator/*/specs/` or
+      `docs/superpowers-orchestrator/*/plans/` — [DOC_SCOPE_RULE].
     - Do NOT inspect the git history of the target document (no `git log`,
       `git blame`, or `git show` on it).
     - You MAY read the rest of the repository to check the document's

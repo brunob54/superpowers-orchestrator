@@ -5,9 +5,10 @@ description: >
   from an approved spec: plan writing, N plan-review rounds, batched
   implementation, and N code-review rounds run autonomously, stopping only
   on major errors, ending before merge/PR. Triggers on: "orchestrate the
-  development", "orchestrate docs/specs/...", "run the whole pipeline
-  autonomously", "resume orchestration", "abandon orchestration". Requires
-  the Agent tool with nested dispatch (Claude Code only).
+  development", "orchestrate docs/superpowers-orchestrator/<date>-<slug>/specs/...",
+  "run the whole pipeline autonomously", "resume orchestration", "abandon
+  orchestration". Requires the Agent tool with nested dispatch (Claude Code
+  only).
 ---
 
 # Orchestrating Development
@@ -76,11 +77,47 @@ the same question batch below).
    `.superpowers/` are matched by the exclude file at
    `$(git rev-parse --git-path info/exclude)` (append missing lines). The
    literal `.git/info/exclude` path does not exist in a linked worktree.
-4. **Preconditions:** git repo; spec file exists; the computed plan path
-   and log path (step 7) do not already exist; `git status --porcelain`
-   empty EXCEPT the spec and its `<spec-basename>-review-log.md` sidecar
-   (brainstorming leaves them uncommitted). Any other dirt → stop and
-   report; never stash or commit the user's unrelated changes.
+4. **Preconditions:** git repo; spec file exists; **the spec path derives a
+   topic folder** (rule in the "Artifact Layout" section of
+   `skills/brainstorming/SKILL.md`) — a spec outside the layout, an old
+   flat-directory spec path included, is a pre-log stop: report the expected
+   location `docs/superpowers-orchestrator/<date>-<slug>/specs/<slug>-design.md`
+   — `<slug>` = the spec basename with `YYYY-MM-DD-`, `-design` and `.md`
+   stripped, each only if present, then normalized by the "Slug" rule in
+   the "Artifact Layout" section of `skills/brainstorming/SKILL.md` —
+   and tell the user to `git mv` the spec and, when it exists, its
+   `-review-log.md` sidecar there (plain `mv` followed by `git add` for a file
+   git does not track yet), naming both destination paths
+   (`specs/<slug>-design.md` and `specs/<slug>-design-review-log.md`). When
+   that spec belongs to a run that stopped under the pre-7.3.0 layout — a
+   plan or an orchestration log for it exists at the old flat paths (a
+   `<date>-<slug>.md` plan or a `<date>-<slug>-orchestration-log.md` log in
+   the former flat plans directory) — point
+   to the migration recipe in the v7.3.0 release note instead: it moves
+   every document of the run, not only the spec. The
+   orchestrator never moves files itself and never asks a question after
+   Phase 0. Then test the computed log path (step 7) FIRST, before the plan
+   path. The log exists → a prior orchestration of this slug. Do NOT stop
+   with a bare "already exists"; apply the recorded-spec comparison
+   here — read the spec path from the most recent `_Invocation` line that
+   records one (a resumed override line, `_Invocation <k> — … — resumed_`,
+   records no spec path — the per-parameter rule of Resume step 5):
+   recorded spec equals the invoked spec → report "prior run" and print
+   `Resume orchestration for <plan path>`; different or missing → report
+   "unrelated prior run with the same slug: rename the spec or clear the old
+   topic folder". Both outcomes stop (step 5 keeps the branch-exists cases).
+   Only when NO log exists and the computed plan path (step 7) exists →
+   stop with "plan exists without a log: remove or rename it". The order
+   matters: a run stopped after Phase 1 has both files and takes the log
+   branch above, so it is never given this bare stop.
+   Next, `git status --porcelain --untracked-files=all` empty EXCEPT the spec
+   and its `-review-log.md` sidecar under the topic folder's `specs/`
+   (brainstorming leaves them uncommitted). `--untracked-files=all` is
+   required: after brainstorming the topic folder is a **new untracked
+   directory**, and plain `git status --porcelain` collapses it to one line
+   (`?? docs/superpowers-orchestrator/<date>-<slug>/`), so neither file path
+   would appear. Any other dirt → stop and report; never stash or commit the
+   user's unrelated changes.
    **Prior-art intake check** — the deliberate, documented exception to
    the thin-sequencer rule: the orchestrator itself reads the spec body
    here, before any controller dispatch (it otherwise touches the spec
@@ -135,21 +172,30 @@ the same question batch below).
 
    Then re-run orchestration.
 5. **Branch:** create and switch to `feature/<slug>` from current HEAD.
-   `<slug>` = spec basename with `YYYY-MM-DD-` prefix and `-design` suffix
-   each stripped only if present. If the branch exists: locate the
-   existing orchestration log for that slug with the glob
-   `docs/plans/*-<slug>-orchestration-log.md` (its date prefix is the
-   PRIOR run's start date — never assume today's) and compare its
-   recorded spec path with the invoked spec — same spec → report "prior run", suggest the resume
-   prompt; different/missing → report "unrelated prior run with the same
-   slug", tell the user to rename the spec or clear the old branch. Stop
-   either way.
+   `<slug>` = the **topic folder's** basename minus its `YYYY-MM-DD-` prefix
+   — never derived from the spec basename. If the branch exists: locate the
+   existing orchestration log with the glob
+   `docs/superpowers-orchestrator/????-??-??-<slug>/<slug>-orchestration-log.md`.
+   Zero matches → stop with "branch feature/<slug> exists but no
+   orchestration log was found: rename the spec or delete the branch" (a
+   `git checkout -b` onto the existing branch fails, and switching to it
+   would run on a branch whose state was never checked; for a run stopped
+   under the pre-7.3.0 layout, follow the migration recipe in the v7.3.0
+   release note). Exactly one match → the recorded-spec comparison of step 4:
+   same spec → report "prior run", print
+   `Resume orchestration for <plan path>`; different/missing → report
+   "unrelated prior run with the same slug", tell the user to rename the spec
+   or clear the old branch. More than one match → stop with "ambiguous slug:
+   <folders>" (slug uniqueness is violated; the user must merge or rename
+   before any run). Stop in every case: only a branch that does not exist
+   yet is created.
 6. **Commit inputs:** if the spec/sidecar were dirty in step 4, commit them
    (`docs(spec): <slug> design`).
-7. **Log:** create `docs/plans/YYYY-MM-DD-<slug>-orchestration-log.md`
-   (start date) with the invocation header (format below), recording
-   BASE = `git rev-parse HEAD`. Commit it
-   (`chore(orchestration): <slug> log started`).
+7. **Log:** create `<topic folder>/<slug>-orchestration-log.md` — at the topic
+   root, **no date prefix**; each invocation entry inside carries its own
+   date — with the invocation header (format below), recording BASE =
+   `git rev-parse HEAD`. The header records the spec path and the plan path in
+   their new form. Commit it (`chore(orchestration): <slug> log started`).
 8. **Seed `state.md`:** the sections writing-plans seeds, plus
    `## Orchestration` (format below).
 
@@ -161,8 +207,7 @@ never ask the user anything.
 ## Phase 1 — Plan Writing
 
 Fill `./plan-writer-prompt.md` (spec path; output plan path
-`docs/plans/YYYY-MM-DD-<slug>.md`, same date and slug as the log) and
-dispatch. Expected return: `PLAN_READY <path> tasks=<T>` or
+`<topic folder>/plans/<slug>.md`) and dispatch. Expected return: `PLAN_READY <path> tasks=<T>` or
 `BLOCKED: <question>` (spec ambiguity → major error → stop). On success:
 commit the plan (`docs(plan): <slug> implementation plan`), append and
 commit the Phase 1 log entry.
@@ -226,8 +271,16 @@ recorded branch point, N_code, plan path, ledger path
 `REVIEW_DONE rounds=<r> outcome=<converged|cap> fixes=<n> unresolved=<n>
 user_decision=<n>` or `BLOCKED: <reason>`. `unresolved > 0` or
 `user_decision > 0` → major error → stop (the findings are journaled in
-the review log; point the stop entry there). On success: append and
+the review log; point the stop entry there and list the open items by
+their review-log ids — stop entry format below — so a resume prompt can
+answer them by id; Resume step 3 re-dispatches this phase with the
+answers in `[RESUME_ANSWER]`). On success: append and
 commit the Phase 4 log entry before Phase 5 begins.
+
+The filled `code-review-loop-prompt.md` passes `TOPIC_DIR` = the topic folder
+(absolute path) to the controller, which passes it on to `multi-code-review`.
+The controller's write scope therefore adds `<topic folder>/implementation/`.
+The open-decisions file is `<topic folder>/plans/<slug>-open-decisions.md`.
 
 ## Phase 5 — Completion
 
@@ -237,7 +290,8 @@ commit the Phase 4 log entry before Phase 5 begins.
 2. Append the completion marker to the log; commit.
 3. Report: tasks completed, batches run, plan-review rounds/outcome,
    code-review rounds/fixes/outcome, and the three log paths
-   (orchestration, plan review, `.superpowers/reviews/` code review).
+   (orchestration, plan review, and the code review log at
+   `<topic folder>/implementation/<slug>-review-log.md`).
 4. Invoke `finishing-a-development-branch` (interactive — merge/PR/keep/
    discard is the user's call).
 
@@ -246,10 +300,10 @@ commit the Phase 4 log entry before Phase 5 begins.
 ```
 # Orchestration Log — <slug>
 
-_Invocation 1 — YYYY-MM-DD — spec docs/specs/<spec>.md — N_plan=<n> N_code=<n> cap=<n> — branch feature/<slug> — BASE <sha7>_
+_Invocation 1 — YYYY-MM-DD — spec docs/superpowers-orchestrator/<date>-<slug>/specs/<slug>-design.md — N_plan=<n> N_code=<n> cap=<n> — branch feature/<slug> — BASE <sha7>_
 
 ## Phase 1 — Plan — DONE — YYYY-MM-DD
-plan: docs/plans/<plan>.md — <T> tasks
+plan: docs/superpowers-orchestrator/<date>-<slug>/plans/<slug>.md — <T> tasks
 
 ## Phase 2 — Plan review — rounds <r> — <converged|cap> — unresolved 0
 
@@ -266,13 +320,17 @@ A stop writes instead:
 ```
 ## STOPPED — YYYY-MM-DD — phase <p> — <one-line reason>
 Detail: <path to the file holding the blocker detail>
-Resume: Resume orchestration for docs/plans/<plan>.md
+Resume: Resume orchestration for docs/superpowers-orchestrator/<date>-<slug>/plans/<slug>.md
 ```
 
 (For a Phase 1 stop the plan may not exist: the Resume line names the
 spec path instead, and resume re-dispatches the plan-writer with the
 answer the resume prompt must supply, carried in the template's
-`[RESUME_ANSWER]` placeholder.) Skipped loops write the
+`[RESUME_ANSWER]` placeholder. For a Phase 4 stop, `Detail:` names the
+review log and is followed by one line per open item —
+`Open: [<id>] <user-decision|unresolved> — <summary>`, `<id>` as in the
+review log — so the resume prompt can answer each item by id.) Skipped
+loops write the
 `skipped (N_x=0)` line shapes from Phase 0. Round-by-round detail lives
 in the sub-skills' own logs — never duplicate it here. Commit the log at
 every boundary: Phase 0, after Phases 1–2, after each batch, after
@@ -288,7 +346,7 @@ Rewrite the plan-execution sections at every boundary (SDD's shape, cap
 
 ```
 ## Orchestration
-Spec: docs/specs/<spec>.md  Plan: docs/plans/<plan>.md
+Spec: <topic folder>/specs/<slug>-design.md  Plan: <topic folder>/plans/<slug>.md
 Params: N_plan=<n> N_code=<n> cap=<n>  Branch: feature/<slug>  BASE: <sha7>
 Position: phase <p>[, next batch tasks <i>–<j>]
 ```
@@ -297,25 +355,79 @@ Position: phase <p>[, next batch tasks <i>–<j>]
 
 Trigger: `Resume orchestration for <plan-or-spec path>`.
 
-0. Derive `feature/<slug>` from the named path; verify the branch exists
-   (else stop — nothing to resume) and check it out; re-ensure the exclude
-   entries (Phase 0 step 3) FIRST, then require `git status --porcelain`
-   empty (else stop).
+0. Derive the **topic folder** from the named path (same rule as Phase 0)
+   — a path outside the layout, an old flat-directory plan path included, is
+   a stop: for a run stopped under the pre-7.3.0 layout, follow the
+   migration recipe in the v7.3.0 release note — then `feature/<slug>` from
+   the topic folder's basename minus its date prefix; verify the branch
+   exists (else stop — nothing to resume) and check it out; re-ensure the
+   exclude entries (Phase 0 step 3) FIRST, then require
+   the clean-tree check to pass:
+
+   ```bash
+   git status --porcelain -- ':(top)' ':(top,exclude)<topic>/implementation/*'
+   ```
+
+   must be empty (else stop). The exclusion mirrors multi-code-review's
+   pipeline-mode precondition: an interruption between a round's first log
+   write and its `chore(review)` commit — a controller that died, a commit
+   that failed — leaves `implementation/` modified or untracked. Without the
+   exclusion, resume would stop with "dirty tree" before the review loop's own
+   resume rule could run. The resumed loop's next `chore(review)` commit picks
+   those files up.
 1. Read the orchestration log — locate it with
-   `docs/plans/*-<slug>-orchestration-log.md` (its date prefix is the
-   run's start date, not today's) — authoritative for parameters and last
+   `docs/superpowers-orchestrator/????-??-??-<slug>/<slug>-orchestration-log.md`;
+   more than one match is an "ambiguous slug" stop — authoritative for parameters and last
    completed phase; `state.md` (narrative, may be one step stale); the
    plan's checkboxes (if it exists); recent `git log`. A required
    artifact missing — no log matches the glob, or the log records a
    completed Phase 1 but the plan it names is gone — is a major error:
-   stop, report what is missing, and suggest starting a fresh
-   orchestration; never reconstruct it.
+   stop and report what is missing; for a run stopped under the pre-7.3.0
+   layout — its log and plan sit at the old flat paths, outside the glob —
+   follow the migration recipe in the v7.3.0 release note; otherwise start
+   a fresh orchestration. Never reconstruct it.
 2. Log ends with `_Completed_` → report that and stop.
 3. Log ends with `## STOPPED` carrying a blocking question the resume
-   prompt does not answer → present the question and stop. When the
+   prompt does not answer → present the question and stop (Phase 4 has a
+   second trigger, below). When the
    resume prompt does answer it, re-dispatch the stopped phase's
    controller with that answer in the template's `[RESUME_ANSWER]`
-   placeholder — the only channel for it.
+   placeholder — the only channel for it. Phases whose stop carries
+   answerable items: Phase 1 (the plan-writer's BLOCKED question), Phase 3
+   (a batch controller's BLOCKED task), and Phase 4 — its stop lists the
+   review log's open items by id, and the resume prompt answers them by
+   id (for example `[I2]: plan governs; [C3]: fix it`); the code-review-loop
+   controller records each answer as `decided (user): <answer>` in the
+   review log's LATEST `_Invocation` entry and re-evaluates the counts
+   (template Deviation 5). A Phase 4 stop has a second resume trigger:
+   compute the effective HEAD (multi-code-review's Pipeline rule 4) and
+   compare it with the completion-marker HEAD of that latest entry. When
+   the effective HEAD has moved past the marker — code commits landed
+   after the stop — re-dispatch Phase 4 whether or not the resume prompt
+   carries answers: the controller ALWAYS starts a new invocation over the
+   new content, journaling the addendum first when answers are present. An
+   answer never requests a re-review by itself. If no review log exists at
+   `<topic folder>/implementation/<slug>-review-log.md` — a run migrated
+   from the pre-7.3.0 layout and stopped in Phase 4: its old log was
+   untracked and is not migrated — re-dispatch Phase 4 without answers
+   (the stop's open items belong to that old log; answers the resume
+   prompt gives are not applicable and are reported back as such); the
+   controller starts invocation 1. A latest review-log entry WITHOUT a
+   completion marker is an interrupted invocation: re-dispatch Phase 4 —
+   with the answers when the resume prompt gives them — and the controller
+   resumes that entry at its next round (template Deviations 2 and 5);
+   nothing is journaled twice. This case takes precedence over "present
+   the question and stop", because the ids in the old `## STOPPED` entry
+   may already be `decided (user)`. Present the question and stop ONLY
+   when the review log exists, its latest entry carries a completion
+   marker, the effective HEAD is unchanged, the resume prompt gives no
+   answers AND at least one of the stop's open ids has no
+   `decided (user)` line in that entry (a re-dispatch in that state would
+   return BLOCKED — never a silent no-op). When every open id is already
+   decided there — a resume from another session after the addendum
+   journaled the answers and re-evaluated the counts — re-dispatch Phase 4
+   without answers: the controller synthesizes the return from the log
+   (template Deviation 2); already-decided ids are never re-presented.
 4. Otherwise continue at the first incomplete phase/batch. Your own log's
    phase entries are the primary re-run guard; the sub-skills' logs are
    the backstop.
@@ -349,7 +461,8 @@ unexpected dirty tree at a boundary; a `### Task N` heading with zero
 checkboxes (malformed plan, Phase 3 step 1); a log or plan commit that
 fails at a phase boundary (report the git output verbatim); resume
 finding a required artifact missing (orchestration log deleted, plan
-moved) — report it and suggest starting a fresh orchestration rather
+moved) — report it and, for a pre-7.3.0 run, point to the migration
+recipe, otherwise suggest starting a fresh orchestration, rather
 than reconstructing state. Remaining failure modes surface inside the
 controllers and are handled there by the consumed skills' own rules.
 

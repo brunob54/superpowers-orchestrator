@@ -119,10 +119,10 @@ approve; the rest run autonomously:
 
 ```mermaid
 flowchart TD
-    A[Feature request] --> B["Design — brainstorming<br/>spec in docs/specs/"]
+    A[Feature request] --> B["Design — brainstorming<br/>spec in &lt;topic&gt;/specs/"]
     B --> B2["spec review rounds<br/>(multi-doc-review)"]
     B2 --> G1{"GATE: you approve<br/>the spec"}
-    G1 --> C["Plan — writing-plans<br/>plan in docs/plans/"]
+    G1 --> C["Plan — writing-plans<br/>plan in &lt;topic&gt;/plans/"]
     C --> C2["plan review rounds<br/>(multi-doc-review)"]
     C2 --> G2{"GATE: you approve<br/>the plan"}
     G2 --> D["Execute — subagent-driven-development<br/>(batched by default) or executing-plans"]
@@ -134,6 +134,27 @@ flowchart TD
     G3 --> H["finishing-a-development-branch"]
 ```
 
+### Where the documents live
+
+Every document of one feature lives in one **topic folder**:
+
+```
+docs/superpowers-orchestrator/<YYYY-MM-DD>-<slug>/
+  specs/<slug>-design.md                 the design, plus its review log
+  plans/<slug>.md                        the plan, plus its review log
+  implementation/<slug>-review-log.md    the code review log and fix reports
+  <slug>-orchestration-log.md            the orchestration run's record
+```
+
+The date is the day the design was created and never changes afterwards. The
+topic folder is always anchored at the **repository root** — a sub-project
+inside a monorepo gets its documents at the monorepo root, and moving the
+folder elsewhere makes every document in it "outside the layout", which stops
+the pipeline with a message naming the expected location.
+
+Stage folders appear on first write: a topic that stopped at the spec has only
+`specs/`.
+
 The middle of the pipeline (plan → execute → review) is exactly what §4's
 orchestration automates end to end; this section is the interactive version,
 where you're present at each gate.
@@ -143,7 +164,7 @@ where you're present at each gate.
 Say what you want ("build X", "add a feature that...", "I want to change...")
 and the router lands you in `brainstorming`. It inspects the project, asks
 its questions **in one batch** (multiple-choice where possible), and writes a
-spec to `docs/specs/YYYY-MM-DD-<name>-design.md` covering scope, non-goals,
+spec to `docs/superpowers-orchestrator/YYYY-MM-DD-<slug>/specs/<slug>-design.md` covering scope, non-goals,
 and the design itself. The spec then passes a self-review and — for
 non-trivial work — N independent `multi-doc-review` rounds before reaching
 you.
@@ -169,7 +190,7 @@ Two rules worth internalizing:
 ### Stage 2 — Plan (`writing-plans`)
 
 After spec approval, `writing-plans` decomposes it into
-`docs/plans/YYYY-MM-DD-<name>.md`: tasks with checkboxes, each broken into
+`docs/superpowers-orchestrator/YYYY-MM-DD-<slug>/plans/<slug>.md`: tasks with checkboxes, each broken into
 steps of one action apiece (~2–5 minutes), with the actual file contents and
 exact verification commands an engineer needs — placeholders like "update
 logic" are treated as plan failures. Test-driven development (TDD) ordering
@@ -224,7 +245,7 @@ batches that survive session boundaries. You can also start it directly on
 any existing plan:
 
 ```
-implement the next 5 tasks of docs/plans/2026-08-08-my-feature.md
+implement the next 5 tasks of docs/superpowers-orchestrator/2026-08-04-my-feature/plans/my-feature.md
 ```
 
 A batch executes up to the **task cap** (your stated count, else 3) fully
@@ -234,7 +255,7 @@ the boundary it writes a handoff into `state.md` (position, decisions, open
 issues, and the exact resume prompt), tells you to `/clear`, and you paste:
 
 ```
-Resume the plan at docs/plans/2026-08-08-my-feature.md (batched autonomous mode)
+Resume the plan at docs/superpowers-orchestrator/2026-08-04-my-feature/plans/my-feature.md (batched autonomous mode)
 ```
 
 Fresh session, cached-context costs gone, next batch begins. A context-
@@ -276,7 +297,7 @@ These are the actual dialogs:
 
 **Execution handoff** (end of `writing-plans`, after plan approval):
 
-> Plan saved to `docs/plans/<filename>.md`. Ready to execute with
+> Plan saved to `docs/superpowers-orchestrator/<date>-<slug>/plans/<slug>.md`. Ready to execute with
 > **[Subagent-Driven / Inline Execution]** (`<N>` tasks).
 >
 > Recommended: start execution in a fresh session (`/clear` in Claude Code)
@@ -285,7 +306,7 @@ These are the actual dialogs:
 > plan file and
 > `state.md` carry everything execution needs. Then paste:
 >
-> `Use subagents in batched autonomous mode on docs/plans/<filename>.md`
+> `Use subagents in batched autonomous mode on docs/superpowers-orchestrator/<date>-<slug>/plans/<slug>.md`
 >
 > Or reply here to execute in this session, or say "inline" / "subagent"
 > to switch.
@@ -317,7 +338,7 @@ reconcile inconsistent state — anything suspicious is a stop, not a guess.
 
 ```mermaid
 flowchart TD
-    A["orchestrate the development of docs/specs/&lt;spec&gt;.md"] --> P0
+    A["orchestrate the development of docs/superpowers-orchestrator/&lt;date&gt;-&lt;slug&gt;/specs/&lt;slug&gt;-design.md"] --> P0
 
     subgraph INT1["🧑 Interactive — your only conversation"]
         P0["Phase 0 — one question batch:<br/>N_plan, N_code, batch cap,<br/>branch point + permissions confirm"]
@@ -348,7 +369,7 @@ Authoritative detail:
 
 ### Prerequisites
 
-- **An approved spec** in `docs/specs/` — usually produced by `brainstorming`
+- **An approved spec** in `docs/superpowers-orchestrator/<date>-<slug>/specs/` — usually produced by `brainstorming`
   (§3). Orchestration starts *from* a spec; it does not design one.
 - **Spec content, when it matches the prior-art trigger predicate** (§3):
   a "Prior art and alternatives" section, or the exact sentence "No
@@ -369,7 +390,7 @@ log live on disk, so nothing is lost, and the pipeline gets the full context
 window. Then paste:
 
 ```
-orchestrate the development of docs/specs/2026-08-04-my-feature-design.md
+orchestrate the development of docs/superpowers-orchestrator/2026-08-04-my-feature/specs/my-feature-design.md
 ```
 
 The spec approval gate at the end of `brainstorming` (§3) offers this same
@@ -402,10 +423,10 @@ The same batch asks for two confirmations:
 
 | Phase | What it does | Artifact |
 | --- | --- | --- |
-| 1 — Plan | Writes the implementation plan from the spec | `docs/plans/<date>-<slug>.md` |
+| 1 — Plan | Writes the implementation plan from the spec | `docs/superpowers-orchestrator/<date>-<slug>/plans/<slug>.md` |
 | 2 — Plan review | N independent review rounds, findings applied between rounds | plan review-log sidecar |
 | 3 — Implementation | Tasks in batches of ≤ cap; each task test-driven, reviewed, and committed with its checkbox ticked | commits on `feature/<slug>` |
-| 4 — Code review | N whole-branch review rounds with fixes applied | `.superpowers/reviews/` log |
+| 4 — Code review | N whole-branch review rounds with fixes applied | `<topic>/implementation/<slug>-review-log.md`, committed |
 | 5 — Completion | Verifies every checkbox and a clean tree, then hands over | final report |
 
 Each phase runs in a fresh controller subagent; the orchestrator itself stays
@@ -415,16 +436,16 @@ what makes interrupted runs recoverable (§5).
 ### Watching progress
 
 The orchestration log is the run's visible record:
-`docs/plans/<date>-<slug>-orchestration-log.md`, committed at every boundary.
+`docs/superpowers-orchestrator/<date>-<slug>/<slug>-orchestration-log.md`, committed at every boundary.
 Tail it from another terminal:
 
 ```
 # Orchestration Log — my-feature
 
-_Invocation 1 — 2026-08-08 — spec docs/specs/2026-08-04-my-feature-design.md — N_plan=3 N_code=3 cap=3 — branch feature/my-feature — BASE a1b2c3d_
+_Invocation 1 — 2026-08-08 — spec docs/superpowers-orchestrator/2026-08-04-my-feature/specs/my-feature-design.md — N_plan=3 N_code=3 cap=3 — branch feature/my-feature — BASE a1b2c3d_
 
 ## Phase 1 — Plan — DONE — 2026-08-08
-plan: docs/plans/2026-08-08-my-feature.md — 7 tasks
+plan: docs/superpowers-orchestrator/2026-08-04-my-feature/plans/my-feature.md — 7 tasks
 
 ## Phase 2 — Plan review — rounds 2 — converged — unresolved 0
 
@@ -484,7 +505,7 @@ Two interruption shapes, one resume phrase:
 Either way:
 
 ```
-Resume orchestration for docs/plans/2026-08-08-my-feature.md
+Resume orchestration for docs/superpowers-orchestrator/2026-08-04-my-feature/plans/my-feature.md
 ```
 
 Resume checks out the feature branch, reads the log (authoritative for
@@ -520,7 +541,7 @@ how much is redone differs:
 To tear down a wedged or superseded run instead of resuming it:
 
 ```
-Abandon orchestration for docs/plans/2026-08-08-my-feature.md
+Abandon orchestration for docs/superpowers-orchestrator/2026-08-04-my-feature/plans/my-feature.md
 ```
 
 (confirms once, then deletes the feature branch — refusing if it's merged or
@@ -532,7 +553,7 @@ Batches end with a handoff written to `state.md` containing verbatim resume
 instructions. After `/clear` (or a crash), paste:
 
 ```
-Resume the plan at docs/plans/2026-08-08-my-feature.md (batched autonomous mode)
+Resume the plan at docs/superpowers-orchestrator/2026-08-04-my-feature/plans/my-feature.md (batched autonomous mode)
 ```
 
 Resume reads `state.md`, then **reconciles against the authoritative
@@ -569,7 +590,9 @@ The same file-based durability serves everyday work:
    silently reconciles your working tree.
 2. **`state.md` and `.superpowers/` are git-excluded.** They survive a crash
    on the same machine, but not a fresh clone or `git clean -fdx`. The
-   committed artifacts (plan, checkboxes, logs) are the source of truth;
+   committed artifacts (plan, checkboxes, the orchestration log, and — for a
+   pipeline run — everything under the topic's `implementation/`) are the
+   source of truth;
    anything excluded that's lost is reported, never silently reconstructed.
 
 ## 6. "How does it remember?" — the memory system
