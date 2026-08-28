@@ -18,3 +18,8 @@ Resumed 2026-08-28 — plan and spec corrected at defb515 (self-consistent M=3 e
 Detail: .superpowers/sdd/task-2-report.md, .superpowers/sdd/task-3-report.md
 Resume: Resume orchestration for docs/superpowers-orchestrator/2026-08-27-reviewers-per-lens/plans/reviewers-per-lens.md
 Resumed 2026-08-28 — plan corrected at 5a868da (concrete-line grep; "of the Triage step"; Global Constraints names the annotation-free lines); batch 1 re-dispatched for tasks 2–3
+
+## Phase 3 — Batch 1 (tasks 1–3) — COMPLETE — commits b42545d..90c30a7
+- Task 1: complete — b42545d..e97da66 — session tag hook + unit test
+- Task 2: complete — ab942a5..135c1fb — multi-doc-review: M reviewers, consolidation, log format (one fix round)
+- Task 3: complete — 26845fb..73e9510 — multi-code-review: M reviewers, consolidation, carried findings, log format
