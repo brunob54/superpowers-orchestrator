@@ -993,3 +993,28 @@ $ bash tests/codex/run-unit-tests.sh
 
 $ bash -n tests/claude-code/test-helpers.sh && echo "SYNTAX OK"
 SYNTAX OK
+
+## Round 6 fixes — 2026-08-28
+
+### Findings addressed
+- [M2] tests/claude-code/run-skill-tests.sh:65 and docs/superpowers-orchestrator/2026-08-27-reviewers-per-lens/plans/reviewers-per-lens.md:1871 — test-multi-doc-review.sh runs two `claude -p` cases, each wrapped in `timeout 1700` (lines 90 and 165), for a worst case near 3400 seconds plus CLI start-up, project seeding, and assertion overhead; the advised outer `--timeout 3600` in run-skill-tests.sh's help text left only about 200 seconds of headroom, so a run hitting the outer timeout first would be killed before any `FAIL(f)`/`FAIL(f2)` assertion prints. Raised the advised outer timeout from 3600 to 4200 seconds in both places: the help line in tests/claude-code/run-skill-tests.sh and the matching verification command in the plan file, giving the two 1700 s inner budgets about 800 seconds of headroom. No other line in either file was changed; the inner `timeout 1700` values and all plan checkboxes were left untouched.
+
+### Verification
+$ bash -n tests/claude-code/run-skill-tests.sh
+exit: 0
+
+$ bash tests/claude-code/run-skill-tests.sh --help
+(...)
+Integration Tests (use --integration):
+  test-subagent-driven-development-integration.sh  Full workflow execution
+  test-multi-doc-review.sh  Multi-doc-review log contract on a seeded flawed spec (use --timeout 4200)
+  test-multi-code-review.sh  Multi-code-review loop contract on a seeded defective branch (use --timeout 1800)
+  test-researching-prior-art.sh  Merged-report contract for the prior-art research skill (use --timeout 1800)
+  test-researching-prior-art-gate.sh  Brainstorming research-gate message contract (use --timeout 1800)
+exit: 0
+
+$ grep -rn "timeout 3600" tests/claude-code/ docs/superpowers-orchestrator/2026-08-27-reviewers-per-lens/plans/
+(no output)
+exit: 1
+
+Commit: 0a1c318c70240535841e295544cef65fbfd10a76 "review fixes (reviewers-per-lens, round 6)"

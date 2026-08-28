@@ -121,3 +121,14 @@ _Carried findings source: `.superpowers/sdd/progress.md` `Minor:` lines (14 item
 - [K12] carried — .superpowers/sdd/task-6-report.md per-file diffstat numbers wrong (ship-as-is: untracked work artifact, totals correct)
 - [K13] carried — README.md first use of M does not expand it (ship-as-is: already fixed on this branch)
 - [K14] carried — docs/REVIEW-PROCESS-COMPARISON.md eval item does not restate the 1–5 range (ship-as-is: that line describes a hypothetical evaluation design, not the parameter contract)
+
+## Round 6 — Adversarial red-team — opus
+**Reviewer verdict:** 0 Critical, 2 Important, 4 Minor
+**Converged:** no
+### Dispositions
+- [I1] user-decision — the Agent call's `description` reaches the reviewer subagent's own context on this harness, so the M ≥ 2 suffix `(reviewer <j>/<m>)` tells each reviewer that other reviewers exist and leaks M, contradicting the stated invariant (plan-mandated: the plan's design summary and both reviewer-template steps mandate that suffix and the sentence "the description is not part of the prompt" verbatim)
+- [I2] user-decision — the round-1 carried-finding rule escalates to `user-decision` when ANY reviewer recommends it, so a larger M raises the probability that an unattended orchestration run stops on a Minor carried item (1 − (1 − p)^M); the documentation presents M as a quality knob with a token cost only (plan-mandated: the plan fixes "disagreement → most cautious (`user-decision` > `fix-before-merge` > `ship-as-is`)")
+- [M1] carried — the Carried Findings Triage output shape carries no item ids, so with M ≥ 2 the controller must match items across reports by free text; adding ids would change the reviewer template beyond the plan's "the reviewer prompt bodies and placeholders are untouched"
+- [M2] fixed — the advised outer timeout for the doc-review behavioural test raised from 3600 s to 4200 s in the runner help text and in the plan's Task 6 Step 7 verification command, leaving about 800 s of headroom over the two 1700 s inner budgets → 0a1c318
+- [M3] carried — a bare `<m> reviewers` (for example "review the branch 3 times with 2 reviewers") matches no accepted M form and is then read as N; the plan fixes the four accepted forms exactly
+- [M4] carried — a round is clean only at u = M, so a systematically unusable reviewer disables early exit and a larger M makes a clean round less likely; the plan fixes the u = M condition
