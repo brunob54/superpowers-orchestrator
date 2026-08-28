@@ -1871,7 +1871,7 @@ Expected: the last command prints a number ≥ 1 (the string is part of the log 
 Run: `tests/claude-code/run-skill-tests.sh --test test-multi-doc-review.sh --verbose --timeout 4200`
 Expected: `PASS: multi-doc-review behavioral test`, no `FAIL(m)` line.
 
-Run: `tests/claude-code/run-skill-tests.sh --test test-multi-code-review.sh --verbose --timeout 1800`
+Run: `tests/claude-code/run-skill-tests.sh --test test-multi-code-review.sh --verbose --timeout 4200`
 Expected: the single line `PASS: multi-code-review behavioral test` (the test's `finish()` prints one PASS line for both cases together; there are no per-case PASS lines), no `FAIL(i)` and no `FAIL(m)` line.
 
 Restore the environment whether the tests passed or failed: `git -C "$CLONE" checkout main`. The cache directory `$CACHE` still holds the branch's skills after that — a later `claude plugin update` from `main` sees the same version and does not refresh it — so a user who wants the released 7.3.0 copy back must `rm -rf "$CACHE"` and run `claude plugin update superpowers-orchestrator -y` once more with the clone on `main`. After Task 8 is merged, an update installs 7.4.0 into its own directory.

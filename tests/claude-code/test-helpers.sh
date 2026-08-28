@@ -233,6 +233,8 @@ export -f create_test_plan
 export -f check_no_reviewers_per_lens_setting
 
 # assert_round_reviewers <log> <round> <m> <findings>
+# <m> must be a single digit, 1-9: the function builds character classes like
+# "[1-${m}]" from it, which is correct only for a single digit.
 # <findings> is 'required' or 'optional' and is NOT optional itself: it says
 # whether this round must have consolidated at least one finding.
 #   - 'required' — the caller seeded defects the round is expected to find.
@@ -270,6 +272,14 @@ assert_round_reviewers() {
     # prevent, and would also let an un-updated three-argument call through.
     if [ "$findings" != "required" ] && [ "$findings" != "optional" ]; then
         echo "FAIL(m): round $round: assert_round_reviewers needs a fourth argument, 'required' or 'optional' (got '${findings}')"
+        return 1
+    fi
+
+    # [M4] The character classes built below from $m (e.g. "[1-${m}]") are
+    # correct only for a single digit: with m=10 the class silently becomes
+    # "[1-1]0" and the checks change meaning instead of failing loudly.
+    if ! [[ "$m" =~ ^[1-9]$ ]]; then
+        echo "FAIL(m): round $round: assert_round_reviewers needs a single-digit m, 1-9 (got '${m}')"
         return 1
     fi
     entry=$(awk -v r="$round" '
@@ -325,6 +335,23 @@ assert_round_reviewers() {
         echo "FAIL(m): round $round: $distinct_sources distinct source ids in annotations, Sources mapped says ${k_total:-none}"
         failures=$((failures+1))
     fi
+
+    # [M3] Per-line check: the agreement count '<a>' in ' ← <a>/<m>: ' must
+    # equal the number of comma-separated source ids listed after the colon
+    # on that same line. The distinct-token/k comparison above catches a
+    # wrong total across the whole round but not a single line like
+    # '← 2/2: r1:C1' (agreement count 2, one source id).
+    while IFS= read -r annotated_line; do
+        [ -z "$annotated_line" ] && continue
+        local a ids id_count
+        a=$(printf '%s' "$annotated_line" | sed -nE "s/.* ← ([0-9]+)\/${m}: .*/\1/p")
+        ids=$(printf '%s' "$annotated_line" | sed -nE "s/.* ← [0-9]+\/${m}: (.*)\$/\1/p")
+        id_count=$(printf '%s' "$ids" | awk -F', ' '{ print NF }')
+        if [ -n "$a" ] && [ "$a" != "$id_count" ]; then
+            echo "FAIL(m): round $round: disposition line's agreement count $a does not match its $id_count listed source id(s): $annotated_line"
+            failures=$((failures+1))
+        fi
+    done < <(printf '%s\n' "$entry" | grep -E "$annotation_re" || true)
 
     if [ -n "$sources_line" ] && [ "$k_total" = "0" ]; then
         if [ "$findings" = "required" ]; then

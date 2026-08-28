@@ -381,6 +381,14 @@ else
         echo "FAIL(m1): no '## Round 1 — ' entry extracted"
         FAILURES=$((FAILURES+1))
     fi
+    # The seeded defective branch is a legitimate precondition for round 1 to
+    # consolidate at least one finding. Without this check, a round 1 that
+    # consolidated nothing at all would pass all four absence checks below
+    # while verifying nothing about the M=1 disposition format.
+    if ! printf '%s\n' "$ROUND1_M1" | grep -qE '^- \[[CIM][0-9]+\] '; then
+        echo "FAIL(m1): M=1 round 1 consolidated no finding — the absence checks below verify nothing"
+        FAILURES=$((FAILURES+1))
+    fi
     if printf '%s\n' "$ROUND1_M1" | grep -q '^\*\*Reviewers:\*\*'; then
         echo "FAIL(m1): M=1 round 1 has a '**Reviewers:**' line — must be absent for the default configuration"
         FAILURES=$((FAILURES+1))

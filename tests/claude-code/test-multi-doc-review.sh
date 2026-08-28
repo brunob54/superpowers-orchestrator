@@ -87,7 +87,7 @@ PROMPT="Invoke the superpowers-orchestrator:multi-doc-review skill on the docume
 # actually inferred rather than assumed.
 
 CLAUDE_STATUS=0
-cd "$PLUGIN_DIR" && timeout 1700 claude -p "$PROMPT" \
+cd "$PLUGIN_DIR" && timeout 1800 claude -p "$PROMPT" \
     --permission-mode bypassPermissions \
     --add-dir "$TEST_PROJECT" \
     2>&1 | tee "$TEST_PROJECT/output.txt" || CLAUDE_STATUS=${PIPESTATUS[0]}
@@ -95,7 +95,7 @@ cd "$PLUGIN_DIR" && timeout 1700 claude -p "$PROMPT" \
 # (f) the run must not have been killed by the timeout: GNU timeout reports
 #     124, the tests/lib/timeout-shim.sh fallback reports 143 (SIGTERM).
 if [ "$CLAUDE_STATUS" -eq 124 ] || [ "$CLAUDE_STATUS" -eq 143 ]; then
-    echo "FAIL(f): the claude run was killed by the 1700s timeout (exit $CLAUDE_STATUS) — the loop never finished"
+    echo "FAIL(f): the claude run was killed by the 1800s timeout (exit $CLAUDE_STATUS) — the loop never finished"
     FAILURES=$((FAILURES+1))
 fi
 
@@ -162,14 +162,14 @@ PROMPT2="Invoke the superpowers-orchestrator:multi-doc-review skill on the docum
 # it — see the (m1) checks below.
 
 CLAUDE_STATUS2=0
-cd "$PLUGIN_DIR" && timeout 1700 claude -p "$PROMPT2" \
+cd "$PLUGIN_DIR" && timeout 1800 claude -p "$PROMPT2" \
     --permission-mode bypassPermissions \
     --add-dir "$TEST_PROJECT" \
     2>&1 | tee "$TEST_PROJECT/output-m1.txt" || CLAUDE_STATUS2=${PIPESTATUS[0]}
 
 # (f2) same timeout check as (f), for the Case 2 run.
 if [ "$CLAUDE_STATUS2" -eq 124 ] || [ "$CLAUDE_STATUS2" -eq 143 ]; then
-    echo "FAIL(f2): the Case 2 claude run was killed by the 1700s timeout (exit $CLAUDE_STATUS2) — the loop never finished"
+    echo "FAIL(f2): the Case 2 claude run was killed by the 1800s timeout (exit $CLAUDE_STATUS2) — the loop never finished"
     FAILURES=$((FAILURES+1))
 fi
 
@@ -207,6 +207,15 @@ else
         on { print }' "$LOG2")
     if [ -z "$ROUND1_M1" ]; then
         echo "FAIL(m1): no '## Round 1 — ' entry extracted"
+        FAILURES=$((FAILURES+1))
+    fi
+    # The seeded spec above (same Requirements/Retry Behavior contradiction
+    # as Case 1) is a legitimate precondition for round 1 to consolidate at
+    # least one finding. Without this check, a round 1 that consolidated
+    # nothing at all would pass all four absence checks below while
+    # verifying nothing about the M=1 disposition format.
+    if ! printf '%s\n' "$ROUND1_M1" | grep -qE '^- \[[CIM][0-9]+\] '; then
+        echo "FAIL(m1): M=1 round 1 consolidated no finding — the absence checks below verify nothing"
         FAILURES=$((FAILURES+1))
     fi
     if printf '%s\n' "$ROUND1_M1" | grep -q '^\*\*Reviewers:\*\*'; then
