@@ -297,7 +297,7 @@ git commit -m "feat(hooks): emit the reviewers-per-lens session tag from SUPERPO
 
 **Does NOT cover:** asking the user for M (never); a majority vote among reviewers; passing agreement counts to any fixer; file-based report transport; prompt diversity between the M reviewers; the reviewer prompt body (untouched).
 
-- [ ] **Step 1: Frontmatter description and slash form**
+- [x] **Step 1: Frontmatter description and slash form**
 
 In `skills/multi-doc-review/SKILL.md`, replace:
 
@@ -322,7 +322,7 @@ with:
   /multi-doc-review <doc-path> [N] [M=<m>].
 ```
 
-- [ ] **Step 2: Parameters — N reads after M; new M bullet**
+- [x] **Step 2: Parameters — N reads after M; new M bullet**
 
 Replace:
 
@@ -366,7 +366,7 @@ with:
   per round.
 ```
 
-- [ ] **Step 3: Procedure — invocation note records M**
+- [x] **Step 3: Procedure — invocation note records M**
 
 Replace:
 
@@ -380,7 +380,7 @@ with:
 target document and append an invocation note: date, N, M, and invoker
 ```
 
-- [ ] **Step 4: Procedure — per-round steps with M reviewers and consolidation**
+- [x] **Step 4: Procedure — per-round steps with M reviewers and consolidation**
 
 Replace (steps 1–5, verbatim from the current file):
 
@@ -493,7 +493,7 @@ with:
    than with M = 1 — that is the intended effect.
 ```
 
-- [ ] **Step 5: Review Log Format**
+- [x] **Step 5: Review Log Format**
 
 Replace (the whole current block and the two sentences after it):
 
@@ -608,7 +608,7 @@ invocation note (which carries `M=` like every other); failed rounds get
 `inconclusive` entries.
 ````
 
-- [ ] **Step 6: Error Handling**
+- [x] **Step 6: Error Handling**
 
 Replace:
 
@@ -639,7 +639,7 @@ with:
   the procedure is unchanged.
 ```
 
-- [ ] **Step 7: Reviewer template header and `description` suffix**
+- [x] **Step 7: Reviewer template header and `description` suffix**
 
 In `skills/multi-doc-review/reviewer-prompt.md`, replace:
 
@@ -671,7 +671,7 @@ with:
                the description is not part of the prompt)
 ```
 
-- [ ] **Step 8: Verify**
+- [x] **Step 8: Verify**
 
 Run: `grep -c 'M=<m>' skills/multi-doc-review/SKILL.md`
 Expected: a number ≥ 3.
@@ -682,7 +682,7 @@ Expected: no output.
 Run: `grep -n '^\*\*Reviewers:\*\* M=3, usable 3/3$\|^\*\*Sources mapped:\*\* 4/4$' skills/multi-doc-review/SKILL.md`
 Expected: two matching lines (the M ≥ 2 example of the Review Log Format section).
 
-- [ ] **Step 9: Commit**
+- [x] **Step 9: Commit**
 
 ```bash
 git add skills/multi-doc-review/SKILL.md skills/multi-doc-review/reviewer-prompt.md
