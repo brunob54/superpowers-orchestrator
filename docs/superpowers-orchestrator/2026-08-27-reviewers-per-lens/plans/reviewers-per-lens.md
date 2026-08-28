@@ -74,7 +74,7 @@ Edit notation used below: "replace A with B" means an exact-string replacement i
 
 **Does NOT cover:** the Codex adapter `hooks/codex/session-start-adapter.js` (no Codex consumer of the tag exists); a separate Cursor change (Cursor runs this same bash script); values outside 1–5 (they produce no tag — a silent fallback, documented in Task 7); making a changed value take effect without restarting the CLI.
 
-- [ ] **Step 1: Write the failing unit test**
+- [x] **Step 1: Write the failing unit test**
 
 Create `tests/codex/test-session-start-reviewers-tag.sh` with this content:
 
@@ -162,7 +162,7 @@ echo "  ${PASS} passed, ${FAIL} failed"
 [ "$FAIL" -eq 0 ]
 ```
 
-- [ ] **Step 2: Register the test in the fast unit-test entry point**
+- [x] **Step 2: Register the test in the fast unit-test entry point**
 
 In `tests/codex/run-unit-tests.sh`, replace:
 
@@ -199,12 +199,12 @@ run_test "session-start-adapter" "${SCRIPT_DIR}/test-session-start-adapter.js"
 run_test "session-start (reviewers-per-lens tag)" "${SCRIPT_DIR}/test-session-start-reviewers-tag.sh" bash
 ```
 
-- [ ] **Step 3: Run the test to verify it fails**
+- [x] **Step 3: Run the test to verify it fails**
 
 Run: `bash tests/codex/test-session-start-reviewers-tag.sh`
 Expected: the header line `session-start: <reviewers-per-lens> tag`, then the line `  FAIL - SUPERPOWERS_REVIEWERS_PER_LENS=3 does not end the context with <reviewers-per-lens>3</reviewers-per-lens>` (two leading spaces), then five `  ok   - …` lines, then `  5 passed, 1 failed`, exit status 1.
 
-- [ ] **Step 4: Implement the hook change (three placements)**
+- [x] **Step 4: Implement the hook change (three placements)**
 
 Placement 1 — with the content blocks, before the `escape_for_json` definition. In `hooks/session-start`, replace:
 
@@ -267,7 +267,7 @@ ${known_issues_escaped}${context_snapshot_escaped}${reviewers_escaped}"
 
 (That string occurs once, at the end of the single-line `session_context=` assignment.)
 
-- [ ] **Step 5: Run the tests to verify they pass**
+- [x] **Step 5: Run the tests to verify they pass**
 
 Run: `bash tests/codex/test-session-start-reviewers-tag.sh`
 Expected: six `ok` lines, `6 passed, 0 failed`, exit status 0.
@@ -278,7 +278,7 @@ Expected: the new suite `── session-start (reviewers-per-lens tag)` listed, 
 Run: `bash -n hooks/session-start`
 Expected: no output (syntax valid).
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add hooks/session-start tests/codex/test-session-start-reviewers-tag.sh tests/codex/run-unit-tests.sh
