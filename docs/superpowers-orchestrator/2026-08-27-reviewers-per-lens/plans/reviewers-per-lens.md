@@ -1583,7 +1583,7 @@ git commit -m "feat(subagent-driven-development): resolve M for the final review
 
 **Does NOT cover:** Case 2 of `test-multi-code-review.sh` (pipeline mode stays at M = 1 so its `p5-control` package count keeps its meaning); a test of a partial or inconclusive round (the `[1-m]` tolerance in the usable count only prevents a rare retry failure from failing the test); running these tests without the plugin reinstalled (CLAUDE.md constraint).
 
-- [ ] **Step 1: Shared assertion helper**
+- [x] **Step 1: Shared assertion helper**
 
 Append to the end of `tests/claude-code/test-helpers.sh`:
 
@@ -1658,7 +1658,7 @@ assert_round_reviewers() {
 }
 ```
 
-- [ ] **Step 2: Fast check of the helper against a fixture (not committed)**
+- [x] **Step 2: Fast check of the helper against a fixture (not committed)**
 
 Run this once from the repository root:
 
@@ -1690,7 +1690,7 @@ rm -f "$FIX" "$FIX.bak"
 
 Expected: first run prints only `exit=0`; second run prints two `FAIL(m)` lines (verdict sum 4 vs 3; distinct sources 4 vs 3) and `exit=2`.
 
-- [ ] **Step 3: `test-multi-doc-review.sh` — prompt and assertions**
+- [x] **Step 3: `test-multi-doc-review.sh` — prompt and assertions**
 
 Replace:
 
@@ -1753,7 +1753,7 @@ with:
 fi
 ```
 
-- [ ] **Step 4: `test-multi-code-review.sh` — Case 1 prompt and assertions**
+- [x] **Step 4: `test-multi-code-review.sh` — Case 1 prompt and assertions**
 
 Replace:
 
@@ -1802,7 +1802,7 @@ fi
 
 (The replaced block occurs once, in Case 1 — its echo says `FAIL(d):`. Case 2 stays at M = 1 and is not edited.)
 
-- [ ] **Step 5: Fast verification**
+- [x] **Step 5: Fast verification**
 
 Run: `bash -n tests/claude-code/test-helpers.sh && bash -n tests/claude-code/test-multi-doc-review.sh && bash -n tests/claude-code/test-multi-code-review.sh && echo SYNTAX_OK`
 Expected: `SYNTAX_OK`.
@@ -1813,7 +1813,7 @@ Expected: `1` for each file.
 Run: `grep -n 'N=2, and TOPIC_DIR' tests/claude-code/test-multi-code-review.sh`
 Expected: the unchanged Case 2 prompt line (no `M=2` in it).
 
-- [ ] **Step 6: Behavioral verification (slow; after the local plugin is updated to this branch)**
+- [x] **Step 6: Behavioral verification (slow; after the local plugin is updated to this branch)**
 
 Preconditions: Tasks 1–5 are committed on the current branch and Task 8 has not started (see **Depends on** above). Reinstall/update the local plugin copy first (CLAUDE.md: sessions run the installed copy under `~/.claude/plugins/cache/superpowers-orchestrator/`). Facts this step relies on: the marketplace clone at `~/.claude/plugins/marketplaces/superpowers-orchestrator` tracks `main` only; its `.claude-plugin/marketplace.json` has `"source": "./"`, so the update copies the clone's checked-out working tree; the cache directory is named after the version in `.claude-plugin/plugin.json`, which is still the value of `VERSION` (`7.3.0`) at this task because Task 8 bumps it later. Run everything below from the repository root.
 
@@ -1848,7 +1848,7 @@ Expected: the single line `PASS: multi-code-review behavioral test` (the test's 
 
 Restore the environment whether the tests passed or failed: `git -C "$CLONE" checkout main`. The cache directory `$CACHE` still holds the branch's skills after that — a later `claude plugin update` from `main` sees the same version and does not refresh it — so a user who wants the released 7.3.0 copy back must `rm -rf "$CACHE"` and run `claude plugin update superpowers-orchestrator -y` once more with the clone on `main`. After Task 8 is merged, an update installs 7.4.0 into its own directory.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add tests/claude-code/test-helpers.sh tests/claude-code/test-multi-doc-review.sh tests/claude-code/test-multi-code-review.sh
