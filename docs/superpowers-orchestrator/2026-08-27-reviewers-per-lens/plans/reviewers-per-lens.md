@@ -202,7 +202,7 @@ run_test "session-start (reviewers-per-lens tag)" "${SCRIPT_DIR}/test-session-st
 - [x] **Step 3: Run the test to verify it fails**
 
 Run: `bash tests/codex/test-session-start-reviewers-tag.sh`
-Expected: the header line `session-start: <reviewers-per-lens> tag`, then the line `  FAIL - SUPERPOWERS_REVIEWERS_PER_LENS=3 does not end the context with <reviewers-per-lens>3</reviewers-per-lens>` (two leading spaces), then five `  ok   - …` lines, then `  5 passed, 1 failed`, exit status 1.
+Expected: the header line `session-start: <reviewers-per-lens> tag`, then the line `  FAIL - SUPERPOWERS_REVIEWERS_PER_LENS=3 does not end the context with <reviewers-per-lens>3</reviewers-per-lens>` (two leading spaces), then nine `  ok   - …` lines, then `  9 passed, 4 failed`, exit status 1.
 
 - [x] **Step 4: Implement the hook change (three placements)**
 
@@ -270,7 +270,7 @@ ${known_issues_escaped}${context_snapshot_escaped}${reviewers_escaped}"
 - [x] **Step 5: Run the tests to verify they pass**
 
 Run: `bash tests/codex/test-session-start-reviewers-tag.sh`
-Expected: six `ok` lines, `6 passed, 0 failed`, exit status 0.
+Expected: thirteen `ok` lines, `13 passed, 0 failed`, exit status 0.
 
 Run: `bash tests/codex/run-unit-tests.sh`
 Expected: the new suite `── session-start (reviewers-per-lens tag)` listed, and the line ` All unit tests passed.` (one leading space; the final line is the `=====` rule that follows it).
@@ -1808,7 +1808,7 @@ Run: `bash -n tests/claude-code/test-helpers.sh && bash -n tests/claude-code/tes
 Expected: `SYNTAX_OK`.
 
 Run: `grep -c 'assert_round_reviewers' tests/claude-code/test-multi-doc-review.sh tests/claude-code/test-multi-code-review.sh`
-Expected: `1` for each file.
+Expected: `2` for each file.
 
 Run: `grep -n 'N=2, and TOPIC_DIR' tests/claude-code/test-multi-code-review.sh`
 Expected: the unchanged Case 2 prompt line (no `M=2` in it).
@@ -1842,7 +1842,7 @@ grep -c 'usable <u>/<m>' "$CACHE/skills/multi-doc-review/SKILL.md"
 
 Expected: the last command prints a number ≥ 1 (the string is part of the log format Task 2 adds to the skill). `0` or `No such file or directory` means the installed copy is stale — one retry only: `rm -rf "$CACHE"`, run the `claude plugin update` command again, and repeat the `grep -c` check. If the count is still not ≥ 1 after that one retry, stop and report "Task 6 Step 6: the plugin update does not install the branch's skills" — do not run the behavioral tests, because a `FAIL(m)` or `FAIL(i)` line from a stale copy says nothing about the code.
 
-Run: `tests/claude-code/run-skill-tests.sh --test test-multi-doc-review.sh --verbose --timeout 1800`
+Run: `tests/claude-code/run-skill-tests.sh --test test-multi-doc-review.sh --verbose --timeout 3600`
 Expected: `PASS: multi-doc-review behavioral test`, no `FAIL(m)` line.
 
 Run: `tests/claude-code/run-skill-tests.sh --test test-multi-code-review.sh --verbose --timeout 1800`

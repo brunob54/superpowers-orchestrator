@@ -193,6 +193,33 @@ EOF
     echo "$plan_file"
 }
 
+# [I2] Detect SUPERPOWERS_REVIEWERS_PER_LENS set in the `env` block of a
+# settings file that applies to a `claude -p` run started from $plugin_dir:
+# a user-level ~/.claude/settings.json, or a project-level
+# $plugin_dir/.claude/settings.json or $plugin_dir/.claude/settings.local.json.
+# README.md and docs/guide/README.md tell users to set M this way; Claude
+# Code applies that env block inside its own process and passes it to hooks,
+# so a shell-level `unset` of the same variable does not remove it. Tolerates
+# a missing file. Uses plain grep — no jq dependency (not used elsewhere in
+# these tests).
+# Usage: check_no_reviewers_per_lens_setting "$PLUGIN_DIR"
+check_no_reviewers_per_lens_setting() {
+    local plugin_dir="$1"
+    local var="SUPERPOWERS_REVIEWERS_PER_LENS"
+    local f
+    for f in "$HOME/.claude/settings.json" \
+             "$plugin_dir/.claude/settings.json" \
+             "$plugin_dir/.claude/settings.local.json"; do
+        if [ -f "$f" ] && grep -qE "\"$var\"[[:space:]]*:" "$f"; then
+            echo "ABORT: $var is set in the env block of $f."
+            echo "Claude Code applies that env block inside its own process and passes it to hooks, so the shell-level 'unset $var' in this script does not remove it."
+            echo "The default-M (M=1) cases in this test cannot be trusted while $var is set there — remove or comment it out in $f before running this test."
+            return 1
+        fi
+    done
+    return 0
+}
+
 # Export functions for use in tests
 export -f run_claude
 export -f assert_contains
@@ -202,6 +229,7 @@ export -f assert_order
 export -f create_test_project
 export -f cleanup_test_project
 export -f create_test_plan
+export -f check_no_reviewers_per_lens_setting
 
 # assert_round_reviewers <log> <round> <m>
 # Checks the reviewers-per-lens lines of one round entry — the lines from
@@ -228,6 +256,15 @@ assert_round_reviewers() {
         $0 ~ "^## Round " r " — " { on = 1; print; next }
         /^## Round / { if (on) exit }
         on { print }' "$log")
+
+    # [M4] The round entry is missing entirely (not just malformed) — say so
+    # in one clear line instead of falling through to the five generic
+    # checks below, which would all fail for the same underlying reason and
+    # not tell a maintainer "the round is missing" from "the round is wrong".
+    if [ -z "$entry" ]; then
+        echo "FAIL(m): round $round: no '## Round $round — ' entry found in the log"
+        return 1
+    fi
 
     local usable_re="^\\*\\*Reviewers:\\*\\* M=${m}, usable [1-${m}]/${m}\$"
     local usable_line

@@ -65,10 +65,16 @@ source "$SCRIPT_DIR/../lib/timeout-shim.sh"
 source "$SCRIPT_DIR/test-helpers.sh"
 
 # [I2] M must come from the prompt (M=2 explicit in Case 1, or no M= for the
-# Case 2 default), never from the developer's own environment — unset here so
-# a developer with SUPERPOWERS_REVIEWERS_PER_LENS set cannot make Case 2's
-# M=1 default resolve to a different M via the session tag.
+# Case 2 default), never from the developer's own environment. `unset` here
+# only clears SUPERPOWERS_REVIEWERS_PER_LENS from THIS shell's environment —
+# it does NOT remove a value Claude Code applies from a settings file's
+# `env` block (README.md and docs/guide/README.md document setting M that
+# way): Claude Code applies that block inside its own process and passes it
+# to hooks, so the shell-level unset cannot reach it. The check below
+# detects that case and aborts before any `claude -p` call, instead of
+# letting Case 2's M=1 default silently resolve to a different M.
 unset SUPERPOWERS_REVIEWERS_PER_LENS
+check_no_reviewers_per_lens_setting "$PLUGIN_DIR" || exit 1
 
 TEST_PROJECT=$(create_test_project)
 trap "cleanup_test_project '$TEST_PROJECT'" EXIT

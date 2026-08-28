@@ -39,10 +39,16 @@ source "$SCRIPT_DIR/../lib/timeout-shim.sh"
 source "$SCRIPT_DIR/test-helpers.sh"
 
 # [I2] M must come from the prompt (M=2 explicit in Case 1, or no M= for the
-# Case 2 default), never from the developer's own environment — unset here so
-# a developer with SUPERPOWERS_REVIEWERS_PER_LENS set cannot make Case 2's
-# M=1 default resolve to a different M via the session tag.
+# Case 2 default), never from the developer's own environment. `unset` here
+# only clears SUPERPOWERS_REVIEWERS_PER_LENS from THIS shell's environment —
+# it does NOT remove a value Claude Code applies from a settings file's
+# `env` block (README.md and docs/guide/README.md document setting M that
+# way): Claude Code applies that block inside its own process and passes it
+# to hooks, so the shell-level unset cannot reach it. The check below
+# detects that case and aborts before any `claude -p` call, instead of
+# letting Case 2's M=1 default silently resolve to a different M.
 unset SUPERPOWERS_REVIEWERS_PER_LENS
+check_no_reviewers_per_lens_setting "$PLUGIN_DIR" || exit 1
 
 TEST_PROJECT=$(create_test_project)
 trap "cleanup_test_project '$TEST_PROJECT'" EXIT
@@ -80,10 +86,18 @@ PROMPT="Invoke the superpowers-orchestrator:multi-doc-review skill on the docume
 # text — there is nothing in it a grep could key on to confirm "spec" was
 # actually inferred rather than assumed.
 
-cd "$PLUGIN_DIR" && timeout 1500 claude -p "$PROMPT" \
+CLAUDE_STATUS=0
+cd "$PLUGIN_DIR" && timeout 1700 claude -p "$PROMPT" \
     --permission-mode bypassPermissions \
     --add-dir "$TEST_PROJECT" \
-    2>&1 | tee "$TEST_PROJECT/output.txt" || true
+    2>&1 | tee "$TEST_PROJECT/output.txt" || CLAUDE_STATUS=${PIPESTATUS[0]}
+
+# (f) the run must not have been killed by the timeout: GNU timeout reports
+#     124, the tests/lib/timeout-shim.sh fallback reports 143 (SIGTERM).
+if [ "$CLAUDE_STATUS" -eq 124 ] || [ "$CLAUDE_STATUS" -eq 143 ]; then
+    echo "FAIL(f): the claude run was killed by the 1700s timeout (exit $CLAUDE_STATUS) — the loop never finished"
+    FAILURES=$((FAILURES+1))
+fi
 
 LOG="$TOPIC_DIR/specs/test-feature-design-review-log.md"
 
@@ -142,10 +156,17 @@ PROMPT2="Invoke the superpowers-orchestrator:multi-doc-review skill on the docum
 # the way every gate invocation and every user without an explicit M= runs
 # it — see the (m1) checks below.
 
-cd "$PLUGIN_DIR" && timeout 1500 claude -p "$PROMPT2" \
+CLAUDE_STATUS2=0
+cd "$PLUGIN_DIR" && timeout 1700 claude -p "$PROMPT2" \
     --permission-mode bypassPermissions \
     --add-dir "$TEST_PROJECT" \
-    2>&1 | tee "$TEST_PROJECT/output-m1.txt" || true
+    2>&1 | tee "$TEST_PROJECT/output-m1.txt" || CLAUDE_STATUS2=${PIPESTATUS[0]}
+
+# (f2) same timeout check as (f), for the Case 2 run.
+if [ "$CLAUDE_STATUS2" -eq 124 ] || [ "$CLAUDE_STATUS2" -eq 143 ]; then
+    echo "FAIL(f2): the Case 2 claude run was killed by the 1700s timeout (exit $CLAUDE_STATUS2) — the loop never finished"
+    FAILURES=$((FAILURES+1))
+fi
 
 LOG2="$TOPIC_DIR2/specs/test-feature-design-review-log.md"
 
