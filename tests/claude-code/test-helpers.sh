@@ -231,7 +231,18 @@ export -f cleanup_test_project
 export -f create_test_plan
 export -f check_no_reviewers_per_lens_setting
 
-# assert_round_reviewers <log> <round> <m>
+# assert_round_reviewers <log> <round> <m> <findings>
+# <findings> is 'required' or 'optional' and is NOT optional itself: it says
+# whether this round must have consolidated at least one finding.
+#   - 'required' — the caller seeded defects the round is expected to find.
+#     A '**Sources mapped:** 0/0' entry then FAILS: on an empty set the three
+#     numeric checks below compare 0 with 0 and the annotation check is
+#     skipped, so all four pass while verifying nothing about M reviewers.
+#   - 'optional' — an empty set is a legitimate result for this round (a
+#     later round of a converging loop finds nothing, and a round whose
+#     reviewers all report nothing correctly writes no annotation).
+# A missing or misspelled fourth argument fails: the check must be stated at
+# each call site, never defaulted, because the wrong default is silent.
 # Checks the reviewers-per-lens lines of one round entry — the lines from
 # '^## Round <round> — ' up to the next '^## Round ' or the end of the file.
 # The en dash after the round number matches the round header only: a
@@ -244,14 +255,22 @@ export -f check_no_reviewers_per_lens_setting
 #     not trusted: the sum is recomputed here)
 #   - the distinct 'r<j>:<id>' tokens across the source annotations equal k
 #   - at least one disposition line ends in ' ← <a>/<m>: <source ids>'
-#     (skipped with a 'note:' line when Sources mapped is 0/0: a round whose
-#     reviewers all report nothing writes no annotation, and that is correct
-#     skill behavior — rerun the test if the seeded findings were expected)
+#     (skipped with a 'note:' line when Sources mapped is 0/0 and <findings>
+#     is 'optional'; when <findings> is 'required', 0/0 is a failure)
 # Prints one FAIL(m) line per failed check; returns the number of failed checks.
 assert_round_reviewers() {
-    local log="$1" round="$2" m="$3"
+    local log="$1" round="$2" m="$3" findings="${4:-}"
     local failures=0
     local entry
+
+    # The fourth argument carries knowledge only the caller has: whether this
+    # round ran over a fixture seeded with defects. Refuse to guess it — a
+    # default would silently restore the vacuous pass this check exists to
+    # prevent, and would also let an un-updated three-argument call through.
+    if [ "$findings" != "required" ] && [ "$findings" != "optional" ]; then
+        echo "FAIL(m): round $round: assert_round_reviewers needs a fourth argument, 'required' or 'optional' (got '${findings}')"
+        return 1
+    fi
     entry=$(awk -v r="$round" '
         $0 ~ "^## Round " r " — " { on = 1; print; next }
         /^## Round / { if (on) exit }
@@ -307,7 +326,12 @@ assert_round_reviewers() {
     fi
 
     if [ -n "$sources_line" ] && [ "$k_total" = "0" ]; then
-        echo "note: round $round: Sources mapped is 0/0 (empty consolidated set); annotation check skipped — rerun if findings were expected"
+        if [ "$findings" = "required" ]; then
+            echo "FAIL(m): round $round: '**Sources mapped:** 0/0' but this round was declared to require findings; the numeric checks compared 0 with 0 and the annotation check was skipped, so nothing about M=$m consolidation was verified"
+            failures=$((failures+1))
+        else
+            echo "note: round $round: Sources mapped is 0/0 (empty consolidated set); annotation check skipped — declared legitimate for this round"
+        fi
     elif ! printf '%s\n' "$entry" | grep -qE "$annotation_re"; then
         echo "FAIL(m): round $round: no disposition line ends in a ' ← <a>/$m: <source ids>' annotation"
         failures=$((failures+1))

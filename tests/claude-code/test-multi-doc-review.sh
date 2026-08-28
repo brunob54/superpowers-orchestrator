@@ -125,12 +125,17 @@ else
         FAILURES=$((FAILURES+1))
     fi
     # (m) M=2: the round-1 entry carries the reviewers-per-lens lines and
-    #     source annotations, and they agree with each other
-    assert_round_reviewers "$LOG" 1 2 || FAILURES=$((FAILURES+$?))
+    #     source annotations, and they agree with each other.
+    #     'required': Case 1 seeds a spec with defects, so round 1 must
+    #     consolidate at least one finding — an empty set here means the
+    #     seeding or the logging broke, not that the spec was clean.
+    assert_round_reviewers "$LOG" 1 2 required || FAILURES=$((FAILURES+$?))
     # (m) M=2, round 2: the M passed to the invocation governs every round it
     #     runs, not just round 1 — this N=2 run already produces a round 2,
     #     so its reviewers-per-lens lines must be checked too.
-    assert_round_reviewers "$LOG" 2 2 || FAILURES=$((FAILURES+$?))
+    #     'optional': round 2 runs after round 1's applied findings, so
+    #     finding nothing is convergence — a legitimate result.
+    assert_round_reviewers "$LOG" 2 2 optional || FAILURES=$((FAILURES+$?))
 fi
 
 # ── Case 2: M=1 (default configuration) ─────────────────────────────────

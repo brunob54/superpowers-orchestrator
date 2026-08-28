@@ -1585,6 +1585,32 @@ git commit -m "feat(subagent-driven-development): resolve M for the final review
 
 - [x] **Step 1: Shared assertion helper**
 
+> **Amendment — 2026-08-28, after Phase 4 round 4 finding [I1].** This step
+> originally fixed the helper's body verbatim, including a rule that skips the
+> annotation check when a round entry reads `**Sources mapped:** 0/0`. Review
+> found that on an empty set the three numeric checks compare 0 with 0 and the
+> annotation check is skipped, so all four pass while verifying nothing about M
+> reviewers per lens: a behavioral test whose seeded findings failed to appear
+> would still exit 0.
+>
+> The skip itself is not wrong — a converged round legitimately writes no
+> annotation. What is wrong is that the helper alone cannot tell a legitimate
+> empty round from a broken fixture. Only the caller knows which it is: round 1
+> runs over seeded defects and must find them; round 2 runs after round 1's
+> fixes and may legitimately find nothing.
+>
+> The helper therefore takes a **fourth, required argument**, `required` or
+> `optional`, stating that expectation per call. `required` makes `0/0` a
+> failure; `optional` keeps the documented skip. A missing or misspelled fourth
+> argument fails, so the expectation can never be silently defaulted and an
+> un-updated three-argument call cannot pass unnoticed.
+>
+> The block below is superseded on this point only; the shipped
+> `tests/claude-code/test-helpers.sh` is authoritative for the helper's body.
+> **General lesson for future plans:** mandate the *property* a helper must
+> guarantee, not its literal body — a verbatim body turns every later review
+> finding about it into a plan conflict.
+
 Append to the end of `tests/claude-code/test-helpers.sh`:
 
 ```bash

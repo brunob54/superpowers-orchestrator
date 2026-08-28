@@ -221,11 +221,16 @@ else
     # (m) M=2: the round-1 entry carries the reviewers-per-lens lines and
     #     source annotations, and they agree with each other. Case 1 passes no
     #     carried findings, so every disposition of the round carries one.
-    assert_round_reviewers "$LOG" 1 2 || FAILURES=$((FAILURES+$?))
+    #     'required': Case 1 seeds defects, so round 1 must consolidate at
+    #     least one finding — an empty set here means the seeding or the
+    #     logging broke, not that the branch was clean.
+    assert_round_reviewers "$LOG" 1 2 required || FAILURES=$((FAILURES+$?))
     # (m) M=2, round 2: the M passed to the invocation governs every round it
     #     runs, not just round 1 — this N=2 run already produces a round 2,
     #     so its reviewers-per-lens lines must be checked too.
-    assert_round_reviewers "$LOG" 2 2 || FAILURES=$((FAILURES+$?))
+    #     'optional': round 2 runs after round 1's fixes, so finding nothing
+    #     is convergence — a legitimate result, not a test failure.
+    assert_round_reviewers "$LOG" 2 2 optional || FAILURES=$((FAILURES+$?))
 fi
 
 # ── Case 2: pipeline mode (TOPIC_DIR) ────────────────────────────────────────
