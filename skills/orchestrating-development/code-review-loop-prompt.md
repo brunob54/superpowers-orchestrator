@@ -26,6 +26,8 @@ Agent tool (general-purpose):
     - BASE: [BASE_SHA]   (the orchestration branch point; already
       verified an ancestor of HEAD)
     - N (round cap): [N_CODE]
+    - M (reviewers per lens): [M]   (fill the review log's invocation
+      line from it; never read M from the session or the log)
     - Plan/requirements path: [PLAN_PATH]
     - TOPIC_DIR: [TOPIC_DIR]   (absolute path of the topic folder; the
       review log and fix reports are written and committed under its
@@ -143,7 +145,8 @@ Agent tool (general-purpose):
        there is spent as well: journal nothing for it on the new entry);
        for a `fix it` answer, also skip the fix dispatch when the fix
        commit already exists — first search `git log` for the `<sha>` the
-       addendum's `fixed` line records; when it recorded none, search for
+       addendum's `fixed` line records (the token immediately after `→ `,
+       before any ` ← ` source annotation); when it recorded none, search for
        the fix commit subject `review fixes (<slug>, round <i>)` limited
        to the range `<that entry's completion-marker sha>..HEAD` — the
        post-loop fix always lands after the marker, and round `<i>`'s
@@ -172,6 +175,8 @@ Agent tool (general-purpose):
   `../multi-code-review/reviewer-prompt.md`
 - `[BASE_SHA]` — REQUIRED: the Phase 0 recorded branch-point SHA
 - `[N_CODE]` — REQUIRED: integer 1–10
+- `[M]` — REQUIRED: integer 1–5, the Phase 0 M (reviewers per lens); the
+  controller passes it to multi-code-review as its M
 - `[PLAN_PATH]` — REQUIRED: absolute plan path
 - `[TOPIC_DIR]` — REQUIRED: absolute path of the topic folder
   `docs/superpowers-orchestrator/<YYYY-MM-DD>-<slug>/` at the repository root

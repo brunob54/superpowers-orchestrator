@@ -60,7 +60,11 @@ the same question batch below).
 
 1. Platform check (above).
 2. **Ask once (single batch):** N_plan (0–10, default 3), N_code (0–10,
-   default 3), batch cap (1–5, default 3). Invalid → default. N=0 means
+   default 3), M — reviewers per lens, the number of identical reviewer
+   subagents each review round dispatches in parallel (1–5, default `<d>`,
+   where `<d>` is the value of a `<reviewers-per-lens>` tag in the session
+   context if present, else 1; one M applies to Phase 2 and Phase 4),
+   batch cap (1–5, default 3). Invalid → default. N=0 means
    you skip that phase yourself — no controller dispatched; the log records
    `## Phase 2 — Plan review — skipped (N_plan=0)` /
    `## Phase 4 — Code review — skipped (N_code=0)`. The same batch carries
@@ -215,7 +219,7 @@ commit the Phase 1 log entry.
 ## Phase 2 — Plan Review Loop
 
 If N_plan = 0, log the skip and go to Phase 3. Otherwise fill
-`./doc-review-loop-prompt.md` (plan path, spec path, N_plan) and dispatch.
+`./doc-review-loop-prompt.md` (plan path, spec path, N_plan, M) and dispatch.
 Expected return: `REVIEW_DONE rounds=<r> outcome=<converged|cap>
 unresolved=<n>` or `BLOCKED: <reason>`. `unresolved > 0` → major error →
 stop. On success: commit the revised plan + its review log
@@ -266,7 +270,7 @@ orchestration-log edits are committed (they are, if you committed at each
 boundary), and `git merge-base --is-ancestor <BASE> HEAD` succeeds —
 failure means the branch was rebased or reset mid-run → major error →
 stop. Fill `./code-review-loop-prompt.md` (BASE = the Phase 0
-recorded branch point, N_code, plan path, ledger path
+recorded branch point, N_code, M, plan path, ledger path
 `.superpowers/sdd/progress.md`) and dispatch. Expected return:
 `REVIEW_DONE rounds=<r> outcome=<converged|cap> fixes=<n> unresolved=<n>
 user_decision=<n>` or `BLOCKED: <reason>`. `unresolved > 0` or
@@ -300,7 +304,7 @@ The open-decisions file is `<topic folder>/plans/<slug>-open-decisions.md`.
 ```
 # Orchestration Log — <slug>
 
-_Invocation 1 — YYYY-MM-DD — spec docs/superpowers-orchestrator/<date>-<slug>/specs/<slug>-design.md — N_plan=<n> N_code=<n> cap=<n> — branch feature/<slug> — BASE <sha7>_
+_Invocation 1 — YYYY-MM-DD — spec docs/superpowers-orchestrator/<date>-<slug>/specs/<slug>-design.md — N_plan=<n> N_code=<n> M=<m> cap=<n> — branch feature/<slug> — BASE <sha7>_
 
 ## Phase 1 — Plan — DONE — YYYY-MM-DD
 plan: docs/superpowers-orchestrator/<date>-<slug>/plans/<slug>.md — <T> tasks
@@ -347,7 +351,7 @@ Rewrite the plan-execution sections at every boundary (SDD's shape, cap
 ```
 ## Orchestration
 Spec: <topic folder>/specs/<slug>-design.md  Plan: <topic folder>/plans/<slug>.md
-Params: N_plan=<n> N_code=<n> cap=<n>  Branch: feature/<slug>  BASE: <sha7>
+Params: N_plan=<n> N_code=<n> M=<m> cap=<n>  Branch: feature/<slug>  BASE: <sha7>
 Position: phase <p>[, next batch tasks <i>–<j>]
 ```
 
@@ -440,6 +444,12 @@ Trigger: `Resume orchestration for <plan-or-spec path>`.
    taken from the most recent earlier line that records it — never
    defaulted (defaulting would silently discard the user's Phase 0
    choices). This is the designed escape from a parameter-caused stop.
+   One explicit exception: a log written before 7.4.0 records `M=` on no
+   line at all, so there is nothing to recover — M is 1 for such a log.
+   `... with M=2` overrides M like any other parameter; the controller
+   dispatched after it carries the new value in its `[M]` placeholder, and
+   that value governs the review log it continues (the review log's own
+   invocation line is never rewritten).
 6. Excluded state (`state.md`, `.superpowers/`) does not survive clone
    boundaries or `git clean -fdx`; anything lost is reported, never
    silently reconstructed.
