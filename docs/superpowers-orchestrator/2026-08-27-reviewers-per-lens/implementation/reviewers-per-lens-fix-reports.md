@@ -2834,3 +2834,104 @@ commands:
      echo "FAIL(f2): the Case 2 claude run was killed by the 1800s timeout (exit $CLAUDE_STATUS2) — the loop never finished"
      FAILURES=$((FAILURES+1))
 ```
+
+## Round 12 fixes
+
+### [I1] Plan Task 6 verification blocks used the old three-argument `assert_round_reviewers` call
+
+Files changed:
+- `docs/superpowers-orchestrator/2026-08-27-reviewers-per-lens/plans/reviewers-per-lens.md`
+
+Change: In Task 6 Step 2's fixture verification block, added the fourth
+argument `required` to both `assert_round_reviewers` calls. In Step 3's and
+Step 4's replacement snippets, added the fourth argument `required` to match
+the four-argument form the shipped tests use at the corresponding call sites
+(`tests/claude-code/test-multi-doc-review.sh:148`,
+`tests/claude-code/test-multi-code-review.sh:227`). Ran the corrected Step 2
+block; its real output already matched the existing "Expected:" sentence
+word for word, so that sentence needed no rewrite.
+
+Verification — corrected Step 2 block run verbatim from the repository root:
+
+```
+=== run 1 ===
+exit=0
+=== run 2 ===
+FAIL(m): round 1: Reviewer verdicts counts sum to 4, Sources mapped says 3
+FAIL(m): round 1: 4 distinct source ids in annotations, Sources mapped says 3
+exit=2
+```
+
+This matches the plan's "Expected:" sentence exactly (first run prints only
+`exit=0`; second run prints two `FAIL(m)` lines — verdict sum 4 vs 3;
+distinct sources 4 vs 3 — and `exit=2`).
+
+### [M1] `tests/codex/test-session-start-reviewers-tag.sh:79-80` — the `1` case does not discriminate
+
+Files changed:
+- `tests/codex/test-session-start-reviewers-tag.sh`
+
+Change: added a comment directly above the `for v in 1 3 5` loop stating that
+the `1` case cannot tell a correct read of the variable apart from the
+fallback (both emit the byte-identical
+`<reviewers-per-lens>1</reviewers-per-lens>` tag), and that the `3` and `5`
+cases are the discriminating ones. No code changed; the loop body and
+assertion count are unchanged.
+
+### [M2] `tests/claude-code/test-helpers.sh` — `check_no_reviewers_per_lens_setting` missed the enterprise managed-settings files
+
+Files changed:
+- `tests/claude-code/test-helpers.sh`
+
+Change: added `/Library/Application Support/ClaudeCode/managed-settings.json`
+(macOS) and `/etc/claude-code/managed-settings.json` (Linux) to the `for f in`
+path list in `check_no_reviewers_per_lens_setting`. The loop already
+tolerates a missing file, so both paths are listed unconditionally. Updated
+the function's leading comment to mention that the managed-settings files —
+which have the highest precedence of all the files scanned — are inspected
+too.
+
+### Verification commands and full output
+
+```
+$ bash tests/codex/test-session-start-reviewers-tag.sh
+session-start: <reviewers-per-lens> tag
+  ok   - SUPERPOWERS_REVIEWERS_PER_LENS=1 emits <reviewers-per-lens>1</reviewers-per-lens> at the end of the context
+  ok   - SUPERPOWERS_REVIEWERS_PER_LENS=3 emits <reviewers-per-lens>3</reviewers-per-lens> at the end of the context
+  ok   - SUPERPOWERS_REVIEWERS_PER_LENS=5 emits <reviewers-per-lens>5</reviewers-per-lens> at the end of the context
+  ok   - unset SUPERPOWERS_REVIEWERS_PER_LENS falls back to <reviewers-per-lens>1</reviewers-per-lens> at the end of the context
+  ok   - SUPERPOWERS_REVIEWERS_PER_LENS=0 falls back to <reviewers-per-lens>1</reviewers-per-lens> at the end of the context
+  ok   - SUPERPOWERS_REVIEWERS_PER_LENS=6 falls back to <reviewers-per-lens>1</reviewers-per-lens> at the end of the context
+  ok   - SUPERPOWERS_REVIEWERS_PER_LENS=10 falls back to <reviewers-per-lens>1</reviewers-per-lens> at the end of the context
+  ok   - SUPERPOWERS_REVIEWERS_PER_LENS=abc falls back to <reviewers-per-lens>1</reviewers-per-lens> at the end of the context
+  ok   - SUPERPOWERS_REVIEWERS_PER_LENS=3.0 falls back to <reviewers-per-lens>1</reviewers-per-lens> at the end of the context
+  ok   - SUPERPOWERS_REVIEWERS_PER_LENS=2.5 falls back to <reviewers-per-lens>1</reviewers-per-lens> at the end of the context
+  ok   - SUPERPOWERS_REVIEWERS_PER_LENS= (set but empty) falls back to <reviewers-per-lens>1</reviewers-per-lens> at the end of the context
+  ok   - SUPERPOWERS_REVIEWERS_PER_LENS=' 3' (leading space) falls back to <reviewers-per-lens>1</reviewers-per-lens> at the end of the context
+  ok   - workspace-embedded decoy tag precedes the real <reviewers-per-lens>3</reviewers-per-lens> at the end of the context
+  ok   - unset: workspace decoy is overridden by the fallback <reviewers-per-lens>1</reviewers-per-lens> at the end of the context
+  14 passed, 0 failed
+```
+
+```
+$ bash -n tests/claude-code/test-helpers.sh
+(no output — exit 0)
+```
+
+```
+$ bash tests/sdd-scripts/run-tests.sh
+... (193 assertions across sdd-workspace, task-brief, review-package,
+     blinding, pipeline-mode git rules, TOPIC_DIR validation, recovery
+     greps, archive naming)
+Results: 193 passed, 0 failed
+```
+
+```
+$ bash tests/codex/run-unit-tests.sh
+... (pretool-bash-adapter, posttool-bash-compress-adapter, stop-adapter,
+     stop-reminders, session-start-adapter, session-start reviewers-per-lens
+     tag, skill-activator, statusline-context-cache, subagent-guard,
+     protect-secrets)
+Results: 10 suites passed, 0 suites failed
+All unit tests passed.
+```
