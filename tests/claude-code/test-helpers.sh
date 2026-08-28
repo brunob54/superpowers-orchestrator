@@ -198,8 +198,10 @@ EOF
 # a user-level ~/.claude/settings.json, a user-level
 # ${CLAUDE_CONFIG_DIR:-$HOME/.claude}/settings.json or settings.local.json
 # (relevant only when CLAUDE_CONFIG_DIR points somewhere other than
-# ~/.claude), or a project-level $plugin_dir/.claude/settings.json or
-# $plugin_dir/.claude/settings.local.json.
+# ~/.claude), a project-level $plugin_dir/.claude/settings.json or
+# $plugin_dir/.claude/settings.local.json, or the enterprise
+# managed-settings.json (macOS: /Library/Application Support/ClaudeCode/;
+# Linux: /etc/claude-code/), which has the highest precedence of all of them.
 # README.md and docs/guide/README.md tell users to set M this way; Claude
 # Code applies that env block inside its own process and passes it to hooks,
 # so a shell-level `unset` of the same variable does not remove it. Tolerates
@@ -216,7 +218,9 @@ check_no_reviewers_per_lens_setting() {
              "$config_dir/settings.json" \
              "$config_dir/settings.local.json" \
              "$plugin_dir/.claude/settings.json" \
-             "$plugin_dir/.claude/settings.local.json"; do
+             "$plugin_dir/.claude/settings.local.json" \
+             "/Library/Application Support/ClaudeCode/managed-settings.json" \
+             "/etc/claude-code/managed-settings.json"; do
         if [ -f "$f" ] && grep -qE "\"$var\"[[:space:]]*:" "$f"; then
             echo "ABORT: $var is set in the env block of $f."
             echo "Claude Code applies that env block inside its own process and passes it to hooks, so the shell-level 'unset $var' in this script does not remove it."

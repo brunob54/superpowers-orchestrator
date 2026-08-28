@@ -76,6 +76,10 @@ expect_fallback_tag() {
 }
 
 echo "session-start: <reviewers-per-lens> tag"
+# The '1' case below cannot tell a correct read of the variable apart from
+# the fallback: both emit the byte-identical <reviewers-per-lens>1</reviewers-per-lens>
+# tag. Only the '3' and '5' cases carry information — they can only pass if
+# the hook actually reads SUPERPOWERS_REVIEWERS_PER_LENS.
 for v in 1 3 5; do
   expect_tag "$v"
 done

@@ -1742,9 +1742,9 @@ _Invocation 1 — 2026-08-27 — N=2 M=2 — direct_
 ## Round 2 — Ambiguity & testability — opus
 **Reviewer verdict:** 0 Critical, 0 Important, 0 Minor
 EOF
-bash -c 'source tests/claude-code/test-helpers.sh; assert_round_reviewers "$1" 1 2; echo "exit=$?"' _ "$FIX"
+bash -c 'source tests/claude-code/test-helpers.sh; assert_round_reviewers "$1" 1 2 required; echo "exit=$?"' _ "$FIX"
 sed -i.bak 's/Sources mapped:\*\* 4\/4/Sources mapped:** 3\/3/' "$FIX"
-bash -c 'source tests/claude-code/test-helpers.sh; assert_round_reviewers "$1" 1 2; echo "exit=$?"' _ "$FIX"
+bash -c 'source tests/claude-code/test-helpers.sh; assert_round_reviewers "$1" 1 2 required; echo "exit=$?"' _ "$FIX"
 rm -f "$FIX" "$FIX.bak"
 ```
 
@@ -1809,7 +1809,7 @@ with:
     fi
     # (m) M=2: the round-1 entry carries the reviewers-per-lens lines and
     #     source annotations, and they agree with each other
-    assert_round_reviewers "$LOG" 1 2 || FAILURES=$((FAILURES+$?))
+    assert_round_reviewers "$LOG" 1 2 required || FAILURES=$((FAILURES+$?))
 fi
 ```
 
@@ -1856,7 +1856,7 @@ with:
     # (m) M=2: the round-1 entry carries the reviewers-per-lens lines and
     #     source annotations, and they agree with each other. Case 1 passes no
     #     carried findings, so every disposition of the round carries one.
-    assert_round_reviewers "$LOG" 1 2 || FAILURES=$((FAILURES+$?))
+    assert_round_reviewers "$LOG" 1 2 required || FAILURES=$((FAILURES+$?))
 fi
 ```
 
