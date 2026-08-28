@@ -306,7 +306,9 @@ Rules for the added lines:
   entry is written on one line, never wrapped.
 - `**Sources mapped:**` — the traceability check of the procedure; both
   numbers are *k*. The entry is written only after the check passed, so the
-  two numbers are always equal.
+  two numbers are always equal. A clean round (u = M, empty consolidated set)
+  writes `**Sources mapped:** 0/0`; only an inconclusive round (u = 0) omits
+  this line entirely.
 - `**Reviewer verdict:**` — keeps its name and position; with M ≥ 2 it
   carries the **consolidated** counts.
 - Source annotation — ` ← <a>/<m>: <source ids>` appended at the end of the

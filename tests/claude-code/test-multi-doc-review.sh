@@ -38,6 +38,12 @@ PLUGIN_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
 source "$SCRIPT_DIR/../lib/timeout-shim.sh"
 source "$SCRIPT_DIR/test-helpers.sh"
 
+# [I2] M must come from the prompt (M=2 explicit in Case 1, or no M= for the
+# Case 2 default), never from the developer's own environment — unset here so
+# a developer with SUPERPOWERS_REVIEWERS_PER_LENS set cannot make Case 2's
+# M=1 default resolve to a different M via the session tag.
+unset SUPERPOWERS_REVIEWERS_PER_LENS
+
 TEST_PROJECT=$(create_test_project)
 trap "cleanup_test_project '$TEST_PROJECT'" EXIT
 
@@ -74,7 +80,7 @@ PROMPT="Invoke the superpowers-orchestrator:multi-doc-review skill on the docume
 # text — there is nothing in it a grep could key on to confirm "spec" was
 # actually inferred rather than assumed.
 
-cd "$PLUGIN_DIR" && timeout 1800 claude -p "$PROMPT" \
+cd "$PLUGIN_DIR" && timeout 1500 claude -p "$PROMPT" \
     --permission-mode bypassPermissions \
     --add-dir "$TEST_PROJECT" \
     2>&1 | tee "$TEST_PROJECT/output.txt" || true
@@ -136,7 +142,7 @@ PROMPT2="Invoke the superpowers-orchestrator:multi-doc-review skill on the docum
 # the way every gate invocation and every user without an explicit M= runs
 # it — see the (m1) checks below.
 
-cd "$PLUGIN_DIR" && timeout 1800 claude -p "$PROMPT2" \
+cd "$PLUGIN_DIR" && timeout 1500 claude -p "$PROMPT2" \
     --permission-mode bypassPermissions \
     --add-dir "$TEST_PROJECT" \
     2>&1 | tee "$TEST_PROJECT/output-m1.txt" || true
@@ -147,8 +153,8 @@ if [ ! -f "$LOG2" ]; then
     echo "FAIL(a2): review log $LOG2 was not created"
     FAILURES=$((FAILURES+1))
 else
-    if ! grep -q "^## Round 1" "$LOG2"; then
-        echo "FAIL(a2): review log has no '## Round 1' entry"
+    if ! grep -q "^## Round 1 — " "$LOG2"; then
+        echo "FAIL(a2): review log has no '## Round 1 — ' entry"
         FAILURES=$((FAILURES+1))
     fi
     SPEC2_SHA_AFTER=$(shasum "$SPEC2" | cut -d' ' -f1)
@@ -173,6 +179,10 @@ else
         $0 ~ "^## Round " r " — " { on = 1; print; next }
         /^## Round / { if (on) exit }
         on { print }' "$LOG2")
+    if [ -z "$ROUND1_M1" ]; then
+        echo "FAIL(m1): no '## Round 1 — ' entry extracted"
+        FAILURES=$((FAILURES+1))
+    fi
     if printf '%s\n' "$ROUND1_M1" | grep -q '^\*\*Reviewers:\*\*'; then
         echo "FAIL(m1): M=1 round 1 has a '**Reviewers:**' line — must be absent for the default configuration"
         FAILURES=$((FAILURES+1))

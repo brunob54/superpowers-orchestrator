@@ -230,9 +230,17 @@ assert_round_reviewers() {
         on { print }' "$log")
 
     local usable_re="^\\*\\*Reviewers:\\*\\* M=${m}, usable [1-${m}]/${m}\$"
-    if ! printf '%s\n' "$entry" | grep -qE "$usable_re"; then
+    local usable_line
+    usable_line=$(printf '%s\n' "$entry" | grep -E "$usable_re" | head -1 || true)
+    if [ -z "$usable_line" ]; then
         echo "FAIL(m): round $round has no '**Reviewers:** M=$m, usable <u>/$m' line"
         failures=$((failures+1))
+    else
+        local u
+        u=$(printf '%s' "$usable_line" | sed -nE 's/.*usable ([0-9]+)\/[0-9]+$/\1/p')
+        if [ -n "$u" ] && [ "$u" -lt "$m" ]; then
+            echo "note: round $round: partial (usable $u/$m); M>=2 consolidation not exercised"
+        fi
     fi
 
     local sources_line k_mapped k_total

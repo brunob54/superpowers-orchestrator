@@ -64,6 +64,12 @@ PLUGIN_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
 source "$SCRIPT_DIR/../lib/timeout-shim.sh"
 source "$SCRIPT_DIR/test-helpers.sh"
 
+# [I2] M must come from the prompt (M=2 explicit in Case 1, or no M= for the
+# Case 2 default), never from the developer's own environment — unset here so
+# a developer with SUPERPOWERS_REVIEWERS_PER_LENS set cannot make Case 2's
+# M=1 default resolve to a different M via the session tag.
+unset SUPERPOWERS_REVIEWERS_PER_LENS
+
 TEST_PROJECT=$(create_test_project)
 trap "cleanup_test_project '$TEST_PROJECT'" EXIT
 
@@ -349,6 +355,35 @@ else
     #      log is self-describing), same rule as (i) for Case 1's M=2.
     if ! grep -q " N=2 M=1 — " "$PIPE_LOG"; then
         echo "FAIL(i2): pipeline review log invocation line does not contain ' N=2 M=1 — '"
+        FAILURES=$((FAILURES+1))
+    fi
+    # (m1) M=1 (default, Case 2 pipeline mode): the round-1 entry stays
+    # byte-identical to earlier releases — no reviewers-per-lens lines and no
+    # source annotations at all. Same extraction, non-empty guard and checks
+    # as the doc-review test's (m1) block
+    # (tests/claude-code/test-multi-doc-review.sh), kept parallel here.
+    ROUND1_M1=$(awk -v r=1 '
+        $0 ~ "^## Round " r " — " { on = 1; print; next }
+        /^## Round / { if (on) exit }
+        on { print }' "$PIPE_LOG")
+    if [ -z "$ROUND1_M1" ]; then
+        echo "FAIL(m1): no '## Round 1 — ' entry extracted"
+        FAILURES=$((FAILURES+1))
+    fi
+    if printf '%s\n' "$ROUND1_M1" | grep -q '^\*\*Reviewers:\*\*'; then
+        echo "FAIL(m1): M=1 round 1 has a '**Reviewers:**' line — must be absent for the default configuration"
+        FAILURES=$((FAILURES+1))
+    fi
+    if printf '%s\n' "$ROUND1_M1" | grep -q '^\*\*Reviewer verdicts:\*\*'; then
+        echo "FAIL(m1): M=1 round 1 has a '**Reviewer verdicts:**' line — must be absent for the default configuration"
+        FAILURES=$((FAILURES+1))
+    fi
+    if printf '%s\n' "$ROUND1_M1" | grep -q '^\*\*Sources mapped:\*\*'; then
+        echo "FAIL(m1): M=1 round 1 has a '**Sources mapped:**' line — must be absent for the default configuration"
+        FAILURES=$((FAILURES+1))
+    fi
+    if printf '%s\n' "$ROUND1_M1" | grep -q ' ← '; then
+        echo "FAIL(m1): M=1 round 1 has a disposition line with a ' ← ' source annotation — must be absent for the default configuration"
         FAILURES=$((FAILURES+1))
     fi
     # (h3) the completion marker records the EFFECTIVE HEAD (Pipeline rule 4

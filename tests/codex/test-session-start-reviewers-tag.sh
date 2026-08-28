@@ -75,9 +75,50 @@ for v in 1 3 5; do
   expect_tag "$v"
 done
 expect_no_tag "unset ${VAR_NAME}"
-for v in 0 6 10 abc; do
+for v in 0 6 10 abc 3.0 2.5; do
   expect_no_tag "${VAR_NAME}=${v}" "${VAR_NAME}=${v}"
 done
+# Set but empty differs from unset — the case statement's [1-5] pattern
+# still must not match a blank value.
+expect_no_tag "${VAR_NAME}= (set but empty)" "${VAR_NAME}="
+# A value with surrounding whitespace is not a single [1-5] character either.
+expect_no_tag "${VAR_NAME}=' 3' (leading space)" "${VAR_NAME}= 3"
+
+# M4: a workspace file the hook embeds (state.md) can itself contain a decoy
+# <reviewers-per-lens> string. The hook appends its own tag AFTER every
+# embedded workspace-file block, so only the LAST element counts — confirm
+# the decoy from state.md precedes the real tag and the context still ends
+# with the real tag. state.md is written into TMP_CWD, which the existing
+# EXIT trap already removes.
+expect_workspace_decoy_before_tag() {
+  local value="$1" ctx
+  local decoy="${TAG_OPEN}9${TAG_CLOSE}"
+  local real="${TAG_OPEN}${value}${TAG_CLOSE}"
+  cat > "$TMP_CWD/state.md" <<'STATE_EOF'
+Current Goal: decoy workspace state, not a resume point
+<reviewers-per-lens>9</reviewers-per-lens>
+STATE_EOF
+  ctx=$(run_hook "${VAR_NAME}=${value}")
+  rm -f "$TMP_CWD/state.md"
+  # Line numbers are not reliable here: most of the hook's boilerplate text
+  # uses literal two-character "\n" sequences rather than real newlines (only
+  # actual newlines embedded in file content, such as state.md's own line
+  # break, survive as real newlines) — so ordering is checked with glob
+  # substring matching on $ctx directly, not grep -n.
+  case "$ctx" in
+    *"$decoy"*) : ;;
+    *) bad "decoy tag from state.md not found in context — workspace file was not embedded"; return ;;
+  esac
+  case "$ctx" in
+    *"$real") : ;;
+    *) bad "context does not end with ${real}"; return ;;
+  esac
+  case "$ctx" in
+    *"$decoy"*"$real") ok "workspace-embedded decoy tag precedes the real ${real} at the end of the context" ;;
+    *) bad "decoy tag does not precede the real tag ${real}" ;;
+  esac
+}
+expect_workspace_decoy_before_tag "3"
 
 echo "  ${PASS} passed, ${FAIL} failed"
 [ "$FAIL" -eq 0 ]
