@@ -1018,3 +1018,112 @@ $ grep -rn "timeout 3600" tests/claude-code/ docs/superpowers-orchestrator/2026-
 exit: 1
 
 Commit: 0a1c318c70240535841e295544cef65fbfd10a76 "review fixes (reviewers-per-lens, round 6)"
+
+## Round 8 fixes — 2026-08-28
+
+### Findings addressed
+
+- **[I1]** tests/claude-code/test-multi-doc-review.sh and
+  tests/claude-code/test-multi-code-review.sh — added a presence assertion
+  in each `(m1)` block, immediately before the four existing absence checks,
+  requiring the extracted M=1 round-1 entry to contain at least one line
+  matching `^- \[[CIM][0-9]+\] ` (an enumerated disposition). On failure it
+  prints `FAIL(m1): M=1 round 1 consolidated no finding — the absence checks
+  below verify nothing`, using the same `FAILURES=$((FAILURES+1))` mechanism
+  as the neighbouring checks in the same block. The four existing absence
+  checks are unchanged.
+- **[M3]** tests/claude-code/test-helpers.sh, `assert_round_reviewers` — added
+  a per-line check after the existing distinct-token/k comparison: for every
+  disposition line matched by `$annotation_re`, extract the agreement count
+  `<a>` and the comma-separated source ids listed after the colon on that
+  same line, and fail with `FAIL(m): round $round: disposition line's
+  agreement count $a does not match its $id_count listed source id(s):
+  $annotated_line` when the two differ. The existing distinct-token/k
+  comparison is untouched.
+- **[M4]** tests/claude-code/test-helpers.sh, `assert_round_reviewers` —
+  added a validation guard at the top of the function (right after the
+  existing `findings` argument check): `m` must match `^[1-9]$`, otherwise
+  the function prints `FAIL(m): round $round: assert_round_reviewers needs a
+  single-digit m, 1-9 (got '$m')` and returns 1. Added a line to the usage
+  comment above the function stating the single-digit constraint.
+- **[M5]** tests/claude-code/test-multi-doc-review.sh — restored both
+  per-run budgets from `timeout 1700` back to `timeout 1800` (Case 1 and
+  Case 2), and updated the two failure message strings (`FAIL(f)`,
+  `FAIL(f2)`) to name 1800 instead of 1700. The outer `--timeout 4200` in
+  run-skill-tests.sh's help line was left unchanged, as instructed.
+- **[M6]** tests/claude-code/run-skill-tests.sh (the
+  `test-multi-code-review.sh` help line) and
+  docs/superpowers-orchestrator/2026-08-27-reviewers-per-lens/plans/reviewers-per-lens.md
+  (the one `Run:` command line at line 1874) — raised both `1800` values to
+  `4200`. No other `1800` occurrence in either file (e.g. the
+  `test-researching-prior-art*.sh` help lines, or other plan lines) was
+  touched.
+
+### Verification
+
+```
+$ bash -n tests/claude-code/test-multi-doc-review.sh && echo OK
+OK
+
+$ bash -n tests/claude-code/test-multi-code-review.sh && echo OK
+OK
+
+$ bash -n tests/claude-code/test-helpers.sh && echo OK
+OK
+
+$ bash -n tests/claude-code/run-skill-tests.sh && echo OK
+OK
+
+$ bash tests/codex/run-unit-tests.sh
+[... 10 suites ...]
+==================================================
+ Results: 10 suites passed, 0 suites failed
+ All unit tests passed.
+==================================================
+
+$ bash tests/claude-code/run-skill-tests.sh --help
+Usage: tests/claude-code/run-skill-tests.sh [options]
+
+Options:
+  --verbose, -v        Show verbose output
+  --test, -t NAME      Run only the specified test
+  --timeout SECONDS    Set timeout per test (default: 300)
+  --integration, -i    Run integration tests (slow, 10-30 min)
+  --help, -h           Show this help
+
+Tests:
+  test-subagent-driven-development.sh  Test skill loading and requirements
+
+Integration Tests (use --integration):
+  test-subagent-driven-development-integration.sh  Full workflow execution
+  test-multi-doc-review.sh  Multi-doc-review log contract on a seeded flawed spec (use --timeout 4200)
+  test-multi-code-review.sh  Multi-code-review loop contract on a seeded defective branch (use --timeout 4200)
+  test-researching-prior-art.sh  Merged-report contract for the prior-art research skill (use --timeout 1800)
+  test-researching-prior-art-gate.sh  Brainstorming research-gate message contract (use --timeout 1800)
+```
+
+Throwaway script (sourced `test-helpers.sh`, exercised `assert_round_reviewers`
+directly against synthetic log fixtures shaped like the real Review Log
+Format documented in skills/multi-code-review/SKILL.md):
+
+```
+--- case (a): well-formed M=2, two ids matching agreement count 2 — expect PASS (0) ---
+exit code: 0
+
+--- case (b): agreement count (1) mismatches its 2 listed ids — expect FAIL, new [M3] check (non-zero) ---
+FAIL(m): round 1: disposition line's agreement count 1 does not match its 2 listed source id(s): - [C1] applied: fixed the bug ← 1/2: r1:C1, r2:C1
+exit code: 1
+
+--- case (c): m=10 — expect FAIL with [M4] validation message (non-zero) ---
+FAIL(m): round 1: assert_round_reviewers needs a single-digit m, 1-9 (got '10')
+exit code: 1
+
+--- case (d): round 5 absent from log — expect FAIL, missing entry (non-zero) ---
+FAIL(m): round 5: no '## Round 5 — ' entry found in the log
+exit code: 1
+```
+
+All four cases (a)-(d) behaved as expected. The throwaway script stayed in
+the scratchpad directory and was not committed.
+
+Commit: 3f3a999498d682a4899c7c43673d95c689223f2a "review fixes (reviewers-per-lens, round 8)"

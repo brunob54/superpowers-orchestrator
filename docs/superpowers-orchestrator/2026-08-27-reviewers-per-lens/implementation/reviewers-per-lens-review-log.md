@@ -138,3 +138,15 @@ _Carried findings source: `.superpowers/sdd/progress.md` `Minor:` lines (14 item
 **Converged:** no
 ### Dispositions
 - [I1] user-decision — when `SUPERPOWERS_REVIEWERS_PER_LENS` is unset the hook emits no `<reviewers-per-lens>` tag at all, so a tag planted in a repository file that `hooks/session-start` embeds (project-map.md, session-log.md, state.md, known-issues.md, context-snapshot.json) becomes the LAST element and is honoured as M; repository content can then raise M to 5 with no prompt (cost and concurrency amplification only, since M stays clamped to 1–5). The reviewer's fix — emit `<reviewers-per-lens>1</reviewers-per-lens>` when the variable is unset or invalid — is plan-mandated against: the plan states "Invalid or unset → no tag (silent fallback, documented)" and the shipped hermetic test asserts `expect_no_tag "unset SUPERPOWERS_REVIEWERS_PER_LENS"`. The finding's secondary suggestion (repeating the tag-ordering caveat in orchestrating-development and subagent-driven-development) was not applied separately, because the wording depends on which way this decision goes
+
+## Round 8 — Test & coverage quality — opus
+**Reviewer verdict:** 0 Critical, 1 Important, 6 Minor
+**Converged:** no
+### Dispositions
+- [I1] fixed — both behavioural tests now assert that the extracted M=1 round-1 entry holds at least one enumerated disposition line before the four absence checks run, so the default-configuration block can no longer pass while verifying nothing → 3f3a999
+- [M1] carried — the M=1 absence checks cover round 1 only, and Case 2 of the doc-review test has no Round-2 existence check; adding a second extraction on the last round of the loop was judged more churn than value
+- [M2] carried — a partial round (usable u/m) prints a `note:` but is not counted in the test's final summary; the note already makes a degraded run visible in the transcript
+- [M3] fixed — `assert_round_reviewers` now compares each annotation's agreement count with the number of source ids listed on that same line → 3f3a999
+- [M4] fixed — `assert_round_reviewers` now rejects a non-single-digit `m` instead of silently building the character class `[1-1]0` → 3f3a999
+- [M5] fixed — the two per-run budgets of test-multi-doc-review.sh restored to `timeout 1800` (with their failure messages), which the already-advised outer 4200 s covers → 3f3a999
+- [M6] fixed — the advised outer timeout for test-multi-code-review.sh raised from 1800 s to 4200 s in the runner help text and in the plan's Task 6 verification command, above the sum of its two 1800 s inner budgets → 3f3a999
