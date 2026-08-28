@@ -27,7 +27,7 @@
 - Consolidation rules 1–8 of spec section 5.3 (union, same-issue rule, highest severity, most specific text, fresh ids ordered by agreement count, traceability `k` = `k`, renumbering of malformed ids). Carried-finding recommendations are outside the consolidated set; disagreement → most cautious (`user-decision` > `fix-before-merge` > `ship-as-is`). The fix subagent receives no source ids and no agreement counts.
 - Clean round = zero Critical and zero Important in the consolidated set **and** u = m. Early exit rule otherwise unchanged (two consecutive clean rounds; N ≤ 2 no mid-loop exit; N = 1 "cap reached").
 - Invocation lines record `M=<m>` after `N=<n>` for every M, including 1: `_Invocation <k> — YYYY-MM-DD — N=<n> M=<m> — <invoker>_` and `_Invocation <k> — YYYY-MM-DD — N=<n> M=<m> — BASE..HEAD <base7>..<head7> — branch <raw-name> — <invoker>_`. A line without `M=` reads as M = 1. Invocation lines are never rewritten; the M passed to the skill governs every round it runs.
-- Round entry with M ≥ 2: after the header, `**Reviewers:** M=<m>, usable <u>/<m>`, `**Reviewer verdicts:** r1: <c> Critical, <i> Important, <mi> Minor | r2: … | r3: unusable`, `**Sources mapped:** <k>/<k>`; `**Reviewer verdict:**` keeps its name and position with consolidated counts; every finding disposition line ends with ` ← <a>/<m>: <source ids>`. The `fixed` shape becomes `fixed — <summary> → <sha>[ ← <a>/<m>: <ids>]`; readers of `<sha>` take the token immediately after `→ `. M = 1 entries are byte-identical to today; a resumed invocation whose effective M is 1 while the line records a larger M writes exactly one `**Reviewers:**` line; an effective M ≥ 2 always writes the full three-line format, whatever the invocation line records.
+- Round entry with M ≥ 2: after the header, `**Reviewers:** M=<m>, usable <u>/<m>`, `**Reviewer verdicts:** r1: <c> Critical, <i> Important, <mi> Minor | r2: … | r3: unusable`, `**Sources mapped:** <k>/<k>`; `**Reviewer verdict:**` keeps its name and position with consolidated counts; every disposition line of a consolidated finding ends with ` ← <a>/<m>: <source ids>` (the annotation-free lines — post-loop addendum lines, round-1 items carried from the ledger, the clean-round `- none` line — are listed in each skill's log-format rules). The `fixed` shape becomes `fixed — <summary> → <sha>[ ← <a>/<m>: <ids>]`; readers of `<sha>` take the token immediately after `→ `. M = 1 entries are byte-identical to today; a resumed invocation whose effective M is 1 while the line records a larger M writes exactly one `**Reviewers:**` line; an effective M ≥ 2 always writes the full three-line format, whatever the invocation line records.
 - `REVIEW_DONE …` and `BLOCKED:` return lines of the controllers are unchanged. `requesting-code-review` is unchanged. One M applies to both loops of an orchestration run.
 - Orchestration log header: `_Invocation 1 — YYYY-MM-DD — spec <path> — N_plan=<n> N_code=<n> M=<m> cap=<n> — branch feature/<slug> — BASE <sha7>_`; `state.md` line `Params: N_plan=<n> N_code=<n> M=<m> cap=<n>`; a header without `M=` → M = 1 on resume (the one defaulted resume parameter).
 - Release 7.4.0: `VERSION`, `.claude-plugin/plugin.json`, `.claude-plugin/marketplace.json`, `plugin.universal.yaml` meta, README badge, the two `v6.7.0–v7.3.0` ranges, the README release enumeration, a `## v7.4.0 — M reviewers per lens` entry in `RELEASE-NOTES.md`.
@@ -679,8 +679,8 @@ Expected: a number ≥ 3.
 Run: `grep -n 'Dispatch one reviewer\|One reviewer per round\|^reviewer per round;\|N=<n> — <invoker>' skills/multi-doc-review/SKILL.md skills/multi-doc-review/reviewer-prompt.md`
 Expected: no output.
 
-Run: `grep -n '^\*\*Reviewers:\*\* M=<m>, usable <u>/<m>$\|^\*\*Sources mapped:\*\* <k>/<k>$' skills/multi-doc-review/SKILL.md`
-Expected: two matching lines.
+Run: `grep -n '^\*\*Reviewers:\*\* M=3, usable 3/3$\|^\*\*Sources mapped:\*\* 4/4$' skills/multi-doc-review/SKILL.md`
+Expected: two matching lines (the M ≥ 2 example of the Review Log Format section).
 
 - [ ] **Step 9: Commit**
 
@@ -1145,7 +1145,7 @@ Rules for the added lines:
   is present). Two kinds of disposition line carry no annotation:
   post-loop addendum lines (`decided (user): …`, addendum `fixed …`), and
   the round-1 lines written for the **Carried findings (round 1)** items
-  of Step 5 — findings carried from an earlier invocation's ledger, which
+  of the Triage step — findings carried from an earlier invocation's ledger, which
   are decided from the reviewers' recommendations and never enter the
   consolidated set. A finding's annotation lives on its original
   disposition line. This exception is about the item's origin, not about
