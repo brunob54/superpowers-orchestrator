@@ -667,7 +667,8 @@ You can change the threshold in your `settings.json` (a percentage, 10–90):
 The number of reviewers per lens — M, the identical reviewer subagents each
 `multi-doc-review` / `multi-code-review` round dispatches in parallel — is set
 the same way (an integer 1–5, default 1; restart the CLI after changing it;
-an invalid value silently falls back to 1):
+an invalid value silently falls back to 1). Honored on Claude Code and
+Cursor; has no effect on Codex:
 
 ```json
 { "env": { "SUPERPOWERS_REVIEWERS_PER_LENS": "3" } }

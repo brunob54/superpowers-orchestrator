@@ -376,7 +376,7 @@ With this stack, sessions start with full context and zero re-discovery overhead
 
 Set these in `settings.json`'s `env` block so they survive plugin updates; a changed value takes effect after the CLI is restarted.
 
-- `SUPERPOWERS_REVIEWERS_PER_LENS` — M, reviewers per lens: how many identical reviewer subagents each `multi-doc-review` / `multi-code-review` round dispatches in parallel (integer 1–5, default 1). Example: `{ "env": { "SUPERPOWERS_REVIEWERS_PER_LENS": "3" } }`. An `M=<m>` stated in an invocation, or answered in orchestration's Phase 0, wins over it. An invalid value silently falls back to 1.
+- `SUPERPOWERS_REVIEWERS_PER_LENS` — M, reviewers per lens: how many identical reviewer subagents each `multi-doc-review` / `multi-code-review` round dispatches in parallel (integer 1–5, default 1). Example: `{ "env": { "SUPERPOWERS_REVIEWERS_PER_LENS": "3" } }`. An `M=<m>` stated in an invocation, or answered in orchestration's Phase 0, wins over it. An invalid value silently falls back to 1. Honored on Claude Code and Cursor; has no effect on Codex.
 - `SUPERPOWERS_PRESSURE_THRESHOLD` — the context-pressure gate's block threshold (a percentage, 10–90, default 60); see **skill-activator** below.
 - `SUPERPOWERS_AUTO_UPDATE` — `0` disables the startup update check; see **Available Update Notification** below.
 
