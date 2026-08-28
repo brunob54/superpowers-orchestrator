@@ -48,3 +48,14 @@ _Carried findings source: `.superpowers/sdd/progress.md` `Minor:` lines (14 item
 ### Dispositions
 - [M1] fixed — plan manual-verification block now validates `VERSION` before composing `$CACHE`, so an empty or missing `VERSION` can no longer collapse the `rm -rf` target to the parent plugin-cache directory → 153fc8b (partial: the two `rm -rf "$CACHE"` mentions in the surrounding prose are inline code spans outside the fenced block and were left unchanged; the root cause is removed)
 - [M2] fixed — both review skills now state that only the LAST `<reviewers-per-lens>` element of the session context is a parameter, because `hooks/session-start` appends its own tag after every embedded workspace-file block → 153fc8b
+
+## Round 4 — Test & coverage quality — opus
+**Reviewer verdict:** 0 Critical, 3 Important, 3 Minor
+**Converged:** no
+### Dispositions
+- [I1] user-decision — `assert_round_reviewers` skips its content checks when a round entry says `**Sources mapped:** 0/0`, so assertion (m) can pass while verifying nothing and the behavioural test still exits 0 (plan-mandated: Task 6 Step 1 fixes the helper's content verbatim, and making the 0/0 path fail would contradict it)
+- [I2] fixed — both behavioural tests now assert the M=2 contract on round 2 as well as round 1 → afaafe4
+- [I3] fixed — tests/claude-code/test-multi-doc-review.sh regained default (M=1) coverage as a second case asserting the M=1 log shape → afaafe4
+- [M1] fixed — tests/codex/test-session-start-reviewers-tag.sh now exercises both boundaries of the `[1-5]` range (1, 3, 5) → afaafe4
+- [M2] fixed — invocation-line `M=` greps added for the doc-review M=2 case and for both M=1 cases → afaafe4
+- [M3] fixed — the "empty consolidated set" note in tests/claude-code/test-helpers.sh is now printed only when the `**Sources mapped:**` line was actually found → afaafe4
