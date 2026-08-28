@@ -206,7 +206,8 @@ writing-plans (plan) gates, or direct via `/multi-doc-review <path> [N] [M=<m>]`
   `rejected: <reason>` — never silently dropped. A sidecar log
   (`<doc>-review-log.md`) records every disposition.
 - **Early exit** after two consecutive clean rounds (zero Critical/Important
-  enumerated); default N=3, valid 0–10, N=0 is an explicit skip.
+  enumerated **and** every reviewer usable, u = M); default N=3, valid 0–10,
+  N=0 is an explicit skip.
 - **Once per gate**: a completed loop is recorded in the log and not re-run
   after user-requested edits (only the host self-review re-runs), surviving
   session restarts.

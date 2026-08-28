@@ -118,7 +118,7 @@ A single review — even a careful one — inherits the authoring conversation's
 ### How it works
 
 - Reviewers receive only template placeholders (document path, doc type, lens instructions, and — for plans — the spec path); they are barred from the Skill tool, review logs, sibling spec/plan documents, and the target's git history.
-- Convergence is judged from the reviewer's **enumerated findings** (never the count line, never post-triage): a round is clean at zero Critical and zero Important. Rejecting findings at triage never makes a round clean, so the controller cannot game the exit. An unusable report is retried once, then logged `inconclusive` (breaks the clean streak).
+- Convergence is judged from the reviewer's **enumerated findings** (never the count line, never post-triage): a round is clean only when the consolidated finding set is empty **and** every reviewer returned a usable report (u = M). Rejecting findings at triage never makes a round clean, so the controller cannot game the exit. An unusable report is retried once; if any reviewer is still unusable after the retry, the round is logged PARTIAL as `usable <u>/<m>` (never clean), unless every reviewer is unusable (u = 0), which is logged `inconclusive` (breaks the clean streak).
 - Reviewer reports open with the marker `<!-- multi-review report -->`; `hooks/subagent-guard.js` exempts such messages from skill-leakage blocking, since reports about skill-discussing documents legitimately quote skill names.
 - N semantics: integer 0–10 (anything else falls back to 3); N=0 skips the loop but logs a `skipped` entry; the loop runs at most once per gate (recorded in the log, surviving restarts).
 
@@ -160,7 +160,7 @@ Dogfood evidence from building it: the design spec collected **33 findings acros
 
 - **Reviewer model:** inherits the session model with a **sonnet floor** — a haiku-tier or unrecognized session model dispatches reviewers on `sonnet`. This replaces subagent-driven-development's previous always-opus final-review rule. Fix subagents follow SDD's existing Model Selection table.
 - **A user-supplied BASE is never used raw:** it is charset-rejected (`^[A-Za-z0-9._/~^{}-]+$`) before anything touches a shell, resolved with `git rev-parse --verify`, and ancestry-checked against HEAD — a non-ancestor BASE would render untouched commits as deletions and the reviewer would report them as defects.
-- Convergence is judged from the reviewer's **enumerated findings**, never the count line and never post-triage — rejecting findings at triage cannot make a round clean.
+- Convergence is judged from the reviewer's **enumerated findings**, never the count line and never post-triage — a round is clean only when the finding set is empty **and** every reviewer returned a usable report (u = M); rejecting findings at triage cannot make a round clean.
 - **Once per gate** is keyed on the completion marker's *post-fix* HEAD plus the recorded branch name (an invocation-start HEAD would be defeated by the loop's own fix commits). The tracked-log condition — never honouring a log that `git ls-files` reports as tracked in the branch under review — applies in **direct mode** only; in **pipeline mode** the log is tracked by design, and the completion marker records the **effective HEAD** instead.
 - Reviewer reports reuse the guard-exempt marker `<!-- multi-review report -->`; the skill is in the `hooks/subagent-guard.js` roster.
 

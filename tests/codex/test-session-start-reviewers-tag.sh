@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
 # Unit test: hooks/session-start emits <reviewers-per-lens><m></reviewers-per-lens>
-# when SUPERPOWERS_REVIEWERS_PER_LENS is an integer from 1 to 5, and emits no
-# tag otherwise (unset, 0, 6, 10, abc).
+# with the value of SUPERPOWERS_REVIEWERS_PER_LENS when it is a valid integer
+# from 1 to 5. Every other value (unset, empty, 0, 6, 10, abc, 3.0, 2.5,
+# leading whitespace) instead emits the explicit fallback tag
+# <reviewers-per-lens>1</reviewers-per-lens>, which must end the context.
 #
 # The hook is not a pure function of the variable, so every run is hermetic:
 #   - SUPERPOWERS_AUTO_UPDATE=0   -> no network fetch, no fast-forward of the checkout
