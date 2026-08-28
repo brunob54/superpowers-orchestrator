@@ -1,7 +1,9 @@
 # Code Reviewer Prompt Template (multi-code-review)
 
 Use this template when dispatching a multi-code-review reviewer subagent.
-One reviewer per round; the lens comes from SKILL.md's Lens Rotation.
+M reviewers per round (default 1), all with this identical prompt; the
+lens comes from SKILL.md's Lens Rotation. The reviewers are not told that
+other reviewers exist.
 
 The marker line in the output format is load-bearing:
 `hooks/subagent-guard.js` exempts messages that OPEN with it from
@@ -11,6 +13,8 @@ blocked and the round degrades to a retry.
 ```
 Agent tool (general-purpose):
   description: "multi-code-review round [ROUND]: [LENS_NAME]"
+               (when M ≥ 2 append " (reviewer <j>/<m>)" — reviewer j of m;
+               the description is not part of the prompt)
   model: [MODEL — REQUIRED: session model, sonnet floor per SKILL.md
          Parameters; never omit]
   prompt: |
