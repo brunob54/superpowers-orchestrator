@@ -208,6 +208,7 @@ check_no_reviewers_per_lens_setting() {
     local var="SUPERPOWERS_REVIEWERS_PER_LENS"
     local f
     for f in "$HOME/.claude/settings.json" \
+             "$HOME/.claude/settings.local.json" \
              "$plugin_dir/.claude/settings.json" \
              "$plugin_dir/.claude/settings.local.json"; do
         if [ -f "$f" ] && grep -qE "\"$var\"[[:space:]]*:" "$f"; then

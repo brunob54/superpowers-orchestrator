@@ -328,7 +328,7 @@ Rules for the added lines:
   `**Sources mapped:**` line (nothing was consolidated), then
   `**Reviewer verdict:** inconclusive` and `- inconclusive — <reason>`.
 
-A clean round (zero findings) writes exactly one disposition line:
+A clean round (zero findings, with u = M) writes exactly one disposition line:
 `- none — no material issues under this lens`.
 Skipped invocations (N=0) get a one-line `skipped` entry under their
 invocation note (which carries `M=` like every other); failed rounds get
