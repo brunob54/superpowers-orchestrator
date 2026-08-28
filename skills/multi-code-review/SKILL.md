@@ -63,7 +63,8 @@ final review on such platforms; that fallback lives there, not here.)
   range is empty or invalid (BASE = HEAD, no merge-base, or BASE does
   not resolve to a commit), stop and report; dispatch nothing.
 - **N (round cap):** if the user stated a count, use it (most recent
-  wins). Otherwise ask once — at gate time for the SDD gate, immediately
+  wins; every M form is extracted from the invocation first — see M
+  below). Otherwise ask once — at gate time for the SDD gate, immediately
   for direct invocations. Default **3**. Valid N is an integer 0–10;
   anything else → 3. N = 0 skips the loop and logs a `skipped` entry
   recording `HEAD <sha>` (an explicit user choice; the SDD gate then
@@ -325,18 +326,19 @@ code has been revised since, so a re-pass is meaningful):
    commits landed since the last package; reuse it when none did (a clean
    round, or a round whose findings were all rejected or deferred).
 2. **Dispatch M reviewers in one message** — M parallel Agent tool calls
-   (the convention of `skills/dispatching-parallel-agents/SKILL.md`), each
-   `general-purpose`, model per Parameters, filled from
-   `./reviewer-prompt.md` with the same placeholder values: round number,
-   model, repo root (the root anchor), the **same package path** (the
-   package is generated once per round), BASE/HEAD SHAs, round `i`'s lens
-   name + the lens's full instruction text from Lens Rotation below
-   (verbatim), the plan path on every lens-1 round, and the carried
-   Minor-findings list on round 1 only. Fill ONLY the template
-   placeholders. Never pass the conversation, prior rounds' findings, fix
-   reports, or the log. Reviewer `j` of the round is written `r<j>`. The
-   reviewers are not told that other reviewers exist: only the Agent
-   call's `description` differs, and only when M ≥ 2 (the
+   (the convention of `../dispatching-parallel-agents/SKILL.md`, relative
+   to this skill's own base directory), each `general-purpose`, model per
+   Parameters, filled from `./reviewer-prompt.md` with the same
+   placeholder values: round number, model, repo root (the root anchor),
+   the **same package path** (the package is generated once per round),
+   BASE/HEAD SHAs, round `i`'s lens name + the lens's full instruction
+   text from Lens Rotation below (verbatim), the plan path on every
+   lens-1 round, and the carried Minor-findings list on round 1 only.
+   Fill ONLY the template placeholders. Never pass the conversation,
+   prior rounds' findings, fix reports, or the log. Reviewer `j` of the
+   round is written `r<j>`. The reviewers are not told that other
+   reviewers exist: only the Agent call's `description` differs, and
+   only when M ≥ 2 (the
    `(reviewer <j>/<m>)` suffix shown in the template). A platform that
    runs the calls one after another gives the same result, only slower.
 3. **Validate each report and consolidate:** a report is usable when its
@@ -577,8 +579,8 @@ that drift from the text they are meant to check.
 
 The invocation line records M right after N, **including when M = 1**, so
 that a log is self-describing; a line without `M=` (written before 7.4.0)
-is read as M = 1. Round entry with M = 1 (byte-identical to earlier
-releases):
+is read as M = 1. The invocation line below adds `M=<m>`; the round entry
+that follows it (M = 1) is byte-identical to earlier releases:
 
 ```
 _Invocation <k> — YYYY-MM-DD — N=<n> M=<m> — BASE..HEAD <base7>..<head7> — branch <raw-name> — <invoker>_
@@ -640,7 +642,8 @@ Rules for the added lines:
   reviewer `r<j>: unusable`; a reviewer whose ids were renumbered gets the
   suffix `, ids renumbered`, and one whose count line disagreed with its
   enumeration the suffix `, counts recomputed`. A reviewer that needs both
-  suffixes gets `, ids renumbered` first, then `, counts recomputed`.
+  suffixes gets `, ids renumbered` first, then `, counts recomputed`. The
+  entry is written on one line, never wrapped.
 - `**Sources mapped:**` — the traceability check of the Procedure; both
   numbers are *k*. The entry is written only after the check passed, so the
   two numbers are always equal.
@@ -680,15 +683,16 @@ secret value; the same applies to command output quoted in fix reports.
 Canonical dispositions — Critical/Important:
 `fixed — <summary> → <sha>` | `rejected: <reason>` | `user-decision` |
 `unresolved: <reason>`; Minor: `fixed — <summary> → <sha>` | `carried` |
-`rejected: <reason>` — the `fixed` line always uses the single shape
-`fixed — <summary> → <sha>`. A clean round (zero
-findings of any severity, and — on round 1 — no carried-finding
-dispositions either) writes exactly one disposition line:
-`- none — no material issues under this lens`. A Minor-only round is
-clean for convergence but logs its Minor dispositions normally — never
-the "none" line. Note sonnet-floor substitutions on the round header
-line. Skipped invocations (N=0) get a one-line `skipped` entry carrying
-the same invocation-note fields (date, N, BASE..HEAD, raw branch name,
+`rejected: <reason>` — the `fixed` line uses the shape
+`fixed — <summary> → <sha>`, with the source annotation appended when
+M ≥ 2 (see above). A clean round (zero findings of any severity, and —
+on round 1 — no carried-finding dispositions either, with u = M) writes
+exactly one disposition line: `- none — no material issues under this
+lens`. A Minor-only round is clean for convergence (with u = M) but logs
+its Minor dispositions normally — never the "none" line. Note
+sonnet-floor substitutions on the round header line. Skipped invocations
+(N=0) get a one-line `skipped` entry carrying
+the same invocation-note fields (date, N, M, BASE..HEAD, raw branch name,
 invoker) plus `HEAD <sha>` — in **direct mode** the raw
 `git rev-parse HEAD`; in **pipeline mode** the entry records the
 **effective HEAD**, never the raw `git rev-parse HEAD`: the entry is
@@ -709,7 +713,7 @@ effective HEAD as defined in "Pipeline rule 4" below, beside "Once per
 gate" — the raw HEAD at marker time is the round's own log commit, which
 would never match on a later comparison. Then report to the host gate: rounds run, per-round finding
 counts, fixes applied (commit SHAs), unresolved and user-decision items,
-converged vs cap reached, log path.
+converged vs cap reached, log path, effective M (and any substitution).
 
 **Resolving user-decision and unresolved items** (interactive; batched
 mode journals and ends the batch instead): present each once, at this

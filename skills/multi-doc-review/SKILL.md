@@ -79,10 +79,11 @@ global number.
 For each round `i` in 1..N:
 
 1. **Dispatch M reviewers in one message** — M parallel Agent tool calls
-   (the convention of `skills/dispatching-parallel-agents/SKILL.md`), each
-   filled from `reviewer-prompt.md` with the same placeholder values:
-   round `i`'s lens (Lens Rotation below; for N > 4 cycle from lens 1),
-   the same document path, the same model. Fill ONLY the template
+   (the convention of `../dispatching-parallel-agents/SKILL.md`, relative
+   to this skill's own base directory), each filled from
+   `reviewer-prompt.md` with the same placeholder values: round `i`'s
+   lens (Lens Rotation below; for N > 4 cycle from lens 1), the same
+   document path, the same model. Fill ONLY the template
    placeholders. Never pass the conversation, design rationale, prior
    findings, or the log. Reviewer `j` of the round is written `r<j>`. The
    reviewers are not told that other reviewers exist: only the Agent
@@ -165,7 +166,8 @@ gate, the host skill's own checklist (brainstorming's Spec Self-Review /
 writing-plans' Self-Review, already in context); for direct invocations, the
 four-item list: placeholder scan, internal consistency, ambiguity, scope.
 Fix merge-introduced issues inline and note them in the log. Then report:
-rounds run, per-round finding counts, converged vs cap reached, log path.
+rounds run, per-round finding counts, converged vs cap reached, log path,
+effective M (and any substitution).
 The host gate's single user approval follows — this skill adds no approvals
 of its own.
 
@@ -234,8 +236,9 @@ Sidecar file next to the target document: `<doc-basename>-review-log.md`.
 
 The invocation line records M right after N, **including when M = 1**, so
 that a log is self-describing. A line without `M=` (written by a release
-before 7.4.0) is read as M = 1. Round entry with M = 1 (byte-identical to
-earlier releases):
+before 7.4.0) is read as M = 1. The invocation line below adds `M=<m>`;
+the round entry that follows it (M = 1) is byte-identical to earlier
+releases:
 
 ```
 _Invocation <k> — YYYY-MM-DD — N=<n> M=<m> — <invoker>_
@@ -289,7 +292,8 @@ Rules for the added lines:
   reviewer `r<j>: unusable`; a reviewer whose ids were renumbered gets the
   suffix `, ids renumbered`, and one whose count line disagreed with its
   enumeration the suffix `, counts recomputed`. A reviewer that needs both
-  suffixes gets `, ids renumbered` first, then `, counts recomputed`.
+  suffixes gets `, ids renumbered` first, then `, counts recomputed`. The
+  entry is written on one line, never wrapped.
 - `**Sources mapped:**` — the traceability check of the procedure; both
   numbers are *k*. The entry is written only after the check passed, so the
   two numbers are always equal.
@@ -330,7 +334,6 @@ invocation note (which carries `M=` like every other); failed rounds get
 - One or more reviewers unusable after one retry, u ≥ 1 → partial round:
   consolidate the usable reports, log `usable <u>/<m>` and `r<j>: unusable`,
   triage normally; the round is never clean.
-- All reviewers unusable after retries (u = 0) → `inconclusive` round.
 - Sources-mapped mismatch (source ids mapped ≠ findings enumerated) →
   repair the consolidation before writing the entry; never write the line
   with unequal numbers.

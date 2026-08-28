@@ -2,8 +2,8 @@
 # Test: multi-code-review skill — N-round whole-branch review loop (behavioral, slow)
 #
 # Seeds a temp git repo with a base commit and a branch carrying a blatant
-# planted defect, invokes the skill headlessly with N=2, and asserts the
-# review-log contract from docs/superpowers-orchestrator/2026-07-27-multi-code-review/specs/multi-code-review-design.md:
+# planted defect, invokes the skill headlessly with N=2 and M=2, and
+# asserts the review-log contract from docs/superpowers-orchestrator/2026-07-27-multi-code-review/specs/multi-code-review-design.md:
 #   (a) .superpowers/reviews/*-review-log.md exists with a Round 1 entry
 #   (b) every enumerated Critical/Important disposition uses the canonical
 #       vocabulary (fixed / rejected: / user-decision / unresolved:)
@@ -11,6 +11,10 @@
 #   (d) fix commits (if any) use generic subjects — no finding text
 #   (f) the run was not killed by the timeout
 #   (g)/(h) the loop ran Round 2 and wrote its completion marker
+#   (i) the invocation line records N and M
+#   (m) M=2: round 1 carries the reviewers-per-lens lines (Reviewers,
+#       Reviewer verdicts, Sources mapped) and source annotations that
+#       agree with each other
 #
 # Case 2 (pipeline mode, TOPIC_DIR) repeats the setup on a second branch and
 # adds:

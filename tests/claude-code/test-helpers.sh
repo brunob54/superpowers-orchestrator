@@ -270,3 +270,4 @@ assert_round_reviewers() {
 
     return "$failures"
 }
+export -f assert_round_reviewers
