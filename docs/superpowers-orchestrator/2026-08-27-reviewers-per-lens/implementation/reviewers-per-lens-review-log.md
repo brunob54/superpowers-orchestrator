@@ -59,3 +59,16 @@ _Carried findings source: `.superpowers/sdd/progress.md` `Minor:` lines (14 item
 - [M1] fixed — tests/codex/test-session-start-reviewers-tag.sh now exercises both boundaries of the `[1-5]` range (1, 3, 5) → afaafe4
 - [M2] fixed — invocation-line `M=` greps added for the doc-review M=2 case and for both M=1 cases → afaafe4
 - [M3] fixed — the "empty consolidated set" note in tests/claude-code/test-helpers.sh is now printed only when the `**Sources mapped:**` line was actually found → afaafe4
+
+## Round 4 verification 1 — Test & coverage quality — opus
+**Reviewer verdict:** 0 Critical, 2 Important, 7 Minor
+### Dispositions
+- [I1] fixed — the doc-review M=1 case now fails when the `## Round 1 — ` entry extracts empty, and its positive anchor greps the same header prefix → bb6d7db
+- [I2] fixed — both behavioural scripts `unset SUPERPOWERS_REVIEWERS_PER_LENS`, so the default-M cases no longer depend on the developer's environment → bb6d7db
+- [M1] fixed — `assert_round_reviewers` now prints a `note:` when a round was partial (usable u/m), so a green run is distinguishable from one that never exercised M ≥ 2 consolidation → bb6d7db
+- [M2] fixed — the code-review M=1 case gained the same negative shape block, with the non-empty extraction guard → bb6d7db
+- [M3] fixed — the session-tag test now rejects `3.0`, `2.5`, the set-but-empty value and `" 3"` → bb6d7db
+- [M4] fixed — a new case seeds `state.md` with a decoy `<reviewers-per-lens>` element and asserts the hook's own tag is still last → bb6d7db
+- [M5] fixed — both skills now state that a clean round with an empty consolidated set writes `**Sources mapped:** 0/0`, and only an inconclusive round omits the line → bb6d7db
+- [M6] carried — no assertion covers `## Round <i> verification <c>` entries; adding a conditional assertion for entries that may not exist was judged more churn than value at this point
+- [M7] fixed — both inner per-call timeouts lowered to 1500 s so two live calls fit one outer budget, and the runner's help listing now hints `--timeout 3600` for the doc-review test → bb6d7db

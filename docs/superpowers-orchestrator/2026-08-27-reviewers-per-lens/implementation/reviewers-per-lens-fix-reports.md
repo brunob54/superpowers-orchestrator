@@ -818,3 +818,72 @@ $ git status --porcelain (immediately before commit)
  M tests/claude-code/test-multi-code-review.sh
  M tests/claude-code/test-multi-doc-review.sh
  M tests/codex/test-session-start-reviewers-tag.sh
+
+## Round 4 verification 1 fixes — 2026-08-28
+
+### Findings addressed
+- [I1] tests/claude-code/test-multi-doc-review.sh:150,172-179 — added a `FAIL(m1): no '## Round 1 — ' entry extracted` guard right after the `ROUND1_M1` awk extraction, and changed the `(a2)` grep from `^## Round 1` to `^## Round 1 — ` so it matches the same header prefix the extractor requires.
+- [I2] tests/claude-code/test-multi-doc-review.sh:41-45, tests/claude-code/test-multi-code-review.sh:67-71 — added `unset SUPERPOWERS_REVIEWERS_PER_LENS` near the top of both scripts, before any `claude -p` call, with a one-line comment that M must come from the prompt, not the developer's environment.
+- [M1] tests/claude-code/test-helpers.sh:232-243 — `assert_round_reviewers` now captures the matched usable line, extracts `u`, and echoes `note: round <r>: partial (usable <u>/<m>); M>=2 consolidation not exercised` when `u < m`, with no change to pass/fail outcome.
+- [M2] tests/claude-code/test-multi-code-review.sh:359-384 — added the same `(m1)` negative-shape block (no `**Reviewers:**`, no `**Reviewer verdicts:**`, no `**Sources mapped:**`, no ` ← ` annotation, plus the `[I1]` non-empty-extraction guard) against Case 2's `PIPE_LOG` round 1, mirroring the doc-review test's block structure.
+- [M3] tests/codex/test-session-start-reviewers-tag.sh:77-84 — added `3.0`, `2.5`, the set-but-empty case, and `" 3"` (leading space) to the rejecting assertions, each via `expect_no_tag`.
+- [M4] tests/codex/test-session-start-reviewers-tag.sh:86-117 — added `expect_workspace_decoy_before_tag`, which seeds `$TMP_CWD/state.md` with a decoy `<reviewers-per-lens>9</reviewers-per-lens>` string, runs the hook with a real M value, and asserts (via substring glob matching, not line numbers — most of the hook's boilerplate text is literal two-character `\n` sequences, not real newlines) that the decoy precedes the real tag and the context still ends with the real tag; the seeded file is removed right after the run (the existing `TMP_CWD` EXIT trap also covers it).
+- [M5] skills/multi-code-review/SKILL.md and skills/multi-doc-review/SKILL.md, `**Sources mapped:**` rule — added one sentence: a clean round (u = M, empty consolidated set) writes `**Sources mapped:** 0/0`; only an inconclusive round (u = 0) omits the line entirely. No helper change.
+- [M7] tests/claude-code/test-multi-doc-review.sh:83,145 — lowered both inner `timeout 1800` calls to `timeout 1500`; tests/claude-code/run-skill-tests.sh:65 — added `(use --timeout 3600)` to the `test-multi-doc-review.sh` help-listing hint, matching the neighbouring entries' style.
+
+### Verification
+$ bash -n tests/claude-code/test-helpers.sh && bash -n tests/claude-code/test-multi-code-review.sh && bash -n tests/claude-code/test-multi-doc-review.sh && bash -n tests/codex/test-session-start-reviewers-tag.sh && bash -n tests/claude-code/run-skill-tests.sh && echo SYNTAX_OK
+SYNTAX_OK
+
+$ bash tests/codex/test-session-start-reviewers-tag.sh
+session-start: <reviewers-per-lens> tag
+  ok   - SUPERPOWERS_REVIEWERS_PER_LENS=1 emits <reviewers-per-lens>1</reviewers-per-lens> at the end of the context
+  ok   - SUPERPOWERS_REVIEWERS_PER_LENS=3 emits <reviewers-per-lens>3</reviewers-per-lens> at the end of the context
+  ok   - SUPERPOWERS_REVIEWERS_PER_LENS=5 emits <reviewers-per-lens>5</reviewers-per-lens> at the end of the context
+  ok   - unset SUPERPOWERS_REVIEWERS_PER_LENS emits no tag
+  ok   - SUPERPOWERS_REVIEWERS_PER_LENS=0 emits no tag
+  ok   - SUPERPOWERS_REVIEWERS_PER_LENS=6 emits no tag
+  ok   - SUPERPOWERS_REVIEWERS_PER_LENS=10 emits no tag
+  ok   - SUPERPOWERS_REVIEWERS_PER_LENS=abc emits no tag
+  ok   - SUPERPOWERS_REVIEWERS_PER_LENS=3.0 emits no tag
+  ok   - SUPERPOWERS_REVIEWERS_PER_LENS=2.5 emits no tag
+  ok   - SUPERPOWERS_REVIEWERS_PER_LENS= (set but empty) emits no tag
+  ok   - SUPERPOWERS_REVIEWERS_PER_LENS=' 3' (leading space) emits no tag
+  ok   - workspace-embedded decoy tag precedes the real <reviewers-per-lens>3</reviewers-per-lens> at the end of the context
+  13 passed, 0 failed
+
+$ bash tests/codex/run-unit-tests.sh
+(10 suites: protect-secrets and 9 others — all passed)
+==================================================
+ Results: 10 suites passed, 0 suites failed
+ All unit tests passed.
+==================================================
+
+$ bash tests/smart-compress/run-tests.sh
+(9 sections — hooks.json integration, token savings, adaptive re-run detection, etc. — all passed)
+══════════════════════════════════════════
+  Results: 87 passed
+  0 failed
+══════════════════════════════════════════
+
+$ [I1]/[M1] focused check — assert_round_reviewers against three synthetic logs under /tmp (not in the repo), sourced via `bash -c` (this shell resolves to zsh, whose `export -f` is incompatible with test-helpers.sh; `bash -c` avoided that)
+=== case 1: well-formed M=2 (2 reviewers, 4 distinct source tokens, Sources mapped 4/4) ===
+exit: 0
+=== case 2: usable 1/2 ===
+note: round 1: partial (usable 1/2); M>=2 consolidation not exercised
+exit: 0
+=== case 3: Sources mapped 0/0 ===
+note: round 1: Sources mapped is 0/0 (empty consolidated set); annotation check skipped — rerun if findings were expected
+exit: 0
+
+$ [I1] guard-fires check — synthetic doc-review log under /tmp whose round-1 header omits the ' — ' part ("## Round 1 (no en dash here)"), running just the extraction + guard logic (the same awk command and empty-string test copied out of the script) against it
+FAIL(m1): no '## Round 1 — ' entry extracted
+
+$ git status --porcelain (immediately before commit)
+ M skills/multi-code-review/SKILL.md
+ M skills/multi-doc-review/SKILL.md
+ M tests/claude-code/run-skill-tests.sh
+ M tests/claude-code/test-helpers.sh
+ M tests/claude-code/test-multi-code-review.sh
+ M tests/claude-code/test-multi-doc-review.sh
+ M tests/codex/test-session-start-reviewers-tag.sh
