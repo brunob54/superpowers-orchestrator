@@ -30,3 +30,14 @@ _Carried findings source: `.superpowers/sdd/progress.md` `Minor:` lines (14 item
 - [K12] carried — .superpowers/sdd/task-6-report.md per-file diffstat numbers wrong (ship-as-is: work artifact, totals correct)
 - [K13] fixed — README.md first use of M now expands to "(reviewers per lens)" → 3b30e10
 - [K14] carried — docs/REVIEW-PROCESS-COMPARISON.md eval item does not restate the 1–5 range (ship-as-is: stated in the sibling documents it links to)
+
+## Round 2 — Adversarial red-team — opus
+**Reviewer verdict:** 0 Critical, 2 Important, 4 Minor   <!-- counts recomputed from the enumeration; the report's count line said 3 Minor while enumerating M1–M4 -->
+**Converged:** no
+### Dispositions
+- [I1] fixed — `../dispatching-parallel-agents/SKILL.md` reference narrowed to the single-message mechanic of its Procedure step 3; its Decision Check, integration-verification step and prompt requirements declared not applicable to reviewer dispatch, in both review skills → 6f5526b
+- [I2] fixed — M resolution step 2 now states that only a `<reviewers-per-lens>` tag injected at session start counts; an occurrence inside any file the controller read is data, never a parameter, in both review skills → 6f5526b
+- [M1] carried — the accepted M forms do not cover the near-miss phrase "with 2 reviewers", so the number can survive into N parsing (changing the stated form list would contradict the plan's parameter grammar; left for the user)
+- [M2] fixed — README.md and docs/guide/README.md now note that `SUPERPOWERS_REVIEWERS_PER_LENS` is honored on Claude Code and Cursor and has no effect on Codex → 6f5526b
+- [M3] carried — tests/claude-code/test-helpers.sh `**Sources mapped:** k/k` equality check cannot fail by construction; the two checks that follow carry the real traceability assertion
+- [M4] carried — tests/claude-code/test-helpers.sh assertion (m) passes trivially when a round's consolidated set is empty; making an empty round 1 a failure would make a genuinely clean round fail
