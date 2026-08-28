@@ -89,7 +89,11 @@ digraph sdd_process {
    layout** derives no topic folder: pass no `TOPIC_DIR`, so the review runs
    in direct mode under `.superpowers/reviews/`, and say so in the
    completion message. Ask the user for N unless a count was
-   already stated (default 3; N=0 skips on explicit user choice). The
+   already stated (default 3; N=0 skips on explicit user choice). Never
+   ask for M (reviewers per lens — the number of identical reviewer
+   subagents each review round dispatches in parallel): pass the value
+   the user stated, else the value of the `<reviewers-per-lens>` session
+   tag, else 1 — multi-code-review's own default resolution. The
    loop's unresolved Critical/Important and user-decision items block
    completion exactly as unresolved review findings do. On platforms
    without the Agent tool, fall back to the single-pass review (see
@@ -219,13 +223,21 @@ Then stop with a message stating what was completed, any open issues
 > Batch complete (N tasks). Context at P%. To continue: run `/clear`, then paste:
 > "Resume the plan at <plan-path> (batched autonomous mode)"
 
+When the user stated M (reviewers per lens for the final review loop) when
+the batch run started, the paste prompt carries it so that the stated value
+survives `/clear`: `"Resume the plan at <plan-path> (batched autonomous
+mode, M=<m>)"`. Otherwise write nothing about M — multi-code-review's
+default resolution (session tag, else 1) runs again after every resume.
+
 If the batch ended because the plan is complete, skip the resume instructions:
 write the handoff with `## Open Issues` only (for any carry-over), then proceed
 to the final whole-branch review loop (`multi-code-review`) and
 `finishing-a-development-branch` as in the Core Flow. The loop runs
 autonomously: never ask for N (default 3, or a count the user stated when
-starting the batch); plan-mandated/user-decision findings are journaled
-under `## Open Issues` and end the batch.
+starting the batch) and never ask for M (the value the user stated when
+starting the batch or carried by the resume prompt's `M=<m>`, else the
+`<reviewers-per-lens>` session tag, else 1); plan-mandated/user-decision
+findings are journaled under `## Open Issues` and end the batch.
 
 ### Autonomy Policy (inside a batch)
 
