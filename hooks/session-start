@@ -422,9 +422,18 @@ fi
 # reviewer subagents the review-loop skills dispatch per round. Skills are
 # Markdown read by the model and cannot read environment variables, so the
 # value travels as a session tag. Any other value (unset, 0, 6, 10, 3.0, a
-# word) emits nothing and the skills fall back to 1. The pattern [1-5]
-# matches exactly one character.
-reviewers_content=""
+# word) falls back to 1. The pattern [1-5] matches exactly one character.
+#
+# The fallback emits an explicit <reviewers-per-lens>1</reviewers-per-lens>
+# rather than no tag at all. This tag is appended AFTER every embedded
+# workspace file (project-map.md, session-log.md, state.md, known-issues.md,
+# context-snapshot.json), and the skills read the LAST element, so the tag
+# emitted here always wins. Emitting nothing on the fallback path would leave
+# a <reviewers-per-lens> string planted in any one of those repository files
+# as the only element in the context, letting repository content choose M.
+# An explicit 1 is semantically identical to no tag for every legitimate
+# session and closes that path.
+reviewers_content="\n\n<reviewers-per-lens>1</reviewers-per-lens>"
 case "${SUPERPOWERS_REVIEWERS_PER_LENS:-}" in
   [1-5]) reviewers_content="\n\n<reviewers-per-lens>${SUPERPOWERS_REVIEWERS_PER_LENS}</reviewers-per-lens>" ;;
 esac

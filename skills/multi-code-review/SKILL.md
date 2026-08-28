@@ -449,9 +449,16 @@ code has been revised since, so a re-pass is meaningful):
      recommendation per carried item (`fix-before-merge` | `ship-as-is` |
      `user-decision`). Decide each item yourself from the recommendations
      present in the usable reports; when they disagree take the most
-     cautious one — `user-decision` if any reviewer recommends it (the
-     disagreement itself is information for the human), else
-     `fix-before-merge` if any reviewer recommends it, else `ship-as-is`;
+     cautious one that is corroborated — `user-decision` when at least TWO
+     reviewers recommend it, or when M = 1 and the single reviewer does;
+     else `fix-before-merge` if any reviewer recommends it (a lone
+     `user-decision` recommendation under M >= 2 lands here); else
+     `ship-as-is`. Escalating to `user-decision` on one voice out of M
+     would make a larger M more likely to stop an unattended run —
+     1 - (1 - p)^M — turning a quality setting into a halt-probability
+     setting. Requiring a second voice keeps M = 1 behaviour byte-identical
+     and keeps the caution asymmetry where it is cheap: a lone worried
+     reviewer still gets the item FIXED, it just does not stop the run;
      when no recommendation is present for an item (every reviewer
      omitted it, or the only reviewer that addressed it was unusable),
      decide alone. fix-before-merge → include it in this round's fix
@@ -882,8 +889,11 @@ completed invocation only on explicit user request.
 - Reviewer report with missing or duplicated ids → renumber by position per
   severity heading, note `ids renumbered` (M ≥ 2 only; with M = 1 the report
   keeps its original ids, as today).
-- M recommendations for a carried finding disagree → most cautious wins:
-  `user-decision`, else `fix-before-merge`, else `ship-as-is`.
+- M recommendations for a carried finding disagree → most cautious
+  CORROBORATED wins: `user-decision` needs two reviewers (or M = 1), else
+  `fix-before-merge` if any reviewer recommends it, else `ship-as-is`. A lone
+  `user-decision` under M >= 2 becomes `fix-before-merge`: the item is fixed
+  rather than stopping an unattended run.
 - Review-log invocation line without `M=` → read as M = 1; the M of this
   invocation always comes from its parameters, never from the log.
 - Platform without parallel dispatch → reviewers run one after another;

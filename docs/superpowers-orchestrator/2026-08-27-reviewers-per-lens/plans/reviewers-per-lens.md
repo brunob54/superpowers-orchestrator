@@ -24,7 +24,7 @@
 - A controller subagent takes M from its template placeholder `[M]`; a template without an M value means M = 1; a template value wins over a tag.
 - Dispatch: M parallel Agent calls in one message, identical prompt and model; only the `description` differs, and only when M ≥ 2: `"multi-doc-review round <i>: <lens name> (reviewer <j>/<m>)"` / `"multi-code-review round <i>: <lens name> (reviewer <j>/<m>)"`. Reviewers are never told other reviewers exist. The reviewer prompt bodies and placeholders are untouched.
 - Per-reviewer validation (marker line + Verdict block), one retry per unusable report keeping the reviewer number; u = usable reports; u = 0 → `inconclusive`; 1 ≤ u < m → partial round (never clean).
-- Consolidation rules 1–8 of spec section 5.3 (union, same-issue rule, highest severity, most specific text, fresh ids ordered by agreement count, traceability `k` = `k`, renumbering of malformed ids). Carried-finding recommendations are outside the consolidated set; disagreement → most cautious (`user-decision` > `fix-before-merge` > `ship-as-is`). The fix subagent receives no source ids and no agreement counts.
+- Consolidation rules 1–8 of spec section 5.3 (union, same-issue rule, highest severity, most specific text, fresh ids ordered by agreement count, traceability `k` = `k`, renumbering of malformed ids). Carried-finding recommendations are outside the consolidated set; disagreement → most cautious (`user-decision` > `fix-before-merge` > `ship-as-is` [amended 2026-08-28: `user-decision` requires two reviewers when M >= 2; see the Task 3 amendment]). The fix subagent receives no source ids and no agreement counts.
 - Clean round = zero Critical and zero Important in the consolidated set **and** u = m. Early exit rule otherwise unchanged (two consecutive clean rounds; N ≤ 2 no mid-loop exit; N = 1 "cap reached").
 - Invocation lines record `M=<m>` after `N=<n>` for every M, including 1: `_Invocation <k> — YYYY-MM-DD — N=<n> M=<m> — <invoker>_` and `_Invocation <k> — YYYY-MM-DD — N=<n> M=<m> — BASE..HEAD <base7>..<head7> — branch <raw-name> — <invoker>_`. A line without `M=` reads as M = 1. Invocation lines are never rewritten; the M passed to the skill governs every round it runs.
 - Round entry with M ≥ 2: after the header, `**Reviewers:** M=<m>, usable <u>/<m>`, `**Reviewer verdicts:** r1: <c> Critical, <i> Important, <mi> Minor | r2: … | r3: unusable`, `**Sources mapped:** <k>/<k>`; `**Reviewer verdict:**` keeps its name and position with consolidated counts; every disposition line of a consolidated finding ends with ` ← <a>/<m>: <source ids>` (the annotation-free lines — post-loop addendum lines, round-1 items carried from the ledger, the clean-round `- none` line — are listed in each skill's log-format rules). The `fixed` shape becomes `fixed — <summary> → <sha>[ ← <a>/<m>: <ids>]`; readers of `<sha>` take the token immediately after `→ `. M = 1 entries are byte-identical to today; a resumed invocation whose effective M is 1 while the line records a larger M writes exactly one `**Reviewers:**` line; an effective M ≥ 2 always writes the full three-line format, whatever the invocation line records.
@@ -64,6 +64,24 @@ Edit notation used below: "replace A with B" means an exact-string replacement i
 ---
 
 ### Task 1: Session tag from `SUPERPOWERS_REVIEWERS_PER_LENS` (hook + unit test)
+
+> **Amendment — 2026-08-28, after Phase 4 invocation 2, round 7 finding [I1].**
+> This task mandated "Invalid or unset -> no tag (silent fallback,
+> documented)", and its hermetic test asserted `expect_no_tag` for the unset
+> and invalid cases. Review found that the hook appends its tag AFTER every
+> embedded workspace file (project-map.md, session-log.md, state.md,
+> known-issues.md, context-snapshot.json) and the skills read the LAST
+> element. Emitting no tag on the fallback path therefore leaves a
+> `<reviewers-per-lens>` string planted in any one of those repository files
+> as the only element in context, so repository content chooses M (clamped
+> 1-5, so the cost is reviewer count and concurrency, not privilege).
+>
+> The fallback now emits an explicit `<reviewers-per-lens>1</reviewers-per-lens>`.
+> This is semantically identical to no tag for every legitimate session —
+> the skills already default to 1 — and it closes the path, because the
+> hook's own tag is last and wins. The hermetic test's `expect_no_tag`
+> helper became `expect_fallback_tag`, asserting the 1-tag ends the context.
+
 
 **Files:**
 - Create: `tests/codex/test-session-start-reviewers-tag.sh`
@@ -692,6 +710,22 @@ git commit -m "feat(multi-doc-review): M reviewers per lens with report consolid
 ---
 
 ### Task 3: `multi-code-review` — parameter M, M-reviewer rounds, consolidation, carried findings, verification re-reviews, log format
+
+> **Amendment — 2026-08-28, after Phase 4 invocation 2, round 6 finding [I2].**
+> This task fixed the carried-finding disagreement rule as "most cautious
+> wins: `user-decision` > `fix-before-merge` > `ship-as-is`", escalating to
+> `user-decision` when ANY one reviewer recommends it. Review found that this
+> makes a larger M more likely to STOP an unattended run — the probability is
+> 1 - (1 - p)^M — while the documentation presents M as a quality setting
+> whose only cost is tokens.
+>
+> `user-decision` now requires corroboration: two reviewers, or the single
+> reviewer when M = 1. A lone `user-decision` recommendation under M >= 2
+> degrades to `fix-before-merge`, so the worried reviewer still gets the item
+> FIXED — it simply does not halt the run. M = 1 behaviour is unchanged, so
+> no existing configuration regresses. The caution asymmetry is kept where it
+> is cheap and dropped only where its cost is a halted pipeline.
+
 
 **Files:**
 - Modify: `skills/multi-code-review/SKILL.md`

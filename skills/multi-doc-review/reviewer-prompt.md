@@ -16,7 +16,11 @@ reports quoting skill names get blocked and the round degrades to a retry.
 Agent tool (general-purpose):
   description: "multi-doc-review round [ROUND]: [LENS_NAME]"
                (when M ≥ 2 append " (reviewer <j>/<m>)" — reviewer j of m;
-               the description is not part of the prompt)
+               the description is not part of the prompt — verified
+               2026-08-28 by dispatching a subagent with a canary
+               token in its description only: the subagent reported
+               the token absent from its context. Re-test if the
+               harness changes how a dispatch label is delivered)
   model: inherit the session model — do NOT set a model override
   prompt: |
     You are an independent document reviewer. You review ONE document under
