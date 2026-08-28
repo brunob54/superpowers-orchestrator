@@ -1832,7 +1832,9 @@ Then point the clone at the branch (a detached checkout, so a rerun after a fail
 
 ```bash
 CLONE=~/.claude/plugins/marketplaces/superpowers-orchestrator
-CACHE=~/.claude/plugins/cache/superpowers-orchestrator/superpowers-orchestrator/$(cat VERSION)
+VER=$(cat VERSION) || exit 1
+[ -n "$VER" ] || { echo "VERSION is empty — run from the repository root" >&2; exit 1; }
+CACHE=~/.claude/plugins/cache/superpowers-orchestrator/superpowers-orchestrator/$VER
 git -C "$CLONE" fetch "$(pwd)" "$BR" && git -C "$CLONE" checkout --detach FETCH_HEAD
 claude plugin update superpowers-orchestrator -y
 grep -c 'usable <u>/<m>' "$CACHE/skills/multi-doc-review/SKILL.md"
