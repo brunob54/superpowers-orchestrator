@@ -195,8 +195,11 @@ EOF
 
 # [I2] Detect SUPERPOWERS_REVIEWERS_PER_LENS set in the `env` block of a
 # settings file that applies to a `claude -p` run started from $plugin_dir:
-# a user-level ~/.claude/settings.json, or a project-level
-# $plugin_dir/.claude/settings.json or $plugin_dir/.claude/settings.local.json.
+# a user-level ~/.claude/settings.json, a user-level
+# ${CLAUDE_CONFIG_DIR:-$HOME/.claude}/settings.json or settings.local.json
+# (relevant only when CLAUDE_CONFIG_DIR points somewhere other than
+# ~/.claude), or a project-level $plugin_dir/.claude/settings.json or
+# $plugin_dir/.claude/settings.local.json.
 # README.md and docs/guide/README.md tell users to set M this way; Claude
 # Code applies that env block inside its own process and passes it to hooks,
 # so a shell-level `unset` of the same variable does not remove it. Tolerates
@@ -206,9 +209,12 @@ EOF
 check_no_reviewers_per_lens_setting() {
     local plugin_dir="$1"
     local var="SUPERPOWERS_REVIEWERS_PER_LENS"
+    local config_dir="${CLAUDE_CONFIG_DIR:-$HOME/.claude}"
     local f
     for f in "$HOME/.claude/settings.json" \
              "$HOME/.claude/settings.local.json" \
+             "$config_dir/settings.json" \
+             "$config_dir/settings.local.json" \
              "$plugin_dir/.claude/settings.json" \
              "$plugin_dir/.claude/settings.local.json"; do
         if [ -f "$f" ] && grep -qE "\"$var\"[[:space:]]*:" "$f"; then
@@ -337,18 +343,23 @@ assert_round_reviewers() {
     fi
 
     # [M3] Per-line check: the agreement count '<a>' in ' ← <a>/<m>: ' must
-    # equal the number of comma-separated source ids listed after the colon
-    # on that same line. The distinct-token/k comparison above catches a
-    # wrong total across the whole round but not a single line like
-    # '← 2/2: r1:C1' (agreement count 2, one source id).
+    # equal the number of DISTINCT reviewer(s) (the distinct 'r<j>' prefixes)
+    # among the comma-separated source ids listed after the colon on that
+    # same line — not the number of listed ids: one consolidated finding may
+    # list two source ids from the SAME reviewer (rule 8 allows a report to
+    # enumerate one defect twice), so a correct line like
+    # '← 1/3: r1:I1, r1:I4' has agreement count 1 with two listed ids. The
+    # distinct-token/k comparison above catches a wrong total across the
+    # whole round but not a single line like '← 2/2: r1:C1' (agreement count
+    # 2, one distinct reviewer).
     while IFS= read -r annotated_line; do
         [ -z "$annotated_line" ] && continue
-        local a ids id_count
+        local a ids reviewer_count
         a=$(printf '%s' "$annotated_line" | sed -nE "s/.* ← ([0-9]+)\/${m}: .*/\1/p")
         ids=$(printf '%s' "$annotated_line" | sed -nE "s/.* ← [0-9]+\/${m}: (.*)\$/\1/p")
-        id_count=$(printf '%s' "$ids" | awk -F', ' '{ print NF }')
-        if [ -n "$a" ] && [ "$a" != "$id_count" ]; then
-            echo "FAIL(m): round $round: disposition line's agreement count $a does not match its $id_count listed source id(s): $annotated_line"
+        reviewer_count=$(printf '%s' "$ids" | grep -oE 'r[0-9]+' | sort -u | wc -l | tr -d ' ')
+        if [ -n "$a" ] && [ "$a" != "$reviewer_count" ]; then
+            echo "FAIL(m): round $round: disposition line's agreement count $a does not match its $reviewer_count distinct reviewer(s): $annotated_line"
             failures=$((failures+1))
         fi
     done < <(printf '%s\n' "$entry" | grep -E "$annotation_re" || true)
