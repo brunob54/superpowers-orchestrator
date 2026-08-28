@@ -306,18 +306,31 @@ assert_round_reviewers() {
         return 1
     fi
 
-    local usable_re="^\\*\\*Reviewers:\\*\\* M=${m}, usable [1-${m}]/${m}\$"
+    # Full participation is REQUIRED, not tolerated. The earlier pattern
+    # accepted 'usable [1-m]/m' so that one flaky reviewer would not fail the
+    # test. But with u = 1 and M = 2 only ONE reviewer ran, so no consolidation
+    # happened and the M >= 2 path — the only reason these tests exist — was
+    # never exercised, while the suite still reported PASS. These behavioural
+    # tests are the sole coverage of that path, so a partial round must fail
+    # loudly and be re-run rather than pass silently. For M = 1 this is
+    # identical to the old pattern ('1/1' either way).
+    local usable_re="^\\*\\*Reviewers:\\*\\* M=${m}, usable ${m}/${m}\$"
     local usable_line
     usable_line=$(printf '%s\n' "$entry" | grep -E "$usable_re" | head -1 || true)
     if [ -z "$usable_line" ]; then
-        echo "FAIL(m): round $round has no '**Reviewers:** M=$m, usable <u>/$m' line"
+        # Distinguish "the round ran short-handed" from "the line is missing or
+        # malformed": the first is a re-run, the second is a real defect.
+        local partial_line
+        partial_line=$(printf '%s\n' "$entry" \
+            | grep -E "^\\*\\*Reviewers:\\*\\* M=${m}, usable [0-9]+/${m}\$" | head -1 || true)
+        if [ -n "$partial_line" ]; then
+            echo "FAIL(m): round $round: partial round ($partial_line) — fewer than $m reviewers were usable, so the M=$m consolidation path was NOT exercised. Re-run the test; this is not necessarily a defect."
+        else
+            echo "FAIL(m): round $round has no '**Reviewers:** M=$m, usable $m/$m' line"
+        fi
         failures=$((failures+1))
     else
-        local u
-        u=$(printf '%s' "$usable_line" | sed -nE 's/.*usable ([0-9]+)\/[0-9]+$/\1/p')
-        if [ -n "$u" ] && [ "$u" -lt "$m" ]; then
-            echo "note: round $round: partial (usable $u/$m); M>=2 consolidation not exercised"
-        fi
+        : # usable_re already guarantees u = m
     fi
 
     local sources_line k_mapped k_total

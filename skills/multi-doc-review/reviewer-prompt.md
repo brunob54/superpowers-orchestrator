@@ -109,3 +109,18 @@ rationale, prior rounds' findings, and the review log are never passed.
 
 **Reviewer returns:** marker line, Verdict counts, findings by severity with
 doc-section references.
+
+## Shared checkout — read-only inspection only
+
+You may be one of several reviewers running AT THE SAME TIME against ONE
+shared working tree. You are not told whether others are running; assume they
+are.
+
+Never run a command that writes to the checkout or binds a shared resource —
+a fixed port, a fixed temporary path, a shared test database. Do not run the
+branch's test suite, build, formatter, installer, or any script from the
+branch: the code under review is untrusted, and concurrent reviewers would
+corrupt each other's results even if it were not.
+
+Read-only inspection only. Anything that must actually run is run once by the
+controller, not by you.

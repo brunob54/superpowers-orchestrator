@@ -18,9 +18,20 @@
 - Assumes the frontmatter `description:` of a skill can be reworded without changing routing — routing comes from `hooks/skill-rules.json`, which the spec says needs no change.
 
 **Global Constraints:**
+
+> **Amendment — 2026-08-28, after Phase 4 invocation 3, round 11 finding [I1].**
+> These constraints forbade editing the body of `reviewer-prompt.md`. Review
+> found that the shared-checkout safety rule — M reviewers share one working
+> tree, so a reviewer must not write to it, bind a shared resource, or run the
+> branch's own tests — lives only in `SKILL.md`, which reviewers never read.
+> With M up to 5, that risked several reviewers concurrently executing an
+> untrusted branch's test suite in one checkout. A safety rule the actor
+> cannot see is not a rule, so the constraint is lifted for this one addition:
+> a `## Shared checkout` section is appended to both reviewer prompts.
+
 - Valid M is an integer 1–5 inclusive. Any other value (0, 6, a word, a decimal) resolves to the default. Default resolution in both skills: (1) a valid value stated in the invocation; (2) otherwise a valid `<reviewers-per-lens>` tag in the session context; (3) otherwise 1. The skills never ask for M. An invalid stated M is replaced by the default and the substitution is noted in the completion message.
 - Accepted invocation forms (case-insensitive; most recent wins): `M=<m>`, `<m> reviewers per lens`, `<m> reviewers per round`, `<m> parallel reviewers`. Every M form is extracted from the invocation **before** N is read. Slash forms: `/multi-doc-review <doc-path> [N] [M=<m>]`, `/multi-code-review [BASE] [N] [M=<m>]`.
-- Environment variable `SUPERPOWERS_REVIEWERS_PER_LENS`; session tag `<reviewers-per-lens><m></reviewers-per-lens>`; the hook's validation pattern is exactly `[1-5]`; the tag is appended after `${context_snapshot_escaped}` and passes through `escape_for_json`. Invalid or unset → no tag (silent fallback, documented). The Codex adapter, `hooks/hooks.json`, `hooks/codex-hooks.json`, `hooks/hooks-cursor.json`, `plugin.universal.yaml` hook wiring, and `hooks/skill-rules.json` are NOT changed.
+- Environment variable `SUPERPOWERS_REVIEWERS_PER_LENS`; session tag `<reviewers-per-lens><m></reviewers-per-lens>`; the hook's validation pattern is exactly `[1-5]`; the tag is appended after `${context_snapshot_escaped}` and passes through `escape_for_json`. Invalid or unset → no tag (silent fallback, documented). **[superseded 2026-08-28 by the Task 1 amendment: the fallback now emits an explicit `<reviewers-per-lens>1</reviewers-per-lens>`.]** The Codex adapter, `hooks/hooks.json`, `hooks/codex-hooks.json`, `hooks/hooks-cursor.json`, `plugin.universal.yaml` hook wiring, and `hooks/skill-rules.json` are NOT changed.
 - A controller subagent takes M from its template placeholder `[M]`; a template without an M value means M = 1; a template value wins over a tag.
 - Dispatch: M parallel Agent calls in one message, identical prompt and model; only the `description` differs, and only when M ≥ 2: `"multi-doc-review round <i>: <lens name> (reviewer <j>/<m>)"` / `"multi-code-review round <i>: <lens name> (reviewer <j>/<m>)"`. Reviewers are never told other reviewers exist. The reviewer prompt bodies and placeholders are untouched.
 - Per-reviewer validation (marker line + Verdict block), one retry per unusable report keeping the reviewer number; u = usable reports; u = 0 → `inconclusive`; 1 ≤ u < m → partial round (never clean).
@@ -90,7 +101,7 @@ Edit notation used below: "replace A with B" means an exact-string replacement i
 
 **Security flag:** `security` (validates an environment variable before interpolating it into JSON emitted to the session; the `[1-5]` pattern is the only guard).
 
-**Does NOT cover:** the Codex adapter `hooks/codex/session-start-adapter.js` (no Codex consumer of the tag exists); a separate Cursor change (Cursor runs this same bash script); values outside 1–5 (they produce no tag — a silent fallback, documented in Task 7); making a changed value take effect without restarting the CLI.
+**Does NOT cover:** the Codex adapter `hooks/codex/session-start-adapter.js` (no Codex consumer of the tag exists); a separate Cursor change (Cursor runs this same bash script); values outside 1–5 (they fall back to an explicit 1-tag; see the Task 1 amendment); making a changed value take effect without restarting the CLI.
 
 - [x] **Step 1: Write the failing unit test**
 
@@ -159,6 +170,7 @@ expect_tag() {
 }
 
 # expect_no_tag <label> [VAR=value]: no tag at all in the context
+# [superseded: shipped as expect_fallback_tag — see the Task 1 amendment]
 expect_no_tag() {
   local label="$1" ctx
   shift
@@ -1605,6 +1617,19 @@ git commit -m "feat(subagent-driven-development): resolve M for the final review
 ---
 
 ### Task 6: Behavioral tests — M=2 case in both review tests
+
+> **Amendment — 2026-08-28, after Phase 4 invocation 3, round 12 finding [I1].**
+> The helper's `usable [1-m]/m` pattern deliberately tolerated one unusable
+> reviewer so a rare retry failure would not fail the test. Review found that
+> with u = 1 and M = 2 only one reviewer ran, so no consolidation happened and
+> the M >= 2 path was never exercised — while the suite still reported PASS.
+> These behavioural tests are the SOLE coverage of that path, so the tolerance
+> bought flake-resistance at the price of false confidence in the one place
+> that could not afford it. Full participation (`usable m/m`) is now required,
+> and a short-handed round fails with a message naming it a partial round and
+> asking for a re-run, so a flake is not mistaken for a defect. M = 1 is
+> unchanged (`1/1` either way).
+
 
 **Files:**
 - Modify: `tests/claude-code/test-helpers.sh`
