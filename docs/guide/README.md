@@ -167,7 +167,9 @@ its questions **in one batch** (multiple-choice where possible), and writes a
 spec to `docs/superpowers-orchestrator/YYYY-MM-DD-<slug>/specs/<slug>-design.md` covering scope, non-goals,
 and the design itself. The spec then passes a self-review and — for
 non-trivial work — N independent `multi-doc-review` rounds before reaching
-you.
+you. Each round dispatches M identical reviewers in parallel (M = reviewers
+per lens, default 1; see the `SUPERPOWERS_REVIEWERS_PER_LENS` setting in
+§7) and consolidates their reports before findings are triaged.
 
 When a design decision would add or change a dependency, depend on
 version-sensitive external API behavior, or select an external hosted
@@ -195,7 +197,7 @@ steps of one action apiece (~2–5 minutes), with the actual file contents and
 exact verification commands an engineer needs — placeholders like "update
 logic" are treated as plan failures. Test-driven development (TDD) ordering
 is built in: test-writing steps precede implementation steps. The plan gets its own `multi-doc-review`
-gate before you approve it.
+gate (same M reviewers per round) before you approve it.
 
 This file is the pipeline's backbone: its checkboxes are the durable
 position record that execution ticks and commits task by task (§5).
@@ -227,8 +229,11 @@ moment the task completes.
 
 When the last task completes, `multi-code-review` runs N independent
 whole-branch review rounds (rotating lenses: correctness, red-team, security,
-test quality), with Critical/Important findings fixed between rounds and an
-early exit after two consecutive clean rounds. Throughout, any "done" claim
+test quality), each round dispatching M identical reviewers in parallel
+(default 1) whose reports are consolidated before triage, with
+Critical/Important findings fixed between rounds and an early exit after two
+consecutive clean rounds — with M > 1 a round is clean only when every
+reviewer returned a usable report. Throughout, any "done" claim
 must pass `verification-before-completion` — fresh command output as
 evidence, never memory of an earlier run.
 
@@ -405,6 +410,7 @@ thing you hear is completion or a stop.
 | --- | --- | --- |
 | `N_plan` — plan-review rounds | 0–10 (0 = skip) | 3 |
 | `N_code` — code-review rounds | 0–10 (0 = skip) | 3 |
+| `M` — reviewers per lens: identical reviewers dispatched in parallel per review round, for both loops | 1–5 | 1, or the value of `SUPERPOWERS_REVIEWERS_PER_LENS` |
 | Batch cap — tasks per implementation batch | 1–5 | 3 |
 
 The same batch asks for two confirmations:
@@ -442,7 +448,7 @@ Tail it from another terminal:
 ```
 # Orchestration Log — my-feature
 
-_Invocation 1 — 2026-08-08 — spec docs/superpowers-orchestrator/2026-08-04-my-feature/specs/my-feature-design.md — N_plan=3 N_code=3 cap=3 — branch feature/my-feature — BASE a1b2c3d_
+_Invocation 1 — 2026-08-08 — spec docs/superpowers-orchestrator/2026-08-04-my-feature/specs/my-feature-design.md — N_plan=3 N_code=3 M=1 cap=3 — branch feature/my-feature — BASE a1b2c3d_
 
 ## Phase 1 — Plan — DONE — 2026-08-08
 plan: docs/superpowers-orchestrator/2026-08-04-my-feature/plans/my-feature.md — 7 tasks
@@ -658,6 +664,15 @@ You can change the threshold in your `settings.json` (a percentage, 10–90):
 { "env": { "SUPERPOWERS_PRESSURE_THRESHOLD": "50" } }
 ```
 
+The number of reviewers per lens — M, the identical reviewer subagents each
+`multi-doc-review` / `multi-code-review` round dispatches in parallel — is set
+the same way (an integer 1–5, default 1; restart the CLI after changing it;
+an invalid value silently falls back to 1):
+
+```json
+{ "env": { "SUPERPOWERS_REVIEWERS_PER_LENS": "3" } }
+```
+
 **One complication: the plugin has to guess how big the memory is.**
 Different Claude models have different context-window sizes (some 200
 thousand tokens, some 1 million). Hooks are not told which one is active, so
@@ -716,8 +731,8 @@ handled by the router (§2) — just describe what you want.
 | "Resume orchestration for `<plan>`" | Continue an interrupted run from its last boundary | §5 |
 | "Abandon orchestration for `<plan>`" | Confirmed teardown of a wedged run | §5 |
 | "research prior art for `<decision>`" / `/researching-prior-art` | Evidence gathering for one technology decision (normally automatic at §3's research gate) | §3 |
-| `/multi-doc-review <doc> [N]` | N independent review rounds on a spec or plan | §3 |
-| `/multi-code-review [BASE] [N]` | N whole-branch code-review rounds with fixes | §3 |
+| `/multi-doc-review <doc> [N] [M=<m>]` | N independent review rounds on a spec or plan, M reviewers per round | §3 |
+| `/multi-code-review [BASE] [N] [M=<m>]` | N whole-branch code-review rounds with fixes, M reviewers per round | §3 |
 | "save state" / "compress context" | Snapshot to `state.md` + decision log entry | §6 |
 | "map this project" | Generate `project-map.md` | §6 |
 | "save this fix" | Record symptom → cause → fix in `known-issues.md` | §6 |

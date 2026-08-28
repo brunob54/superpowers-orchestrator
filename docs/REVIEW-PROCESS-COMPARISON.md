@@ -194,8 +194,10 @@ model-required dispatches. The parent's two-reviewer prompts were replaced by
 N-round independent document review at the brainstorming (spec) and
 writing-plans (plan) gates, or direct via `/multi-doc-review <path> [N]`:
 
-- Each round dispatches **one fresh reviewer subagent, blind** to the authoring
-  conversation, to prior rounds' findings, and to the audit log.
+- Each round dispatches **M fresh reviewer subagents (default 1), each blind**
+  to the authoring conversation, to prior rounds' findings, to the audit log,
+  and to the other reviewers of the round; their reports are consolidated
+  into one finding set before triage.
 - Rounds rotate through **four lenses**: correctness & completeness,
   ambiguity & testability, feasibility & architecture risk, adversarial
   failure modes — with per-doc-type instructions for each.
@@ -310,7 +312,8 @@ inline self-review cannot have. None of this is a controlled comparison.
 **What would settle the open question.** An A/B evaluation in the style obra
 already used: specs and plans with planted flaws (obra's eval scenarios —
 e.g. `spec-reviewer-catches-planted-flaws` — are a ready template), run under
-(a) self-review only, (b) one blind round, (c) the full N=3 lens loop,
+(a) self-review only, (b) one blind round, (c) the full N=3 lens loop, (d) M
+reviewers per lens (M = 2, 3) against M = 1,
 measuring planted-flaw catch rate, false-finding rate (merge churn),
 wall-clock, and tokens. Until that exists, the fair summary is: this fork's
 review loops are a **plausible, differently-designed second attempt** at an

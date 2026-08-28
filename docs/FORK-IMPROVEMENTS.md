@@ -107,7 +107,7 @@ The flow is automatic whenever subagent-driven-development executes a plan — e
 ### Summary
 
 - Runs up to **N independent review rounds** (default 3, cap 10) on a spec or plan document before its approval gate.
-- Each round dispatches **one clean-context reviewer subagent** that has never seen the authoring conversation, the design rationale, or prior rounds' findings — under a **rotating lens**: correctness & completeness → ambiguity & testability → feasibility & architecture risk → adversarial failure modes.
+- Each round dispatches **M clean-context reviewer subagents** (M = reviewers per lens, 1–5, default 1, since v7.4.0; identical prompts, run in parallel, reports consolidated before triage), none of which has ever seen the authoring conversation, the design rationale, or prior rounds' findings — under a **rotating lens**: correctness & completeness → ambiguity & testability → feasibility & architecture risk → adversarial failure modes.
 - Between rounds, every Critical/Important finding is **applied to the document or rejected with a written reason** — silent drops are forbidden — and every disposition is recorded in a sidecar audit log `<doc-basename>-review-log.md`.
 - The loop **exits early after two consecutive clean rounds**; brainstorming (spec gate) and writing-plans (plan gate) invoke it automatically, once per gate.
 
@@ -130,7 +130,7 @@ A single review — even a careful one — inherits the authoring conversation's
 
 ### Where it lives
 
-`skills/multi-doc-review/` (`SKILL.md` controller + `reviewer-prompt.md` dispatch template), gate steps in `skills/brainstorming/SKILL.md` and `skills/writing-plans/SKILL.md`, `hooks/skill-rules.json` routing entry, `hooks/subagent-guard.js` marker exemption, `tests/claude-code/test-multi-doc-review.sh`.
+`skills/multi-doc-review/` (`SKILL.md` controller + `reviewer-prompt.md` dispatch template), gate steps in `skills/brainstorming/SKILL.md` and `skills/writing-plans/SKILL.md`, `hooks/skill-rules.json` routing entry, `hooks/subagent-guard.js` marker exemption, `hooks/session-start` (the `<reviewers-per-lens>` session tag, v7.4.0), `tests/claude-code/test-multi-doc-review.sh`, `tests/codex/test-session-start-reviewers-tag.sh`.
 
 ### References
 
@@ -145,7 +145,7 @@ A single review — even a careful one — inherits the authoring conversation's
 ### Summary
 
 - The same loop as multi-doc-review, aimed at a **branch diff** (`BASE..HEAD`) instead of a document: up to **N independent review rounds** (default 3, cap 10).
-- Each round dispatches **one clean-context reviewer subagent** under a **rotating lens**: correctness & spec alignment → adversarial red-team → security → test & coverage quality. Every lens carries a **prose adaptation** — for files that are instructions to an agent (skills, prompts, configs) rather than executable code, runtime-input attacks are vacuous, so the reviewer attacks *agent misexecution* instead.
+- Each round dispatches **M clean-context reviewer subagents** (M = reviewers per lens, 1–5, default 1, since v7.4.0; identical prompts, run in parallel, reports consolidated before triage) under a **rotating lens**: correctness & spec alignment → adversarial red-team → security → test & coverage quality. Every lens carries a **prose adaptation** — for files that are instructions to an agent (skills, prompts, configs) rather than executable code, runtime-input attacks are vacuous, so the reviewer attacks *agent misexecution* instead.
 - Between rounds, **one fix subagent** handles that round's Critical/Important findings and the next round reviews a **freshly built package** of the fixed code.
 - **No fix ships unreviewed:** an exit that would leave the last round's fix unexamined triggers a same-lens verification re-review (capped at 3 cycles).
 - Sidecar audit log at `.superpowers/reviews/<branch-slug>-review-log.md` — or, in a pipeline run, `docs/superpowers-orchestrator/<date>-<slug>/implementation/<slug>-review-log.md`, committed — so a direct review is never part of the branch under review. Early exit after **two consecutive clean rounds**.
@@ -173,7 +173,7 @@ Dogfood evidence from building it: the design spec collected **33 findings acros
 
 ### Where it lives
 
-`skills/multi-code-review/` (`SKILL.md` controller + `reviewer-prompt.md` dispatch template), the final-gate step in `skills/subagent-driven-development/SKILL.md`, `hooks/skill-rules.json` routing entry, `hooks/subagent-guard.js` roster, `tests/claude-code/test-multi-code-review.sh`, `tests/codex/test-subagent-guard.js`.
+`skills/multi-code-review/` (`SKILL.md` controller + `reviewer-prompt.md` dispatch template), the final-gate step in `skills/subagent-driven-development/SKILL.md`, `hooks/skill-rules.json` routing entry, `hooks/subagent-guard.js` roster, `hooks/session-start` (the `<reviewers-per-lens>` session tag, v7.4.0), `tests/claude-code/test-multi-code-review.sh`, `tests/codex/test-subagent-guard.js`, `tests/codex/test-session-start-reviewers-tag.sh`.
 
 ### References
 
