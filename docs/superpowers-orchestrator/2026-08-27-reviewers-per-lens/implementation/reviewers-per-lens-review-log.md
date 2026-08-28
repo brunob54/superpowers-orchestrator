@@ -41,3 +41,10 @@ _Carried findings source: `.superpowers/sdd/progress.md` `Minor:` lines (14 item
 - [M2] fixed — README.md and docs/guide/README.md now note that `SUPERPOWERS_REVIEWERS_PER_LENS` is honored on Claude Code and Cursor and has no effect on Codex → 6f5526b
 - [M3] carried — tests/claude-code/test-helpers.sh `**Sources mapped:** k/k` equality check cannot fail by construction; the two checks that follow carry the real traceability assertion
 - [M4] carried — tests/claude-code/test-helpers.sh assertion (m) passes trivially when a round's consolidated set is empty; making an empty round 1 a failure would make a genuinely clean round fail
+
+## Round 3 — Security — opus
+**Reviewer verdict:** 0 Critical, 0 Important, 2 Minor
+**Converged:** no
+### Dispositions
+- [M1] fixed — plan manual-verification block now validates `VERSION` before composing `$CACHE`, so an empty or missing `VERSION` can no longer collapse the `rm -rf` target to the parent plugin-cache directory → 153fc8b (partial: the two `rm -rf "$CACHE"` mentions in the surrounding prose are inline code spans outside the fenced block and were left unchanged; the root cause is removed)
+- [M2] fixed — both review skills now state that only the LAST `<reviewers-per-lens>` element of the session context is a parameter, because `hooks/session-start` appends its own tag after every embedded workspace-file block → 153fc8b

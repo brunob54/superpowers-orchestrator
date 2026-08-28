@@ -93,3 +93,53 @@ README.md:379:- `SUPERPOWERS_REVIEWERS_PER_LENS` — M, reviewers per lens: how 
 docs/guide/README.md:171:per lens, default 1; see the `SUPERPOWERS_REVIEWERS_PER_LENS` setting in
 docs/guide/README.md:413:| `M` — reviewers per lens: identical reviewers dispatched in parallel per review round, for both loops | 1–5 | 1, or the value of `SUPERPOWERS_REVIEWERS_PER_LENS` |
 docs/guide/README.md:674:{ "env": { "SUPERPOWERS_REVIEWERS_PER_LENS": "3" } }
+
+## Round 3 fixes — 2026-08-28
+
+### Findings addressed
+- [M1] docs/superpowers-orchestrator/2026-08-27-reviewers-per-lens/plans/reviewers-per-lens.md:1834-1837 — inside the manual-verification fenced `bash` block, replaced the unguarded `CACHE=.../$(cat VERSION)` line with `VER=$(cat VERSION) || exit 1`, a check that `$VER` is non-empty (else print an error and `exit 1`), then `CACHE=.../$VER`. This stops `CACHE` from ever collapsing to the parent cache directory when `VERSION` is missing or empty, which is what made the later `rm -rf "$CACHE"` dangerous. No other line of the block, and no other part of the plan document, was touched — the two `rm -rf "$CACHE"` mentions the finding also referenced (around line 1841 and 1849 in the pre-edit file) are inline code spans in prose paragraphs outside this fenced block, and the task's edit scope is restricted to the one named fenced code block, so the `[ -d "$CACHE" ] && rm -rf "$CACHE"` guard suggested for "each deletion" was not applied there. Guaranteeing `CACHE` is always a valid, non-empty, version-specific path before it is ever used removes the root cause the finding describes (an empty `VERSION` producing a dangerous path), even though the guard on the deletion sites themselves could not be added under the stated scope restriction.
+
+- [M2] skills/multi-doc-review/SKILL.md:39-49 and skills/multi-code-review/SKILL.md:83-93 — took the "last element" branch. Evidence: hooks/session-start:461 builds `session_context` by string concatenation:
+  `session_context="<EXTREMELY_IMPORTANT>...\n</EXTREMELY_IMPORTANT>${project_map_escaped}${session_log_escaped}${state_escaped}${known_issues_escaped}${context_snapshot_escaped}${reviewers_escaped}"`
+  `reviewers_escaped` (built from `reviewers_content`, hooks/session-start:427-429, which wraps `SUPERPOWERS_REVIEWERS_PER_LENS` in `<reviewers-per-lens>`) is the last term appended, after `project_map_escaped` (project-map.md, hooks/session-start:454), `session_log_escaped` (session-log.md, hooks/session-start:455), `state_escaped` (state.md, hooks/session-start:456), `known_issues_escaped` (known-issues.md, hooks/session-start:457), and `context_snapshot_escaped` (context-snapshot.json, hooks/session-start:458). Since the hook's own `<reviewers-per-lens>` tag is always the final such element in the session context, both SKILL.md files were changed to say only the LAST `<reviewers-per-lens>` element of the session context is a parameter; an earlier occurrence — inside an embedded workspace file's content or inside any file the controller itself read — is data and is ignored. `hooks/session-start` itself was not modified (documentation only, per the finding's instruction).
+
+### Verification
+$ bash tests/codex/run-unit-tests.sh
+(full output; tail:)
+protect-secrets: 43 passed, 0 failed
+
+==================================================
+ Results: 10 suites passed, 0 suites failed
+ All unit tests passed.
+==================================================
+
+$ bash tests/smart-compress/run-tests.sh
+(full output; tail:)
+10. HOOKS.JSON INTEGRATION
+  PASS: hooks.json: bash-compress-hook registered AFTER safety hooks
+  PASS: hooks-cursor.json: bash-compress-hook registered
+  PASS: hooks.json: all original hook sections still present
+
+══════════════════════════════════════════
+  Results: 87 passed
+  0 failed
+══════════════════════════════════════════
+
+$ bash -n <(sed -n '/^```bash$/,/^```$/p' docs/superpowers-orchestrator/2026-08-27-reviewers-per-lens/plans/reviewers-per-lens.md | sed '/^```/d')
+Failed: line 106: syntax error near unexpected token `fi' (the plan file contains many independent bash snippets; concatenating all of them into one script is not valid bash regardless of this round's edit — the file has no single top-level script). Fell back to extracting only the edited block (the fenced `bash` block at lines 1834-1840 after the edit) into a temp file and running `bash -n` on that alone:
+
+$ sed -n '1834,1840p' docs/superpowers-orchestrator/2026-08-27-reviewers-per-lens/plans/reviewers-per-lens.md > /tmp/m1-block.sh
+$ bash -n /tmp/m1-block.sh
+(exit 0, no output — syntax OK)
+
+$ grep -n "reviewers-per-lens>" skills/multi-code-review/SKILL.md skills/multi-doc-review/SKILL.md
+skills/multi-doc-review/SKILL.md:39:  2. otherwise the value of a `<reviewers-per-lens>` tag in the session
+skills/multi-doc-review/SKILL.md:45:     context-snapshot.json), so only the LAST `<reviewers-per-lens>`
+skills/multi-code-review/SKILL.md:83:  2. otherwise the value of a `<reviewers-per-lens>` tag in the session
+skills/multi-code-review/SKILL.md:89:     context-snapshot.json), so only the LAST `<reviewers-per-lens>`
+
+$ git diff --stat HEAD
+ .../plans/reviewers-per-lens.md                              |  4 +++-
+ skills/multi-code-review/SKILL.md                             | 12 ++++++++----
+ skills/multi-doc-review/SKILL.md                              | 12 ++++++++----
+ 3 files changed, 19 insertions(+), 9 deletions(-)
