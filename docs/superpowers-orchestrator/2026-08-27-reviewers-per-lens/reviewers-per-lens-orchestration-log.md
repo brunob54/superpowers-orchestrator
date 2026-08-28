@@ -23,3 +23,9 @@ Resumed 2026-08-28 — plan corrected at 5a868da (concrete-line grep; "of the Tr
 - Task 1: complete — b42545d..e97da66 — session tag hook + unit test
 - Task 2: complete — ab942a5..135c1fb — multi-doc-review: M reviewers, consolidation, log format (one fix round)
 - Task 3: complete — 26845fb..73e9510 — multi-code-review: M reviewers, consolidation, carried findings, log format
+
+## Phase 3 — Batch 2 (tasks 4–6) — PARTIAL — controller died before returning
+- Task 4: complete — 9c373f1..8c5b43d — orchestrating-development asks and passes M
+- Task 5: complete — 266a648..fcc8c6e — subagent-driven-development resolves M
+- Task 6: incomplete — orphan commit f8d2432 on the branch, no ledger line, boxes unticked
+Resumed 2026-08-28 — batch 3 dispatched for tasks 6–8; mid-task recovery reviews the orphan commit together with task 6's completion
