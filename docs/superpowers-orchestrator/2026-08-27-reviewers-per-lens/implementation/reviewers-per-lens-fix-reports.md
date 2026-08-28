@@ -887,3 +887,92 @@ $ git status --porcelain (immediately before commit)
  M tests/claude-code/test-multi-code-review.sh
  M tests/claude-code/test-multi-doc-review.sh
  M tests/codex/test-session-start-reviewers-tag.sh
+
+## Round 4 verification 2 fixes — 2026-08-28
+
+### Findings addressed
+- [I1] tests/claude-code/test-multi-doc-review.sh:83-95, 156-166 — capture `CLAUDE_STATUS`/`CLAUDE_STATUS2` via `PIPESTATUS[0]` for both `claude -p` runs, added dedicated `FAIL(f)`/`FAIL(f2)` timeout checks (status 124/143) copying the pattern from tests/claude-code/test-multi-code-review.sh:143-156, and raised both inner `timeout` calls from 1500s to 1700s
+- [I2] tests/claude-code/test-helpers.sh (new `check_no_reviewers_per_lens_setting` function) + tests/claude-code/test-multi-doc-review.sh:41-49 + tests/claude-code/test-multi-code-review.sh:67-75 — added a settings-file check (plain grep, no jq) for `SUPERPOWERS_REVIEWERS_PER_LENS` in the `env` block of `~/.claude/settings.json`, `$PLUGIN_DIR/.claude/settings.json` or `$PLUGIN_DIR/.claude/settings.local.json`, called right after the shell-level `unset` in both scripts; aborts with a clear message naming the variable and file before any `claude -p` call; corrected the comment above `unset` to no longer claim protection it doesn't give. jq is not used anywhere else in tests/claude-code/, so no new dependency was introduced.
+- [M1] docs/superpowers-orchestrator/2026-08-27-reviewers-per-lens/plans/reviewers-per-lens.md:1811 — `grep -c 'assert_round_reviewers' tests/claude-code/test-multi-doc-review.sh tests/claude-code/test-multi-code-review.sh` really prints `2` for each file (verified below); changed expected value from `1` to `2`
+- [M2] docs/superpowers-orchestrator/2026-08-27-reviewers-per-lens/plans/reviewers-per-lens.md:205, 273 — ran `bash tests/codex/test-session-start-reviewers-tag.sh` against the shipped hook (13 assertions, 13 passed/0 failed) and, via a scratch copy of the hook with the reviewers-per-lens placement reverted, against the pre-implementation state (9 passed/4 failed); updated Step 3's expected counts from "five ok lines … 5 passed, 1 failed" to "nine ok lines … 9 passed, 4 failed", and Step 5's from "six ok lines, 6 passed, 0 failed" to "thirteen ok lines, 13 passed, 0 failed"
+- [M3] docs/superpowers-orchestrator/2026-08-27-reviewers-per-lens/plans/reviewers-per-lens.md:1845 — changed the Task 6 Step 7 doc-review behavioral test's `--timeout 1800` to `--timeout 3600` (the test-multi-code-review.sh occurrence on the next line was left untouched)
+- [M4] tests/claude-code/test-helpers.sh (`assert_round_reviewers`) — added an early check: when the extracted round entry is empty (round not found at all), print one `FAIL(m): round <n>: no '## Round <n> — ' entry found in the log` line and return 1 immediately, instead of falling through to the five generic checks. The existing malformed/partial-round behavior (including the `usable u/m` tolerance) is unchanged.
+
+### Verification
+$ bash -n tests/claude-code/test-helpers.sh && bash -n tests/claude-code/test-multi-code-review.sh && bash -n tests/claude-code/test-multi-doc-review.sh && echo SYNTAX_OK
+SYNTAX_OK
+
+$ bash tests/codex/test-session-start-reviewers-tag.sh
+session-start: <reviewers-per-lens> tag
+  ok   - SUPERPOWERS_REVIEWERS_PER_LENS=1 emits <reviewers-per-lens>1</reviewers-per-lens> at the end of the context
+  ok   - SUPERPOWERS_REVIEWERS_PER_LENS=3 emits <reviewers-per-lens>3</reviewers-per-lens> at the end of the context
+  ok   - SUPERPOWERS_REVIEWERS_PER_LENS=5 emits <reviewers-per-lens>5</reviewers-per-lens> at the end of the context
+  ok   - unset SUPERPOWERS_REVIEWERS_PER_LENS emits no tag
+  ok   - SUPERPOWERS_REVIEWERS_PER_LENS=0 emits no tag
+  ok   - SUPERPOWERS_REVIEWERS_PER_LENS=6 emits no tag
+  ok   - SUPERPOWERS_REVIEWERS_PER_LENS=10 emits no tag
+  ok   - SUPERPOWERS_REVIEWERS_PER_LENS=abc emits no tag
+  ok   - SUPERPOWERS_REVIEWERS_PER_LENS=3.0 emits no tag
+  ok   - SUPERPOWERS_REVIEWERS_PER_LENS=2.5 emits no tag
+  ok   - SUPERPOWERS_REVIEWERS_PER_LENS= (set but empty) emits no tag
+  ok   - SUPERPOWERS_REVIEWERS_PER_LENS=' 3' (leading space) emits no tag
+  ok   - workspace-embedded decoy tag precedes the real <reviewers-per-lens>3</reviewers-per-lens> at the end of the context
+  13 passed, 0 failed
+
+For comparison (M2 evidence, not part of the standard verification set): a scratch copy of hooks/session-start with the reviewers-per-lens case statement reverted to empty, run against the same test script from a temp copy pointed at that scratch hook (no repository file touched):
+session-start: <reviewers-per-lens> tag
+  FAIL - SUPERPOWERS_REVIEWERS_PER_LENS=1 does not end the context with <reviewers-per-lens>1</reviewers-per-lens>
+  FAIL - SUPERPOWERS_REVIEWERS_PER_LENS=3 does not end the context with <reviewers-per-lens>3</reviewers-per-lens>
+  FAIL - SUPERPOWERS_REVIEWERS_PER_LENS=5 does not end the context with <reviewers-per-lens>5</reviewers-per-lens>
+  ok   - unset SUPERPOWERS_REVIEWERS_PER_LENS emits no tag
+  ok   - SUPERPOWERS_REVIEWERS_PER_LENS=0 emits no tag
+  ok   - SUPERPOWERS_REVIEWERS_PER_LENS=6 emits no tag
+  ok   - SUPERPOWERS_REVIEWERS_PER_LENS=10 emits no tag
+  ok   - SUPERPOWERS_REVIEWERS_PER_LENS=abc emits no tag
+  ok   - SUPERPOWERS_REVIEWERS_PER_LENS=3.0 emits no tag
+  ok   - SUPERPOWERS_REVIEWERS_PER_LENS=2.5 emits no tag
+  ok   - SUPERPOWERS_REVIEWERS_PER_LENS= (set but empty) emits no tag
+  ok   - SUPERPOWERS_REVIEWERS_PER_LENS=' 3' (leading space) emits no tag
+  FAIL - context does not end with <reviewers-per-lens>3</reviewers-per-lens>
+  9 passed, 4 failed
+exit=1
+
+$ bash tests/codex/run-unit-tests.sh
+[... 10 suites, all pass ...]
+==================================================
+ Results: 10 suites passed, 0 suites failed
+ All unit tests passed.
+==================================================
+
+$ bash tests/smart-compress/run-tests.sh
+[... 87 checks ...]
+  Results: 87 passed
+  0 failed
+
+$ grep -c 'assert_round_reviewers' tests/claude-code/test-multi-doc-review.sh tests/claude-code/test-multi-code-review.sh
+tests/claude-code/test-multi-doc-review.sh:2
+tests/claude-code/test-multi-code-review.sh:2
+
+$ (M4 focused check) source tests/claude-code/test-helpers.sh; assert_round_reviewers against three synthetic /tmp logs
+--- Test A: round 2 entirely absent from a log that only has Round 1 ---
+FAIL(m): round 2: no '## Round 2 — ' entry found in the log
+return=1
+--- Test B: well-formed round 2, M=2 (2 distinct source tokens, Sources mapped 2/2) ---
+(no output)
+return=0
+--- Test C: Sources mapped numbers wrong (1/2 instead of equal) ---
+FAIL(m): round 1 has no '**Sources mapped:** k/k' line with equal numbers
+return=1
+
+$ (I2 focused check) scratch settings.json with {"env": {"SUPERPOWERS_REVIEWERS_PER_LENS": "3"}} under /tmp, check_no_reviewers_per_lens_setting pointed at its parent dir
+ABORT: SUPERPOWERS_REVIEWERS_PER_LENS is set in the env block of <scratch>/fakeplugin/.claude/settings.json.
+Claude Code applies that env block inside its own process and passes it to hooks, so the shell-level 'unset SUPERPOWERS_REVIEWERS_PER_LENS' in this script does not remove it.
+The default-M (M=1) cases in this test cannot be trusted while SUPERPOWERS_REVIEWERS_PER_LENS is set there — remove or comment it out in <scratch>/fakeplugin/.claude/settings.json before running this test.
+return=1 (non-zero, as expected)
+Control runs: a settings.json with only an unrelated env var, and a directory with no settings files at all, both returned 0 (pass) as expected.
+
+$ git status --porcelain (immediately before commit)
+ M docs/superpowers-orchestrator/2026-08-27-reviewers-per-lens/plans/reviewers-per-lens.md
+ M tests/claude-code/test-helpers.sh
+ M tests/claude-code/test-multi-code-review.sh
+ M tests/claude-code/test-multi-doc-review.sh

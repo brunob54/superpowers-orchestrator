@@ -72,3 +72,13 @@ _Carried findings source: `.superpowers/sdd/progress.md` `Minor:` lines (14 item
 - [M5] fixed — both skills now state that a clean round with an empty consolidated set writes `**Sources mapped:** 0/0`, and only an inconclusive round omits the line → bb6d7db
 - [M6] carried — no assertion covers `## Round <i> verification <c>` entries; adding a conditional assertion for entries that may not exist was judged more churn than value at this point
 - [M7] fixed — both inner per-call timeouts lowered to 1500 s so two live calls fit one outer budget, and the runner's help listing now hints `--timeout 3600` for the doc-review test → bb6d7db
+
+## Round 4 verification 2 — Test & coverage quality — opus
+**Reviewer verdict:** 0 Critical, 2 Important, 4 Minor
+### Dispositions
+- [I1] fixed — the doc-review test now captures each `claude -p` exit status and reports a dedicated timeout failure on 124/143, and both inner budgets were raised to 1700 s to fit the advised `--timeout 3600` → 4f1c932
+- [I2] fixed — both behavioural scripts now also detect `SUPERPOWERS_REVIEWERS_PER_LENS` in the `env` block of the applicable settings files and abort with a named reason, because a shell-level `unset` cannot remove a settings-supplied value → 4f1c932
+- [M1] fixed — plan Task 6 verification now expects `assert_round_reviewers` twice per behavioural test file → 4f1c932
+- [M2] fixed — plan Task 1 verification now states the shipped assertion counts (9 passed / 4 failed before, 13 passed / 0 failed after) → 4f1c932
+- [M3] fixed — plan Task 6 Step 7 now runs the doc-review behavioural test with `--timeout 3600` → 4f1c932
+- [M4] fixed — `assert_round_reviewers` now reports a missing round entry as one distinct failure instead of five generic ones → 4f1c932 (the partial-round tolerance named in the same finding was left unchanged: the plan lists it explicitly under "Does NOT cover")
