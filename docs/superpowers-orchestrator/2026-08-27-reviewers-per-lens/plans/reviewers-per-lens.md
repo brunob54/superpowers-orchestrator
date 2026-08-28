@@ -27,7 +27,7 @@
 - Consolidation rules 1–8 of spec section 5.3 (union, same-issue rule, highest severity, most specific text, fresh ids ordered by agreement count, traceability `k` = `k`, renumbering of malformed ids). Carried-finding recommendations are outside the consolidated set; disagreement → most cautious (`user-decision` > `fix-before-merge` > `ship-as-is`). The fix subagent receives no source ids and no agreement counts.
 - Clean round = zero Critical and zero Important in the consolidated set **and** u = m. Early exit rule otherwise unchanged (two consecutive clean rounds; N ≤ 2 no mid-loop exit; N = 1 "cap reached").
 - Invocation lines record `M=<m>` after `N=<n>` for every M, including 1: `_Invocation <k> — YYYY-MM-DD — N=<n> M=<m> — <invoker>_` and `_Invocation <k> — YYYY-MM-DD — N=<n> M=<m> — BASE..HEAD <base7>..<head7> — branch <raw-name> — <invoker>_`. A line without `M=` reads as M = 1. Invocation lines are never rewritten; the M passed to the skill governs every round it runs.
-- Round entry with M ≥ 2: after the header, `**Reviewers:** M=<m>, usable <u>/<m>`, `**Reviewer verdicts:** r1: <c> Critical, <i> Important, <mi> Minor | r2: … | r3: unusable`, `**Sources mapped:** <k>/<k>`; `**Reviewer verdict:**` keeps its name and position with consolidated counts; every finding disposition line ends with ` ← <a>/<m>: <source ids>`. The `fixed` shape becomes `fixed — <summary> → <sha>[ ← <a>/<m>: <ids>]`; readers of `<sha>` take the token immediately after `→ `. M = 1 entries are byte-identical to today; a resumed invocation whose effective M differs from the line's M writes exactly one `**Reviewers:**` line.
+- Round entry with M ≥ 2: after the header, `**Reviewers:** M=<m>, usable <u>/<m>`, `**Reviewer verdicts:** r1: <c> Critical, <i> Important, <mi> Minor | r2: … | r3: unusable`, `**Sources mapped:** <k>/<k>`; `**Reviewer verdict:**` keeps its name and position with consolidated counts; every finding disposition line ends with ` ← <a>/<m>: <source ids>`. The `fixed` shape becomes `fixed — <summary> → <sha>[ ← <a>/<m>: <ids>]`; readers of `<sha>` take the token immediately after `→ `. M = 1 entries are byte-identical to today; a resumed invocation whose effective M is 1 while the line records a larger M writes exactly one `**Reviewers:**` line; an effective M ≥ 2 always writes the full three-line format, whatever the invocation line records.
 - `REVIEW_DONE …` and `BLOCKED:` return lines of the controllers are unchanged. `requesting-code-review` is unchanged. One M applies to both loops of an orchestration run.
 - Orchestration log header: `_Invocation 1 — YYYY-MM-DD — spec <path> — N_plan=<n> N_code=<n> M=<m> cap=<n> — branch feature/<slug> — BASE <sha7>_`; `state.md` line `Params: N_plan=<n> N_code=<n> M=<m> cap=<n>`; a header without `M=` → M = 1 on resume (the one defaulted resume parameter).
 - Release 7.4.0: `VERSION`, `.claude-plugin/plugin.json`, `.claude-plugin/marketplace.json`, `plugin.universal.yaml` meta, README badge, the two `v6.7.0–v7.3.0` ranges, the README release enumeration, a `## v7.4.0 — M reviewers per lens` entry in `RELEASE-NOTES.md`.
@@ -115,11 +115,15 @@ bad() { FAIL=$(( FAIL + 1 )); echo "  FAIL - $1"; }
 # Runs the hook in the hermetic environment, optionally with one extra
 # variable assignment, and prints the additionalContext string of the Claude
 # Code output branch. JSON.parse doubles as a well-formedness check.
+# SYSTEMROOT and TEMP pass through when they are set: on Windows Git Bash the
+# native git.exe the hook calls can need them to start; on macOS and Linux
+# they are unset and nothing is added.
 run_hook() {
   local extra=()
   [ $# -gt 0 ] && extra=("$1")
   (cd "$TMP_CWD" && env -i PATH="$PATH" HOME="$TMP_HOME" \
       CLAUDE_PLUGIN_ROOT="$REPO_ROOT" SUPERPOWERS_AUTO_UPDATE=0 \
+      ${SYSTEMROOT:+SYSTEMROOT="$SYSTEMROOT"} ${TEMP:+TEMP="$TEMP"} \
       ${extra[@]+"${extra[@]}"} bash "$HOOK") \
     | node -e '
       const j = JSON.parse(require("fs").readFileSync(0, "utf8"));
@@ -198,7 +202,7 @@ run_test "session-start (reviewers-per-lens tag)" "${SCRIPT_DIR}/test-session-st
 - [ ] **Step 3: Run the test to verify it fails**
 
 Run: `bash tests/codex/test-session-start-reviewers-tag.sh`
-Expected: the first line `FAIL - SUPERPOWERS_REVIEWERS_PER_LENS=3 does not end the context with <reviewers-per-lens>3</reviewers-per-lens>`, then five `ok` lines, then `5 passed, 1 failed`, exit status 1.
+Expected: the header line `session-start: <reviewers-per-lens> tag`, then the line `  FAIL - SUPERPOWERS_REVIEWERS_PER_LENS=3 does not end the context with <reviewers-per-lens>3</reviewers-per-lens>` (two leading spaces), then five `  ok   - …` lines, then `  5 passed, 1 failed`, exit status 1.
 
 - [ ] **Step 4: Implement the hook change (three placements)**
 
@@ -269,7 +273,7 @@ Run: `bash tests/codex/test-session-start-reviewers-tag.sh`
 Expected: six `ok` lines, `6 passed, 0 failed`, exit status 0.
 
 Run: `bash tests/codex/run-unit-tests.sh`
-Expected: the new suite `── session-start (reviewers-per-lens tag)` listed, final line `All unit tests passed.`
+Expected: the new suite `── session-start (reviewers-per-lens tag)` listed, and the line ` All unit tests passed.` (one leading space; the final line is the `=====` rule that follows it).
 
 Run: `bash -n hooks/session-start`
 Expected: no output (syntax valid).
@@ -464,7 +468,10 @@ with:
       position within each severity heading (`C1…`, `I1…`, `M1…` in order
       of appearance; the heading decides the severity) and note
       `ids renumbered` on that reviewer's entry of the
-      `**Reviewer verdicts:**` line.
+      `**Reviewer verdicts:**` line. This rule applies to M ≥ 2 only: with
+      M = 1 the report keeps its original ids (today's behavior, unchanged)
+      — there is no `**Reviewer verdicts:**` line to carry the note, and the
+      M = 1 entry stays byte-identical to earlier releases.
 3. **Triage and merge:** the consolidated set is the input. Every
    Critical/Important finding is either applied to the document or
    `rejected: <reason>` — never silently dropped. Minor findings: apply at
@@ -553,17 +560,20 @@ annotation at the **end** of every finding disposition line:
 Rules for the added lines:
 
 - `**Reviewers:**` — M and the usable count *u* of this round. Written when
-  M ≥ 2, and also when the effective M of the round differs from the M on
-  the invocation line (a resumed invocation given a new M): then it is the
-  only added line — `**Reviewers:** M=1, usable 1/1`, or `usable 0/1` for
-  an inconclusive round — with original ids, no source annotation, and no
-  `**Reviewer verdicts:**` or `**Sources mapped:**` line.
+  M ≥ 2, and also when the effective M of the round is 1 while the
+  invocation line records a larger M (a resumed invocation given a new M):
+  then it is the only added line — `**Reviewers:** M=1, usable 1/1`, or
+  `usable 0/1` for an inconclusive round — with original ids, no source
+  annotation, and no `**Reviewer verdicts:**` or `**Sources mapped:**` line.
+  An effective M ≥ 2 always writes all three lines and the source
+  annotations, whatever M the invocation line records.
 - `**Reviewer verdicts:**` — one entry per reviewer in reviewer order, the
   counts taken from each report's enumeration. A usable reviewer with no
   findings is written `r<j>: 0 Critical, 0 Important, 0 Minor`; an unusable
   reviewer `r<j>: unusable`; a reviewer whose ids were renumbered gets the
   suffix `, ids renumbered`, and one whose count line disagreed with its
-  enumeration the suffix `, counts recomputed`.
+  enumeration the suffix `, counts recomputed`. A reviewer that needs both
+  suffixes gets `, ids renumbered` first, then `, counts recomputed`.
 - `**Sources mapped:**` — the traceability check of the procedure; both
   numbers are *k*. The entry is written only after the check passed, so the
   two numbers are always equal.
@@ -573,8 +583,9 @@ Rules for the added lines:
   disposition line; `<a>` is the agreement count (distinct reviewers that
   reported the finding), the source ids are comma-separated in reviewer
   order. The line keeps its existing prefix (`- [I1] applied — …`), so
-  patterns anchored at the start of the line still match. Post-loop note
-  lines carry no annotation.
+  patterns anchored at the start of the line still match. The note lines
+  the "After the loop" step writes for merge-introduced fixes (self-review
+  notes) carry no annotation.
 - The clean-round line `- none — no material issues under this lens` is
   written without annotation and only when the consolidated set is empty
   **and** u = M. A partial round with an empty consolidated set writes
@@ -615,7 +626,8 @@ with:
   repair the consolidation before writing the entry; never write the line
   with unequal numbers.
 - Reviewer report with missing or duplicated ids → renumber by position per
-  severity heading, note `ids renumbered`.
+  severity heading, note `ids renumbered` (M ≥ 2 only; with M = 1 the report
+  keeps its original ids, as today).
 - Review-log invocation line without `M=` → read as M = 1; the M of this
   invocation always comes from its parameters, never from the log.
 - Platform without parallel dispatch → reviewers run one after another;
@@ -659,7 +671,7 @@ with:
 Run: `grep -c 'M=<m>' skills/multi-doc-review/SKILL.md`
 Expected: a number ≥ 3.
 
-Run: `grep -n 'Dispatch one reviewer\|One reviewer per round\|N=<n> — <invoker>' skills/multi-doc-review/SKILL.md skills/multi-doc-review/reviewer-prompt.md`
+Run: `grep -n 'Dispatch one reviewer\|One reviewer per round\|^reviewer per round;\|N=<n> — <invoker>' skills/multi-doc-review/SKILL.md skills/multi-doc-review/reviewer-prompt.md`
 Expected: no output.
 
 Run: `grep -n '^\*\*Reviewers:\*\* M=<m>, usable <u>/<m>$\|^\*\*Sources mapped:\*\* <k>/<k>$' skills/multi-doc-review/SKILL.md`
@@ -891,7 +903,10 @@ with:
       position within each severity heading (`C1…`, `I1…`, `M1…` in order
       of appearance; the heading decides the severity) and note
       `ids renumbered` on that reviewer's entry of the
-      `**Reviewer verdicts:**` line.
+      `**Reviewer verdicts:**` line. This rule applies to M ≥ 2 only: with
+      M = 1 the report keeps its original ids (today's behavior, unchanged)
+      — there is no `**Reviewer verdicts:**` line to carry the note, and the
+      M = 1 entry stays byte-identical to earlier releases.
    The Carried Findings Triage lines of round-1 reports are
    recommendations, not enumerated findings: they stay outside the
    consolidated set and outside *k* (see Triage).
@@ -1012,8 +1027,9 @@ with:
    usable reports' findings are triaged normally. A partial round or cycle
    satisfies "a later round with a usable report ran on the updated
    branch": the fixes it examined count as reviewed. A partial
-   verification cycle whose consolidated set is empty ends the
-   verification of its originating round. "Never clean" concerns only the
+   verification cycle after which no unreviewed fix remains (an empty
+   consolidated set included) ends the verification of its originating
+   round. "Never clean" concerns only the
    convergence streak; it never reopens a verification — so a cap exit
    after a partial round ships no unreviewed fix, and three partial
    cycles with empty consolidated sets end with nothing standing and
@@ -1089,17 +1105,20 @@ in reviewer order):
 Rules for the added lines:
 
 - `**Reviewers:**` — M and the usable count *u* of this round. Written when
-  M ≥ 2, and also when the effective M of the round differs from the M on
-  the invocation line (a resumed invocation given a new M): then it is the
-  only added line — `**Reviewers:** M=1, usable 1/1`, or `usable 0/1` for
-  an inconclusive round — with original ids, no source annotation, and no
-  `**Reviewer verdicts:**` or `**Sources mapped:**` line.
+  M ≥ 2, and also when the effective M of the round is 1 while the
+  invocation line records a larger M (a resumed invocation given a new M):
+  then it is the only added line — `**Reviewers:** M=1, usable 1/1`, or
+  `usable 0/1` for an inconclusive round — with original ids, no source
+  annotation, and no `**Reviewer verdicts:**` or `**Sources mapped:**` line.
+  An effective M ≥ 2 always writes all three lines and the source
+  annotations, whatever M the invocation line records.
 - `**Reviewer verdicts:**` — one entry per reviewer in reviewer order, the
   counts taken from each report's enumeration. A usable reviewer with no
   findings is written `r<j>: 0 Critical, 0 Important, 0 Minor`; an unusable
   reviewer `r<j>: unusable`; a reviewer whose ids were renumbered gets the
   suffix `, ids renumbered`, and one whose count line disagreed with its
-  enumeration the suffix `, counts recomputed`.
+  enumeration the suffix `, counts recomputed`. A reviewer that needs both
+  suffixes gets `, ids renumbered` first, then `, counts recomputed`.
 - `**Sources mapped:**` — the traceability check of the Procedure; both
   numbers are *k*. The entry is written only after the check passed, so the
   two numbers are always equal.
@@ -1166,7 +1185,8 @@ with:
   repair the consolidation before writing the entry; never write the line
   with unequal numbers.
 - Reviewer report with missing or duplicated ids → renumber by position per
-  severity heading, note `ids renumbered`.
+  severity heading, note `ids renumbered` (M ≥ 2 only; with M = 1 the report
+  keeps its original ids, as today).
 - M recommendations for a carried finding disagree → most cautious wins:
   `user-decision`, else `fix-before-merge`, else `ship-as-is`.
 - Review-log invocation line without `M=` → read as M = 1; the M of this
@@ -1428,7 +1448,7 @@ Run: `grep -n 'M=<m>' skills/orchestrating-development/SKILL.md`
 Expected: two lines — the log header and the `Params:` line.
 
 Run: `grep -c '\[M\]' skills/orchestrating-development/doc-review-loop-prompt.md skills/orchestrating-development/code-review-loop-prompt.md skills/orchestrating-development/SKILL.md`
-Expected: `doc-review-loop-prompt.md:2`, `code-review-loop-prompt.md:2`, `SKILL.md:1`.
+Expected: three lines, each prefixed with the path exactly as given on the command line: `skills/orchestrating-development/doc-review-loop-prompt.md:2`, `skills/orchestrating-development/code-review-loop-prompt.md:2`, `skills/orchestrating-development/SKILL.md:1`.
 
 Run: `bash tests/sdd-scripts/run-tests.sh 2>&1 | tail -3`
 Expected: 0 failures (the `code-review-loop-prompt.md` drift assertion at line 756 still passes).
@@ -1519,7 +1539,7 @@ Run: `grep -c 'reviewers per lens' skills/subagent-driven-development/SKILL.md`
 Expected: `2`.
 
 Run: `grep -n 'batched autonomous' skills/subagent-driven-development/SKILL.md`
-Expected: the original paste-prompt line and the new `mode, M=<m>)` line both listed.
+Expected: three lines — the existing announce line (`I'm using subagent-driven-development (batched autonomous mode).`), the original paste-prompt line, and the new paste-prompt line, which ends in `(batched autonomous` (its continuation `mode, M=<m>)"` sits on the next line and is not matched by this grep).
 
 - [ ] **Step 4: Commit**
 
@@ -1539,6 +1559,8 @@ git commit -m "feat(subagent-driven-development): resolve M for the final review
 
 **Security flag:** `none`
 
+**Depends on:** Tasks 1–5 committed on the working branch — Step 6 installs the branch's skill text, and the Parallel Waves grouping of subagent-driven-development (file overlap only) would otherwise put this task, whose files overlap no other task, in the first wave. Task 8 must not have started: it changes `VERSION`, which Step 6 uses to find the cache directory.
+
 **Does NOT cover:** Case 2 of `test-multi-code-review.sh` (pipeline mode stays at M = 1 so its `p5-control` package count keeps its meaning); a test of a partial or inconclusive round (the `[1-m]` tolerance in the usable count only prevents a rare retry failure from failing the test); running these tests without the plugin reinstalled (CLAUDE.md constraint).
 
 - [ ] **Step 1: Shared assertion helper**
@@ -1549,7 +1571,10 @@ Append to the end of `tests/claude-code/test-helpers.sh`:
 
 # assert_round_reviewers <log> <round> <m>
 # Checks the reviewers-per-lens lines of one round entry — the lines from
-# '^## Round <round> ' up to the next '^## Round ' or the end of the file:
+# '^## Round <round> — ' up to the next '^## Round ' or the end of the file.
+# The en dash after the round number matches the round header only: a
+# '## Round <round> verification <c> — …' header does not match it, so a
+# verification-cycle entry ends the extraction instead of being appended.
 #   - '**Reviewers:** M=<m>, usable <u>/<m>' with 1 <= u <= m (one unusable
 #     reviewer is tolerated, so a rare retry failure does not fail the test)
 #   - '**Sources mapped:** k/k' with equal numbers
@@ -1557,13 +1582,16 @@ Append to the end of `tests/claude-code/test-helpers.sh`:
 #     not trusted: the sum is recomputed here)
 #   - the distinct 'r<j>:<id>' tokens across the source annotations equal k
 #   - at least one disposition line ends in ' ← <a>/<m>: <source ids>'
+#     (skipped with a 'note:' line when Sources mapped is 0/0: a round whose
+#     reviewers all report nothing writes no annotation, and that is correct
+#     skill behavior — rerun the test if the seeded findings were expected)
 # Prints one FAIL(m) line per failed check; returns the number of failed checks.
 assert_round_reviewers() {
     local log="$1" round="$2" m="$3"
     local failures=0
     local entry
     entry=$(awk -v r="$round" '
-        $0 ~ "^## Round " r " " { on = 1; print; next }
+        $0 ~ "^## Round " r " — " { on = 1; print; next }
         /^## Round / { if (on) exit }
         on { print }' "$log")
 
@@ -1599,7 +1627,9 @@ assert_round_reviewers() {
         failures=$((failures+1))
     fi
 
-    if ! printf '%s\n' "$entry" | grep -qE "$annotation_re"; then
+    if [ "${k_total:-0}" = "0" ]; then
+        echo "note: round $round: Sources mapped is 0/0 (empty consolidated set); annotation check skipped — rerun if findings were expected"
+    elif ! printf '%s\n' "$entry" | grep -qE "$annotation_re"; then
         echo "FAIL(m): round $round: no disposition line ends in a ' ← <a>/$m: <source ids>' annotation"
         failures=$((failures+1))
     fi
@@ -1765,13 +1795,38 @@ Expected: the unchanged Case 2 prompt line (no `M=2` in it).
 
 - [ ] **Step 6: Behavioral verification (slow; after the local plugin is updated to this branch)**
 
-Reinstall/update the local plugin copy first (CLAUDE.md: sessions run the installed copy under `~/.claude/plugins/cache/superpowers-orchestrator/`; the marketplace clone tracks `main` only, so point it at this branch by hand before `claude plugin update -y`). Then:
+Preconditions: Tasks 1–5 are committed on the current branch and Task 8 has not started (see **Depends on** above). Reinstall/update the local plugin copy first (CLAUDE.md: sessions run the installed copy under `~/.claude/plugins/cache/superpowers-orchestrator/`). Facts this step relies on: the marketplace clone at `~/.claude/plugins/marketplaces/superpowers-orchestrator` tracks `main` only; its `.claude-plugin/marketplace.json` has `"source": "./"`, so the update copies the clone's checked-out working tree; the cache directory is named after the version in `.claude-plugin/plugin.json`, which is still the value of `VERSION` (`7.3.0`) at this task because Task 8 bumps it later. Run everything below from the repository root.
+
+First confirm that the branch itself carries the Task 2 text:
+
+```bash
+# BR is feature/reviewers-per-lens under orchestrating-development; another
+# executor may be on a differently named branch, so the name is read, not typed.
+BR=$(git branch --show-current)
+git grep -c 'usable <u>/<m>' "$BR" -- skills/multi-doc-review/SKILL.md
+```
+
+Expected: `<BR>:skills/multi-doc-review/SKILL.md:<n>` with n ≥ 1. No output means the Task 2 commit is not on this branch: stop and report "Task 6 Step 6: Tasks 2/3 are not committed on <BR>" — do not continue with the installation.
+
+Then point the clone at the branch (a detached checkout, so a rerun after a failed test does not fail with "refusing to fetch into branch … checked out"), update, and prove that the installed copy carries the new text:
+
+```bash
+CLONE=~/.claude/plugins/marketplaces/superpowers-orchestrator
+CACHE=~/.claude/plugins/cache/superpowers-orchestrator/superpowers-orchestrator/$(cat VERSION)
+git -C "$CLONE" fetch "$(pwd)" "$BR" && git -C "$CLONE" checkout --detach FETCH_HEAD
+claude plugin update superpowers-orchestrator -y
+grep -c 'usable <u>/<m>' "$CACHE/skills/multi-doc-review/SKILL.md"
+```
+
+Expected: the last command prints a number ≥ 1 (the string is part of the log format Task 2 adds to the skill). `0` or `No such file or directory` means the installed copy is stale — one retry only: `rm -rf "$CACHE"`, run the `claude plugin update` command again, and repeat the `grep -c` check. If the count is still not ≥ 1 after that one retry, stop and report "Task 6 Step 6: the plugin update does not install the branch's skills" — do not run the behavioral tests, because a `FAIL(m)` or `FAIL(i)` line from a stale copy says nothing about the code.
 
 Run: `tests/claude-code/run-skill-tests.sh --test test-multi-doc-review.sh --verbose --timeout 1800`
 Expected: `PASS: multi-doc-review behavioral test`, no `FAIL(m)` line.
 
 Run: `tests/claude-code/run-skill-tests.sh --test test-multi-code-review.sh --verbose --timeout 1800`
-Expected: the Case 1 and Case 2 PASS lines, no `FAIL(i)` and no `FAIL(m)` line.
+Expected: the single line `PASS: multi-code-review behavioral test` (the test's `finish()` prints one PASS line for both cases together; there are no per-case PASS lines), no `FAIL(i)` and no `FAIL(m)` line.
+
+Restore the environment whether the tests passed or failed: `git -C "$CLONE" checkout main`. The cache directory `$CACHE` still holds the branch's skills after that — a later `claude plugin update` from `main` sees the same version and does not refresh it — so a user who wants the released 7.3.0 copy back must `rm -rf "$CACHE"` and run `claude plugin update superpowers-orchestrator -y` once more with the clone on `main`. After Task 8 is merged, an update installs 7.4.0 into its own directory.
 
 - [ ] **Step 7: Commit**
 
@@ -1865,7 +1920,7 @@ and the design itself. The spec then passes a self-review and — for
 non-trivial work — N independent `multi-doc-review` rounds before reaching
 you. Each round dispatches M identical reviewers in parallel (M = reviewers
 per lens, default 1; see the `SUPERPOWERS_REVIEWERS_PER_LENS` setting in
-§6) and consolidates their reports before findings are triaged.
+§7) and consolidates their reports before findings are triaged.
 ```
 
 Replace:
