@@ -1491,7 +1491,7 @@ git commit -m "feat(orchestrating-development): ask and pass M (reviewers per le
 
 **Does NOT cover:** asking the user for M at the final gate or in a batch (never); writing `M=<m>` into the resume prompt when the user did not state M (then nothing is written and the resolution runs again after every resume, so a changed environment variable takes effect at the next batch started after a CLI restart).
 
-- [ ] **Step 1: Final whole-branch gate**
+- [x] **Step 1: Final whole-branch gate**
 
 In `skills/subagent-driven-development/SKILL.md`, replace:
 
@@ -1511,7 +1511,7 @@ with:
    tag, else 1 — multi-code-review's own default resolution. The
 ```
 
-- [ ] **Step 2: Batched Autonomous Mode handoff**
+- [x] **Step 2: Batched Autonomous Mode handoff**
 
 Replace:
 
@@ -1553,7 +1553,7 @@ starting the batch or carried by the resume prompt's `M=<m>`, else the
 findings are journaled under `## Open Issues` and end the batch.
 ```
 
-- [ ] **Step 3: Verify**
+- [x] **Step 3: Verify**
 
 Run: `grep -c 'reviewers per lens' skills/subagent-driven-development/SKILL.md`
 Expected: `2`.
@@ -1561,7 +1561,7 @@ Expected: `2`.
 Run: `grep -n 'batched autonomous' skills/subagent-driven-development/SKILL.md`
 Expected: three lines — the existing announce line (`I'm using subagent-driven-development (batched autonomous mode).`), the original paste-prompt line, and the new paste-prompt line, which ends in `(batched autonomous` (its continuation `mode, M=<m>)"` sits on the next line and is not matched by this grep).
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add skills/subagent-driven-development/SKILL.md
