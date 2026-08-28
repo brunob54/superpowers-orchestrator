@@ -71,7 +71,9 @@ expect_no_tag() {
 }
 
 echo "session-start: <reviewers-per-lens> tag"
-expect_tag 3
+for v in 1 3 5; do
+  expect_tag "$v"
+done
 expect_no_tag "unset ${VAR_NAME}"
 for v in 0 6 10 abc; do
   expect_no_tag "${VAR_NAME}=${v}" "${VAR_NAME}=${v}"

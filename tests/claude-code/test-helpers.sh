@@ -261,7 +261,7 @@ assert_round_reviewers() {
         failures=$((failures+1))
     fi
 
-    if [ "${k_total:-0}" = "0" ]; then
+    if [ -n "$sources_line" ] && [ "$k_total" = "0" ]; then
         echo "note: round $round: Sources mapped is 0/0 (empty consolidated set); annotation check skipped — rerun if findings were expected"
     elif ! printf '%s\n' "$entry" | grep -qE "$annotation_re"; then
         echo "FAIL(m): round $round: no disposition line ends in a ' ← <a>/$m: <source ids>' annotation"

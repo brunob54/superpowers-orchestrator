@@ -12,9 +12,10 @@
 #   (f) the run was not killed by the timeout
 #   (g)/(h) the loop ran Round 2 and wrote its completion marker
 #   (i) the invocation line records N and M
-#   (m) M=2: round 1 carries the reviewers-per-lens lines (Reviewers,
+#   (m) M=2: rounds 1 and 2 carry the reviewers-per-lens lines (Reviewers,
 #       Reviewer verdicts, Sources mapped) and source annotations that
-#       agree with each other
+#       agree with each other — the M passed to the invocation governs
+#       every round it runs, not just round 1
 #
 # Case 2 (pipeline mode, TOPIC_DIR) repeats the setup on a second branch and
 # adds:
@@ -209,6 +210,10 @@ else
     #     source annotations, and they agree with each other. Case 1 passes no
     #     carried findings, so every disposition of the round carries one.
     assert_round_reviewers "$LOG" 1 2 || FAILURES=$((FAILURES+$?))
+    # (m) M=2, round 2: the M passed to the invocation governs every round it
+    #     runs, not just round 1 — this N=2 run already produces a round 2,
+    #     so its reviewers-per-lens lines must be checked too.
+    assert_round_reviewers "$LOG" 2 2 || FAILURES=$((FAILURES+$?))
 fi
 
 # ── Case 2: pipeline mode (TOPIC_DIR) ────────────────────────────────────────
@@ -337,6 +342,13 @@ else
     # (h2) the loop reached its completion marker, same check as (h) for Case 1.
     if ! grep -q "^_Completed — " "$PIPE_LOG"; then
         echo "FAIL(h2): pipeline review log has no '_Completed — ' marker — the loop did not finish"
+        FAILURES=$((FAILURES+1))
+    fi
+    # (i2) PIPE_PROMPT names no M=, so this case runs the default M=1. The
+    #      invocation line records M right after N INCLUDING when M=1 (so a
+    #      log is self-describing), same rule as (i) for Case 1's M=2.
+    if ! grep -q " N=2 M=1 — " "$PIPE_LOG"; then
+        echo "FAIL(i2): pipeline review log invocation line does not contain ' N=2 M=1 — '"
         FAILURES=$((FAILURES+1))
     fi
     # (h3) the completion marker records the EFFECTIVE HEAD (Pipeline rule 4
