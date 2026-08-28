@@ -702,7 +702,7 @@ git commit -m "feat(multi-doc-review): M reviewers per lens with report consolid
 
 **Does NOT cover:** `requesting-code-review` (its reviewer + red-team pair stays as it is); reading M back from a review log on resume (M always comes from the parameters); a new timeout for a hung reviewer; a change to the package generation (one package per round, shared by the M reviewers); passing agreement counts or source ids to the fix subagent.
 
-- [ ] **Step 1: Frontmatter description and slash form**
+- [x] **Step 1: Frontmatter description and slash form**
 
 In `skills/multi-code-review/SKILL.md`, replace:
 
@@ -730,7 +730,7 @@ with:
   directly via /multi-code-review [BASE] [N] [M=<m>]. Triggers on: "multi code
 ```
 
-- [ ] **Step 2: Parameters — argument order, M bullet, direct slash form**
+- [x] **Step 2: Parameters — argument order, M bullet, direct slash form**
 
 Replace:
 
@@ -798,7 +798,7 @@ with:
   `/multi-code-review [BASE] [N] [M=<m>]` — direct, no `TOPIC_DIR`; and the pipeline
 ```
 
-- [ ] **Step 3: Workspace and Log — invocation note and resume precedence**
+- [x] **Step 3: Workspace and Log — invocation note and resume precedence**
 
 Replace:
 
@@ -824,7 +824,7 @@ differs from the M on the invocation line, the round entry says so on its
 `**Reviewers:**` line (Review Log Format).
 ```
 
-- [ ] **Step 4: Procedure — dispatch M reviewers, validate each, consolidate**
+- [x] **Step 4: Procedure — dispatch M reviewers, validate each, consolidate**
 
 Replace (steps 2–3 verbatim):
 
@@ -917,7 +917,7 @@ with:
    consolidated set and outside *k* (see Triage).
 ```
 
-- [ ] **Step 5: Procedure — fix subagent input and carried findings from M recommendations**
+- [x] **Step 5: Procedure — fix subagent input and carried findings from M recommendations**
 
 Replace:
 
@@ -963,7 +963,7 @@ with:
      dispositions, without a source annotation.
 ```
 
-- [ ] **Step 6: Procedure — convergence and verification re-reviews**
+- [x] **Step 6: Procedure — convergence and verification re-reviews**
 
 Replace:
 
@@ -1041,7 +1041,7 @@ with:
    nothing `unresolved`.
 ```
 
-- [ ] **Step 7: Review Log Format**
+- [x] **Step 7: Review Log Format**
 
 Replace:
 
@@ -1165,7 +1165,7 @@ Rules for the added lines:
   carry `M=` like every other. The `_Completed — …` line is unchanged.
 ````
 
-- [ ] **Step 8: After the Loop — `<sha>` reader**
+- [x] **Step 8: After the Loop — `<sha>` reader**
 
 Replace:
 
@@ -1182,7 +1182,7 @@ commit already exists is not dispatched again — found in `git log` by the
 any ` ← ` source annotation) or, when none was recorded, by the fix
 ```
 
-- [ ] **Step 9: Error Handling**
+- [x] **Step 9: Error Handling**
 
 Replace:
 
@@ -1215,7 +1215,7 @@ with:
   the procedure is unchanged.
 ```
 
-- [ ] **Step 10: Reviewer template header and `description` suffix**
+- [x] **Step 10: Reviewer template header and `description` suffix**
 
 In `skills/multi-code-review/reviewer-prompt.md`, replace:
 
@@ -1247,7 +1247,7 @@ with:
                the description is not part of the prompt)
 ```
 
-- [ ] **Step 11: Verify**
+- [x] **Step 11: Verify**
 
 Run: `bash tests/sdd-scripts/run-tests.sh 2>&1 | tail -5`
 Expected: the summary reports 0 failures (every text-drift assertion against `multi-code-review/SKILL.md` still passes).
@@ -1261,7 +1261,7 @@ Expected: a number ≥ 4.
 Run: `grep -n 'the token immediately after' skills/multi-code-review/SKILL.md`
 Expected: two matching lines (Review Log Format rule and After the Loop).
 
-- [ ] **Step 12: Commit**
+- [x] **Step 12: Commit**
 
 ```bash
 git add skills/multi-code-review/SKILL.md skills/multi-code-review/reviewer-prompt.md
