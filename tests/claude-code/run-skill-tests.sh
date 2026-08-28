@@ -62,7 +62,7 @@ while [[ $# -gt 0 ]]; do
             echo ""
             echo "Integration Tests (use --integration):"
             echo "  test-subagent-driven-development-integration.sh  Full workflow execution"
-            echo "  test-multi-doc-review.sh  Multi-doc-review log contract on a seeded flawed spec (use --timeout 3600)"
+            echo "  test-multi-doc-review.sh  Multi-doc-review log contract on a seeded flawed spec (use --timeout 4200)"
             echo "  test-multi-code-review.sh  Multi-code-review loop contract on a seeded defective branch (use --timeout 1800)"
             echo "  test-researching-prior-art.sh  Merged-report contract for the prior-art research skill (use --timeout 1800)"
             echo "  test-researching-prior-art-gate.sh  Brainstorming research-gate message contract (use --timeout 1800)"

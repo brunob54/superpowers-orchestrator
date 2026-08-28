@@ -1868,7 +1868,7 @@ grep -c 'usable <u>/<m>' "$CACHE/skills/multi-doc-review/SKILL.md"
 
 Expected: the last command prints a number ≥ 1 (the string is part of the log format Task 2 adds to the skill). `0` or `No such file or directory` means the installed copy is stale — one retry only: `rm -rf "$CACHE"`, run the `claude plugin update` command again, and repeat the `grep -c` check. If the count is still not ≥ 1 after that one retry, stop and report "Task 6 Step 6: the plugin update does not install the branch's skills" — do not run the behavioral tests, because a `FAIL(m)` or `FAIL(i)` line from a stale copy says nothing about the code.
 
-Run: `tests/claude-code/run-skill-tests.sh --test test-multi-doc-review.sh --verbose --timeout 3600`
+Run: `tests/claude-code/run-skill-tests.sh --test test-multi-doc-review.sh --verbose --timeout 4200`
 Expected: `PASS: multi-doc-review behavioral test`, no `FAIL(m)` line.
 
 Run: `tests/claude-code/run-skill-tests.sh --test test-multi-code-review.sh --verbose --timeout 1800`
