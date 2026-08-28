@@ -976,3 +976,20 @@ $ git status --porcelain (immediately before commit)
  M tests/claude-code/test-helpers.sh
  M tests/claude-code/test-multi-code-review.sh
  M tests/claude-code/test-multi-doc-review.sh
+
+## Round 5 fixes — 2026-08-28
+
+### Findings addressed
+- [M1] skills/multi-doc-review/SKILL.md:331 — qualified "A clean round (zero findings) writes exactly one disposition line" with "with u = M", matching the precision of its twin sentence in skills/multi-code-review/SKILL.md:699-703 ("A clean round (zero findings of any severity, and — on round 1 — no carried-finding dispositions either, with u = M) writes exactly one disposition line"); the multi-doc-review skill has no round-1 carried-finding concept, so only the "with u = M" qualifier was added, not the carried-finding clause
+- [M3] tests/claude-code/test-helpers.sh (`check_no_reviewers_per_lens_setting`) — added `"$HOME/.claude/settings.local.json"` to the list of files the function checks for `SUPERPOWERS_REVIEWERS_PER_LENS` in the env block, alongside the existing `$HOME/.claude/settings.json`, `$plugin_dir/.claude/settings.json`, and `$plugin_dir/.claude/settings.local.json`
+
+### Verification
+$ bash tests/codex/run-unit-tests.sh
+[... 10 suites ...]
+==================================================
+ Results: 10 suites passed, 0 suites failed
+ All unit tests passed.
+==================================================
+
+$ bash -n tests/claude-code/test-helpers.sh && echo "SYNTAX OK"
+SYNTAX OK

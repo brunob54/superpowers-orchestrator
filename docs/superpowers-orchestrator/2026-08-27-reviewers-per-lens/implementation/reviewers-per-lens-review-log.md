@@ -98,3 +98,26 @@ _Completed — 2026-08-28 — cap reached — HEAD 4f1c9323740622a3332e7d89d2949
 _Invocation 2 — 2026-08-28 — N=4 M=1 — BASE..HEAD 526a74c..649b38e — branch feature/reviewers-per-lens — gate: orchestration_
 
 _Carried findings source: `.superpowers/sdd/progress.md` `Minor:` lines (14 items), labelled `[K1]`–`[K14]` below._
+
+## Round 5 — Correctness & spec alignment — opus
+**Reviewer verdict:** 0 Critical, 0 Important, 4 Minor
+**Converged:** no
+### Dispositions
+- [M1] fixed — multi-doc-review SKILL.md clean-round "- none" sentence qualified "with u = M", matching its twin in multi-code-review → 41f1eb5
+- [M2] carried — the M ≥ 2 `description` note in both reviewer-prompt.md templates uses two unbracketed continuation lines instead of the files' bracket convention (presentation only; the dispatching text is unambiguous)
+- [M3] fixed — `check_no_reviewers_per_lens_setting` now also inspects `$HOME/.claude/settings.local.json` → 41f1eb5
+- [M4] carried — the two 1700 s inner `claude -p` budgets in test-multi-doc-review.sh leave about 200 s under the advised `--timeout 3600`; left as is because rounds 4 verification 1 and 2 already moved this value in both directions and a third change would ship unreviewed churn
+- [K1] carried — test-session-start-reviewers-tag.sh run_hook accepts only one extra VAR=value argument (ship-as-is: the comment matches the code, every call site passes at most one)
+- [K2] carried — multi-doc-review duplicate u = 0 inconclusive bullet (ship-as-is: already fixed on this branch, one bullet remains)
+- [K3] carried — multi-doc-review ", counts recomputed" instruction placed in step 5 instead of step 2 (ship-as-is: presentation preference, no behaviour change)
+- [K4] carried — multi-doc-review uses the letter k for both the invocation number and the source-finding count (ship-as-is: the two uses are in different sections)
+- [K5] carried — multi-doc-review "a resumed invocation given a new M" rule has no resume path defined. The round-5 reviewer recommended `user-decision` and called both options defensible; the controller keeps invocation 1's decision (ship-as-is: an unreachable rule that preserves word-for-word parity with multi-code-review's log format), so this is not re-opened as an open item
+- [K6] carried — multi-doc-review after-the-loop report list and effective M (ship-as-is: already fixed on this branch)
+- [K7] carried — multi-doc-review "byte-identical" label (ship-as-is: already fixed on this branch)
+- [K8] carried — multi-doc-review SKILL.md grew 180 → 354 lines (ship-as-is: a structural split does not belong in a release branch)
+- [K9] carried — multi-code-review canonical-dispositions "always uses the single shape" (ship-as-is: already fixed on this branch)
+- [K10] carried — clean-round and Minor-only-round sentences not qualified by u = M (ship-as-is for multi-code-review, already fixed; the same gap in multi-doc-review is [M1] above and was fixed this round)
+- [K11] carried — multi-code-review skipped-entry field list missing M (ship-as-is: already fixed on this branch)
+- [K12] carried — .superpowers/sdd/task-6-report.md per-file diffstat numbers wrong (ship-as-is: untracked work artifact, totals correct)
+- [K13] carried — README.md first use of M does not expand it (ship-as-is: already fixed on this branch)
+- [K14] carried — docs/REVIEW-PROCESS-COMPARISON.md eval item does not restate the 1–5 range (ship-as-is: that line describes a hypothetical evaluation design, not the parameter contract)
