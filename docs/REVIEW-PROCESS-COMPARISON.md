@@ -192,7 +192,7 @@ model-required dispatches. The parent's two-reviewer prompts were replaced by
 
 **v6.9.0 — multi-doc-review** (renamed from `multi-review` in v6.11.0).
 N-round independent document review at the brainstorming (spec) and
-writing-plans (plan) gates, or direct via `/multi-doc-review <path> [N]`:
+writing-plans (plan) gates, or direct via `/multi-doc-review <path> [N] [M=<m>]`:
 
 - Each round dispatches **M fresh reviewer subagents (default 1), each blind**
   to the authoring conversation, to prior rounds' findings, to the audit log,
@@ -215,7 +215,7 @@ writing-plans (plan) gates, or direct via `/multi-doc-review <path> [N]`:
 
 **v6.10.0 — multi-code-review.** The same loop shape applied to a branch diff,
 replacing SDD's single-pass final whole-branch review, or direct via
-`/multi-code-review [BASE] [N]`:
+`/multi-code-review [BASE] [N] [M=<m>]`:
 
 - Lenses per round: correctness & spec alignment, adversarial red-team,
   security, test quality.
