@@ -417,6 +417,18 @@ if [ -f "context-snapshot.json" ]; then
     fi
 fi
 
+# ── Reviewers per lens ────────────────────────────────────────────────────────
+# SUPERPOWERS_REVIEWERS_PER_LENS (an integer from 1 to 5) is the number of
+# reviewer subagents the review-loop skills dispatch per round. Skills are
+# Markdown read by the model and cannot read environment variables, so the
+# value travels as a session tag. Any other value (unset, 0, 6, 10, 3.0, a
+# word) emits nothing and the skills fall back to 1. The pattern [1-5]
+# matches exactly one character.
+reviewers_content=""
+case "${SUPERPOWERS_REVIEWERS_PER_LENS:-}" in
+  [1-5]) reviewers_content="\n\n<reviewers-per-lens>${SUPERPOWERS_REVIEWERS_PER_LENS}</reviewers-per-lens>" ;;
+esac
+
 # ── Load using-superpowers skill body ─────────────────────────────────────────
 using_superpowers_content=$(awk '
 NR == 1 && $0 == "---" { in_frontmatter = 1; next }
@@ -444,8 +456,9 @@ session_log_escaped=$(escape_for_json "$session_log_content")
 state_escaped=$(escape_for_json "$state_content")
 known_issues_escaped=$(escape_for_json "$known_issues_content")
 context_snapshot_escaped=$(escape_for_json "$context_snapshot_content")
+reviewers_escaped=$(escape_for_json "$reviewers_content")
 
-session_context="<EXTREMELY_IMPORTANT>\nYou have superpowers-orchestrator.\n\n**The \`superpowers-orchestrator:using-superpowers\` guidance is loaded below. For all other skills, use the \`Skill\` tool.**\n\n**MANDATORY FIRST ACTIONS — before ANY tool calls beyond reading files:**\n1. Silently activate token-efficiency (its rules apply immediately)\n2. Classify the task complexity (micro/lightweight/full) per the Entry Sequence below\n3. If the user names a specific skill (e.g. use brainstorming, use context management), that IS a Skill tool invocation — call \`Skill\` with that skill name. Do NOT re-implement the skill's purpose with ad-hoc agents or manual steps.\n\n${using_superpowers_escaped}\n\n${warning_escaped}${update_escaped}${git_escaped}\n</EXTREMELY_IMPORTANT>${project_map_escaped}${session_log_escaped}${state_escaped}${known_issues_escaped}${context_snapshot_escaped}"
+session_context="<EXTREMELY_IMPORTANT>\nYou have superpowers-orchestrator.\n\n**The \`superpowers-orchestrator:using-superpowers\` guidance is loaded below. For all other skills, use the \`Skill\` tool.**\n\n**MANDATORY FIRST ACTIONS — before ANY tool calls beyond reading files:**\n1. Silently activate token-efficiency (its rules apply immediately)\n2. Classify the task complexity (micro/lightweight/full) per the Entry Sequence below\n3. If the user names a specific skill (e.g. use brainstorming, use context management), that IS a Skill tool invocation — call \`Skill\` with that skill name. Do NOT re-implement the skill's purpose with ad-hoc agents or manual steps.\n\n${using_superpowers_escaped}\n\n${warning_escaped}${update_escaped}${git_escaped}\n</EXTREMELY_IMPORTANT>${project_map_escaped}${session_log_escaped}${state_escaped}${known_issues_escaped}${context_snapshot_escaped}${reviewers_escaped}"
 
 # ── Output ─────────────────────────────────────────────────────────────────────
 # Uses printf instead of heredoc (cat <<EOF) to work around a bash 5.3+
