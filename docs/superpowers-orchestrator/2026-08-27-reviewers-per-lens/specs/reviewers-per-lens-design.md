@@ -426,17 +426,22 @@ trailing source annotation on every finding disposition:
 
 ```
 ## Round <i> — <lens name> — <model>
-**Reviewers:** M=<m>, usable <u>/<m>
-**Reviewer verdicts:** r1: <c> Critical, <i> Important, <mi> Minor | r2: 0 Critical, 0 Important, 0 Minor | r3: unusable
-**Sources mapped:** <k>/<k>
-**Reviewer verdict:** <c> Critical, <i> Important, <mi> Minor
-**Converged:** yes/no
+**Reviewers:** M=3, usable 3/3
+**Reviewer verdicts:** r1: 1 Critical, 0 Important, 1 Minor | r2: 0 Critical, 1 Important, 0 Minor | r3: 0 Critical, 1 Important, 0 Minor
+**Sources mapped:** 4/4
+**Reviewer verdict:** 1 Critical, 1 Important, 1 Minor
+**Converged:** no
 
 ### Dispositions
-- [C1] applied — <doc section>: <finding summary> → <change made> ← 2/3: r1:C1, r3:I2
+- [C1] applied — <doc section>: <finding summary> → <change made> ← 2/3: r1:C1, r3:I1
 - [I1] rejected: <reason> — <finding summary> ← 1/3: r2:I1
-- [M1] deferred — <finding summary> ← 1/3: r1:M2
+- [M1] deferred — <finding summary> ← 1/3: r1:M1
 ```
+
+(In this example r1 and r3 reported the same issue — r1 as Critical,
+r3 as Important — so it is one consolidated finding at the highest
+severity: the four source ids (k = 4) map to three consolidated findings,
+and every source id appears in exactly one annotation.)
 
 Rules:
 
@@ -473,7 +478,11 @@ Rules:
   when an annotation is present). Post-loop addendum lines
   (`decided (user): …`, addendum `fixed …`) carry no annotation — the
   annotation lives on the finding's original disposition line.
-  Carried-finding dispositions carry no annotation (5.3).
+  The round-1 dispositions of findings carried from an earlier
+  invocation's ledger carry no annotation (5.3) — they are decided from
+  the reviewers' recommendations and never enter the consolidated set;
+  a current-round finding whose disposition word is `carried` is an
+  ordinary consolidated finding and keeps its annotation.
 - The clean-round line `- none — no material issues under this lens` is
   written without annotation; it appears only when the consolidated set
   is empty **and** u = m. A partial round with an empty consolidated set

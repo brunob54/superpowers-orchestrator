@@ -545,17 +545,22 @@ annotation at the **end** of every finding disposition line:
 
 ```
 ## Round <i> — <lens name> — <model>
-**Reviewers:** M=<m>, usable <u>/<m>
-**Reviewer verdicts:** r1: <c> Critical, <i> Important, <mi> Minor | r2: 0 Critical, 0 Important, 0 Minor | r3: unusable
-**Sources mapped:** <k>/<k>
-**Reviewer verdict:** <c> Critical, <i> Important, <mi> Minor
-**Converged:** yes/no
+**Reviewers:** M=3, usable 3/3
+**Reviewer verdicts:** r1: 1 Critical, 0 Important, 1 Minor | r2: 0 Critical, 1 Important, 0 Minor | r3: 0 Critical, 1 Important, 0 Minor
+**Sources mapped:** 4/4
+**Reviewer verdict:** 1 Critical, 1 Important, 1 Minor
+**Converged:** no
 
 ### Dispositions
-- [C1] applied — <doc section>: <finding summary> → <change made> ← 2/3: r1:C1, r3:I2
+- [C1] applied — <doc section>: <finding summary> → <change made> ← 2/3: r1:C1, r3:I1
 - [I1] rejected: <reason> — <finding summary> ← 1/3: r2:I1
-- [M1] deferred — <finding summary> ← 1/3: r1:M2
+- [M1] deferred — <finding summary> ← 1/3: r1:M1
 ```
+
+(In this example r1 and r3 reported the same issue — r1 as Critical,
+r3 as Important — so it is one consolidated finding at the highest
+severity: the four source ids (k = 4) map to three consolidated findings,
+and every source id appears in exactly one annotation.)
 
 Rules for the added lines:
 
@@ -1090,17 +1095,25 @@ in reviewer order):
 
 ```
 ## Round <i> — <lens name> — <model>
-**Reviewers:** M=<m>, usable <u>/<m>
-**Reviewer verdicts:** r1: <c> Critical, <i> Important, <mi> Minor | r2: 0 Critical, 0 Important, 0 Minor | r3: unusable
-**Sources mapped:** <k>/<k>
-**Reviewer verdict:** <c> Critical, <i> Important, <mi> Minor
-**Converged:** yes/no
+**Reviewers:** M=3, usable 3/3
+**Reviewer verdicts:** r1: 1 Critical, 1 Important, 0 Minor | r2: 0 Critical, 1 Important, 1 Minor | r3: 0 Critical, 1 Important, 0 Minor
+**Sources mapped:** 5/5
+**Reviewer verdict:** 1 Critical, 2 Important, 1 Minor
+**Converged:** no
 ### Dispositions
-- [C1] fixed — <finding summary> → <fix commit sha> ← 2/3: r1:C1, r3:I2
-- [I1] rejected: <reason> — <finding summary> ← 1/3: r2:I1
-- [I2] user-decision — <finding summary> (plan-mandated) ← 1/3: r1:I3
+- [C1] fixed — <finding summary> → <fix commit sha> ← 2/3: r1:C1, r3:I1
+- [I1] user-decision — <finding summary> (plan-mandated) ← 1/3: r1:I1
+- [I2] rejected: <reason> — <finding summary> ← 1/3: r2:I1
 - [M1] carried — <finding summary> ← 1/3: r2:M1
 ```
+
+(In this example r1 and r3 reported the same issue — r1 as Critical,
+r3 as Important — so it is one consolidated finding at the highest
+severity: the five source ids (k = 5) map to four consolidated findings,
+and every source id appears in exactly one annotation. `[I1]` precedes
+`[I2]` because both have agreement count 1 and r1 is the lower reviewer
+number. `[M1] carried` is a current-round Minor finding and keeps its
+annotation — see the rule on carried findings below.)
 
 Rules for the added lines:
 
@@ -1129,9 +1142,16 @@ Rules for the added lines:
   disposition keeps its single shape, which becomes
   `fixed — <summary> → <sha>[ ← <a>/<m>: <ids>]`; every reader of `<sha>`
   takes the token immediately after `→ ` (before ` ← ` when an annotation
-  is present). Post-loop addendum lines (`decided (user): …`, addendum
-  `fixed …`) and carried-finding dispositions carry no annotation — a
-  finding's annotation lives on its original disposition line.
+  is present). Two kinds of disposition line carry no annotation:
+  post-loop addendum lines (`decided (user): …`, addendum `fixed …`), and
+  the round-1 lines written for the **Carried findings (round 1)** items
+  of Step 5 — findings carried from an earlier invocation's ledger, which
+  are decided from the reviewers' recommendations and never enter the
+  consolidated set. A finding's annotation lives on its original
+  disposition line. This exception is about the item's origin, not about
+  the disposition word: a current-round finding whose disposition is
+  `carried` (the `[M1] carried` line in the example) is an ordinary
+  consolidated finding and keeps its annotation.
 - The clean-round line `- none — no material issues under this lens` is
   written without annotation and only when the consolidated set is empty
   **and** u = M. A partial round with an empty consolidated set writes
