@@ -39,3 +39,24 @@ Resumed 2026-08-28 — batch 3 dispatched for tasks 6–8; mid-task recovery rev
 Detail: docs/superpowers-orchestrator/2026-08-27-reviewers-per-lens/implementation/reviewers-per-lens-review-log.md
 Open: [I1] user-decision — assert_round_reviewers skips its content checks when the entry reads `**Sources mapped:** 0/0`, so behavioural assertion (m) can pass while verifying nothing; making the 0/0 path fail contradicts Task 6 Step 1, which fixes that helper's content verbatim
 Resume: Resume orchestration for docs/superpowers-orchestrator/2026-08-27-reviewers-per-lens/plans/reviewers-per-lens.md
+
+## Phase 4 — Code review — invocations 3 — rounds 12 — cap — fixes 13 — unresolved 0
+- Invocation 1: rounds 1–4, cap, 6 fixes, 1 user-decision → decided by the user's delegate, fixed at 649b38e
+- Invocation 2: rounds 5–8, cap, 3 fixes, 3 user-decision → decided, fixed at f80b424
+- Invocation 3: rounds 9–12, cap, 4 fixes, 3 user-decision → decided, fixed at d9478e9
+- All user-decision items were ruled on by the orchestrator under a standing
+  delegation from the user; each ruling that changed mandated behaviour is
+  recorded as an `> **Amendment**` block quote in the plan step it changes
+  (Task 1, Task 3, Task 6 Step 1, and Global Constraints).
+
+## Behavioral verification — 2026-08-28 — PASS
+Plugin reinstalled at 7.4.0 and verified byte-identical to the working tree.
+Both suites run in isolation against d9478e9:
+- tests/claude-code/test-multi-doc-review.sh — PASS (663s)
+- tests/claude-code/test-multi-code-review.sh — PASS (899s)
+M = 2 consolidation genuinely exercised: sources mapped 10/10 and 27/27, real
+source annotations, no partial-round or vacuous-pass warnings, repo HEAD
+unchanged across the run. An earlier run at 20:10 is void — it ran concurrently
+with the review loop, which tripped the (e2) blast-radius check.
+
+_Completed — 2026-08-28 — HEAD d9478e9_
