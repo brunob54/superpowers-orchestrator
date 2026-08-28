@@ -1281,7 +1281,7 @@ git commit -m "feat(multi-code-review): M reviewers per lens with report consoli
 
 **Does NOT cover:** separate M values for Phase 2 and Phase 4 (one M applies to both); a change to the `REVIEW_DONE …` / `BLOCKED:` return lines; recovering M from a review log (the orchestrator reads only its own log); a Phase 0 question for M in SDD (Task 5 — SDD never asks).
 
-- [ ] **Step 1: Phase 0 question batch**
+- [x] **Step 1: Phase 0 question batch**
 
 In `skills/orchestrating-development/SKILL.md`, replace:
 
@@ -1301,7 +1301,7 @@ with:
    batch cap (1–5, default 3). Invalid → default. N=0 means
 ```
 
-- [ ] **Step 2: Phase 2 and Phase 4 template fill lists**
+- [x] **Step 2: Phase 2 and Phase 4 template fill lists**
 
 Replace:
 
@@ -1329,7 +1329,7 @@ stop. Fill `./code-review-loop-prompt.md` (BASE = the Phase 0
 recorded branch point, N_code, M, plan path, ledger path
 ```
 
-- [ ] **Step 3: Orchestration log header**
+- [x] **Step 3: Orchestration log header**
 
 Replace:
 
@@ -1343,7 +1343,7 @@ with:
 _Invocation 1 — YYYY-MM-DD — spec docs/superpowers-orchestrator/<date>-<slug>/specs/<slug>-design.md — N_plan=<n> N_code=<n> M=<m> cap=<n> — branch feature/<slug> — BASE <sha7>_
 ```
 
-- [ ] **Step 4: `state.md` Params line**
+- [x] **Step 4: `state.md` Params line**
 
 Replace:
 
@@ -1357,7 +1357,7 @@ with:
 Params: N_plan=<n> N_code=<n> M=<m> cap=<n>  Branch: feature/<slug>  BASE: <sha7>
 ```
 
-- [ ] **Step 5: Resume step 5 — the one defaulted parameter**
+- [x] **Step 5: Resume step 5 — the one defaulted parameter**
 
 Replace:
 
@@ -1381,7 +1381,7 @@ with:
    invocation line is never rewritten).
 ```
 
-- [ ] **Step 6: `doc-review-loop-prompt.md` — parameter line and placeholder**
+- [x] **Step 6: `doc-review-loop-prompt.md` — parameter line and placeholder**
 
 In `skills/orchestrating-development/doc-review-loop-prompt.md`, replace:
 
@@ -1411,7 +1411,7 @@ with:
   controller passes it to multi-doc-review as its M
 ```
 
-- [ ] **Step 7: `code-review-loop-prompt.md` — parameter line, placeholder, `<sha>` reader**
+- [x] **Step 7: `code-review-loop-prompt.md` — parameter line, placeholder, `<sha>` reader**
 
 In `skills/orchestrating-development/code-review-loop-prompt.md`, replace:
 
@@ -1462,7 +1462,7 @@ in the review log" and "the new entry's `_Invocation` line is written and
 committed together" — identify an entry by its line prefix and position,
 never by its `N=` / `M=` fields.
 
-- [ ] **Step 8: Verify**
+- [x] **Step 8: Verify**
 
 Run: `grep -n 'M=<m>' skills/orchestrating-development/SKILL.md`
 Expected: two lines — the log header and the `Params:` line.
@@ -1473,7 +1473,7 @@ Expected: three lines, each prefixed with the path exactly as given on the comma
 Run: `bash tests/sdd-scripts/run-tests.sh 2>&1 | tail -3`
 Expected: 0 failures (the `code-review-loop-prompt.md` drift assertion at line 756 still passes).
 
-- [ ] **Step 9: Commit**
+- [x] **Step 9: Commit**
 
 ```bash
 git add skills/orchestrating-development/SKILL.md skills/orchestrating-development/doc-review-loop-prompt.md skills/orchestrating-development/code-review-loop-prompt.md
