@@ -1,7 +1,9 @@
 # Document Reviewer Prompt Template
 
-Use this template when dispatching a multi-doc-review reviewer subagent. One
-reviewer per round; the lens comes from SKILL.md's Lens Rotation table.
+Use this template when dispatching a multi-doc-review reviewer subagent. M
+reviewers per round (default 1), all with this identical prompt; the lens
+comes from SKILL.md's Lens Rotation table. The reviewers are not told that
+other reviewers exist.
 
 **Purpose:** Independent review of one document under one lens, with no
 authoring context and no knowledge of prior rounds.
@@ -13,6 +15,8 @@ reports quoting skill names get blocked and the round degrades to a retry.
 ```
 Agent tool (general-purpose):
   description: "multi-doc-review round [ROUND]: [LENS_NAME]"
+               (when M ≥ 2 append " (reviewer <j>/<m>)" — reviewer j of m;
+               the description is not part of the prompt)
   model: inherit the session model — do NOT set a model override
   prompt: |
     You are an independent document reviewer. You review ONE document under
