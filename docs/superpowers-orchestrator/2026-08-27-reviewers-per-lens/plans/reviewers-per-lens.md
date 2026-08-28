@@ -1869,7 +1869,7 @@ git commit -m "test(claude-code): M=2 case in the multi-doc-review and multi-cod
 
 **Does NOT cover:** the version badge, lineage ranges, release enumeration line, and `RELEASE-NOTES.md` (Task 8); `tests/codex/post-push-validation-checklist.md` (no Codex-facing file changes).
 
-- [ ] **Step 1: `README.md` — feature bullets**
+- [x] **Step 1: `README.md` — feature bullets**
 
 Replace:
 
@@ -1885,7 +1885,7 @@ with:
 - **multi-code-review (v6.10.0)** — N independent whole-branch code review rounds with rotating lenses (correctness/spec alignment, adversarial red-team, security, test quality) and fixes applied between rounds, with a sidecar audit log; since v7.4.0 each round can dispatch M identical reviewers in parallel (`M=<m>`, 1–5, default 1); automatic at subagent-driven-development's final review gate, or direct: `/multi-code-review [BASE] [N] [M=<m>]`. [Details](docs/FORK-IMPROVEMENTS.md#4-multi-code-review--n-round-independent-whole-branch-code-review-v6100)
 ```
 
-- [ ] **Step 2: `README.md` — Skills Library entries**
+- [x] **Step 2: `README.md` — Skills Library entries**
 
 Replace:
 
@@ -1901,7 +1901,7 @@ with:
 - **multi-code-review** — N-round independent whole-branch code review: M clean-context reviewers per round (default 1) under rotating lenses, reports consolidated per round, one fix subagent per round, sidecar audit log; automatic at subagent-driven-development's final review gate or direct via `/multi-code-review [BASE] [N] [M=<m>]`
 ```
 
-- [ ] **Step 3: `README.md` — environment variables note**
+- [x] **Step 3: `README.md` — environment variables note**
 
 Replace:
 
@@ -1923,7 +1923,7 @@ Set these in `settings.json`'s `env` block so they survive plugin updates; a cha
 ### Hooks (10 total)
 ```
 
-- [ ] **Step 4: `docs/guide/README.md` — stage descriptions**
+- [x] **Step 4: `docs/guide/README.md` — stage descriptions**
 
 Replace:
 
@@ -1978,7 +1978,7 @@ consecutive clean rounds — with M > 1 a round is clean only when every
 reviewer returned a usable report. Throughout, any "done" claim
 ```
 
-- [ ] **Step 5: `docs/guide/README.md` — Phase 0 table, log sample, settings, cheat-sheet**
+- [x] **Step 5: `docs/guide/README.md` — Phase 0 table, log sample, settings, cheat-sheet**
 
 Replace:
 
@@ -2044,7 +2044,7 @@ with:
 | `/multi-code-review [BASE] [N] [M=<m>]` | N whole-branch code-review rounds with fixes, M reviewers per round | §3 |
 ```
 
-- [ ] **Step 6: `docs/FORK-IMPROVEMENTS.md` — §3 and §4**
+- [x] **Step 6: `docs/FORK-IMPROVEMENTS.md` — §3 and §4**
 
 Replace:
 
@@ -2094,7 +2094,7 @@ with:
 `skills/multi-code-review/` (`SKILL.md` controller + `reviewer-prompt.md` dispatch template), the final-gate step in `skills/subagent-driven-development/SKILL.md`, `hooks/skill-rules.json` routing entry, `hooks/subagent-guard.js` roster, `hooks/session-start` (the `<reviewers-per-lens>` session tag, v7.4.0), `tests/claude-code/test-multi-code-review.sh`, `tests/codex/test-subagent-guard.js`, `tests/codex/test-session-start-reviewers-tag.sh`.
 ```
 
-- [ ] **Step 7: `docs/REVIEW-PROCESS-COMPARISON.md`**
+- [x] **Step 7: `docs/REVIEW-PROCESS-COMPARISON.md`**
 
 Replace:
 
@@ -2125,7 +2125,7 @@ with:
 reviewers per lens (M = 2, 3) against M = 1,
 ```
 
-- [ ] **Step 8: Verify**
+- [x] **Step 8: Verify**
 
 Run: `grep -n 'one clean-context reviewer\|one fresh reviewer subagent' README.md docs/guide/README.md docs/FORK-IMPROVEMENTS.md docs/REVIEW-PROCESS-COMPARISON.md`
 Expected: no output.
@@ -2136,7 +2136,7 @@ Expected: `README.md:1` or more, `docs/guide/README.md:2` or more.
 Run: `grep -n 'M=1 cap=3' docs/guide/README.md`
 Expected: the sample header line.
 
-- [ ] **Step 9: Commit**
+- [x] **Step 9: Commit**
 
 ```bash
 git add README.md docs/guide/README.md docs/FORK-IMPROVEMENTS.md docs/REVIEW-PROCESS-COMPARISON.md
