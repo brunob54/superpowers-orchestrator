@@ -320,8 +320,8 @@ invocation note (which carries `M=` like every other); failed rounds get
 
 ## Error Handling
 
-- Unusable report twice → `inconclusive` round, continue (never counts as
-  clean).
+- All reviewer reports unusable twice (u = 0) → `inconclusive` round,
+  continue (never counts as clean).
 - Target document missing → stop and report; nothing dispatched.
 - Invalid N (not an integer 0–10) → 3. N = 0 → skip, log.
 - M stated but invalid (0, 6, `two`, `2.5`) → the default of the Parameters
