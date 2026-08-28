@@ -34,3 +34,8 @@ Resumed 2026-08-28 — batch 3 dispatched for tasks 6–8; mid-task recovery rev
 - Task 6: complete — recovered orphan commit f8d2432 (M=2 behavioral test cases), reviewed with the completion, tick 19100fd
 - Task 7: complete — ec2d175..72b249a — README and guide document M and SUPERPOWERS_REVIEWERS_PER_LENS (one fix round)
 - Task 8: complete — 5dde97a — release v7.4.0
+
+## STOPPED — 2026-08-28 — phase 4 — code review left 1 user-decision item (rounds 4, cap, fixes 6, unresolved 0)
+Detail: docs/superpowers-orchestrator/2026-08-27-reviewers-per-lens/implementation/reviewers-per-lens-review-log.md
+Open: [I1] user-decision — assert_round_reviewers skips its content checks when the entry reads `**Sources mapped:** 0/0`, so behavioural assertion (m) can pass while verifying nothing; making the 0/0 path fail contradicts Task 6 Step 1, which fixes that helper's content verbatim
+Resume: Resume orchestration for docs/superpowers-orchestrator/2026-08-27-reviewers-per-lens/plans/reviewers-per-lens.md
