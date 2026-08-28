@@ -88,3 +88,5 @@ _Carried findings source: `.superpowers/sdd/progress.md` `Minor:` lines (14 item
 ### Dispositions
 - [M1] carried — on a clean M ≥ 2 round the presence of the `**Reviewer verdicts:**` line is not checked, because `**Sources mapped:** 0/0` makes the sum comparison succeed at 0; not fixed here, since the verification cycle cap (3) was reached and a further fix would ship unreviewed
 - [M2] carried — `check_no_reviewers_per_lens_setting` omits `~/.claude/settings.local.json` from the settings files it inspects; same reason as [M1]
+
+_Completed — 2026-08-28 — cap reached — HEAD 4f1c9323740622a3332e7d89d2949d85749045ea_
