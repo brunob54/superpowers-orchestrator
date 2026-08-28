@@ -29,3 +29,8 @@ Resumed 2026-08-28 — plan corrected at 5a868da (concrete-line grep; "of the Tr
 - Task 5: complete — 266a648..fcc8c6e — subagent-driven-development resolves M
 - Task 6: incomplete — orphan commit f8d2432 on the branch, no ledger line, boxes unticked
 Resumed 2026-08-28 — batch 3 dispatched for tasks 6–8; mid-task recovery reviews the orphan commit together with task 6's completion
+
+## Phase 3 — Batch 3 (tasks 6–8) — COMPLETE — commits f8d2432..70c84fd
+- Task 6: complete — recovered orphan commit f8d2432 (M=2 behavioral test cases), reviewed with the completion, tick 19100fd
+- Task 7: complete — ec2d175..72b249a — README and guide document M and SUPERPOWERS_REVIEWERS_PER_LENS (one fix round)
+- Task 8: complete — 5dde97a — release v7.4.0
