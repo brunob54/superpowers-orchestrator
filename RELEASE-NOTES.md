@@ -1,5 +1,61 @@
 # Superpowers Orchestrator Release Notes
 
+## v7.4.0 — M reviewers per lens
+
+Field report: LLMs (large language models) are not deterministic — the same
+reviewer prompt reports different findings on different runs, and one run can
+miss a problem another run would report. Each round of `multi-doc-review` and
+`multi-code-review` dispatched exactly one reviewer, so a round took one
+sample of the reviewer's judgment under its lens.
+
+- **M reviewers per lens.** A new parameter M (integer 1–5, default 1) sets
+  how many reviewer subagents a round dispatches — in parallel, with the
+  identical prompt, none told that the others exist. Their reports are
+  consolidated into one finding set before triage: every finding of every
+  usable report is kept (a union — no majority vote, which would drop exactly
+  the findings this feature exists to catch), findings that name the same
+  place and the same defect are merged at the highest severity given, and
+  every reviewer-local id is traced to exactly one consolidated finding
+  (`**Sources mapped:** k/k`). Running time stays close to one review; the
+  token cost grows about M times per round. State it as `M=<m>`,
+  `<m> reviewers per lens`, `<m> reviewers per round`, or
+  `<m> parallel reviewers`: `/multi-doc-review <doc> [N] [M=<m>]`,
+  `/multi-code-review [BASE] [N] [M=<m>]`. The skills never ask for M.
+- **Convergence with M ≥ 2.** A round is clean only when the consolidated
+  set has zero Critical and zero Important findings **and** all M reviewers
+  returned a usable report; a partial round (a reviewer still unusable after
+  one retry) is never clean. Verification re-reviews use the same M.
+- **Log format.** Every invocation line now records `M=<m>` after `N=<n>`
+  (a line without `M=` reads as M = 1). With M ≥ 2 a round entry gains
+  `**Reviewers:**`, `**Reviewer verdicts:**`, and `**Sources mapped:**`
+  lines, and every finding disposition line ends with
+  ` ← <a>/<m>: <source ids>` — the agreement count and the
+  reviewer-qualified ids (`r1:C1`). With M = 1 the entry is byte-identical
+  to before. Readers of the `fixed — … → <sha>` line take the token right
+  after `→ `.
+- **Orchestration and SDD.** `orchestrating-development`'s Phase 0 batch
+  asks for M (default: the environment variable's value, else 1); the
+  orchestration-log header and `state.md` record `M=<m>`; `... with M=2`
+  overrides it on resume, and a log written before 7.4.0 resumes with
+  M = 1; both loop-controller templates carry `[M]`, because subagents never
+  receive the session tag. The subagent-driven-development final gate and
+  Batched Autonomous Mode never ask — they use the same default resolution,
+  and a batch handoff carries a stated M across `/clear`.
+- `SUPERPOWERS_REVIEWERS_PER_LENS` env var (integer 1–5, default 1) sets M
+  for every invocation that does not state it; `hooks/session-start`
+  carries it to the skills as a `<reviewers-per-lens>` session tag. Set it
+  in settings.json's `env` block so it survives plugin updates; restart the
+  CLI after changing it. Invalid or out-of-range values silently fall back
+  to 1.
+- **Tests.** `tests/codex/run-unit-tests.sh` gains a hermetic shell test of
+  the tag (`tests/codex/test-session-start-reviewers-tag.sh`); the two
+  behavioral review tests gain an M=2 case that cross-checks the round-1
+  entry's counts against its source annotations.
+- **Docs sync.** README (feature bullets, Skills Library, environment
+  variables), `docs/guide/README.md` (stages, Phase 0 table, log sample,
+  settings, cheat-sheet), `docs/FORK-IMPROVEMENTS.md`, and
+  `docs/REVIEW-PROCESS-COMPARISON.md` updated for M.
+
 ## v7.3.0 — one folder per topic, committed code reviews
 
 Field report: the documents of one feature were spread over three flat
