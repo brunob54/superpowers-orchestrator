@@ -217,3 +217,14 @@ _Carried findings source: `.superpowers/sdd/progress.md` `Minor:` lines (14 item
 - [M2] fixed — `check_no_reviewers_per_lens_setting` did not inspect the enterprise managed-settings file, which has the highest precedence, so a managed value of SUPERPOWERS_REVIEWERS_PER_LENS defeated the guard silently; both the macOS and the Linux paths were added → 4fa1ab3
 - [M3] carried — the hook unit test sets only `CLAUDE_PLUGIN_ROOT`, so the Cursor output branch (`additional_context`, selected by `CURSOR_PLUGIN_ROOT`) has no assertion although README.md documents Cursor support. Both branches interpolate the same `$session_context`, so the risk is low; a new case would change the assertion count that Task 1's steps state, and that text is already stale (round 9 [M2]) — one correction of it belongs to the orchestrator, not to two separate loop fixes
 - [M4] carried — no test covers the M ≥ 2 error shapes (partial round, inconclusive round, invalid stated M, the `, ids renumbered` and `, counts recomputed` suffixes). Task 6's "Does NOT cover" places partial and inconclusive rounds out of scope, so this is a scope note rather than a missed requirement; the reviewer's own suggestion routes it through the fixture-driven helper test proposed in [I2]
+
+## Round 12 verification 1 — Test & coverage quality — opus
+**Reviewer verdict:** 0 Critical, 1 Important, 3 Minor
+### Dispositions
+- [I1] rejected: duplicate of round 12 [I1] — the same partial-round tolerance in `assert_round_reviewers`, reported again with the same suggested run-level gate; it is already recorded as `user-decision` (plan-mandated) on round 12 and is not counted twice
+- [M1] carried — no test covers the inconclusive M ≥ 2 round shape (`usable 0/<m>`, which the helper's `[1-m]` class actively rejects) nor the resumed-invocation shape `**Reviewers:** M=1, usable 1/1`; same scope note as round 12 [M4]
+- [M2] carried — the M plumbing through `orchestrating-development` (Phase 0 question, the `Params:` line of state.md, the `[M]` placeholder of both loop prompt templates) and through `subagent-driven-development` (final gate resolution, M carried across `/clear`) is verified only by `grep` counts on the Markdown; no test asserts that a stated M reaches either review loop. The plan's Tasks 4 and 5 define exactly that verification, so closing the gap is a scope change rather than a defect fix
+- [M3] carried — the hook unit test exercises only the `hookSpecificOutput.additionalContext` output branch; the reviewer checked `hooks/session-start` and confirmed all three branches print the same `$session_context`, so the tag cannot differ between them. Same item as round 12 [M3]
+- No unreviewed fix remains: this cycle reviewed 4fa1ab3, and it produced no finding requiring a fix, so the verification of round 12 ends here (1 of 3 cycles used)
+
+_Completed — 2026-08-28 — cap reached — HEAD 4fa1ab37bfeff98f2abd6b2f007d51505db9aa79_
