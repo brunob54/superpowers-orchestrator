@@ -150,3 +150,12 @@ _Carried findings source: `.superpowers/sdd/progress.md` `Minor:` lines (14 item
 - [M4] fixed — `assert_round_reviewers` now rejects a non-single-digit `m` instead of silently building the character class `[1-1]0` → 3f3a999
 - [M5] fixed — the two per-run budgets of test-multi-doc-review.sh restored to `timeout 1800` (with their failure messages), which the already-advised outer 4200 s covers → 3f3a999
 - [M6] fixed — the advised outer timeout for test-multi-code-review.sh raised from 1800 s to 4200 s in the runner help text and in the plan's Task 6 verification command, above the sum of its two 1800 s inner budgets → 3f3a999
+
+## Round 8 verification 1 — Test & coverage quality — opus
+**Reviewer verdict:** 0 Critical, 0 Important, 3 Minor
+### Dispositions
+- [M1] carried — `assert_round_reviewers` still tolerates a partial round (`usable 1/2`) and only prints a `note:`; making it a failure for a `required` round is a sensible extension of the fourth argument, but it would ship unreviewed at the loop's cap
+- [M2] carried — no behavioural case exercises resolution step 2 (a `<reviewers-per-lens>` session tag supplying M when the invocation states none); both tests deliberately unset the variable, and the extra live case costs a further multi-minute run
+- [M3] carried — the new `[M]` placeholders in the two orchestration loop-prompt templates and the `M=<m>` field in the orchestration log header have no drift assertion in tests/sdd-scripts/run-tests.sh
+
+_Completed — 2026-08-28 — cap reached — HEAD 3f3a999498d682a4899c7c43673d95c689223f2a_
