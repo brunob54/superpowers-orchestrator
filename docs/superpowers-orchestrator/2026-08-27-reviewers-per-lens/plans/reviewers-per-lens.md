@@ -2159,7 +2159,7 @@ git commit -m "docs: document M reviewers per lens and SUPERPOWERS_REVIEWERS_PER
 
 **Does NOT cover:** publishing a GitHub release (the fork publishes none; the badge is static); merging or creating a pull request (the orchestrator stops before that); `tests/codex/post-push-validation-checklist.md` (no Codex-facing change).
 
-- [ ] **Step 1: Version files**
+- [x] **Step 1: Version files**
 
 Run:
 
@@ -2170,7 +2170,7 @@ sed -i.bak 's/^  version: "7.3.0"$/  version: "7.4.0"/' plugin.universal.yaml
 rm -f .claude-plugin/plugin.json.bak .claude-plugin/marketplace.json.bak plugin.universal.yaml.bak
 ```
 
-- [ ] **Step 2: `README.md` — badge, lineage ranges, release enumeration**
+- [x] **Step 2: `README.md` — badge, lineage ranges, release enumeration**
 
 Replace:
 
@@ -2208,7 +2208,7 @@ with:
 slug-stamped commit messages (v7.1.0), the per-topic artifact layout (v7.3.0), and M reviewers per lens (v7.4.0) — are covered in [RELEASE-NOTES.md](RELEASE-NOTES.md).
 ```
 
-- [ ] **Step 3: `RELEASE-NOTES.md` entry**
+- [x] **Step 3: `RELEASE-NOTES.md` entry**
 
 Replace:
 
@@ -2282,7 +2282,7 @@ sample of the reviewer's judgment under its lens.
 ## v7.3.0 — one folder per topic, committed code reviews
 ```
 
-- [ ] **Step 4: Verify**
+- [x] **Step 4: Verify**
 
 Run: `cat VERSION; grep -n '"version"' .claude-plugin/plugin.json .claude-plugin/marketplace.json; grep -n '^  version:' plugin.universal.yaml`
 Expected: `7.4.0` on every line.
@@ -2296,7 +2296,7 @@ Expected: line 3.
 Run: `bash tests/codex/run-unit-tests.sh 2>&1 | tail -3 && bash tests/smart-compress/run-tests.sh 2>&1 | tail -3`
 Expected: both suites report all tests passed.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add VERSION .claude-plugin/plugin.json .claude-plugin/marketplace.json plugin.universal.yaml README.md RELEASE-NOTES.md
