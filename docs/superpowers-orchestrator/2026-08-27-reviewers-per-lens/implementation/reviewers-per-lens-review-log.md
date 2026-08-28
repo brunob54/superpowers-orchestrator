@@ -159,3 +159,29 @@ _Carried findings source: `.superpowers/sdd/progress.md` `Minor:` lines (14 item
 - [M3] carried — the new `[M]` placeholders in the two orchestration loop-prompt templates and the `M=<m>` field in the orchestration log header have no drift assertion in tests/sdd-scripts/run-tests.sh
 
 _Completed — 2026-08-28 — cap reached — HEAD 3f3a999498d682a4899c7c43673d95c689223f2a_
+
+_Invocation 3 — 2026-08-28 — N=4 M=1 — BASE..HEAD 526a74c..f80b424 — branch feature/reviewers-per-lens — gate: orchestration_
+
+_Carried findings source: `.superpowers/sdd/progress.md` `Minor:` lines (14 items), labelled `[K1]`–`[K14]` below._
+
+## Round 9 — Correctness & spec alignment — opus
+**Reviewer verdict:** 0 Critical, 1 Important, 2 Minor
+**Converged:** no
+### Dispositions
+- [I1] fixed — the header comment of tests/codex/test-session-start-reviewers-tag.sh still described the pre-amendment "no tag on the fallback path" contract, contradicting both the shipped hook and the file's own `expect_fallback_tag` assertions; rewritten to state the explicit `<reviewers-per-lens>1</reviewers-per-lens>` fallback → 1ff050c
+- [M1] fixed — the two convergence bullets in docs/FORK-IMPROVEMENTS.md and the early-exit bullet in docs/REVIEW-PROCESS-COMPARISON.md now carry the `u = M` clean-round condition and the partial-round case → 1ff050c
+- [M2] carried — the plan file still states the pre-amendment "no tag" contract in five places that Task 1's amendment supersedes without marking them (Global Constraints line 23, Task 1 "Does NOT cover", the verbatim test body of Step 1 and the expected outputs of Steps 3 and 5); Task 6 Step 1 uses an explicit "superseded on this point" marker and Task 1 does not. Carried rather than fixed: the plan is this loop's requirements document and its amendment bookkeeping belongs to the orchestrator, not to a review fix subagent
+- [K1] carried — test-session-start-reviewers-tag.sh run_hook accepts only one extra VAR=value argument (ship-as-is: the comment says "one extra variable assignment", which matches the body; no call site passes two)
+- [K2] carried — multi-doc-review duplicate u = 0 inconclusive bullet (ship-as-is: already fixed on this branch, one bullet remains)
+- [K3] carried — multi-doc-review ", counts recomputed" instruction placed in step 5 instead of step 2 (ship-as-is: consolidation rule 1 already makes the enumeration authoritative before the entry is written)
+- [K4] carried — multi-doc-review uses the letter k for both the invocation number and the source-finding count (ship-as-is: the two uses are in different sections)
+- [K5] carried — multi-doc-review "a resumed invocation given a new M" rule has no resume path defined (ship-as-is: the Parameters M bullet names the case; only the mechanism is unstated)
+- [K6] carried — multi-doc-review after-the-loop report list and effective M (ship-as-is: already fixed on this branch)
+- [K7] carried — multi-doc-review "byte-identical" label (ship-as-is: already fixed on this branch)
+- [K8] user-decision — multi-doc-review/SKILL.md has grown to 369 lines and the consolidation rules are a candidate for a reference file; the round-9 reviewer recommended `user-decision`, calling it a cost/benefit trade (context size against keeping both review loops teachable as one pattern) that belongs to the owner. Under M = 1 a single `user-decision` recommendation is decisive
+- [K9] carried — multi-code-review canonical-dispositions "always uses the single shape" (ship-as-is: already fixed on this branch)
+- [K10] carried — clean-round and Minor-only-round sentences not qualified by u = M (ship-as-is: already fixed in both skills)
+- [K11] carried — multi-code-review skipped-entry field list missing M (ship-as-is: already fixed on this branch)
+- [K12] carried — .superpowers/sdd/task-6-report.md per-file diffstat numbers wrong (ship-as-is: git-ignored work artifact, totals correct)
+- [K13] carried — README.md first use of M does not expand it (ship-as-is: the multi-doc-review bullet now expands it and the Environment variables section defines it in full)
+- [K14] carried — docs/REVIEW-PROCESS-COMPARISON.md eval item does not restate the 1–5 range (ship-as-is: the item names the evaluated values and both sibling documents state the range)

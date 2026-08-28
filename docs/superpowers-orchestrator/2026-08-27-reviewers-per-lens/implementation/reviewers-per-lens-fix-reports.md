@@ -1127,3 +1127,34 @@ All four cases (a)-(d) behaved as expected. The throwaway script stayed in
 the scratchpad directory and was not committed.
 
 Commit: 3f3a999498d682a4899c7c43673d95c689223f2a "review fixes (reviewers-per-lens, round 8)"
+
+## Round 9 fixes
+
+### Findings addressed
+- [I1] `tests/codex/test-session-start-reviewers-tag.sh:2-6` — rewrote the header comment to state the shipped contract: a valid 1-5 value emits that value; every other value (unset, empty, 0, 6, 10, `abc`, `3.0`, `2.5`, leading whitespace) emits the explicit fallback `<reviewers-per-lens>1</reviewers-per-lens>`, which must end the context. No code or assertion changed.
+- [M1] `docs/FORK-IMPROVEMENTS.md:121` — added the partial-round case (`usable <u>/<m>`, never clean) and the `u = M` clean-round condition to the multi-doc-review convergence bullet.
+- [M1] `docs/FORK-IMPROVEMENTS.md:163` — added the `u = M` clause to the multi-code-review convergence bullet.
+- [M1] `docs/REVIEW-PROCESS-COMPARISON.md:208-209` — added the `u = M` clause to the early-exit bullet.
+
+### Verification
+
+Command:
+    bash tests/codex/test-session-start-reviewers-tag.sh
+
+Output:
+    session-start: <reviewers-per-lens> tag
+      ok   - SUPERPOWERS_REVIEWERS_PER_LENS=1 emits <reviewers-per-lens>1</reviewers-per-lens> at the end of the context
+      ok   - SUPERPOWERS_REVIEWERS_PER_LENS=3 emits <reviewers-per-lens>3</reviewers-per-lens> at the end of the context
+      ok   - SUPERPOWERS_REVIEWERS_PER_LENS=5 emits <reviewers-per-lens>5</reviewers-per-lens> at the end of the context
+      ok   - unset SUPERPOWERS_REVIEWERS_PER_LENS falls back to <reviewers-per-lens>1</reviewers-per-lens> at the end of the context
+      ok   - SUPERPOWERS_REVIEWERS_PER_LENS=0 falls back to <reviewers-per-lens>1</reviewers-per-lens> at the end of the context
+      ok   - SUPERPOWERS_REVIEWERS_PER_LENS=6 falls back to <reviewers-per-lens>1</reviewers-per-lens> at the end of the context
+      ok   - SUPERPOWERS_REVIEWERS_PER_LENS=10 falls back to <reviewers-per-lens>1</reviewers-per-lens> at the end of the context
+      ok   - SUPERPOWERS_REVIEWERS_PER_LENS=abc falls back to <reviewers-per-lens>1</reviewers-per-lens> at the end of the context
+      ok   - SUPERPOWERS_REVIEWERS_PER_LENS=3.0 falls back to <reviewers-per-lens>1</reviewers-per-lens> at the end of the context
+      ok   - SUPERPOWERS_REVIEWERS_PER_LENS=2.5 falls back to <reviewers-per-lens>1</reviewers-per-lens> at the end of the context
+      ok   - SUPERPOWERS_REVIEWERS_PER_LENS= (set but empty) falls back to <reviewers-per-lens>1</reviewers-per-lens> at the end of the context
+      ok   - SUPERPOWERS_REVIEWERS_PER_LENS=' 3' (leading space) falls back to <reviewers-per-lens>1</reviewers-per-lens> at the end of the context
+      ok   - workspace-embedded decoy tag precedes the real <reviewers-per-lens>3</reviewers-per-lens> at the end of the context
+      ok   - unset: workspace decoy is overridden by the fallback <reviewers-per-lens>1</reviewers-per-lens> at the end of the context
+      14 passed, 0 failed
