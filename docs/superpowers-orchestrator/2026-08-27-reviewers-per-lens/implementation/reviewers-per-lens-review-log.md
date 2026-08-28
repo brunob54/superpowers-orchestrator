@@ -132,3 +132,9 @@ _Carried findings source: `.superpowers/sdd/progress.md` `Minor:` lines (14 item
 - [M2] fixed — the advised outer timeout for the doc-review behavioural test raised from 3600 s to 4200 s in the runner help text and in the plan's Task 6 Step 7 verification command, leaving about 800 s of headroom over the two 1700 s inner budgets → 0a1c318
 - [M3] carried — a bare `<m> reviewers` (for example "review the branch 3 times with 2 reviewers") matches no accepted M form and is then read as N; the plan fixes the four accepted forms exactly
 - [M4] carried — a round is clean only at u = M, so a systematically unusable reviewer disables early exit and a larger M makes a clean round less likely; the plan fixes the u = M condition
+
+## Round 7 — Security — opus
+**Reviewer verdict:** 0 Critical, 1 Important, 0 Minor
+**Converged:** no
+### Dispositions
+- [I1] user-decision — when `SUPERPOWERS_REVIEWERS_PER_LENS` is unset the hook emits no `<reviewers-per-lens>` tag at all, so a tag planted in a repository file that `hooks/session-start` embeds (project-map.md, session-log.md, state.md, known-issues.md, context-snapshot.json) becomes the LAST element and is honoured as M; repository content can then raise M to 5 with no prompt (cost and concurrency amplification only, since M stays clamped to 1–5). The reviewer's fix — emit `<reviewers-per-lens>1</reviewers-per-lens>` when the variable is unset or invalid — is plan-mandated against: the plan states "Invalid or unset → no tag (silent fallback, documented)" and the shipped hermetic test asserts `expect_no_tag "unset SUPERPOWERS_REVIEWERS_PER_LENS"`. The finding's secondary suggestion (repeating the tag-ordering caveat in orchestrating-development and subagent-driven-development) was not applied separately, because the wording depends on which way this decision goes
