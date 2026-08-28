@@ -120,7 +120,7 @@ git add sum.js sum.test.js
 git commit --quiet -m "feature: extend sumFirstN"
 SEEDED_HEAD_SHA=$(git rev-parse HEAD)
 
-PROMPT="Invoke the superpowers-orchestrator:multi-code-review skill on the git repository at $TEST_PROJECT (review its current branch feature-under-review) with BASE $BASE_SHA and N=2. Do not ask me any questions — use N=2 and proceed to completion, treating any finding that would need my decision as user-decision in the log."
+PROMPT="Invoke the superpowers-orchestrator:multi-code-review skill on the git repository at $TEST_PROJECT (review its current branch feature-under-review) with BASE $BASE_SHA, N=2 and M=2. Do not ask me any questions — use N=2 and M=2 and proceed to completion, treating any finding that would need my decision as user-decision in the log."
 
 # Safety net: the skill commits; a misanchored run must not mutate the dev repo.
 # --ignored=matching is included because .superpowers/ and state.md/known-issues.md/*.txt
@@ -196,6 +196,15 @@ else
         echo "$NON_GENERIC"
         FAILURES=$((FAILURES+1))
     fi
+    # (i) the invocation line records N and M
+    if ! grep -q " N=2 M=2 — " "$LOG"; then
+        echo "FAIL(i): review log invocation line does not contain ' N=2 M=2 — '"
+        FAILURES=$((FAILURES+1))
+    fi
+    # (m) M=2: the round-1 entry carries the reviewers-per-lens lines and
+    #     source annotations, and they agree with each other. Case 1 passes no
+    #     carried findings, so every disposition of the round carries one.
+    assert_round_reviewers "$LOG" 1 2 || FAILURES=$((FAILURES+$?))
 fi
 
 # ── Case 2: pipeline mode (TOPIC_DIR) ────────────────────────────────────────

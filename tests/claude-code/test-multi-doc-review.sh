@@ -1,12 +1,14 @@
 #!/usr/bin/env bash
 # Test: multi-doc-review skill — N-round document review loop (behavioral, slow)
 #
-# Seeds a deliberately flawed spec, invokes the skill headlessly with N=2,
+# Seeds a deliberately flawed spec, invokes the skill headlessly with N=2 and M=2,
 # and asserts the review-log contract from
 # docs/superpowers-orchestrator/2026-07-19-multi-review/specs/multi-review-design.md:
 #   (a) sidecar <doc-basename>-review-log.md exists with a Round 1 entry
 #   (b) doc modified OR all Critical/Important dispositions are rejections
 #   (c) log has a disposition line or an explicit no-findings verdict
+#   (m) round 1 carries the M=2 lines (Reviewers, Reviewer verdicts, Sources
+#       mapped) and source annotations that agree with each other
 #
 # Requires the INSTALLED plugin to include multi-doc-review — reinstall the
 # plugin cache after editing skills/ before running this.
@@ -36,7 +38,7 @@ Failed exports are retried a reasonable number of times.
 SPEC_EOF
 SPEC_SHA_BEFORE=$(shasum "$SPEC" | cut -d' ' -f1)
 
-PROMPT="Invoke the superpowers-orchestrator:multi-doc-review skill on the document $SPEC with N=2. Do not ask me any questions — use N=2 and proceed to completion."
+PROMPT="Invoke the superpowers-orchestrator:multi-doc-review skill on the document $SPEC with N=2 and M=2. Do not ask me any questions — use N=2 and M=2 and proceed to completion."
 # Deliberately no doc-type statement: the spec's Testing Strategy requires this
 # test to run the skill on a new-layout spec path (nearest segment specs/ ->
 # spec); stating the type would override inference per the skill's Parameters
@@ -77,6 +79,9 @@ else
         echo "FAIL(c): log has no disposition line and no no-findings verdict"
         FAILURES=$((FAILURES+1))
     fi
+    # (m) M=2: the round-1 entry carries the reviewers-per-lens lines and
+    #     source annotations, and they agree with each other
+    assert_round_reviewers "$LOG" 1 2 || FAILURES=$((FAILURES+$?))
 fi
 
 if [ "$FAILURES" -eq 0 ]; then

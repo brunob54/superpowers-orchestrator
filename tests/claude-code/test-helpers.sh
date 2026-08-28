@@ -202,3 +202,71 @@ export -f assert_order
 export -f create_test_project
 export -f cleanup_test_project
 export -f create_test_plan
+
+# assert_round_reviewers <log> <round> <m>
+# Checks the reviewers-per-lens lines of one round entry — the lines from
+# '^## Round <round> — ' up to the next '^## Round ' or the end of the file.
+# The en dash after the round number matches the round header only: a
+# '## Round <round> verification <c> — …' header does not match it, so a
+# verification-cycle entry ends the extraction instead of being appended.
+#   - '**Reviewers:** M=<m>, usable <u>/<m>' with 1 <= u <= m (one unusable
+#     reviewer is tolerated, so a rare retry failure does not fail the test)
+#   - '**Sources mapped:** k/k' with equal numbers
+#   - the counts on the '**Reviewer verdicts:**' line sum to k (the line is
+#     not trusted: the sum is recomputed here)
+#   - the distinct 'r<j>:<id>' tokens across the source annotations equal k
+#   - at least one disposition line ends in ' ← <a>/<m>: <source ids>'
+#     (skipped with a 'note:' line when Sources mapped is 0/0: a round whose
+#     reviewers all report nothing writes no annotation, and that is correct
+#     skill behavior — rerun the test if the seeded findings were expected)
+# Prints one FAIL(m) line per failed check; returns the number of failed checks.
+assert_round_reviewers() {
+    local log="$1" round="$2" m="$3"
+    local failures=0
+    local entry
+    entry=$(awk -v r="$round" '
+        $0 ~ "^## Round " r " — " { on = 1; print; next }
+        /^## Round / { if (on) exit }
+        on { print }' "$log")
+
+    local usable_re="^\\*\\*Reviewers:\\*\\* M=${m}, usable [1-${m}]/${m}\$"
+    if ! printf '%s\n' "$entry" | grep -qE "$usable_re"; then
+        echo "FAIL(m): round $round has no '**Reviewers:** M=$m, usable <u>/$m' line"
+        failures=$((failures+1))
+    fi
+
+    local sources_line k_mapped k_total
+    sources_line=$(printf '%s\n' "$entry" | grep -E '^\*\*Sources mapped:\*\* [0-9]+/[0-9]+$' | head -1 || true)
+    k_mapped=$(printf '%s' "$sources_line" | sed -nE 's/.* ([0-9]+)\/[0-9]+$/\1/p')
+    k_total=$(printf '%s' "$sources_line" | sed -nE 's/.* [0-9]+\/([0-9]+)$/\1/p')
+    if [ -z "$sources_line" ] || [ "$k_mapped" != "$k_total" ]; then
+        echo "FAIL(m): round $round has no '**Sources mapped:** k/k' line with equal numbers"
+        failures=$((failures+1))
+    fi
+
+    local verdict_sum
+    verdict_sum=$(printf '%s\n' "$entry" | grep -E '^\*\*Reviewer verdicts:\*\*' \
+        | grep -oE '[0-9]+ (Critical|Important|Minor)' | awk '{ s += $1 } END { print s + 0 }' || true)
+    if [ "$verdict_sum" != "${k_total:-none}" ]; then
+        echo "FAIL(m): round $round: Reviewer verdicts counts sum to $verdict_sum, Sources mapped says ${k_total:-none}"
+        failures=$((failures+1))
+    fi
+
+    local annotation_re=" ← [1-${m}]/${m}: r[1-${m}]:[CIM][0-9]+(, r[1-${m}]:[CIM][0-9]+)*\$"
+    local distinct_sources
+    distinct_sources=$(printf '%s\n' "$entry" | grep -oE "$annotation_re" \
+        | grep -oE "r[1-${m}]:[CIM][0-9]+" | sort -u | wc -l | tr -d ' ' || true)
+    if [ "$distinct_sources" != "${k_total:-none}" ]; then
+        echo "FAIL(m): round $round: $distinct_sources distinct source ids in annotations, Sources mapped says ${k_total:-none}"
+        failures=$((failures+1))
+    fi
+
+    if [ "${k_total:-0}" = "0" ]; then
+        echo "note: round $round: Sources mapped is 0/0 (empty consolidated set); annotation check skipped — rerun if findings were expected"
+    elif ! printf '%s\n' "$entry" | grep -qE "$annotation_re"; then
+        echo "FAIL(m): round $round: no disposition line ends in a ' ← <a>/$m: <source ids>' annotation"
+        failures=$((failures+1))
+    fi
+
+    return "$failures"
+}
