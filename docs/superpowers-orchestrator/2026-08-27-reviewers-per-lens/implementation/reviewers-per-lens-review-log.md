@@ -82,3 +82,9 @@ _Carried findings source: `.superpowers/sdd/progress.md` `Minor:` lines (14 item
 - [M2] fixed — plan Task 1 verification now states the shipped assertion counts (9 passed / 4 failed before, 13 passed / 0 failed after) → 4f1c932
 - [M3] fixed — plan Task 6 Step 7 now runs the doc-review behavioural test with `--timeout 3600` → 4f1c932
 - [M4] fixed — `assert_round_reviewers` now reports a missing round entry as one distinct failure instead of five generic ones → 4f1c932 (the partial-round tolerance named in the same finding was left unchanged: the plan lists it explicitly under "Does NOT cover")
+
+## Round 4 verification 3 — Test & coverage quality — opus
+**Reviewer verdict:** 0 Critical, 0 Important, 2 Minor
+### Dispositions
+- [M1] carried — on a clean M ≥ 2 round the presence of the `**Reviewer verdicts:**` line is not checked, because `**Sources mapped:** 0/0` makes the sum comparison succeed at 0; not fixed here, since the verification cycle cap (3) was reached and a further fix would ship unreviewed
+- [M2] carried — `check_no_reviewers_per_lens_setting` omits `~/.claude/settings.local.json` from the settings files it inspects; same reason as [M1]
