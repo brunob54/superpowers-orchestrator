@@ -90,3 +90,11 @@ _Carried findings source: `.superpowers/sdd/progress.md` `Minor:` lines (14 item
 - [M2] carried — `check_no_reviewers_per_lens_setting` omits `~/.claude/settings.local.json` from the settings files it inspects; same reason as [M1]
 
 _Completed — 2026-08-28 — cap reached — HEAD 4f1c9323740622a3332e7d89d2949d85749045ea_
+
+### Post-loop decisions — 2026-08-28
+- [I1] (round 4) decided (user): fix it — `assert_round_reviewers` now takes a required fourth argument, `required` or `optional`, stating whether that round must have consolidated at least one finding; `required` makes a `**Sources mapped:** 0/0` entry fail, `optional` keeps the documented skip, and a missing or misspelled value fails. Plan Task 6 Step 1 was amended in that step as a block quote, so the helper body is no longer mandated verbatim on this point and the finding is no longer a plan conflict.
+- [I1] (round 4) fixed — required `required`/`optional` argument added to `assert_round_reviewers`; the four call sites updated (round 1 `required` in both behavioural tests, round 2 `optional`) → 649b38e
+
+_Invocation 2 — 2026-08-28 — N=4 M=1 — BASE..HEAD 526a74c..649b38e — branch feature/reviewers-per-lens — gate: orchestration_
+
+_Carried findings source: `.superpowers/sdd/progress.md` `Minor:` lines (14 items), labelled `[K1]`–`[K14]` below._
