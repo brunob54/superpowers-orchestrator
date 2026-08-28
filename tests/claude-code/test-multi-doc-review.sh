@@ -86,6 +86,13 @@ PROMPT="Invoke the superpowers-orchestrator:multi-doc-review skill on the docume
 # text — there is nothing in it a grep could key on to confirm "spec" was
 # actually inferred rather than assumed.
 
+# Safety net: the skill commits; a misanchored run must not mutate the dev repo.
+# --ignored=matching is included because .superpowers/ and state.md/known-issues.md/*.txt
+# are gitignored in this repo — exactly the paths the skill under test writes — so a
+# plain --porcelain diff would miss a misanchored run landing its review log or journal here.
+PLUGIN_HEAD_BEFORE=$(git -C "$PLUGIN_DIR" rev-parse HEAD)
+PLUGIN_STATUS_BEFORE=$(git -C "$PLUGIN_DIR" status --porcelain --ignored=matching | shasum | cut -d' ' -f1)
+
 CLAUDE_STATUS=0
 cd "$PLUGIN_DIR" && timeout 1800 claude -p "$PROMPT" \
     --permission-mode bypassPermissions \
@@ -96,6 +103,15 @@ cd "$PLUGIN_DIR" && timeout 1800 claude -p "$PROMPT" \
 #     124, the tests/lib/timeout-shim.sh fallback reports 143 (SIGTERM).
 if [ "$CLAUDE_STATUS" -eq 124 ] || [ "$CLAUDE_STATUS" -eq 143 ]; then
     echo "FAIL(f): the claude run was killed by the 1800s timeout (exit $CLAUDE_STATUS) — the loop never finished"
+    FAILURES=$((FAILURES+1))
+fi
+
+PLUGIN_HEAD_AFTER=$(git -C "$PLUGIN_DIR" rev-parse HEAD)
+PLUGIN_STATUS_AFTER=$(git -C "$PLUGIN_DIR" status --porcelain --ignored=matching | shasum | cut -d' ' -f1)
+if [ "$PLUGIN_HEAD_AFTER" != "$PLUGIN_HEAD_BEFORE" ] || [ "$PLUGIN_STATUS_AFTER" != "$PLUGIN_STATUS_BEFORE" ]; then
+    echo "FAIL(e): the run mutated the plugin dev repo (misanchored skill?)"
+    echo "  Inspect: git -C $PLUGIN_DIR status --porcelain; git -C $PLUGIN_DIR diff"
+    echo "  Only after confirming that tree held nothing else of value, recover with: git -C $PLUGIN_DIR reset --hard $PLUGIN_HEAD_BEFORE (this discards ALL uncommitted work in that repo)"
     FAILURES=$((FAILURES+1))
 fi
 
@@ -161,6 +177,15 @@ PROMPT2="Invoke the superpowers-orchestrator:multi-doc-review skill on the docum
 # the way every gate invocation and every user without an explicit M= runs
 # it — see the (m1) checks below.
 
+# Safety net (Case 2): re-snapshot the plugin repository immediately before
+# this case's agent call, same as assertion (e) does for Case 1. Case 1's
+# PLUGIN_HEAD_BEFORE/PLUGIN_STATUS_BEFORE only cover Case 1 — without a fresh
+# snapshot here, a Case 2 run that writes its topic folder or its commit into
+# the developer's own checkout instead of the test project would leave this
+# suite green.
+PLUGIN_HEAD_BEFORE2=$(git -C "$PLUGIN_DIR" rev-parse HEAD)
+PLUGIN_STATUS_BEFORE2=$(git -C "$PLUGIN_DIR" status --porcelain --ignored=matching | shasum | cut -d' ' -f1)
+
 CLAUDE_STATUS2=0
 cd "$PLUGIN_DIR" && timeout 1800 claude -p "$PROMPT2" \
     --permission-mode bypassPermissions \
@@ -170,6 +195,16 @@ cd "$PLUGIN_DIR" && timeout 1800 claude -p "$PROMPT2" \
 # (f2) same timeout check as (f), for the Case 2 run.
 if [ "$CLAUDE_STATUS2" -eq 124 ] || [ "$CLAUDE_STATUS2" -eq 143 ]; then
     echo "FAIL(f2): the Case 2 claude run was killed by the 1800s timeout (exit $CLAUDE_STATUS2) — the loop never finished"
+    FAILURES=$((FAILURES+1))
+fi
+
+# (e2) same blast-radius check as assertion (e), repeated for Case 2.
+PLUGIN_HEAD_AFTER2=$(git -C "$PLUGIN_DIR" rev-parse HEAD)
+PLUGIN_STATUS_AFTER2=$(git -C "$PLUGIN_DIR" status --porcelain --ignored=matching | shasum | cut -d' ' -f1)
+if [ "$PLUGIN_HEAD_AFTER2" != "$PLUGIN_HEAD_BEFORE2" ] || [ "$PLUGIN_STATUS_AFTER2" != "$PLUGIN_STATUS_BEFORE2" ]; then
+    echo "FAIL(e2): the Case 2 run mutated the plugin dev repo (misanchored skill?)"
+    echo "  Inspect: git -C $PLUGIN_DIR status --porcelain; git -C $PLUGIN_DIR diff"
+    echo "  Only after confirming that tree held nothing else of value, recover with: git -C $PLUGIN_DIR reset --hard $PLUGIN_HEAD_BEFORE2 (this discards ALL uncommitted work in that repo)"
     FAILURES=$((FAILURES+1))
 fi
 
