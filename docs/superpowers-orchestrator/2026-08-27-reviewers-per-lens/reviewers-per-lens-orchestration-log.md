@@ -10,3 +10,4 @@ plan: docs/superpowers-orchestrator/2026-08-27-reviewers-per-lens/plans/reviewer
 ## STOPPED — 2026-08-28 — phase 3 — batch 1 BLOCKED task=1: pre-flight plan conflicts (M ≥ 2 log examples at Task 2 Step 5 and Task 3 Step 7 cite an unusable and a zero-finding reviewer as finding sources; Task 3 carried-finding annotation rule contradicts its own example)
 Detail: .superpowers/sdd/task-1-report.md
 Resume: Resume orchestration for docs/superpowers-orchestrator/2026-08-27-reviewers-per-lens/plans/reviewers-per-lens.md
+Resumed 2026-08-28 — plan and spec corrected at defb515 (self-consistent M=3 examples; carried-finding annotation rule names the round-1 ledger items); batch 1 re-dispatched
