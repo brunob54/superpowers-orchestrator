@@ -308,7 +308,10 @@ The open-decisions file is `<topic folder>/plans/<slug>-open-decisions.md`.
    never silently reconcile.
 2. Append the completion marker to the log; commit.
 3. Report: tasks completed, batches run, plan-review rounds/outcome,
-   code-review rounds/fixes/outcome, and the three log paths
+   code-review rounds/fixes/outcome, harness probes owed — every
+   `rejected: harness probe not runnable here — <probe>` line of the
+   code-review log and the plan-review log, listed verbatim with its
+   review log path, or `none` — and the three log paths
    (orchestration, plan review, and the code review log at
    `<topic folder>/implementation/<slug>-review-log.md`).
 4. Invoke `finishing-a-development-branch` (interactive — merge/PR/keep/
@@ -348,7 +351,10 @@ answer the resume prompt must supply, carried in the template's
 `[RESUME_ANSWER]` placeholder. For a Phase 4 stop, `Detail:` names the
 review log and is followed by one line per open item —
 `Open: [<id>] <user-decision|unresolved> — <summary>`, `<id>` as in the
-review log — so the resume prompt can answer each item by id.) Skipped
+review log — so the resume prompt can answer each item by id; after the
+`Open:` lines comes one `Owed probe: <verbatim line>` line for every
+`rejected: harness probe not runnable here — <probe>` line of the review
+log.) Skipped
 loops write the
 `skipped (N_x=0)` line shapes from Phase 0. Round-by-round detail lives
 in the sub-skills' own logs — never duplicate it here. Commit the log at

@@ -442,6 +442,8 @@ git commit -m "feat(multi-code-review): reviewer must probe or name a probe for 
 
 **Does NOT cover:** a `user-decision` guard — `multi-doc-review` has no `user-decision` disposition, so the guard exists only in `multi-code-review` (Task 5); findings tagged `harness: tested` beyond accepting their observation; any disposition other than the two the triage sentence already names (`applied`, `rejected: <reason>`); the lens, convergence, and consolidation rules (unchanged). A probe that needs a dispatch is run only when the dispatch rule passes; on every other platform the "not runnable here" branch applies.
 
+> **Amendment 2026-08-30 (review [I1], user decision):** the `**Dispatch rule:**` paragraph no longer depends on the controller knowing it was dispatched with a `name:` — a controller may run a dispatch-based probe from any position, because the probe subagent is always told to write its observation to a unique temporary file outside the checkout and the controller reads that file on a bounded polling loop when the dispatch call returns only a launch acknowledgement, so the reason `dispatch would not block` is replaced by `probe subagent did not report`.
+
 - [x] **Step 1: Replace Procedure step 3 with the harness sub-steps followed by the existing triage sentence**
 
 In `skills/multi-doc-review/SKILL.md`, replace this text (currently lines 164–167):
@@ -609,6 +611,10 @@ git commit -m "feat(multi-doc-review): controller probes untested harness claims
 **Line numbers in this task** are those of the unmodified `skills/multi-code-review/SKILL.md`; after Step 1 inserts its block they shift downwards. Locate every edit by the quoted text, never by the number.
 
 **Does NOT cover:** `user-decision` items that are not harness claims (plan-mandated findings whose premise is about the code keep today's path); the Batched Autonomous Mode journaling of a `user-decision` (unchanged — the guard runs before the disposition is chosen, so batched mode sees only guarded dispositions); the fix subagent's behaviour beyond what it receives; the verification re-review cycle; the pipeline rules and completion marker. The guard applies to every `user-decision`, the carried-findings path included.
+
+> **Amendment 2026-08-30 (review [I1], user decision):** the `**Dispatch rule:**` paragraph no longer depends on the controller knowing it was dispatched with a `name:` — a controller may run a dispatch-based probe from any position, because the probe subagent is always told to write its observation to a unique temporary file outside the checkout and the controller reads that file on a bounded polling loop when the dispatch call returns only a launch acknowledgement, so the reason `dispatch would not block` is replaced by `probe subagent did not report`.
+
+> **Amendment 2026-08-30 (review [I2], user decision):** `skills/orchestrating-development/SKILL.md` — outside this plan's file set, explicitly allowed by the user — gains two additions so owed harness probes survive the pipeline return boundary: the Phase 5 completion report lists every `rejected: harness probe not runnable here — <probe>` line of the code-review and plan-review logs verbatim with its review log path (or `none`), and the `## STOPPED` entry for a Phase 4 stop carries one `Owed probe: <verbatim line>` line per owed probe after its `Open:` lines.
 
 - [x] **Step 1: Insert the `Harness claims` bullet as the first bullet of Procedure step 4 (Triage)**
 
