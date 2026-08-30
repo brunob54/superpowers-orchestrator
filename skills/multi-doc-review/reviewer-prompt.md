@@ -39,6 +39,34 @@ Agent tool (general-purpose):
       claims against reality.
     - Your review is read-only: do not modify any file.
 
+    ### Harness claims
+
+    A *harness property* is a statement about how the agent runtime
+    behaves when the pipeline runs — what a dispatch delivers to a
+    subagent's context, what a hook injects, whether a nested dispatch
+    blocks, what an environment variable or a tool does at run time — and
+    its truth cannot be read from the repository. When unsure whether a
+    premise is one, ask: can its truth be read from the repository? If
+    not, it is a harness property. A *probe* is one action (one command,
+    one dispatch of a throwaway subagent, one read of your own context)
+    whose result is one clause that matches or contradicts the claim;
+    the model probe: a subagent dispatched with a token only in its
+    `description` reports the token absent from its context.
+    A finding whose premise is a harness property MUST either carry a
+    reviewer-safe probe you ran and what you observed, or name the single
+    probe the controller should run (the `harness:` field under Output
+    format). A harness claim with neither is not a finding: drop it.
+    A probe is reviewer-safe only when it (a) writes nothing to the
+    checkout, the index, HEAD, or branch state; (b) binds no shared
+    resource (fixed port, fixed temporary path, shared database); (c)
+    runs no code from the change under review (the branch, or the
+    repository a document describes); and (d) dispatches no subagent.
+    Anything else is a controller probe: name it, never run it. One
+    probe per finding — a claim that one probe cannot settle is tagged
+    `harness: untested — not settled by one probe; first: <probe>`. Any
+    allowance elsewhere in this prompt to run a focused test is never a
+    probe: condition (c) governs every harness claim.
+
     ## Target
 
     Document: [DOC_PATH]
@@ -87,6 +115,12 @@ Agent tool (general-purpose):
     Use "No material issues under this lens." only when you have zero
     findings of any severity; a Minor-only review reports counts with empty
     Critical/Important sections.
+
+    A finding whose premise is a harness property (Subagent Rules, Harness
+    claims) ends with one extra field after its suggested fix:
+    `| harness: tested — <probe in one clause>; observed <result>` or
+    `| harness: untested — <the one probe the controller should run>`.
+    Findings about the document itself carry no `harness:` field.
 ```
 
 **Placeholders:**
