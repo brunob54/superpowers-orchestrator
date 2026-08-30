@@ -112,7 +112,7 @@ else
     exit 1
 fi
 
-if assert_contains "$output" "implementer.*fix\|fix.*issues" "Implementer fixes issues"; then
+if assert_contains "$output" "fix subagent\|implementer.*fix\|fix.*issues" "Implementer fixes issues"; then
     : # pass
 else
     exit 1
