@@ -402,9 +402,11 @@ above where they differ.
   `probe subagent did not report`.
 - **Case 007 v2/v3 [I3] — 2026-08-30.** An observation that neither matches nor
   contradicts the predicted result is not an observation: the finding is
-  treated as `harness: untested` with the same probe. Before logging a `tested`
-  finding `user-decision`, the code-review controller re-runs the probe itself
-  and uses its own observation. A consolidated finding is `harness: tested`
+  treated as `harness: untested` with the same probe. Before logging
+  `user-decision` a finding whose `tested` tag came from the reviewer, the
+  code-review controller re-runs the probe itself and uses its own
+  observation; a probe the controller ran itself in the same round is never
+  repeated. A consolidated finding is `harness: tested`
   only when every source carrying a `harness:` field is `tested`; otherwise it
-  is `harness: untested` with the probe of the lowest-numbered source that
-  carries one.
+  is `harness: untested` with the probe of the lowest-numbered source tagged
+  `untested`.

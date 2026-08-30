@@ -393,7 +393,7 @@ code has been revised since, so a re-pass is meaningful):
       made may be added. A consolidated finding is `harness: tested` only
       when every source that carries a `harness:` field is `tested`;
       otherwise it is `harness: untested` with the probe of the
-      lowest-numbered source that carries one.
+      lowest-numbered source tagged `untested`.
    6. Ids: whenever M ≥ 2 — a partial round with a single usable report
       included — consolidated findings get fresh ids per severity class,
       `C1…`, `I1…`, `M1…`, ordered by agreement count (the number of
@@ -420,7 +420,7 @@ code has been revised since, so a re-pass is meaningful):
    recommendations, not enumerated findings: they stay outside the
    consolidated set and outside *k* (see Triage).
 4. **Triage:**
-   - **Harness claims (settled before any disposition below is chosen):**
+   - **Harness claims (each settled before its own disposition below is chosen; the poll of the dispatch rule may run across the triage of other findings):**
      a finding whose premise is a property of the agent runtime, tagged by
      the reviewer with the trailing `harness:` field of
      `reviewer-prompt.md`.
@@ -500,11 +500,13 @@ code has been revised since, so a re-pass is meaningful):
         when one exists within the constraints of item 1 and run it; when
         you cannot name one, take the "not runnable here" branch with
         `none` as the `<probe>` and `no probe named` as the reason
-        clause. Before logging a `tested` finding `user-decision`, re-run
-        its probe yourself under the constraints and dispatch rule of
-        item 1 and use your own observation; when you cannot run it, take
-        the `not runnable here` branch — the claim reaches the user
-        through the `Harness probes owed:` list, not through a stop.
+        clause. Before logging `user-decision` a finding whose `tested`
+        tag came from the reviewer, re-run its probe yourself under the
+        constraints and dispatch rule of item 1 and use your own
+        observation — a probe you ran yourself under item 1 in this round
+        is never repeated; when you cannot run it, take the `not runnable
+        here` branch — the claim reaches the user through the
+        `Harness probes owed:` list, not through a stop.
         This guard is a backstop, not the primary
         mechanism: the reviewer's tag is.
      4. A finding tagged `harness: tested — …` is triaged normally and its

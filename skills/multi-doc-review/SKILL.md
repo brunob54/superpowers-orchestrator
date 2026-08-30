@@ -141,7 +141,7 @@ For each round `i` in 1..N:
       made may be added. A consolidated finding is `harness: tested` only
       when every source that carries a `harness:` field is `tested`;
       otherwise it is `harness: untested` with the probe of the
-      lowest-numbered source that carries one.
+      lowest-numbered source tagged `untested`.
    6. Ids: whenever M ≥ 2 — a partial round with a single usable report
       included — consolidated findings get fresh ids per severity class,
       `C1…`, `I1…`, `M1…`, ordered by agreement count (the number of
@@ -164,10 +164,12 @@ For each round `i` in 1..N:
       M = 1 the report keeps its original ids (today's behavior, unchanged)
       — there is no `**Reviewer verdicts:**` line to carry the note, and the
       M = 1 entry stays byte-identical to earlier releases.
-3. **Triage and merge:** the consolidated set is the input. Before any
-   disposition is chosen, settle the harness claims — findings whose
-   premise is a property of the agent runtime, tagged by the reviewer with
-   the trailing `harness:` field of `reviewer-prompt.md`:
+3. **Triage and merge:** the consolidated set is the input. Before a
+   finding's own disposition is chosen, settle its harness claim — the poll
+   of the dispatch rule may run across the triage of other findings. Harness
+   claims are findings whose premise is a property of the agent runtime,
+   tagged by the reviewer with the trailing `harness:` field of
+   `reviewer-prompt.md`:
    1. A finding tagged `harness: untested — <probe>` — except one tagged
       `not settled by one probe`, which takes the "not runnable here"
       branch of 3.2 directly (its `first: <probe>` text is the `<probe>`
