@@ -225,7 +225,7 @@ git commit -m "test(reviewer-templates): add fast wording-contract suite for har
 
 **Does NOT cover:** claims about the document under review (they keep the existing section/line reference rule); the `description:` canary comment above `prompt: |` (unchanged); the code-review template (Task 3). The rule tells a reviewer to run only reviewer-safe probes — it does not cover probes that need a dispatch (condition (d)); those are named for the controller.
 
-- [ ] **Step 1: Insert the rule as the last sub-section of `## Subagent Rules`**
+- [x] **Step 1: Insert the rule as the last sub-section of `## Subagent Rules`**
 
 In `skills/multi-doc-review/reviewer-prompt.md`, replace this text (currently lines 40–42):
 
@@ -271,7 +271,7 @@ with this text (the rule block between the bullet and `## Target`; every line of
     ## Target
 ```
 
-- [ ] **Step 2: Add the finding-format extension at the end of the prompt block**
+- [x] **Step 2: Add the finding-format extension at the end of the prompt block**
 
 In the same file, replace this text (currently the last paragraph inside the fence, followed by the closing fence):
 
@@ -301,17 +301,17 @@ with:
 
 (The closing triple-backtick fence stays as the line right after the new paragraph.)
 
-- [ ] **Step 3: Run the suite to verify the doc-review checks pass**
+- [x] **Step 3: Run the suite to verify the doc-review checks pass**
 
 Run: `bash tests/reviewer-templates/run-tests.sh; echo "exit=$?"`
 Expected: `Results: 7 passed, 12 failed`, `exit=1`. Newly passing: "doc-review template: Harness claims rule inside the prompt block", both doc-review field spellings, "doc-review template: rule extract is non-empty". Still failing: the code-review counterparts (Task 3), section 3 (Tasks 4–5), section 4 (Task 5), and the drift check (until Task 3).
 
-- [ ] **Step 4: Verify placement by hand — the rule is the last sub-section before `## Target` and the canary comment is untouched**
+- [x] **Step 4: Verify placement by hand — the rule is the last sub-section before `## Target` and the canary comment is untouched**
 
 Run: `grep -n '^    ### Harness claims\|^    ## Target\|2026-08-28 by dispatching' skills/multi-doc-review/reviewer-prompt.md`
 Expected: three lines, in file order: `20:` the canary comment line `2026-08-28 by dispatching a subagent with a canary` (untouched; the comment is wrapped, so the word `verified` is on line 19 and the date on line 20 — grep for the date fragment, never for `verified 2026-08-28`), `42:    ### Harness claims`, and `70:    ## Target` — the heading at line 42 and `## Target` at line 70 with nothing but the 25-line rule body and two blank lines between them.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add skills/multi-doc-review/reviewer-prompt.md
