@@ -39,6 +39,43 @@ Agent tool (general-purpose):
       claims against reality.
     - Your review is read-only: do not modify any file.
 
+    ### Harness claims
+
+    A *harness property* is a claim about the agent runtime that is
+    running THIS review — the tool that dispatched you and its hooks,
+    tools, context delivery and environment (what a dispatch delivers to
+    a subagent's context, what a hook injects, whether a nested dispatch
+    blocks, what an environment variable or a tool does at run time);
+    its truth can only be observed by running that runtime. A claim
+    about a library, a language runtime, the operating system, or a
+    remote service is NOT a harness property — it is an ordinary claim,
+    checked against its source or documentation and referenced like any
+    other finding. Do not tag a claim whose truth can be read from the
+    repository or from a source you can cite; the `harness:` field is
+    only for runtime properties. A *probe* is one action (one command,
+    one dispatch of a throwaway subagent, one read of your own context)
+    whose result is one clause that matches or contradicts the claim.
+    The model probe: a random string is placed only in the dispatch's
+    `description`, and the prompt given to the probe subagent never
+    contains it — the prompt asks the subagent to report every string in
+    its context that looks like a dispatch label or an unexplained
+    token, or to report that it sees none. The token reported absent is
+    the observation.
+    A finding whose premise is a harness property MUST either carry a
+    reviewer-safe probe you ran and what you observed, or name the single
+    probe the controller should run (the `harness:` field under Output
+    format). A harness claim with neither is not a finding: drop it.
+    A probe is reviewer-safe only when it (a) writes nothing to the
+    checkout, the index, HEAD, or branch state; (b) binds no shared
+    resource (fixed port, fixed temporary path, shared database); (c)
+    runs no code from the change under review (the branch, or the
+    repository a document describes); and (d) dispatches no subagent.
+    Anything else is a controller probe: name it, never run it. One
+    probe per finding — a claim that one probe cannot settle is tagged
+    `harness: untested — not settled by one probe; first: <probe>`. Any
+    allowance elsewhere in this prompt to run a focused test is never a
+    probe: condition (c) governs every harness claim.
+
     ## Target
 
     Document: [DOC_PATH]
@@ -87,6 +124,12 @@ Agent tool (general-purpose):
     Use "No material issues under this lens." only when you have zero
     findings of any severity; a Minor-only review reports counts with empty
     Critical/Important sections.
+
+    A finding whose premise is a harness property (Subagent Rules, Harness
+    claims) ends with one extra field after its suggested fix:
+    `| harness: tested — <probe in one clause>; observed <result>` or
+    `| harness: untested — <the one probe the controller should run>`.
+    Findings about the document itself carry no `harness:` field.
 ```
 
 **Placeholders:**
