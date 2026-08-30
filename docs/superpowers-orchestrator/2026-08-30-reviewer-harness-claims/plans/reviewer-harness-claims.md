@@ -837,7 +837,9 @@ git commit -m "feat(multi-code-review): probe untested harness claims; guard use
 
 **Does NOT cover:** the behavioural suites under `tests/claude-code/`, `tests/skill-triggering/`, `tests/explicit-skill-requests/`, `tests/opencode/` (a non-goal: they must not run concurrently with a review loop); `RELEASE-NOTES.md`, `VERSION`, `docs/guide/` (release work, decided after the branch outcome); `docs/orchestration-issues.md` (local, hand-edited).
 
-- [ ] **Step 1: Add the suite to the Testing block**
+> **Amendment 2026-08-30:** `CLAUDE.md` is gitignored (`.gitignore` line 7) and untracked in this repository; the Step 1 edit is an on-disk edit only. The commit step (Step 4) and the diff-stat expectation (Step 3) apply to tracked files only: the stat lists five files, and no commit is made for `CLAUDE.md`.
+
+- [x] **Step 1: Add the suite to the Testing block**
 
 In `CLAUDE.md`, replace this text:
 
@@ -854,17 +856,17 @@ bash tests/smart-compress/run-tests.sh    # Bash-output compression rules
 bash tests/reviewer-templates/run-tests.sh # reviewer-template and review-skill wording contracts (harness claims)
 ```
 
-- [ ] **Step 2: Run every fast suite**
+- [x] **Step 2: Run every fast suite**
 
 Run: `bash tests/reviewer-templates/run-tests.sh 2>&1 | tail -n 1; bash tests/codex/run-unit-tests.sh 2>&1 | tail -n 3; bash tests/smart-compress/run-tests.sh 2>&1 | tail -n 3; bash tests/sdd-scripts/run-tests.sh 2>&1 | tail -n 3`
 Expected: `Results: 19 passed, 0 failed` for the new suite, then the three existing suites' summary lines: codex prints `Results: <n> suites passed, 0 suites failed` followed by `All unit tests passed.`; smart-compress prints `Results: <n> passed` followed by a line `0 failed`; sdd-scripts prints `Results: <n> passed, 0 failed`. The pass criterion is `0 failed` (or `0 suites failed` for codex) in each. Any failure in an existing suite is a regression introduced by Tasks 2–5 — the only plausible cause is a changed sentence that `tests/sdd-scripts/run-tests.sh` pins; restore that sentence.
 
-- [ ] **Step 3: Verify the whole change is wording plus one test file**
+- [x] **Step 3: Verify the whole change is wording plus one test file**
 
 Run: `git diff --stat main...HEAD -- . ':(exclude)docs/superpowers-orchestrator' | tail -n 8`
 Expected: exactly six files — `CLAUDE.md`, `skills/multi-code-review/SKILL.md`, `skills/multi-code-review/reviewer-prompt.md`, `skills/multi-doc-review/SKILL.md`, `skills/multi-doc-review/reviewer-prompt.md`, `tests/reviewer-templates/run-tests.sh` — and nothing under `hooks/`, no `VERSION`, no `RELEASE-NOTES.md`.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add CLAUDE.md
