@@ -21,3 +21,13 @@ _Invocation 1 — 2026-08-30 — N=2 M=1 — BASE..HEAD 82722ff..27c49b3 — bra
 - [M2] carried — a `harness: tested — read own context` observation can be made from a context the claim is not about, so the rule can pass vacuously (reviewer-prompt.md:72-73 in both templates; plan-mandated byte-identical rule text)
 - [M3] carried — a not-runnable harness rejection on a Critical/Important finding keeps every round dirty and forces `cap reached` (multi-code-review/SKILL.md:459-461); the plan forbids touching convergence rules
 
+## Round 2 verification 1 — Adversarial red-team — fable
+**Reviewer verdict:** 0 Critical, 2 Important, 2 Minor
+### Dispositions
+- [I1] user-decision — same item as round 2 [I1]: dispatch rule keyed on a `name:` statement the `orch-*` controller prompts do not contain (plan-mandated)
+- [I2] user-decision — same item as round 2 [I2]: `Harness probes owed:` list has no path across the pipeline return boundary (plan-mandated)
+- [M1] carried — tests/reviewer-templates/run-tests.sh:61-66,113-118 drift check passes when both rule bodies are deleted and only the `### Harness claims` heading remains; no assertion pins a normative sentence of the body
+- [M2] carried — same item as round 2 [M3]: a not-runnable harness rejection keeps the round non-clean (plan forbids touching convergence rules)
+- verification result: the round 2 fix (de3e5eb) raised no finding; no unreviewed fix remains
+
+_Completed — 2026-08-30 — cap reached — HEAD 
