@@ -442,7 +442,7 @@ git commit -m "feat(multi-code-review): reviewer must probe or name a probe for 
 
 **Does NOT cover:** a `user-decision` guard — `multi-doc-review` has no `user-decision` disposition, so the guard exists only in `multi-code-review` (Task 5); findings tagged `harness: tested` beyond accepting their observation; any disposition other than the two the triage sentence already names (`applied`, `rejected: <reason>`); the lens, convergence, and consolidation rules (unchanged). A probe that needs a dispatch is run only when the dispatch rule passes; on every other platform the "not runnable here" branch applies.
 
-- [ ] **Step 1: Replace Procedure step 3 with the harness sub-steps followed by the existing triage sentence**
+- [x] **Step 1: Replace Procedure step 3 with the harness sub-steps followed by the existing triage sentence**
 
 In `skills/multi-doc-review/SKILL.md`, replace this text (currently lines 164–167):
 
@@ -512,7 +512,7 @@ with:
    findings: apply at your discretion; log all dispositions either way.
 ```
 
-- [ ] **Step 2: Add the `Harness probes owed:` line to the after-loop report**
+- [x] **Step 2: Add the `Harness probes owed:` line to the after-loop report**
 
 In the same file, replace this text (currently lines 188–190):
 
@@ -534,7 +534,7 @@ or `Harness probes owed: none`. The line is always written; a report
 without it is defective. The user runs the owed probes after the loop.
 ```
 
-- [ ] **Step 3: Note the clause placement in the Review Log Format**
+- [x] **Step 3: Note the clause placement in the Review Log Format**
 
 In the same file, replace this text (currently lines 324–330, the source-annotation bullet):
 
@@ -562,7 +562,7 @@ with:
   notes) carry no annotation.
 ```
 
-- [ ] **Step 4: Add the Error Handling bullet**
+- [x] **Step 4: Add the Error Handling bullet**
 
 In the same file, in `## Error Handling`, replace this text (currently the last bullet of the list):
 
@@ -584,12 +584,12 @@ with:
   support for the claim; the probe goes on the `Harness probes owed:` line.
 ```
 
-- [ ] **Step 5: Run the suite to verify the doc-review controller strings pass**
+- [x] **Step 5: Run the suite to verify the doc-review controller strings pass**
 
 Run: `bash tests/reviewer-templates/run-tests.sh; echo "exit=$?"`
 Expected: `Results: 15 passed, 4 failed`, `exit=1`. Newly passing: the three `multi-doc-review SKILL.md` assertions of section 3. Still failing: the three `multi-code-review SKILL.md` assertions of section 3 and the section 4 guard (Task 5).
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add skills/multi-doc-review/SKILL.md
