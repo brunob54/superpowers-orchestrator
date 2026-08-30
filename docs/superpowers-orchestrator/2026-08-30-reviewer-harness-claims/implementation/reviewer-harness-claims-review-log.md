@@ -30,4 +30,4 @@ _Invocation 1 — 2026-08-30 — N=2 M=1 — BASE..HEAD 82722ff..27c49b3 — bra
 - [M2] carried — same item as round 2 [M3]: a not-runnable harness rejection keeps the round non-clean (plan forbids touching convergence rules)
 - verification result: the round 2 fix (de3e5eb) raised no finding; no unreviewed fix remains
 
-_Completed — 2026-08-30 — cap reached — HEAD 
+_Completed — 2026-08-30 — cap reached — HEAD de3e5ebfec8c816312530d8c0c66f833e6224d01_
