@@ -161,10 +161,60 @@ For each round `i` in 1..N:
       M = 1 the report keeps its original ids (today's behavior, unchanged)
       — there is no `**Reviewer verdicts:**` line to carry the note, and the
       M = 1 entry stays byte-identical to earlier releases.
-3. **Triage and merge:** the consolidated set is the input. Every
-   Critical/Important finding is either applied to the document or
-   `rejected: <reason>` — never silently dropped. Minor findings: apply at
-   your discretion; log all dispositions either way.
+3. **Triage and merge:** the consolidated set is the input. Before any
+   disposition is chosen, settle the harness claims — findings whose
+   premise is a property of the agent runtime, tagged by the reviewer with
+   the trailing `harness:` field of `reviewer-prompt.md`:
+   1. A finding tagged `harness: untested — <probe>` — except one tagged
+      `not settled by one probe`, which takes the "not runnable here"
+      branch of 3.2 directly (its `first: <probe>` text fills only the
+      `Harness probes owed:` line of the completion report) — gets that
+      probe run once, by you. Constraints: the probe writes nothing to
+      the checkout, the index, HEAD, or branch state; binds no shared
+      resource (fixed port, fixed temporary path, shared database); runs
+      no code from the change under review; and is one action — one
+      command, one read of your own context, or one dispatch of a
+      throwaway subagent whose prompt is self-contained and that writes
+      nothing. **Dispatch rule:** run a dispatch-based probe only when you
+      know the dispatch will complete within your own turn — you are the
+      main session (the Agent tool's result or a task notification comes
+      back to you), or your own prompt states that you were dispatched
+      with a `name:` (the `orch-*` controllers of
+      `orchestrating-development`, whose dispatches block since v7.5.0).
+      An unnamed subagent's child runs detached and its completion never
+      reaches the subagent; when you cannot tell which case you are in,
+      take the "not runnable here" branch with the reason `dispatch would
+      not block`. The reviewer's condition (d) exists for exactly this
+      reason and does not apply to a controller that passes the dispatch
+      rule.
+   2. Dispose on the observation:
+      - it contradicts the claim → `rejected: harness probe —
+        <observation>`;
+      - it supports the claim → triage the finding as if it had been
+        `harness: tested`; the ordinary rules apply from here, and the
+        observation is recorded on the disposition line as a trailing
+        clause `— harness probe: <observation>`, placed before any source
+        annotation (` ← a/m: …`), whatever the disposition;
+      - the probe cannot be run here (tool missing, a platform without
+        nested dispatch, the dispatch rule of 3.1 fails, the reviewer
+        tagged it `not settled by one probe`, the probe would break a
+        constraint of 3.1, or the observation is ambiguous — it cannot be
+        written in one clause that matches or contradicts the result the
+        claim predicts) → `rejected: harness probe not runnable here —
+        <probe>`. This rejection never blocks the gate; every such
+        rejection is listed on the completion report's
+        `Harness probes owed:` line.
+   3. A finding tagged `harness: tested — …` is triaged normally and its
+      observation is accepted: the rule keeps claims tested, it does not
+      re-verify every observation. When the stated probe was not
+      reviewer-safe (the reviewer dispatched a subagent, for example),
+      append `(reviewer probe not reviewer-safe)` to the disposition
+      line. You may re-run a probe whose observation looks inconsistent
+      with the reviewer's conclusion; you are not required to.
+   The harness branch adds no disposition: it always ends in one of the
+   two below. Every Critical/Important finding is either applied to the
+   document or `rejected: <reason>` — never silently dropped. Minor
+   findings: apply at your discretion; log all dispositions either way.
 4. **Append the round entry** to the log (format below).
 5. **Convergence check:** severities come from the consolidated set's
    enumerated findings — a report's count line is informational; on
@@ -187,7 +237,11 @@ writing-plans' Self-Review, already in context); for direct invocations, the
 four-item list: placeholder scan, internal consistency, ambiguity, scope.
 Fix merge-introduced issues inline and note them in the log. Then report:
 rounds run, per-round finding counts, converged vs cap reached, log path,
-effective M (and any substitution).
+effective M (and any substitution), and a `Harness probes owed:` line —
+one item `- [<id>] <probe> (round <i>)` per
+`rejected: harness probe not runnable here` disposition of this invocation,
+or `Harness probes owed: none`. The line is always written; a report
+without it is defective. The user runs the owed probes after the loop.
 The host gate's single user approval follows — this skill adds no approvals
 of its own.
 
@@ -325,7 +379,9 @@ Rules for the added lines:
   disposition line; `<a>` is the agreement count (distinct reviewers that
   reported the finding), the source ids are comma-separated in reviewer
   order. The line keeps its existing prefix (`- [I1] applied — …`), so
-  patterns anchored at the start of the line still match. The note lines
+  patterns anchored at the start of the line still match. A
+  `— harness probe: <observation>` clause (Procedure step 3.2) sits before
+  the annotation, never after it. The note lines
   the "After the loop" step writes for merge-introduced fixes (self-review
   notes) carry no annotation.
 - The clean-round line `- none — no material issues under this lens` is
@@ -369,6 +425,10 @@ invocation note (which carries `M=` like every other); failed rounds get
 - Plan with no locatable spec → lens phrasing omits spec-coverage; round 1
   uses the `general` correctness instructions; log that coverage was not
   reviewed.
+- Harness probe result ambiguous, probe not runnable here, or probe would
+  break a constraint of Procedure step 3.1 →
+  `rejected: harness probe not runnable here — <probe>`, never treated as
+  support for the claim; the probe goes on the `Harness probes owed:` line.
 
 ## Guard Interaction
 
