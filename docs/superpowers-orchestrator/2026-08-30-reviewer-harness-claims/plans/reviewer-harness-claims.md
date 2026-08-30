@@ -330,7 +330,7 @@ git commit -m "feat(multi-doc-review): reviewer must probe or name a probe for h
 
 **Does NOT cover:** claims about the diff under review (they keep the file:line rule); the `## Tests` focused-test allowance, which stays as it is — the rule says such a run is never a probe; the `## Shared checkout` section, the blinding pathspec line, the marker instruction, and the `description:` canary comment (all unchanged).
 
-- [ ] **Step 1: Insert the rule as the last sub-section of `## Subagent Rules`**
+- [x] **Step 1: Insert the rule as the last sub-section of `## Subagent Rules`**
 
 In `skills/multi-code-review/reviewer-prompt.md`, replace this text (currently lines 60–64):
 
@@ -380,7 +380,7 @@ with this text. The rule block is **byte-identical** to Task 2's — copy it fro
     ## Diff Under Review
 ```
 
-- [ ] **Step 2: Add the finding-format extension at the end of the prompt block**
+- [x] **Step 2: Add the finding-format extension at the end of the prompt block**
 
 In the same file, replace this text (currently the last paragraph inside the fence, followed by the closing fence):
 
@@ -411,17 +411,17 @@ with:
 
 (The closing triple-backtick fence stays as the line right after the new paragraph.)
 
-- [ ] **Step 3: Run the suite to verify sections 1, 2, 5 and 6 pass**
+- [x] **Step 3: Run the suite to verify sections 1, 2, 5 and 6 pass**
 
 Run: `bash tests/reviewer-templates/run-tests.sh; echo "exit=$?"`
 Expected: `Results: 12 passed, 7 failed`, `exit=1`. Now passing: all of sections 1, 2, 5 (including "rule text identical in both templates") and 6. Still failing: section 3 (6 assertions, Tasks 4–5) and section 4 (1, Task 5). If "rule text differs between templates" fails, the printed `diff` output shows the divergent line — fix it in this file to match Task 2's text exactly.
 
-- [ ] **Step 4: Confirm the pinned contracts of the existing sdd-scripts drift check still hold**
+- [x] **Step 4: Confirm the pinned contracts of the existing sdd-scripts drift check still hold**
 
 Run: `bash tests/sdd-scripts/run-tests.sh 2>&1 | grep -c 'FAIL:'; echo "grep-exit=$?"`
 Expected: `0` and `grep-exit=1` (no `FAIL:` line — the blinding pathspec entries are still present verbatim).
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add skills/multi-code-review/reviewer-prompt.md
