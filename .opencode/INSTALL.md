@@ -152,9 +152,40 @@ Set-Location "$env:USERPROFILE\.config\opencode\superpowers"; git pull
 
 When skills reference Claude Code tools:
 - `TodoWrite` → `update_plan`
-- `Task` with subagents → `@mention` syntax
+- `Task` with subagents → `task` tool or `@mention` syntax (nested dispatch is off by default — see "Nested subagents" below)
 - `Skill` tool → OpenCode's native `skill` tool
 - File operations → your native tools
+
+### Nested subagents
+
+Skills such as `orchestrating-development` dispatch a controller subagent
+that dispatches worker subagents (*nested dispatch*). OpenCode blocks this
+by default: the `task` tool is removed from every subagent. To enable it,
+you need OpenCode v1.18.2 or newer and two settings in `opencode.json`:
+
+```json
+{
+  "$schema": "https://opencode.ai/config.json",
+  "subagent_depth": 2,
+  "agent": {
+    "general": {
+      "permission": {
+        "task": { "*": "allow" }
+      }
+    }
+  }
+}
+```
+
+`subagent_depth` is a top-level key (default `1`; `2` allows
+session → controller → worker). `permission.task` goes on the agent that
+acts as controller; without an explicit rule OpenCode denies the `task`
+tool to children even when the depth allows them.
+
+Caveat: prompts raised by a depth-2 subagent never reach the user and the
+session hangs (open OpenCode issues #13715, #39112, #43996), so unattended
+pipeline runs are still not supported on OpenCode. See
+`docs/platforms/opencode.md`, section "Nested Subagents", for details.
 
 ## Getting Help
 
