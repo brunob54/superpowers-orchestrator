@@ -42,3 +42,13 @@ Open: [v3 I1] user-decision — the dispatch rule's poll names no mechanism and 
 Open: [v3 I2] user-decision — `rejected: harness probe not runnable here — <probe>`: three branches write a reason (`probe subagent did not report`, `no probe named`, …) into the `<probe>` slot instead of the probe text
 Owed probe: none
 Resume: Resume orchestration for docs/superpowers-orchestrator/2026-08-30-reviewer-harness-claims/plans/reviewer-harness-claims.md
+
+## Phase 4 — Code review (resumed with Case 007 rulings + standing rule) — rounds 2 — cap — fixes 3 — unresolved 0 — user-decision 3
+
+## STOPPED — 2026-08-30 — phase 4 — 3 user-decision items against the reviewer templates' plan-mandated text (Tasks 2/3), outside the standing rule's scope
+Detail: docs/superpowers-orchestrator/2026-08-30-reviewer-harness-claims/implementation/reviewer-harness-claims-review-log.md
+Open: [v4 I3 = v5 I2] user-decision — model-probe sentence: a probe prompt that names the token contaminates the probe
+Open: [v4 I4] user-decision — tie-break sentence "cannot be read from the repository" widens harness property to library/OS/remote claims
+Open: [v6 I1] user-decision — no strip rule for a `harness:` field on a repository-readable premise
+Owed probe: none
+Resume: Resume orchestration for docs/superpowers-orchestrator/2026-08-30-reviewer-harness-claims/plans/reviewer-harness-claims.md
