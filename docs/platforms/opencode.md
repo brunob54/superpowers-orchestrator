@@ -250,9 +250,67 @@ Superpowers uses OpenCode's native `skill` tool for skill discovery and loading.
 Skills written for Claude Code are automatically adapted for OpenCode. The bootstrap provides mapping instructions:
 
 - `TodoWrite` → `update_plan`
-- `Task` with subagents → OpenCode's `@mention` system
+- `Task` with subagents → OpenCode's `task` tool or `@mention` system (nested dispatch is off by default — see "Nested Subagents" below)
 - `Skill` tool → OpenCode's native `skill` tool
 - File operations → Native OpenCode tools
+
+### Nested Subagents (subagent_depth)
+
+Several skills dispatch a **controller subagent** that itself dispatches
+**worker subagents** (`orchestrating-development`, `researching-prior-art`,
+the review loops it drives). This is called *nested dispatch*: a subagent
+starting another subagent.
+
+OpenCode blocks nested dispatch by default. Its `task` tool (the tool that
+starts a subagent) is removed from every subagent, so a controller cannot
+start workers. The OpenCode docs state: *"The default is `1`, which allows
+primary agents to launch subagents but prevents those subagents from
+launching additional subagents."*
+(https://opencode.ai/docs/config/, section "Subagent depth").
+
+To enable it you need **OpenCode v1.18.2 or newer** (released 2026-07-15)
+and two settings in `opencode.json` (project root or
+`~/.config/opencode/opencode.json`):
+
+```json
+{
+  "$schema": "https://opencode.ai/config.json",
+  "subagent_depth": 2,
+  "agent": {
+    "general": {
+      "permission": {
+        "task": { "*": "allow" }
+      }
+    }
+  }
+}
+```
+
+- `subagent_depth` is a **top-level** key, not inside `agent`. `1` is the
+  default; `2` allows session → controller → worker, which is the depth the
+  orchestration skills need. `0` forbids all subagents. There is no
+  per-agent override; the value is global.
+- `permission.task` must be set on the **intermediate** agent (the one that
+  acts as controller — `general` in the example; use the name of the agent
+  you dispatch). Without an explicit rule OpenCode injects a `deny` for
+  child agents even when the depth allows them. Rules are evaluated in
+  order, so a later `"*": "deny"` overrides an earlier allow
+  (https://opencode.ai/docs/agents/, section "Task permissions").
+- If the depth limit is reached, the `task` tool fails with *"Increase
+  subagent_depth to allow nested subagents"*.
+
+**Known limitation — unattended runs are still not supported on OpenCode.**
+Permission or question prompts raised by a depth-2 subagent never reach the
+user, and the session hangs (open OpenCode issues #13715, #39112, #43996).
+Every nested worker must therefore run with the permissions it needs
+pre-allowed, or the pipeline stalls silently. Until those issues are fixed,
+`orchestrating-development` keeps refusing on OpenCode; the settings above
+are for people who want to try the nested skills interactively.
+
+Older advice found on the web (`tools: { task: true }` on the agent, or a
+global `"task": "allow"`) is out of date: the first stopped working in v1.1.15,
+and the second caused unbounded recursion before v1.18.2 added the depth
+limit.
 
 ## Architecture
 
