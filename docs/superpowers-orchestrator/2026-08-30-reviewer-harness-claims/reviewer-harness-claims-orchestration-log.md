@@ -31,3 +31,14 @@ Detail: docs/superpowers-orchestrator/2026-08-30-reviewer-harness-claims/impleme
 Open: [I1] user-decision — dispatch rule keyed on "your own prompt states that you were dispatched with a `name:`", text the `orch-*` controller prompts never contain
 Open: [I2] user-decision — `Harness probes owed:` list lives only in the completion report; no path across the pipeline return boundary, so owed probes can be dropped unattended
 Resume: Resume orchestration for docs/superpowers-orchestrator/2026-08-30-reviewer-harness-claims/plans/reviewer-harness-claims.md
+
+## Phase 4 — Code review (resumed with answers [I1]: b, [I2]: a) — rounds 2 — cap — fixes 2 — unresolved 0 — user-decision 4
+
+## STOPPED — 2026-08-30 — phase 4 — 4 user-decision items raised by the verification re-reviews of the resume fixes (plan-mandated wording)
+Detail: docs/superpowers-orchestrator/2026-08-30-reviewer-harness-claims/implementation/reviewer-harness-claims-review-log.md
+Open: [v2 I2] user-decision — `not settled by one probe; first: <probe>`: the `first:` text fills only the completion-report line, never the review-log `rejected:` line, so the owed probe is lost in pipeline mode
+Open: [v2/v3 I3] user-decision — a `harness: tested — …` observation is accepted without re-verification and without a rule for an observation that neither matches nor contradicts the prediction; it bypasses the user-decision guard
+Open: [v3 I1] user-decision — the dispatch rule's poll names no mechanism and no limit; a foreground `sleep` is refused in this harness; the "Waiting on a subagent" reference is not in the review skills' context
+Open: [v3 I2] user-decision — `rejected: harness probe not runnable here — <probe>`: three branches write a reason (`probe subagent did not report`, `no probe named`, …) into the `<probe>` slot instead of the probe text
+Owed probe: none
+Resume: Resume orchestration for docs/superpowers-orchestrator/2026-08-30-reviewer-harness-claims/plans/reviewer-harness-claims.md
