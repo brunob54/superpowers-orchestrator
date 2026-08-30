@@ -21,7 +21,7 @@
 - The `Harness claims` rule text is **identical, byte for byte**, in both reviewer templates: a level-three heading indented four spaces (`    ### Harness claims`), the **last** sub-section under `## Subagent Rules`, immediately before the prompt's next level-two heading (`    ## Target` in doc review, `    ## Diff Under Review` in code review). The rule is inside `prompt: |` — never in the `description:` comment above it.
 - Exact strings the tests assert: `harness: tested —`, `harness: untested —` (both templates); `harness probe —`, `harness probe not runnable here`, `Harness probes owed:` (both SKILL.md files); ``never logged `user-decision` on the strength of an untested harness claim`` (multi-code-review SKILL.md only). The em dash is `—` (U+2014), matching every other disposition string in these files.
 - Finding format: the existing reference sentences stay unchanged — "Every finding must reference a section or line of the target document." (doc review) and "Every finding must carry a file:line reference into the diff." (code review). The harness field is optional, trailing, and only on findings whose premise is a harness property.
-- The harness triage branch ends only in `applied`/`fixed` (through normal triage) or `rejected: <reason>` — never `deferred`, `unresolved`, or `user-decision` on an untested claim. The `— harness probe: <observation>` clause goes on the disposition line **before** any ` ← a/m: …` source annotation.
+- The harness triage branch adds no disposition of its own: an untested claim ends only in `rejected: <reason>` (probe contradicts it, or probe not runnable here) or, once the probe supports it, in whatever ordinary disposition its severity allows — `applied`/`fixed` for Critical/Important, and for Minor also `deferred` (doc review) or `carried` (code review). Never `deferred`, `unresolved`, or `user-decision` on an **untested** Critical/Important claim. The `— harness probe: <observation>` clause goes on the disposition line **before** any ` ← a/m: …` source annotation.
 - The `Harness probes owed:` line is always written in the completion report — `none` when empty.
 - Do NOT touch: the `## Shared checkout — read-only inspection only` sections; the blinding pathspec line (`git diff --stat [BASE_SHA]..[HEAD_SHA] -- ':(top)' …`) in `multi-code-review/reviewer-prompt.md`; the `<!-- multi-review report -->` marker instruction; the `description:` canary comment ("verified 2026-08-28 …") in both templates; lenses, severities, convergence rules.
 - No new hook, script, or `hooks/skill-rules.json` entry. No version bump, `RELEASE-NOTES.md` entry, or `docs/guide/` change. No behavioural test run (no real `claude` sessions). `docs/orchestration-issues.md` is not edited by this plan.
@@ -63,8 +63,9 @@ Create `tests/reviewer-templates/run-tests.sh` with exactly this content:
 # Reviewer-template test suite: static wording checks on the reviewer
 # templates and SKILL.md files of multi-doc-review and multi-code-review.
 # Pure bash; no claude invocation.
-# Windows note: avoids /dev/stdin and process substitution (not reliable in
-# Git Bash on Windows) — extracted text goes through temp files.
+# Windows note: never reads standard input through its device path and uses
+# no process substitution (neither is reliable in Git Bash on Windows) —
+# extracted text goes through temp files.
 #
 # Contract source: docs/superpowers-orchestrator/2026-08-30-reviewer-harness-claims/
 # specs/reviewer-harness-claims-design.md, section "Testing strategy".
@@ -203,7 +204,7 @@ Expected: `Results: 3 passed, 16 failed` and `exit=1`. The 3 passes are section 
 - [ ] **Step 3: Confirm the suite is self-contained (no `/dev/stdin`, no process substitution)**
 
 Run: `grep -nE '/dev/stdin|<\(' tests/reviewer-templates/run-tests.sh; echo "matches=$?"`
-Expected: no output lines and `matches=1` (grep found nothing).
+Expected: no output lines and `matches=1` (grep found nothing — the script's own header comment deliberately avoids spelling either token, so a hit means a real use was introduced).
 
 - [ ] **Step 4: Commit**
 
@@ -303,12 +304,12 @@ with:
 - [ ] **Step 3: Run the suite to verify the doc-review checks pass**
 
 Run: `bash tests/reviewer-templates/run-tests.sh; echo "exit=$?"`
-Expected: `Results: 8 passed, 11 failed`, `exit=1`. Newly passing: "doc-review template: Harness claims rule inside the prompt block", both doc-review field spellings, "doc-review template: rule extract is non-empty". Still failing: the code-review counterparts (Task 3), section 3 (Tasks 4–5), section 4 (Task 5), and the drift check (until Task 3).
+Expected: `Results: 7 passed, 12 failed`, `exit=1`. Newly passing: "doc-review template: Harness claims rule inside the prompt block", both doc-review field spellings, "doc-review template: rule extract is non-empty". Still failing: the code-review counterparts (Task 3), section 3 (Tasks 4–5), section 4 (Task 5), and the drift check (until Task 3).
 
 - [ ] **Step 4: Verify placement by hand — the rule is the last sub-section before `## Target` and the canary comment is untouched**
 
-Run: `grep -n '^    ### Harness claims\|^    ## Target\|verified 2026-08-28' skills/multi-doc-review/reviewer-prompt.md`
-Expected: three lines, in file order: the `verified 2026-08-28` canary comment at line 20 (untouched), `42:    ### Harness claims`, and `70:    ## Target` — the heading at line 42 and `## Target` at line 70 with nothing but the 25-line rule body and two blank lines between them.
+Run: `grep -n '^    ### Harness claims\|^    ## Target\|2026-08-28 by dispatching' skills/multi-doc-review/reviewer-prompt.md`
+Expected: three lines, in file order: `20:` the canary comment line `2026-08-28 by dispatching a subagent with a canary` (untouched; the comment is wrapped, so the word `verified` is on line 19 and the date on line 20 — grep for the date fragment, never for `verified 2026-08-28`), `42:    ### Harness claims`, and `70:    ## Target` — the heading at line 42 and `## Target` at line 70 with nothing but the 25-line rule body and two blank lines between them.
 
 - [ ] **Step 5: Commit**
 
@@ -436,6 +437,8 @@ git commit -m "feat(multi-code-review): reviewer must probe or name a probe for 
 - Test: `tests/reviewer-templates/run-tests.sh`
 
 **Security flag:** `none`
+
+**Line numbers in this task** are those of the unmodified `skills/multi-doc-review/SKILL.md`; after Step 1 inserts its block they shift downwards. Locate every edit by the quoted text, never by the number.
 
 **Does NOT cover:** a `user-decision` guard — `multi-doc-review` has no `user-decision` disposition, so the guard exists only in `multi-code-review` (Task 5); findings tagged `harness: tested` beyond accepting their observation; any disposition other than the two the triage sentence already names (`applied`, `rejected: <reason>`); the lens, convergence, and consolidation rules (unchanged). A probe that needs a dispatch is run only when the dispatch rule passes; on every other platform the "not runnable here" branch applies.
 
@@ -603,6 +606,8 @@ git commit -m "feat(multi-doc-review): controller probes untested harness claims
 
 **Security flag:** `none`
 
+**Line numbers in this task** are those of the unmodified `skills/multi-code-review/SKILL.md`; after Step 1 inserts its block they shift downwards. Locate every edit by the quoted text, never by the number.
+
 **Does NOT cover:** `user-decision` items that are not harness claims (plan-mandated findings whose premise is about the code keep today's path); the Batched Autonomous Mode journaling of a `user-decision` (unchanged — the guard runs before the disposition is chosen, so batched mode sees only guarded dispositions); the fix subagent's behaviour beyond what it receives; the verification re-review cycle; the pipeline rules and completion marker. The guard applies to every `user-decision`, the carried-findings path included.
 
 - [ ] **Step 1: Insert the `Harness claims` bullet as the first bullet of Procedure step 4 (Triage)**
@@ -616,7 +621,7 @@ In `skills/multi-code-review/SKILL.md`, replace this text (currently lines 419�
      source ids and no agreement counts (never one fixer per finding). The
 ```
 
-with:
+with the text below. The guard fragment ``never logged `user-decision` on the strength of an untested harness claim`` MUST stay on one physical line exactly as shown (the suite greps it as a single line with `grep -qF`); do not re-wrap it:
 
 ```markdown
 4. **Triage:**
@@ -660,14 +665,15 @@ with:
           tagged it `not settled by one probe`, the probe would break a
           constraint of item 1, or the observation is ambiguous — it
           cannot be written in one clause that matches or contradicts the
-          result the claim predicts) → `rejected: harness probe not
-          runnable here — <probe>`. This is the existing "reject as
+          result the claim predicts) →
+          `rejected: harness probe not runnable here — <probe>`. This is the existing "reject as
           unverifiable" path with the probe text kept, and it is not
           blocking — `unresolved` and `user-decision` both stop the host
           gate; this does not. Every such rejection is listed on the
           completion report's `Harness probes owed:` line.
-     3. **Guard:** a finding is never logged `user-decision` on the
-        strength of an untested harness claim. Before any `user-decision`
+     3. **Guard** — a finding is
+        never logged `user-decision` on the strength of an untested harness claim.
+        Before any `user-decision`
         — a plan-mandated finding, or a carried item decided from reviewer
         recommendations — ask whether the finding's premise is a harness
         property. If it is and the reviewer tagged it, item 1 applies
@@ -693,7 +699,7 @@ with:
 
 - [ ] **Step 2: Reference the guard from the plan-mandated and carried-findings bullets**
 
-In the same file, replace this text (currently lines 452–455):
+In the same file, replace this text (currently lines 453–456):
 
 ```markdown
    - **Plan-mandated findings** (conflicting with what the plan's text
@@ -810,7 +816,7 @@ Expected: `Results: 19 passed, 0 failed` and `exit=0`.
 - [ ] **Step 7: Confirm the guard fragment is present exactly once and the pathspec drift check still holds**
 
 Run: `grep -c 'never logged `user-decision` on the strength of an untested harness claim' skills/multi-code-review/SKILL.md; bash tests/sdd-scripts/run-tests.sh 2>&1 | tail -n 3`
-Expected: `1`, then the sdd-scripts summary with `0 failed` (or its equivalent all-green last lines).
+Expected: `1`, then the sdd-scripts summary line `Results: <n> passed, 0 failed` (the `0 failed` part is the pass criterion).
 
 - [ ] **Step 8: Commit**
 
@@ -851,7 +857,7 @@ bash tests/reviewer-templates/run-tests.sh # reviewer-template and review-skill 
 - [ ] **Step 2: Run every fast suite**
 
 Run: `bash tests/reviewer-templates/run-tests.sh 2>&1 | tail -n 1; bash tests/codex/run-unit-tests.sh 2>&1 | tail -n 3; bash tests/smart-compress/run-tests.sh 2>&1 | tail -n 3; bash tests/sdd-scripts/run-tests.sh 2>&1 | tail -n 3`
-Expected: `Results: 19 passed, 0 failed` for the new suite, and the three existing suites end with their all-passed summary lines (zero failures each). Any failure in an existing suite is a regression introduced by Tasks 2–5 — the only plausible cause is a changed sentence that `tests/sdd-scripts/run-tests.sh` pins; restore that sentence.
+Expected: `Results: 19 passed, 0 failed` for the new suite, then the three existing suites' summary lines: codex prints `Results: <n> suites passed, 0 suites failed` followed by `All unit tests passed.`; smart-compress prints `Results: <n> passed` followed by a line `0 failed`; sdd-scripts prints `Results: <n> passed, 0 failed`. The pass criterion is `0 failed` (or `0 suites failed` for codex) in each. Any failure in an existing suite is a regression introduced by Tasks 2–5 — the only plausible cause is a changed sentence that `tests/sdd-scripts/run-tests.sh` pins; restore that sentence.
 
 - [ ] **Step 3: Verify the whole change is wording plus one test file**
 
@@ -880,6 +886,6 @@ git commit -m "docs(claude-md): list the reviewer-templates fast test suite" --t
 
 **2. Placeholder scan.** No "TBD", "TODO", "similar to Task N", or "add validation". Every code step carries the full text. The rule block is repeated verbatim in Task 3 rather than referenced.
 
-**3. Type consistency.** Strings are identical across tasks: `harness: tested —`, `harness: untested —`, `harness probe —`, `harness probe not runnable here`, `Harness probes owed:`, `— harness probe: <observation>`, `(reviewer probe not reviewer-safe)`, `dispatch would not block`, `no probe named`, `not settled by one probe; first: <probe>`. The test variables in Task 1 (`FIELD_TESTED`, `FIELD_UNTESTED`, `REASON_PROBE`, `REASON_NOT_RUNNABLE`, `OWED_LINE`, `GUARD`) match those strings. Cross-references inside each SKILL.md (`3.1`/`3.2` in doc review; `item 1`/`item 2` in code review) match the numbering written in that file.
+**3. Type consistency.** Strings are identical across tasks: `harness: tested —`, `harness: untested —`, `harness probe —`, `harness probe not runnable here`, `Harness probes owed:`, `— harness probe: <observation>`, `(reviewer probe not reviewer-safe)`, `dispatch would not block`, `no probe named`, `not settled by one probe; first: <probe>`. The test variables in Task 1 (`FIELD_TESTED`, `FIELD_UNTESTED`, `REASON_PROBE`, `REASON_NOT_RUNNABLE`, `OWED_LINE`, `GUARD`) match those strings, and every asserted string sits on one physical line in its target file (the suite greps line by line; the guard fragment in Task 5 Step 1 is deliberately unwrapped for this reason). Cross-references inside each SKILL.md (`3.1`/`3.2` in doc review; `item 1`/`item 2` in code review) match the numbering written in that file.
 
 **4. Scope-reduction scan.** No "v1", "basic", "simple", "for now", "placeholder", "initial version", "minimal". The rule length (about 24 lines) exceeds the spec's "near 15" guideline; the spec marks that guideline as asserted by no test, and the plan header records the reason.
