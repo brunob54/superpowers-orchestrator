@@ -568,3 +568,99 @@ protect-secrets: 43 passed, 0 failed
 ==================================================
 ```
 
+
+## Round 2 post-loop fix — 2026-08-30 — [I1], [I2]
+
+**Commit:** `ca872f7c509e8e15034b9d696d684f9ff75defcd` — `review fixes (reviewer-harness-claims, round 2)`
+
+**Files changed:**
+- `skills/multi-code-review/SKILL.md`
+- `skills/multi-doc-review/SKILL.md`
+- `skills/orchestrating-development/SKILL.md`
+- `docs/superpowers-orchestrator/2026-08-30-reviewer-harness-claims/plans/reviewer-harness-claims.md`
+
+`tests/reviewer-templates/run-tests.sh` was NOT changed: none of its
+assertions referenced the removed condition text.
+
+### [I1] — controller dispatch rule depended on unobservable text
+
+The `**Dispatch rule:**` paragraph in both review skills was rewritten so
+it depends on nothing the controller cannot observe. The old condition
+"your own prompt states that you were dispatched with a `name:`" and the
+`orch-*` parenthetical are gone. The new rule: a controller may run a
+dispatch-based probe from any position; the probe subagent is always told
+to write its observation to a unique temporary file outside the checkout
+(the controller creates the path, for example with `mktemp`) and to
+return the same observation as its final message; when the dispatch call
+returns only a launch acknowledgement, the controller polls for that file
+on a bounded loop — the same mechanism as the "Waiting on a subagent"
+rule in the orchestration controller prompts. A file that never appears
+means `not runnable here` with the reason `probe subagent did not
+report`. The reason `dispatch would not block` no longer appears in
+either file (verified by grep: 0 matches in both). The constraint phrase
+"writes nothing" in the one-action list was minimally qualified to
+"writes nothing to the checkout" so it does not contradict the
+observation file, which lives outside the checkout. The closing sentence
+now reads "The reviewer's condition (d) does not apply to a controller,
+which always has this mechanism." The two paragraphs were extracted and
+whitespace-normalised: they are identical in both files.
+
+Plan record: a `> **Amendment 2026-08-30 (review [I1], user decision):**`
+block quote was added under Task 4 and under Task 5, each after the
+task's introductory paragraphs and before its first step.
+
+### [I2] — owed harness probes had no durable path across the return boundary
+
+`skills/orchestrating-development/SKILL.md`, two additions:
+
+1. Phase 5 step 3 (completion report) now also reports "harness probes
+   owed — every `rejected: harness probe not runnable here — <probe>`
+   line of the code-review log and the plan-review log, listed verbatim
+   with its review log path, or `none`".
+2. The `## STOPPED` entry format for a Phase 4 stop now carries, after
+   the `Open:` lines, one `Owed probe: <verbatim line>` line for every
+   owed probe of the review log.
+
+Mirror copy: none. `grep -rn 'Phase 5 — Completion'` matches only this
+skill plus the historical plan and design spec of the 2026-08-04
+orchestrating-development topic, which are not copies of the skill and
+were not edited.
+
+Plan record: a `> **Amendment 2026-08-30 (review [I2], user decision):**`
+block quote was added under Task 5, below the [I1] amendment, naming the
+out-of-set file and the two additions.
+
+### Tests
+
+```
+$ bash tests/codex/run-unit-tests.sh
+protect-secrets: 43 passed, 0 failed
+ Results: 10 suites passed, 0 suites failed
+ All unit tests passed.
+
+$ bash tests/smart-compress/run-tests.sh
+  Results: 87 passed
+  0 failed
+
+$ bash tests/sdd-scripts/run-tests.sh
+Results: 193 passed, 0 failed
+
+$ bash tests/reviewer-templates/run-tests.sh
+Results: 19 passed, 0 failed
+```
+
+All four suites passed (exit 0).
+
+## Round 2 verification cycle 3 fix — 2026-08-30 — [I1]
+
+**Files changed:**
+- `skills/multi-code-review/SKILL.md`
+- `skills/multi-doc-review/SKILL.md`
+
+**Description:** In the controller's harness-probe `**Dispatch rule:**` paragraph (identical in both files), fixed the race where `mktemp` creates the observation file immediately and empty, so a `test -f` poll could read an empty observation on the first check. The rule now says the controller creates the observation path so it does not yet exist (`mktemp -u`), and the poll runs until the file exists and is non-empty (`test -s`) rather than merely existing. The "file never appears" wording is replaced by "the file is still missing or still empty when the poll ends", still resolving to `not runnable here` with the unchanged reason string `probe subagent did not report`. `dispatch would not block` was not reintroduced. Verified the two paragraphs remain word-for-word identical across both files. The plan's two `Amendment 2026-08-30 (review [I1], user decision):` block quotes do not mention `mktemp` or "never appears" (they describe the unique-temporary-file mechanism at a higher level), so the plan file was left untouched per the fix-task's conditional instruction.
+
+**Test command:** `bash tests/reviewer-templates/run-tests.sh`
+
+**Test output (summary line):** `Results: 19 passed, 0 failed`
+
+**Commit sha:** debacbbe524a7fdac4b5546d5096edcdd63f6e58
