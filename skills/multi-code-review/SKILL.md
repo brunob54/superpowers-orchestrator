@@ -503,9 +503,13 @@ code has been revised since, so a re-pass is meaningful):
         clause. Before logging `user-decision` a finding whose `tested`
         tag came from the reviewer, re-run its probe yourself under the
         constraints and dispatch rule of item 1 and use your own
-        observation — a probe you ran yourself under item 1 in this round
-        is never repeated; when you cannot run it, take the `not runnable
-        here` branch — the claim reaches the user through the
+        observation — a probe you ran yourself under item 1 in this
+        round is never repeated, and a probe that is a read of the
+        reviewer's own context is re-run from the reviewer's position,
+        as one dispatch of a throwaway subagent that writes what it
+        observes, never as a read of your own context, whose contents
+        differ from a subagent's; when you cannot run it, take the `not
+        runnable here` branch — the claim reaches the user through the
         `Harness probes owed:` list, not through a stop.
         This guard is a backstop, not the primary
         mechanism: the reviewer's tag is.

@@ -400,13 +400,14 @@ above where they differ.
   work; a final message that did arrive always wins over the file; the path is
   best-effort and a slower probe subagent is reported as
   `probe subagent did not report`.
-- **Case 007 v2/v3 [I3] — 2026-08-30.** An observation that neither matches nor
-  contradicts the predicted result is not an observation: the finding is
+- **Case 007 v2/v3 [I3] — 2026-08-30.** An observation that neither matches
+  nor contradicts the predicted result is not an observation: the finding is
   treated as `harness: untested` with the same probe. Before logging
   `user-decision` a finding whose `tested` tag came from the reviewer, the
   code-review controller re-runs the probe itself and uses its own
   observation; a probe the controller ran itself in the same round is never
-  repeated. A consolidated finding is `harness: tested`
-  only when every source carrying a `harness:` field is `tested`; otherwise it
-  is `harness: untested` with the probe of the lowest-numbered source tagged
-  `untested`.
+  repeated and a context-read probe is re-run from a throwaway subagent's
+  position, never from the controller's own context. A consolidated finding is
+  `harness: tested` only when every source carrying a `harness:` field is
+  `tested`; otherwise it is `harness: untested` with the probe of the
+  lowest-numbered source tagged `untested`.
