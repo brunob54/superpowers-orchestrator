@@ -20,3 +20,6 @@ plan: docs/superpowers-orchestrator/2026-08-30-reviewer-harness-claims/plans/rev
 ## STOPPED — 2026-08-30 — phase 3 — batch controller BLOCKED task=6: CLAUDE.md is gitignored, plan assumes it is tracked
 Detail: .superpowers/sdd/task-6-report.md
 Resume: Resume orchestration for docs/superpowers-orchestrator/2026-08-30-reviewer-harness-claims/plans/reviewer-harness-claims.md
+
+## Phase 3 — Batch 3 (task 6, resumed with answer) — COMPLETE — commits dc805d4..ede5568
+- Task 6: complete — CLAUDE.md Testing line on disk only (file is gitignored, plan amended); all four fast suites pass; no code commit, tick commit ede5568
