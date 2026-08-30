@@ -23,3 +23,11 @@ Resume: Resume orchestration for docs/superpowers-orchestrator/2026-08-30-review
 
 ## Phase 3 — Batch 3 (task 6, resumed with answer) — COMPLETE — commits dc805d4..ede5568
 - Task 6: complete — CLAUDE.md Testing line on disk only (file is gitignored, plan amended); all four fast suites pass; no code commit, tick commit ede5568
+
+## Phase 4 — Code review — rounds 2 — cap — fixes 1 — unresolved 0 — user-decision 2
+
+## STOPPED — 2026-08-30 — phase 4 — 2 user-decision items (plan-mandated wording; fixes touch files outside the plan's file set)
+Detail: docs/superpowers-orchestrator/2026-08-30-reviewer-harness-claims/implementation/reviewer-harness-claims-review-log.md
+Open: [I1] user-decision — dispatch rule keyed on "your own prompt states that you were dispatched with a `name:`", text the `orch-*` controller prompts never contain
+Open: [I2] user-decision — `Harness probes owed:` list lives only in the completion report; no path across the pipeline return boundary, so owed probes can be dropped unattended
+Resume: Resume orchestration for docs/superpowers-orchestrator/2026-08-30-reviewer-harness-claims/plans/reviewer-harness-claims.md
