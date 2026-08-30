@@ -761,6 +761,10 @@ permission prompt: a subagent asked for an approval nobody is watching for,
 and the run stalls indefinitely — this is exactly what §4's Phase 0
 permissions confirmation exists to prevent. Check the terminal for a pending
 dialog; after answering it, let the run continue or stop it and resume (§5).
+The other cause seen in practice — a controller subagent that ended its
+turn "waiting for" a reviewer and never resumed — is closed in v7.5.0;
+if you still see it, the installed copy is older than that (§1). Until
+you update, sending the stalled controller a message resumes it.
 
 **I updated, but the plugin is still the old version.** Two-step update
 half-done (marketplace refreshed but plugin not updated, or vice versa — §1),

@@ -1,5 +1,45 @@
 # Superpowers Orchestrator Release Notes
 
+## v7.5.0 — blocking controller dispatch
+
+Field report: in every orchestrated run since v7.0.0, at least one
+controller (the subagent that runs a phase of `orchestrating-development`)
+ended its turn with a line such as `Waiting for the round 1 reviewer to
+finish.` and never resumed. The run stood still until a human sent the
+controller a message. Four parallel research passes and two measured
+experiments (2026-08-28 to 2026-08-30) traced it to Claude Code itself, not
+to this plugin, not to a platform: a subagent dispatched without a `name`
+runs its own children asynchronously, and each child's completion notice is
+delivered to the main conversation — never to the controller that is waiting
+for it (anthropics/claude-code#75043, open). A subagent dispatched *with* a
+`name` is a teammate, and a teammate's own Agent calls block until the child
+finishes and return its final message inline — measured 48 s against 8 s
+for the same 30-second child.
+
+- **Named controllers.** Each of the four controller templates in
+  `skills/orchestrating-development/` now carries a fixed dispatch name
+  (`orch-plan-writer`, `orch-plan-review`, `orch-batch-<n>`,
+  `orch-code-review`), and the skill's Controller Dispatch Rules state the
+  property this buys — the controller's own subagent calls return each
+  child's result — and its form on a platform whose dispatch tool has no
+  `name` parameter (Copilot CLI: foreground dispatch, never a background
+  mode). Nested workers stay unnamed: a teammate cannot create teammates.
+- **"Waiting on a subagent" rule.** Every controller prompt now says: never
+  end a turn while a subagent you dispatched is outstanding; if a dispatch
+  returned only a launch acknowledgement, do not wait for a notice that
+  will not arrive — poll the file the child was told to write, on a bounded
+  loop, and reconstruct the result from it; if the file never appears,
+  retry once, then return `BLOCKED`.
+- **`SendMessage` success is not delivery.** Measured on Claude Code
+  2.1.251: a send to a recipient that does not exist returns
+  `{"success": true}` and lands in the main conversation. Controllers
+  confirm a child's work only through the file it writes.
+
+No user-facing phrase, log format, or artifact path changes. Nothing to
+migrate. Requires nothing newer than before; on Claude Code, 2.1.251 or
+later also lets a child reply to an unnamed parent (fixed upstream in that
+release).
+
 ## v7.4.0 — M reviewers per lens
 
 Field report: LLMs (large language models) are not deterministic — the same
