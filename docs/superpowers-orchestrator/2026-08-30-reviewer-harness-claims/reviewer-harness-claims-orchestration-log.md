@@ -52,3 +52,8 @@ Open: [v4 I4] user-decision — tie-break sentence "cannot be read from the repo
 Open: [v6 I1] user-decision — no strip rule for a `harness:` field on a repository-readable premise
 Owed probe: none
 Resume: Resume orchestration for docs/superpowers-orchestrator/2026-08-30-reviewer-harness-claims/plans/reviewer-harness-claims.md
+
+## Phase 4 — Code review (resumed with Case 008 rulings, standing rule widened) — rounds 2 — cap — fixes 1 — unresolved 0 — user-decision 0
+Harness probes owed: none
+
+_Completed — 2026-08-30 — HEAD 63eb0ab_
