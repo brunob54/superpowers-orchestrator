@@ -664,3 +664,236 @@ All four suites passed (exit 0).
 **Test output (summary line):** `Results: 19 passed, 0 failed`
 
 **Commit sha:** debacbbe524a7fdac4b5546d5096edcdd63f6e58
+
+## Round 2 post-loop fix 2 — 2026-08-30 — [v2 I2], [v3 I1], [v3 I2], [v2/v3 I3]
+
+Commit: `4f17c47a072c1a4d223ad2a359806eb61d4206cb`
+— `review fixes (reviewer-harness-claims, round 2)`
+(files committed: `skills/multi-code-review/SKILL.md`,
+`skills/multi-doc-review/SKILL.md`,
+`docs/superpowers-orchestrator/2026-08-30-reviewer-harness-claims/specs/reviewer-harness-claims-design.md`,
+`docs/superpowers-orchestrator/2026-08-30-reviewer-harness-claims/plans/reviewer-harness-claims.md`).
+
+### Change 1 — rejection shape with a reason ([v2 I2], [v3 I2])
+
+New shape everywhere:
+`rejected: harness probe not runnable here — <probe> — (<reason>)`.
+
+- `skills/multi-code-review/SKILL.md`
+  - item 1, line 429: the `not settled by one probe` parenthetical now reads
+    "its `first: <probe>` text is the `<probe>` of that rejection line"
+    (previously "fills only the `Harness probes owed:` line").
+  - item 2 "cannot be run here" branch, lines 479–488: new shape plus the
+    definition of `<probe>` (reviewer text copied verbatim; `first:` text for
+    a `not settled by one probe` tag; the probe the controller named, or the
+    literal `none`, for an untagged premise) and of `<reason>` (one of `not
+    settled by one probe`, `probe subagent did not report`, `no probe named`,
+    `tool missing`, `would break a constraint`, `ambiguous observation`).
+  - Guard item 3, lines 500–502: "with the reason `no probe named`" became
+    "with `none` as the `<probe>` and `no probe named` as the reason clause".
+  - completion report, lines 861–866: item is now
+    `- [<id>] <probe> — (<reason>) (round <i>)`, with `(addendum)` in place of
+    `(round <i>)` for a rejection made in a post-loop addendum, and the reason
+    clause copied from the rejection line.
+  - error-handling bullet, lines 1030–1033: new shape.
+- `skills/multi-doc-review/SKILL.md`
+  - 3.1, line 173; 3.2 branch, lines 221–229; report, lines 274–278;
+    error-handling bullet, lines 463–466 — same wording, `3.1`/`3.2`
+    numbering.
+
+### Change 2 — poll mechanism of the dispatch rule ([v3 I1])
+
+- `skills/multi-code-review/SKILL.md`, lines 441–464: the poll sentence
+  ("poll on a bounded loop … the 'Waiting on a subagent' rule in the
+  orchestration controller prompts") is replaced by the `test -s <path>`
+  mechanism: each attempt a separate tool call, never a shell loop and never
+  `sleep`, at most 20 attempts, spread over the controller's own remaining
+  work; a final message that did arrive always wins over the file; the path is
+  best-effort. The following sentence keeps its place and now produces
+  `rejected: harness probe not runnable here — <probe> — (probe subagent did
+  not report)`; the sentence about the reviewer's condition (d) is unchanged.
+- `skills/multi-doc-review/SKILL.md`, lines 185–208: identical text.
+
+### Change 3 — `tested` observations ([v2/v3 I3])
+
+- (a) `skills/multi-code-review/SKILL.md` item 4, lines 512–521 and
+  `skills/multi-doc-review/SKILL.md` 3.3, lines 236–246: a non-observation
+  (neither matching nor contradicting the predicted result, including one
+  naming neither the predicted result nor its negation) is treated as
+  `harness: untested` with the same probe, applying item 1 / 3.1; the known
+  limit is stated. The existing "You may re-run a probe …" sentence is kept in
+  both files.
+- (b) `skills/multi-code-review/SKILL.md` Guard item 3, lines 503–507 (code
+  review only): re-run the probe of a `tested` finding before logging it
+  `user-decision`; when it cannot be run, take the "not runnable here" branch.
+- (c) consolidation rule 5 ("Text:") of both files —
+  `skills/multi-code-review/SKILL.md` lines 391–396 and
+  `skills/multi-doc-review/SKILL.md` lines 139–144: a consolidated finding is
+  `harness: tested` only when every source carrying a `harness:` field is
+  `tested`; otherwise `harness: untested` with the probe of the lowest-numbered
+  source that carries one.
+
+### Change 4 — spec and plan records
+
+- Spec: new final section `## Amendments` with five dated bullets — Case 006
+  [I1], Case 006 [I2], Case 007 v2 [I2] + v3 [I2], Case 007 v3 [I1], Case 007
+  v2/v3 [I3] — each stating that it was decided during code review and
+  supersedes the wording above where they differ.
+- Plan, Task 5: new block quote
+  `> **Amendment 2026-08-30 (review v2/v3 items, user decision):**` after the
+  two existing amendment quotes, recording the four Case 007 rulings.
+
+### Tests
+
+```
+bash tests/codex/run-unit-tests.sh
+  Results: 10 suites passed, 0 suites failed
+bash tests/smart-compress/run-tests.sh
+  Results: 87 passed, 0 failed
+bash tests/sdd-scripts/run-tests.sh
+  Results: 193 passed, 0 failed
+bash tests/reviewer-templates/run-tests.sh
+  Results: 19 passed, 0 failed
+```
+
+`tests/reviewer-templates/run-tests.sh` was **not** changed: every asserted
+string (`harness probe —`, `harness probe not runnable here`,
+`Harness probes owed:`, the guard fragment) still occurs on a single physical
+line in both SKILL.md files.
+
+### Section diff between the two files
+
+Both harness sections were extracted (`sed -n '427,524p'` for
+`skills/multi-code-review/SKILL.md`, `sed -n '171,246p'` for
+`skills/multi-doc-review/SKILL.md`), normalised (leading indentation stripped,
+wrapping removed, one word per line) and diffed. The differences are: the item
+numbering (`item 1`/`item 2` versus `3.1`/`3.2`), the code-review-only **Guard**
+item, and three wording differences that already existed at HEAD before this
+fix (the word "below" in "the ordinary rules below apply", the
+"(`fixed`, `user-decision`, …)" list, and the code-review-only "reject as
+unverifiable … this does not." sentence in place of the doc-review "This
+rejection never blocks the gate;"). The same diff was run against the HEAD
+versions of both files and produced exactly the same difference set, so this
+fix introduced no new divergence.
+
+## Round 2 post-loop fix 3 — 2026-08-30 — verification 4 [I1], [I2], [M1]
+
+Three wording clarifications, applied to the two SKILL.md files and synced
+into the spec's `## Amendments` section and the plan's Task 5 amendment block
+quote. No behavioural change to the rules themselves.
+
+### Change A — order of harness settling versus the poll — [I1]
+
+- `skills/multi-code-review/SKILL.md`, line 423 (Triage bullet header): the
+  header `**Harness claims (settled before any disposition below is chosen):**`
+  became `**Harness claims (each settled before its own disposition below is
+  chosen; the poll of the dispatch rule may run across the triage of other
+  findings):**`. Kept on one physical line, as the surrounding bold headers are.
+- `skills/multi-doc-review/SKILL.md`, lines 167–172 (Procedure step 3): the
+  middle sentence of `**Triage and merge:**` now reads "Before a finding's own
+  disposition is chosen, settle its harness claim — the poll of the dispatch
+  rule may run across the triage of other findings. Harness claims are findings
+  whose premise is a property of the agent runtime, tagged by the reviewer with
+  the trailing `harness:` field of `reviewer-prompt.md`:". Re-wrapped to the
+  surrounding width; four lines became six.
+
+Both files now say that the settling is per finding, not a barrier across the
+whole set, so the bounded poll of the dispatch rule can be spread over the
+triage of other findings as its own text requires.
+
+### Change B — the Guard's re-run applies to reviewer-tagged `tested` findings only — [I2]
+
+- `skills/multi-code-review/SKILL.md`, Guard (item 3 of the Harness claims
+  bullet), lines 503–507 before the edit, 503–509 after: "Before logging a
+  `tested` finding `user-decision`, re-run its probe yourself …" became "Before
+  logging `user-decision` a finding whose `tested` tag came from the reviewer,
+  re-run its probe yourself under the constraints and dispatch rule of item 1
+  and use your own observation — a probe you ran yourself under item 1 in this
+  round is never repeated; when you cannot run it, take the `not runnable here`
+  branch — …". The one-physical-line guard fragment above it was not touched.
+- Spec sync: `specs/reviewer-harness-claims-design.md`, `## Amendments`, the
+  **Case 007 v2/v3 [I3]** bullet (lines 403–412): the middle sentence became
+  "Before logging `user-decision` a finding whose `tested` tag came from the
+  reviewer, the code-review controller re-runs the probe itself and uses its own
+  observation; a probe the controller ran itself in the same round is never
+  repeated."
+- Plan sync: `plans/reviewer-harness-claims.md`, line 619, the block quote
+  `**Amendment 2026-08-30 (review v2/v3 items, user decision):**`, ruling (3):
+  "the guard also re-runs the probe of a `tested` finding before logging it
+  `user-decision`" became "the guard also re-runs, before logging it
+  `user-decision`, the probe of a finding whose `tested` tag came from the
+  reviewer (a probe the controller ran itself in the same round is never
+  repeated)".
+
+This removes the double-run: a finding the controller itself promoted to
+`tested` under item 1 is not probed a second time by the guard.
+
+### Change C — which source's probe survives consolidation — [M1]
+
+Identical edit in both files, consolidation rule 5 ("Text:"):
+
+- `skills/multi-code-review/SKILL.md`, line 396.
+- `skills/multi-doc-review/SKILL.md`, line 144.
+
+The ending "otherwise it is `harness: untested` with the probe of the
+lowest-numbered source that carries one." became "… with the probe of the
+lowest-numbered source tagged `untested`." A `tested` source's probe can no
+longer be attached to a finding the consolidation marks `untested`.
+
+Synced identically in the spec's Case 007 v2/v3 [I3] bullet
+(`specs/reviewer-harness-claims-design.md`, line 411) and in ruling (4) of the
+plan's Task 5 amendment block quote (`plans/reviewer-harness-claims.md`,
+line 619).
+
+### Tests
+
+| Command | Result |
+| --- | --- |
+| `bash tests/codex/run-unit-tests.sh` | `Results: 10 suites passed, 0 suites failed` |
+| `bash tests/smart-compress/run-tests.sh` | `Results: 87 passed, 0 failed` |
+| `bash tests/sdd-scripts/run-tests.sh` | `Results: 193 passed, 0 failed` |
+| `bash tests/reviewer-templates/run-tests.sh` | `Results: 19 passed, 0 failed` |
+
+No test file was edited.
+
+### Commit
+
+`6100d11` — `review fixes (reviewer-harness-claims, round 2)` — four files:
+`skills/multi-code-review/SKILL.md`, `skills/multi-doc-review/SKILL.md`,
+`specs/reviewer-harness-claims-design.md`,
+`plans/reviewer-harness-claims.md`. This fix-report file is not staged.
+
+## Round 2 post-loop fix 4 — 2026-08-30 — verification 5 [I1]
+
+**Edits**
+
+- `skills/multi-code-review/SKILL.md`, Guard item (item 3 of the "Harness
+  claims" Triage bullet), lines 503–513 (was 503–509): the sentence beginning
+  "Before logging `user-decision` a finding whose `tested` tag came from the
+  reviewer" now states that a probe that is a read of the reviewer's own
+  context is re-run from the reviewer's position, as one dispatch of a
+  throwaway subagent that writes what it observes, never as a read of the
+  controller's own context, whose contents differ from a subagent's. Only that
+  sentence was re-wrapped.
+- `docs/superpowers-orchestrator/2026-08-30-reviewer-harness-claims/specs/reviewer-harness-claims-design.md`,
+  `## Amendments`, the Case 007 v2/v3 [I3] bullet (lines 403–413): after
+  "a probe the controller ran itself in the same round is never repeated"
+  added "and a context-read probe is re-run from a throwaway subagent's
+  position, never from the controller's own context".
+- `docs/superpowers-orchestrator/2026-08-30-reviewer-harness-claims/plans/reviewer-harness-claims.md`,
+  the `### Task 5` block quote "Amendment 2026-08-30 (review v2/v3 items, user
+  decision)", line 619, ruling (3): after "(a probe the controller ran itself
+  in the same round is never repeated" added "; a context-read probe is re-run
+  from a throwaway subagent's position, never from the controller's own
+  context" before the closing parenthesis.
+
+**Tests**
+
+| Command | Summary line |
+| --- | --- |
+| `bash tests/codex/run-unit-tests.sh` | `Results: 10 suites passed, 0 suites failed` |
+| `bash tests/smart-compress/run-tests.sh` | `Results: 87 passed, 0 failed` |
+| `bash tests/sdd-scripts/run-tests.sh` | `Results: 193 passed, 0 failed` |
+| `bash tests/reviewer-templates/run-tests.sh` | `Results: 19 passed, 0 failed` |
+
+**Commit:** `8f13ea631da464bf058063da26bef4e8f3331454` — `review fixes (reviewer-harness-claims, round 2)`
