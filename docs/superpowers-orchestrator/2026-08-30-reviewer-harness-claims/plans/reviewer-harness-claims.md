@@ -54,7 +54,7 @@ Task order is TDD: Task 1 writes the suite (16 of 19 assertions fail on the unch
 
 **Does NOT cover:** behaviour of a real reviewer or controller session (a non-goal of the spec); the wording of lenses, severities, or the review-log entry format; any file other than the four named ones and their two string contracts (pathspec, marker). A heading placed inside the fence but above `prompt: |` fails check 1 by design; a rule placed after the next `## ` heading passes check 1 but yields an empty or wrong extract in check 5.
 
-- [ ] **Step 1: Write the test suite**
+- [x] **Step 1: Write the test suite**
 
 Create `tests/reviewer-templates/run-tests.sh` with exactly this content:
 
@@ -196,17 +196,17 @@ fi
 exit 0
 ```
 
-- [ ] **Step 2: Make it executable and run it to verify it fails on the unchanged repository**
+- [x] **Step 2: Make it executable and run it to verify it fails on the unchanged repository**
 
 Run: `chmod +x tests/reviewer-templates/run-tests.sh && bash tests/reviewer-templates/run-tests.sh; echo "exit=$?"`
 Expected: `Results: 3 passed, 16 failed` and `exit=1`. The 3 passes are section 6 (pathspec line and the two marker instructions already exist). The 16 failures: section 1 (2: no `### Harness claims` heading), section 2 (4), section 3 (6), section 4 (1), section 5 (3: both extracts empty, drift check fails because an extract is empty).
 
-- [ ] **Step 3: Confirm the suite is self-contained (no `/dev/stdin`, no process substitution)**
+- [x] **Step 3: Confirm the suite is self-contained (no `/dev/stdin`, no process substitution)**
 
 Run: `grep -nE '/dev/stdin|<\(' tests/reviewer-templates/run-tests.sh; echo "matches=$?"`
 Expected: no output lines and `matches=1` (grep found nothing — the script's own header comment deliberately avoids spelling either token, so a hit means a real use was introduced).
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add tests/reviewer-templates/run-tests.sh
