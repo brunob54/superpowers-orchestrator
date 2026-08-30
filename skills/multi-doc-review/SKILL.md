@@ -169,7 +169,11 @@ For each round `i` in 1..N:
    of the dispatch rule may run across the triage of other findings. Harness
    claims are findings whose premise is a property of the agent runtime,
    tagged by the reviewer with the trailing `harness:` field of
-   `reviewer-prompt.md`:
+   `reviewer-prompt.md`. A `harness:` field on a premise that can be read
+   from the repository or from a citable source is dropped: triage the
+   finding as an ordinary finding under the existing reference
+   requirement and append `(harness field dropped: repository-readable)`
+   to its disposition line. For every other tagged finding:
    1. A finding tagged `harness: untested — <probe>` — except one tagged
       `not settled by one probe`, which takes the "not runnable here"
       branch of 3.2 directly (its `first: <probe>` text is the `<probe>`

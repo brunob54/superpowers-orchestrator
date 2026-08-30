@@ -411,3 +411,29 @@ above where they differ.
   `harness: tested` only when every source carrying a `harness:` field is
   `tested`; otherwise it is `harness: untested` with the probe of the
   lowest-numbered source tagged `untested`.
+- **Case 007 verification 4 [I3] + verification 5 [I2] — 2026-08-30.** The
+  model-probe example in both reviewer templates is uncontaminated: the
+  token is a random string placed only in the dispatch's `description`, and
+  the prompt given to the probe subagent never contains it — the prompt asks
+  the subagent to report every string in its context that looks like a
+  dispatch label or an unexplained token, or to report that it sees none;
+  the token reported absent is the observation.
+- **Case 007 verification 4 [I4] — 2026-08-30.** The tie-break "can its
+  truth be read from the repository?" is replaced by a definition in both
+  reviewer templates: a harness property is a claim about the agent runtime
+  that is running this review (the tool that dispatched the reviewer and its
+  hooks, tools, context delivery and environment); its truth can only be
+  observed by running that runtime. A claim about a library, a language
+  runtime, the operating system, or a remote service is not a harness
+  property — it is an ordinary claim, checked against its source or
+  documentation and referenced like any other finding.
+- **Case 007 verification 6 [I1] — 2026-08-30.** A mis-tagged premise has a
+  way back. Both reviewer templates gain: "Do not tag a claim whose truth
+  can be read from the repository or from a source you can cite; the
+  `harness:` field is only for runtime properties." The controller triage of
+  harness claims in both `SKILL.md` files gains, before the item that
+  handles `harness: untested` findings, the strip rule: a `harness:` field
+  on a premise that can be read from the repository or from a citable source
+  is dropped — the finding is triaged as an ordinary finding under the
+  existing reference requirement and `(harness field dropped:
+  repository-readable)` is appended to its disposition line.
