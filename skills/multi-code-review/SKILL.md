@@ -438,15 +438,18 @@ code has been revised since, so a re-pass is meaningful):
         **Dispatch rule:** you may run a dispatch-based probe from any
         position. Always tell the probe subagent to write its
         observation to a file at a unique temporary path outside the
-        checkout — you create the path, for example with `mktemp` — and
-        to return that same observation as its final message. When the
-        dispatch call returns the subagent's final message, use it. When
-        it returns only a launch acknowledgement, poll for that file on
-        a bounded loop (check every few seconds, give up after a fixed
-        limit) and read the observation from it — the same mechanism as
-        the "Waiting on a subagent" rule in the orchestration controller
-        prompts. If the file never appears, the probe is `not runnable
-        here` with the reason `probe subagent did not report`. The
+        checkout — you create the path so it does not yet exist (for
+        example `mktemp -u`) — and to return that same observation as
+        its final message. When the dispatch call returns the
+        subagent's final message, use it. When it returns only a
+        launch acknowledgement, poll on a bounded loop (check every
+        few seconds, give up after a fixed limit) until the file
+        exists and is non-empty (`test -s`), then read the observation
+        from it — the same mechanism as the "Waiting on a subagent"
+        rule in the orchestration controller prompts. If the file is
+        still missing or still empty when the poll ends, the probe is
+        `not runnable here` with the reason `probe subagent did not
+        report`. The
         reviewer's condition (d) does not apply to a controller, which
         always has this mechanism.
      2. Dispose on the observation:
