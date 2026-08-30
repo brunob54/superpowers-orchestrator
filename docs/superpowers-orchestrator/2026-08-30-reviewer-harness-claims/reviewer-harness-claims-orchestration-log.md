@@ -4,3 +4,5 @@ _Invocation 1 — 2026-08-30 — spec docs/superpowers-orchestrator/2026-08-30-r
 
 ## Phase 1 — Plan — DONE — 2026-08-30
 plan: docs/superpowers-orchestrator/2026-08-30-reviewer-harness-claims/plans/reviewer-harness-claims.md — 6 tasks
+
+## Phase 2 — Plan review — rounds 2 — cap — unresolved 0
