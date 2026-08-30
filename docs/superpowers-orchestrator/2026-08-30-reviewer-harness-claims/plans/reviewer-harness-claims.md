@@ -610,7 +610,7 @@ git commit -m "feat(multi-doc-review): controller probes untested harness claims
 
 **Does NOT cover:** `user-decision` items that are not harness claims (plan-mandated findings whose premise is about the code keep today's path); the Batched Autonomous Mode journaling of a `user-decision` (unchanged — the guard runs before the disposition is chosen, so batched mode sees only guarded dispositions); the fix subagent's behaviour beyond what it receives; the verification re-review cycle; the pipeline rules and completion marker. The guard applies to every `user-decision`, the carried-findings path included.
 
-- [ ] **Step 1: Insert the `Harness claims` bullet as the first bullet of Procedure step 4 (Triage)**
+- [x] **Step 1: Insert the `Harness claims` bullet as the first bullet of Procedure step 4 (Triage)**
 
 In `skills/multi-code-review/SKILL.md`, replace this text (currently lines 419–422, the start of the Triage step):
 
@@ -697,7 +697,7 @@ with the text below. The guard fragment ``never logged `user-decision` on the st
      fix subagent fixes the code). Never one fixer per finding. The
 ```
 
-- [ ] **Step 2: Reference the guard from the plan-mandated and carried-findings bullets**
+- [x] **Step 2: Reference the guard from the plan-mandated and carried-findings bullets**
 
 In the same file, replace this text (currently lines 453–456):
 
@@ -738,7 +738,7 @@ with:
      dispositions, without a source annotation.
 ```
 
-- [ ] **Step 3: Add the `Harness probes owed:` line to the after-loop report**
+- [x] **Step 3: Add the `Harness probes owed:` line to the after-loop report**
 
 In the same file, replace this text (currently lines 746–748):
 
@@ -761,7 +761,7 @@ report without it is defective. The user runs the owed probes after the
 loop.
 ```
 
-- [ ] **Step 4: Note the clause placement in the Review Log Format**
+- [x] **Step 4: Note the clause placement in the Review Log Format**
 
 In the same file, replace this text (currently lines 684–689, the start of the disposition-prefix bullet):
 
@@ -787,7 +787,7 @@ with:
   annotation, never after it. Two kinds of disposition line carry no annotation:
 ```
 
-- [ ] **Step 5: Add the Error Handling bullet**
+- [x] **Step 5: Add the Error Handling bullet**
 
 In the same file, in `## Error Handling`, replace this text (currently the bullet that ends the carried-finding disagreement rule):
 
@@ -808,17 +808,17 @@ with:
   support for the claim; the probe goes on the `Harness probes owed:` line.
 ```
 
-- [ ] **Step 6: Run the suite to verify every assertion passes**
+- [x] **Step 6: Run the suite to verify every assertion passes**
 
 Run: `bash tests/reviewer-templates/run-tests.sh; echo "exit=$?"`
 Expected: `Results: 19 passed, 0 failed` and `exit=0`.
 
-- [ ] **Step 7: Confirm the guard fragment is present exactly once and the pathspec drift check still holds**
+- [x] **Step 7: Confirm the guard fragment is present exactly once and the pathspec drift check still holds**
 
 Run: `grep -c 'never logged `user-decision` on the strength of an untested harness claim' skills/multi-code-review/SKILL.md; bash tests/sdd-scripts/run-tests.sh 2>&1 | tail -n 3`
 Expected: `1`, then the sdd-scripts summary line `Results: <n> passed, 0 failed` (the `0 failed` part is the pass criterion).
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add skills/multi-code-review/SKILL.md
