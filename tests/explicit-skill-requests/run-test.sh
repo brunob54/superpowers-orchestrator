@@ -21,6 +21,7 @@ fi
 
 # Get the directory where this script lives
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/../lib/timeout-shim.sh"
 # Get the superpowers plugin root (two levels up)
 PLUGIN_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
 
