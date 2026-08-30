@@ -171,6 +171,19 @@ you. Each round dispatches M identical reviewers in parallel (M = reviewers
 per lens, default 1; see the `SUPERPOWERS_REVIEWERS_PER_LENS` setting in
 §7) and consolidates their reports before findings are triaged.
 
+Reviewers in both review loops (`multi-doc-review` here and in Stage 2,
+`multi-code-review` in Stage 4) follow one rule about the **harness** — the
+agent runtime that runs the review: what reaches a subagent's context, what
+a hook injects, how a dispatch behaves. Such properties cannot be checked
+against the repository, so a finding that rests on one must either carry a
+probe the reviewer ran and what it observed (`harness: tested`), or name the
+one probe the controller should run (`harness: untested`); the controller
+runs that probe once and decides from the observation. A claim nobody can
+test in the current environment is logged as
+`rejected: harness probe not runnable here — <probe> — (<reason>)` — never
+escalated to you — and the loop's completion report lists every such probe
+under `Harness probes owed:` so you can run it yourself afterwards.
+
 When a design decision would add or change a dependency, depend on
 version-sensitive external API behavior, or select an external hosted
 service, brainstorming pauses at a **research gate**: it names the
@@ -233,7 +246,10 @@ test quality), each round dispatching M identical reviewers in parallel
 (default 1) whose reports are consolidated before triage, with
 Critical/Important findings fixed between rounds and an early exit after two
 consecutive clean rounds — with M > 1 a round is clean only when every
-reviewer returned a usable report. Throughout, any "done" claim
+reviewer returned a usable report. The harness-claims rule from Stage 1
+applies here as well: a finding built on an untested claim about the agent
+runtime is never escalated to you — the controller runs the named probe
+first, or lists it under `Harness probes owed:`. Throughout, any "done" claim
 must pass `verification-before-completion` — fresh command output as
 evidence, never memory of an earlier run.
 
@@ -469,6 +485,10 @@ inconsistency, the branch changed under it — appends a `## STOPPED` entry to
 the log with the reason, a pointer to the detail file, and the exact resume
 prompt to use. Nothing is lost: everything up to the stop is committed. See
 §5 for resuming, overriding parameters on resume, and abandoning a wedged run.
+A Phase 4 stop entry lists each open review item on an `Open:` line, then
+one `Owed probe:` line for every harness probe the review loop could not run
+(see Stage 1 in §3) — these probes are yours to run; they are not blockers
+and need no answer in the resume prompt.
 
 Phase 0 itself can also refuse to start, before the log even exists: the
 prior-art intake check (see Prerequisites above) reads the spec, and when
@@ -479,7 +499,8 @@ missing section or sentence to the spec and re-run orchestration.
 
 ### On completion
 
-You get a summary (tasks, batches, review rounds and outcomes, the three log
+You get a summary (tasks, batches, review rounds and outcomes, the harness
+probes owed by the plan and code review loops — or `none` — and the three log
 paths), and `finishing-a-development-branch` takes over interactively —
 merge, PR, keep, or discard is yours to decide.
 
@@ -777,6 +798,12 @@ the marketplace entry points at the right repo.
 If the session genuinely is full: compact or `/clear` first. If you're on a
 large-window model and the number looks absurd, the gate is likely falling
 back to a 200K assumption — install the statusline bridge (§7).
+
+**A review report says `Harness probes owed:` with one or more items.** A
+reviewer made a claim about the agent runtime that nobody could test in that
+environment, so the finding was rejected instead of stopping the run (§3,
+Stage 1). Run the named probe yourself; if it confirms the claim, reopen the
+finding by hand — nothing in the run is waiting on it.
 
 **Something orchestration-specific went wrong.** §5 covers stops, crashes,
 resumes, and teardown; the orchestration log's `## STOPPED` entry names the

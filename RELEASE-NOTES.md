@@ -1,5 +1,54 @@
 # Superpowers Orchestrator Release Notes
 
+## v7.6.0 — reviewers test harness claims instead of asserting them
+
+Field report: a code reviewer asserted that the Agent tool's `description`
+field reaches the reviewer's context, so a `(reviewer j/m)` suffix would
+leak the reviewer count. The review loop escalated the finding to the user,
+which stopped an unattended run. A three-second probe — a subagent dispatched
+with a random token only in its `description` — showed the token absent.
+The claim was false, and one full stop was spent on it. Claims about the
+**harness** (the agent runtime that runs the review: what reaches a
+subagent's context, what a hook injects, how a dispatch behaves) cannot be
+checked against the repository, so nothing required the reviewer to test
+them.
+
+- **Harness claims rule.** Both reviewer templates (`multi-doc-review`,
+  `multi-code-review`) carry a `### Harness claims` sub-section: a finding
+  whose premise is a harness property must carry a probe the reviewer ran
+  and its observation (`| harness: tested — <probe>; observed <result>`),
+  or name the one probe the controller should run
+  (`| harness: untested — <probe>`). A reviewer-safe probe writes nothing
+  to the checkout, binds no shared resource, runs no code from the change
+  under review, and dispatches no subagent — a reviewer's child runs
+  detached (v7.5.0 field report), so dispatch-based probes run once, in
+  the controller. A harness property is a claim about the runtime running
+  *this* review; a claim about a library, the operating system, or a
+  remote service is an ordinary claim with a citable source.
+- **Controller triage.** Both review skills run a named probe once —
+  read-only, one action, with a concrete poll for a dispatch that returned
+  only a launch acknowledgement (separate `test -s` calls, at most 20,
+  spread over the controller's own work; no `sleep`) — and dispose on the
+  observation. A claim nobody can test here is
+  `rejected: harness probe not runnable here — <probe> — (<reason>)`, never
+  `unresolved` and never `user-decision`, and every such rejection is
+  listed in the completion report under `Harness probes owed:`. In
+  `multi-code-review`, a finding is never logged `user-decision` on the
+  strength of an untested harness claim; before that disposition the
+  controller re-runs a `tested` probe itself.
+- **Owed probes reach the user in pipeline mode.** `orchestrating-development`
+  lists the review logs' owed-probe lines in its Phase 5 report and as
+  `Owed probe:` lines in a Phase 4 `## STOPPED` entry.
+- **New fast suite.** `tests/reviewer-templates/run-tests.sh` (19 checks)
+  pins the wording contracts: the rule sits inside `prompt: |`, the field
+  spellings and reason strings exist, the two templates' rule text is
+  byte-identical, and the blinding pathspec and report marker survive.
+
+No log-format break: the new field and reason strings appear only in rounds
+run after the update; existing logs are read as before. Nothing to migrate.
+This was also the behavioural proof of v7.5.0: nine named controller
+dispatches, zero stalls.
+
 ## v7.5.0 — blocking controller dispatch
 
 Field report: in every orchestrated run since v7.0.0, at least one
