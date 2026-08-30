@@ -74,6 +74,7 @@ timeout 300 claude -p "$PROMPT" \
     --dangerously-skip-permissions \
     --max-turns "$MAX_TURNS" \
     --output-format stream-json \
+    --verbose \
     > "$LOG_FILE" 2>&1 || true
 
 echo ""
