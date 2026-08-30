@@ -138,7 +138,10 @@ For each round `i` in 1..N:
       its sources gave it.
    5. Text: keep the most specific description among the sources; details
       from several sources may be combined, but no claim that no source
-      made may be added.
+      made may be added. A consolidated finding is `harness: tested` only
+      when every source that carries a `harness:` field is `tested`;
+      otherwise it is `harness: untested` with the probe of the
+      lowest-numbered source that carries one.
    6. Ids: whenever M ≥ 2 — a partial round with a single usable report
       included — consolidated findings get fresh ids per severity class,
       `C1…`, `I1…`, `M1…`, ordered by agreement count (the number of
@@ -167,8 +170,8 @@ For each round `i` in 1..N:
    the trailing `harness:` field of `reviewer-prompt.md`:
    1. A finding tagged `harness: untested — <probe>` — except one tagged
       `not settled by one probe`, which takes the "not runnable here"
-      branch of 3.2 directly (its `first: <probe>` text fills only the
-      `Harness probes owed:` line of the completion report) — gets that
+      branch of 3.2 directly (its `first: <probe>` text is the `<probe>`
+      of that rejection line) — gets that
       probe run once, by you. Constraints: the probe writes nothing to
       the checkout, the index, HEAD, or branch state; binds no shared
       resource (fixed port, fixed temporary path, shared database); runs
@@ -185,14 +188,21 @@ For each round `i` in 1..N:
       create the path so it does not yet exist (for example `mktemp
       -u`) — and to return that same observation as its final message.
       When the dispatch call returns the subagent's final message, use
-      it. When it returns only a launch acknowledgement, poll on a
-      bounded loop (check every few seconds, give up after a fixed
-      limit) until the file exists and is non-empty (`test -s`), then
-      read the observation from it — the same mechanism as the
-      "Waiting on a subagent" rule in the orchestration controller
-      prompts. If the file is still missing or still empty when the
-      poll ends, the probe is `not runnable here` with the reason
-      `probe subagent did not report`. The reviewer's condition
+      it. When it returns only a launch acknowledgement, poll the file:
+      run `test -s <path>` as its own tool call and repeat that call —
+      each attempt a separate tool call, never a shell loop and never
+      `sleep`, which some harnesses refuse in the foreground — at most
+      20 attempts. Do not poll in a tight sequence: spread the attempts
+      over your own remaining work (write the round's log entry so far,
+      triage the next finding, then check again), so that a slow probe
+      subagent has time to write. A final message that did arrive
+      always wins over the file, even when the file is missing. This
+      path is best-effort: a probe subagent slower than your remaining
+      work is reported as `probe subagent did not report`. If the file
+      is still missing or still empty when the poll ends, the
+      disposition is
+      `rejected: harness probe not runnable here — <probe> — (probe subagent did not report)`.
+      The reviewer's condition
       (d) does not apply to a controller, which always has this
       mechanism.
    2. Dispose on the observation:
@@ -209,12 +219,27 @@ For each round `i` in 1..N:
         constraint of 3.1, or the observation is ambiguous — it cannot be
         written in one clause that matches or contradicts the result the
         claim predicts) → `rejected: harness probe not runnable here —
-        <probe>`. This rejection never blocks the gate; every such
+        <probe> — (<reason>)`. `<probe>` is the reviewer's probe text
+        copied verbatim, never edited — for a `not settled by one probe`
+        tag it is the `first:` text; for an untagged premise it is the
+        probe you named, or the literal `none` when no probe exists.
+        `<reason>` is the last parenthesised clause of the line, one of
+        `not settled by one probe`, `probe subagent did not report`, `no
+        probe named`, `tool missing`, `would break a constraint`,
+        `ambiguous observation`. This rejection never blocks the gate; every such
         rejection is listed on the completion report's
         `Harness probes owed:` line.
    3. A finding tagged `harness: tested — …` is triaged normally and its
       observation is accepted: the rule keeps claims tested, it does not
-      re-verify every observation. When the stated probe was not
+      re-verify every observation. An observation that neither matches
+      nor contradicts the result the claim predicts — including one that
+      names neither the predicted result nor its negation (for example
+      `observed: the harness behaved as expected`) — is not an
+      observation: treat the finding as `harness: untested` with the
+      same probe and apply 3.1. Known limit, accepted by design: a
+      `tested` observation that matches the prediction is not policed; a
+      wrong one costs at most one wrong disposition that the next round
+      sees. When the stated probe was not
       reviewer-safe (the reviewer dispatched a subagent, for example),
       append `(reviewer probe not reviewer-safe)` to the disposition
       line. You may re-run a probe whose observation looks inconsistent
@@ -246,8 +271,10 @@ four-item list: placeholder scan, internal consistency, ambiguity, scope.
 Fix merge-introduced issues inline and note them in the log. Then report:
 rounds run, per-round finding counts, converged vs cap reached, log path,
 effective M (and any substitution), and a `Harness probes owed:` line —
-one item `- [<id>] <probe> (round <i>)` per
+one item `- [<id>] <probe> — (<reason>) (round <i>)` per
 `rejected: harness probe not runnable here` disposition of this invocation,
+with `(addendum)` in place of `(round <i>)` for a rejection made in a
+post-loop addendum, and the reason clause copied from the rejection line,
 or `Harness probes owed: none`. The line is always written; a report
 without it is defective. The user runs the owed probes after the loop.
 The host gate's single user approval follows — this skill adds no approvals
@@ -435,7 +462,8 @@ invocation note (which carries `M=` like every other); failed rounds get
   reviewed.
 - Harness probe result ambiguous, probe not runnable here, or probe would
   break a constraint of Procedure step 3.1 →
-  `rejected: harness probe not runnable here — <probe>`, never treated as
+  `rejected: harness probe not runnable here — <probe> — (<reason>)`,
+  never treated as
   support for the claim; the probe goes on the `Harness probes owed:` line.
 
 ## Guard Interaction

@@ -368,3 +368,43 @@ No migration. The change is live for any session once the plugin copy is
 reinstalled (editing `skills/` here does not change running sessions —
 `CLAUDE.md`). Existing review logs are unaffected: the new field and reason
 strings only appear in rounds run after the change.
+
+## Amendments
+
+Each ruling below was decided during code review; it supersedes the wording
+above where they differ.
+
+- **Case 006 [I1] — 2026-08-30.** The dispatch rule is no longer keyed on the
+  controller knowing it was dispatched with a `name:` statement: the probe
+  subagent always writes its observation to a file at a unique temporary path
+  outside the checkout, and the controller reads that file on a bounded poll
+  when the dispatch call returns only a launch acknowledgement.
+- **Case 006 [I2] — 2026-08-30.** Owed probes are the review log's
+  `rejected: harness probe not runnable here` lines; `orchestrating-development`
+  relays them verbatim in its Phase 5 report and in the `## STOPPED` entry of a
+  Phase 4 stop, so they survive the pipeline return boundary.
+- **Case 007 v2 [I2] + v3 [I2] — 2026-08-30.** The rejection line carries a
+  reason: `rejected: harness probe not runnable here — <probe> — (<reason>)`,
+  where `<probe>` is the reviewer's probe text copied verbatim (the `first:`
+  text of a `not settled by one probe` tag, the probe the controller named for
+  an untagged premise, or the literal `none` when no probe exists) and
+  `<reason>` is one of `not settled by one probe`,
+  `probe subagent did not report`, `no probe named`, `tool missing`,
+  `would break a constraint`, `ambiguous observation`. The
+  `Harness probes owed:` item becomes `- [<id>] <probe> — (<reason>) (round <i>)`,
+  with `(addendum)` in place of `(round <i>)` for a rejection made in a
+  post-loop addendum.
+- **Case 007 v3 [I1] — 2026-08-30.** The poll is concrete: `test -s <path>` as
+  its own tool call, repeated as separate tool calls (never a shell loop, never
+  `sleep`), at most 20 attempts, spread over the controller's own remaining
+  work; a final message that did arrive always wins over the file; the path is
+  best-effort and a slower probe subagent is reported as
+  `probe subagent did not report`.
+- **Case 007 v2/v3 [I3] — 2026-08-30.** An observation that neither matches nor
+  contradicts the predicted result is not an observation: the finding is
+  treated as `harness: untested` with the same probe. Before logging a `tested`
+  finding `user-decision`, the code-review controller re-runs the probe itself
+  and uses its own observation. A consolidated finding is `harness: tested`
+  only when every source carrying a `harness:` field is `tested`; otherwise it
+  is `harness: untested` with the probe of the lowest-numbered source that
+  carries one.
