@@ -5,6 +5,7 @@ tasks; it runs SDD's per-task flow with nested workers, autonomously.
 
 ```
 Agent tool (general-purpose):
+  name: "orch-batch-[BATCH_NUMBER]"
   description: "orchestration phase 3: batch [BATCH_NUMBER] (tasks [TASK_LIST])"
   model: session model, sonnet floor
   prompt: |
@@ -20,6 +21,22 @@ Agent tool (general-purpose):
       prompt MUST include: "You are a focused subagent. Do NOT invoke any
       skills from the superpowers-orchestrator plugin. Do NOT use the Skill
       tool. Your only job is the task described below."
+    - Waiting on a subagent: dispatch every subagent so that the dispatch
+      call itself returns the subagent's final message — never in a
+      background or asynchronous mode. NEVER end your turn while a
+      subagent you dispatched is still outstanding: its completion notice
+      is delivered to the main session, not to you, so a turn ended
+      "waiting for X" stalls the whole run until a human intervenes. If a
+      dispatch call returned only a launch acknowledgement, do not wait
+      for a notice: poll for the file that subagent was told to write, on
+      a bounded loop (check every few seconds, give up after a fixed
+      limit), and reconstruct its result from that file. If the file never
+      appears, treat the subagent as failed: retry that dispatch once,
+      then return BLOCKED naming it.
+    - A `SendMessage` result of `success` proves neither that the message
+      was delivered nor that the recipient exists. Never take it as
+      confirmation of anything; confirm through the file the subagent
+      writes.
 
     ## Procedure
 
@@ -110,6 +127,9 @@ Agent tool (general-purpose):
 ```
 
 **Placeholders:**
+- `name` — fixed, not a placeholder except `[BATCH_NUMBER]`: the dispatch name that makes the
+  controller's own subagent calls block (Controller Dispatch Rules in
+  `SKILL.md`, "Blocking dispatch")
 - `[BATCH_NUMBER]` — REQUIRED: 1-based batch index (display only)
 - `[TASK_LIST]` — REQUIRED: comma-separated task numbers, e.g. `4, 5, 6`
 - `[TASK_RANGE]` — REQUIRED: `<first>..<last>` of TASK_LIST

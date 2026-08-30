@@ -36,6 +36,18 @@ this platform lacks` — and stop.
   session model with a **sonnet floor** (a haiku-tier or unrecognized
   session model dispatches on `sonnet`). Nested workers inside a batch
   follow SDD's Model Selection table, chosen by the batch controller.
+- **Blocking dispatch:** pass the `name` given in the template's header
+  (`name: "orch-…"`). A named controller's own subagent calls block and
+  return each child's final message inline; an unnamed controller's
+  return at once, and the child's completion notice is delivered to the
+  main session, not to the controller — which then ends its turn
+  "waiting" and stalls the run (claude-code #75043; measured 2026-08-30).
+  The property is what matters, not the parameter: on a platform whose
+  dispatch tool has no `name` (Copilot CLI: `task`/`agent`), the
+  controller obtains it from the "Waiting on a subagent" rule in its
+  prompt — foreground dispatch, never a background mode. Controllers
+  cannot name their own children (the roster is flat); nested workers
+  stay unnamed.
 - Build the prompt ONLY from the filled template — never pass conversation
   history, prior phases' returns, or your own reasoning.
 - Resolve procedure-source paths from this skill's base directory:

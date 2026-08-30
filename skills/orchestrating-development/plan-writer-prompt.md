@@ -5,6 +5,7 @@ the implementation plan from the approved spec, autonomously.
 
 ```
 Agent tool (general-purpose):
+  name: "orch-plan-writer"
   description: "orchestration phase 1: plan writer"
   model: session model, sonnet floor
   prompt: |
@@ -16,6 +17,22 @@ Agent tool (general-purpose):
     - Do NOT invoke any skills from any plugin. Do NOT use the Skill tool.
     - Do NOT write `state.md`. Do NOT ask the user anything.
     - Your ONLY file writes are the plan file named below.
+    - Waiting on a subagent: dispatch every subagent so that the dispatch
+      call itself returns the subagent's final message — never in a
+      background or asynchronous mode. NEVER end your turn while a
+      subagent you dispatched is still outstanding: its completion notice
+      is delivered to the main session, not to you, so a turn ended
+      "waiting for X" stalls the whole run until a human intervenes. If a
+      dispatch call returned only a launch acknowledgement, do not wait
+      for a notice: poll for the file that subagent was told to write, on
+      a bounded loop (check every few seconds, give up after a fixed
+      limit), and reconstruct its result from that file. If the file never
+      appears, treat the subagent as failed: retry that dispatch once,
+      then return BLOCKED naming it.
+    - A `SendMessage` result of `success` proves neither that the message
+      was delivered nor that the recipient exists. Never take it as
+      confirmation of anything; confirm through the file the subagent
+      writes.
 
     ## Procedure
 
@@ -55,6 +72,9 @@ Agent tool (general-purpose):
 ```
 
 **Placeholders:**
+- `name` — fixed, not a placeholder: the dispatch name that makes the
+  controller's own subagent calls block (Controller Dispatch Rules in
+  `SKILL.md`, "Blocking dispatch")
 - `[WRITING_PLANS_SKILL_PATH]` — REQUIRED: absolute path of
   `../writing-plans/SKILL.md` resolved from this skill's base directory
 - `[SPEC_PATH]` — REQUIRED: absolute path of the approved spec
