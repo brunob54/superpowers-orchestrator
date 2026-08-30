@@ -11,7 +11,7 @@
 
 # Superpowers Orchestrator
 
-**Superpowers** is a plugin for coding agents (Claude Code, Cursor, Codex, OpenCode) that adds a disciplined development workflow: a design specification first, then a task plan, then test-driven implementation with staged code reviews. The workflow is implemented as *skills* (instruction files the agent follows) and *hooks* (scripts that run automatically at session events).
+**Superpowers** is a plugin for coding agents (Claude Code, Cursor, Codex, OpenCode, GitHub Copilot CLI) that adds a disciplined development workflow: a design specification first, then a task plan, then test-driven implementation with staged code reviews. The workflow is implemented as *skills* (instruction files the agent follows) and *hooks* (scripts that run automatically at session events).
 
 This repository is a fork of [obra/superpowers](https://github.com/obra/superpowers) via [REPOZY/superpowers-optimized](https://github.com/REPOZY/superpowers-optimized). Its own contribution is **orchestration**: the same workflow can run autonomously from an approved specification to a merge-ready branch, with independent review rounds between stages — see [What this repo adds](#what-this-repo-adds).
 
@@ -495,6 +495,44 @@ Fetch and follow the update instructions from https://raw.githubusercontent.com/
 
 Or manually: `git pull` in your local clone of the repository.
 
+---
+
+### GitHub Copilot CLI
+
+Copilot CLI reads the same `.claude-plugin/marketplace.json` and
+`plugin.json` as Claude Code, so the install flow is the same two commands.
+Use a recent Copilot CLI (`npm install -g @github/copilot@latest`); the
+`/plugin` command exists since 0.0.392 (January 2026).
+
+**Install** — inside a Copilot CLI session:
+```
+/plugin marketplace add brunob54/superpowers-orchestrator
+/plugin install superpowers-orchestrator@superpowers-orchestrator
+```
+
+**Update** — refresh the marketplace catalog first, then the plugin:
+```
+/plugin marketplace update superpowers-orchestrator
+/plugin update superpowers-orchestrator
+```
+
+**Uninstall** — one command removes the plugin and the marketplace entry:
+```
+/plugin marketplace remove superpowers-orchestrator --force
+```
+Without `--force` the command is refused while a plugin from that
+marketplace is still installed (`--force` uninstalls those plugins too).
+The two-step form is `/plugin uninstall superpowers-orchestrator` followed
+by `/plugin marketplace remove superpowers-orchestrator`.
+
+The same subcommands work from the shell as `copilot plugin ...`
+(for example `copilot plugin update superpowers-orchestrator`). The
+installed copy lives under
+`~/.copilot/installed-plugins/superpowers-orchestrator/superpowers-orchestrator/`;
+the skills in `skills/` are discovered automatically. Copilot CLI supports
+subagents that dispatch subagents (multi-level), which the orchestration
+skills need. The hooks in `hooks/hooks.json` use Claude Code's event names
+and have not been verified on Copilot CLI.
 
 ### Available Update Notification
 
