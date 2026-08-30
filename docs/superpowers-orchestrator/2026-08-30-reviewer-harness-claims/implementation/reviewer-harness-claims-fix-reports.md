@@ -897,3 +897,79 @@ No test file was edited.
 | `bash tests/reviewer-templates/run-tests.sh` | `Results: 19 passed, 0 failed` |
 
 **Commit:** `8f13ea631da464bf058063da26bef4e8f3331454` — `review fixes (reviewer-harness-claims, round 2)`
+
+## Round 2 post-loop fix 5 — 2026-08-30 — verification 4 [I3]/[I4], verification 5 [I2], verification 6 [I1]
+
+**Edits**
+
+- `skills/multi-doc-review/reviewer-prompt.md` (`### Harness claims`, line 42
+  onward) and `skills/multi-code-review/reviewer-prompt.md` (`### Harness
+  claims`, line 64 onward), same edit in both, first paragraph of the
+  sub-section only:
+  - verification 4 [I3] = verification 5 [I2]: the model-probe example is
+    reworded — a random string is placed only in the dispatch's
+    `description`; the prompt given to the probe subagent never contains it
+    and asks the subagent to report every string in its context that looks
+    like a dispatch label or an unexplained token, or to report that it sees
+    none; the token reported absent is the observation (two sentences).
+  - verification 4 [I4]: the tie-break "When unsure whether a premise is one,
+    ask: can its truth be read from the repository? If not, it is a harness
+    property." is replaced by the definition: a harness property is a claim
+    about the agent runtime that is running THIS review (the tool that
+    dispatched you and its hooks, tools, context delivery and environment);
+    its truth can only be observed by running that runtime; a claim about a
+    library, a language runtime, the operating system, or a remote service is
+    NOT a harness property — an ordinary claim, checked against its source or
+    documentation and referenced like any other finding.
+  - verification 6 [I1], part 1: added "Do not tag a claim whose truth can
+    be read from the repository or from a source you can cite; the
+    `harness:` field is only for runtime properties."
+- `skills/multi-doc-review/SKILL.md`, Procedure step 3 intro (before
+  sub-item 1, strip rule ends line 175) and `skills/multi-code-review/SKILL.md`,
+  Triage "Harness claims" bullet intro (before item 1, strip rule ends line
+  429) — verification 6 [I1], part 2: after "field of `reviewer-prompt.md`"
+  added the strip rule "A `harness:` field on a premise that can be read
+  from the repository or from a citable source is dropped: triage the finding
+  as an ordinary finding under the existing reference requirement and append
+  `(harness field dropped: repository-readable)` to its disposition line.
+  For every other tagged finding:" (the closing colon of the intro moved to
+  the end of the new sentence).
+- `docs/superpowers-orchestrator/2026-08-30-reviewer-harness-claims/plans/reviewer-harness-claims.md`,
+  `### Task 3`, new block quote at line 333 ("Amendment 2026-08-30 (review
+  v4–v6 items, user decision)"), placed after the "Does NOT cover" paragraph
+  and before Step 1, as in Tasks 4 and 5; records rulings (1)–(3).
+- `docs/superpowers-orchestrator/2026-08-30-reviewer-harness-claims/specs/reviewer-harness-claims-design.md`,
+  `## Amendments`: three bullets appended — "Case 007 verification 4 [I3] +
+  verification 5 [I2]", "Case 007 verification 4 [I4]", "Case 007
+  verification 6 [I1]".
+
+**Test assertions changed**
+
+None. `tests/reviewer-templates/run-tests.sh` pins no string of the three
+edited sentences (its fixed strings are the heading, the two field spellings,
+the two reason strings, the owed line, the guard fragment, the pathspec and
+the marker), so every existing assertion is unchanged and still meaningful.
+No assertion was added: the suite asserts the fixed contract list of the
+spec's "Testing strategy" (items 1–6), not each rule sentence, so the new
+sentences are covered by the drift check (item 5) only. The script is not in
+the commit.
+
+**Drift check**
+
+```
+awk '$0=="    ### Harness claims"{f=1} f&&/^    ## /{exit} f' skills/multi-doc-review/reviewer-prompt.md > doc-rule.txt
+awk '$0=="    ### Harness claims"{f=1} f&&/^    ## /{exit} f' skills/multi-code-review/reviewer-prompt.md > code-rule.txt
+diff doc-rule.txt code-rule.txt && echo IDENTICAL
+```
+Result: 37 lines each, `IDENTICAL` (no diff output).
+
+**Tests**
+
+| Command | Summary line |
+| --- | --- |
+| `bash tests/codex/run-unit-tests.sh` | `Results: 10 suites passed, 0 suites failed` |
+| `bash tests/smart-compress/run-tests.sh` | `Results: 87 passed` / `0 failed` |
+| `bash tests/sdd-scripts/run-tests.sh` | `Results: 193 passed, 0 failed` |
+| `bash tests/reviewer-templates/run-tests.sh` | `Results: 19 passed, 0 failed` |
+
+**Commit:** `2dabcc911456beef8ed4ed2a0e42a9f5aad09187` — `review fixes (reviewer-harness-claims, round 2)`
