@@ -363,7 +363,7 @@ git commit -m "feat(writing-plans): add Contract field to the Task Template" --t
 
 Binding in this task: the fragment "reference implementations" inside the Plan Header fenced template. The note's other sentences are reference wording, but must keep the R3 properties: reference-default for fenced/quoted task-step bodies, ordinary fix while the contract holds, `**Exact content:**` as the only byte-for-byte binding, and `**Global Constraints:**` binding as stated.
 
-- [ ] **Step 1: Add the failing block-scoped check**
+- [x] **Step 1: Add the failing block-scoped check**
 
 In `tests/writing-plans/run-tests.sh`, add to the variable definitions (after `FRAG_SELF_PIN=...`):
 
@@ -379,12 +379,12 @@ assert_in_block "Plan Header template carries '$FRAG_REF_IMPL'" \
   "$FRAG_REF_IMPL" '## Plan Header' '```' fragment
 ```
 
-- [ ] **Step 2: Run the suite to verify the new check fails**
+- [x] **Step 2: Run the suite to verify the new check fails**
 
 Run: `bash tests/writing-plans/run-tests.sh`
 Expected: FAIL — exit code 1, `Results: 5 passed, 1 failed`. ("reference implementations" occurs in Task 1's section, but not inside the Plan Header fenced block — again the block scoping is what the check tests.)
 
-- [ ] **Step 3: Add the note to the Plan Header template**
+- [x] **Step 3: Add the note to the Plan Header template**
 
 In `skills/writing-plans/SKILL.md`, inside the Plan Header fenced block (the ` ```markdown ` block under `## Plan Header`), extend the existing `> **For agentic workers:** …` block quote with a second paragraph — add these two lines directly after the `> **For agentic workers:** …` line (same block-quote mechanism, so the rule travels inside every generated plan to reviewers who never read this skill):
 
@@ -393,12 +393,12 @@ In `skills/writing-plans/SKILL.md`, inside the Plan Header fenced block (the ` `
 > **Body authority:** Fenced code blocks and block-quoted wording in task steps are reference implementations for the task's stated `**Contract:**`. A review finding against such a body is an ordinary fix while the contract holds; only blocks marked `**Exact content:**` bind byte-for-byte. The `**Global Constraints:**` block binds as stated.
 ```
 
-- [ ] **Step 4: Run the suite to verify it passes**
+- [x] **Step 4: Run the suite to verify it passes**
 
 Run: `bash tests/writing-plans/run-tests.sh`
 Expected: PASS — exit code 0, `Results: 6 passed, 0 failed`.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add tests/writing-plans/run-tests.sh skills/writing-plans/SKILL.md
