@@ -46,6 +46,10 @@ assert_file_contains() { # desc file needle
   if grep -qF -- "$3" "$2"; then ok "$1"; else bad "$1 (missing: $3)"; fi
 }
 
+assert_file_contains_i() { # desc file needle (case-insensitive)
+  if grep -qiF -- "$3" "$2"; then ok "$1"; else bad "$1 (missing: $3)"; fi
+}
+
 # Line number of the first line containing the fixed string $2 in file $1;
 # empty when absent.
 first_line_of() { grep -nF -- "$2" "$1" | head -n 1 | cut -d: -f1; }
@@ -125,6 +129,23 @@ bold "6. Unchanged contracts"
 assert_file_contains "code-review template: blinding pathspec line" "$CODE_PROMPT" "$PATHSPEC"
 assert_file_contains "code-review template: report marker instruction" "$CODE_PROMPT" "$MARKER"
 assert_file_contains "doc-review template: report marker instruction" "$DOC_PROMPT" "$MARKER"
+
+bold "7. Ambiguity & testability plan-cell contract targets"
+AMB_PLAN_CELL="$WORK/ambiguity-plan-cell.txt"
+awk '
+  $0 == "**Ambiguity & testability**" { inlens = 1; next }
+  inlens && /^\*\*/ { exit }
+  inlens && /^- plan:/ { incell = 1; print; next }
+  incell && /^- / { incell = 0 }
+  incell { print }
+' "$DOC_SKILL" > "$AMB_PLAN_CELL"
+if [ -s "$AMB_PLAN_CELL" ]; then
+  ok "multi-doc-review SKILL.md: Ambiguity plan-cell extract is non-empty"
+else
+  bad "multi-doc-review SKILL.md: Ambiguity plan-cell extract is empty"
+fi
+assert_file_contains_i "Ambiguity plan cell: fragment 'no stated contract'" "$AMB_PLAN_CELL" 'no stated contract'
+assert_file_contains_i "Ambiguity plan cell: fragment 'self-pin'" "$AMB_PLAN_CELL" 'self-pin'
 
 echo
 bold "Results: $PASS passed, $FAIL failed"
