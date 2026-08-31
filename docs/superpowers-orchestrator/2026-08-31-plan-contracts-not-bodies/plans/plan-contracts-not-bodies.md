@@ -51,7 +51,7 @@ Tasks 1–6 run strictly in order. Tasks 1–4 are sequential (same two files). 
 
 Binding in this task: the heading `## Contracts and Literal Bodies`, the label `**Exact content:**`, the fragments "ordinary fix" and "together as one ordinary fix". The rest of the section text below is reference wording — rewordable while the spec R1 properties hold.
 
-- [ ] **Step 1: Write the failing test suite**
+- [x] **Step 1: Write the failing test suite**
 
 Create `tests/writing-plans/run-tests.sh` with this content:
 
@@ -160,12 +160,12 @@ exit 0
 
 *(The helpers `assert_in_block` and `first_line_of` are unused until Tasks 2–3 — they are defined here once so later tasks only append check sections. `EXACT_LABEL` deliberately does not yet occur in the skill file.)*
 
-- [ ] **Step 2: Run the suite to verify it fails**
+- [x] **Step 2: Run the suite to verify it fails**
 
 Run: `bash tests/writing-plans/run-tests.sh`
 Expected: FAIL — exit code 1, `Results: 0 passed, 4 failed` (heading, label, and both fragments are all absent from the current skill file; the current file contains none of "ordinary fix", "Exact content", or the section heading).
 
-- [ ] **Step 3: Add the section and the "No Placeholders" sentence**
+- [x] **Step 3: Add the section and the "No Placeholders" sentence**
 
 In `skills/writing-plans/SKILL.md`, insert the following section, followed by one blank line, immediately **before** the line `## Task Template` (i.e. between "Task Rules" and "Task Template", so the template's new field in Task 2 has its definition above it):
 
@@ -282,12 +282,12 @@ reference implementation.
 
 *(Note for Step 3: the section text above deliberately avoids the word "falsifiable" — Task 4's failing-test step depends on that word being absent until Task 4 adds it. It says "falsify", which the case-insensitive fragment `falsifiable` does not match.)*
 
-- [ ] **Step 4: Run the suite to verify it passes**
+- [x] **Step 4: Run the suite to verify it passes**
 
 Run: `bash tests/writing-plans/run-tests.sh`
 Expected: PASS — exit code 0, `Results: 4 passed, 0 failed`.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add tests/writing-plans/run-tests.sh skills/writing-plans/SKILL.md
