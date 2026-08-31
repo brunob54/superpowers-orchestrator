@@ -7,3 +7,8 @@ plan: docs/superpowers-orchestrator/2026-08-31-plan-contracts-not-bodies/plans/p
 note: controller return carried narration before the marker line; fields parseable, accepted (worklist row 9 shape, recorded as evidence there)
 
 ## Phase 2 — Plan review — rounds 2 — cap — unresolved 0
+
+## Phase 3 — Batch 1 (tasks 1–3) — COMPLETE — commits c38f65a..6ba5c5c
+- Task 1: complete — Contracts and Literal Bodies section + wording suite (c38f65a..05b6360)
+- Task 2: complete — Contract field in Task Template (0aeca6b..c03a3e1)
+- Task 3: complete — Plan Header authority note (fe9cad1..2992681)
