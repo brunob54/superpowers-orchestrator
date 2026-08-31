@@ -17,3 +17,9 @@ note: controller return carried narration before the marker line; fields parseab
 - Task 4: complete — Self-Review check 5 (bcd2984..9d83cbc)
 - Task 5: complete — lens targets + reviewer-templates check (3f274ac..31ceac1)
 - Task 6: complete — CLAUDE.md line on-disk only + final verification (892b21b..2d5bc29)
+
+## STOPPED — 2026-08-31 — phase 4 — code review left 2 user-decision items (rounds 2, cap, fixes 0)
+Detail: docs/superpowers-orchestrator/2026-08-31-plan-contracts-not-bodies/implementation/plan-contracts-not-bodies-review-log.md
+Open: [I1] user-decision — lens gate bound to rewordable free-text phrase "reference implementations"; silent off-switch
+Open: [I2] user-decision — Global Constraints block lets self-pinned literals bypass rule 5 unguarded
+Resume: Resume orchestration for docs/superpowers-orchestrator/2026-08-31-plan-contracts-not-bodies/plans/plan-contracts-not-bodies.md
