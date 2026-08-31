@@ -211,6 +211,24 @@ it shows one way, it does not bind.
 > as not procedural — ambiguity produces a contract entry, never a
 > silent exemption."
 
+> **Amended 2026-08-31 (code review [I3], round 3):** The quote above is
+> superseded. Rule 1's boundary sentence was restated in conjunctive form
+> so it is identical to the same test already committed to Self-Review
+> check 5 bucket (c) and to `skills/multi-doc-review/SKILL.md`'s plan
+> lens cell. The actual wording committed to `skills/writing-plans/SKILL.md`
+> rule 1 now reads: "A block is procedural when it creates, modifies, or
+> deletes no file in the working tree, running only pipeline commands —
+> the two canonical forms are the Step 5 commit block and a verification
+> `Run:` line; the Step 5 commit block qualifies because it writes the
+> git index and git objects but no working-tree file. This is the one
+> test for "procedural" used everywhere in the plan you are writing and
+> in review. When it is unclear whether a block meets this test, treat
+> the block as not procedural — ambiguity produces a contract entry,
+> never a silent exemption." Reason: read literally, the earlier
+> "exactly when" phrasing stated the test over the file-writing clause
+> alone, which would make any inert quoted-wording body procedural —
+> inverting the intent for the wording-artifact contract shape.
+
 2. **Pin an interface only when something outside the plan depends on
    it.** An interface (signature, flag set, file format) is pinned in the
    contract only when something *outside the plan* already depends on it.
@@ -411,6 +429,15 @@ In `skills/writing-plans/SKILL.md`, inside the Plan Header fenced block (the ` `
 >
 > **Body authority:** Fenced code blocks and block-quoted wording in task steps are reference implementations for the task's stated `**Contract:**`. A review finding against such a body is an ordinary fix while the contract holds; only blocks marked `**Exact content:**` bind byte-for-byte. The `**Global Constraints:**` block binds as stated.
 ```
+
+> **Amended 2026-08-31 (code review [I1], round 3):** The quote above is
+> superseded. Design R3 bullet 2 requires the note to state both that the
+> `**Global Constraints:**` block binds as stated AND that the note
+> itself binds as stated alongside it; the wording above stated only the
+> first half. The actual wording committed to `skills/writing-plans/SKILL.md`'s
+> Plan Header note now ends: "The `**Global Constraints:**` block binds
+> as stated, and this note binds as stated alongside it." The first half
+> of the note's wording is unchanged.
 
 - [x] **Step 4: Run the suite to verify it passes**
 

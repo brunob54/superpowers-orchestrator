@@ -396,3 +396,15 @@ authority (Non-goals).
   demands falsifiability. The verb set "creates, modifies, or deletes"
   also settles delete-only tasks, resolving carried Minor [M3] (the old
   verb pair "introduces or modifies" left them undecidable).
+- **2026-08-31 (code review [M3], round 3):** R1.4's placement condition
+  widens from a LINE binding — "the line immediately above the fenced
+  block or block quote it pins reads `**Exact content:** <reason>`" — to
+  a PARAGRAPH binding: the committed rule (`skills/writing-plans/SKILL.md`
+  rule 4) requires only that the paragraph immediately preceding the
+  fenced block or block quote it pins begins with
+  `**Exact content:** <reason>`. Reason: under the line-only reading, a
+  reason that wraps past a single line, or a blank line separating the
+  marker paragraph from the fence, would fail the placement test even
+  though the marker still unambiguously pins the block that follows it;
+  the paragraph binding keeps the marker's position meaningful without
+  forcing every reason onto one line.

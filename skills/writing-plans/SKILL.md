@@ -83,7 +83,7 @@ together with its spec.
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers-orchestrator:subagent-driven-development (recommended) or superpowers-orchestrator:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 >
-> **Body authority:** Fenced code blocks and block-quoted wording in task steps are reference implementations for the task's stated `**Contract:**`. A review finding against such a body is an ordinary fix while the contract holds; only blocks marked `**Exact content:**` bind byte-for-byte. The `**Global Constraints:**` block binds as stated.
+> **Body authority:** Fenced code blocks and block-quoted wording in task steps are reference implementations for the task's stated `**Contract:**`. A review finding against such a body is an ordinary fix while the contract holds; only blocks marked `**Exact content:**` bind byte-for-byte. The `**Global Constraints:**` block binds as stated, and this note binds as stated alongside it.
 
 **Goal:** <single sentence>
 **Spec:** `docs/superpowers-orchestrator/<YYYY-MM-DD>-<slug>/specs/<slug>-design.md` *(multi-doc-review reads this line to locate the spec on direct plan reviews; an old-layout path here would produce a plan whose spec is outside the layout)*
@@ -138,15 +138,15 @@ it shows one way, it does not bind.
    — need no contract entry; rule 3's default covers them. The test is
    intrinsic to the block: it asks what the block itself does to the
    working tree, never what any list elsewhere in the task records. A
-   block is procedural exactly when it creates, modifies, or deletes
-   no file in the working tree. This is the one test for "procedural"
-   used everywhere in this plan and in review: a procedural block only
-   runs pipeline commands — the two canonical forms are the Step 5
-   commit block and a verification `Run:` line; the Step 5 commit
-   block qualifies because it writes the git index and git objects but
-   no working-tree file. When it is unclear whether a block writes a
-   working-tree file, treat the block as not procedural — ambiguity
-   produces a contract entry, never a silent exemption. Two contract
+   block is procedural when it creates, modifies, or deletes no file
+   in the working tree, running only pipeline commands — the two
+   canonical forms are the Step 5 commit block and a verification
+   `Run:` line; the Step 5 commit block qualifies because it writes
+   the git index and git objects but no working-tree file. This is
+   the one test for "procedural" used everywhere in the plan you are
+   writing and in review. When it is unclear whether a block meets
+   this test, treat the block as not procedural — ambiguity produces a
+   contract entry, never a silent exemption. Two contract
    shapes exist — code artifact and wording artifact — shown in the
    examples below.
 
