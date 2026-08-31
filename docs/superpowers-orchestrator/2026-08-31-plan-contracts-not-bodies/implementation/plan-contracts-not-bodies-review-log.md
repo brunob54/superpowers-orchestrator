@@ -70,3 +70,27 @@ so that one stop cannot become a chain.
 - [M4] carried — the inconsistent-regime guard states no discriminator between a task's `**Contract:**` field and the same label quoted inside a task step body
 
 _Completed — 2026-08-31 — cap reached — HEAD ad588950398812abeb0666f6d8908547c621fcd9_
+
+## Post-loop addendum 2 — 2026-08-31 — invoker decisions on the open items
+
+**Standing rule, restated for this and every later invocation of this loop:** a
+verification re-review finding against ANY plan-mandated wording is this loop's
+to decide — fix it, or reject it with a named reason. A Critical is never
+rejected under this rule. Such findings are never journaled as `user-decision`,
+so that one stop cannot become a chain.
+
+The fix for both open items was produced and committed before this addendum was
+written; no fix subagent was dispatched for them, and the verification re-review
+is skipped because the effective HEAD moved past this entry's completion marker
+(the new invocation below reviews the fix). The completion marker above is left
+unchanged.
+
+### Dispositions
+- [I2] decided (user): fix it — scope the `**Exact content:**` label assertion in `tests/writing-plans/run-tests.sh` with the `assert_in_range` helper so it fails if rule 4 of the "Contracts and Literal Bodies" section is deleted
+- [I2] fixed — the label assertion is now `assert_in_range` scoped to rule 4 instead of a whole-file grep → 808d813
+- [I3] decided (user): fix it — make rule 1's procedural-block boundary test intrinsic to the block rather than relational to the `**Files:**` list; delete the orphaned completeness clause; restate the same test identically at all three sites; amend spec R1 and the plan
+- [I3] fixed — a block is procedural exactly when it creates, modifies, or deletes no working-tree file, running only pipeline commands, with a fail-closed tie-break (unclear → not procedural); the `**Files:**`-list completeness clause is deleted; the same test is stated identically in rule 1, Self-Review check 5 bucket (c) and the multi-doc-review plan cell; spec R1 and the plan amended → 808d813
+- [M3] resolved — the delete-only-task ambiguity is closed by the verb set "creates, modifies, or deletes" of the [I3] fix; no longer carried → 808d813
+- [M1] resolved — verified at HEAD: rule 4 binds on "the paragraph immediately preceding" the fenced block and states that what matters is that the marker starts the paragraph, not that it sits on the single line right above the fence; the blank-line case is covered; no longer carried
+
+_Invocation 2 — 2026-08-31 — N=2 M=1 — BASE..HEAD 6f589ed..808d813 — branch feature/plan-contracts-not-bodies — gate: orchestration_
