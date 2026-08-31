@@ -117,6 +117,106 @@ This structure informs the task decomposition. Each task should produce self-con
 - Use TDD ordering when code behavior changes.
 - For ambiguous features, ask clarifying questions before finalizing the plan rather than guessing.
 
+## Contracts and Literal Bodies
+
+A **contract** is the set of properties an artifact must guarantee, stated
+so that a check can falsify them. A **reference implementation** is a
+concrete body (a code block or quoted text) that satisfies the contract:
+it shows one way, it does not bind.
+
+1. **State a contract for every governed artifact.** For every helper,
+   function, command, or piece of wording a task introduces or modifies,
+   state the contract in the task's `**Contract:**` field: the invariants
+   that must hold and the verification (a runnable command or check) that
+   would falsify them; for code artifacts also inputs and outputs. A task
+   that creates or modifies several artifacts holds one entry per artifact
+   in the same field (a list) — or is a candidate for splitting.
+   Procedural step blocks that operate the pipeline rather than build the
+   feature — the Step 5 commit command, `Run:` verification lines — need
+   no contract entry; rule 3's default covers them. The boundary is a
+   test, not a feeling: a block is procedural exactly when it creates or
+   modifies no file named in the task's `**Files:**` list. Two contract
+   shapes exist — code artifact and wording artifact — shown in the
+   examples below.
+
+2. **Pin an interface only when something outside the plan depends on
+   it.** An interface (signature, flag set, file format) is pinned in the
+   contract only when something *outside the plan* already depends on it.
+   Stating inputs and outputs in the `**Contract:**` field does not pin
+   them: a concrete signature written there is descriptive — part of the
+   reference implementation — unless the external-dependency condition
+   holds, and a fix may amend the signature together with the contract's
+   inputs/outputs wording as one ordinary fix.
+
+3. **Bodies are reference implementations by default.** Code blocks and
+   quoted wording in task steps are reference implementations. The
+   implementer follows them as written; a later review finding against
+   such a body is an **ordinary fix** so long as the stated contract still
+   holds. Only a change that breaks or amends the contract itself is a
+   plan conflict.
+
+4. **Mark exact content explicitly.** A block is binding byte-for-byte
+   only when the line immediately above the fenced block or block quote it
+   pins reads `**Exact content:** <reason>`. The reason must name the
+   *external* pin: a pre-existing test asserting the string, another file
+   that must already match byte-for-byte, or user-approved copy — and a
+   user-approval reason must cite where the approval is recorded (a spec
+   section, a review-log disposition, or a plan amendment quote); an
+   uncited approval claim is not a valid reason. A marker with no reason
+   is a plan failure of the same class as the "No Placeholders" patterns.
+   Never place the marker inline on the same line as the content it pins.
+
+5. **A self-pin never justifies the marker.** A pin the plan itself
+   introduces (the plan also writes the test that asserts the string, or
+   also writes the matching file) does not justify `**Exact content:**`:
+   body and pin are amendable **together as one ordinary fix** — the fix
+   changes the text and its pinning test in the same commit. The same
+   applies to a *pre-existing* pin whose assertion the same plan edits: a
+   pin the plan controls is a self-pin, whatever its age. Only a pin the
+   plan leaves untouched binds. Circular reasons — a reason citing an
+   artifact the same plan creates or modifies — are a plan failure.
+
+6. **Boundaries.**
+   (a) This section defines the *authority* of bodies; it does not license
+   vague steps — the "No Placeholders" rules still require actual code.
+   (b) The default never applies to the plan header's
+   `**Global Constraints:**` block, which binds as stated; a conflict with
+   a global constraint is genuine and stops the run.
+   (c) Other non-task plan content (header prose such as
+   `**Architecture:**` and `**Assumptions:**`, the File Structure section)
+   follows the same reference default: findings against it are ordinary
+   fixes unless they contradict a stated contract or a global constraint.
+   (d) A finding against a body in a task whose field reads
+   `**Contract:** none — <reason>` is an ordinary fix under rule 3's
+   default — there is no contract to break.
+   (e) The implementer follows the reference body; the contract governs
+   later findings.
+
+**Example — code artifact contract:**
+
+> **Contract:** `assert_round_reviewers <log> <round> <m> <required|optional>`
+> - Inputs: review-log path, round number, expected reviewer count M, an
+>   expectation mode supplied by the caller.
+> - Output: exit 0 only when the round entry demonstrates M reviewers per
+>   lens and every consolidated finding maps to reviewer sources.
+> - Invariants: mode `required` makes a `Sources mapped: 0/0` entry fail;
+>   mode `optional` keeps the documented skip; a missing or misspelled
+>   mode fails.
+> - Verification: synthetic-fixture checks covering both modes × both
+>   outcomes, bad mode, missing round entry.
+> - Interface not externally pinned — the signature above is descriptive
+>   and may change in a fix (rule 2).
+
+**Example — wording artifact contract:**
+
+> **Contract:** model-probe example in `reviewer-prompt.md`
+> - Must convey: a reviewer asserting a harness property runs a probe; the
+>   probe prompt must not name the canary token.
+> - Invariant: no example places the token inside the probe prompt text.
+> - Verification: `bash tests/reviewer-templates/run-tests.sh` asserts the
+>   section exists and the example probe omits the token.
+> - Sentence wording is free; the properties above bind.
+
 ## Task Template
 
 ````markdown
@@ -181,6 +281,11 @@ Every step must contain the actual content an engineer needs. These are **plan f
 - "Similar to Task N" (repeat the code — the engineer may be reading tasks out of order)
 - Steps that describe what to do without showing how (code blocks required for code steps)
 - References to types, functions, or methods not defined in any task
+
+These patterns are about *content completeness*; the "Contracts and
+Literal Bodies" section defines the *authority* of that content. A body
+must still be actual code or actual wording even when it binds only as a
+reference implementation.
 
 ## Quality Bar
 
