@@ -12,3 +12,8 @@ note: controller return carried narration before the marker line; fields parseab
 - Task 1: complete — Contracts and Literal Bodies section + wording suite (c38f65a..05b6360)
 - Task 2: complete — Contract field in Task Template (0aeca6b..c03a3e1)
 - Task 3: complete — Plan Header authority note (fe9cad1..2992681)
+
+## Phase 3 — Batch 2 (tasks 4–6) — COMPLETE — commits bcd2984..2d5bc29
+- Task 4: complete — Self-Review check 5 (bcd2984..9d83cbc)
+- Task 5: complete — lens targets + reviewer-templates check (3f274ac..31ceac1)
+- Task 6: complete — CLAUDE.md line on-disk only + final verification (892b21b..2d5bc29)
