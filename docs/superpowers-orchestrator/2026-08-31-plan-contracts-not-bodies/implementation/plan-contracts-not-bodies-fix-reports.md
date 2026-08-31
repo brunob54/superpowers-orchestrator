@@ -978,3 +978,170 @@ Results: 10 suites passed, 0 suites failed
 All unit tests passed.
 ```
 EXIT: 0
+
+## Round 4 fixes
+
+- **[I1]** — `skills/writing-plans/SKILL.md`, Plan Header template
+  `**Body authority:**` block quote (line 86). Added the rule 6(b)
+  self-pin exception to the note's `**Global Constraints:**` sentence, so
+  the note itself now states the same rule as rule 6(b): a
+  `**Global Constraints:**` entry failing the two-part self-pin test is an
+  ordinary fix, not a plan conflict. The note's opening label, first two
+  sentences, and the round-3 self-binding clause ("this note binds as
+  stated alongside it") are unchanged; only the exception clause was
+  inserted into the Global-Constraints sentence.
+  Also amended `docs/superpowers-orchestrator/2026-08-31-plan-contracts-not-bodies/specs/plan-contracts-not-bodies-design.md`
+  R3 bullet 2 to match, and added a new `## Amendments` entry naming the
+  reason (a review controller triages from the plan, not from
+  `writing-plans`, so the note's earlier unconditional wording made rule
+  6(b)'s resolution path unreachable at triage time). Added a new
+  `> **Amended 2026-08-31 (code review [I1], round 4):**` block quote in
+  `docs/superpowers-orchestrator/2026-08-31-plan-contracts-not-bodies/plans/plan-contracts-not-bodies.md`
+  after the existing round-3 amendment, recording the new committed
+  wording without rewriting the earlier quote.
+
+- **[I2]** — `skills/multi-doc-review/SKILL.md`, plan lens cell's
+  inconsistent-regime guard (the "A plan that carries `**Contract:**`
+  fields…" sentence). Scoped the guard's `**Contract:**` predicate to the
+  field itself — a label starting a top-level line of a task's body, not
+  merely mentioned inside a fenced code block or a block quote — mirroring
+  the "not merely mentioned" qualifier the same cell already uses for the
+  `**Body authority:**` gate. The rest of the guard's wording is
+  unchanged. Also amended spec R5's guard paragraph to match, added a new
+  `## Amendments` entry, and added a new
+  `> **Amended 2026-08-31 (code review [I2], round 4):**` block quote in
+  the plan after the existing [I3]/[M3] amendment for this cell (the plan
+  had no prior verbatim quote of this guard's committed wording, so this
+  is the first one).
+
+- **[M5]** — Applied the identical fix at all three sites that restate
+  rule 1's procedural-block boundary test: `skills/writing-plans/SKILL.md`
+  rule 1 (line ~141), Self-Review check 5 bucket (c) (line 335), and
+  `skills/multi-doc-review/SKILL.md`'s plan lens cell (line ~333). The
+  command conjunct is now stated positively — a block must run at least
+  one command, and every command it runs must be a pipeline command —
+  instead of "running only pipeline commands", which was vacuously true
+  of a block that runs no command at all. The two canonical forms, the
+  Step 5 commit block's explanation, and the fail-closed tie-break are
+  unchanged at each site. Also amended spec R1's rule-1 property text and
+  added a new `## Amendments` entry, and added three new
+  `> **Amended 2026-08-31 (code review [M5], round 4):**` block quotes in
+  the plan (after the rule 1 quote, after the Self-Review bucket (c)
+  quote, and after the lens-cell quote), each recording the new committed
+  wording without rewriting the earlier quotes.
+
+- **[M1]** — `tests/writing-plans/run-tests.sh`, section-heading
+  assertion (was `assert_exact` using `grep -qF`, a substring match).
+  Replaced with a whole-line check reusing the already-computed
+  `$CONTRACTS_HEADING_LINE` (itself `first_line_of`, `grep -nxF`), so
+  deleting the `## Contracts and Literal Bodies` heading now fails the
+  suite even when a prose line still names the section. Removed the
+  now-unused `assert_exact()` helper (its only caller was this check).
+
+- **[M3]** — `tests/writing-plans/run-tests.sh`, `FRAG_NOT_PROCEDURAL`
+  constant: changed from `'not procedural'` to
+  `'treat the block as not procedural'`, a fragment only the fail-closed
+  reading of rule 1 can carry (an inversion of the tie-break with the
+  ambiguity clause deleted would not contain this phrase). Because rule 1
+  originally wrapped "not" and "procedural" across two lines, also
+  rewrapped that paragraph in `skills/writing-plans/SKILL.md` (no wording
+  change) so the pinned phrase sits on one line — `grep -F` matches
+  per-line, so a mid-phrase line break would have made the fragment
+  unmatchable regardless of content. Verified the fragment is present
+  verbatim in the committed rule 1 text after the [M5] edit.
+
+- **[M4]** — `tests/reviewer-templates/run-tests.sh`: added a `WP_SKILL`
+  path variable and a new check section 8 that extracts the body-authority
+  label from `skills/writing-plans/SKILL.md`'s Plan Header template (the
+  second `> **Label:**` block-quote paragraph, found by position rather
+  than by re-hardcoding the string) and the gate label
+  `skills/multi-doc-review/SKILL.md`'s plan cell switches on (from its
+  `` `> **Body authority:**` `` sentence), then compares them
+  byte-for-byte, case-sensitively — following the extract-both-and-compare
+  pattern already used in section 5. Verified by temporarily renaming the
+  label to `**Body Authority:**` in `skills/writing-plans/SKILL.md` only:
+  the new check failed with a mismatch message; reverted immediately
+  after.
+
+Files edited (only these):
+- `skills/writing-plans/SKILL.md`
+- `skills/multi-doc-review/SKILL.md`
+- `tests/writing-plans/run-tests.sh`
+- `tests/reviewer-templates/run-tests.sh`
+- `docs/superpowers-orchestrator/2026-08-31-plan-contracts-not-bodies/specs/plan-contracts-not-bodies-design.md`
+- `docs/superpowers-orchestrator/2026-08-31-plan-contracts-not-bodies/plans/plan-contracts-not-bodies.md`
+
+### Command: `bash tests/writing-plans/run-tests.sh`
+
+```
+1. Contracts and Literal Bodies section (R1)
+  PASS: section heading '## Contracts and Literal Bodies' (whole-line match, line 122)
+  PASS: exact-content label '**Exact content:**' (rule 4) (line 171, range 169..183)
+  PASS: procedural tie-break fragment 'treat the block as not procedural' (rule 1) (line 148, range 129..153)
+  PASS: authority-default fragment 'ordinary fix' (rule 3) (line 165, range 162..169)
+  PASS: self-pin fragment 'together as one ordinary fix' (rule 5) (line 186, range 183..193)
+2. Task Template Contract field (R2)
+  PASS: Task Template block carries '**Contract:**' (line 258, block 246..288)
+3. Plan Header authority note (R3)
+  PASS: Plan Header template carries 'reference implementations' (line 86, block 81..96)
+  PASS: Plan Header template carries '**Body authority:**' (line 86, block 81..96)
+4. Self-Review contract audit (R4)
+  PASS: self-review fragment 'falsifiable' (check 5) (line 335, range 335..337)
+
+Results: 9 passed, 0 failed
+```
+EXIT: 0
+
+### Command: `bash tests/reviewer-templates/run-tests.sh`
+
+```
+1. Harness claims rule is inside the prompt block
+  PASS: doc-review template: Harness claims rule inside the prompt block (line 42, block 25..133)
+  PASS: code-review template: Harness claims rule inside the prompt block (line 64, block 24..193)
+2. Finding-format field spellings
+  PASS: doc-review template: field spelling 'harness: tested —'
+  PASS: doc-review template: field spelling 'harness: untested —'
+  PASS: code-review template: field spelling 'harness: tested —'
+  PASS: code-review template: field spelling 'harness: untested —'
+3. Controller triage reason strings and completion-report line
+  PASS: multi-doc-review SKILL.md: reason string 'harness probe —'
+  PASS: multi-doc-review SKILL.md: reason string 'harness probe not runnable here'
+  PASS: multi-doc-review SKILL.md: completion-report line 'Harness probes owed:'
+  PASS: multi-code-review SKILL.md: reason string 'harness probe —'
+  PASS: multi-code-review SKILL.md: reason string 'harness probe not runnable here'
+  PASS: multi-code-review SKILL.md: completion-report line 'Harness probes owed:'
+4. user-decision guard
+  PASS: multi-code-review SKILL.md: guard fragment
+5. Rule text drift between the two templates
+  PASS: doc-review template: rule extract is non-empty
+  PASS: code-review template: rule extract is non-empty
+  PASS: rule text identical in both templates
+6. Unchanged contracts
+  PASS: code-review template: blinding pathspec line
+  PASS: code-review template: report marker instruction
+  PASS: doc-review template: report marker instruction
+7. Ambiguity & testability plan-cell contract targets
+  PASS: multi-doc-review SKILL.md: Ambiguity plan-cell extract is non-empty
+  PASS: Ambiguity plan cell: fragment 'no stated contract'
+  PASS: Ambiguity plan cell: fragment 'self-pin'
+  PASS: Ambiguity plan cell: gate label '**Body authority:**'
+8. Body-authority gate label consistency (writing-plans vs multi-doc-review)
+  PASS: gate label matches between writing-plans and multi-doc-review (**Body authority:**)
+
+Results: 24 passed, 0 failed
+```
+EXIT: 0
+
+### Command: `bash tests/codex/run-unit-tests.sh`
+
+```
+
+──────────────────────────────────────────────────
+protect-secrets: 43 passed, 0 failed
+
+==================================================
+ Results: 10 suites passed, 0 suites failed
+ All unit tests passed.
+==================================================
+```
+EXIT: 0
