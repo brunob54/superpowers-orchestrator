@@ -30,7 +30,7 @@ FRAG_ORDINARY_FIX='ordinary fix'
 FRAG_SELF_PIN='together as one ordinary fix'
 FRAG_REF_IMPL='reference implementations'
 FRAG_FALSIFIABLE='falsifiable'
-FRAG_NOT_PROCEDURAL='not procedural'
+FRAG_NOT_PROCEDURAL='treat the block as not procedural'
 
 PASS=0
 FAIL=0
@@ -42,11 +42,6 @@ bold()  { printf '\033[1m%s\033[0m\n' "$1"; }
 
 ok()  { green "  PASS: $1"; PASS=$((PASS+1)); }
 bad() { red "  FAIL: $1"; ERRORS+=("$1"); FAIL=$((FAIL+1)); }
-
-# Byte-pin match: exact, case-sensitive.
-assert_exact() { # desc needle
-  if grep -qF -- "$2" "$SKILL"; then ok "$1"; else bad "$1 (missing: $2)"; fi
-}
 
 # Line number of the first line whose entire content equals the fixed
 # string $1 (whole-line match); empty when absent. Callers pass full
@@ -130,7 +125,11 @@ SELF_REVIEW_5_LINE="$(line_starting_with_after '**5. Contract audit:**' "$CONTRA
 SELF_REVIEW_5_END_LINE="$(line_starting_with_after 'If you find issues, fix them inline.' "$SELF_REVIEW_5_LINE")"
 
 bold "1. Contracts and Literal Bodies section (R1)"
-assert_exact "section heading '$SECTION_HEADING'" "$SECTION_HEADING"
+if [ -n "$CONTRACTS_HEADING_LINE" ]; then
+  ok "section heading '$SECTION_HEADING' (whole-line match, line $CONTRACTS_HEADING_LINE)"
+else
+  bad "section heading '$SECTION_HEADING' (no whole line matches — a prose mention alone does not count)"
+fi
 assert_in_range "exact-content label '$EXACT_LABEL' (rule 4)" \
   "$EXACT_LABEL" "$RULE4_LINE" "$RULE5_LINE" exact
 assert_in_range "procedural tie-break fragment '$FRAG_NOT_PROCEDURAL' (rule 1)" \

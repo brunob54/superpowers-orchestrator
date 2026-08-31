@@ -16,6 +16,7 @@ DOC_PROMPT="$ROOT/skills/multi-doc-review/reviewer-prompt.md"
 CODE_PROMPT="$ROOT/skills/multi-code-review/reviewer-prompt.md"
 DOC_SKILL="$ROOT/skills/multi-doc-review/SKILL.md"
 CODE_SKILL="$ROOT/skills/multi-code-review/SKILL.md"
+WP_SKILL="$ROOT/skills/writing-plans/SKILL.md"
 
 # Wording contracts asserted below. Each is one fixed string.
 RULE_HEADING='    ### Harness claims'
@@ -147,6 +148,36 @@ fi
 assert_file_contains_i "Ambiguity plan cell: fragment 'no stated contract'" "$AMB_PLAN_CELL" 'no stated contract'
 assert_file_contains_i "Ambiguity plan cell: fragment 'self-pin'" "$AMB_PLAN_CELL" 'self-pin'
 assert_file_contains "Ambiguity plan cell: gate label '**Body authority:**'" "$AMB_PLAN_CELL" '**Body authority:**'
+
+bold "8. Body-authority gate label consistency (writing-plans vs multi-doc-review)"
+# Extract the label the Plan Header template's second `> **Label:**`
+# block-quote paragraph opens with (today "Body authority") directly from
+# writing-plans/SKILL.md, rather than hardcoding it a second time here — a
+# rename in one file without the other then fails this check.
+WP_BODY_AUTHORITY_LABEL="$(awk '
+  /^## Plan Header/ { inblk = 1 }
+  inblk && /^> \*\*[A-Za-z ]+:\*\*/ {
+    n++
+    if (n == 2) {
+      match($0, /\*\*[A-Za-z ]+:\*\*/)
+      print substr($0, RSTART, RLENGTH)
+      exit
+    }
+  }
+  inblk && /^---$/ { exit }
+' "$WP_SKILL")"
+# Extract the label multi-doc-review's plan-cell gate switches on, from its
+# own committed sentence (`> **Body authority:**` inside backticks).
+LENS_GATE_LABEL="$(grep -oE '> \*\*[A-Za-z ]+:\*\*`' "$DOC_SKILL" | head -n1 | sed -e 's/^> //' -e 's/`$//')"
+if [ -z "$WP_BODY_AUTHORITY_LABEL" ]; then
+  bad "writing-plans/SKILL.md: no body-authority label found in the Plan Header block quote"
+elif [ -z "$LENS_GATE_LABEL" ]; then
+  bad "multi-doc-review SKILL.md: no gate label found in the plan cell"
+elif [ "$WP_BODY_AUTHORITY_LABEL" = "$LENS_GATE_LABEL" ]; then
+  ok "gate label matches between writing-plans and multi-doc-review ($WP_BODY_AUTHORITY_LABEL)"
+else
+  bad "gate label mismatch: writing-plans has '$WP_BODY_AUTHORITY_LABEL', multi-doc-review gates on '$LENS_GATE_LABEL'"
+fi
 
 echo
 bold "Results: $PASS passed, $FAIL failed"

@@ -109,12 +109,14 @@ rules with the following properties:
    Step 5 commit command, `Run:` verification lines — need no contract
    entry; rule 3's default covers them. The test is intrinsic to the
    block, not relational to any list: a block is procedural exactly
-   when it creates, modifies, or deletes no file in the working tree.
-   A procedural block only runs pipeline commands — the Step 5 commit
-   block qualifies because it writes the git index and git objects but
-   no working-tree file, and a verification `Run:` line is the other
-   canonical form. When it is unclear whether a block writes a
-   working-tree file, treat the block as not procedural — a fail-closed
+   when it creates, modifies, or deletes no file in the working tree,
+   AND it runs at least one command, every command it runs being a
+   pipeline command — the Step 5 commit block qualifies because it
+   writes the git index and git objects but no working-tree file, and a
+   verification `Run:` line is the other canonical form. The command
+   conjunct is stated positively: a block that runs no command at all
+   does not satisfy it. When it is unclear whether a block meets this
+   test, treat the block as not procedural — a fail-closed
    tie-break, so ambiguity produces a contract entry, never a silent
    exemption. Two shapes are defined and each is shown in a short
    example (see "Contract shapes" below; the section must carry both
@@ -219,9 +221,10 @@ reviewers who never read `writing-plans`. Bound properties of the note:
   review finding against such a body is an ordinary fix while the contract
   holds, and that only blocks marked `**Exact content:**` bind
   byte-for-byte.
-- It states that the `**Global Constraints:**` block binds as stated, and
-  that the `**Body authority:**` note itself binds as stated alongside it
-  — a review fix may not reword the note (rule 6(b)).
+- It states that the `**Global Constraints:**` block binds as stated,
+  except an entry failing the two-part self-pin test (rule 6(b)), which is
+  an ordinary fix, and that the `**Body authority:**` note itself binds as
+  stated alongside it — a review fix may not reword the note (rule 6(b)).
 - It opens with the label `**Body authority:**` (test-pinned, byte pin,
   matched exactly and case-sensitively, asserted to occur inside the Plan
   Header fenced template). `multi-doc-review`'s plan-cell gate (R5)
@@ -272,8 +275,10 @@ text above the first `---` separator — contains a line starting with
 merely mentioned elsewhere in the block quote) — a byte pin, matched
 exactly and case-sensitively, not the free-text phrase "reference
 implementations" the note also contains: a free-text phrase is rewordable
-by an ordinary review fix, so it cannot carry a gate. A plan that carries `**Contract:**` fields in its
-tasks but no `**Body authority:**` label in its header is an inconsistent
+by an ordinary review fix, so it cannot carry a gate. A plan that carries a
+`**Contract:**` field — the label starting a top-level line of a task's
+body, not merely mentioned inside a fenced code block or a block quote —
+but no `**Body authority:**` label in its header is an inconsistent
 regime and is itself a finding — it is never silently reviewed as a
 legacy plan. A plan with neither predates this design and is reviewed
 under today's lens text (see Non-goals).
@@ -408,3 +413,34 @@ authority (Non-goals).
   though the marker still unambiguously pins the block that follows it;
   the paragraph binding keeps the marker's position meaningful without
   forcing every reason onto one line.
+- **2026-08-31 (code review [I1], round 4):** R3 bullet 2 is amended so the
+  bound note states the same Global-Constraints exception rule 6(b) already
+  carries — an entry failing the two-part self-pin test is an ordinary fix,
+  not a plan conflict. Reason: the note is the only authority statement
+  travelling inside a generated plan; a review controller triaging a
+  finding reads the plan, not this skill file, so the note's earlier
+  unconditional wording made rule 6(b)'s resolution path unreachable at
+  triage time for a target-4 finding.
+- **2026-08-31 (code review [I2], round 4):** R5's inconsistent-regime
+  guard is amended to scope its `**Contract:**` predicate to the field
+  itself — a label starting a top-level line of a task's body — rather
+  than to the bare string anywhere in the plan. Reason: the guard as
+  written fired on any occurrence of the string `**Contract:**`, including
+  one quoted inside a fenced block or block quote that a task writes into
+  another file; a plan whose tasks write reference wording containing that
+  label but whose own header carries no `**Body authority:**` note was
+  flagged as an inconsistent regime, and the natural repair (adding the
+  header note) then falsely applied the full contract regime to a legacy
+  plan.
+- **2026-08-31 (code review [M5], round 4):** Rule 1's boundary test (and
+  its identical restatements in Self-Review check 5 bucket (c) and in
+  `skills/multi-doc-review/SKILL.md`'s plan lens cell) states the command
+  conjunct positively: a procedural block creates, modifies, or deletes no
+  file in the working tree AND runs at least one command, every command it
+  runs being a pipeline command. Reason: "running only pipeline commands"
+  is vacuously true of a block that runs no command at all, so a step
+  whose body is markdown wording to be inserted into a file — creating no
+  working-tree file itself and running no command — passed both conjuncts
+  and read as procedural, exempting every wording artifact from a
+  contract entry: the inversion the conjunctive restatement was meant to
+  prevent.

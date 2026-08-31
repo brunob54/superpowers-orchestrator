@@ -331,16 +331,19 @@ Copy the cell for the doc type verbatim into `[LENS_INSTRUCTIONS]`.
   no stated contract — a `**Contract:** none — <reason>` field on a task
   that does create or modify a governed artifact counts as no stated
   contract; procedural step blocks — those that create, modify, or
-  delete no file in the working tree, running only pipeline commands
-  (the Step 5 commit block, a verification `Run:` line) with an
-  unclear case treated as not procedural — are exempt; contracts
+  delete no file in the working tree, and run at least one command,
+  every command they run being a pipeline command (the Step 5 commit
+  block, a verification `Run:` line), with an unclear case treated as
+  not procedural — are exempt; contracts
   that are vacuous or unverifiable (no check could falsify them);
   `**Exact content:**` markers with no reason, or whose reason cites an
   artifact the same plan creates or modifies (a self-pin); a
   `**Global Constraints:**` entry that does not trace to the spec named on
   the plan's `**Spec:**` line and restates the body of an artifact the
   plan itself creates or modifies (a self-pin in disguise). A plan that
-  carries `**Contract:**` fields in its tasks but no `**Body authority:**`
+  carries a `**Contract:**` field — the label starting a top-level line of
+  a task's body, not merely mentioned inside a fenced code block or a
+  block quote — in its tasks but no `**Body authority:**`
   label in its header is an inconsistent regime and is itself a finding —
   it is never reviewed silently as a legacy plan. A plan with neither
   predates the contract rules — review it under the first sentence of this

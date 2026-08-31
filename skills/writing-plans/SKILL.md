@@ -83,7 +83,7 @@ together with its spec.
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers-orchestrator:subagent-driven-development (recommended) or superpowers-orchestrator:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 >
-> **Body authority:** Fenced code blocks and block-quoted wording in task steps are reference implementations for the task's stated `**Contract:**`. A review finding against such a body is an ordinary fix while the contract holds; only blocks marked `**Exact content:**` bind byte-for-byte. The `**Global Constraints:**` block binds as stated, and this note binds as stated alongside it.
+> **Body authority:** Fenced code blocks and block-quoted wording in task steps are reference implementations for the task's stated `**Contract:**`. A review finding against such a body is an ordinary fix while the contract holds; only blocks marked `**Exact content:**` bind byte-for-byte. The `**Global Constraints:**` block binds as stated — except an entry failing the two-part self-pin test (rule 6(b)), which is an ordinary fix — and this note binds as stated alongside it.
 
 **Goal:** <single sentence>
 **Spec:** `docs/superpowers-orchestrator/<YYYY-MM-DD>-<slug>/specs/<slug>-design.md` *(multi-doc-review reads this line to locate the spec on direct plan reviews; an old-layout path here would produce a plan whose spec is outside the layout)*
@@ -139,15 +139,15 @@ it shows one way, it does not bind.
    intrinsic to the block: it asks what the block itself does to the
    working tree, never what any list elsewhere in the task records. A
    block is procedural when it creates, modifies, or deletes no file
-   in the working tree, running only pipeline commands — the two
-   canonical forms are the Step 5 commit block and a verification
-   `Run:` line; the Step 5 commit block qualifies because it writes
-   the git index and git objects but no working-tree file. This is
-   the one test for "procedural" used everywhere in the plan you are
-   writing and in review. When it is unclear whether a block meets
-   this test, treat the block as not procedural — ambiguity produces a
-   contract entry, never a silent exemption. Two contract
-   shapes exist — code artifact and wording artifact — shown in the
+   in the working tree, and runs at least one command, every command it
+   runs being a pipeline command — the two canonical forms are the Step 5
+   commit block and a verification `Run:` line; the Step 5 commit block
+   qualifies because it writes the git index and git objects but no
+   working-tree file. This is the one test for "procedural" used
+   everywhere in the plan you are writing and in review. When it is
+   unclear whether a block meets this test, treat the block as not procedural
+   — ambiguity produces a contract entry, never a silent exemption. Two
+   contract shapes exist — code artifact and wording artifact — shown in the
    examples below.
 
 2. **Pin an interface only when something outside the plan depends on
@@ -332,7 +332,7 @@ After writing the complete plan, look at the spec with fresh eyes and check the 
 
 **4. Scope-reduction scan:** Search the plan for: "v1", "basic", "simple", "for now", "placeholder", "initial version", "minimal". For each hit, verify it was explicitly sanctioned by the user — not a quiet scope downgrade from what was requested. Fix any that weren't.
 
-**5. Contract audit:** Every fenced block or quoted wording in the plan is in one of three buckets: (a) it falls under its task's stated `**Contract:**`; (b) it carries an `**Exact content:**` marker; or (c) it is a procedural step block under rule 1's test — it creates, modifies, or deletes no file in the working tree, running only pipeline commands such as the Step 5 commit block or a verification `Run:` line, with an unclear case treated as not procedural — covered by the reference default of "Contracts and Literal Bodies" rule 3. Every marker's reason names a pin external to the plan and untouched by it — a reason citing an artifact this same plan creates or modifies is circular and invalid. Every `**Contract:**` field is falsifiable: a contract no check could fail ("must work correctly") is treated as missing, and so is a `none — <reason>` field on a task that does create or modify a governed artifact (a false `none`). Each `**Global Constraints:**` entry is checked too: an entry that (a) does not trace to the spec named on the plan's `**Spec:**` line and (b) restates the body of an artifact the plan itself creates or modifies is a self-pin in disguise and is flagged.
+**5. Contract audit:** Every fenced block or quoted wording in the plan is in one of three buckets: (a) it falls under its task's stated `**Contract:**`; (b) it carries an `**Exact content:**` marker; or (c) it is a procedural step block under rule 1's test — it creates, modifies, or deletes no file in the working tree, and runs at least one command, every command it runs being a pipeline command, such as the Step 5 commit block or a verification `Run:` line, with an unclear case treated as not procedural — covered by the reference default of "Contracts and Literal Bodies" rule 3. Every marker's reason names a pin external to the plan and untouched by it — a reason citing an artifact this same plan creates or modifies is circular and invalid. Every `**Contract:**` field is falsifiable: a contract no check could fail ("must work correctly") is treated as missing, and so is a `none — <reason>` field on a task that does create or modify a governed artifact (a false `none`). Each `**Global Constraints:**` entry is checked too: an entry that (a) does not trace to the spec named on the plan's `**Spec:**` line and (b) restates the body of an artifact the plan itself creates or modifies is a self-pin in disguise and is flagged.
 
 If you find issues, fix them inline. No need to re-review — just fix and move on. If you find a spec requirement with no task, add the task.
 

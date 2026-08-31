@@ -229,6 +229,27 @@ it shows one way, it does not bind.
 > alone, which would make any inert quoted-wording body procedural —
 > inverting the intent for the wording-artifact contract shape.
 
+> **Amended 2026-08-31 (code review [M5], round 4):** The quote above is
+> superseded. "Running only pipeline commands" is vacuously true of a
+> block that runs no command at all, so a task step whose body is
+> markdown wording to be inserted into a file — creating no working-tree
+> file itself and running no command — passed both conjuncts and read as
+> procedural, exempting every wording artifact from a contract entry. The
+> command conjunct is now stated positively. The actual wording committed
+> to `skills/writing-plans/SKILL.md` rule 1 now reads: "A block is
+> procedural when it creates, modifies, or deletes no file in the working
+> tree, and runs at least one command, every command it runs being a
+> pipeline command — the two canonical forms are the Step 5 commit block
+> and a verification `Run:` line; the Step 5 commit block qualifies
+> because it writes the git index and git objects but no working-tree
+> file. This is the one test for "procedural" used everywhere in the plan
+> you are writing and in review. When it is unclear whether a block meets
+> this test, treat the block as not procedural — ambiguity produces a
+> contract entry, never a silent exemption." The same predicate change is
+> applied identically to Self-Review check 5 bucket (c) and to
+> `skills/multi-doc-review/SKILL.md`'s plan lens cell — see the design's
+> Amendments section.
+
 2. **Pin an interface only when something outside the plan depends on
    it.** An interface (signature, flag set, file format) is pinned in the
    contract only when something *outside the plan* already depends on it.
@@ -439,6 +460,18 @@ In `skills/writing-plans/SKILL.md`, inside the Plan Header fenced block (the ` `
 > as stated, and this note binds as stated alongside it." The first half
 > of the note's wording is unchanged.
 
+> **Amended 2026-08-31 (code review [I1], round 4):** The quote above is
+> superseded again. Rule 6(b) carves out one exception to the
+> `**Global Constraints:**` bind — an entry failing the two-part self-pin
+> test is an ordinary fix, not a plan conflict — and the note is the only
+> copy of that rule a review controller actually reads at triage time, so
+> the note now states the same exception. The actual wording committed to
+> `skills/writing-plans/SKILL.md`'s Plan Header note now ends: "The
+> `**Global Constraints:**` block binds as stated — except an entry
+> failing the two-part self-pin test (rule 6(b)), which is an ordinary
+> fix — and this note binds as stated alongside it." The first half of
+> the note's wording is unchanged.
+
 - [x] **Step 4: Run the suite to verify it passes**
 
 Run: `bash tests/writing-plans/run-tests.sh`
@@ -494,6 +527,8 @@ In `skills/writing-plans/SKILL.md`, section `## Self-Review`, insert the followi
 ```
 
 > **Amended 2026-08-31 (code review [I3], [M3]):** The actual wording committed to `skills/writing-plans/SKILL.md` Self-Review check 5, bucket (c), reads: "it is a procedural step block under rule 1's test — it creates, modifies, or deletes no file in the working tree, running only pipeline commands such as the Step 5 commit block or a verification `Run:` line, with an unclear case treated as not procedural — covered by the reference default …". Same predicate as rule 1's amended boundary test; see the design's Amendments section.
+
+> **Amended 2026-08-31 (code review [M5], round 4):** The quote above is superseded. The command conjunct is now stated positively, so a block that runs no command at all does not qualify as procedural. The actual wording committed to `skills/writing-plans/SKILL.md` Self-Review check 5, bucket (c), now reads: "it is a procedural step block under rule 1's test — it creates, modifies, or deletes no file in the working tree, and runs at least one command, every command it runs being a pipeline command, such as the Step 5 commit block or a verification `Run:` line, with an unclear case treated as not procedural — covered by the reference default …". Same predicate as rule 1's amended boundary test; see the design's Amendments section.
 
 - [x] **Step 4: Run the suite to verify it passes**
 
@@ -582,6 +617,10 @@ In `skills/multi-doc-review/SKILL.md`, section `## Lens Instructions`, lens `**A
 > **Amended 2026-08-31 (code review [I1], [I2]):** The actual wording committed to `skills/multi-doc-review/SKILL.md` gates on the label `**Body authority:**` instead of the phrase "reference implementations", adds the inconsistent-regime guard, and adds a fourth target for `**Global Constraints:**` self-pins in disguise — see the design's Amendments section for the full ruling.
 
 > **Amended 2026-08-31 (code review [I3], [M3]):** The plan-cell's procedural-block exemption also gates on the amended, intrinsic working-tree test rather than the task's `**Files:**` list. The actual wording committed to `skills/multi-doc-review/SKILL.md` reads: "procedural step blocks — those that create, modify, or delete no file in the working tree, running only pipeline commands (the Step 5 commit block, a verification `Run:` line) with an unclear case treated as not procedural — are exempt". Same predicate as rule 1's amended boundary test; see the design's Amendments section.
+
+> **Amended 2026-08-31 (code review [M5], round 4):** The quote above is superseded. The command conjunct is now stated positively, so a block that runs no command at all does not qualify as procedural. The actual wording committed to `skills/multi-doc-review/SKILL.md` now reads: "procedural step blocks — those that create, modify, or delete no file in the working tree, and run at least one command, every command they run being a pipeline command (the Step 5 commit block, a verification `Run:` line), with an unclear case treated as not procedural — are exempt". Same predicate as rule 1's amended boundary test; see the design's Amendments section.
+
+> **Amended 2026-08-31 (code review [I2], round 4):** The inconsistent-regime guard's `**Contract:**` predicate is scoped to the field itself — a label starting a top-level line of a task's body — instead of the bare string anywhere in the plan, mirroring the "not merely mentioned" qualifier the same cell already uses for the `**Body authority:**` gate. The actual wording committed to `skills/multi-doc-review/SKILL.md` now reads: "A plan that carries a `**Contract:**` field — the label starting a top-level line of a task's body, not merely mentioned inside a fenced code block or a block quote — in its tasks but no `**Body authority:**` label in its header is an inconsistent regime and is itself a finding — it is never reviewed silently as a legacy plan." Reason: the bare-string predicate false-flagged a plan whose tasks merely quote the label `**Contract:**` inside a fenced block or block quote written into another file — a concrete instance is this plan itself.
 
 - [x] **Step 4: Run both suites to verify they pass**
 
