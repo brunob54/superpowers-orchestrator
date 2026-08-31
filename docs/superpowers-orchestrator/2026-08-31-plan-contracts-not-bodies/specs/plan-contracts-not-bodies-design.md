@@ -444,3 +444,34 @@ authority (Non-goals).
   and read as procedural, exempting every wording artifact from a
   contract entry: the inversion the conjunctive restatement was meant to
   prevent.
+- **2026-08-31 (code review [I2], [I3], round 4 verification 1):** R3's
+  bound properties change in two ways. Bullet 1: the note's exact-content
+  sentence now carries the same self-pin exception rule 5 already states —
+  a marker whose reason names a pin the plan itself writes or edits does
+  not bind byte-for-byte; body and pin are amendable together as one
+  ordinary fix. Bullet 2: the Global-Constraints exception is restated
+  inline, positively, and without a cross-reference to "rule 6(b)" — an
+  entry that both does not trace to the spec named on the plan's
+  `**Spec:**` line and restates the body of an artifact the plan itself
+  creates or modifies is an ordinary fix; every other entry binds as
+  stated. Reason: the note is the only copy of the body-authority regime a
+  review controller ever reads — it reads the plan, never this skill file
+  — so every rule the note states must be decidable from the note alone.
+  The unconditional exact-content sentence made the self-pin rule
+  unreachable for a marked body at triage time; the "rule 6(b)"
+  cross-reference dangled into a file the controller does not read, and
+  the two admissible readings of "an entry failing the two-part self-pin
+  test" pointed opposite ways, so two controllers reading the same note
+  could reach opposite classifications.
+- **2026-08-31 (code review [M4], round 4 verification 1):** R1 rule 1's
+  procedural test gains a qualifier on its `Run:`-line example: a
+  verification `Run:` line is a canonical procedural form only when the
+  command it runs writes no working-tree file. Applied identically to
+  Self-Review check 5 bucket (c) and to `skills/multi-doc-review/SKILL.md`'s
+  plan lens cell exemption. Reason: the unqualified example named a
+  `Run:` line as procedural regardless of what its command does, while the
+  predicate itself requires the block to write no working-tree file — a
+  `Run:` line invoking a formatter, a snapshot-updating test, or a
+  fixture regenerator satisfied the example but failed the predicate, so
+  the same block read as both procedural and not procedural depending on
+  which of the three sites was consulted.

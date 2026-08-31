@@ -31,6 +31,8 @@ FRAG_SELF_PIN='together as one ordinary fix'
 FRAG_REF_IMPL='reference implementations'
 FRAG_FALSIFIABLE='falsifiable'
 FRAG_NOT_PROCEDURAL='treat the block as not procedural'
+FRAG_NOTE_BINDS='this note binds as stated'
+FRAG_GC_SELF_PIN='restates the body of an artifact the plan itself creates or modifies'
 
 PASS=0
 FAIL=0
@@ -148,6 +150,12 @@ assert_in_block "Plan Header template carries '$FRAG_REF_IMPL'" \
   "$FRAG_REF_IMPL" '## Plan Header' '```' fragment
 assert_in_block "Plan Header template carries '$BODY_AUTHORITY_LABEL'" \
   "$BODY_AUTHORITY_LABEL" '## Plan Header' '```' exact
+assert_in_block "Plan Header note carries the self-pin qualification '$FRAG_SELF_PIN'" \
+  "$FRAG_SELF_PIN" '## Plan Header' '```' fragment
+assert_in_block "Plan Header note carries the Global Constraints self-pin exception '$FRAG_GC_SELF_PIN'" \
+  "$FRAG_GC_SELF_PIN" '## Plan Header' '```' fragment
+assert_in_block "Plan Header note carries the self-binding clause '$FRAG_NOTE_BINDS'" \
+  "$FRAG_NOTE_BINDS" '## Plan Header' '```' fragment
 
 bold "4. Self-Review contract audit (R4)"
 assert_in_range "self-review fragment '$FRAG_FALSIFIABLE' (check 5)" \

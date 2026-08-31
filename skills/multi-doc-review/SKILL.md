@@ -333,8 +333,9 @@ Copy the cell for the doc type verbatim into `[LENS_INSTRUCTIONS]`.
   contract; procedural step blocks — those that create, modify, or
   delete no file in the working tree, and run at least one command,
   every command they run being a pipeline command (the Step 5 commit
-  block, a verification `Run:` line), with an unclear case treated as
-  not procedural — are exempt; contracts
+  block, a verification `Run:` line — a `Run:` line is a procedural form
+  only when the command it runs writes no working-tree file), with an
+  unclear case treated as not procedural — are exempt; contracts
   that are vacuous or unverifiable (no check could falsify them);
   `**Exact content:**` markers with no reason, or whose reason cites an
   artifact the same plan creates or modifies (a self-pin); a
