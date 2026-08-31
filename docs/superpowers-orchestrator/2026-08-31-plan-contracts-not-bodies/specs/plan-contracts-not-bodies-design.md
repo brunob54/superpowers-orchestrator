@@ -259,15 +259,16 @@ targets (properties; exact phrasing free except the pinned fragments):
    artifact the plan itself creates or modifies — a self-pin in disguise
    (the fragment "self-pin" is binding — same suite).
 
-The four targets apply only to a plan whose header carries the label
+The four targets apply only to a plan whose header's block quote — the
+text above the first `---` separator — carries the label
 `**Body authority:**` — a byte pin, matched exactly and case-sensitively,
 not the free-text phrase "reference implementations" the note also
 contains: a free-text phrase is rewordable by an ordinary review fix, so
-it cannot carry a gate. A plan whose header carries a `**Contract:**`
-field but no `**Body authority:**` label is an inconsistent regime and is
-itself a finding — it is never silently reviewed as a legacy plan. A plan
-with neither predates this design and is reviewed under today's lens text
-(see Non-goals).
+it cannot carry a gate. A plan that carries `**Contract:**` fields in its
+tasks but no `**Body authority:**` label in its header is an inconsistent
+regime and is itself a finding — it is never silently reviewed as a
+legacy plan. A plan with neither predates this design and is reviewed
+under today's lens text (see Non-goals).
 
 No other lens or cell changes: this lens already owns placeholders,
 vagueness, and unverifiable verification, and a second lens would duplicate

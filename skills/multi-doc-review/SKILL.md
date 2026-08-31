@@ -323,7 +323,8 @@ Copy the cell for the doc type verbatim into `[LENS_INSTRUCTIONS]`.
   "unverified" — flag every claim that has neither.
 - plan: Find: placeholder patterns (TBD, "add appropriate...", steps without
   code); vague steps; missing or unverifiable verification commands; steps
-  interpretable two ways. When the plan header carries the label
+  interpretable two ways. When the plan header's block quote — the text
+  above the first `---` separator — carries the label
   `**Body authority:**`, also find: task-step bodies of artifacts the task
   creates or modifies that fix behaviour with no stated contract — a
   `**Contract:** none — <reason>` field on a task that does create or
@@ -334,11 +335,12 @@ Copy the cell for the doc type verbatim into `[LENS_INSTRUCTIONS]`.
   artifact the same plan creates or modifies (a self-pin); a
   `**Global Constraints:**` entry that does not trace to the spec named on
   the plan's `**Spec:**` line and restates the body of an artifact the
-  plan itself creates or modifies (a self-pin in disguise). A plan whose
-  header carries a `**Contract:**` field but no `**Body authority:**`
-  label is an inconsistent regime and is itself a finding — it is never
-  reviewed silently as a legacy plan. A plan with neither predates the
-  contract rules — review it under the first sentence of this cell only.
+  plan itself creates or modifies (a self-pin in disguise). A plan that
+  carries `**Contract:**` fields in its tasks but no `**Body authority:**`
+  label in its header is an inconsistent regime and is itself a finding —
+  it is never reviewed silently as a legacy plan. A plan with neither
+  predates the contract rules — review it under the first sentence of this
+  cell only.
 - general: Find: ambiguous statements, unverifiable claims, undefined terms.
 
 **Feasibility & architecture risk**

@@ -538,7 +538,9 @@ In `skills/multi-doc-review/SKILL.md`, section `## Lens Instructions`, lens `**A
 - [x] **Step 4: Run both suites to verify they pass**
 
 Run: `bash tests/reviewer-templates/run-tests.sh && bash tests/writing-plans/run-tests.sh`
-Expected: PASS — both exit 0; the reviewer-templates suite reports all sections (1–7) passing, the writing-plans suite reports `Results: 7 passed, 0 failed`.
+Expected: PASS — both exit 0; the reviewer-templates suite reports all sections (1–7) passing, the writing-plans suite reports `Results: 8 passed, 0 failed`.
+
+> **Amended 2026-08-31 (code review [M1]):** The writing-plans suite's check count rose from 7 to 8 because the round-2 review fix added a block-scoped assertion for the `**Body authority:**` label. The earlier per-task expected counts in this plan (4, 5, 6, 7) record the suite size at each task's own point in time and are superseded by this count.
 
 - [x] **Step 5: Commit**
 
