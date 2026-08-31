@@ -35,7 +35,7 @@
 - `skills/multi-doc-review/SKILL.md` — **modify** (Task 5). Three finding targets added to the plan cell of the Ambiguity & testability lens.
 - `CLAUDE.md` — **modify on disk only** (Task 6). One line in the Testing list. Never staged, never committed.
 
-Tasks 1–4 are sequential (same two files). Task 5 is independent of 1–4 but is ordered after them for a linear run. Task 6 is last (final verification over everything).
+Tasks 1–6 run strictly in order. Tasks 1–4 are sequential (same two files). Task 5 touches different files but is NOT independent of Tasks 1–4: its Step 4 verification runs `bash tests/writing-plans/run-tests.sh` and expects the 7-check pass state that exists only after Task 4 — do not dispatch Task 5 in parallel with or before Tasks 1–4. Task 6 is last (final verification over everything).
 
 ---
 
@@ -167,7 +167,7 @@ Expected: FAIL — exit code 1, `Results: 0 passed, 4 failed` (heading, label, a
 
 - [ ] **Step 3: Add the section and the "No Placeholders" sentence**
 
-In `skills/writing-plans/SKILL.md`, insert the following section immediately **before** the line `## Task Template` (i.e. between "Task Rules" and "Task Template", so the template's new field in Task 2 has its definition above it):
+In `skills/writing-plans/SKILL.md`, insert the following section, followed by one blank line, immediately **before** the line `## Task Template` (i.e. between "Task Rules" and "Task Template", so the template's new field in Task 2 has its definition above it):
 
 ```markdown
 ## Contracts and Literal Bodies
@@ -511,7 +511,7 @@ Expected: FAIL — exit code 1; all pre-existing checks still PASS, the extract 
 
 - [ ] **Step 3: Extend the plan cell**
 
-In `skills/multi-doc-review/SKILL.md`, section `## Lens Instructions`, lens `**Ambiguity & testability**`, replace the `- plan:` bullet (currently: `- plan: Find: placeholder patterns (TBD, "add appropriate...", steps without code); vague steps; missing or unverifiable verification commands; steps interpretable two ways.`) with:
+In `skills/multi-doc-review/SKILL.md`, section `## Lens Instructions`, lens `**Ambiguity & testability**`, replace the entire `- plan:` bullet — in the file it is wrapped across three lines (its unwrapped text is: `- plan: Find: placeholder patterns (TBD, "add appropriate...", steps without code); vague steps; missing or unverifiable verification commands; steps interpretable two ways.`); replace the whole wrapped bullet, not a one-line exact string — with:
 
 ```markdown
 - plan: Find: placeholder patterns (TBD, "add appropriate...", steps without
@@ -526,7 +526,7 @@ In `skills/multi-doc-review/SKILL.md`, section `## Lens Instructions`, lens `**A
   check could falsify them); `**Exact content:**` markers with no reason,
   or whose reason cites an artifact the same plan creates or modifies (a
   self-pin). A plan whose header lacks that phrase predates the contract
-  rules — review it under the preceding sentence only.
+  rules — review it under the first sentence of this cell only.
 ```
 
 - [ ] **Step 4: Run both suites to verify they pass**
@@ -567,8 +567,8 @@ bash tests/writing-plans/run-tests.sh     # writing-plans contract/authority wor
 
 - [ ] **Step 3: Verify the edit landed and stayed out of git**
 
-Run: `grep -F "tests/writing-plans/run-tests.sh" CLAUDE.md && git status --porcelain`
-Expected: the grep prints the new line; `git status --porcelain` prints nothing for `CLAUDE.md` (it is ignored, so it cannot appear) and nothing else unexpected.
+Run: `grep -F "tests/writing-plans/run-tests.sh" CLAUDE.md` then `git status --porcelain -- CLAUDE.md`
+Expected: the grep prints the new line; the path-anchored `git status --porcelain -- CLAUDE.md` prints nothing (the file is ignored, so it cannot appear as tracked or untracked). Other untracked paths elsewhere in the repository are outside this check and are not a failure.
 
 - [ ] **Step 4: Final verification — all fast suites green**
 
