@@ -94,3 +94,16 @@ unchanged.
 - [M1] resolved — verified at HEAD: rule 4 binds on "the paragraph immediately preceding" the fenced block and states that what matters is that the marker starts the paragraph, not that it sits on the single line right above the fence; the blank-line case is covered; no longer carried
 
 _Invocation 2 — 2026-08-31 — N=2 M=1 — BASE..HEAD 6f589ed..808d813 — branch feature/plan-contracts-not-bodies — gate: orchestration_
+
+## Round 3 — Correctness & spec alignment — fable
+**Reviewer verdict:** 0 Critical, 3 Important, 3 Minor
+**Converged:** no
+### Dispositions
+- [I1] fixed — the `**Body authority:**` note stated only half of the property spec R3 bullet 2 binds: it said the `**Global Constraints:**` block binds as stated but not that the note itself binds as stated, and the missing half lived only in rule 6(b), which never travels into a generated plan; the note now states both → 569e1cb
+- [I2] rejected: already decided by this loop — the proposal to carry rule 6(b)'s Global-Constraints self-pin exception into the `**Body authority:**` note is the same proposal rejected at invocation 1 verification 3 [I1]. Spec R3 bullet 2 binds the note to state that the `**Global Constraints:**` block binds as stated; an exception clause in the note would break that spec-bound property. The exception remains normative in rule 6(b) of the same skill file, and the known limit is documented
+- [I3] fixed — rule 1 stated the procedural boundary as a biconditional over the file-writing clause alone ("procedural exactly when it creates, modifies, or deletes no file in the working tree"), demoting the "runs only pipeline commands" conjunct to a following sentence; read literally this exempted inert quoted-wording bodies, inverting the wording-artifact contract shape, and it left rule 1 the odd one out among the three sites. The sentence is now conjunctive and identical to Self-Review check 5 bucket (c) and the multi-doc-review plan cell; the fail-closed tie-break is kept → 569e1cb
+- [M1] fixed — rule 1's "used everywhere in this plan" had no referent inside a skill file; reworded to "the plan you are writing" in the same sentence as [I3] → 569e1cb
+- [M2] carried — `first_line_of` in `tests/writing-plans/run-tests.sh` and the same-named helper in `tests/reviewer-templates/run-tests.sh` have opposite argument order and different match modes; a future copy between the suites could search the wrong file or string
+- [M3] fixed — the design's Amendments section now records the rule 4 line → paragraph widening of R1.4's placement condition, which had been made without an amendment note → 569e1cb
+- carried — tests/writing-plans/run-tests.sh helpers assert_in_block/first_line_of unused until Tasks 2-3 (reviewer: resolved at head — `assert_in_block` runs in sections 2 and 3 and exercises `first_line_of`; recommendation ship-as-is)
+- carried — tests/writing-plans/run-tests.sh check 4 unscoped whole-file assert_fragment for "falsifiable" (reviewer: resolved at head — check 4 now uses `assert_in_range` bounded by the Self-Review check it pins; recommendation ship-as-is)
