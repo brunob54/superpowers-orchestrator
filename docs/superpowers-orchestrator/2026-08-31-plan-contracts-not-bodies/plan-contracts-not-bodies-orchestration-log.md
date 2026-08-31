@@ -23,3 +23,11 @@ Detail: docs/superpowers-orchestrator/2026-08-31-plan-contracts-not-bodies/imple
 Open: [I1] user-decision — lens gate bound to rewordable free-text phrase "reference implementations"; silent off-switch
 Open: [I2] user-decision — Global Constraints block lets self-pinned literals bypass rule 5 unguarded
 Resume: Resume orchestration for docs/superpowers-orchestrator/2026-08-31-plan-contracts-not-bodies/plans/plan-contracts-not-bodies.md
+
+## STOPPED — 2026-08-31 — phase 4 — resume left 2 unresolved items at the verification cap (rounds 2, cap, fixes 3)
+Detail: docs/superpowers-orchestrator/2026-08-31-plan-contracts-not-bodies/implementation/plan-contracts-not-bodies-review-log.md
+Open: [I2] unresolved — assert_exact for `**Exact content:**` is a whole-file grep; cannot fail if rule 4 is deleted (vacuous pass, Case 001 shape)
+Open: [I3] unresolved — `**Files:**`-list completeness required by rule 1's boundary test but no decision procedure exists in check 5 or any lens target
+note: earlier rulings [I1]/[I2] of the previous entry fixed in 86bf5c5; standing rule worked — 3 wording findings rejected with named reasons, no chain
+note: controller return again carried narration before the marker (2nd occurrence this run; worklist row 9)
+Resume: Resume orchestration for docs/superpowers-orchestrator/2026-08-31-plan-contracts-not-bodies/plans/plan-contracts-not-bodies.md
