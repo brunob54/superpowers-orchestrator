@@ -473,7 +473,7 @@ git commit -m "feat(writing-plans): add contract audit as Self-Review check 5" -
 
 Binding in this task: the fragments "no stated contract" and "self-pin" inside the plan cell. The rest of the cell wording is reference wording, but must keep the R5 properties: three targets (uncontracted bodies with the false-`none` case and the procedural exemption; vacuous/unverifiable contracts; markers with missing or self-pinning reasons), gated on the header phrase "reference implementations".
 
-- [ ] **Step 1: Add the failing checks to the reviewer-templates suite**
+- [x] **Step 1: Add the failing checks to the reviewer-templates suite**
 
 In `tests/reviewer-templates/run-tests.sh`, add this helper after the existing `assert_file_contains()` definition:
 
@@ -504,12 +504,12 @@ assert_file_contains_i "Ambiguity plan cell: fragment 'no stated contract'" "$AM
 assert_file_contains_i "Ambiguity plan cell: fragment 'self-pin'" "$AMB_PLAN_CELL" 'self-pin'
 ```
 
-- [ ] **Step 2: Run the suite to verify the new checks fail**
+- [x] **Step 2: Run the suite to verify the new checks fail**
 
 Run: `bash tests/reviewer-templates/run-tests.sh`
 Expected: FAIL — exit code 1; all pre-existing checks still PASS, the extract check passes (the cell exists today), and exactly the two new fragment checks FAIL.
 
-- [ ] **Step 3: Extend the plan cell**
+- [x] **Step 3: Extend the plan cell**
 
 In `skills/multi-doc-review/SKILL.md`, section `## Lens Instructions`, lens `**Ambiguity & testability**`, replace the entire `- plan:` bullet — in the file it is wrapped across three lines (its unwrapped text is: `- plan: Find: placeholder patterns (TBD, "add appropriate...", steps without code); vague steps; missing or unverifiable verification commands; steps interpretable two ways.`); replace the whole wrapped bullet, not a one-line exact string — with:
 
@@ -529,12 +529,12 @@ In `skills/multi-doc-review/SKILL.md`, section `## Lens Instructions`, lens `**A
   rules — review it under the first sentence of this cell only.
 ```
 
-- [ ] **Step 4: Run both suites to verify they pass**
+- [x] **Step 4: Run both suites to verify they pass**
 
 Run: `bash tests/reviewer-templates/run-tests.sh && bash tests/writing-plans/run-tests.sh`
 Expected: PASS — both exit 0; the reviewer-templates suite reports all sections (1–7) passing, the writing-plans suite reports `Results: 7 passed, 0 failed`.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add tests/reviewer-templates/run-tests.sh skills/multi-doc-review/SKILL.md
