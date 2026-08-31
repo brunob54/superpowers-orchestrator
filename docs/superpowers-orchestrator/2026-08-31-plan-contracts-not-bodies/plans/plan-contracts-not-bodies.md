@@ -308,7 +308,7 @@ git commit -m "feat(writing-plans): add Contracts and Literal Bodies section wit
 
 Binding in this task: the literal label `**Contract:**` inside the Task Template fenced block. The parenthetical instruction is reference wording, but must keep two properties (spec R2): it points at the "Contracts and Literal Bodies" section and it names the two shapes (code artifact, wording artifact).
 
-- [ ] **Step 1: Add the failing block-scoped check**
+- [x] **Step 1: Add the failing block-scoped check**
 
 In `tests/writing-plans/run-tests.sh`, add to the variable definitions (after the line `EXACT_LABEL='**Exact content:**'`):
 
@@ -324,12 +324,12 @@ assert_in_block "Task Template block carries '$CONTRACT_LABEL'" \
   "$CONTRACT_LABEL" '## Task Template' '````' exact
 ```
 
-- [ ] **Step 2: Run the suite to verify the new check fails**
+- [x] **Step 2: Run the suite to verify the new check fails**
 
 Run: `bash tests/writing-plans/run-tests.sh`
 Expected: FAIL — exit code 1, `Results: 4 passed, 1 failed`; the failing line names the Task Template block. (`**Contract:**` already occurs in the file from Task 1's section, but not *inside* the 4-backtick Task Template block — the block-scoped helper is what makes this check meaningful.)
 
-- [ ] **Step 3: Add the field to the Task Template**
+- [x] **Step 3: Add the field to the Task Template**
 
 In `skills/writing-plans/SKILL.md`, inside the Task Template fenced block (the ` ````markdown ` block under `## Task Template`), insert the following line as its own paragraph directly **after** the `**Does NOT cover:**` line's paragraph and before Step 1:
 
@@ -337,12 +337,12 @@ In `skills/writing-plans/SKILL.md`, inside the Task Template fenced block (the `
 **Contract:** *(one entry per artifact this task creates or modifies: the invariants that must hold and the verification that would falsify them; inputs and outputs for code artifacts. See "Contracts and Literal Bodies" for the two shapes — code artifact and wording artifact. Write `none — <reason>` when the task creates or modifies nothing a later review finding could be judged against.)*
 ```
 
-- [ ] **Step 4: Run the suite to verify it passes**
+- [x] **Step 4: Run the suite to verify it passes**
 
 Run: `bash tests/writing-plans/run-tests.sh`
 Expected: PASS — exit code 0, `Results: 5 passed, 0 failed`.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add tests/writing-plans/run-tests.sh skills/writing-plans/SKILL.md
