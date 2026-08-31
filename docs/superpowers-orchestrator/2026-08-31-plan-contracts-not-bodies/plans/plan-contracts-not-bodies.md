@@ -552,12 +552,12 @@ git commit -m "feat(multi-doc-review): contract-target findings in the Ambiguity
 
 **Does NOT cover:** committing `CLAUDE.md` in any form — the file is gitignored in this clone (`.gitignore` line 7) and the spec forbids `git add CLAUDE.md`; this task therefore has **no commit step**. It also does not run any behavioural suite (spec Non-goals) and does not touch `docs/guide/`, `VERSION`, or release files — the release-time work stays with the release process.
 
-- [ ] **Step 1: Confirm the file is still gitignored**
+- [x] **Step 1: Confirm the file is still gitignored**
 
 Run: `git check-ignore CLAUDE.md`
 Expected: exit code 0, prints `CLAUDE.md`. (If this ever fails, STOP — the on-disk-only assumption is broken and the edit must not be made without a user decision.)
 
-- [ ] **Step 2: Add the suite to the Testing list**
+- [x] **Step 2: Add the suite to the Testing list**
 
 In `CLAUDE.md`, inside the fenced command list of the `## Testing` section, add this line directly after the `bash tests/reviewer-templates/run-tests.sh …` line:
 
@@ -565,12 +565,12 @@ In `CLAUDE.md`, inside the fenced command list of the `## Testing` section, add 
 bash tests/writing-plans/run-tests.sh     # writing-plans contract/authority wording rules
 ```
 
-- [ ] **Step 3: Verify the edit landed and stayed out of git**
+- [x] **Step 3: Verify the edit landed and stayed out of git**
 
 Run: `grep -F "tests/writing-plans/run-tests.sh" CLAUDE.md` then `git status --porcelain -- CLAUDE.md`
 Expected: the grep prints the new line; the path-anchored `git status --porcelain -- CLAUDE.md` prints nothing (the file is ignored, so it cannot appear as tracked or untracked). Other untracked paths elsewhere in the repository are outside this check and are not a failure.
 
-- [ ] **Step 4: Final verification — all fast suites green**
+- [x] **Step 4: Final verification — all fast suites green**
 
 Run: `bash tests/writing-plans/run-tests.sh && bash tests/reviewer-templates/run-tests.sh && bash tests/codex/run-unit-tests.sh`
 Expected: PASS — all three exit 0. The codex unit tests guard against collateral edits: no wording this plan touches is pinned there, so any failure indicates an accidental edit outside this plan's scope and must be investigated, not waved through.
