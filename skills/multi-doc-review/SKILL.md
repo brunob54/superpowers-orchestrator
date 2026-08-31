@@ -330,8 +330,10 @@ Copy the cell for the doc type verbatim into `[LENS_INSTRUCTIONS]`.
   bodies of artifacts the task creates or modifies that fix behaviour with
   no stated contract — a `**Contract:** none — <reason>` field on a task
   that does create or modify a governed artifact counts as no stated
-  contract; procedural step blocks — those that create or modify no file
-  named in the task's `**Files:**` list — are exempt; contracts
+  contract; procedural step blocks — those that create, modify, or
+  delete no file in the working tree, running only pipeline commands
+  (the Step 5 commit block, a verification `Run:` line) with an
+  unclear case treated as not procedural — are exempt; contracts
   that are vacuous or unverifiable (no check could falsify them);
   `**Exact content:**` markers with no reason, or whose reason cites an
   artifact the same plan creates or modifies (a self-pin); a

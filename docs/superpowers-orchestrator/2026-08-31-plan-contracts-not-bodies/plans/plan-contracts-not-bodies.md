@@ -194,6 +194,23 @@ it shows one way, it does not bind.
    shapes exist — code artifact and wording artifact — shown in the
    examples below.
 
+> **Amended 2026-08-31 (code review [I3], [M3]):** Rule 1's boundary test
+> changed from the relational form above (the task's `**Files:**` list)
+> to an intrinsic, working-tree-scoped test with a fail-closed tie-break;
+> the orphaned `**Files:**`-list completeness clause was deleted. See the
+> design's Amendments section for the full ruling. The actual wording
+> committed to `skills/writing-plans/SKILL.md` rule 1 reads: "The test is
+> intrinsic to the block: it asks what the block itself does to the
+> working tree, never what any list elsewhere in the task records. A
+> block is procedural exactly when it creates, modifies, or deletes no
+> file in the working tree. … a procedural block only runs pipeline
+> commands — the two canonical forms are the Step 5 commit block and a
+> verification `Run:` line; the Step 5 commit block qualifies because it
+> writes the git index and git objects but no working-tree file. When it
+> is unclear whether a block writes a working-tree file, treat the block
+> as not procedural — ambiguity produces a contract entry, never a
+> silent exemption."
+
 2. **Pin an interface only when something outside the plan depends on
    it.** An interface (signature, flag set, file format) is pinned in the
    contract only when something *outside the plan* already depends on it.
@@ -449,6 +466,8 @@ In `skills/writing-plans/SKILL.md`, section `## Self-Review`, insert the followi
 **5. Contract audit:** Every fenced block or quoted wording in the plan is in one of three buckets: (a) it falls under its task's stated `**Contract:**`; (b) it carries an `**Exact content:**` marker; or (c) it is a procedural step block (verification command, commit command) covered by the reference default of "Contracts and Literal Bodies" rule 3. Every marker's reason names a pin external to the plan and untouched by it — a reason citing an artifact this same plan creates or modifies is circular and invalid. Every `**Contract:**` field is falsifiable: a contract no check could fail ("must work correctly") is treated as missing, and so is a `none — <reason>` field on a task that does create or modify a governed artifact (a false `none`).
 ```
 
+> **Amended 2026-08-31 (code review [I3], [M3]):** The actual wording committed to `skills/writing-plans/SKILL.md` Self-Review check 5, bucket (c), reads: "it is a procedural step block under rule 1's test — it creates, modifies, or deletes no file in the working tree, running only pipeline commands such as the Step 5 commit block or a verification `Run:` line, with an unclear case treated as not procedural — covered by the reference default …". Same predicate as rule 1's amended boundary test; see the design's Amendments section.
+
 - [x] **Step 4: Run the suite to verify it passes**
 
 Run: `bash tests/writing-plans/run-tests.sh`
@@ -535,12 +554,16 @@ In `skills/multi-doc-review/SKILL.md`, section `## Lens Instructions`, lens `**A
 
 > **Amended 2026-08-31 (code review [I1], [I2]):** The actual wording committed to `skills/multi-doc-review/SKILL.md` gates on the label `**Body authority:**` instead of the phrase "reference implementations", adds the inconsistent-regime guard, and adds a fourth target for `**Global Constraints:**` self-pins in disguise — see the design's Amendments section for the full ruling.
 
+> **Amended 2026-08-31 (code review [I3], [M3]):** The plan-cell's procedural-block exemption also gates on the amended, intrinsic working-tree test rather than the task's `**Files:**` list. The actual wording committed to `skills/multi-doc-review/SKILL.md` reads: "procedural step blocks — those that create, modify, or delete no file in the working tree, running only pipeline commands (the Step 5 commit block, a verification `Run:` line) with an unclear case treated as not procedural — are exempt". Same predicate as rule 1's amended boundary test; see the design's Amendments section.
+
 - [x] **Step 4: Run both suites to verify they pass**
 
 Run: `bash tests/reviewer-templates/run-tests.sh && bash tests/writing-plans/run-tests.sh`
-Expected: PASS — both exit 0; the reviewer-templates suite reports all sections (1–7) passing, the writing-plans suite reports `Results: 8 passed, 0 failed`.
+Expected: PASS — both exit 0; the reviewer-templates suite reports all sections (1–7) passing, the writing-plans suite reports `Results: 9 passed, 0 failed`.
 
 > **Amended 2026-08-31 (code review [M1]):** The writing-plans suite's check count rose from 7 to 8 because the round-2 review fix added a block-scoped assertion for the `**Body authority:**` label. The earlier per-task expected counts in this plan (4, 5, 6, 7) record the suite size at each task's own point in time and are superseded by this count.
+
+> **Amended 2026-08-31 (code review [I3]):** The count rose again, from 8 to 9, because the [I3] fix added a fragment assertion (rule 1's range) falsifying the new fail-closed tie-break clause. See the design's Amendments section.
 
 - [x] **Step 5: Commit**
 

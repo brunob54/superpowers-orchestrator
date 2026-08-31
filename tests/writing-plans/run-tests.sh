@@ -30,6 +30,7 @@ FRAG_ORDINARY_FIX='ordinary fix'
 FRAG_SELF_PIN='together as one ordinary fix'
 FRAG_REF_IMPL='reference implementations'
 FRAG_FALSIFIABLE='falsifiable'
+FRAG_NOT_PROCEDURAL='not procedural'
 
 PASS=0
 FAIL=0
@@ -119,6 +120,8 @@ assert_in_range() { # desc needle start end mode
 # Line ranges for the fragments that must be scoped to one rule or check
 # each, rather than matched anywhere in the file (see assert_in_range).
 CONTRACTS_HEADING_LINE="$(first_line_of "$SECTION_HEADING")"
+RULE1_LINE="$(line_starting_with_after '1. **State a contract for every governed artifact.**' "$CONTRACTS_HEADING_LINE")"
+RULE2_LINE="$(line_starting_with_after '2. **Pin an interface only when something outside the plan depends on' "$RULE1_LINE")"
 RULE3_LINE="$(line_starting_with_after '3. **Bodies are reference implementations by default.**' "$CONTRACTS_HEADING_LINE")"
 RULE4_LINE="$(line_starting_with_after '4. **Mark exact content explicitly.**' "$RULE3_LINE")"
 RULE5_LINE="$(line_starting_with_after '5. **A self-pin never justifies the marker.**' "$RULE4_LINE")"
@@ -128,7 +131,10 @@ SELF_REVIEW_5_END_LINE="$(line_starting_with_after 'If you find issues, fix them
 
 bold "1. Contracts and Literal Bodies section (R1)"
 assert_exact "section heading '$SECTION_HEADING'" "$SECTION_HEADING"
-assert_exact "exact-content label '$EXACT_LABEL'" "$EXACT_LABEL"
+assert_in_range "exact-content label '$EXACT_LABEL' (rule 4)" \
+  "$EXACT_LABEL" "$RULE4_LINE" "$RULE5_LINE" exact
+assert_in_range "procedural tie-break fragment '$FRAG_NOT_PROCEDURAL' (rule 1)" \
+  "$FRAG_NOT_PROCEDURAL" "$RULE1_LINE" "$RULE2_LINE" fragment
 assert_in_range "authority-default fragment '$FRAG_ORDINARY_FIX' (rule 3)" \
   "$FRAG_ORDINARY_FIX" "$RULE3_LINE" "$RULE4_LINE" fragment
 assert_in_range "self-pin fragment '$FRAG_SELF_PIN' (rule 5)" \

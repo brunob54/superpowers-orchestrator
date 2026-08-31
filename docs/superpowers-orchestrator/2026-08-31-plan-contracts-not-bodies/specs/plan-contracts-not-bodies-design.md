@@ -107,11 +107,18 @@ rules with the following properties:
    field (a list) — or is a candidate for splitting. Procedural step
    blocks that operate the pipeline rather than build the feature — the
    Step 5 commit command, `Run:` verification lines — need no contract
-   entry; rule 3's default covers them. The boundary is a test, not a
-   feel: a block is procedural exactly when it creates or modifies no
-   file named in the task's `**Files:**` list. Two shapes are defined and
-   each is shown in a short example (see "Contract shapes" below; the
-   section must carry both examples, adapted or verbatim).
+   entry; rule 3's default covers them. The test is intrinsic to the
+   block, not relational to any list: a block is procedural exactly
+   when it creates, modifies, or deletes no file in the working tree.
+   A procedural block only runs pipeline commands — the Step 5 commit
+   block qualifies because it writes the git index and git objects but
+   no working-tree file, and a verification `Run:` line is the other
+   canonical form. When it is unclear whether a block writes a
+   working-tree file, treat the block as not procedural — a fail-closed
+   tie-break, so ambiguity produces a contract entry, never a silent
+   exemption. Two shapes are defined and each is shown in a short
+   example (see "Contract shapes" below; the section must carry both
+   examples, adapted or verbatim).
 2. **Interface pinning rule.** An interface (signature, flag set, file
    format) is pinned in the contract only when something *outside the plan*
    already depends on it. Stating inputs and outputs in the
@@ -372,3 +379,20 @@ authority (Non-goals).
   entry keeps binding as stated. Without this, a target-4 finding could be
   raised but never cleared, so every such finding became a run-stopping
   plan conflict with no in-run resolution.
+- **2026-08-31 (code review [I3], [M3]):** Rule 1's "procedural" boundary
+  test changes from a relational one — a block is procedural when it
+  creates or modifies no file named in the task's `**Files:**` list — to
+  an intrinsic, working-tree-scoped one: a block is procedural when it
+  creates, modifies, or deletes no file in the working tree, runs only
+  pipeline commands (the Step 5 commit block, a verification `Run:`
+  line), and an unclear case is treated as not procedural (a fail-closed
+  tie-break). Reason: the relational test made "procedural" depend on a
+  list elsewhere in the task, so an omitted file silently turned a
+  governed block into an exempt one, with no reviewer-independent way to
+  catch the omission. The orphaned `**Files:**`-list completeness clause
+  that propped up the relational test is deleted: it existed only to
+  patch that dependency, and, with no consumer and no falsifier of its
+  own, was itself an unfalsifiable requirement inside a section that
+  demands falsifiability. The verb set "creates, modifies, or deletes"
+  also settles delete-only tasks, resolving carried Minor [M3] (the old
+  verb pair "introduces or modifies" left them undecidable).
