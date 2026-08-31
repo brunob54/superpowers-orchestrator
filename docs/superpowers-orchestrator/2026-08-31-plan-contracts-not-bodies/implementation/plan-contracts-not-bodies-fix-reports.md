@@ -1145,3 +1145,233 @@ protect-secrets: 43 passed, 0 failed
 ==================================================
 ```
 EXIT: 0
+
+## Round 4 verification 1 fixes
+
+- **[I2]** — `skills/writing-plans/SKILL.md`, Plan Header template
+  `**Body authority:**` block quote (line 86). The exact-content sentence
+  now carries the same self-pin exception rule 5 already states, stated
+  self-contained (no cross-reference into rule 5): "a block marked
+  `**Exact content:**` binds byte-for-byte unless its reason names a pin
+  the plan itself writes or edits, in which case it is a self-pin and body
+  and pin are amendable together as one ordinary fix." Also amended
+  `docs/superpowers-orchestrator/2026-08-31-plan-contracts-not-bodies/specs/plan-contracts-not-bodies-design.md`
+  R3 bullet 1 via a combined `## Amendments` entry with [I3] below, and
+  added a new
+  `> **Amended 2026-08-31 (code review [I2], [I3], round 4 verification 1):**`
+  block quote in
+  `docs/superpowers-orchestrator/2026-08-31-plan-contracts-not-bodies/plans/plan-contracts-not-bodies.md`
+  after the existing round-4 [I1] amendment, recording the note's new
+  wording in full without rewriting any earlier quote.
+
+- **[I3]** — Same note, same edit (the note is one paragraph, fixed
+  together with [I2]). The `**Global Constraints:**` exception is now
+  stated inline, positively, without the "rule 6(b)" cross-reference and
+  without the ambiguous "failing the two-part self-pin test" phrasing: "The
+  `**Global Constraints:**` block binds as stated, except an entry that
+  both does not trace to the spec named on the plan's `**Spec:**` line and
+  restates the body of an artifact the plan itself creates or modifies,
+  which is an ordinary fix; every other entry binds as stated — and this
+  note binds as stated alongside it." The note's opening label
+  (`**Body authority:**`), the "reference implementations" fragment, and
+  the self-binding clause ("this note binds as stated") are all preserved
+  byte-identical or as substrings. `skills/writing-plans/SKILL.md` rule
+  6(b) itself is unchanged — the fix only removes the note's dependence on
+  a rule number the plan-holding controller never reads. Spec and plan
+  amended as described under [I2] above (one combined spec Amendments
+  entry, one combined plan block quote covering both findings).
+
+- **[M4]** — Applied the identical fix at all three sites that restate
+  rule 1's procedural-block boundary test:
+  `skills/writing-plans/SKILL.md` rule 1 (line ~144),
+  `skills/writing-plans/SKILL.md` Self-Review check 5 bucket (c)
+  (line ~336), and `skills/multi-doc-review/SKILL.md`'s plan lens cell
+  (line ~335). Each site's `Run:`-line example now carries the qualifier
+  "a `Run:` line is a procedural form only when the command it runs writes
+  no working-tree file", so a verification `Run:` line invoking a command
+  that writes into the working tree (a formatter, a snapshot-updating
+  test, a fixture regenerator) is no longer misclassified as procedural by
+  the example while the predicate itself would reject it. The fail-closed
+  tie-break and the Step 5 commit-block explanation are unchanged at all
+  three sites. Also amended the spec's `## Amendments` section with a new
+  entry, and added a new
+  `> **Amended 2026-08-31 (code review [M4], round 4 verification 1):**`
+  block quote at each of the three corresponding plan sites (Task 1's rule
+  1, Task 4's Self-Review check 5, Task 5's plan-cell exemption), each
+  after the most recent (round-4 [M5]) amendment for that site.
+
+- **[M3]** — `tests/writing-plans/run-tests.sh`. Added two new binding
+  fragment variables (`FRAG_NOTE_BINDS='this note binds as stated'`,
+  `FRAG_GC_SELF_PIN='restates the body of an artifact the plan itself
+  creates or modifies'`) and three new `assert_in_block` checks scoped to
+  the Plan Header fenced block (the same helper and scoping already used
+  for the section's other Plan Header checks): one for the self-pin
+  qualification added for [I2] (reusing the existing `$FRAG_SELF_PIN`
+  constant, now also asserted inside the Plan Header block, not only
+  inside rule 5's range), one for the Global-Constraints self-pin
+  exception added for [I3], and one for the note's self-binding clause.
+  Check count rose from 9 to 12. Also added a
+  `> **Amended 2026-08-31 (code review [M3], round 4 verification 1):**`
+  block quote in the plan's Task 5 Step 4 recording the new count, after
+  the existing [I3] count amendment there.
+
+- **[M2]** — `tests/reviewer-templates/run-tests.sh`, section 8
+  (body-authority gate label consistency). Replaced the ordinal-position
+  selection (`n == 2`) of the writing-plans Plan Header block-quote label
+  with a content-based search: `LENS_GATE_LABEL` is computed first (see
+  [M1] below), then an `awk` pass over the Plan Header fenced block finds
+  the first `> **Label:**` paragraph whose label text equals
+  `LENS_GATE_LABEL`, scanning by content rather than position. A paragraph
+  inserted earlier in the block quote, or a relabeled
+  `> **For agentic workers:**` paragraph, can no longer shift which
+  paragraph is compared.
+
+- **[M1]** — Same section. `LENS_GATE_LABEL` now greps `$AMB_PLAN_CELL`
+  (the plan-cell extract already built in section 7) instead of the whole
+  `$DOC_SKILL` file, so a future backtick-quoted block-quote label added
+  elsewhere in `skills/multi-doc-review/SKILL.md` cannot retarget this
+  comparison.
+
+### Verification
+
+#### Command: `bash tests/writing-plans/run-tests.sh`
+
+```
+1. Contracts and Literal Bodies section (R1)
+  PASS: section heading '## Contracts and Literal Bodies' (whole-line match, line 122)
+  PASS: exact-content label '**Exact content:**' (rule 4) (line 172, range 170..184)
+  PASS: procedural tie-break fragment 'treat the block as not procedural' (rule 1) (line 149, range 129..154)
+  PASS: authority-default fragment 'ordinary fix' (rule 3) (line 166, range 163..170)
+  PASS: self-pin fragment 'together as one ordinary fix' (rule 5) (line 187, range 184..194)
+2. Task Template Contract field (R2)
+  PASS: Task Template block carries '**Contract:**' (line 259, block 247..289)
+3. Plan Header authority note (R3)
+  PASS: Plan Header template carries 'reference implementations' (line 86, block 81..96)
+  PASS: Plan Header template carries '**Body authority:**' (line 86, block 81..96)
+  PASS: Plan Header note carries the self-pin qualification 'together as one ordinary fix' (line 86, block 81..96)
+  PASS: Plan Header note carries the Global Constraints self-pin exception 'restates the body of an artifact the plan itself creates or modifies' (line 86, block 81..96)
+  PASS: Plan Header note carries the self-binding clause 'this note binds as stated' (line 86, block 81..96)
+4. Self-Review contract audit (R4)
+  PASS: self-review fragment 'falsifiable' (check 5) (line 336, range 336..338)
+
+Results: 12 passed, 0 failed
+```
+EXIT: 0
+
+#### Command: `bash tests/reviewer-templates/run-tests.sh`
+
+```
+1. Harness claims rule is inside the prompt block
+  PASS: doc-review template: Harness claims rule inside the prompt block (line 42, block 25..133)
+  PASS: code-review template: Harness claims rule inside the prompt block (line 64, block 24..193)
+2. Finding-format field spellings
+  PASS: doc-review template: field spelling 'harness: tested —'
+  PASS: doc-review template: field spelling 'harness: untested —'
+  PASS: code-review template: field spelling 'harness: tested —'
+  PASS: code-review template: field spelling 'harness: untested —'
+3. Controller triage reason strings and completion-report line
+  PASS: multi-doc-review SKILL.md: reason string 'harness probe —'
+  PASS: multi-doc-review SKILL.md: reason string 'harness probe not runnable here'
+  PASS: multi-doc-review SKILL.md: completion-report line 'Harness probes owed:'
+  PASS: multi-code-review SKILL.md: reason string 'harness probe —'
+  PASS: multi-code-review SKILL.md: reason string 'harness probe not runnable here'
+  PASS: multi-code-review SKILL.md: completion-report line 'Harness probes owed:'
+4. user-decision guard
+  PASS: multi-code-review SKILL.md: guard fragment
+5. Rule text drift between the two templates
+  PASS: doc-review template: rule extract is non-empty
+  PASS: code-review template: rule extract is non-empty
+  PASS: rule text identical in both templates
+6. Unchanged contracts
+  PASS: code-review template: blinding pathspec line
+  PASS: code-review template: report marker instruction
+  PASS: doc-review template: report marker instruction
+7. Ambiguity & testability plan-cell contract targets
+  PASS: multi-doc-review SKILL.md: Ambiguity plan-cell extract is non-empty
+  PASS: Ambiguity plan cell: fragment 'no stated contract'
+  PASS: Ambiguity plan cell: fragment 'self-pin'
+  PASS: Ambiguity plan cell: gate label '**Body authority:**'
+8. Body-authority gate label consistency (writing-plans vs multi-doc-review)
+  PASS: gate label matches between writing-plans and multi-doc-review (**Body authority:**)
+
+Results: 24 passed, 0 failed
+```
+EXIT: 0
+
+#### Command: `bash tests/codex/run-unit-tests.sh`
+
+```
+
+──────────────────────────────────────────────────
+protect-secrets: 43 passed, 0 failed
+
+==================================================
+ Results: 10 suites passed, 0 suites failed
+ All unit tests passed.
+==================================================
+```
+EXIT: 0
+
+### Falsification demonstrations
+
+For [M3] and [M2], each new/changed assertion was verified to fail when
+the property it pins is violated. Each demo edited
+`skills/writing-plans/SKILL.md` (or, for the second M2 variant, the same
+file's Plan Header label) in place, ran the relevant suite, captured the
+FAIL line, then restored the file from a backup copy (`diff` confirmed
+byte-identical restoration after each demo).
+
+#### [M3] demo 1 — delete the note's self-binding clause
+
+Edit: removed `" — and this note binds as stated alongside it."` from the
+end of the note (leaving the Global-Constraints sentence ending at
+"...binds as stated.").
+
+```
+  FAIL: Plan Header note carries the self-binding clause 'this note binds as stated' (not inside block 81..96)
+Results: 11 passed, 1 failed
+```
+
+Restored; `diff` against the pre-demo backup showed no differences.
+
+#### [M3] demo 2 — delete the Global-Constraints self-pin exception
+
+Edit: replaced the whole Global-Constraints sentence with
+`"The `**Global Constraints:**` block binds as stated — and this note
+binds as stated alongside it."` (dropping the `except an entry that...`
+clause added for [I3]).
+
+```
+  FAIL: Plan Header note carries the Global Constraints self-pin exception 'restates the body of an artifact the plan itself creates or modifies' (not inside block 81..96)
+Results: 11 passed, 1 failed
+```
+
+Restored; `diff` against the pre-demo backup showed no differences.
+
+#### [M3] demo 3 — delete the [I2] self-pin qualification
+
+Edit: replaced the exact-content sentence with
+`"a block marked `**Exact content:**` binds byte-for-byte."` (dropping the
+`unless its reason names a pin...` clause added for [I2]).
+
+```
+  FAIL: Plan Header note carries the self-pin qualification 'together as one ordinary fix' (not inside block 81..96)
+Results: 11 passed, 1 failed
+```
+
+Restored; `diff` against the pre-demo backup showed no differences.
+
+#### [M2] demo — rename the writing-plans label so it no longer matches the lens gate label
+
+Edit: changed `> **Body authority:**` to `> **Body Authority Renamed:**`
+at the start of the Plan Header note (the `## Contracts and Literal
+Bodies` self-review check's `**Contract:**` label and the multi-doc-review
+gate string were left untouched, so `LENS_GATE_LABEL` still resolves to
+`**Body authority:**`).
+
+```
+  FAIL: writing-plans/SKILL.md: no Plan Header block-quote paragraph matches gate label '**Body authority:**'
+Results: 23 passed, 1 failed
+```
+
+Restored; `diff` against the pre-demo backup showed no differences.
