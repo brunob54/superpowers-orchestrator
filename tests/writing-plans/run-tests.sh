@@ -23,6 +23,7 @@ SKILL="$ROOT/skills/writing-plans/SKILL.md"
 SECTION_HEADING='## Contracts and Literal Bodies'
 EXACT_LABEL='**Exact content:**'
 CONTRACT_LABEL='**Contract:**'
+BODY_AUTHORITY_LABEL='**Body authority:**'
 
 # Binding free-text fragments.
 FRAG_ORDINARY_FIX='ordinary fix'
@@ -51,9 +52,12 @@ assert_fragment() { # desc needle
   if grep -qiF -- "$2" "$SKILL"; then ok "$1"; else bad "$1 (missing: $2)"; fi
 }
 
-# Line number of the first line containing the fixed string $1; empty when
-# absent.
-first_line_of() { grep -nF -- "$1" "$SKILL" | head -n 1 | cut -d: -f1; }
+# Line number of the first line whose entire content equals the fixed
+# string $1 (whole-line match); empty when absent. Callers pass full
+# heading lines, so a partial-match (containment) search could be
+# retargeted by an unrelated prose mention of the same text earlier in the
+# file — whole-line anchoring avoids that.
+first_line_of() { grep -nxF -- "$1" "$SKILL" | head -n 1 | cut -d: -f1; }
 
 # Line number of the first line after line $2 whose text starts with $1;
 # empty when absent.
@@ -101,6 +105,8 @@ assert_in_block "Task Template block carries '$CONTRACT_LABEL'" \
 bold "3. Plan Header authority note (R3)"
 assert_in_block "Plan Header template carries '$FRAG_REF_IMPL'" \
   "$FRAG_REF_IMPL" '## Plan Header' '```' fragment
+assert_in_block "Plan Header template carries '$BODY_AUTHORITY_LABEL'" \
+  "$BODY_AUTHORITY_LABEL" '## Plan Header' '```' exact
 
 bold "4. Self-Review contract audit (R4)"
 assert_fragment "self-review fragment '$FRAG_FALSIFIABLE'" "$FRAG_FALSIFIABLE"

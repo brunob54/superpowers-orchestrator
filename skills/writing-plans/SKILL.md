@@ -183,7 +183,12 @@ it shows one way, it does not bind.
    vague steps — the "No Placeholders" rules still require actual code.
    (b) The default never applies to the plan header's
    `**Global Constraints:**` block, which binds as stated; a conflict with
-   a global constraint is genuine and stops the run.
+   a global constraint is genuine and stops the run. The `**Body
+   authority:**` note itself binds as stated alongside the
+   `**Global Constraints:**` block: a review fix may not reword the note.
+   Known limit: because the note is exempt from the reference default, a
+   finding against the note's wording is a plan conflict, not an ordinary
+   fix.
    (c) Other non-task plan content (header prose such as
    `**Architecture:**` and `**Assumptions:**`, the File Structure section)
    follows the same reference default: findings against it are ordinary
@@ -310,7 +315,7 @@ After writing the complete plan, look at the spec with fresh eyes and check the 
 
 **4. Scope-reduction scan:** Search the plan for: "v1", "basic", "simple", "for now", "placeholder", "initial version", "minimal". For each hit, verify it was explicitly sanctioned by the user — not a quiet scope downgrade from what was requested. Fix any that weren't.
 
-**5. Contract audit:** Every fenced block or quoted wording in the plan is in one of three buckets: (a) it falls under its task's stated `**Contract:**`; (b) it carries an `**Exact content:**` marker; or (c) it is a procedural step block (verification command, commit command) covered by the reference default of "Contracts and Literal Bodies" rule 3. Every marker's reason names a pin external to the plan and untouched by it — a reason citing an artifact this same plan creates or modifies is circular and invalid. Every `**Contract:**` field is falsifiable: a contract no check could fail ("must work correctly") is treated as missing, and so is a `none — <reason>` field on a task that does create or modify a governed artifact (a false `none`).
+**5. Contract audit:** Every fenced block or quoted wording in the plan is in one of three buckets: (a) it falls under its task's stated `**Contract:**`; (b) it carries an `**Exact content:**` marker; or (c) it is a procedural step block (verification command, commit command) covered by the reference default of "Contracts and Literal Bodies" rule 3. Every marker's reason names a pin external to the plan and untouched by it — a reason citing an artifact this same plan creates or modifies is circular and invalid. Every `**Contract:**` field is falsifiable: a contract no check could fail ("must work correctly") is treated as missing, and so is a `none — <reason>` field on a task that does create or modify a governed artifact (a false `none`). Each `**Global Constraints:**` entry is checked too: an entry that (a) does not trace to the spec named on the plan's `**Spec:**` line and (b) restates the body of an artifact the plan itself creates or modifies is a self-pin in disguise and is flagged.
 
 If you find issues, fix them inline. No need to re-review — just fix and move on. If you find a spec requirement with no task, add the task.
 

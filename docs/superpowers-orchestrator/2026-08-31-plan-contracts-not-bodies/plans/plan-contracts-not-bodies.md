@@ -19,6 +19,8 @@
 **Global Constraints:**
 - Binding literal labels, matched exactly and case-sensitively (`grep -F`): `## Contracts and Literal Bodies` (heading), `**Exact content:**`, `**Contract:**` (the latter asserted inside the Task Template fenced block). These are byte pins — do not reword them.
 - Binding free-text fragments, matched case-insensitively (`grep -iF`): "ordinary fix", "together as one ordinary fix", "falsifiable", "reference implementations" (asserted inside the Plan Header fenced template), "no stated contract" and "self-pin" (asserted inside the Ambiguity & testability plan cell). The sentences carrying them may be reworded as long as the fragment and the spec-bound properties survive.
+
+> **Amended 2026-08-31 (code review [I1]):** The `multi-doc-review` gate now switches on the byte-pin label `**Body authority:**`, not on the free-text phrase "reference implementations". `**Body authority:**` joins the binding literal labels above (byte pin, exact match).
 - All other new wording in this plan's code blocks is reference wording: the spec (section "Design", preamble) explicitly allows rewording it as long as the bound properties hold.
 - No change to `skills/multi-code-review/**`, no hook/activation/packaging change, no file in `hooks/` touched, no skill added or renamed (spec Non-goals).
 - Never `git add` or commit `CLAUDE.md` — the Task 6 edit is on-disk only (spec R8).
@@ -473,6 +475,8 @@ git commit -m "feat(writing-plans): add contract audit as Self-Review check 5" -
 
 Binding in this task: the fragments "no stated contract" and "self-pin" inside the plan cell. The rest of the cell wording is reference wording, but must keep the R5 properties: three targets (uncontracted bodies with the false-`none` case and the procedural exemption; vacuous/unverifiable contracts; markers with missing or self-pinning reasons), gated on the header phrase "reference implementations".
 
+> **Amended 2026-08-31 (code review [I1], [I2]):** The gate is now the byte-pin label `**Body authority:**`, not the phrase "reference implementations". A fourth target applies too: a `**Global Constraints:**` entry that fails a decidable two-part test (does not trace to the spec, and restates a body the plan itself creates or modifies) is a self-pin in disguise and is flagged. A plan with `**Contract:**` fields but no `**Body authority:**` label is itself flagged as an inconsistent regime.
+
 - [x] **Step 1: Add the failing checks to the reviewer-templates suite**
 
 In `tests/reviewer-templates/run-tests.sh`, add this helper after the existing `assert_file_contains()` definition:
@@ -528,6 +532,8 @@ In `skills/multi-doc-review/SKILL.md`, section `## Lens Instructions`, lens `**A
   self-pin). A plan whose header lacks that phrase predates the contract
   rules — review it under the first sentence of this cell only.
 ```
+
+> **Amended 2026-08-31 (code review [I1], [I2]):** The actual wording committed to `skills/multi-doc-review/SKILL.md` gates on the label `**Body authority:**` instead of the phrase "reference implementations", adds the inconsistent-regime guard, and adds a fourth target for `**Global Constraints:**` self-pins in disguise — see the design's Amendments section for the full ruling.
 
 - [x] **Step 4: Run both suites to verify they pass**
 

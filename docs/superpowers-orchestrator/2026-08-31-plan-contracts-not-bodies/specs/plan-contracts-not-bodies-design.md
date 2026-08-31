@@ -212,9 +212,17 @@ reviewers who never read `writing-plans`. Bound properties of the note:
   review finding against such a body is an ordinary fix while the contract
   holds, and that only blocks marked `**Exact content:**` bind
   byte-for-byte.
-- It states that the `**Global Constraints:**` block binds as stated.
-- It contains the phrase "reference implementations" (test-pinned, in the
-  new suite, asserted to occur inside the Plan Header fenced template).
+- It states that the `**Global Constraints:**` block binds as stated, and
+  that the `**Body authority:**` note itself binds as stated alongside it
+  — a review fix may not reword the note (rule 6(b)).
+- It opens with the label `**Body authority:**` (test-pinned, byte pin,
+  matched exactly and case-sensitively, asserted to occur inside the Plan
+  Header fenced template). `multi-doc-review`'s plan-cell gate (R5)
+  switches on this label, not on free text: a free-text phrase is
+  rewordable by an ordinary review fix, so it cannot carry a gate. The
+  note also contains the phrase "reference implementations" (test-pinned,
+  case-insensitive fragment, same suite) — this phrase is no longer the
+  gate predicate.
 
 ### R4 — Self-Review check 5
 
@@ -232,7 +240,7 @@ a task that does create or modify a governed artifact (a false `none`).
 ### R5 — `multi-doc-review` lens addition
 
 In `skills/multi-doc-review/SKILL.md`, section "Lens Instructions", lens
-**Ambiguity & testability**, the **plan** cell only, add three finding
+**Ambiguity & testability**, the **plan** cell only, add four finding
 targets (properties; exact phrasing free except the pinned fragments):
 
 1. task-step bodies of artifacts the task creates or modifies that fix
@@ -245,12 +253,21 @@ targets (properties; exact phrasing free except the pinned fragments):
 2. contracts that are vacuous or unverifiable (no check could falsify
    them);
 3. `**Exact content:**` markers with no reason, or whose reason cites an
-   artifact the same plan creates or modifies (a self-pin).
+   artifact the same plan creates or modifies (a self-pin);
+4. a `**Global Constraints:**` entry that (a) does not trace to the spec
+   named on the plan's `**Spec:**` line and (b) restates the body of an
+   artifact the plan itself creates or modifies — a self-pin in disguise
+   (the fragment "self-pin" is binding — same suite).
 
-The three targets apply only to a plan whose header carries the R3
-authority note — detected by the note's test-pinned phrase "reference
-implementations" appearing in the plan header; a plan without it predates
-this design and is reviewed under today's lens text (see Non-goals).
+The four targets apply only to a plan whose header carries the label
+`**Body authority:**` — a byte pin, matched exactly and case-sensitively,
+not the free-text phrase "reference implementations" the note also
+contains: a free-text phrase is rewordable by an ordinary review fix, so
+it cannot carry a gate. A plan whose header carries a `**Contract:**`
+field but no `**Body authority:**` label is an inconsistent regime and is
+itself a finding — it is never silently reviewed as a legacy plan. A plan
+with neither predates this design and is reviewed under today's lens text
+(see Non-goals).
 
 No other lens or cell changes: this lens already owns placeholders,
 vagueness, and unverifiable verification, and a second lens would duplicate
@@ -333,4 +350,17 @@ authority (Non-goals).
 
 ## Amendments
 
-*(none yet — added here if in-run rulings amend this spec)*
+- **2026-08-31 (code review [I1]):** R3 bullet 3 and R5's gate sentence
+  change from the free-text PHRASE predicate ("reference implementations")
+  to the LABEL predicate (`**Body authority:**`), and R5 gains an
+  inconsistent-regime guard (a plan with `**Contract:**` fields but no
+  `**Body authority:**` label is itself flagged, never silently reviewed
+  as legacy). Reason: a free-text phrase is rewordable by an ordinary
+  review fix, so it cannot carry a gate.
+- **2026-08-31 (code review [I2]):** Self-Review check 5 and R5's lens
+  targets are extended to inspect `**Global Constraints:**` entries with a
+  decidable two-part test: an entry that (a) does not trace to the spec
+  named on the plan's `**Spec:**` line and (b) restates the body of an
+  artifact the plan itself creates or modifies is a self-pin in disguise
+  and is flagged. Reason: rule 6(b)'s unconditional bind on Global
+  Constraints gave self-pinned literals an unguarded bypass of rule 5.
