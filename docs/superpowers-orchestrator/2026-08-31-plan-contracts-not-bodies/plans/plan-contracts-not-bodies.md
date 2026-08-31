@@ -419,7 +419,7 @@ git commit -m "feat(writing-plans): add body-authority note to the Plan Header t
 
 Binding in this task: the fragment "falsifiable". The check's wording is otherwise reference wording, but must keep the R4 properties: three buckets for every fenced/quoted body (contract-covered, `**Exact content:**`-marked, or procedural), external-and-untouched pins with the circular case called out, falsifiability of every contract, and the false-`none` case.
 
-- [ ] **Step 1: Add the failing check**
+- [x] **Step 1: Add the failing check**
 
 In `tests/writing-plans/run-tests.sh`, add to the variable definitions (after `FRAG_REF_IMPL=...`):
 
@@ -434,12 +434,12 @@ bold "4. Self-Review contract audit (R4)"
 assert_fragment "self-review fragment '$FRAG_FALSIFIABLE'" "$FRAG_FALSIFIABLE"
 ```
 
-- [ ] **Step 2: Run the suite to verify the new check fails**
+- [x] **Step 2: Run the suite to verify the new check fails**
 
 Run: `bash tests/writing-plans/run-tests.sh`
 Expected: FAIL — exit code 1, `Results: 6 passed, 1 failed`. (Task 1's section says "falsify", which the fragment `falsifiable` does not match, so the word is still absent.)
 
-- [ ] **Step 3: Add the fifth Self-Review check**
+- [x] **Step 3: Add the fifth Self-Review check**
 
 In `skills/writing-plans/SKILL.md`, section `## Self-Review`, insert the following paragraph after the `**4. Scope-reduction scan:** …` paragraph and before the closing "If you find issues…" paragraph:
 
@@ -447,12 +447,12 @@ In `skills/writing-plans/SKILL.md`, section `## Self-Review`, insert the followi
 **5. Contract audit:** Every fenced block or quoted wording in the plan is in one of three buckets: (a) it falls under its task's stated `**Contract:**`; (b) it carries an `**Exact content:**` marker; or (c) it is a procedural step block (verification command, commit command) covered by the reference default of "Contracts and Literal Bodies" rule 3. Every marker's reason names a pin external to the plan and untouched by it — a reason citing an artifact this same plan creates or modifies is circular and invalid. Every `**Contract:**` field is falsifiable: a contract no check could fail ("must work correctly") is treated as missing, and so is a `none — <reason>` field on a task that does create or modify a governed artifact (a false `none`).
 ```
 
-- [ ] **Step 4: Run the suite to verify it passes**
+- [x] **Step 4: Run the suite to verify it passes**
 
 Run: `bash tests/writing-plans/run-tests.sh`
 Expected: PASS — exit code 0, `Results: 7 passed, 0 failed`.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add tests/writing-plans/run-tests.sh skills/writing-plans/SKILL.md
