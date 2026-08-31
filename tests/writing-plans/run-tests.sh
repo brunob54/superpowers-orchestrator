@@ -47,11 +47,6 @@ assert_exact() { # desc needle
   if grep -qF -- "$2" "$SKILL"; then ok "$1"; else bad "$1 (missing: $2)"; fi
 }
 
-# Free-text fragment match: case-insensitive.
-assert_fragment() { # desc needle
-  if grep -qiF -- "$2" "$SKILL"; then ok "$1"; else bad "$1 (missing: $2)"; fi
-}
-
 # Line number of the first line whose entire content equals the fixed
 # string $1 (whole-line match); empty when absent. Callers pass full
 # heading lines, so a partial-match (containment) search could be
@@ -92,11 +87,52 @@ assert_in_block() { # desc needle heading fence mode
   fi
 }
 
+# Assert that string $2 occurs on a line at or after line number $3
+# (inclusive — the rule or check's own heading line often carries its body
+# on the same line) and before line number $4 (exclusive). $5 is the match
+# mode: "exact" (case-sensitive) or "fragment" (case-insensitive). Scopes a
+# fragment assertion to the rule or check it is meant to pin, instead of
+# searching the whole file — a whole-file search still passes after the
+# pinned rule is deleted, as long as the fragment happens to appear
+# elsewhere.
+assert_in_range() { # desc needle start end mode
+  local desc="$1" needle="$2" start="$3" end="$4" mode="$5"
+  local hit
+  if [ -z "$start" ] || [ -z "$end" ]; then
+    bad "$desc (could not locate the range to search)"
+    return
+  fi
+  if [ "$mode" = "exact" ]; then
+    hit="$(awk -v needle="$needle" -v a="$start" -v b="$end" \
+      'NR >= a && NR < b && index($0, needle) > 0 { print NR; exit }' "$SKILL")"
+  else
+    hit="$(awk -v needle="$needle" -v a="$start" -v b="$end" \
+      'NR >= a && NR < b && index(tolower($0), tolower(needle)) > 0 { print NR; exit }' "$SKILL")"
+  fi
+  if [ -n "$hit" ]; then
+    ok "$desc (line $hit, range $start..$end)"
+  else
+    bad "$desc (not inside range $start..$end)"
+  fi
+}
+
+# Line ranges for the fragments that must be scoped to one rule or check
+# each, rather than matched anywhere in the file (see assert_in_range).
+CONTRACTS_HEADING_LINE="$(first_line_of "$SECTION_HEADING")"
+RULE3_LINE="$(line_starting_with_after '3. **Bodies are reference implementations by default.**' "$CONTRACTS_HEADING_LINE")"
+RULE4_LINE="$(line_starting_with_after '4. **Mark exact content explicitly.**' "$RULE3_LINE")"
+RULE5_LINE="$(line_starting_with_after '5. **A self-pin never justifies the marker.**' "$RULE4_LINE")"
+RULE6_LINE="$(line_starting_with_after '6. **Boundaries.**' "$RULE5_LINE")"
+SELF_REVIEW_5_LINE="$(line_starting_with_after '**5. Contract audit:**' "$CONTRACTS_HEADING_LINE")"
+SELF_REVIEW_5_END_LINE="$(line_starting_with_after 'If you find issues, fix them inline.' "$SELF_REVIEW_5_LINE")"
+
 bold "1. Contracts and Literal Bodies section (R1)"
 assert_exact "section heading '$SECTION_HEADING'" "$SECTION_HEADING"
 assert_exact "exact-content label '$EXACT_LABEL'" "$EXACT_LABEL"
-assert_fragment "authority-default fragment '$FRAG_ORDINARY_FIX'" "$FRAG_ORDINARY_FIX"
-assert_fragment "self-pin fragment '$FRAG_SELF_PIN'" "$FRAG_SELF_PIN"
+assert_in_range "authority-default fragment '$FRAG_ORDINARY_FIX' (rule 3)" \
+  "$FRAG_ORDINARY_FIX" "$RULE3_LINE" "$RULE4_LINE" fragment
+assert_in_range "self-pin fragment '$FRAG_SELF_PIN' (rule 5)" \
+  "$FRAG_SELF_PIN" "$RULE5_LINE" "$RULE6_LINE" fragment
 
 bold "2. Task Template Contract field (R2)"
 assert_in_block "Task Template block carries '$CONTRACT_LABEL'" \
@@ -109,7 +145,8 @@ assert_in_block "Plan Header template carries '$BODY_AUTHORITY_LABEL'" \
   "$BODY_AUTHORITY_LABEL" '## Plan Header' '```' exact
 
 bold "4. Self-Review contract audit (R4)"
-assert_fragment "self-review fragment '$FRAG_FALSIFIABLE'" "$FRAG_FALSIFIABLE"
+assert_in_range "self-review fragment '$FRAG_FALSIFIABLE' (check 5)" \
+  "$FRAG_FALSIFIABLE" "$SELF_REVIEW_5_LINE" "$SELF_REVIEW_5_END_LINE" fragment
 
 echo
 bold "Results: $PASS passed, $FAIL failed"

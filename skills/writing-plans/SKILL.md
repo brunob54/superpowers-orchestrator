@@ -137,9 +137,12 @@ it shows one way, it does not bind.
    feature — the Step 5 commit command, `Run:` verification lines — need
    no contract entry; rule 3's default covers them. The boundary is a
    test, not a feeling: a block is procedural exactly when it creates or
-   modifies no file named in the task's `**Files:**` list. Two contract
-   shapes exist — code artifact and wording artifact — shown in the
-   examples below.
+   modifies no file named in the task's `**Files:**` list. This is the one
+   test for "procedural" used everywhere in this plan and in review: the
+   `**Files:**` list must be complete — every file a task's step bodies
+   create or modify is named there — and an omitted file is a plan
+   defect, not an exemption from this test. Two contract shapes exist —
+   code artifact and wording artifact — shown in the examples below.
 
 2. **Pin an interface only when something outside the plan depends on
    it.** An interface (signature, flag set, file format) is pinned in the
@@ -158,8 +161,11 @@ it shows one way, it does not bind.
    plan conflict.
 
 4. **Mark exact content explicitly.** A block is binding byte-for-byte
-   only when the line immediately above the fenced block or block quote it
-   pins reads `**Exact content:** <reason>`. The reason must name the
+   only when the paragraph immediately preceding the fenced block or block
+   quote it pins begins with `**Exact content:** <reason>`. The reason
+   may wrap across more than one line; what matters is that the marker
+   starts the paragraph, not that it sits on the single line right above
+   the fence. The reason must name the
    *external* pin: a pre-existing test asserting the string, another file
    that must already match byte-for-byte, or user-approved copy — and a
    user-approval reason must cite where the approval is recorded (a spec
@@ -183,8 +189,13 @@ it shows one way, it does not bind.
    vague steps — the "No Placeholders" rules still require actual code.
    (b) The default never applies to the plan header's
    `**Global Constraints:**` block, which binds as stated; a conflict with
-   a global constraint is genuine and stops the run. The `**Body
-   authority:**` note itself binds as stated alongside the
+   a global constraint is genuine and stops the run. One exception: a
+   `**Global Constraints:**` entry that fails the two-part self-pin test
+   from Self-Review check 5 — it does not trace to the spec named on the
+   plan's `**Spec:**` line AND it restates the body of an artifact the
+   plan itself creates or modifies — is amendable as an ordinary fix;
+   every other Global Constraints entry keeps binding as stated. The
+   `**Body authority:**` note itself binds as stated alongside the
    `**Global Constraints:**` block: a review fix may not reword the note.
    Known limit: because the note is exempt from the reference default, a
    finding against the note's wording is a plan conflict, not an ordinary
@@ -315,7 +326,7 @@ After writing the complete plan, look at the spec with fresh eyes and check the 
 
 **4. Scope-reduction scan:** Search the plan for: "v1", "basic", "simple", "for now", "placeholder", "initial version", "minimal". For each hit, verify it was explicitly sanctioned by the user — not a quiet scope downgrade from what was requested. Fix any that weren't.
 
-**5. Contract audit:** Every fenced block or quoted wording in the plan is in one of three buckets: (a) it falls under its task's stated `**Contract:**`; (b) it carries an `**Exact content:**` marker; or (c) it is a procedural step block (verification command, commit command) covered by the reference default of "Contracts and Literal Bodies" rule 3. Every marker's reason names a pin external to the plan and untouched by it — a reason citing an artifact this same plan creates or modifies is circular and invalid. Every `**Contract:**` field is falsifiable: a contract no check could fail ("must work correctly") is treated as missing, and so is a `none — <reason>` field on a task that does create or modify a governed artifact (a false `none`). Each `**Global Constraints:**` entry is checked too: an entry that (a) does not trace to the spec named on the plan's `**Spec:**` line and (b) restates the body of an artifact the plan itself creates or modifies is a self-pin in disguise and is flagged.
+**5. Contract audit:** Every fenced block or quoted wording in the plan is in one of three buckets: (a) it falls under its task's stated `**Contract:**`; (b) it carries an `**Exact content:**` marker; or (c) it is a procedural step block under rule 1's test — it creates or modifies no file named in the task's `**Files:**` list — covered by the reference default of "Contracts and Literal Bodies" rule 3. Every marker's reason names a pin external to the plan and untouched by it — a reason citing an artifact this same plan creates or modifies is circular and invalid. Every `**Contract:**` field is falsifiable: a contract no check could fail ("must work correctly") is treated as missing, and so is a `none — <reason>` field on a task that does create or modify a governed artifact (a false `none`). Each `**Global Constraints:**` entry is checked too: an entry that (a) does not trace to the spec named on the plan's `**Spec:**` line and (b) restates the body of an artifact the plan itself creates or modifies is a self-pin in disguise and is flagged.
 
 If you find issues, fix them inline. No need to re-review — just fix and move on. If you find a spec requirement with no task, add the task.
 

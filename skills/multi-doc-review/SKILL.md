@@ -324,12 +324,14 @@ Copy the cell for the doc type verbatim into `[LENS_INSTRUCTIONS]`.
 - plan: Find: placeholder patterns (TBD, "add appropriate...", steps without
   code); vague steps; missing or unverifiable verification commands; steps
   interpretable two ways. When the plan header's block quote — the text
-  above the first `---` separator — carries the label
-  `**Body authority:**`, also find: task-step bodies of artifacts the task
-  creates or modifies that fix behaviour with no stated contract — a
-  `**Contract:** none — <reason>` field on a task that does create or
-  modify a governed artifact counts as no stated contract; procedural step
-  blocks (verification commands, commit commands) are exempt; contracts
+  above the first `---` separator — contains a line starting with
+  `> **Body authority:**` (the label at the start of a block-quote line,
+  not merely mentioned elsewhere in the block quote), also find: task-step
+  bodies of artifacts the task creates or modifies that fix behaviour with
+  no stated contract — a `**Contract:** none — <reason>` field on a task
+  that does create or modify a governed artifact counts as no stated
+  contract; procedural step blocks — those that create or modify no file
+  named in the task's `**Files:**` list — are exempt; contracts
   that are vacuous or unverifiable (no check could falsify them);
   `**Exact content:**` markers with no reason, or whose reason cites an
   artifact the same plan creates or modifies (a self-pin); a

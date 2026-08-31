@@ -260,11 +260,12 @@ targets (properties; exact phrasing free except the pinned fragments):
    (the fragment "self-pin" is binding — same suite).
 
 The four targets apply only to a plan whose header's block quote — the
-text above the first `---` separator — carries the label
-`**Body authority:**` — a byte pin, matched exactly and case-sensitively,
-not the free-text phrase "reference implementations" the note also
-contains: a free-text phrase is rewordable by an ordinary review fix, so
-it cannot carry a gate. A plan that carries `**Contract:**` fields in its
+text above the first `---` separator — contains a line starting with
+`> **Body authority:**` (the label at the start of a block-quote line, not
+merely mentioned elsewhere in the block quote) — a byte pin, matched
+exactly and case-sensitively, not the free-text phrase "reference
+implementations" the note also contains: a free-text phrase is rewordable
+by an ordinary review fix, so it cannot carry a gate. A plan that carries `**Contract:**` fields in its
 tasks but no `**Body authority:**` label in its header is an inconsistent
 regime and is itself a finding — it is never silently reviewed as a
 legacy plan. A plan with neither predates this design and is reviewed
@@ -365,3 +366,9 @@ authority (Non-goals).
   artifact the plan itself creates or modifies is a self-pin in disguise
   and is flagged. Reason: rule 6(b)'s unconditional bind on Global
   Constraints gave self-pinned literals an unguarded bypass of rule 5.
+  Follow-up (code review [I2], round 2): rule 6(b) gained the matching
+  resolution path — a `**Global Constraints:**` entry that fails the
+  two-part self-pin test is amendable as an ordinary fix; every other
+  entry keeps binding as stated. Without this, a target-4 finding could be
+  raised but never cleared, so every such finding became a run-stopping
+  plan conflict with no in-run resolution.
