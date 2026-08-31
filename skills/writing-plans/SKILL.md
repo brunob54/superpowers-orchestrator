@@ -231,6 +231,8 @@ it shows one way, it does not bind.
 
 **Does NOT cover:** *(required when this task adds a condition, gate, trigger, or any "when X do Y" logic — state the scenarios the condition excludes. If an excluded scenario should be covered, revise this task before implementing.)*
 
+**Contract:** *(one entry per artifact this task creates or modifies: the invariants that must hold and the verification that would falsify them; inputs and outputs for code artifacts. See "Contracts and Literal Bodies" for the two shapes — code artifact and wording artifact. Write `none — <reason>` when the task creates or modifies nothing a later review finding could be judged against.)*
+
 - [ ] **Step 1: Write failing test**
 
 ```<lang>

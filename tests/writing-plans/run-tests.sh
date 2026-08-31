@@ -22,6 +22,7 @@ SKILL="$ROOT/skills/writing-plans/SKILL.md"
 # Binding literal labels (byte pins).
 SECTION_HEADING='## Contracts and Literal Bodies'
 EXACT_LABEL='**Exact content:**'
+CONTRACT_LABEL='**Contract:**'
 
 # Binding free-text fragments.
 FRAG_ORDINARY_FIX='ordinary fix'
@@ -90,6 +91,10 @@ assert_exact "section heading '$SECTION_HEADING'" "$SECTION_HEADING"
 assert_exact "exact-content label '$EXACT_LABEL'" "$EXACT_LABEL"
 assert_fragment "authority-default fragment '$FRAG_ORDINARY_FIX'" "$FRAG_ORDINARY_FIX"
 assert_fragment "self-pin fragment '$FRAG_SELF_PIN'" "$FRAG_SELF_PIN"
+
+bold "2. Task Template Contract field (R2)"
+assert_in_block "Task Template block carries '$CONTRACT_LABEL'" \
+  "$CONTRACT_LABEL" '## Task Template' '````' exact
 
 echo
 bold "Results: $PASS passed, $FAIL failed"
