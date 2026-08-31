@@ -27,6 +27,7 @@ CONTRACT_LABEL='**Contract:**'
 # Binding free-text fragments.
 FRAG_ORDINARY_FIX='ordinary fix'
 FRAG_SELF_PIN='together as one ordinary fix'
+FRAG_REF_IMPL='reference implementations'
 
 PASS=0
 FAIL=0
@@ -95,6 +96,10 @@ assert_fragment "self-pin fragment '$FRAG_SELF_PIN'" "$FRAG_SELF_PIN"
 bold "2. Task Template Contract field (R2)"
 assert_in_block "Task Template block carries '$CONTRACT_LABEL'" \
   "$CONTRACT_LABEL" '## Task Template' '````' exact
+
+bold "3. Plan Header authority note (R3)"
+assert_in_block "Plan Header template carries '$FRAG_REF_IMPL'" \
+  "$FRAG_REF_IMPL" '## Plan Header' '```' fragment
 
 echo
 bold "Results: $PASS passed, $FAIL failed"
