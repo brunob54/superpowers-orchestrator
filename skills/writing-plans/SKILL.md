@@ -310,6 +310,8 @@ After writing the complete plan, look at the spec with fresh eyes and check the 
 
 **4. Scope-reduction scan:** Search the plan for: "v1", "basic", "simple", "for now", "placeholder", "initial version", "minimal". For each hit, verify it was explicitly sanctioned by the user — not a quiet scope downgrade from what was requested. Fix any that weren't.
 
+**5. Contract audit:** Every fenced block or quoted wording in the plan is in one of three buckets: (a) it falls under its task's stated `**Contract:**`; (b) it carries an `**Exact content:**` marker; or (c) it is a procedural step block (verification command, commit command) covered by the reference default of "Contracts and Literal Bodies" rule 3. Every marker's reason names a pin external to the plan and untouched by it — a reason citing an artifact this same plan creates or modifies is circular and invalid. Every `**Contract:**` field is falsifiable: a contract no check could fail ("must work correctly") is treated as missing, and so is a `none — <reason>` field on a task that does create or modify a governed artifact (a false `none`).
+
 If you find issues, fix them inline. No need to re-review — just fix and move on. If you find a spec requirement with no task, add the task.
 
 ## Multi-Round Plan Review

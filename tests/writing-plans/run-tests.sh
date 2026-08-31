@@ -28,6 +28,7 @@ CONTRACT_LABEL='**Contract:**'
 FRAG_ORDINARY_FIX='ordinary fix'
 FRAG_SELF_PIN='together as one ordinary fix'
 FRAG_REF_IMPL='reference implementations'
+FRAG_FALSIFIABLE='falsifiable'
 
 PASS=0
 FAIL=0
@@ -100,6 +101,9 @@ assert_in_block "Task Template block carries '$CONTRACT_LABEL'" \
 bold "3. Plan Header authority note (R3)"
 assert_in_block "Plan Header template carries '$FRAG_REF_IMPL'" \
   "$FRAG_REF_IMPL" '## Plan Header' '```' fragment
+
+bold "4. Self-Review contract audit (R4)"
+assert_fragment "self-review fragment '$FRAG_FALSIFIABLE'" "$FRAG_FALSIFIABLE"
 
 echo
 bold "Results: $PASS passed, $FAIL failed"
