@@ -48,3 +48,9 @@ note: [I3] and the mislabeled amendment both fixed (f026387); suites 16/16, 24/2
 note: the loop reports the note's LENGTH is now itself a defect — ~1500 chars, 7 normative sentences with nested exceptions; each of the last 4 verification cycles produced 3-4 findings of the single shape "case X falls between two sentences"
 note: a third independent reviewer proposes the note stop binding by its wording and instead carry an explicit non-conflict disposition for findings against its own prose — decidable from the note alone; NOT acted on, it changes the binding regime
 Resume: Resume orchestration for docs/superpowers-orchestrator/2026-08-31-plan-contracts-not-bodies/plans/plan-contracts-not-bodies.md
+
+## Phase 4 — Code review — rounds 4 (2 invocations) — cap — fixes 10 — unresolved 0 — user_decision 0
+Resolved by orchestrator ruling under the user's standing delegation: invocation 1 [I1]/[I2] (86bf5c5), invocation 2 [I2]/[I3] (808d813), [I3] note self-contradiction (f026387), and the structural restructure A-F (a10e5a6).
+Standing rule bounded every verification chain: findings against plan-mandated wording were decided inside the loop (fixed, or rejected with a named reason); none escalated.
+
+_Completed — 2026-09-01 — HEAD a10e5a6_
