@@ -38,3 +38,13 @@ Open: [I3] unresolved — the `**Body authority:**` note contradicts itself: its
 note: introduced by this loop's own verification-2 fix; verification cycles for round 4 were spent, so the remedy could not ship reviewed
 note: standing rule held — 2 Important findings rejected with named reasons ([I1] multi-code-review triage change, out of scope by the spec's Non-goals; [I2] property-binding needing a spec list the controller never reads)
 Resume: Resume orchestration for docs/superpowers-orchestrator/2026-08-31-plan-contracts-not-bodies/plans/plan-contracts-not-bodies.md
+
+## STOPPED — 2026-09-01 — phase 4 — 3 unresolved at the verification cap; note not converging by accretion
+Detail: docs/superpowers-orchestrator/2026-08-31-plan-contracts-not-bodies/implementation/plan-contracts-not-bodies-review-log.md
+Open: [U1] unresolved — Self-Review check 5 quantifies over every fenced/quoted block "in the plan" but its buckets reach only task content, so the header block quote every generated plan carries fits no bucket: the check reports a defect on 100% of generated plans
+Open: [U2] unresolved — an `**Exact content:**` marker whose reason is present but names no pin falls through both clauses and binds byte-for-byte, so a vacuous reason outranks a properly reasoned self-pin
+Open: [U3] unresolved — task content that is neither fenced nor block-quoted (`Expected:` lines, `**Files:**` lists) is in neither of the note's two sets; this branch's own plan hit that class twice
+note: [I3] and the mislabeled amendment both fixed (f026387); suites 16/16, 24/24, 10/10
+note: the loop reports the note's LENGTH is now itself a defect — ~1500 chars, 7 normative sentences with nested exceptions; each of the last 4 verification cycles produced 3-4 findings of the single shape "case X falls between two sentences"
+note: a third independent reviewer proposes the note stop binding by its wording and instead carry an explicit non-conflict disposition for findings against its own prose — decidable from the note alone; NOT acted on, it changes the binding regime
+Resume: Resume orchestration for docs/superpowers-orchestrator/2026-08-31-plan-contracts-not-bodies/plans/plan-contracts-not-bodies.md
