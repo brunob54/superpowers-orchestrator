@@ -535,6 +535,34 @@ In `skills/writing-plans/SKILL.md`, inside the Plan Header fenced block (the ` `
 > every other entry binds as stated — and this note binds as stated
 > alongside it." See the design's Amendments section for the full ruling.
 
+> **Amended 2026-09-01 (code review [I1]/[I2] correction, round 6):** The
+> quote above is superseded on sentence order only — no sentence's wording
+> changed. Sentence 4 ("A review finding against such a body …") uses
+> "such a body" to refer back to sentence 1's task-step bodies; the two
+> new sentences inserted between them retargeted that phrase to the
+> nearest new sentence instead. The actual wording committed to
+> `skills/writing-plans/SKILL.md`'s Plan Header note now reads in full:
+> "Fenced code blocks and block-quoted wording in task steps are reference
+> implementations for the task's stated `**Contract:**`. A review finding
+> against such a body is an ordinary fix while the contract holds; a block
+> marked `**Exact content:**` binds byte-for-byte unless its reason names
+> a pin the plan itself writes or edits, in which case it is a self-pin
+> and body and pin are amendable together as one ordinary fix. A block
+> marked `**Exact content:**` with no reason does not bind byte-for-byte;
+> the body is an ordinary fix, and the missing reason is itself a
+> finding. Other non-task plan content — header prose such as
+> `**Architecture:**` and `**Assumptions:**`, and the File Structure
+> section — follows the same reference default: a finding against it is
+> an ordinary fix unless it contradicts a stated contract or a global
+> constraint. A finding against a body in a task whose `**Contract:**`
+> field reads `none — <reason>` is an ordinary fix, because there is no
+> contract to break. The `**Global Constraints:**` block binds as stated,
+> except an entry that both does not trace to the spec named on the
+> plan's `**Spec:**` line and restates the body of an artifact the plan
+> itself creates or modifies, which is an ordinary fix; every other entry
+> binds as stated — and this note binds as stated alongside it." See the
+> design's Amendments section for the full ruling.
+
 - [x] **Step 4: Run the suite to verify it passes**
 
 Run: `bash tests/writing-plans/run-tests.sh`
