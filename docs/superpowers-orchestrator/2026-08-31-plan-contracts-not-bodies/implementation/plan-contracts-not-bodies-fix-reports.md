@@ -1375,3 +1375,263 @@ Results: 23 passed, 1 failed
 ```
 
 Restored; `diff` against the pre-demo backup showed no differences.
+
+## Round 4 verification 2 fixes — 2026-09-01
+
+Fix subagent applied the three findings from the round-4-verification-2 review.
+
+- **[I1]** — `skills/writing-plans/SKILL.md`'s `**Body authority:**` note
+  (Plan Header template, around line 86) gained two clauses in its own
+  voice, decidable from the note alone with no cross-reference to any rule
+  number: (a) the same reference default that governs task-step bodies now
+  also states that it covers other non-task plan content — header prose
+  such as `**Architecture:**` and `**Assumptions:**`, and the File
+  Structure section — as an ordinary fix unless it contradicts a stated
+  contract or a global constraint (mirrors rule 6(c)); (b) it states that a
+  finding against a body in a task whose `**Contract:**` field reads
+  `none — <reason>` is an ordinary fix, because there is no contract to
+  break (mirrors rule 6(d)). The note's existing wording is unchanged; the
+  two clauses were inserted as new sentences. Rules 6(c) and 6(d) in the
+  same file already state these rules and were left unchanged — no
+  contradiction with the note's new wording.
+- **[I2]** — the note's exact-content sentence gained a new sentence for
+  the missing case: a block marked `**Exact content:**` with no reason does
+  not bind byte-for-byte — the body is an ordinary fix, and the missing
+  reason is itself a finding. This closes the inversion where an
+  unreasoned marker got stronger triage protection than a properly
+  reasoned self-pin. Rule 4 already calls a marker with no reason a plan
+  failure and was left unchanged — no contradiction (rule 4 flags the
+  marker itself; the note's new sentence additionally settles whether the
+  body binds, which rule 4 was silent on).
+- **[M2]** — `tests/reviewer-templates/run-tests.sh` check 8 no longer
+  takes the first backtick-quoted block-quote label found in the extracted
+  Ambiguity plan cell. It now collects every distinct matching label
+  (`sort -u` into a temp file, no process substitution) and FAILs with an
+  explicit "ambiguous gate label" message naming all of them when more
+  than one distinct label is present, instead of silently comparing
+  against whichever label happened to come first.
+
+Document amendments made in the same commit:
+- `docs/superpowers-orchestrator/2026-08-31-plan-contracts-not-bodies/specs/plan-contracts-not-bodies-design.md`
+  — R3's bound-properties list gained two new bullets stating the [I1] and
+  [I2] clauses; a dated `## Amendments` entry
+  (`2026-09-01 (code review [I1], [I2], round 4 verification 2)`) records
+  the change and its reason.
+- `docs/superpowers-orchestrator/2026-08-31-plan-contracts-not-bodies/plans/plan-contracts-not-bodies.md`
+  — a new `> **Amended 2026-09-01 …**` block-quote added after the round-4
+  verification-1 amendment in Task 3 Step 3, quoting the note's full,
+  superseding wording; a second amendment after the round-4
+  verification-1 count amendment in Task 5 records the writing-plans
+  suite's assertion count rising from 12 to 15.
+
+### Falsifier demonstrations
+
+Each new clause added to the `**Body authority:**` note was deleted in a
+scratch copy of `skills/writing-plans/SKILL.md`, the suite was re-run to
+confirm the new assertion fails, and the file was restored (`diff` against
+the pre-demo backup showed no differences after each restore).
+
+**Deleting the non-task-content sentence** (" Other non-task plan
+content — header prose such as `**Architecture:**` and `**Assumptions:**`,
+and the File Structure section — follows the same reference default: a
+finding against it is an ordinary fix unless it contradicts a stated
+contract or a global constraint."):
+
+```
+  FAIL: Plan Header note carries the non-task-content default 'Other non-task plan content' (not inside block 81..96)
+Results: 14 passed, 1 failed
+```
+
+**Deleting the no-contract sentence** (" A finding against a body in a task
+whose `**Contract:**` field reads `none — <reason>` is an ordinary fix,
+because there is no contract to break."):
+
+```
+  FAIL: Plan Header note carries the no-contract clause 'no contract to break' (not inside block 81..96)
+Results: 14 passed, 1 failed
+```
+
+**Deleting the unreasoned-marker sentence** (" A block marked
+`**Exact content:**` with no reason does not bind byte-for-byte; the body
+is an ordinary fix, and the missing reason is itself a finding."):
+
+```
+  FAIL: Plan Header note carries the unreasoned-marker clause 'missing reason is itself a finding' (not inside block 81..96)
+Results: 14 passed, 1 failed
+```
+
+**M2 scenario demonstration** — a scratch copy of
+`skills/multi-doc-review/SKILL.md` had a decoy sentence inserted into the
+Ambiguity plan cell before the real gate mention: `` See also
+`> **For agentic workers:**` for the sibling block quote. `` Before the
+fix, `head -n1` would have silently taken this decoy as the gate label.
+After the fix:
+
+```
+  FAIL: multi-doc-review SKILL.md: ambiguous gate label in the plan cell (**Body authority:** **For agentic workers:**)
+Results: 23 passed, 1 failed
+```
+
+File restored; `diff` against the pre-demo backup showed no differences.
+
+### Verification — all three required suites
+
+```
+$ bash tests/writing-plans/run-tests.sh
+```
+```
+1. Contracts and Literal Bodies section (R1)
+  PASS: section heading '## Contracts and Literal Bodies' (whole-line match, line 122)
+  PASS: exact-content label '**Exact content:**' (rule 4) (line 172, range 170..184)
+  PASS: procedural tie-break fragment 'treat the block as not procedural' (rule 1) (line 149, range 129..154)
+  PASS: authority-default fragment 'ordinary fix' (rule 3) (line 166, range 163..170)
+  PASS: self-pin fragment 'together as one ordinary fix' (rule 5) (line 187, range 184..194)
+2. Task Template Contract field (R2)
+  PASS: Task Template block carries '**Contract:**' (line 259, block 247..289)
+3. Plan Header authority note (R3)
+  PASS: Plan Header template carries 'reference implementations' (line 86, block 81..96)
+  PASS: Plan Header template carries '**Body authority:**' (line 86, block 81..96)
+  PASS: Plan Header note carries the self-pin qualification 'together as one ordinary fix' (line 86, block 81..96)
+  PASS: Plan Header note carries the Global Constraints self-pin exception 'restates the body of an artifact the plan itself creates or modifies' (line 86, block 81..96)
+  PASS: Plan Header note carries the self-binding clause 'this note binds as stated' (line 86, block 81..96)
+  PASS: Plan Header note carries the non-task-content default 'Other non-task plan content' (line 86, block 81..96)
+  PASS: Plan Header note carries the no-contract clause 'no contract to break' (line 86, block 81..96)
+  PASS: Plan Header note carries the unreasoned-marker clause 'missing reason is itself a finding' (line 86, block 81..96)
+4. Self-Review contract audit (R4)
+  PASS: self-review fragment 'falsifiable' (check 5) (line 336, range 336..338)
+
+Results: 15 passed, 0 failed
+```
+Exit code: 0
+
+```
+$ bash tests/reviewer-templates/run-tests.sh
+```
+```
+1. Harness claims rule is inside the prompt block
+  PASS: doc-review template: Harness claims rule inside the prompt block (line 42, block 25..133)
+  PASS: code-review template: Harness claims rule inside the prompt block (line 64, block 24..193)
+2. Finding-format field spellings
+  PASS: doc-review template: field spelling 'harness: tested —'
+  PASS: doc-review template: field spelling 'harness: untested —'
+  PASS: code-review template: field spelling 'harness: tested —'
+  PASS: code-review template: field spelling 'harness: untested —'
+3. Controller triage reason strings and completion-report line
+  PASS: multi-doc-review SKILL.md: reason string 'harness probe —'
+  PASS: multi-doc-review SKILL.md: reason string 'harness probe not runnable here'
+  PASS: multi-doc-review SKILL.md: completion-report line 'Harness probes owed:'
+  PASS: multi-code-review SKILL.md: reason string 'harness probe —'
+  PASS: multi-code-review SKILL.md: reason string 'harness probe not runnable here'
+  PASS: multi-code-review SKILL.md: completion-report line 'Harness probes owed:'
+4. user-decision guard
+  PASS: multi-code-review SKILL.md: guard fragment
+5. Rule text drift between the two templates
+  PASS: doc-review template: rule extract is non-empty
+  PASS: code-review template: rule extract is non-empty
+  PASS: rule text identical in both templates
+6. Unchanged contracts
+  PASS: code-review template: blinding pathspec line
+  PASS: code-review template: report marker instruction
+  PASS: doc-review template: report marker instruction
+7. Ambiguity & testability plan-cell contract targets
+  PASS: multi-doc-review SKILL.md: Ambiguity plan-cell extract is non-empty
+  PASS: Ambiguity plan cell: fragment 'no stated contract'
+  PASS: Ambiguity plan cell: fragment 'self-pin'
+  PASS: Ambiguity plan cell: gate label '**Body authority:**'
+8. Body-authority gate label consistency (writing-plans vs multi-doc-review)
+  PASS: gate label matches between writing-plans and multi-doc-review (**Body authority:**)
+
+Results: 24 passed, 0 failed
+```
+Exit code: 0
+
+```
+$ bash tests/codex/run-unit-tests.sh
+```
+```
+Results: 10 suites passed, 0 suites failed
+All unit tests passed.
+```
+Exit code: 0
+
+## Round 4 verification 2 fixes — 2026-09-01 (correction, round 6 review)
+
+A subsequent independent review ([I1]/[I2] correction, round 6) found that
+the [I1]/[I2] insertion broke a referential antecedent: sentence 4 of the
+note ("A review finding against **such a body** is an ordinary fix while
+the contract holds …") was written to refer back to sentence 1's task-step
+bodies, but the two new sentences landed between them, so "such a body"'s
+nearest antecedent became the `**Contract:** none` body instead — reading,
+literally, as a contradiction of the sentence right before it.
+
+**Fix** — `skills/writing-plans/SKILL.md` line 86: reordered the note's
+sentences with no wording changes. New order: (1) task-step bodies are
+reference implementations; (2) ordinary-fix-while-contract-holds +
+exact-content self-pin exception ("such a body" now immediately follows
+its antecedent again); (3) exact-content-with-no-reason; (4) non-task
+plan content follows the same reference default; (5) `**Contract:** none`
+task bodies; (6) Global Constraints + note-binds-as-stated. The note's
+full text after reordering:
+
+> Fenced code blocks and block-quoted wording in task steps are reference
+> implementations for the task's stated `**Contract:**`. A review finding
+> against such a body is an ordinary fix while the contract holds; a block
+> marked `**Exact content:**` binds byte-for-byte unless its reason names
+> a pin the plan itself writes or edits, in which case it is a self-pin
+> and body and pin are amendable together as one ordinary fix. A block
+> marked `**Exact content:**` with no reason does not bind byte-for-byte;
+> the body is an ordinary fix, and the missing reason is itself a
+> finding. Other non-task plan content — header prose such as
+> `**Architecture:**` and `**Assumptions:**`, and the File Structure
+> section — follows the same reference default: a finding against it is
+> an ordinary fix unless it contradicts a stated contract or a global
+> constraint. A finding against a body in a task whose `**Contract:**`
+> field reads `none — <reason>` is an ordinary fix, because there is no
+> contract to break. The `**Global Constraints:**` block binds as stated,
+> except an entry that both does not trace to the spec named on the
+> plan's `**Spec:**` line and restates the body of an artifact the plan
+> itself creates or modifies, which is an ordinary fix; every other entry
+> binds as stated — and this note binds as stated alongside it.
+
+**Document amendments:**
+- `docs/superpowers-orchestrator/2026-08-31-plan-contracts-not-bodies/plans/plan-contracts-not-bodies.md`
+  — a new `> **Amended 2026-09-01 (code review [I1]/[I2] correction,
+  round 6):**` block quote added after the round-4-verification-2
+  amendment in Task 3 Step 3, marking it superseded on sentence order only
+  and quoting the reordered wording in full.
+- `docs/superpowers-orchestrator/2026-08-31-plan-contracts-not-bodies/specs/plan-contracts-not-bodies-design.md`
+  — checked; the R3 amendment entry describes the two clauses in prose
+  ("Clause 1", "Clause 2") and does not quote the note's sentence order,
+  so it needed no update and was left unchanged.
+
+No assertion, wording, or check count changed (the block-scoped fragment
+assertions in `tests/writing-plans/run-tests.sh` match on substrings
+inside the whole Plan Header block, not on sentence order, so they are
+unaffected by the reorder).
+
+### Verification — all three required suites (re-run after the reorder)
+
+```
+$ bash tests/writing-plans/run-tests.sh
+```
+```
+Results: 15 passed, 0 failed
+```
+Exit code: 0
+
+```
+$ bash tests/reviewer-templates/run-tests.sh
+```
+```
+Results: 24 passed, 0 failed
+```
+Exit code: 0
+
+```
+$ bash tests/codex/run-unit-tests.sh
+```
+```
+Results: 10 suites passed, 0 suites failed
+All unit tests passed.
+```
+Exit code: 0
