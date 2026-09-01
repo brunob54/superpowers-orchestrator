@@ -154,12 +154,22 @@ bold "8. Body-authority gate label consistency (writing-plans vs multi-doc-revie
 # plan-cell text already extracted above (check 7) rather than the whole
 # file — a backtick-quoted block-quote label added earlier elsewhere in
 # multi-doc-review/SKILL.md must not silently retarget this comparison (M1).
-LENS_GATE_LABEL="$(grep -oE '> \*\*[A-Za-z ]+:\*\*`' "$AMB_PLAN_CELL" | head -n1 | sed -e 's/^> //' -e 's/`$//')"
+# Collect every distinct label in the cell matching the pattern, instead of
+# taking the first — a backtick-quoted mention of a different block-quote
+# label appearing earlier in the cell (e.g. `` `> **For agentic workers:**` ``)
+# must not silently substitute for the real gate label (M2).
+LENS_GATE_LABELS_FILE="$WORK/lens-gate-labels.txt"
+grep -oE '> \*\*[A-Za-z ]+:\*\*`' "$AMB_PLAN_CELL" | sed -e 's/^> //' -e 's/`$//' | sort -u > "$LENS_GATE_LABELS_FILE"
+LENS_GATE_LABEL_COUNT="$(wc -l < "$LENS_GATE_LABELS_FILE" | tr -d ' ')"
+LENS_GATE_LABEL=""
+if [ "$LENS_GATE_LABEL_COUNT" -eq 1 ]; then
+  LENS_GATE_LABEL="$(cat "$LENS_GATE_LABELS_FILE")"
+fi
 # Find the Plan Header template's block-quote paragraph whose label matches
 # the label the lens cell gates on, by content rather than by ordinal
 # position — a paragraph inserted earlier in the block quote, or a
 # reworded "For agentic workers" label, must not retarget which paragraph
-# gets compared (M2).
+# gets compared.
 WP_BODY_AUTHORITY_LABEL=""
 if [ -n "$LENS_GATE_LABEL" ]; then
   WP_BODY_AUTHORITY_LABEL="$(awk -v want="$LENS_GATE_LABEL" '
@@ -172,7 +182,9 @@ if [ -n "$LENS_GATE_LABEL" ]; then
     }
   ' "$WP_SKILL")"
 fi
-if [ -z "$LENS_GATE_LABEL" ]; then
+if [ "$LENS_GATE_LABEL_COUNT" -gt 1 ]; then
+  bad "multi-doc-review SKILL.md: ambiguous gate label in the plan cell ($(tr '\n' ' ' < "$LENS_GATE_LABELS_FILE" | sed 's/ *$//'))"
+elif [ -z "$LENS_GATE_LABEL" ]; then
   bad "multi-doc-review SKILL.md: no gate label found in the plan cell"
 elif [ -z "$WP_BODY_AUTHORITY_LABEL" ]; then
   bad "writing-plans/SKILL.md: no Plan Header block-quote paragraph matches gate label '$LENS_GATE_LABEL'"

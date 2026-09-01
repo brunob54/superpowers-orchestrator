@@ -33,6 +33,9 @@ FRAG_FALSIFIABLE='falsifiable'
 FRAG_NOT_PROCEDURAL='treat the block as not procedural'
 FRAG_NOTE_BINDS='this note binds as stated'
 FRAG_GC_SELF_PIN='restates the body of an artifact the plan itself creates or modifies'
+FRAG_NONTASK_DEFAULT='Other non-task plan content'
+FRAG_NO_CONTRACT='no contract to break'
+FRAG_NO_REASON='missing reason is itself a finding'
 
 PASS=0
 FAIL=0
@@ -156,6 +159,12 @@ assert_in_block "Plan Header note carries the Global Constraints self-pin except
   "$FRAG_GC_SELF_PIN" '## Plan Header' '```' fragment
 assert_in_block "Plan Header note carries the self-binding clause '$FRAG_NOTE_BINDS'" \
   "$FRAG_NOTE_BINDS" '## Plan Header' '```' fragment
+assert_in_block "Plan Header note carries the non-task-content default '$FRAG_NONTASK_DEFAULT'" \
+  "$FRAG_NONTASK_DEFAULT" '## Plan Header' '```' fragment
+assert_in_block "Plan Header note carries the no-contract clause '$FRAG_NO_CONTRACT'" \
+  "$FRAG_NO_CONTRACT" '## Plan Header' '```' fragment
+assert_in_block "Plan Header note carries the unreasoned-marker clause '$FRAG_NO_REASON'" \
+  "$FRAG_NO_REASON" '## Plan Header' '```' fragment
 
 bold "4. Self-Review contract audit (R4)"
 assert_in_range "self-review fragment '$FRAG_FALSIFIABLE' (check 5)" \

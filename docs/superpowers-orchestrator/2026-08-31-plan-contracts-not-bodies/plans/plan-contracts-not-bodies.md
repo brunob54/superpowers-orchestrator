@@ -509,6 +509,32 @@ In `skills/writing-plans/SKILL.md`, inside the Plan Header fenced block (the ` `
 > and this note binds as stated alongside it." See the design's
 > Amendments section for the full ruling.
 
+> **Amended 2026-09-01 (code review [I1], [I2], round 4 verification 2):**
+> The quote above is superseded. Rules 6(c), 6(d), and 4's no-reason case
+> had no counterpart in the note, so a controller triaging a finding
+> against them at the note alone found nothing covering the case. The
+> actual wording committed to `skills/writing-plans/SKILL.md`'s Plan
+> Header note now reads in full: "Fenced code blocks and block-quoted
+> wording in task steps are reference implementations for the task's
+> stated `**Contract:**`. Other non-task plan content — header prose such
+> as `**Architecture:**` and `**Assumptions:**`, and the File Structure
+> section — follows the same reference default: a finding against it is
+> an ordinary fix unless it contradicts a stated contract or a global
+> constraint. A finding against a body in a task whose `**Contract:**`
+> field reads `none — <reason>` is an ordinary fix, because there is no
+> contract to break. A review finding against such a body is an ordinary
+> fix while the contract holds; a block marked `**Exact content:**` binds
+> byte-for-byte unless its reason names a pin the plan itself writes or
+> edits, in which case it is a self-pin and body and pin are amendable
+> together as one ordinary fix. A block marked `**Exact content:**` with
+> no reason does not bind byte-for-byte; the body is an ordinary fix, and
+> the missing reason is itself a finding. The `**Global Constraints:**`
+> block binds as stated, except an entry that both does not trace to the
+> spec named on the plan's `**Spec:**` line and restates the body of an
+> artifact the plan itself creates or modifies, which is an ordinary fix;
+> every other entry binds as stated — and this note binds as stated
+> alongside it." See the design's Amendments section for the full ruling.
+
 - [x] **Step 4: Run the suite to verify it passes**
 
 Run: `bash tests/writing-plans/run-tests.sh`
@@ -673,6 +699,8 @@ Expected: PASS — both exit 0; the reviewer-templates suite reports all section
 > **Amended 2026-08-31 (code review [I3]):** The count rose again, from 8 to 9, because the [I3] fix added a fragment assertion (rule 1's range) falsifying the new fail-closed tie-break clause. See the design's Amendments section.
 
 > **Amended 2026-08-31 (code review [M3], round 4 verification 1):** The count rose again, from 9 to 12, because the [M3] fix added three block-scoped assertions inside the Plan Header check (the self-pin qualification, the Global-Constraints self-pin exception, and the note's self-binding clause), each falsifying a property the note carried with no prior assertion. The writing-plans suite now reports `Results: 12 passed, 0 failed`.
+
+> **Amended 2026-09-01 (code review [I1], [I2], round 4 verification 2):** The count rose again, from 12 to 15, because the [I1]/[I2] fix added three block-scoped assertions inside the Plan Header check (the non-task-content default, the no-contract clause, and the unreasoned-marker clause), each falsifying a clause the note gained in this round. The writing-plans suite now reports `Results: 15 passed, 0 failed`.
 
 - [x] **Step 5: Commit**
 

@@ -221,6 +221,16 @@ reviewers who never read `writing-plans`. Bound properties of the note:
   review finding against such a body is an ordinary fix while the contract
   holds, and that only blocks marked `**Exact content:**` bind
   byte-for-byte.
+- It states that the same reference default covers other non-task plan
+  content — header prose such as `**Architecture:**` and
+  `**Assumptions:**`, and the File Structure section — as an ordinary fix
+  unless it contradicts a stated contract or a global constraint (rule
+  6(c)), and covers a task whose `**Contract:**` field reads
+  `none — <reason>` as an ordinary fix, because there is no contract to
+  break (rule 6(d)).
+- It states that a block marked `**Exact content:**` with no reason does
+  not bind byte-for-byte — the body is an ordinary fix, and the missing
+  reason is itself a finding (rule 4).
 - It states that the `**Global Constraints:**` block binds as stated,
   except an entry failing the two-part self-pin test (rule 6(b)), which is
   an ordinary fix, and that the `**Body authority:**` note itself binds as
@@ -475,3 +485,23 @@ authority (Non-goals).
   fixture regenerator satisfied the example but failed the predicate, so
   the same block read as both procedural and not procedural depending on
   which of the three sites was consulted.
+- **2026-09-01 (code review [I1], [I2], round 4 verification 2):** R3's
+  bound properties gain two clauses, stated in the note's own voice with
+  no cross-reference to a rule number. Clause 1 (rule 6(c) and rule 6(d)):
+  the note now states that the same reference default covers other
+  non-task plan content — header prose such as `**Architecture:**` and
+  `**Assumptions:**`, and the File Structure section — as an ordinary fix
+  unless it contradicts a stated contract or a global constraint, and
+  covers a task whose `**Contract:**` field reads `none — <reason>` as an
+  ordinary fix, because there is no contract to break. Clause 2 (the
+  missing case in rule 4's marker requirement): the note now states that a
+  block marked `**Exact content:**` with no reason does not bind
+  byte-for-byte — the body is an ordinary fix, and the missing reason is
+  itself a finding. Reason: the note is the only copy of the
+  body-authority regime a review controller ever reads — it reads the
+  plan, never `skills/writing-plans/SKILL.md` — so a rule stated only in
+  rules 6(c), 6(d), or 4 was unreachable at triage time. Before clause 2,
+  the note's unconditional exact-content sentence ("binds byte-for-byte
+  unless its reason names a pin...") gave a marker with no reason at all
+  stronger protection than a properly reasoned self-pin, inverting the
+  intended incentive.
