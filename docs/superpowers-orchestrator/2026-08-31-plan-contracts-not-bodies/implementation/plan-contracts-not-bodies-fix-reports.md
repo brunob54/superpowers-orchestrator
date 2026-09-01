@@ -1635,3 +1635,195 @@ Results: 10 suites passed, 0 suites failed
 All unit tests passed.
 ```
 Exit code: 0
+
+## Round 4 fixes — 2026-09-01 (note self-coverage)
+
+**Finding (Important, accepted).** In `skills/writing-plans/SKILL.md`, the
+`**Body authority:**` note inside the Plan Header template (line 86) said:
+"Other non-task plan content — header prose such as `**Architecture:**`
+and `**Assumptions:**`, and the File Structure section — follows the same
+reference default: a finding against it is an ordinary fix unless it
+contradicts a stated contract or a global constraint." The list was
+introduced with an open-ended "such as", and the sentence stood *before*
+the later sentence declaring that the `**Global Constraints:**` block
+binds as stated and that the note itself binds as stated alongside it. On
+a literal reading the open list already covered both of them, so the note
+contradicted itself: two controllers triaging a finding against a
+`**Global Constraints:**` entry — or against the note's own wording —
+could reach opposite classifications from the note alone. The skill file's
+numbered rules do not collide, because rule 6(b) (the exceptions) precedes
+rule 6(c) (the reference default); the note reversed that order.
+
+**Property established:** the reference-default sentence for non-task plan
+content is no longer readable as covering the `**Global Constraints:**`
+block or the `**Body authority:**` note itself.
+
+**Fix** — `skills/writing-plans/SKILL.md` line 86, one sentence changed,
+the exclusion named inline so the rule stays decidable from the note alone
+(a controller reads the plan, never the skill file):
+
+> Other non-task plan content — header prose such as `**Architecture:**`
+> and `**Assumptions:**`, and the File Structure section, but never the
+> `**Global Constraints:**` block and never this `**Body authority:**`
+> note — follows the same reference default: a finding against it is an
+> ordinary fix unless it contradicts a stated contract or a global
+> constraint.
+
+Every other sentence of the note is unchanged, and the note remains a
+single block-quote line beginning `> **Body authority:**`.
+
+**Numbered rules — checked, unchanged.** Rules 6(b), 6(c) and 6(d) in the
+same file were read. Rule 6(b) states the `**Global Constraints:**` bind,
+its single self-pin carve-out, and the note's own binding force, and it
+*precedes* rule 6(c)'s reference default for other non-task content. The
+contradiction is therefore not literally present in the numbered rules,
+and none of them was changed.
+
+**Test** — `tests/writing-plans/run-tests.sh` gained one constant and one
+block-scoped assertion inside check section 3 (Plan Header authority
+note), following the existing `assert_in_block` pattern:
+
+```bash
+FRAG_NONTASK_EXCLUSION='but never the `**Global Constraints:**` block and never this `**Body authority:**` note'
+```
+
+```bash
+assert_in_block "Plan Header note excludes Global Constraints and itself from the non-task-content default '$FRAG_NONTASK_EXCLUSION'" \
+  "$FRAG_NONTASK_EXCLUSION" '## Plan Header' '```' fragment
+```
+
+**Document amendments:**
+- `docs/superpowers-orchestrator/2026-08-31-plan-contracts-not-bodies/plans/plan-contracts-not-bodies.md`
+  — a new `> **Amended 2026-09-01 (code review, round 4 — note
+  self-coverage):**` block quote added after the round-6 amendment in
+  Task 3 Step 3, marking the previous quote superseded on this one
+  sentence and quoting the note's full new wording; a second amendment
+  after the round-4-verification-2 count amendment in Task 5 records the
+  writing-plans suite's assertion count rising from 15 to 16.
+- `docs/superpowers-orchestrator/2026-08-31-plan-contracts-not-bodies/specs/plan-contracts-not-bodies-design.md`
+  — the spec *does* state the superseded property: R3's second bound
+  bullet describes the non-task-content coverage with the same open
+  "such as" list and no exclusion. A dated `## Amendments` entry
+  (`2026-09-01 (code review, round 4 — note self-coverage)`) records that
+  R3 bullet 2 now requires the two exclusions to be named inline, and why.
+
+### Falsifier demonstration
+
+**1. PASS with the fix in place** — `bash tests/writing-plans/run-tests.sh`:
+
+```
+1. Contracts and Literal Bodies section (R1)
+  PASS: section heading '## Contracts and Literal Bodies' (whole-line match, line 122)
+  PASS: exact-content label '**Exact content:**' (rule 4) (line 172, range 170..184)
+  PASS: procedural tie-break fragment 'treat the block as not procedural' (rule 1) (line 149, range 129..154)
+  PASS: authority-default fragment 'ordinary fix' (rule 3) (line 166, range 163..170)
+  PASS: self-pin fragment 'together as one ordinary fix' (rule 5) (line 187, range 184..194)
+2. Task Template Contract field (R2)
+  PASS: Task Template block carries '**Contract:**' (line 259, block 247..289)
+3. Plan Header authority note (R3)
+  PASS: Plan Header template carries 'reference implementations' (line 86, block 81..96)
+  PASS: Plan Header template carries '**Body authority:**' (line 86, block 81..96)
+  PASS: Plan Header note carries the self-pin qualification 'together as one ordinary fix' (line 86, block 81..96)
+  PASS: Plan Header note carries the Global Constraints self-pin exception 'restates the body of an artifact the plan itself creates or modifies' (line 86, block 81..96)
+  PASS: Plan Header note carries the self-binding clause 'this note binds as stated' (line 86, block 81..96)
+  PASS: Plan Header note carries the non-task-content default 'Other non-task plan content' (line 86, block 81..96)
+  PASS: Plan Header note excludes Global Constraints and itself from the non-task-content default 'but never the `**Global Constraints:**` block and never this `**Body authority:**` note' (line 86, block 81..96)
+  PASS: Plan Header note carries the no-contract clause 'no contract to break' (line 86, block 81..96)
+  PASS: Plan Header note carries the unreasoned-marker clause 'missing reason is itself a finding' (line 86, block 81..96)
+4. Self-Review contract audit (R4)
+  PASS: self-review fragment 'falsifiable' (check 5) (line 336, range 336..338)
+
+Results: 16 passed, 0 failed
+```
+Exit code: 0
+
+**2. FAIL with the exclusion clause deleted** — the clause
+", but never the `**Global Constraints:**` block and never this
+`**Body authority:**` note" was removed from line 86 (nothing else
+changed), then the suite re-run:
+
+```
+3. Plan Header authority note (R3)
+  PASS: Plan Header template carries 'reference implementations' (line 86, block 81..96)
+  PASS: Plan Header template carries '**Body authority:**' (line 86, block 81..96)
+  PASS: Plan Header note carries the self-pin qualification 'together as one ordinary fix' (line 86, block 81..96)
+  PASS: Plan Header note carries the Global Constraints self-pin exception 'restates the body of an artifact the plan itself creates or modifies' (line 86, block 81..96)
+  PASS: Plan Header note carries the self-binding clause 'this note binds as stated' (line 86, block 81..96)
+  PASS: Plan Header note carries the non-task-content default 'Other non-task plan content' (line 86, block 81..96)
+  FAIL: Plan Header note excludes Global Constraints and itself from the non-task-content default 'but never the `**Global Constraints:**` block and never this `**Body authority:**` note' (not inside block 81..96)
+  PASS: Plan Header note carries the no-contract clause 'no contract to break' (line 86, block 81..96)
+  PASS: Plan Header note carries the unreasoned-marker clause 'missing reason is itself a finding' (line 86, block 81..96)
+
+Results: 15 passed, 1 failed
+  - Plan Header note excludes Global Constraints and itself from the non-task-content default 'but never the `**Global Constraints:**` block and never this `**Body authority:**` note' (not inside block 81..96)
+```
+Exit code: 1
+
+**3. PASS after restoring the clause** — clause restored exactly
+(`git diff skills/writing-plans/SKILL.md` shows the single intended
+one-line change and nothing else), suite re-run:
+
+```
+Results: 16 passed, 0 failed
+```
+Exit code: 0
+
+### Verification — all three required suites
+
+```
+$ bash tests/writing-plans/run-tests.sh
+```
+```
+Results: 16 passed, 0 failed
+```
+Exit code: 0
+
+```
+$ bash tests/reviewer-templates/run-tests.sh
+```
+```
+1. Harness claims rule is inside the prompt block
+  PASS: doc-review template: Harness claims rule inside the prompt block (line 42, block 25..133)
+  PASS: code-review template: Harness claims rule inside the prompt block (line 64, block 24..193)
+2. Finding-format field spellings
+  PASS: doc-review template: field spelling 'harness: tested —'
+  PASS: doc-review template: field spelling 'harness: untested —'
+  PASS: code-review template: field spelling 'harness: tested —'
+  PASS: code-review template: field spelling 'harness: untested —'
+3. Controller triage reason strings and completion-report line
+  PASS: multi-doc-review SKILL.md: reason string 'harness probe —'
+  PASS: multi-doc-review SKILL.md: reason string 'harness probe not runnable here'
+  PASS: multi-doc-review SKILL.md: completion-report line 'Harness probes owed:'
+  PASS: multi-code-review SKILL.md: reason string 'harness probe —'
+  PASS: multi-code-review SKILL.md: reason string 'harness probe not runnable here'
+  PASS: multi-code-review SKILL.md: completion-report line 'Harness probes owed:'
+4. user-decision guard
+  PASS: multi-code-review SKILL.md: guard fragment
+5. Rule text drift between the two templates
+  PASS: doc-review template: rule extract is non-empty
+  PASS: code-review template: rule extract is non-empty
+  PASS: rule text identical in both templates
+6. Unchanged contracts
+  PASS: code-review template: blinding pathspec line
+  PASS: code-review template: report marker instruction
+  PASS: doc-review template: report marker instruction
+7. Ambiguity & testability plan-cell contract targets
+  PASS: multi-doc-review SKILL.md: Ambiguity plan-cell extract is non-empty
+  PASS: Ambiguity plan cell: fragment 'no stated contract'
+  PASS: Ambiguity plan cell: fragment 'self-pin'
+  PASS: Ambiguity plan cell: gate label '**Body authority:**'
+8. Body-authority gate label consistency (writing-plans vs multi-doc-review)
+  PASS: gate label matches between writing-plans and multi-doc-review (**Body authority:**)
+
+Results: 24 passed, 0 failed
+```
+Exit code: 0
+
+```
+$ bash tests/codex/run-unit-tests.sh
+```
+```
+Results: 10 suites passed, 0 suites failed
+All unit tests passed.
+```
+Exit code: 0

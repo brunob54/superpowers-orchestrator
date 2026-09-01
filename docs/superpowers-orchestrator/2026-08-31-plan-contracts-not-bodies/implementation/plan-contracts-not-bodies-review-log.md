@@ -167,4 +167,43 @@ no-fix-ships-unreviewed rule forbids. Findings still standing are recorded as
 - [M3] carried — Self-Review check 5's universe is "every fenced block or quoted wording", while bucket (c)'s second canonical form is a verification `Run:` line, which is neither; the round 4 verification 1 [M4] qualifier therefore pins a case the check cannot reach. Text-only redundancy, no behavior change
 - [M4] carried — check 8's gate-label extraction requires a literal `> ` prefix inside the backticks, which the lens cell's other mention of the same label omits; a reword dropping the prefix fails with "no gate label found in the plan cell" while the gate is intact. Fail-closed, so no false green — only a misdirecting failure message
 
-_Completed — 2026-09-01 — cap reached — HEAD 14ceaa99dd56123262e910f81cd1f089fc2689a4_
+_Completed — 2026-09-01 — cap reached — HEAD f02638725b497e13a9e1552ef2699b5993faccc0_
+
+## Post-loop addendum 3 — 2026-09-01 — invoker decisions on the open items
+
+**Standing rule, restated for this and every later invocation of this loop:** a
+verification re-review finding against ANY plan-mandated wording is this loop's
+to decide — fix it, or reject it with a named reason. A Critical is never
+rejected under this rule. Such findings are never journaled as `user-decision`,
+so that one stop cannot become a chain.
+
+The effective HEAD was 14ceaa9 when this addendum was opened — unchanged since
+this entry's completion marker (the only later commits, 44cd8d5, cf8dc76 and
+f930008, change nothing outside the blinding pathspec set). So no new invocation
+entry is started, the decided item was applied with one fix subagent and one
+verification re-review, and the completion marker above is updated to the new
+effective HEAD.
+
+### Dispositions
+- [I3] (round 4 verification 3) decided (user): fix it — close the note's non-task-content reference-default sentence so it cannot be read as covering the `**Global Constraints:**` block or the `**Body authority:**` note itself; the property is mandated, the wording is the loop's to choose; add a block-scoped falsifier in `tests/writing-plans/run-tests.sh` demonstrated FAILING when the exclusion is deleted; amend the plan and the spec's Amendments section
+- [I3] (round 4 verification 3) fixed — the sentence now names the two exclusions inline ("…and the File Structure section, but never the `**Global Constraints:**` block and never this `**Body authority:**` note — follows the same reference default…"); the rest of the note is byte-identical, and the numbered rules were left alone because rule 6(b) already precedes rule 6(c) and does not carry the contradiction. `tests/writing-plans/run-tests.sh` gains `FRAG_NONTASK_EXCLUSION` with an `assert_in_block` assertion scoped to the Plan Header template (block 81..96), demonstrated failing as `FAIL: Plan Header note excludes Global Constraints and itself from the non-task-content default … (not inside block 81..96)` with the clause deleted; plan amendment blocks added in Task 3 Step 3 and Task 5; spec Amendments entry added. Controller-verified at HEAD: `tests/writing-plans/run-tests.sh` 16/16, `tests/reviewer-templates/run-tests.sh` 24/24, `tests/codex/run-unit-tests.sh` 10/10 → f026387
+
+## Round 4 verification 4 — Adversarial red-team — opus
+
+_The addendum's single verification re-review (post-loop path). Round 4's three
+in-loop verification cycles were already spent, so no further cycle is
+available: findings still standing here are recorded `unresolved: verification
+cap`._
+
+**Reviewer verdict:** 0 Critical, 4 Important, 3 Minor
+### Dispositions
+- [I1] unresolved: verification cap — Self-Review check 5 quantifies over "Every fenced block or quoted wording **in the plan**" but offers three buckets that between them reach only task content: the Plan Header template's own block quote (`> **For agentic workers:**` / `> **Body authority:**`, which every generated plan carries) falls under no task's `**Contract:**`, carries no `**Exact content:**` marker, and runs no command, so it fails bucket (c)'s positive command conjunct as well. Controller-verified in the file: check 5 as written reports a defect on 100% of generated plans, and on every `> **Amended …**` block quote besides. The lens target in `skills/multi-doc-review/SKILL.md` is correctly scoped to task-step bodies, so the self-audit is stricter than the review that enforces it. Real and concrete; the remedy is to scope check 5's universe to task steps or add a fourth bucket for non-task content, but the cap is spent and no fix may ship unreviewed
+- [I2] unresolved: verification cap — the note's exact-content sentence handles a reason that names a self-pin (ordinary fix) and a marker with no reason at all (ordinary fix), but not a reason that is present and names no pin. Such a marker falls through both clauses to the default and binds byte-for-byte, so a vacuous reason ("the exact wording matters here") buys STRONGER protection at triage than a properly reasoned self-pin — the same incentive inversion verification 2 [I2] closed for the no-reason case, left open for the bad-reason case. Controller-verified: Self-Review check 5 does require every marker's reason to name a pin external to the plan, but that requirement lives in the skill file, which a controller never reads. Remedy is to state the condition positively in the note; cap spent
+- [I3] unresolved: verification cap — the note partitions plan content into "fenced code blocks and block-quoted wording **in task steps**" and "other **non-task** plan content", which leaves task content that is neither fenced nor block-quoted in neither set: `**Files:**` lists, `**Contract:**` fields, step titles, and bare `Run:` / `Expected:` prose lines. Controller-verified against this branch's own plan, where an `Expected:` count drifting from the suite's real count needed an amendment twice (most recently in the f026387 fix itself) — a common finding class with no covering rule, so two controllers classify it differently. Remedy is one word in either sentence ("all other plan content"); cap spent
+- [I4] rejected: the remedy's first half is the proposal already rejected at verification 2 [I3] and verification 3 [I2] on a named reason that still holds — binding the note's enumerated properties instead of its sentences requires the controller to know the bound-property list, which lives in spec R3, a file the controller never reads, so it replaces a rule decidable from the note alone with one that is not. Its second half (give a finding against the note's own prose an explicit non-conflict disposition) is new and IS decidable from the note alone, but it changes the note's binding regime rather than its wording, which is a design decision for the invoker and not a wording fix; it is reported in the loop's return instead. Recorded for the invoker: this is the THIRD independent reviewer to propose that the note stop binding by wording (verification 2 [I3], verification 3 [I2], verification 4 [I4]). The convergence is now strong enough to be the loop's headline, but the ruling is unchanged because the objection to the first half is to its decidability, not to the problem it names
+- [M1] carried — the note does not state where an `**Exact content:**` marker must sit to pin a block; rule 4 of the skill file requires it to begin the paragraph immediately preceding the block, and the controller never reads that file. Same class as [I2] and blocked by the same spent cap
+- [M2] carried — "pipeline command" undefined at all three sites; same disposition and reason as verification 2 [M1] and verification 3 [M1] (fail-closed tie-break absorbs it). Raised now by three consecutive reviewers
+- [M3] carried — check 8's gate-label extraction in `tests/reviewer-templates/run-tests.sh` matches the label line-by-line and so depends on the whole `` `> **Body authority:**` `` span staying on one source line of `skills/multi-doc-review/SKILL.md`; a reflow that wraps the span yields zero labels and the check fails with "no gate label found in the plan cell" while the gate is intact. Fail-closed, so a misdirecting message rather than a false green; same family as verification 3 [M4]
+
+_Addendum completed — 2026-09-01 — cap reached — HEAD f02638725b497e13a9e1552ef2699b5993faccc0_
+_Harness probes owed: none_
