@@ -16,6 +16,7 @@ DOC_PROMPT="$ROOT/skills/multi-doc-review/reviewer-prompt.md"
 CODE_PROMPT="$ROOT/skills/multi-code-review/reviewer-prompt.md"
 DOC_SKILL="$ROOT/skills/multi-doc-review/SKILL.md"
 CODE_SKILL="$ROOT/skills/multi-code-review/SKILL.md"
+WP_SKILL="$ROOT/skills/writing-plans/SKILL.md"
 
 # Wording contracts asserted below. Each is one fixed string.
 RULE_HEADING='    ### Harness claims'
@@ -44,6 +45,10 @@ bad() { red "  FAIL: $1"; ERRORS+=("$1"); FAIL=$((FAIL+1)); }
 
 assert_file_contains() { # desc file needle
   if grep -qF -- "$3" "$2"; then ok "$1"; else bad "$1 (missing: $3)"; fi
+}
+
+assert_file_contains_i() { # desc file needle (case-insensitive)
+  if grep -qiF -- "$3" "$2"; then ok "$1"; else bad "$1 (missing: $3)"; fi
 }
 
 # Line number of the first line containing the fixed string $2 in file $1;
@@ -125,6 +130,67 @@ bold "6. Unchanged contracts"
 assert_file_contains "code-review template: blinding pathspec line" "$CODE_PROMPT" "$PATHSPEC"
 assert_file_contains "code-review template: report marker instruction" "$CODE_PROMPT" "$MARKER"
 assert_file_contains "doc-review template: report marker instruction" "$DOC_PROMPT" "$MARKER"
+
+bold "7. Ambiguity & testability plan-cell contract targets"
+AMB_PLAN_CELL="$WORK/ambiguity-plan-cell.txt"
+awk '
+  $0 == "**Ambiguity & testability**" { inlens = 1; next }
+  inlens && /^\*\*/ { exit }
+  inlens && /^- plan:/ { incell = 1; print; next }
+  incell && /^- / { incell = 0 }
+  incell { print }
+' "$DOC_SKILL" > "$AMB_PLAN_CELL"
+if [ -s "$AMB_PLAN_CELL" ]; then
+  ok "multi-doc-review SKILL.md: Ambiguity plan-cell extract is non-empty"
+else
+  bad "multi-doc-review SKILL.md: Ambiguity plan-cell extract is empty"
+fi
+assert_file_contains_i "Ambiguity plan cell: fragment 'no stated contract'" "$AMB_PLAN_CELL" 'no stated contract'
+assert_file_contains_i "Ambiguity plan cell: fragment 'self-pin'" "$AMB_PLAN_CELL" 'self-pin'
+assert_file_contains "Ambiguity plan cell: gate label '**Body authority:**'" "$AMB_PLAN_CELL" '**Body authority:**'
+
+bold "8. Body-authority gate label consistency (writing-plans vs multi-doc-review)"
+# Extract the label multi-doc-review's plan-cell gate switches on, from the
+# plan-cell text already extracted above (check 7) rather than the whole
+# file — a backtick-quoted block-quote label added earlier elsewhere in
+# multi-doc-review/SKILL.md must not silently retarget this comparison (M1).
+# Collect every distinct label in the cell matching the pattern, instead of
+# taking the first — a backtick-quoted mention of a different block-quote
+# label appearing earlier in the cell (e.g. `` `> **For agentic workers:**` ``)
+# must not silently substitute for the real gate label (M2).
+LENS_GATE_LABELS_FILE="$WORK/lens-gate-labels.txt"
+grep -oE '> \*\*[A-Za-z ]+:\*\*`' "$AMB_PLAN_CELL" | sed -e 's/^> //' -e 's/`$//' | sort -u > "$LENS_GATE_LABELS_FILE"
+LENS_GATE_LABEL_COUNT="$(wc -l < "$LENS_GATE_LABELS_FILE" | tr -d ' ')"
+LENS_GATE_LABEL=""
+if [ "$LENS_GATE_LABEL_COUNT" -eq 1 ]; then
+  LENS_GATE_LABEL="$(cat "$LENS_GATE_LABELS_FILE")"
+fi
+# Find the Plan Header template's block-quote paragraph whose label matches
+# the label the lens cell gates on, by content rather than by ordinal
+# position — a paragraph inserted earlier in the block quote, or a
+# reworded "For agentic workers" label, must not retarget which paragraph
+# gets compared.
+WP_BODY_AUTHORITY_LABEL=""
+if [ -n "$LENS_GATE_LABEL" ]; then
+  WP_BODY_AUTHORITY_LABEL="$(awk -v want="$LENS_GATE_LABEL" '
+    /^## Plan Header/ { inblk = 1 }
+    inblk && /^---$/ { exit }
+    inblk && /^> \*\*[A-Za-z ]+:\*\*/ {
+      match($0, /\*\*[A-Za-z ]+:\*\*/)
+      label = substr($0, RSTART, RLENGTH)
+      if (label == want) { print label; exit }
+    }
+  ' "$WP_SKILL")"
+fi
+if [ "$LENS_GATE_LABEL_COUNT" -gt 1 ]; then
+  bad "multi-doc-review SKILL.md: ambiguous gate label in the plan cell ($(tr '\n' ' ' < "$LENS_GATE_LABELS_FILE" | sed 's/ *$//'))"
+elif [ -z "$LENS_GATE_LABEL" ]; then
+  bad "multi-doc-review SKILL.md: no gate label found in the plan cell"
+elif [ -z "$WP_BODY_AUTHORITY_LABEL" ]; then
+  bad "writing-plans/SKILL.md: no Plan Header block-quote paragraph matches gate label '$LENS_GATE_LABEL'"
+else
+  ok "gate label matches between writing-plans and multi-doc-review ($WP_BODY_AUTHORITY_LABEL)"
+fi
 
 echo
 bold "Results: $PASS passed, $FAIL failed"

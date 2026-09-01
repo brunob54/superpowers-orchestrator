@@ -82,6 +82,8 @@ together with its spec.
 # <Feature Name> Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers-orchestrator:subagent-driven-development (recommended) or superpowers-orchestrator:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+>
+> **Body authority:** Exactly two things in this plan bind: the `**Global Constraints:**` block, and a block whose immediately preceding paragraph reads `**Exact content:** <reason>` where that reason names a pin this plan does not itself write or edit. Everything else is reference: fenced code blocks and block-quoted wording in task steps are reference implementations, and so is every other code block, every quoted wording, every header field, and this note itself — a finding against any of them is an ordinary fix, not a plan conflict, unless it contradicts a stated `**Contract:**` or a global constraint. A finding whose subject is this note's own wording is never a plan conflict: record it against the plan-writing skill at `skills/writing-plans/SKILL.md` and continue. That disposition covers the note's own text alone; a finding that this note contradicts something specific to this plan — one of its global constraints, say — is about that interaction and is triaged as an ordinary finding.
 
 **Goal:** <single sentence>
 **Spec:** `docs/superpowers-orchestrator/<YYYY-MM-DD>-<slug>/specs/<slug>-design.md` *(multi-doc-review reads this line to locate the spec on direct plan reviews; an old-layout path here would produce a plan whose spec is outside the layout)*
@@ -117,6 +119,131 @@ This structure informs the task decomposition. Each task should produce self-con
 - Use TDD ordering when code behavior changes.
 - For ambiguous features, ask clarifying questions before finalizing the plan rather than guessing.
 
+## Contracts and Literal Bodies
+
+A **contract** is the set of properties an artifact must guarantee, stated
+so that a check can falsify them. A **reference implementation** is a
+concrete body (a code block or quoted text) that satisfies the contract:
+it shows one way, it does not bind.
+
+1. **State a contract for every governed artifact.** For every helper,
+   function, command, or piece of wording a task introduces or modifies,
+   state the contract in the task's `**Contract:**` field: the invariants
+   that must hold and the verification (a runnable command or check) that
+   would falsify them; for code artifacts also inputs and outputs. A task
+   that creates or modifies several artifacts holds one entry per artifact
+   in the same field (a list) — or is a candidate for splitting.
+   Procedural step blocks that operate the pipeline rather than build
+   the feature — the Step 5 commit command, `Run:` verification lines
+   — need no contract entry; rule 3's default covers them. The test is
+   intrinsic to the block: it asks what the block itself does to the
+   working tree, never what any list elsewhere in the task records. A
+   block is procedural when it creates, modifies, or deletes no file
+   in the working tree, and runs at least one command, every command it
+   runs being a pipeline command — the two canonical forms are the Step 5
+   commit block and a verification `Run:` line, though a `Run:` line is a
+   procedural form only when the command it runs writes no working-tree
+   file; the Step 5 commit block qualifies because it writes the git index
+   and git objects but no working-tree file. This is the one test for "procedural" used
+   everywhere in the plan you are writing and in review. When it is
+   unclear whether a block meets this test, treat the block as not procedural
+   — ambiguity produces a contract entry, never a silent exemption. Two
+   contract shapes exist — code artifact and wording artifact — shown in the
+   examples below.
+
+2. **Pin an interface only when something outside the plan depends on
+   it.** An interface (signature, flag set, file format) is pinned in the
+   contract only when something *outside the plan* already depends on it.
+   Stating inputs and outputs in the `**Contract:**` field does not pin
+   them: a concrete signature written there is descriptive — part of the
+   reference implementation — unless the external-dependency condition
+   holds, and a fix may amend the signature together with the contract's
+   inputs/outputs wording as one ordinary fix.
+
+3. **Bodies are reference implementations by default.** Code blocks and
+   quoted wording in task steps are reference implementations. The
+   implementer follows them as written; a later review finding against
+   such a body is an **ordinary fix** so long as the stated contract still
+   holds. Only a change that breaks or amends the contract itself is a
+   plan conflict.
+
+4. **Mark exact content explicitly.** A block is binding byte-for-byte
+   only when the paragraph immediately preceding the fenced block or block
+   quote it pins begins with `**Exact content:** <reason>`. The reason
+   may wrap across more than one line; what matters is that the marker
+   starts the paragraph, not that it sits on the single line right above
+   the fence. The reason must name the
+   *external* pin: a pre-existing test asserting the string, another file
+   that must already match byte-for-byte, or user-approved copy — and a
+   user-approval reason must cite where the approval is recorded (a spec
+   section, a review-log disposition, or a plan amendment quote); an
+   uncited approval claim is not a valid reason. A marker with no reason
+   is a plan failure of the same class as the "No Placeholders" patterns.
+   Never place the marker inline on the same line as the content it pins.
+
+5. **A self-pin never justifies the marker.** A pin the plan itself
+   introduces (the plan also writes the test that asserts the string, or
+   also writes the matching file) does not justify `**Exact content:**`:
+   body and pin are amendable **together as one ordinary fix** — the fix
+   changes the text and its pinning test in the same commit. The same
+   applies to a *pre-existing* pin whose assertion the same plan edits: a
+   pin the plan controls is a self-pin, whatever its age. Only a pin the
+   plan leaves untouched binds. Circular reasons — a reason citing an
+   artifact the same plan creates or modifies — are a plan failure.
+
+6. **Boundaries.**
+   (a) This section defines the *authority* of bodies; it does not license
+   vague steps — the "No Placeholders" rules still require actual code.
+   (b) The default never applies to the plan header's
+   `**Global Constraints:**` block, which binds as stated; a conflict with
+   a global constraint is genuine and stops the run. One exception: a
+   `**Global Constraints:**` entry that fails the two-part self-pin test
+   from Self-Review check 5 — it does not trace to the spec named on the
+   plan's `**Spec:**` line AND it restates the body of an artifact the
+   plan itself creates or modifies — is amendable as an ordinary fix;
+   every other Global Constraints entry keeps binding as stated. A finding
+   whose subject is the `**Body authority:**` note's own wording is never a
+   plan conflict: record it against this skill file,
+   `skills/writing-plans/SKILL.md`, and let the run continue. That
+   disposition covers the note's own text alone; a finding that the note
+   contradicts something specific to the plan it appears in — one of that
+   plan's global constraints, for example — is about that interaction and
+   is triaged as an ordinary finding.
+   (c) Other non-task plan content (header prose such as
+   `**Architecture:**` and `**Assumptions:**`, the File Structure section)
+   follows the same reference default: findings against it are ordinary
+   fixes unless they contradict a stated contract or a global constraint.
+   (d) A finding against a body in a task whose field reads
+   `**Contract:** none — <reason>` is an ordinary fix under rule 3's
+   default — there is no contract to break.
+   (e) The implementer follows the reference body; the contract governs
+   later findings.
+
+**Example — code artifact contract:**
+
+> **Contract:** `assert_round_reviewers <log> <round> <m> <required|optional>`
+> - Inputs: review-log path, round number, expected reviewer count M, an
+>   expectation mode supplied by the caller.
+> - Output: exit 0 only when the round entry demonstrates M reviewers per
+>   lens and every consolidated finding maps to reviewer sources.
+> - Invariants: mode `required` makes a `Sources mapped: 0/0` entry fail;
+>   mode `optional` keeps the documented skip; a missing or misspelled
+>   mode fails.
+> - Verification: synthetic-fixture checks covering both modes × both
+>   outcomes, bad mode, missing round entry.
+> - Interface not externally pinned — the signature above is descriptive
+>   and may change in a fix (rule 2).
+
+**Example — wording artifact contract:**
+
+> **Contract:** model-probe example in `reviewer-prompt.md`
+> - Must convey: a reviewer asserting a harness property runs a probe; the
+>   probe prompt must not name the canary token.
+> - Invariant: no example places the token inside the probe prompt text.
+> - Verification: `bash tests/reviewer-templates/run-tests.sh` asserts the
+>   section exists and the example probe omits the token.
+> - Sentence wording is free; the properties above bind.
+
 ## Task Template
 
 ````markdown
@@ -130,6 +257,8 @@ This structure informs the task decomposition. Each task should produce self-con
 **Security flag:** `none` *(set to `security` if this task handles auth, credentials, input validation, permissions, crypto, or data access boundaries — triggers pre-implementation security review before the implementer is dispatched)*
 
 **Does NOT cover:** *(required when this task adds a condition, gate, trigger, or any "when X do Y" logic — state the scenarios the condition excludes. If an excluded scenario should be covered, revise this task before implementing.)*
+
+**Contract:** *(one entry per artifact this task creates or modifies: the invariants that must hold and the verification that would falsify them; inputs and outputs for code artifacts. See "Contracts and Literal Bodies" for the two shapes — code artifact and wording artifact. Write `none — <reason>` when the task creates or modifies nothing a later review finding could be judged against.)*
 
 - [ ] **Step 1: Write failing test**
 
@@ -182,6 +311,11 @@ Every step must contain the actual content an engineer needs. These are **plan f
 - Steps that describe what to do without showing how (code blocks required for code steps)
 - References to types, functions, or methods not defined in any task
 
+These patterns are about *content completeness*; the "Contracts and
+Literal Bodies" section defines the *authority* of that content. A body
+must still be actual code or actual wording even when it binds only as a
+reference implementation.
+
 ## Quality Bar
 
 - No vague steps like "update logic".
@@ -200,6 +334,8 @@ After writing the complete plan, look at the spec with fresh eyes and check the 
 **3. Type consistency:** Do the types, method signatures, and property names you used in later tasks match what you defined in earlier tasks? A function called `clearLayers()` in Task 3 but `clearFullLayers()` in Task 7 is a bug.
 
 **4. Scope-reduction scan:** Search the plan for: "v1", "basic", "simple", "for now", "placeholder", "initial version", "minimal". For each hit, verify it was explicitly sanctioned by the user — not a quiet scope downgrade from what was requested. Fix any that weren't.
+
+**5. Contract audit:** Every fenced block, block quote, and `Run:` line in a task step is in one of three buckets: (a) it falls under its task's stated `**Contract:**`; (b) it carries an `**Exact content:**` marker; or (c) it is a procedural step block under rule 1's test — it creates, modifies, or deletes no file in the working tree, and runs at least one command, every command it runs being a pipeline command, such as the Step 5 commit block or a verification `Run:` line (a `Run:` line is a procedural form only when the command it runs writes no working-tree file), with an unclear case treated as not procedural — covered by the reference default of "Contracts and Literal Bodies" rule 3. This check's universe is task-step content only; plan-header content is out of scope — including the `**Body authority:**` block quote, which is template text every generated plan carries — with one exception: the `**Global Constraints:**` entries that the last sentence of this check inspects. Every marker's reason names a pin external to the plan and untouched by it — a reason citing an artifact this same plan creates or modifies is circular and invalid. Every `**Contract:**` field is falsifiable: a contract no check could fail ("must work correctly") is treated as missing, and so is a `none — <reason>` field on a task that does create or modify a governed artifact (a false `none`). Each `**Global Constraints:**` entry is checked too: an entry that (a) does not trace to the spec named on the plan's `**Spec:**` line and (b) restates the body of an artifact the plan itself creates or modifies is a self-pin in disguise and is flagged.
 
 If you find issues, fix them inline. No need to re-review — just fix and move on. If you find a spec requirement with no task, add the task.
 
