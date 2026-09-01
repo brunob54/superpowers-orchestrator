@@ -31,3 +31,10 @@ Open: [I3] unresolved — `**Files:**`-list completeness required by rule 1's bo
 note: earlier rulings [I1]/[I2] of the previous entry fixed in 86bf5c5; standing rule worked — 3 wording findings rejected with named reasons, no chain
 note: controller return again carried narration before the marker (2nd occurrence this run; worklist row 9)
 Resume: Resume orchestration for docs/superpowers-orchestrator/2026-08-31-plan-contracts-not-bodies/plans/plan-contracts-not-bodies.md
+
+## STOPPED — 2026-09-01 — phase 4 — invocation 2 left 1 unresolved item (rounds 2, cap, fixes 5)
+Detail: docs/superpowers-orchestrator/2026-08-31-plan-contracts-not-bodies/implementation/plan-contracts-not-bodies-review-log.md
+Open: [I3] unresolved — the `**Body authority:**` note contradicts itself: its open-ended "Other non-task plan content ... follows the same reference default" sentence precedes, and on a literal reading swallows, the sentence declaring that `**Global Constraints:**` and the note itself bind
+note: introduced by this loop's own verification-2 fix; verification cycles for round 4 were spent, so the remedy could not ship reviewed
+note: standing rule held — 2 Important findings rejected with named reasons ([I1] multi-code-review triage change, out of scope by the spec's Non-goals; [I2] property-binding needing a spec list the controller never reads)
+Resume: Resume orchestration for docs/superpowers-orchestrator/2026-08-31-plan-contracts-not-bodies/plans/plan-contracts-not-bodies.md
