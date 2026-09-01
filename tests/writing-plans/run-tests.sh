@@ -31,12 +31,12 @@ FRAG_SELF_PIN='together as one ordinary fix'
 FRAG_REF_IMPL='reference implementations'
 FRAG_FALSIFIABLE='falsifiable'
 FRAG_NOT_PROCEDURAL='treat the block as not procedural'
-FRAG_NOTE_BINDS='this note binds as stated'
-FRAG_GC_SELF_PIN='restates the body of an artifact the plan itself creates or modifies'
-FRAG_NONTASK_DEFAULT='Other non-task plan content'
-FRAG_NONTASK_EXCLUSION='but never the `**Global Constraints:**` block and never this `**Body authority:**` note'
-FRAG_NO_CONTRACT='no contract to break'
-FRAG_NO_REASON='missing reason is itself a finding'
+FRAG_CLOSED_SET='Exactly two things in this plan bind'
+FRAG_MARKER_CONDITION='names a pin this plan does not itself write or edit'
+FRAG_RESIDUE='Everything else is reference'
+FRAG_NOTE_NOT_CONFLICT='is never a plan conflict: record it against the plan-writing skill'
+FRAG_NOTE_SCOPE_GUARD="covers the note's own text alone"
+FRAG_CHECK5_SCOPE='plan-header content is out of scope'
 
 PASS=0
 FAIL=0
@@ -154,24 +154,22 @@ assert_in_block "Plan Header template carries '$FRAG_REF_IMPL'" \
   "$FRAG_REF_IMPL" '## Plan Header' '```' fragment
 assert_in_block "Plan Header template carries '$BODY_AUTHORITY_LABEL'" \
   "$BODY_AUTHORITY_LABEL" '## Plan Header' '```' exact
-assert_in_block "Plan Header note carries the self-pin qualification '$FRAG_SELF_PIN'" \
-  "$FRAG_SELF_PIN" '## Plan Header' '```' fragment
-assert_in_block "Plan Header note carries the Global Constraints self-pin exception '$FRAG_GC_SELF_PIN'" \
-  "$FRAG_GC_SELF_PIN" '## Plan Header' '```' fragment
-assert_in_block "Plan Header note carries the self-binding clause '$FRAG_NOTE_BINDS'" \
-  "$FRAG_NOTE_BINDS" '## Plan Header' '```' fragment
-assert_in_block "Plan Header note carries the non-task-content default '$FRAG_NONTASK_DEFAULT'" \
-  "$FRAG_NONTASK_DEFAULT" '## Plan Header' '```' fragment
-assert_in_block "Plan Header note excludes Global Constraints and itself from the non-task-content default '$FRAG_NONTASK_EXCLUSION'" \
-  "$FRAG_NONTASK_EXCLUSION" '## Plan Header' '```' fragment
-assert_in_block "Plan Header note carries the no-contract clause '$FRAG_NO_CONTRACT'" \
-  "$FRAG_NO_CONTRACT" '## Plan Header' '```' fragment
-assert_in_block "Plan Header note carries the unreasoned-marker clause '$FRAG_NO_REASON'" \
-  "$FRAG_NO_REASON" '## Plan Header' '```' fragment
+assert_in_block "Plan Header note states the closed binding set '$FRAG_CLOSED_SET'" \
+  "$FRAG_CLOSED_SET" '## Plan Header' '```' fragment
+assert_in_block "Plan Header note states the exact-content binding condition '$FRAG_MARKER_CONDITION'" \
+  "$FRAG_MARKER_CONDITION" '## Plan Header' '```' fragment
+assert_in_block "Plan Header note states the residue clause '$FRAG_RESIDUE'" \
+  "$FRAG_RESIDUE" '## Plan Header' '```' fragment
+assert_in_block "Plan Header note states the non-conflict disposition '$FRAG_NOTE_NOT_CONFLICT'" \
+  "$FRAG_NOTE_NOT_CONFLICT" '## Plan Header' '```' fragment
+assert_in_block "Plan Header note states the disposition's scoping guard '$FRAG_NOTE_SCOPE_GUARD'" \
+  "$FRAG_NOTE_SCOPE_GUARD" '## Plan Header' '```' fragment
 
 bold "4. Self-Review contract audit (R4)"
 assert_in_range "self-review fragment '$FRAG_FALSIFIABLE' (check 5)" \
   "$FRAG_FALSIFIABLE" "$SELF_REVIEW_5_LINE" "$SELF_REVIEW_5_END_LINE" fragment
+assert_in_range "self-review scoping statement '$FRAG_CHECK5_SCOPE' (check 5)" \
+  "$FRAG_CHECK5_SCOPE" "$SELF_REVIEW_5_LINE" "$SELF_REVIEW_5_END_LINE" fragment
 
 echo
 bold "Results: $PASS passed, $FAIL failed"

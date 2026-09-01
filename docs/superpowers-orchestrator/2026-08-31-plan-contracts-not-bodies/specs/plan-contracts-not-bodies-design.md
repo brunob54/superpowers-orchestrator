@@ -221,20 +221,23 @@ reviewers who never read `writing-plans`. Bound properties of the note:
   review finding against such a body is an ordinary fix while the contract
   holds, and that only blocks marked `**Exact content:**` bind
   byte-for-byte.
-- It states that the same reference default covers other non-task plan
-  content — header prose such as `**Architecture:**` and
-  `**Assumptions:**`, and the File Structure section — as an ordinary fix
-  unless it contradicts a stated contract or a global constraint (rule
-  6(c)), and covers a task whose `**Contract:**` field reads
-  `none — <reason>` as an ordinary fix, because there is no contract to
-  break (rule 6(d)).
-- It states that a block marked `**Exact content:**` with no reason does
-  not bind byte-for-byte — the body is an ordinary fix, and the missing
-  reason is itself a finding (rule 4).
-- It states that the `**Global Constraints:**` block binds as stated,
-  except an entry failing the two-part self-pin test (rule 6(b)), which is
-  an ordinary fix, and that the `**Body authority:**` note itself binds as
-  stated alongside it — a review fix may not reword the note (rule 6(b)).
+- It states the **closed binding set**: exactly two things in the plan
+  bind — the `**Global Constraints:**` block, and a block whose
+  immediately preceding paragraph reads `**Exact content:** <reason>`
+  where that reason names a pin the plan does not itself write or edit.
+- It states the **residue clause**: everything in the plan other than
+  those two binding members is reference — every other code block, every
+  quoted wording, every header field, and the note itself — and a finding
+  against any of it is an ordinary fix, not a plan conflict, unless it
+  contradicts a stated `**Contract:**` or a global constraint.
+- It states the **non-conflict disposition** for a finding whose subject
+  is the note's own wording: such a finding is never a plan conflict; it
+  is recorded against `skills/writing-plans/SKILL.md` and the run
+  continues. It states the disposition's **scoping guard** as well: the
+  disposition covers the note's own text alone; a finding that the note
+  contradicts something specific to the plan it appears in — one of that
+  plan's global constraints, for example — is about that interaction and
+  is triaged as an ordinary finding.
 - It opens with the label `**Body authority:**` (test-pinned, byte pin,
   matched exactly and case-sensitively, asserted to occur inside the Plan
   Header fenced template). `multi-doc-review`'s plan-cell gate (R5)
@@ -247,11 +250,16 @@ reviewers who never read `writing-plans`. Bound properties of the note:
 ### R4 — Self-Review check 5
 
 The "Self-Review" section gains a fifth check with these properties: every
-fenced block or quoted wording is in one of **three** buckets — (a) it
+fenced block, block quote, and `Run:` line **in a task step** is in one of
+**three** buckets — (a) it
 falls under its task's stated contract, (b) it carries an
 `**Exact content:**` marker, or (c) it is a procedural step block
 (verification command, commit command) covered by the blanket default of
-R1 rule 3; every marker's reason names a pin external to the plan and
+R1 rule 3. The check's universe is task-step content only: plan-header
+content is out of scope — the `**Body authority:**` block quote included,
+being template text every generated plan carries — with one exception, the
+`**Global Constraints:**` entries the check's last property inspects.
+Every marker's reason names a pin external to the plan and
 untouched by it (the circular case is called out); every `**Contract:**`
 field is falsifiable — a contract no check could fail ("must work
 correctly") is treated as missing, and so is a `none — <reason>` field on
@@ -423,14 +431,6 @@ authority (Non-goals).
   though the marker still unambiguously pins the block that follows it;
   the paragraph binding keeps the marker's position meaningful without
   forcing every reason onto one line.
-- **2026-08-31 (code review [I1], round 4):** R3 bullet 2 is amended so the
-  bound note states the same Global-Constraints exception rule 6(b) already
-  carries — an entry failing the two-part self-pin test is an ordinary fix,
-  not a plan conflict. Reason: the note is the only authority statement
-  travelling inside a generated plan; a review controller triaging a
-  finding reads the plan, not this skill file, so the note's earlier
-  unconditional wording made rule 6(b)'s resolution path unreachable at
-  triage time for a target-4 finding.
 - **2026-08-31 (code review [I2], round 4):** R5's inconsistent-regime
   guard is amended to scope its `**Contract:**` predicate to the field
   itself — a label starting a top-level line of a task's body — rather
@@ -454,25 +454,6 @@ authority (Non-goals).
   and read as procedural, exempting every wording artifact from a
   contract entry: the inversion the conjunctive restatement was meant to
   prevent.
-- **2026-08-31 (code review [I2], [I3], round 4 verification 1):** R3's
-  bound properties change in two ways. Bullet 1: the note's exact-content
-  sentence now carries the same self-pin exception rule 5 already states —
-  a marker whose reason names a pin the plan itself writes or edits does
-  not bind byte-for-byte; body and pin are amendable together as one
-  ordinary fix. Bullet 2: the Global-Constraints exception is restated
-  inline, positively, and without a cross-reference to "rule 6(b)" — an
-  entry that both does not trace to the spec named on the plan's
-  `**Spec:**` line and restates the body of an artifact the plan itself
-  creates or modifies is an ordinary fix; every other entry binds as
-  stated. Reason: the note is the only copy of the body-authority regime a
-  review controller ever reads — it reads the plan, never this skill file
-  — so every rule the note states must be decidable from the note alone.
-  The unconditional exact-content sentence made the self-pin rule
-  unreachable for a marked body at triage time; the "rule 6(b)"
-  cross-reference dangled into a file the controller does not read, and
-  the two admissible readings of "an entry failing the two-part self-pin
-  test" pointed opposite ways, so two controllers reading the same note
-  could reach opposite classifications.
 - **2026-08-31 (code review [M4], round 4 verification 1):** R1 rule 1's
   procedural test gains a qualifier on its `Run:`-line example: a
   verification `Run:` line is a canonical procedural form only when the
@@ -485,37 +466,42 @@ authority (Non-goals).
   fixture regenerator satisfied the example but failed the predicate, so
   the same block read as both procedural and not procedural depending on
   which of the three sites was consulted.
-- **2026-09-01 (code review [I1], [I2], round 4 verification 2):** R3's
-  bound properties gain two clauses, stated in the note's own voice with
-  no cross-reference to a rule number. Clause 1 (rule 6(c) and rule 6(d)):
-  the note now states that the same reference default covers other
-  non-task plan content — header prose such as `**Architecture:**` and
-  `**Assumptions:**`, and the File Structure section — as an ordinary fix
-  unless it contradicts a stated contract or a global constraint, and
-  covers a task whose `**Contract:**` field reads `none — <reason>` as an
-  ordinary fix, because there is no contract to break. Clause 2 (the
-  missing case in rule 4's marker requirement): the note now states that a
-  block marked `**Exact content:**` with no reason does not bind
-  byte-for-byte — the body is an ordinary fix, and the missing reason is
-  itself a finding. Reason: the note is the only copy of the
-  body-authority regime a review controller ever reads — it reads the
-  plan, never `skills/writing-plans/SKILL.md` — so a rule stated only in
-  rules 6(c), 6(d), or 4 was unreachable at triage time. Before clause 2,
-  the note's unconditional exact-content sentence ("binds byte-for-byte
-  unless its reason names a pin...") gave a marker with no reason at all
-  stronger protection than a properly reasoned self-pin, inverting the
-  intended incentive.
-- **2026-09-01 (code review, round 4 — note self-coverage):** R3 bullet 2 is
-  amended: the note's non-task-content sentence must name its two
-  exclusions inline — it covers header prose such as `**Architecture:**`
-  and `**Assumptions:**` and the File Structure section, but never the
-  `**Global Constraints:**` block and never the `**Body authority:**` note
-  itself. Reason: the sentence introduced its coverage with an open-ended
-  "such as" list and stood before the sentence declaring that the
-  `**Global Constraints:**` block and the note bind as stated, so on a
-  literal reading it already covered both of them and the note
-  contradicted itself. A controller triaging a finding reads the plan,
-  never `skills/writing-plans/SKILL.md`, so the contradiction could not be
-  resolved by rule order: rules 6(b) and 6(c) place the exceptions before
-  the reference default, but the note reversed that order and needs the
-  exclusion stated in its own text.
+- **2026-09-01 (code review, round 4 verification 2 — closed binding set):**
+  R3's bound properties are restated, and this entry replaces the chain of
+  earlier R3-content entries it supersedes: the 2026-08-31 round 4 entry,
+  the round 4 verification 1 entry, the round 4 verification 2 entry, and
+  the "note self-coverage" entry. Git history keeps their text. The note
+  now states the CLOSED binding set — exactly two members bind: the
+  `**Global Constraints:**` block, and a block whose immediately preceding
+  paragraph reads `**Exact content:** <reason>` where that reason names a
+  pin the plan does not itself write or edit — plus the residue clause
+  (everything else in the plan, the note itself included, is reference; a
+  finding against it is an ordinary fix unless it contradicts a stated
+  `**Contract:**` or a global constraint), the non-conflict disposition
+  for a finding whose subject is the note's own wording (recorded against
+  `skills/writing-plans/SKILL.md`; the run continues), and that
+  disposition's scoping guard. Reason: every earlier version of the note
+  enumerated the OPEN, non-binding set — it listed the categories that do
+  *not* bind — so each round found a case the enumeration did not name and
+  reported it as "case X falls between two sentences", and each fix added
+  one more sentence without ending the class. A closed binding set has no
+  such gap: any case not in the set is reference by construction. The note
+  no longer carries the `**Global Constraints:**` self-pin exception, the
+  `**Contract:** none — <reason>` case, the header-prose case, or the
+  unreasoned-`**Exact content:**`-marker case; those stay in the numbered
+  rules of `skills/writing-plans/SKILL.md` (rules 6(b), 6(c), 6(d) and
+  rule 4), which the plan-writing agent reads, while the note carries only
+  what a review controller needs at triage time. Rule 6(b) is reconciled
+  to match: it no longer says the note binds as stated and that a review
+  fix may not reword it.
+- **2026-09-01 (code review, round 4 — check 5 universe):** R4's universe
+  is task-step content — fenced blocks, block quotes and `Run:` lines in a
+  task step — and plan-header content is out of scope, with one exception:
+  the `**Global Constraints:**` entries the check's last property
+  inspects. Reason: the check's quantifier reached every fenced block and
+  quoted wording in the plan while its three buckets reach only task
+  content, so the `**Body authority:**` block quote that every generated
+  plan carries fitted no bucket and the check reported a defect on 100% of
+  generated plans. `Run:` lines are named in the universe because bucket
+  (c)'s second canonical form is a `Run:` line, which the earlier
+  quantifier left outside the set it classified.

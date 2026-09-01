@@ -467,133 +467,40 @@ In `skills/writing-plans/SKILL.md`, inside the Plan Header fenced block (the ` `
 > **Body authority:** Fenced code blocks and block-quoted wording in task steps are reference implementations for the task's stated `**Contract:**`. A review finding against such a body is an ordinary fix while the contract holds; only blocks marked `**Exact content:**` bind byte-for-byte. The `**Global Constraints:**` block binds as stated.
 ```
 
-> **Amended 2026-08-31 (code review [I1], round 3):** The quote above is
-> superseded. Design R3 bullet 2 requires the note to state both that the
-> `**Global Constraints:**` block binds as stated AND that the note
-> itself binds as stated alongside it; the wording above stated only the
-> first half. The actual wording committed to `skills/writing-plans/SKILL.md`'s
-> Plan Header note now ends: "The `**Global Constraints:**` block binds
-> as stated, and this note binds as stated alongside it." The first half
-> of the note's wording is unchanged.
-
-> **Amended 2026-08-31 (code review [I1], round 4):** The quote above is
-> superseded again. Rule 6(b) carves out one exception to the
-> `**Global Constraints:**` bind — an entry failing the two-part self-pin
-> test is an ordinary fix, not a plan conflict — and the note is the only
-> copy of that rule a review controller actually reads at triage time, so
-> the note now states the same exception. The actual wording committed to
-> `skills/writing-plans/SKILL.md`'s Plan Header note now ends: "The
-> `**Global Constraints:**` block binds as stated — except an entry
-> failing the two-part self-pin test (rule 6(b)), which is an ordinary
-> fix — and this note binds as stated alongside it." The first half of
-> the note's wording is unchanged.
-
-> **Amended 2026-08-31 (code review [I2], [I3], round 4 verification 1):**
-> The quote above is superseded. The note is the only copy of the
-> body-authority regime a review controller ever reads — it reads the
-> plan, never `skills/writing-plans/SKILL.md` — so every rule the note
-> states must be decidable from the note alone: no cross-reference to a
-> rule number that exists only in the skill file, and no undecidable
-> reading. The actual wording committed to
-> `skills/writing-plans/SKILL.md`'s Plan Header note now reads in full:
-> "Fenced code blocks and block-quoted wording in task steps are reference
-> implementations for the task's stated `**Contract:**`. A review finding
-> against such a body is an ordinary fix while the contract holds; a block
-> marked `**Exact content:**` binds byte-for-byte unless its reason names
-> a pin the plan itself writes or edits, in which case it is a self-pin
-> and body and pin are amendable together as one ordinary fix. The
-> `**Global Constraints:**` block binds as stated, except an entry that
-> both does not trace to the spec named on the plan's `**Spec:**` line
-> and restates the body of an artifact the plan itself creates or
-> modifies, which is an ordinary fix; every other entry binds as stated —
-> and this note binds as stated alongside it." See the design's
-> Amendments section for the full ruling.
-
-> **Amended 2026-09-01 (code review [I1], [I2], round 4 verification 2):**
-> The quote above is superseded. Rules 6(c), 6(d), and 4's no-reason case
-> had no counterpart in the note, so a controller triaging a finding
-> against them at the note alone found nothing covering the case. The
-> actual wording committed to `skills/writing-plans/SKILL.md`'s Plan
-> Header note now reads in full: "Fenced code blocks and block-quoted
-> wording in task steps are reference implementations for the task's
-> stated `**Contract:**`. Other non-task plan content — header prose such
-> as `**Architecture:**` and `**Assumptions:**`, and the File Structure
-> section — follows the same reference default: a finding against it is
-> an ordinary fix unless it contradicts a stated contract or a global
-> constraint. A finding against a body in a task whose `**Contract:**`
-> field reads `none — <reason>` is an ordinary fix, because there is no
-> contract to break. A review finding against such a body is an ordinary
-> fix while the contract holds; a block marked `**Exact content:**` binds
-> byte-for-byte unless its reason names a pin the plan itself writes or
-> edits, in which case it is a self-pin and body and pin are amendable
-> together as one ordinary fix. A block marked `**Exact content:**` with
-> no reason does not bind byte-for-byte; the body is an ordinary fix, and
-> the missing reason is itself a finding. The `**Global Constraints:**`
-> block binds as stated, except an entry that both does not trace to the
-> spec named on the plan's `**Spec:**` line and restates the body of an
-> artifact the plan itself creates or modifies, which is an ordinary fix;
-> every other entry binds as stated — and this note binds as stated
-> alongside it." See the design's Amendments section for the full ruling.
-
-> **Amended 2026-09-01 (code review [I1]/[I2] correction, round 6):** The
-> quote above is superseded on sentence order only — no sentence's wording
-> changed. Sentence 4 ("A review finding against such a body …") uses
-> "such a body" to refer back to sentence 1's task-step bodies; the two
-> new sentences inserted between them retargeted that phrase to the
-> nearest new sentence instead. The actual wording committed to
-> `skills/writing-plans/SKILL.md`'s Plan Header note now reads in full:
-> "Fenced code blocks and block-quoted wording in task steps are reference
-> implementations for the task's stated `**Contract:**`. A review finding
-> against such a body is an ordinary fix while the contract holds; a block
-> marked `**Exact content:**` binds byte-for-byte unless its reason names
-> a pin the plan itself writes or edits, in which case it is a self-pin
-> and body and pin are amendable together as one ordinary fix. A block
-> marked `**Exact content:**` with no reason does not bind byte-for-byte;
-> the body is an ordinary fix, and the missing reason is itself a
-> finding. Other non-task plan content — header prose such as
-> `**Architecture:**` and `**Assumptions:**`, and the File Structure
-> section — follows the same reference default: a finding against it is
-> an ordinary fix unless it contradicts a stated contract or a global
-> constraint. A finding against a body in a task whose `**Contract:**`
-> field reads `none — <reason>` is an ordinary fix, because there is no
-> contract to break. The `**Global Constraints:**` block binds as stated,
-> except an entry that both does not trace to the spec named on the
-> plan's `**Spec:**` line and restates the body of an artifact the plan
-> itself creates or modifies, which is an ordinary fix; every other entry
-> binds as stated — and this note binds as stated alongside it." See the
-> design's Amendments section for the full ruling.
-
-> **Amended 2026-09-01 (code review, round 4 — note self-coverage):** The quote
-> above is superseded on one sentence. The non-task-content sentence
-> introduced its coverage with an open-ended "such as" list and stood
-> before the sentence declaring that the `**Global Constraints:**` block
-> and this note bind as stated, so on a literal reading it already covered
-> both of them: two controllers triaging a finding against a
-> `**Global Constraints:**` entry, or against the note's own wording,
-> could reach opposite classifications from the note alone. The sentence
-> now names the two exclusions inline. The actual wording committed to
-> `skills/writing-plans/SKILL.md`'s Plan Header note now reads in full:
-> "Fenced code blocks and block-quoted wording in task steps are reference
-> implementations for the task's stated `**Contract:**`. A review finding
-> against such a body is an ordinary fix while the contract holds; a block
-> marked `**Exact content:**` binds byte-for-byte unless its reason names
-> a pin the plan itself writes or edits, in which case it is a self-pin
-> and body and pin are amendable together as one ordinary fix. A block
-> marked `**Exact content:**` with no reason does not bind byte-for-byte;
-> the body is an ordinary fix, and the missing reason is itself a
-> finding. Other non-task plan content — header prose such as
-> `**Architecture:**` and `**Assumptions:**`, and the File Structure
-> section, but never the `**Global Constraints:**` block and never this
-> `**Body authority:**` note — follows the same reference default: a
-> finding against it is an ordinary fix unless it contradicts a stated
-> contract or a global constraint. A finding against a body in a task
-> whose `**Contract:**` field reads `none — <reason>` is an ordinary fix,
-> because there is no contract to break. The `**Global Constraints:**`
-> block binds as stated, except an entry that both does not trace to the
-> spec named on the plan's `**Spec:**` line and restates the body of an
-> artifact the plan itself creates or modifies, which is an ordinary fix;
-> every other entry binds as stated — and this note binds as stated
-> alongside it." See the design's Amendments section for the full ruling.
+> **Amended 2026-09-01 (code review, round 4 verification 2 — consolidated):**
+> The quote above is superseded, and this block replaces the whole chain of
+> earlier amendments to this note (round 3; round 4; round 4 verification 1;
+> round 4 verification 2; and the round 4 note self-coverage correction).
+> Git history keeps their text; this block states the current note and the
+> ruling behind it. **Ruling:** the note enumerated the OPEN, non-binding
+> set — it listed the categories that do *not* bind — so every category it
+> failed to name produced a finding of the shape "case X falls between two
+> sentences", round after round. The note now states the CLOSED binding set
+> instead: exactly two members bind, and everything else in the plan,
+> including the note itself, is reference. A finding whose subject is the
+> note's own wording is given an explicit non-conflict disposition, with a
+> scoping guard so the disposition covers the note's own text alone. The
+> `**Global Constraints:**` self-pin exception, the
+> `**Contract:** none — <reason>` case and the header-prose case are no
+> longer carried inside the note: they stay in the numbered rules of
+> `skills/writing-plans/SKILL.md` (rules 6(b), 6(c), 6(d)). The actual
+> wording committed to `skills/writing-plans/SKILL.md`'s Plan Header note
+> now reads in full: "Exactly two things in this plan bind: the
+> `**Global Constraints:**` block, and a block whose immediately preceding
+> paragraph reads `**Exact content:** <reason>` where that reason names a
+> pin this plan does not itself write or edit. Everything else is
+> reference: fenced code blocks and block-quoted wording in task steps are
+> reference implementations, and so is every other code block, every quoted
+> wording, every header field, and this note itself — a finding against any
+> of them is an ordinary fix, not a plan conflict, unless it contradicts a
+> stated `**Contract:**` or a global constraint. A finding whose subject is
+> this note's own wording is never a plan conflict: record it against the
+> plan-writing skill at `skills/writing-plans/SKILL.md` and continue. That
+> disposition covers the note's own text alone; a finding that this note
+> contradicts something specific to this plan — one of its global
+> constraints, say — is about that interaction and is triaged as an
+> ordinary finding." See the design's Amendments section for the full
+> ruling.
 
 - [x] **Step 4: Run the suite to verify it passes**
 
@@ -654,6 +561,8 @@ In `skills/writing-plans/SKILL.md`, section `## Self-Review`, insert the followi
 > **Amended 2026-08-31 (code review [M5], round 4):** The quote above is superseded. The command conjunct is now stated positively, so a block that runs no command at all does not qualify as procedural. The actual wording committed to `skills/writing-plans/SKILL.md` Self-Review check 5, bucket (c), now reads: "it is a procedural step block under rule 1's test — it creates, modifies, or deletes no file in the working tree, and runs at least one command, every command it runs being a pipeline command, such as the Step 5 commit block or a verification `Run:` line, with an unclear case treated as not procedural — covered by the reference default …". Same predicate as rule 1's amended boundary test; see the design's Amendments section.
 
 > **Amended 2026-08-31 (code review [M4], round 4 verification 1):** The quote above is superseded. The actual wording committed to `skills/writing-plans/SKILL.md` Self-Review check 5, bucket (c), now reads: "it is a procedural step block under rule 1's test — it creates, modifies, or deletes no file in the working tree, and runs at least one command, every command it runs being a pipeline command, such as the Step 5 commit block or a verification `Run:` line (a `Run:` line is a procedural form only when the command it runs writes no working-tree file), with an unclear case treated as not procedural — covered by the reference default …". Same qualifier as rule 1's amended boundary test; see the design's Amendments section.
+
+> **Amended 2026-09-01 (code review, round 4 — check 5 universe):** The quote above is superseded on the check's opening quantifier, which now reads: "Every fenced block, block quote, and `Run:` line in a task step is in one of three buckets: …". Bucket (c)'s procedural-block sentence is unchanged. The check also gained a scoping sentence, committed to `skills/writing-plans/SKILL.md` immediately after bucket (c): "This check's universe is task-step content only; plan-header content is out of scope — including the `**Body authority:**` block quote, which is template text every generated plan carries — with one exception: the `**Global Constraints:**` entries that the last sentence of this check inspects." Reason: the old quantifier reached every fenced block and quoted wording in the plan, while the three buckets reach only task content, so the Plan Header block quote that every generated plan carries fitted no bucket and the check reported a defect on every generated plan. `Run:` lines join the universe because bucket (c)'s second canonical form is a `Run:` line. See the design's Amendments section.
 
 - [x] **Step 4: Run the suite to verify it passes**
 
@@ -763,6 +672,8 @@ Expected: PASS — both exit 0; the reviewer-templates suite reports all section
 > **Amended 2026-09-01 (code review [I1], [I2], round 4 verification 2):** The count rose again, from 12 to 15, because the [I1]/[I2] fix added three block-scoped assertions inside the Plan Header check (the non-task-content default, the no-contract clause, and the unreasoned-marker clause), each falsifying a clause the note gained in this round. The writing-plans suite now reports `Results: 15 passed, 0 failed`.
 
 > **Amended 2026-09-01 (code review, round 4 — note self-coverage):** The count rose again, from 15 to 16, because this round's fix added one block-scoped assertion inside the Plan Header check (the exclusion of the `**Global Constraints:**` block and of the note itself from the non-task-content reference default). The writing-plans suite now reports `Results: 16 passed, 0 failed`.
+
+> **Amended 2026-09-01 (code review, round 4 — closed binding set):** The count fell from 16 to 15. The note was rewritten to state the closed binding set instead of the open non-binding set, so the seven Plan-Header assertions pinning clauses the rewrite deleted were removed, and six new assertions were added: five block-scoped ones inside the Plan Header check (the closed binding set, the exact-content binding condition, the residue clause, the non-conflict disposition for a finding against the note's own wording, and that disposition's scoping guard) and one range-scoped assertion inside Self-Review check 5 (its universe is task-step content only; plan-header content is out of scope). The writing-plans suite now reports `Results: 15 passed, 0 failed`.
 
 - [x] **Step 5: Commit**
 
