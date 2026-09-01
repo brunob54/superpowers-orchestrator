@@ -1,5 +1,58 @@
 # Superpowers Orchestrator Release Notes
 
+## v7.7.0 — plans state contracts, not literal bodies
+
+Field report: across four earlier runs, eleven interruptions of the
+autonomous pipeline traced to one cause. A plan had fixed a helper's body,
+a command, or a piece of wording **verbatim**, and the review loops may
+never overrule an approved plan — so every later review finding about that
+text became a `user-decision` stop the pipeline could not settle alone
+(Cases 001, 003, 007 and 008 in the orchestration issues log). One run lost
+three of its four stops to it; another turned a single stop into a chain of
+six.
+
+`writing-plans` now asks for the **contract** instead. A task states what
+its artifact must guarantee — invariants, and the verification that would
+falsify them, plus inputs and outputs when the artifact is code — and the
+code block beside it is a *reference implementation*: one way to satisfy
+that contract, not the contract itself. A later review finding against such
+a body is an ordinary fix while the contract still holds. Only two things
+in a plan bind as written: the `**Global Constraints:**` block, and a block
+whose new `**Exact content:** <reason>` marker names a pin the plan does
+not itself write or edit. A pin the plan creates or edits is a *self-pin* —
+body and pin amend together as one ordinary fix — which is exactly the case
+that produced the Case 008 chain.
+
+The rule has to reach the reviewer that applies it, and a review controller
+reads the plan, never `writing-plans`. So every generated plan's header now
+carries a `**Body authority:**` note stating the binding set and declaring
+everything else — the note included — a reference implementation. A finding
+against the note's own wording is recorded against `writing-plans` and the
+run continues; it is never a plan conflict.
+
+### What changed
+
+- **`writing-plans`** — new "Contracts and Literal Bodies" section; a
+  `**Contract:**` field in the Task Template (`none — <reason>` allowed);
+  the `**Body authority:**` note in the Plan Header template; Self-Review
+  gains a contract audit that treats a vacuous contract, a false `none`,
+  and a marker whose reason names no external pin as defects.
+- **`multi-doc-review`** — the plan cell of the Ambiguity & testability
+  lens gains contract targets: bodies with no stated contract, vacuous or
+  unverifiable contracts, and self-pinned `**Exact content:**` markers. The
+  targets apply only to a plan carrying the `**Body authority:**` label, so
+  plans written before this release are reviewed exactly as before.
+- **Tests** — new `tests/writing-plans/run-tests.sh` (15 checks) and a new
+  section in `tests/reviewer-templates/run-tests.sh` (24 total), including
+  a cross-suite equality check so renaming the gate label in one file
+  cannot leave the gate silently inert with both suites green.
+
+### Upgrading
+
+Nothing to do. Plans written before this release carry no
+`**Body authority:**` note, keep their old authority at execution and
+triage time, and are reviewed under the previous lens text.
+
 ## v7.6.0 — reviewers test harness claims instead of asserting them
 
 Field report: a code reviewer asserted that the Agent tool's `description`

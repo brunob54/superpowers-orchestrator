@@ -1,6 +1,6 @@
 # Superpowers Orchestrator — User Guide
 
-_Guide last reviewed against plugin version **7.2.0**._
+_Guide last reviewed against plugin version **7.7.0**._
 
 This is the day-to-day operating manual for the plugin: which phrases trigger
 which workflow, what the pipelines look like end to end, and what to do when
@@ -206,11 +206,29 @@ Two rules worth internalizing:
 
 After spec approval, `writing-plans` decomposes it into
 `docs/superpowers-orchestrator/YYYY-MM-DD-<slug>/plans/<slug>.md`: tasks with checkboxes, each broken into
-steps of one action apiece (~2–5 minutes), with the actual file contents and
+steps of one action apiece (~2–5 minutes), with concrete file contents and
 exact verification commands an engineer needs — placeholders like "update
 logic" are treated as plan failures. Test-driven development (TDD) ordering
-is built in: test-writing steps precede implementation steps. The plan gets its own `multi-doc-review`
-gate (same M reviewers per round) before you approve it.
+is built in: test-writing steps precede implementation steps.
+
+**What binds, and what is only an example.** Each task states a **contract**
+— the invariants its artifact must satisfy and the check that would falsify
+them (inputs and outputs, for code); a task that creates nothing a contract
+could govern says `none — <reason>`. The code blocks and quoted wording
+inside the task's steps are *reference implementations*: a good starting
+point, not text the implementer must reproduce character for character. Only
+two things in a plan bind as written — the plan's `**Global Constraints:**`
+block, and a block whose preceding paragraph reads `**Exact content:**
+<reason>` where that reason names something outside the plan that the text
+must match (a wire format, a file the plan does not itself write). Every
+generated plan carries this rule in a `**Body authority:**` note in its
+header, so reviewers and executors read it from the plan itself.
+
+The plan gets its own `multi-doc-review` gate (same M reviewers per round)
+before you approve it; that gate also audits the contracts — a task body with
+no stated contract, a contract no check could fail ("must work correctly"),
+and an `**Exact content:**` marker whose reason points at a file the same
+plan writes (a "self-pin") are all findings.
 
 This file is the pipeline's backbone: its checkboxes are the durable
 position record that execution ticks and commits task by task (§5).
@@ -483,7 +501,13 @@ the moment its task completes.
 Any major error — a blocked controller, unresolved review findings, a plan
 inconsistency, the branch changed under it — appends a `## STOPPED` entry to
 the log with the reason, a pointer to the detail file, and the exact resume
-prompt to use. Nothing is lost: everything up to the stop is committed. See
+prompt to use. Nothing is lost: everything up to the stop is committed.
+
+A review finding that merely differs from a code block the plan showed is
+*not* one of these stops: since v7.7.0 those bodies are reference
+implementations, so the fix is applied and the run continues. A plan
+inconsistency now means a genuine conflict — with a task's stated
+`**Contract:**`, or with the plan's `**Global Constraints:**`. See
 §5 for resuming, overriding parameters on resume, and abandoning a wedged run.
 A Phase 4 stop entry lists each open review item on an `Open:` line, then
 one `Owed probe:` line for every harness probe the review loop could not run
@@ -804,6 +828,13 @@ reviewer made a claim about the agent runtime that nobody could test in that
 environment, so the finding was rejected instead of stopping the run (§3,
 Stage 1). Run the named probe yourself; if it confirms the claim, reopen the
 finding by hand — nothing in the run is waiting on it.
+
+**The code doesn't match what the plan showed.** Expected, in most cases.
+Since v7.7.0 a plan's code blocks are reference implementations; what the
+implementation must satisfy is the task's `**Contract:**` field. Only the
+plan's `**Global Constraints:**` block and blocks marked `**Exact
+content:**` are reproduced literally. If a divergence breaks a stated
+contract, that *is* a defect — report it against the task.
 
 **Something orchestration-specific went wrong.** §5 covers stops, crashes,
 resumes, and teardown; the orchestration log's `## STOPPED` entry names the
