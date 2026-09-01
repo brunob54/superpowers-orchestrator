@@ -505,3 +505,17 @@ authority (Non-goals).
   unless its reason names a pin...") gave a marker with no reason at all
   stronger protection than a properly reasoned self-pin, inverting the
   intended incentive.
+- **2026-09-01 (code review, round 4 — note self-coverage):** R3 bullet 2 is
+  amended: the note's non-task-content sentence must name its two
+  exclusions inline — it covers header prose such as `**Architecture:**`
+  and `**Assumptions:**` and the File Structure section, but never the
+  `**Global Constraints:**` block and never the `**Body authority:**` note
+  itself. Reason: the sentence introduced its coverage with an open-ended
+  "such as" list and stood before the sentence declaring that the
+  `**Global Constraints:**` block and the note bind as stated, so on a
+  literal reading it already covered both of them and the note
+  contradicted itself. A controller triaging a finding reads the plan,
+  never `skills/writing-plans/SKILL.md`, so the contradiction could not be
+  resolved by rule order: rules 6(b) and 6(c) place the exceptions before
+  the reference default, but the note reversed that order and needs the
+  exclusion stated in its own text.

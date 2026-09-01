@@ -563,6 +563,38 @@ In `skills/writing-plans/SKILL.md`, inside the Plan Header fenced block (the ` `
 > binds as stated — and this note binds as stated alongside it." See the
 > design's Amendments section for the full ruling.
 
+> **Amended 2026-09-01 (code review, round 4 — note self-coverage):** The quote
+> above is superseded on one sentence. The non-task-content sentence
+> introduced its coverage with an open-ended "such as" list and stood
+> before the sentence declaring that the `**Global Constraints:**` block
+> and this note bind as stated, so on a literal reading it already covered
+> both of them: two controllers triaging a finding against a
+> `**Global Constraints:**` entry, or against the note's own wording,
+> could reach opposite classifications from the note alone. The sentence
+> now names the two exclusions inline. The actual wording committed to
+> `skills/writing-plans/SKILL.md`'s Plan Header note now reads in full:
+> "Fenced code blocks and block-quoted wording in task steps are reference
+> implementations for the task's stated `**Contract:**`. A review finding
+> against such a body is an ordinary fix while the contract holds; a block
+> marked `**Exact content:**` binds byte-for-byte unless its reason names
+> a pin the plan itself writes or edits, in which case it is a self-pin
+> and body and pin are amendable together as one ordinary fix. A block
+> marked `**Exact content:**` with no reason does not bind byte-for-byte;
+> the body is an ordinary fix, and the missing reason is itself a
+> finding. Other non-task plan content — header prose such as
+> `**Architecture:**` and `**Assumptions:**`, and the File Structure
+> section, but never the `**Global Constraints:**` block and never this
+> `**Body authority:**` note — follows the same reference default: a
+> finding against it is an ordinary fix unless it contradicts a stated
+> contract or a global constraint. A finding against a body in a task
+> whose `**Contract:**` field reads `none — <reason>` is an ordinary fix,
+> because there is no contract to break. The `**Global Constraints:**`
+> block binds as stated, except an entry that both does not trace to the
+> spec named on the plan's `**Spec:**` line and restates the body of an
+> artifact the plan itself creates or modifies, which is an ordinary fix;
+> every other entry binds as stated — and this note binds as stated
+> alongside it." See the design's Amendments section for the full ruling.
+
 - [x] **Step 4: Run the suite to verify it passes**
 
 Run: `bash tests/writing-plans/run-tests.sh`
@@ -729,6 +761,8 @@ Expected: PASS — both exit 0; the reviewer-templates suite reports all section
 > **Amended 2026-08-31 (code review [M3], round 4 verification 1):** The count rose again, from 9 to 12, because the [M3] fix added three block-scoped assertions inside the Plan Header check (the self-pin qualification, the Global-Constraints self-pin exception, and the note's self-binding clause), each falsifying a property the note carried with no prior assertion. The writing-plans suite now reports `Results: 12 passed, 0 failed`.
 
 > **Amended 2026-09-01 (code review [I1], [I2], round 4 verification 2):** The count rose again, from 12 to 15, because the [I1]/[I2] fix added three block-scoped assertions inside the Plan Header check (the non-task-content default, the no-contract clause, and the unreasoned-marker clause), each falsifying a clause the note gained in this round. The writing-plans suite now reports `Results: 15 passed, 0 failed`.
+
+> **Amended 2026-09-01 (code review, round 4 — note self-coverage):** The count rose again, from 15 to 16, because this round's fix added one block-scoped assertion inside the Plan Header check (the exclusion of the `**Global Constraints:**` block and of the note itself from the non-task-content reference default). The writing-plans suite now reports `Results: 16 passed, 0 failed`.
 
 - [x] **Step 5: Commit**
 

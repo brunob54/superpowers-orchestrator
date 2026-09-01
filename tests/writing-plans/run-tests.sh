@@ -34,6 +34,7 @@ FRAG_NOT_PROCEDURAL='treat the block as not procedural'
 FRAG_NOTE_BINDS='this note binds as stated'
 FRAG_GC_SELF_PIN='restates the body of an artifact the plan itself creates or modifies'
 FRAG_NONTASK_DEFAULT='Other non-task plan content'
+FRAG_NONTASK_EXCLUSION='but never the `**Global Constraints:**` block and never this `**Body authority:**` note'
 FRAG_NO_CONTRACT='no contract to break'
 FRAG_NO_REASON='missing reason is itself a finding'
 
@@ -161,6 +162,8 @@ assert_in_block "Plan Header note carries the self-binding clause '$FRAG_NOTE_BI
   "$FRAG_NOTE_BINDS" '## Plan Header' '```' fragment
 assert_in_block "Plan Header note carries the non-task-content default '$FRAG_NONTASK_DEFAULT'" \
   "$FRAG_NONTASK_DEFAULT" '## Plan Header' '```' fragment
+assert_in_block "Plan Header note excludes Global Constraints and itself from the non-task-content default '$FRAG_NONTASK_EXCLUSION'" \
+  "$FRAG_NONTASK_EXCLUSION" '## Plan Header' '```' fragment
 assert_in_block "Plan Header note carries the no-contract clause '$FRAG_NO_CONTRACT'" \
   "$FRAG_NO_CONTRACT" '## Plan Header' '```' fragment
 assert_in_block "Plan Header note carries the unreasoned-marker clause '$FRAG_NO_REASON'" \
