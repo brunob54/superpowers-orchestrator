@@ -167,7 +167,7 @@ no-fix-ships-unreviewed rule forbids. Findings still standing are recorded as
 - [M3] carried — Self-Review check 5's universe is "every fenced block or quoted wording", while bucket (c)'s second canonical form is a verification `Run:` line, which is neither; the round 4 verification 1 [M4] qualifier therefore pins a case the check cannot reach. Text-only redundancy, no behavior change
 - [M4] carried — check 8's gate-label extraction requires a literal `> ` prefix inside the backticks, which the lens cell's other mention of the same label omits; a reword dropping the prefix fails with "no gate label found in the plan cell" while the gate is intact. Fail-closed, so no false green — only a misdirecting failure message
 
-_Completed — 2026-09-01 — cap reached — HEAD f02638725b497e13a9e1552ef2699b5993faccc0_
+_Completed — 2026-09-01 — cap reached — HEAD a10e5a6481e28e190564ae6d967de0b1793ea49a_
 
 ## Post-loop addendum 3 — 2026-09-01 — invoker decisions on the open items
 
@@ -206,4 +206,60 @@ cap`._
 - [M3] carried — check 8's gate-label extraction in `tests/reviewer-templates/run-tests.sh` matches the label line-by-line and so depends on the whole `` `> **Body authority:**` `` span staying on one source line of `skills/multi-doc-review/SKILL.md`; a reflow that wraps the span yields zero labels and the check fails with "no gate label found in the plan cell" while the gate is intact. Fail-closed, so a misdirecting message rather than a false green; same family as verification 3 [M4]
 
 _Addendum completed — 2026-09-01 — cap reached — HEAD f02638725b497e13a9e1552ef2699b5993faccc0_
+_Harness probes owed: none_
+
+## Post-loop addendum 4 — 2026-09-01 — invoker decisions on the open items
+
+**Standing rule, in force for this and every later invocation of this loop:** a
+verification re-review finding against ANY plan-mandated wording is this loop's
+to decide — fix it, or reject it with a named reason. A Critical is never
+rejected under this rule. Such findings are never journaled as `user-decision`,
+so that one stop cannot become a chain.
+
+The effective HEAD is f026387 — unchanged since this entry's completion marker
+(the only later commits, 82c11c7 and 55cdce4, change nothing outside the
+blinding pathspec set). So no new invocation entry is started: the decided items
+were applied with one fix subagent and one verification re-review, and the
+completion marker above is updated to the new effective HEAD.
+
+**The invoker's ruling (diagnosis and remedy).** The `**Body authority:**` note
+produced three to four Important findings of the shape "case X falls between two
+sentences" in each of the last four verification cycles because it enumerated the
+OPEN non-binding set. The remedy is to state the CLOSED binding set instead.
+Adding another clause is explicitly rejected. Two changes are applied together —
+the disposition alone would make the note's defects invisible without making the
+note correct, and the inversion alone would leave the self-reference problem
+open.
+
+### Dispositions
+- [I4] (round 4 verification 4) decided (user): fix it — invert the note's polarity. The note states the BINDING set positively and closed (exactly two members: the `**Global Constraints:**` block, and a block whose preceding paragraph reads `**Exact content:** <reason>` naming a pin the plan does not itself write or edit); everything else in the plan — every code block, every quoted wording, every header field, and the note itself — is a reference implementation whose finding is an ordinary fix unless it contradicts a stated `**Contract:**` or a global constraint. The note also states the non-conflict disposition (a finding against the note's own wording is not a plan conflict — record it against `writing-plans` and continue) with a scoping guard (the disposition covers the note's own text alone; a finding that the note contradicts something specific to the plan it appears in is about that interaction and stays an ordinary finding). Wording is the loop's to choose; the properties are mandated. This supersedes the ruling of verification 2 [I3], verification 3 [I2] and verification 4 [I4], which rejected property-binding: the invoker takes the third convergent proposal as decisive on the problem while rejecting property-binding as the remedy — the note now binds nothing by wording at all, so no bound-property list has to reach the controller
+- [I1] (round 4 verification 4) decided (user): fix it — Self-Review check 5's quantifier is independently wrong and is not dissolved by the note restructure. Scope the universe to task-step content and name the Plan Header note as out of scope
+- [I2] (round 4 verification 4) decided (user): fix it — dissolved by the inversion: the binding member (ii) is stated positively, so a marker whose reason names no external pin simply is not in the binding set. No separate clause is added
+- [I3] (round 4 verification 4) decided (user): fix it — dissolved by the residue clause, which covers every piece of plan content rather than partitioning it into fenced/quoted and non-task halves
+- [M1] (round 4 verification 4) decided (user): fix it — dissolved by the binding member (ii), which states the marker's placement inline ("a block whose immediately preceding paragraph reads `**Exact content:** <reason>`")
+- (also decided) the plan's amendment block naming "round 6", a round that does not exist in this run, is corrected to the round it records; superseded amendment blocks in the plan and in the spec's Amendments section are consolidated into one current statement rather than appended to; spec R3's bullets are amended (binding-as-stated bullet replaced by the non-conflict disposition, non-task/`Contract: none` enumeration bullet replaced by the residue clause, the label byte pin and gate-predicate bullet left exactly as it is) and R4 amended per the check-5 scoping
+- [I4] [I1] [I2] [I3] [M1] (round 4 verification 4) fixed — the `**Body authority:**` note is rewritten to state the closed binding set (1008 characters of note text after the `> ` prefix, down from 1426). It now reads: exactly two things bind — the `**Global Constraints:**` block, and a block whose immediately preceding paragraph reads `**Exact content:** <reason>` naming a pin the plan does not itself write or edit; everything else, the note included, is reference, and a finding against it is an ordinary fix unless it contradicts a stated `**Contract:**` or a global constraint; a finding whose subject is the note's own wording is never a plan conflict (record it against the plan-writing skill file and continue), and that disposition covers the note's own text alone, so a finding that the note contradicts something specific to its plan stays an ordinary finding. Rule 6(b) of `skills/writing-plans/SKILL.md` is reconciled with the new disposition; rules 6(b)'s Global-Constraints self-pin exception, 6(c) and 6(d) stay in the skill body, which is now their only home. Self-Review check 5's universe is scoped to task-step content (fenced blocks, block quotes and `Run:` lines) with plan-header content named out of scope apart from the `**Global Constraints:**` entries it already inspects; bucket (c)'s three-site sentence is byte-unchanged. `tests/writing-plans/run-tests.sh`: seven Plan-Header assertions pinning deleted note text removed with their now-unused constants, six new assertions added (closed binding set, exact-content binding condition, residue clause, non-conflict disposition, scoping guard, check-5 scoping), each demonstrated FAILING when its clause is deleted (fix report). Spec R3's binding-as-stated bullet and its non-task/`Contract: none` enumeration bullet replaced per the ruling, the label-and-gate bullet untouched, R4 amended, Amendments consolidated; the plan's note-amendment chain consolidated into one block, the "round 6" label gone with it, check count corrected 16 → 15. Controller-verified at HEAD: `tests/writing-plans/run-tests.sh` 15/15, `tests/reviewer-templates/run-tests.sh` 24/24, `tests/codex/run-unit-tests.sh` 10/10 → a10e5a6
+
+## Round 4 verification 5 — Adversarial red-team — opus
+
+_The addendum's single verification re-review (post-loop path). Round 4's three
+in-loop cycles plus addendum 3's cycle are spent, so no fix subagent was
+dispatched: a fix made here would ship unreviewed, which the
+no-fix-ships-unreviewed rule forbids. Every Important below is a finding against
+plan-mandated wording, so the standing rule governs: with "fix it" unavailable
+under the cap, each is rejected with a named reason rather than journalled as a
+user decision. The residual risks the rejections leave standing are reported to
+the invoker in this loop's return._
+
+**Reviewer verdict:** 0 Critical, 4 Important, 3 Minor
+### Dispositions
+- [I1] rejected: the invoker decided precisely this trade-off in the ruling this addendum applies — the binding set is closed at exactly two members, and self-pin mechanics stay in the numbered rules of the skill body. Adding the `**Global Constraints:**` self-pin exception back into the note is the enumeration the ruling removes. The rejection is not a claim that the consequence is unreal: from the note alone, a lens target-4 finding against a `**Global Constraints:**` entry now reads as a plan conflict, where the previous note gave it a resolution path. That cost was accepted knowingly in exchange for ending a class of "case X falls between two sentences" findings that recurred in four consecutive cycles. Recorded for the invoker as the restructure's one known regression
+- [I2] rejected: rule 1's opening enumeration ("the Step 5 commit command, `Run:` verification lines") is illustrative and is explicitly subordinated to the test stated two sentences later in the same rule — "The test is intrinsic to the block", and "This is the one test for 'procedural' used everywhere in the plan you are writing and in review". The two do not carry equal authority, so an agent that reads the rule to its end reaches one answer. The drift also predates this fix (round 4 verification 1 [M4] added the qualifier at the canonical-forms clause and left the enumeration alone) and is outside this addendum's subject. Recorded as a wording drift worth closing in a later pass
+- [I3] rejected: a `Run:` line that runs the task's own verification falls under bucket (a) — rule 1 requires a `**Contract:**` to state "the verification (a runnable command or check)", so the task's stated contract names it. The residue the finding describes is a task-step `Run:` line that is neither the task's verification nor free of working-tree writes — `Run: npm install`, say. Under the old text that line was outside check 5's universe and passed silently; under the new text the check flags it. That is the fail-closed direction rule 1's own tie-break prescribes ("unclear → not procedural → a contract entry, never a silent exemption"), so the change makes the check stricter where it was silent, not wrong
+- [I4] rejected: a finding asserting that a stated `**Contract:**` is wrong or vacuous contradicts that contract in the plain sense — it asserts what the contract denies — and the residue clause already routes such a finding away from "ordinary fix" ("unless it contradicts a stated `**Contract:**` or a global constraint"). The finding's premise, that the hedge cannot cover a finding whose subject IS the contract, is one reading of the clause and not the one the clause's plain words carry. Naming the `**Contract:**` field as a third binding member would also break the two-member closure the ruling mandates
+- [M1] carried — the note tells a controller to "record it against the plan-writing skill at `skills/writing-plans/SKILL.md`", a repository-relative path that does not exist in a consumer project, where the skill lives in the plugin cache. Real, and it is the controller's own wording; the intent (record against the skill, not against the plan) survives the missing path, and the cap is spent. The single wording nit worth a follow-up pass
+- [M2] carried — rule 4 admits three reason kinds for `**Exact content:**` (a pre-existing test, a file that must match, cited user-approved copy) while the note's binding condition speaks only of "a pin this plan does not itself write or edit"; user-approved copy is an approval record rather than a pin, so the note's condition is narrower than rule 4's. Narrow and cap-blocked
+- [M3] carried — check 8's gate-label extraction in `tests/reviewer-templates/run-tests.sh` pins the lens cell's typography (the `> ` prefix inside the backtick span) rather than the gate itself, so a reflow or a reword fails the check with a misdirecting message while the gate is intact. Fail-closed, never a false green; same family as round 4 verification 3 [M4] and verification 4 [M3]
+
+_Addendum completed — 2026-09-01 — cap reached — HEAD a10e5a6481e28e190564ae6d967de0b1793ea49a_
 _Harness probes owed: none_

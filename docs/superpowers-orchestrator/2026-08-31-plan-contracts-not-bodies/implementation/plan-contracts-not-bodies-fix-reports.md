@@ -1827,3 +1827,99 @@ Results: 10 suites passed, 0 suites failed
 All unit tests passed.
 ```
 Exit code: 0
+
+---
+
+## Round 4 — closed binding set (2026-09-01)
+
+### What changed
+
+- `skills/writing-plans/SKILL.md`, Plan Header note (line 86): replaced. The
+  note now states the CLOSED binding set (exactly two members: the
+  `**Global Constraints:**` block, and a block whose immediately preceding
+  paragraph reads `**Exact content:** <reason>` where the reason names a pin
+  the plan does not itself write or edit), the residue clause (everything
+  else, the note itself included, is reference), the non-conflict disposition
+  for a finding against the note's own wording, and that disposition's
+  scoping guard.
+- `skills/writing-plans/SKILL.md`, rule 6(b): the two sentences saying the
+  note binds as stated and that a review fix may not reword it are replaced
+  by the non-conflict disposition and its scoping guard. Rules 6(c) and 6(d)
+  unchanged.
+- `skills/writing-plans/SKILL.md`, Self-Review check 5: the universe is now
+  task-step content only — fenced blocks, block quotes and `Run:` lines in a
+  task step — plus an explicit scoping sentence putting plan-header content
+  out of scope (the `**Body authority:**` block quote named), with the
+  `**Global Constraints:**` entries as the one exception. Bucket (c)'s
+  procedural-block sentence is byte-for-byte unchanged; the "falsifiable"
+  clause, the marker-reason clause and the Global-Constraints clause stay.
+- `tests/writing-plans/run-tests.sh`: removed the seven Plan-Header
+  assertions pinning deleted note text, and the six constants that became
+  unused (`FRAG_GC_SELF_PIN`, `FRAG_NOTE_BINDS`, `FRAG_NONTASK_DEFAULT`,
+  `FRAG_NONTASK_EXCLUSION`, `FRAG_NO_CONTRACT`, `FRAG_NO_REASON`).
+  `FRAG_SELF_PIN` is kept — the rule-5 range assertion still uses it. Added
+  five block-scoped Plan Header assertions and one range-scoped check-5
+  assertion.
+- Plan `plans/plan-contracts-not-bodies.md`: the chain of six amendment
+  blocks on the quoted Plan Header note is consolidated into one block
+  stating the current note text and the ruling; the wrong `round 6` label
+  disappears with it (no other block carries a round that does not exist).
+  Added one amendment block for check 5's new universe and one for the suite
+  check count (16 -> 15).
+- Spec `specs/plan-contracts-not-bodies-design.md`: R3's bound properties
+  restated (closed binding set, residue clause, non-conflict disposition and
+  scoping guard); the label/gate bullet is untouched. R4 amended to the
+  task-step universe. The four R3-content Amendments entries are consolidated
+  into one entry, and one entry added for R4.
+
+### Falsifier demonstrations (each new assertion, its clause deleted, suite re-run)
+
+```
+=== deleted clause: Exactly two things in this plan bind
+  FAIL: Plan Header note states the closed binding set 'Exactly two things in this plan bind' (not inside block 81..96)
+Results: 14 passed, 1 failed
+
+=== deleted clause: names a pin this plan does not itself write or edit
+  FAIL: Plan Header note states the exact-content binding condition 'names a pin this plan does not itself write or edit' (not inside block 81..96)
+Results: 14 passed, 1 failed
+
+=== deleted clause: Everything else is reference
+  FAIL: Plan Header note states the residue clause 'Everything else is reference' (not inside block 81..96)
+Results: 14 passed, 1 failed
+
+=== deleted clause: is never a plan conflict: record it against the plan-writing skill
+  FAIL: Plan Header note states the non-conflict disposition 'is never a plan conflict: record it against the plan-writing skill' (not inside block 81..96)
+Results: 14 passed, 1 failed
+
+=== deleted clause: covers the note's own text alone
+  FAIL: Plan Header note states the disposition's scoping guard 'covers the note's own text alone' (not inside block 81..96)
+Results: 14 passed, 1 failed
+
+=== deleted clause: plan-header content is out of scope
+  FAIL: self-review scoping statement 'plan-header content is out of scope' (check 5) (not inside range 338..340)
+Results: 14 passed, 1 failed
+```
+
+Each clause was restored immediately after its run; the suite is green again
+(fresh output below).
+
+### Verification (fresh)
+
+```
+$ bash tests/writing-plans/run-tests.sh
+Results: 15 passed, 0 failed
+Exit code: 0
+
+$ bash tests/reviewer-templates/run-tests.sh
+Results: 24 passed, 0 failed
+Exit code: 0
+
+$ bash tests/codex/run-unit-tests.sh
+ Results: 10 suites passed, 0 suites failed
+ All unit tests passed.
+Exit code: 0
+```
+
+Behavioural suites (`tests/claude-code/`, `tests/skill-triggering/`,
+`tests/explicit-skill-requests/`, `tests/opencode/`) were not run — excluded
+for this round.
