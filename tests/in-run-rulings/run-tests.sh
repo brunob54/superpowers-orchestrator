@@ -129,9 +129,21 @@ done
 
 bold "3. Fork review (R3)"
 for pin in 'subagent_type: "fork"' '<!-- multi-review report -->' 'fork-<lens>' \
-           'fork review unavailable' 'VERDICT:' 'TABLED:' 'contradiction: unsettled'; do
+           'fork review unavailable' 'contradiction: unsettled'; do
   assert_in_range "fork pin '$pin'" \
     "$ORCH_SKILL" "$pin" "$RULINGS_LINE" "$RULINGS_END" exact
+done
+# 'VERDICT:' and 'TABLED:' also occur as prose in the "Classification" section
+# above (its escalation-predicate text mentions both words), so pinning them
+# to the whole ## In-run rulings range would pass even without the fork
+# subsection. Scope them to the fork subsection itself, whose end is the next
+# `### ` heading after it, or the section end when there is none.
+FORK_LINE="$(first_line_of "$ORCH_SKILL" '### Fork review for a design item')"
+FORK_END="$(line_starting_with_after "$ORCH_SKILL" '### ' "$FORK_LINE")"
+FORK_END="${FORK_END:-$RULINGS_END}"
+for pin in 'VERDICT:' 'TABLED:'; do
+  assert_in_range "fork pin '$pin'" \
+    "$ORCH_SKILL" "$pin" "$FORK_LINE" "$FORK_END" exact
 done
 for frag in 'not a debate' 'never pass conversation history' \
             'action verb followed by a skill name' 'in parallel, in one message' \
