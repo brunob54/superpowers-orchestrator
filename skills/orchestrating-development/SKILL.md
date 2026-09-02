@@ -844,6 +844,92 @@ instead of one fix plus one verification re-review. That new invocation
 counts as one in-run resume against the cap (below), and its rounds are
 bounded by `N_code`.
 
+### The RULING log entry, the commit and the re-dispatch
+
+An in-run ruling re-dispatches the phase without a `## STOPPED` entry. It
+appends to the orchestration log instead:
+
+```
+## RULING <n> — YYYY-MM-DD — phase <p> — <one-line summary>
+Items: [<id>] <forced|design|escalated> — <answer>          (one line per item of the return)
+Detail: <topic folder>/plans/<slug>-open-decisions.md
+Forks: none | <k> (<lens>, <lens>[, <lens>]) — contradiction: none | settled | unsettled
+Re-dispatch: phase <p>, in-run resume <r> of 3
+```
+
+`<n>` is the first ruling number of that return (one `## RULING` entry per
+return, however many items it carried). Before the commit, check your own
+answer lines: a `plan governs` without a clause becomes `fix it`,
+`amend plan …; fix it`, or `escalated (spec wrong)`; an `accept` on a
+Critical becomes `fix it` or `escalated (spec wrong)`. **One commit**,
+subject `chore(orchestration): <slug> ruling <n>`, holds the `## RULING`
+entry, the ruling-record entries and any plan amendment, and lands
+**before** the re-dispatch. Then rewrite `state.md` (its `Rulings:` line)
+and re-dispatch the phase's controller with the answers in
+`[RESUME_ANSWER]` — the only channel. A controller that answers an in-run
+resume with `BLOCKED: previous invocation left <n> open items …` did not
+receive the answers — a malformed dispatch: retry the identical dispatch
+once, then stop under the Major-Error Stop Policy.
+
+**Handling a return as a whole.** When every item of the return is
+`forced` or `design`: rule, record, re-dispatch. When at least one item is
+`escalated`: rule and record the others — their `## RULING` entry is
+written and committed as above, with `Re-dispatch: none — escalated` —
+then write the `## STOPPED` entry in the shape of the Orchestration Log
+Format, listing each escalated item on an `Open:` line with its reason and
+each decided item on a `Ruled:` line with its answer. The user answers
+only the `Open:` ids; Resume step 3 carries the `Ruled:` lines forward as
+`(orchestrator)` answers.
+
+**The cap.** In-run resumes of one phase are capped at 3 per unit: the
+phase itself in Phase 4, the task in Phase 3. The count is the number of
+`## RULING` entries of the same phase — and, in Phase 3, of the same
+`[task <n>]` — whose `Re-dispatch:` line does not start with `none` (the
+escalated form is `Re-dispatch: none — escalated`), written after the
+**later** of the log's latest `_Invocation` line and its latest
+`## STOPPED` entry, so that a resume after a stop starts from zero. Phase 3
+counts per task because one long plan legitimately produces several
+unrelated blocked tasks; only a chain on the same task is the pathology.
+The fourth open return of the same unit is a stop: every open item is
+listed as `escalated (chain)`, and no further ruling is made. A new review
+invocation started by an `amend plan` ruling counts as one in-run resume
+against this cap. Together with multi-code-review's loop-side rule for
+verification cycles, this bounds the chain that Case 007 of the
+orchestration issues log recorded.
+
+**Idempotence of an in-run resume after a crash.** Phase 4 is idempotent
+by the loop's existing rule (an id already carrying a `decided (…)` line
+is skipped; a fix commit already in `git log` is not dispatched again).
+Phase 3 is idempotent by construction: the ruling and any amendment are
+committed before the re-dispatch, so a retry rebuilds the identical
+`[RESUME_ANSWER]` from the ruling-record entry; the batch controller's
+existing rules skip every task whose checkboxes are ticked and recover a
+mid-task crash (its Deviation 4); the amendment block is found by its
+label and never inserted twice. What makes the resume safe to repeat is
+that **the ruling is on disk and committed before anything acts on it**,
+and every actor keys on a durable marker: the `decided (…)` line, the
+ticked checkbox, the amendment label, the `## RULING` entry.
+
+### Guards against motivated judgement
+
+Rejecting a finding ends the loop, which is a reason to reject it. Three
+rules apply everywhere a ruling is made:
+
+1. **A rejection quotes its clause.** A `plan governs` answer, and the
+   `rejected:` line the controller writes for it, carry the spec, plan or
+   skill clause that makes the finding non-binding, verbatim, with its
+   source path. The controller's disposition line for such an answer is
+   `rejected: plan governs (orchestrator decision) — "<clause>"`. A
+   `plan governs` answer for which no clause can be quoted is not a
+   rejection at all: the item is then `fix it` or `amend plan …; fix it`,
+   or — when neither is defensible — `escalated (spec wrong)`.
+2. **A Critical is never rejected by a ruling.** A Critical item is
+   `fix it`, `amend plan …; fix it`, or `escalated (spec wrong)`. Never
+   `plan governs`, never `accept`.
+3. **Every ruling is recorded when it is made**, forced or forked, in the
+   ruling record and the `## RULING` log entry, before the re-dispatch —
+   never reconstructed after the run.
+
 ## Major-Error Stop Policy
 
 In-run stop = append `## STOPPED` to the log, commit it, update

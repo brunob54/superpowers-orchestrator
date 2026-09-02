@@ -171,6 +171,22 @@ for frag in 'appended, never rewritten' '(amended by ruling' \
     "$ORCH_SKILL" "$frag" "$RULINGS_LINE" "$RULINGS_END" fragment
 done
 
+bold "5. RULING log entry, cap and guards (R6, R7, R9)"
+for pin in '## RULING' 'Re-dispatch:' 'Re-dispatch: none' 'Ruled:' \
+           'chore(orchestration): <slug> ruling <n>' \
+           'plan governs (orchestrator decision)'; do
+  assert_in_range "log-entry or guard pin '$pin'" \
+    "$ORCH_SKILL" "$pin" "$RULINGS_LINE" "$RULINGS_END" exact
+done
+for frag in 'in-run resumes of one phase are capped at 3 per unit' \
+            'phase itself in Phase 4, the task in Phase 3' \
+            'previous invocation left' 'durable marker' \
+            'a Critical is never rejected' 'quotes its clause' \
+            'recorded when it is made'; do
+  assert_in_range "log-entry or guard fragment '$frag'" \
+    "$ORCH_SKILL" "$frag" "$RULINGS_LINE" "$RULINGS_END" fragment
+done
+
 # --- end of checks ---
 
 echo
