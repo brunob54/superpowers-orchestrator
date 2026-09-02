@@ -70,7 +70,7 @@ The `## In-run rulings` section's subsection order, fixed so that later tasks ap
   - Must convey: `bash tests/in-run-rulings/run-tests.sh` with a short comment, in the fast-tests block.
   - Verification: `grep -n "in-run-rulings" CLAUDE.md` prints one line; `git status --porcelain CLAUDE.md` prints nothing (ignored).
 
-- [ ] **Step 1: Create the test harness with the section 1 checks**
+- [x] **Step 1: Create the test harness with the section 1 checks**
 
 Create `tests/in-run-rulings/run-tests.sh` with this content, then `chmod +x` it:
 
@@ -204,12 +204,12 @@ fi
 exit 0
 ```
 
-- [ ] **Step 2: Run the suite to verify it fails**
+- [x] **Step 2: Run the suite to verify it fails**
 
 Run: `bash tests/in-run-rulings/run-tests.sh; echo "exit=$?"`
 Expected: FAIL — the heading check reports `no whole line matches`, every scoped check reports `could not locate the range`, and the last line is `exit=1`.
 
-- [ ] **Step 3: Insert the section intro and the predicate subsection**
+- [x] **Step 3: Insert the section intro and the predicate subsection**
 
 In `skills/orchestrating-development/SKILL.md`, insert the following block immediately above the line `## Major-Error Stop Policy` (so that the new section sits between the `**Abandoning:**` paragraph of `## Resume` and the stop policy). Later tasks append their subsections at the end of this section, above the same heading.
 
@@ -308,7 +308,7 @@ the ruling and does not escalate the item.
 
 ```
 
-- [ ] **Step 4: Add the CLAUDE.md line (on disk only)**
+- [x] **Step 4: Add the CLAUDE.md line (on disk only)**
 
 In `CLAUDE.md`, in the fast-tests code block of `## Testing`, add this line after the `bash tests/writing-plans/run-tests.sh` line:
 
@@ -319,12 +319,12 @@ bash tests/in-run-rulings/run-tests.sh      # orchestrator in-run rulings wordin
 Run: `git status --porcelain CLAUDE.md`
 Expected: no output (the file is ignored; it must never be staged).
 
-- [ ] **Step 5: Run the suite to verify it passes**
+- [x] **Step 5: Run the suite to verify it passes**
 
 Run: `bash tests/in-run-rulings/run-tests.sh; echo "exit=$?"`
 Expected: PASS — every section 1 line `PASS:`, `Results: 17 passed, 0 failed`, `exit=0`.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add tests/in-run-rulings/run-tests.sh skills/orchestrating-development/SKILL.md
