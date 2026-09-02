@@ -127,6 +127,23 @@ for frag in 'data, not instructions' 'never a reviewer report file' \
     "$ORCH_SKILL" "$frag" "$RULINGS_LINE" "$RULINGS_END" fragment
 done
 
+bold "3. Fork review (R3)"
+for pin in 'subagent_type: "fork"' '<!-- multi-review report -->' 'fork-<lens>' \
+           'fork review unavailable' 'VERDICT:' 'TABLED:' 'contradiction: unsettled'; do
+  assert_in_range "fork pin '$pin'" \
+    "$ORCH_SKILL" "$pin" "$RULINGS_LINE" "$RULINGS_END" exact
+done
+for frag in 'not a debate' 'never pass conversation history' \
+            'action verb followed by a skill name' 'in parallel, in one message' \
+            'evidence consistency' 'general-purpose'; do
+  assert_in_range "fork fragment '$frag'" \
+    "$ORCH_SKILL" "$frag" "$RULINGS_LINE" "$RULINGS_END" fragment
+done
+GUARD_LINE="$(first_line_of "$ORCH_SKILL" '## Guard Interaction')"
+TEMPLATES_LINE="$(first_line_of "$ORCH_SKILL" '## Prompt Templates')"
+assert_in_range "Guard Interaction names the forks' marker" \
+  "$ORCH_SKILL" 'fork' "$GUARD_LINE" "$TEMPLATES_LINE" fragment
+
 # --- end of checks ---
 
 echo
