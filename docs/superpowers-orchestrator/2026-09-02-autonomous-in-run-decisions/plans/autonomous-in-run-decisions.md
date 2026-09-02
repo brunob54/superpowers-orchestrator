@@ -1491,7 +1491,7 @@ git commit -m "feat(multi-code-review): decided (<who>) attribution and self-suf
   - Invariants: `plan governs (loop decision)` occurs after the `**No fix ships unreviewed:**` anchor and before the next line starting with `## `; the fragments `a Critical is never rejected under this rule`, `decided wording`, `(amended by ruling`, `same BASE`, `never edits plan text` occur in that range.
   - Verification: section 8 of `bash tests/in-run-rulings/run-tests.sh`; `bash tests/reviewer-templates/run-tests.sh` stays green.
 
-- [ ] **Step 1: Add the section 8 checks**
+- [x] **Step 1: Add the section 8 checks**
 
 Insert immediately above the line `# --- end of checks ---` of `tests/in-run-rulings/run-tests.sh`:
 
@@ -1510,12 +1510,12 @@ done
 
 ```
 
-- [ ] **Step 2: Run the suite to verify it fails**
+- [x] **Step 2: Run the suite to verify it fails**
 
 Run: `bash tests/in-run-rulings/run-tests.sh; echo "exit=$?"`
 Expected: FAIL — every section 8 check reports `FAIL:`; `exit=1`.
 
-- [ ] **Step 3: Insert the loop-side rule paragraph**
+- [x] **Step 3: Insert the loop-side rule paragraph**
 
 In `skills/multi-code-review/SKILL.md`, immediately after the paragraph that ends
 
@@ -1548,7 +1548,7 @@ insert (keeping the same three-space indentation as the surrounding list item):
 
 ```
 
-- [ ] **Step 4: Run the suite and the reviewer-templates suite to verify they pass**
+- [x] **Step 4: Run the suite and the reviewer-templates suite to verify they pass**
 
 Run: `bash tests/in-run-rulings/run-tests.sh; echo "exit=$?"`
 Expected: PASS — sections 1–8 all `PASS:`, `0 failed`, `exit=0`.
@@ -1556,7 +1556,7 @@ Expected: PASS — sections 1–8 all `PASS:`, `0 failed`, `exit=0`.
 Run: `bash tests/reviewer-templates/run-tests.sh >/dev/null; echo "rt=$?"`
 Expected: `rt=0`.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add tests/in-run-rulings/run-tests.sh skills/multi-code-review/SKILL.md
