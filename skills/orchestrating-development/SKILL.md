@@ -480,6 +480,98 @@ delete the feature branch (refuse if checked out elsewhere or already
 merged — report instead) and state what remains. This is the sanctioned
 teardown for a wedged or superseded run.
 
+## In-run rulings
+
+A controller return that carries open items does not stop the run by
+itself. An **open item** is, in Phase 4, a disposition of the review log's
+LATEST `_Invocation` entry that is `user-decision` or `unresolved: <reason>`,
+named by its id (`[I2]`, `[C1]`); in Phase 3, one blocking question or one
+plan conflict behind a `BLOCKED task=<n>` return, named `[task <n>]` — or
+`[task <n>/<k>]` when the task's report file holds several `### Conflict <k>`
+or `### Question <k>` sections. A Pre-Flight Plan Review conflict is in
+scope: the batch controller returns it as `BLOCKED task=<n>` with `<n>` the
+lowest-numbered task the conflict touches. Out of scope and unchanged:
+Phase 1 `BLOCKED` questions (a spec ambiguity is, by definition, the
+user's), Phase 2 `unresolved` items (that stop stays a stop), and Phase 5.
+
+You classify each open item with the predicate below, decide every item
+the predicate does not escalate, record every ruling (the ruling record
+and the `## RULING` log entry, below), and re-dispatch the phase. The run
+stops only for the closed list of reasons in the predicate. A **ruling**
+is your decision on one open item: its class, its answer and its reason.
+
+### Classification — the escalation predicate
+
+Classify **each** open item of a return into exactly one class, tested in
+this order:
+
+1. `escalated` — the item matches one entry of the closed list below.
+   **Escalation wins:** an item that fits an escalation entry and also
+   class 2 or 3 is `escalated`.
+2. `forced` — a **forced answer**: only one outcome is defensible. The
+   test: you can state, in one sentence, a fact that makes every other
+   outcome indefensible — a test that cannot fail, a command that cannot
+   run, a contract clause already violated. Decided directly, with no
+   subagent; the ruling records that sentence. When no such sentence can
+   be written, the item is not `forced`, it is `design`.
+3. `design` — a **real design choice**: two or more defensible outcomes.
+   Decided after the fork review (below).
+
+The closed escalation list. An item is `escalated` when, and only when,
+its correct resolution:
+
+- `spec wrong` — requires changing the spec, that is, changing what
+  "done" means for this run; or disputes a Critical. A Critical you
+  believe to be mistaken can be settled only by the spec's author: it is
+  escalated here, never fixed to satisfy the reviewer and never rejected.
+- `scope` — grows the work beyond the spec's requirements, including a
+  fix that must touch files outside the branch's scope. The scope is the
+  union of the plan's `**Files:**` lists; for a plan without such lists,
+  the set of files changed between `BASE` and `HEAD`.
+- `irreversible` — needs an irreversible or outward-facing action: a
+  force-push, deleting data, publishing, calling or configuring an
+  external service, adding a dependency.
+- `secret` — the item's disposition reason or summary names an exposed
+  secret or credential. You never decide a `secret` item. One producer
+  exists: `code-review-loop-prompt.md` Deviation 3 logs a secret found in
+  an orchestration artifact as `unresolved` so that the count stops the
+  run; a secret in reviewed code is a Critical the loop's fix removes,
+  and only the residue (rotation, history) reaches you.
+- `chain` — the cap (below) is reached: every open item of that return is
+  `escalated (chain)`, whatever its own class would have been.
+
+Two exits are not classes of this predicate and are unchanged: a
+**fatal environment failure** (remote gone, tooling missing) stays a
+controller `BLOCKED` return handled by the Major-Error Stop Policy — it is
+never classified as `forced` — and **Phase 5** stays the user's. A **transient
+external problem** (a flaky remote, a momentary tool error) never reaches
+the predicate either: it arrives as a controller error or a
+`BLOCKED: <reason>` that names it, and the Controller Dispatch Rules
+already retry the identical dispatch once before stopping.
+
+A plan task that is impossible as written while the spec is fine is a
+`design` item; its ruling is a plan amendment (below). It is never `spec wrong`.
+
+**Phase 3 discriminator.** A batch controller returns `BLOCKED task=<n>`
+for an open item and for a failure alike, and you do not read its
+one-line reason as content. The report file decides: a `BLOCKED task=<n>`
+whose `.superpowers/sdd/task-<n>-report.md` holds at least one
+`### Conflict <k>` or `### Question <k>` section is an open-item return
+and enters the predicate; one whose report file is missing or holds no
+such section is a controller failure and takes the existing path — retry
+the identical dispatch once, then stop under the Major-Error Stop Policy.
+
+The predicate applies to every open item of a return, and the return is
+handled as a whole (below): the items that are not escalated are decided
+and recorded even when another item of the same return is escalated.
+
+The predicate is applied twice to a `design` item: once before the forks,
+and again to their returns. When any fork's `VERDICT:` is an outcome that
+matches an escalation entry, the item becomes `escalated` — escalation
+wins after the fork review as well. A `TABLED:` outcome that matches an
+escalation entry, offered beside a non-escalating verdict, is recorded in
+the ruling and does not escalate the item.
+
 ## Major-Error Stop Policy
 
 In-run stop = append `## STOPPED` to the log, commit it, update
