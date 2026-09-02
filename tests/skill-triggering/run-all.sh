@@ -36,7 +36,23 @@ for skill in "${SKILLS[@]}"; do
 
     echo "Testing: $skill"
 
-    if "$SCRIPT_DIR/run-test.sh" "$skill" "$prompt_file" 3 2>&1 | tee /tmp/skill-test-$skill.log; then
+    # A pipeline's exit status is the status of its LAST command. Piping the
+    # test into "tee" would therefore report success whenever tee could write
+    # its file, and the real result of run-test.sh would be thrown away. Run
+    # the test on its own, keep its status, then show the log.
+    test_log="/tmp/skill-test-$skill.log"
+    test_rc=0
+    # Turn budget. The entry sequence spends several turns before it can route:
+    # using-superpowers, token-efficiency, and a memory/staleness check each
+    # take one. A budget of 3 ended most sessions after the entry point and
+    # before the target skill, which reads as a routing failure that did not
+    # happen. Measured on 2026-09-01: at 3 turns 3 of 9 skills triggered, and
+    # the transcripts showed the model naming the correct destination as its
+    # turns ran out.
+    "$SCRIPT_DIR/run-test.sh" "$skill" "$prompt_file" 8 > "$test_log" 2>&1 || test_rc=$?
+    cat "$test_log"
+
+    if [ "$test_rc" -eq 0 ]; then
         PASSED=$((PASSED + 1))
         RESULTS+=("✅ $skill")
     else
