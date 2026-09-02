@@ -19,9 +19,9 @@
 - The reviewer templates `skills/multi-code-review/reviewer-prompt.md` and `skills/multi-doc-review/reviewer-prompt.md` are untouched, and the guard sentence in `skills/multi-code-review/SKILL.md` — ``never logged `user-decision` on the strength of an untested harness claim`` — stays byte-identical (spec, Non-goals and R8).
 - `bash tests/reviewer-templates/run-tests.sh` and `bash tests/writing-plans/run-tests.sh` must stay green after every task (spec R11).
 - `CLAUDE.md` is gitignored: its edit is on disk only and no task may `git add` it (spec R12).
-- The cap sentence is written in exactly this form, without emphasis markers: "In-run resumes of one phase are capped at 3 per unit: the phase itself in Phase 4, the task in Phase 3." (spec R6).
+- The cap sentence is written in exactly this form, without emphasis markers: "In-run resumes of one phase are capped at 3 per unit: the phase itself in Phase 4, the task in Phase 3." — "exactly" means these words and this punctuation; a line wrap inside the sentence is allowed (spec R6).
 - A fork's return opens with the first line exactly `<!-- multi-review report -->` (the marker `hooks/subagent-guard.js` already exempts); forks are dispatched with `subagent_type: "fork"` and named `fork-<lens>`, never an `orch-` name (spec R3).
-- The class and reason labels are written once each in their own backticks in the predicate's list, exactly: `escalated`, `forced`, `design`, `spec wrong`, `scope`, `irreversible`, `secret`, `chain`; the stop label is `escalated (chain)` (spec R1, R11).
+- The class and reason labels each appear in their own backticks inside the predicate's list (a label may be repeated there), exactly: `escalated`, `forced`, `design`, `spec wrong`, `scope`, `irreversible`, `secret`, `chain`; the stop label is `escalated (chain)` (spec R1, R11).
 - The ruling commit subject is `chore(orchestration): <slug> ruling <n>`; the follow-up commit subject is `chore(orchestration): <slug> ruling <n> follow-up` (spec R6).
 - No new controller and no new template file: a ruling reaches a controller only through the existing `[RESUME_ANSWER]` placeholder (spec, Non-goals).
 - `docs/guide/`, `RELEASE-NOTES.md`, the version files and worklist rows 9 and 11 of `docs/orchestration-issues.md` are untouched (spec, Non-goals and Rollout).
@@ -60,7 +60,7 @@ The `## In-run rulings` section's subsection order, fixed so that later tasks ap
   - Inputs: none (paths are derived from the script's own location); runs from any working directory.
   - Output: prints one `PASS:`/`FAIL:` line per check and a `Results:` line; exit 0 when every check passes, exit 1 otherwise.
   - Invariants: byte pins are matched case-sensitively; free-text fragments case-insensitively; every fragment for the `## In-run rulings` section is scoped to the range from that heading to the whole-line `## Major-Error Stop Policy` heading; no read of standard input through its device path and no process substitution (Git Bash on Windows).
-  - Verification: `bash tests/in-run-rulings/run-tests.sh` exits 1 before the section exists (missing heading and every scoped check failing) and 0 after; `git stash`-free check: temporarily rename the heading and confirm exit 1.
+  - Verification: `bash tests/in-run-rulings/run-tests.sh` exits 1 before the section exists (missing heading and every scoped check failing — Step 2) and 0 after (Step 5).
   - Interface not externally pinned — helper names are descriptive (rule 2).
 - `## In-run rulings` intro and `### Classification — the escalation predicate` in `skills/orchestrating-development/SKILL.md`
   - Must convey: the three classes tested in order `escalated`, `forced`, `design`; escalation wins; the forced-answer test (one sentence naming a fact that makes every other outcome indefensible); the closed escalation list `spec wrong`, `scope`, `irreversible`, `secret`, `chain` with the spec's definition of each; fatal environment failures and Phase 5 are not classes; transient problems never reach the predicate; an impossible plan task with a correct spec is `design`, never `spec wrong`; the Phase 3 discriminator by `### Conflict <k>` / `### Question <k>` sections in the task report file; the return is handled as a whole; the predicate is applied twice to a `design` item.
@@ -374,7 +374,7 @@ done
 - [ ] **Step 2: Run the suite to verify it fails**
 
 Run: `bash tests/in-run-rulings/run-tests.sh; echo "exit=$?"`
-Expected: FAIL — section 2 reports `intro names the second read exception` and the six fragments as `FAIL:` (`nothing else` may already pass on existing wording; the other checks fail), `exit=1`.
+Expected: FAIL — section 2 reports `intro names the second read exception` and the six fragments as `FAIL:` (the fragment checks are scoped to the section Task 1 wrote, which contains none of these words), `exit=1`.
 
 - [ ] **Step 3: Rewrite the intro's exception sentence**
 
@@ -463,7 +463,7 @@ git commit -m "feat(orchestrating-development): state the classification read ex
 
 **Contract:**
 - `### Fork review for a design item`
-  - Must convey: the four lenses with their one-line definitions; the default of three forks and the two-fork condition (single file, no tabled outcome amends the plan; a later tabled outcome does not change the count); parallel dispatch in one message; each fork sees no other fork; not a debate; forks are reviewers, dispatched with `subagent_type: "fork"`, named `fork-<lens>`, exempt from the two controller dispatch rules named verbatim ("never pass conversation history", "nothing else may be added to the prompt"); the orchestrator waits for all notices of a round doing no other work; the `general-purpose` degradation; the fork prompt's order and return contract (marker first line, `VERDICT:`, `REASON:`, `CONTRADICTS:`, `TABLED:`, 25 lines, the "action verb followed by a skill name" warning); consolidation; the optional `evidence consistency` round; the fixed tie-break with `contradiction: unsettled`; lost returns (re-dispatch once, then leave the lens out with `forks: <k> of <planned>`); fewer than two usable returns is a fatal environment failure with the reason `fork review unavailable`.
+  - Must convey: the four lenses with their one-line definitions; the default of three forks and the two-fork condition (single file, no tabled outcome amends the plan; a later tabled outcome does not change the count; for a Phase 3 item, which has no `file:line`, "single file" means its report section names exactly one file); parallel dispatch in one message; each fork sees no other fork; not a debate; forks are reviewers, dispatched with `subagent_type: "fork"`, named `fork-<lens>`, exempt from the two controller dispatch rules named verbatim ("never pass conversation history", "nothing else may be added to the prompt"); the orchestrator waits for all notices of a round doing no other work; the `general-purpose` degradation; the fork prompt's order and return contract (marker first line, `VERDICT:`, `REASON:`, `CONTRADICTS:`, `TABLED:`, 25 lines, the "action verb followed by a skill name" warning); consolidation; the optional `evidence consistency` round; the fixed tie-break with `contradiction: unsettled`; lost returns (re-dispatch once, then leave the lens out with `forks: <k> of <planned>`); fewer than two usable returns is a fatal environment failure with the reason `fork review unavailable`.
   - Invariants: `subagent_type: "fork"`, `<!-- multi-review report -->`, `fork-<lens>`, `fork review unavailable`, `VERDICT:`, `TABLED:` occur inside the section byte-for-byte; the fragments `not a debate`, `never pass conversation history`, `action verb followed by a skill name`, `in parallel, in one message`, `evidence consistency` occur inside the section.
   - Verification: section 3 of `bash tests/in-run-rulings/run-tests.sh`.
 - `## Guard Interaction` sentence
@@ -497,7 +497,7 @@ assert_in_range "Guard Interaction names the forks' marker" \
 - [ ] **Step 2: Run the suite to verify it fails**
 
 Run: `bash tests/in-run-rulings/run-tests.sh; echo "exit=$?"`
-Expected: FAIL — every section 3 check `FAIL:` except possibly `evidence consistency`, `exit=1`.
+Expected: FAIL — every section 3 check reports `FAIL:` (the text Tasks 1–2 wrote contains none of the pins or fragments), `exit=1`.
 
 - [ ] **Step 3: Append the fork-review subsection**
 
@@ -522,7 +522,10 @@ The default is three forks: `design consistency`, `implementation
 practicality`, `adversarial`. Two — `design consistency` and
 `adversarial` — when the item's `file:line` names a single file and none
 of the outcomes you tabled amends the plan; an outcome a fork tables later
-does not change the count. Each fork gets one lens and does not see the
+does not change the count. A Phase 3 item carries no `file:line`: for it,
+"a single file" means that its `### Conflict <k>` or `### Question <k>`
+section names exactly one file; a section that names none or several
+gets three forks. Each fork gets one lens and does not see the
 other forks. This is an independent review, **not a debate**: a debate
 converges on the first confident voice and dissolves the contradictions
 that carry the signal.
@@ -655,8 +658,8 @@ git commit -m "feat(orchestrating-development): fork review under distinct lense
   - Invariants: `-open-decisions.md`, `**Follow-up:**`, `## Ruling <n>` occur inside the section; the fragment `appended, never rewritten` occurs.
   - Verification: section 4 of `bash tests/in-run-rulings/run-tests.sh`.
 - `### The answers, and how a ruling reaches the plan`
-  - Must convey: the tagged line shapes `[<id>] (orchestrator): <answer>` / `[<id>] (user): <answer>` (untagged is user) and the controller's `decided (<who>): <answer>` record; the four Phase 4 answers `fix it:`, `plan governs:`, `amend plan: …; fix it:`, `accept:` with the validity rules of spec R5; the Phase 3 answer lines `[task <n>]` / `[task <n>/<k>]`; the plan-amendment procedure (edit the binding clause in place with the marker `(amended by ruling <n>)`, insert the `> **Amendment <n> (orchestrator ruling):**` block quote after the block that holds the clause, both in the single ruling commit, found by label and marker on a retry, never applied twice); the stated Phase 4 consequence (an amendment moves the effective HEAD, the controller starts a new invocation, which counts as one in-run resume against the cap).
-  - Invariants: `(orchestrator):`, `decided (orchestrator)`, `amend plan:`, `plan governs:`, `fix it:`, `accept:`, `**Amendment` occur inside the section; the fragments `(amended by ruling`, `never apply the amendment twice`, `new invocation` occur.
+  - Must convey: the tagged line shapes `[<id>] (orchestrator): <answer>` / `[<id>] (user): <answer>` (untagged is user) and the controller's `decided (<who>): <answer>` record; the four Phase 4 answers `fix it:`, `plan governs:`, `amend plan: …; fix it:`, `accept:` with the validity rules of spec R5; the Phase 3 answer lines `[task <n>]` / `[task <n>/<k>]`, the two answer forms for a `### Conflict <k>` (`plan governs: "<clause>" — <path>` or `amend plan: …`), the rule that an answer siding against binding plan text is always `amend plan`, and that a conflict whose answer line is present in `## Resume Answer` is settled on the re-dispatch (the pre-flight scan does not return it again); the plan-amendment procedure (edit the binding clause in place with the marker `(amended by ruling <n>)`, insert the `> **Amendment <n> (orchestrator ruling):**` block quote after the block that holds the clause, both in the single ruling commit, found by label and marker on a retry, never applied twice); the stated Phase 4 consequence (an amendment moves the effective HEAD, the controller starts a new invocation, which counts as one in-run resume against the cap).
+  - Invariants: `(orchestrator):`, `decided (orchestrator)`, `amend plan:`, `plan governs:`, `fix it:`, `accept:`, `**Amendment` occur inside the section; the fragments `(amended by ruling`, `never apply the amendment twice`, `new invocation`, `sides against binding plan text` occur.
   - Verification: section 4 of `bash tests/in-run-rulings/run-tests.sh`.
 
 - [ ] **Step 1: Add the section 4 checks**
@@ -674,7 +677,7 @@ for pin in '-open-decisions.md' '**Follow-up:**' '## Ruling <n>' \
 done
 for frag in 'appended, never rewritten' '(amended by ruling' \
             'never apply the amendment twice' 'new invocation' \
-            'untagged'; do
+            'untagged' 'sides against binding plan text'; do
   assert_in_range "ruling-record or answer fragment '$frag'" \
     "$ORCH_SKILL" "$frag" "$RULINGS_LINE" "$RULINGS_END" fragment
 done
@@ -684,7 +687,7 @@ done
 - [ ] **Step 2: Run the suite to verify it fails**
 
 Run: `bash tests/in-run-rulings/run-tests.sh; echo "exit=$?"`
-Expected: FAIL — the section 4 pins `-open-decisions.md`, `**Follow-up:**`, `## Ruling <n>`, `decided (orchestrator)`, `amend plan:`, `**Amendment` and the fragments `appended, never rewritten`, `(amended by ruling`, `never apply the amendment twice` report `FAIL:`; `exit=1`.
+Expected: FAIL — every section 4 check reports `FAIL:` (the text Tasks 1–3 wrote contains none of the pins or fragments); `exit=1`.
 
 - [ ] **Step 3: Append the two subsections**
 
@@ -755,9 +758,20 @@ Phase 3 answers use the same line shape with the task id:
 ```
 
 where `<answer>` is the answer to the blocking question in plain text, or
-`amend plan: <the amendment>` when the task is impossible as written. The
-batch controller hands the answer to the task's implementer as
-authoritative, exactly as it hands a user's answer today.
+`amend plan: <the amendment>` when the task is impossible as written. A
+`### Conflict <k>` section (a task-level or pre-flight plan conflict) is
+answered in one of two forms: `plan governs: "<verbatim clause>" — <path>`,
+naming the side that governs — the implementer follows that text — or
+`amend plan: <the amendment>` when the other side governs. An answer that
+sides against binding plan text is always `amend plan: …` (the amendment
+procedure below); a plain-text answer is valid only against a question or
+against reference text — a plain-text answer that left a binding clause in
+force would be raised again by the task's reviewer, who receives the
+`**Global Constraints:**` block verbatim. The batch controller hands the
+answer to the task's implementer as authoritative, exactly as it hands a
+user's answer today, and treats a conflict whose `[task <n>/<k>]` line is
+present in `## Resume Answer` as settled: the pre-flight scan of a
+re-dispatched first batch does not return it again.
 
 **Plan amendment.** A plan conflict is a collision with the plan's
 **binding** text — under the 7.7.0 Body-authority note, a
@@ -827,7 +841,7 @@ git commit -m "feat(orchestrating-development): ruling record, tagged answers an
 **Contract:**
 - `### The RULING log entry, the commit and the re-dispatch`
   - Must convey: the `## RULING <n> — YYYY-MM-DD — phase <p> — <one-line summary>` entry with its `Items:`, `Detail:`, `Forks:`, `Re-dispatch:` lines; one entry per return, `<n>` the first ruling number of that return; the answer-line self-check before the commit (a `plan governs` without a clause becomes `fix it`, `amend plan …; fix it` or `escalated (spec wrong)`; an `accept` on a Critical becomes `fix it` or `escalated (spec wrong)`); the single commit `chore(orchestration): <slug> ruling <n>` holding the log entry, the ruling-record entries and any amendment, landing before the re-dispatch; `[RESUME_ANSWER]` as the only channel; a `BLOCKED: previous invocation left <n> open items …` after an in-run resume is a malformed dispatch (retry once, then stop); handling a return as a whole (`Re-dispatch: none — escalated`, then the `## STOPPED` entry with `Open:` and `Ruled:` lines); the cap sentence in its exact form, the counting rule, the per-task count in Phase 3, the fourth open return as `escalated (chain)`; idempotence after a crash (ruling on disk and committed before anything acts on it; every actor keys on a durable marker).
-  - Invariants: `## RULING`, `Re-dispatch:`, `Re-dispatch: none`, `Ruled:`, `chore(orchestration): <slug> ruling <n>` occur inside the section; the fragments `in-run resumes of one phase are capped at 3 per unit`, `previous invocation left`, `durable marker` occur.
+  - Invariants: `## RULING`, `Re-dispatch:`, `Re-dispatch: none`, `Ruled:`, `chore(orchestration): <slug> ruling <n>` occur inside the section; the fragments `in-run resumes of one phase are capped at 3 per unit`, `phase itself in Phase 4, the task in Phase 3` (the two halves of the cap sentence, each on one line), `previous invocation left`, `durable marker` occur.
   - Verification: section 5 of `bash tests/in-run-rulings/run-tests.sh`.
 - `### Guards against motivated judgement`
   - Must convey: the three guards of spec R7 — a rejection quotes its clause (the controller's disposition is `rejected: plan governs (orchestrator decision) — "<clause>"`; a `plan governs` with no quotable clause is not a rejection); a Critical is never rejected by a ruling (never `plan governs`, never `accept`); every ruling is recorded when it is made, never reconstructed after the run.
@@ -847,6 +861,7 @@ for pin in '## RULING' 'Re-dispatch:' 'Re-dispatch: none' 'Ruled:' \
     "$ORCH_SKILL" "$pin" "$RULINGS_LINE" "$RULINGS_END" exact
 done
 for frag in 'in-run resumes of one phase are capped at 3 per unit' \
+            'phase itself in Phase 4, the task in Phase 3' \
             'previous invocation left' 'durable marker' \
             'a Critical is never rejected' 'quotes its clause' \
             'recorded when it is made'; do
@@ -859,7 +874,7 @@ done
 - [ ] **Step 2: Run the suite to verify it fails**
 
 Run: `bash tests/in-run-rulings/run-tests.sh; echo "exit=$?"`
-Expected: FAIL — `Re-dispatch:`, `Re-dispatch: none`, `Ruled:`, `plan governs (orchestrator decision)` and the six fragments report `FAIL:` (`## RULING` and the commit subject already pass on Task 4's wording); `exit=1`.
+Expected: FAIL — `Re-dispatch:`, `Re-dispatch: none`, `Ruled:`, `plan governs (orchestrator decision)` and the seven fragments report `FAIL:` (`## RULING` and the commit subject already pass on Task 4's wording); `exit=1`.
 
 - [ ] **Step 3: Append the two subsections**
 
@@ -906,7 +921,8 @@ only the `Open:` ids; Resume step 3 carries the `Ruled:` lines forward as
 **The cap.** In-run resumes of one phase are capped at 3 per unit: the
 phase itself in Phase 4, the task in Phase 3. The count is the number of
 `## RULING` entries of the same phase — and, in Phase 3, of the same
-`[task <n>]` — whose `Re-dispatch:` is not `none`, written after the
+`[task <n>]` — whose `Re-dispatch:` line does not start with `none` (the
+escalated form is `Re-dispatch: none — escalated`), written after the
 **later** of the log's latest `_Invocation` line and its latest
 `## STOPPED` entry, so that a resume after a stop starts from zero. Phase 3
 counts per task because one long plan legitimately produces several
@@ -976,7 +992,7 @@ git commit -m "feat(orchestrating-development): RULING log entry, resume cap and
 
 **Security flag:** `none`
 
-**Does NOT cover:** Phase 1 and Phase 2 stops (unchanged); Phase 0; the Resume steps other than 3. The new Resume case fires only when the log's last entry is a `## RULING` entry whose `Re-dispatch:` is not `none`; a `## RULING` entry followed by a `## STOPPED` entry takes the `## STOPPED` case.
+**Does NOT cover:** Phase 1 and Phase 2 stops (unchanged); Phase 0; the Resume steps other than 3. The new Resume case fires only when the log's last entry is a `## RULING` entry whose `Re-dispatch:` line does not start with `none` (the escalated form is `Re-dispatch: none — escalated`, which counts as `none`); a `## RULING` entry followed by a `## STOPPED` entry takes the `## STOPPED` case; a log that ends with a `## RULING` entry whose `Re-dispatch:` line starts with `none` (a crash between the ruling commit and the `stopped` commit) first gets its missing `## STOPPED` entry rebuilt from the ruling-record entries, then takes the `## STOPPED` case.
 
 **Contract:**
 - Phase 3 step 5, Phase 4 stop rule, Phase 5 step 3
@@ -990,7 +1006,7 @@ git commit -m "feat(orchestrating-development): RULING log entry, resume cap and
   - Must convey: the `## Orchestration` block carries `Rulings: <count> (last: ruling <n>, phase <p>)`.
   - Verification: section 6 finds `Rulings:` between `## state.md Section` and `## Resume`.
 - Resume step 3
-  - Must convey: the new first case (log ends with a `## RULING` entry whose `Re-dispatch:` is not `none` → re-dispatch that phase with the same answers rebuilt from the ruling-record entries); the `## STOPPED` case reads `Open:` and `Ruled:`; `[RESUME_ANSWER]` is built from the `Ruled:` lines tagged `(orchestrator)` plus the resume prompt's answers tagged `(user)`; each user answer is appended as a `**Follow-up:**` line to its ruling-record entry and committed as `chore(orchestration): <slug> ruling <n> follow-up`; the controller records answers as `decided (<who>)`; every remaining `decided (user)` mention in the step reads `decided (…)`.
+  - Must convey: the new first case (log ends with a `## RULING` entry whose `Re-dispatch:` line does not start with `none` → re-dispatch that phase with the same answers rebuilt from the ruling-record entries); the crash-window case (log ends with a `## RULING` entry whose `Re-dispatch:` line starts with `none` and no `## STOPPED` follows → rebuild the missing `## STOPPED` entry from the ruling-record entries the `Detail:` names, commit it as `stopped`, then continue as the `## STOPPED` case); the `## STOPPED` case reads `Open:` and `Ruled:`; `[RESUME_ANSWER]` is built from the `Ruled:` lines tagged `(orchestrator)` plus the resume prompt's answers tagged `(user)`, a resume-prompt answer for a `Ruled:` id replacing that line (tagged `(user)`); each user answer is appended as a `**Follow-up:**` line to its ruling-record entry and committed as `chore(orchestration): <slug> ruling <n> follow-up`; the controller records answers as `decided (<who>)`; every remaining `decided (user)` mention in the step reads `decided (…)`.
   - Invariants: `## RULING`, `Ruled:`, `**Follow-up:**`, `(orchestrator)`, `(user)`, `decided (<who>)` occur between `## Resume` and `## In-run rulings`.
   - Verification: section 6 of the suite.
 - `## Major-Error Stop Policy`
@@ -1049,7 +1065,7 @@ fi
 - [ ] **Step 2: Run the suite to verify it fails**
 
 Run: `bash tests/in-run-rulings/run-tests.sh; echo "exit=$?"`
-Expected: FAIL — the Phase 3, Phase 4, Phase 5 checks, the log-format pins `## RULING`, `Ruled:`, `ruling <n> follow-up`, the `Rulings:` check, the resume pins, the `decided (user)` check, the `fork review unavailable` stop-policy fragment and the pre-flight check report `FAIL:`; `exit=1`.
+Expected: FAIL — the Phase 3, Phase 4, Phase 5 checks, the log-format pins `## RULING`, `Ruled:`, `ruling <n> follow-up`, the `Rulings:` check, the resume pins except `(user)` (the existing `decided (user)` text already contains it), the `decided (user)` check, the two stop-policy fragments `escalated` and `fork review unavailable` and the pre-flight check report `FAIL:`; `exit=1`.
 
 - [ ] **Step 3: Rewrite Phase 3 step 5**
 
@@ -1066,8 +1082,9 @@ with:
 >    `BLOCKED task=<n>` return goes through the Phase 3 discriminator of
 >    `## In-run rulings`: an open-item return (the task report holds
 >    `### Conflict <k>` or `### Question <k>` sections) is classified,
->    ruled and recorded there, and the batch is re-dispatched with the
->    answers in `[RESUME_ANSWER]`; a controller failure (no such section)
+>    ruled and recorded there, and the same batch — same task list, same
+>    `First batch:` value — is re-dispatched with the answers in
+>    `[RESUME_ANSWER]`; a controller failure (no such section)
 >    → retry the identical dispatch once → major error → stop.
 
 - [ ] **Step 4: Rewrite the Phase 4 stop rule**
@@ -1087,7 +1104,10 @@ with:
 > `user_decision > 0` → `## In-run rulings`: classify each open item by its
 > review-log id, rule on every item the predicate does not escalate, record
 > the rulings, and re-dispatch this phase with the answers in
-> `[RESUME_ANSWER]`. Only an escalated item stops the run: the `## STOPPED`
+> `[RESUME_ANSWER]`. Only an escalated item stops the run on the strength
+> of its content (the environment stops of the Major-Error Stop Policy —
+> `fork review unavailable`, a controller malformed twice — apply as
+> well): the `## STOPPED`
 > entry (format below) points at the review log and lists the escalated
 > items on `Open:` lines and the decided ones on `Ruled:` lines, so that a
 > resume prompt answers the open ids and Resume step 3 re-dispatches this
@@ -1188,11 +1208,19 @@ Rulings: <count> (last: ruling <n>, phase <p>)
 Replace the opening of step 3, from `3. Log ends with `## STOPPED` carrying a blocking question the resume` through `re-evaluates the counts
    (template Deviation 5).`, with:
 
-> 3. Log ends with a `## RULING` entry whose `Re-dispatch:` is not
->    `none` — the re-dispatch it announces may not have completed (a crash
+> 3. Log ends with a `## RULING` entry whose `Re-dispatch:` line does not
+>    start with `none` — the re-dispatch it announces may not have completed (a crash
 >    after the commit, a lost return): re-dispatch that phase again with
 >    the same answers, rebuilt from the ruling-record entries the entry's
->    `Detail:` names (`## In-run rulings`, idempotence). Otherwise, log
+>    `Detail:` names (`## In-run rulings`, idempotence). Log ends with a
+>    `## RULING` entry whose `Re-dispatch:` line starts with `none` (its
+>    written form is `Re-dispatch: none — escalated`) and no `## STOPPED`
+>    follows it — a crash between the ruling commit and the `stopped`
+>    commit: rebuild the missing `## STOPPED` entry from the ruling-record
+>    entries the `Detail:` names (each `escalated` entry gives an `Open:`
+>    line with its reason, each other entry a `Ruled:` line with its
+>    Resolution), commit it as `stopped`, then continue with the
+>    `## STOPPED` case. Otherwise, log
 >    ends with `## STOPPED`: its `Open:` lines are the escalated items the
 >    resume prompt must answer, its `Ruled:` lines the items already
 >    decided. A blocking question or an `Open:` id the resume prompt does
@@ -1200,7 +1228,11 @@ Replace the opening of step 3, from `3. Log ends with `## STOPPED` carrying a bl
 >    trigger, below). When the resume prompt does answer, build
 >    `[RESUME_ANSWER]` from the `Ruled:` lines, each tagged
 >    `(orchestrator)`, plus the resume prompt's answers, each tagged
->    `(user)`; append each user answer to its item's ruling-record entry
+>    `(user)`; a resume-prompt answer for an id that stands on a `Ruled:`
+>    line replaces that line — the user's answer, tagged `(user)`, is sent
+>    instead of the ruled one and is appended to that item's ruling-record
+>    entry as a `**Follow-up:**` line like any user answer; append each
+>    user answer to its item's ruling-record entry
 >    as a `**Follow-up:**` line and commit that file with subject
 >    `chore(orchestration): <slug> ruling <n> follow-up` (a Phase 5 or
 >    boundary clean-tree check must never find it uncommitted); then
@@ -1216,7 +1248,7 @@ Replace the opening of step 3, from `3. Log ends with `## STOPPED` carrying a bl
 >    log's LATEST `_Invocation` entry and re-evaluates the counts
 >    (template Deviation 5).
 
-Then, in the rest of step 3, replace the three remaining mentions of `decided (user)` with `decided (…)`:
+Then, in the rest of step 3, replace the two remaining mentions of `decided (user)` with `decided (…)` (the third mention of the file's step 3 was inside the block replaced above):
 
 - `may already be `decided (user)`.` → `may already be `decided (…)`.`
 - `no `decided (user)` line in that entry` → `no `decided (…)` line in that entry`
@@ -1276,7 +1308,7 @@ git commit -m "feat(orchestrating-development): route open items through in-run 
 
 **Contract:**
 - Attribution wording in `skills/multi-code-review/SKILL.md`
-  - Must convey: the post-loop addendum disposition is `decided (<who>): <answer>` with `<who>` = `user` or `orchestrator`, taken from the answer line's tag, an untagged line being `user`; the four places that today say `decided (user)` in that sense (Pipeline rule 1's addendum sentence, the annotation exception, the pipeline-mode resume paragraph, the idempotency sentence) are generalized; the idempotency test reads "a `decided (user)` or `decided (orchestrator)` line"; the "Resolving user-decision and unresolved items" rule names the rejection shape `rejected: plan governs (orchestrator decision) — "<clause>"` next to `rejected: plan governs (user decision)`.
+  - Must convey: the post-loop addendum disposition is `decided (<who>): <answer>` with `<who>` = `user` or `orchestrator`, taken from the answer line's tag, an untagged line being `user`; the four places that today say `decided (user)` in that sense (Pipeline rule 1's addendum sentence, the annotation exception, the pipeline-mode resume paragraph, the idempotency sentence) are generalized; the idempotency test reads "a `decided (user)` or `decided (orchestrator)` line"; the "Resolving user-decision and unresolved items" rule names the rejection shape `rejected: plan governs (orchestrator decision) — "<clause>"` next to `rejected: plan governs (user decision)`, and maps the two other orchestrator answers onto the loop's existing paths: `amend plan: …; fix it: …` → the finding-governs path for its `fix it` part, with the verification re-review skipped because the amendment moved the effective HEAD (a new invocation follows); `accept: <reason>` → an item decided without a code change (its `decided (<who>): accept: <reason>` line is the whole disposition; no fix, no re-review).
   - Invariants: `decided (orchestrator)`, `decided (<who>)`, `plan governs (orchestrator decision)`, ``decided (user)` or `decided (orchestrator)`` occur in the file; `rejected: plan governs (user decision)` still occurs.
   - Verification: section 7 of `bash tests/in-run-rulings/run-tests.sh`; `bash tests/reviewer-templates/run-tests.sh` stays green.
 - Self-sufficient open-item line rule
@@ -1381,7 +1413,14 @@ with
 > `(orchestrator)`, `rejected: plan governs (orchestrator decision) —
 > "<clause>"`, `<clause>` being the plan, spec or skill text the answer
 > quotes, verbatim — an orchestrator `plan governs` always carries one.
-> Double-fix-failure
+> An `amend plan: …; fix it: …` answer takes the finding-governs path for
+> its `fix it` part (the plan is already amended when the answer arrives;
+> the amendment commit moved the effective HEAD, so the verification
+> re-review is skipped and the new invocation that always follows reviews
+> the fix — pipeline-mode paragraph below). An `accept: <reason>` answer
+> is an item decided without a code change: its `decided (<who>): accept:
+> <reason>` line is its whole disposition, it no longer counts as
+> unresolved, and no fix or re-review runs. Double-fix-failure
 
 - [ ] **Step 5: State the self-sufficient line rule and update the examples**
 
@@ -1544,8 +1583,8 @@ git commit -m "feat(multi-code-review): loop decides findings against decided wo
   - Invariants: `(orchestrator)`, `(user)`, `decided (<who>)` occur in the `[RESUME_ANSWER]` placeholder documentation (between the line containing `` `[RESUME_ANSWER]` — OPTIONAL `` and the line `**Nothing else may be added to the prompt.**`); `decided (<who>)` and ``decided (user)` or `decided (orchestrator)`` occur in Deviation 5 (between `5. Resume answer:` and `## Return`).
   - Verification: section 9 of `bash tests/in-run-rulings/run-tests.sh`.
 - `batch-controller-prompt.md` wording
-  - Must convey: `[RESUME_ANSWER]` carries the answers, one `[task <n>]` or `[task <n>/<k>]` line each, tagged `(orchestrator)` or `(user)`, authoritative either way; every `BLOCKED task=<n>` for an open item writes its detail to `.superpowers/sdd/task-<n>-report.md` as `### Question <k>` sections (blocking questions, `<k>` from 1) or `### Conflict <k>` sections (plan conflicts, each quoting the plan text on both sides); a Pre-Flight Plan Review conflict is returned as `BLOCKED task=<n>`, `<n>` the lowest-numbered task it touches, with its `### Conflict <k>` sections in that task's report file; a `BLOCKED task=<n>` without such a section is read by the orchestrator as a controller failure.
-  - Invariants: `(orchestrator)`, `(user)`, `[task <n>/<k>]` occur in the `[RESUME_ANSWER]` placeholder documentation; `### Question <k>`, `### Conflict <k>`, `lowest-numbered task` occur in the file.
+  - Must convey: `[RESUME_ANSWER]` carries the answers, one `[task <n>]` or `[task <n>/<k>]` line each, tagged `(orchestrator)` or `(user)`, authoritative either way; every `BLOCKED task=<n>` for an open item writes its detail to `.superpowers/sdd/task-<n>-report.md` as `### Question <k>` sections (blocking questions, `<k>` from 1) or `### Conflict <k>` sections (plan conflicts, each quoting the plan text on both sides); a Pre-Flight Plan Review conflict is returned as `BLOCKED task=<n>`, `<n>` the lowest-numbered task it touches, with its `### Conflict <k>` sections in that task's report file; a conflict whose `[task <n>/<k>]` line is present in `## Resume Answer` is settled — the re-dispatched first batch applies the answer and never returns BLOCKED for it again; a `BLOCKED task=<n>` without such a section is read by the orchestrator as a controller failure.
+  - Invariants: `(orchestrator)`, `(user)`, `[task <n>/<k>]` occur in the `[RESUME_ANSWER]` placeholder documentation; `### Question <k>`, `### Conflict <k>`, `lowest-numbered task`, `is settled` occur in the file.
   - Verification: section 9 of `bash tests/in-run-rulings/run-tests.sh`.
 
 - [ ] **Step 1: Add the section 9 checks**
@@ -1578,7 +1617,7 @@ done
 assert_in_range "batch-controller [RESUME_ANSWER] doc says authoritative either way" \
   "$BATCH_PROMPT" 'authoritative either way' "$BATCH_RA_LINE" "$BATCH_RA_END" fragment
 for pin in '### Question <k>' '### Conflict <k>' 'lowest-numbered task' \
-           '.superpowers/sdd/task-<n>-report.md'; do
+           '.superpowers/sdd/task-<n>-report.md' 'is settled'; do
   assert_pin "batch-controller report-section pin '$pin'" "$BATCH_PROMPT" "$pin"
 done
 
@@ -1587,7 +1626,7 @@ done
 - [ ] **Step 2: Run the suite to verify it fails**
 
 Run: `bash tests/in-run-rulings/run-tests.sh; echo "exit=$?"`
-Expected: FAIL — every section 9 check reports `FAIL:`; `exit=1`.
+Expected: FAIL — every section 9 check reports `FAIL:` except the two code-review-loop `(user)` pins (the existing `decided (user)` text contains `(user)` in both ranges); `exit=1`.
 
 - [ ] **Step 3: Update code-review-loop-prompt.md**
 
@@ -1672,7 +1711,10 @@ Make these three replacements:
    >     Review" over the whole plan before task 1; any conflict → return
    >     `BLOCKED task=<n>`, `<n>` the lowest-numbered task the conflict
    >     touches, with its `### Conflict <k>` sections written to that
-   >     task's report file as Deviation 1 states — never best-guess it)
+   >     task's report file as Deviation 1 states — never best-guess it. A
+   >     conflict whose `[task <n>/<k>]` line is present in `## Resume
+   >     Answer` is settled: apply that answer and never return BLOCKED
+   >     for it again)
 
 2. Replace Deviation 1
 
