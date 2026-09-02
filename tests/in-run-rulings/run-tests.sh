@@ -187,6 +187,47 @@ for frag in 'in-run resumes of one phase are capped at 3 per unit' \
     "$ORCH_SKILL" "$frag" "$RULINGS_LINE" "$RULINGS_END" fragment
 done
 
+bold "6. Wiring into phases, log format, state.md, Resume and stop policy (R6)"
+PHASE3_LINE="$(first_line_of "$ORCH_SKILL" '## Phase 3 — Implementation Batches')"
+PHASE4_LINE="$(first_line_of "$ORCH_SKILL" '## Phase 4 — Final Code Review Loop')"
+PHASE5_LINE="$(first_line_of "$ORCH_SKILL" '## Phase 5 — Completion')"
+LOG_FORMAT_LINE="$(first_line_of "$ORCH_SKILL" '## Orchestration Log Format')"
+STATE_LINE="$(first_line_of "$ORCH_SKILL" '## state.md Section')"
+RESUME_LINE="$(first_line_of "$ORCH_SKILL" '## Resume')"
+assert_in_range "Phase 3 routes BLOCKED task=<n> to the predicate" \
+  "$ORCH_SKILL" 'In-run rulings' "$PHASE3_LINE" "$PHASE4_LINE" fragment
+assert_in_range "Phase 4 routes open items to the predicate" \
+  "$ORCH_SKILL" 'In-run rulings' "$PHASE4_LINE" "$PHASE5_LINE" fragment
+assert_in_range "Phase 5 report lists unsettled contradictions" \
+  "$ORCH_SKILL" 'contradiction: unsettled' "$PHASE5_LINE" "$LOG_FORMAT_LINE" fragment
+for pin in '## RULING' 'Ruled:' 'Open:' 'Owed probe:' 'ruling <n> follow-up'; do
+  assert_in_range "log-format pin '$pin'" \
+    "$ORCH_SKILL" "$pin" "$LOG_FORMAT_LINE" "$STATE_LINE" exact
+done
+assert_in_range "state.md carries the Rulings line" \
+  "$ORCH_SKILL" 'Rulings:' "$STATE_LINE" "$RESUME_LINE" exact
+for pin in '## RULING' 'Ruled:' '**Follow-up:**' '(orchestrator)' '(user)' 'decided (<who>)'; do
+  assert_in_range "resume pin '$pin'" \
+    "$ORCH_SKILL" "$pin" "$RESUME_LINE" "$RULINGS_LINE" exact
+done
+if [ -n "$RESUME_LINE" ] && [ -n "$RULINGS_LINE" ] && \
+   awk -v a="$RESUME_LINE" -v b="$RULINGS_LINE" \
+     'NR >= a && NR < b && index($0, "decided (user)") > 0 { found = 1 } END { exit found ? 1 : 0 }' "$ORCH_SKILL"; then
+  ok "Resume step 3 no longer names decided (user) alone"
+else
+  bad "Resume step 3 still names decided (user) alone (range $RESUME_LINE..$RULINGS_LINE)"
+fi
+for frag in 'escalated' 'fork review unavailable'; do
+  assert_in_range "stop policy fragment '$frag'" \
+    "$ORCH_SKILL" "$frag" "$RULINGS_END" "$GUARD_LINE" fragment
+done
+if awk -v a="$RULINGS_END" -v b="$GUARD_LINE" \
+     'NR >= a && NR < b && index($0, "pre-flight plan conflict;") > 0 { found = 1 } END { exit found ? 1 : 0 }' "$ORCH_SKILL"; then
+  ok "stop policy no longer lists a pre-flight plan conflict as a stop by itself"
+else
+  bad "stop policy still lists 'pre-flight plan conflict;' (range $RULINGS_END..$GUARD_LINE)"
+fi
+
 # --- end of checks ---
 
 echo

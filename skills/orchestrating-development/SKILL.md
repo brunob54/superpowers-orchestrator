@@ -267,8 +267,14 @@ Loop until every task is complete:
    (a well-formed return contradicted by file state must never re-enter
    the selection loop).
 5. Append and commit the batch's log entry (the controller already
-   committed each checkbox tick per-task); rewrite `state.md`. `BLOCKED`
-   → major error → stop.
+   committed each checkbox tick per-task); rewrite `state.md`. A
+   `BLOCKED task=<n>` return goes through the Phase 3 discriminator of
+   `## In-run rulings`: an open-item return (the task report holds
+   `### Conflict <k>` or `### Question <k>` sections) is classified,
+   ruled and recorded there, and the same batch — same task list, same
+   `First batch:` value — is re-dispatched with the answers in
+   `[RESUME_ANSWER]`; a controller failure (no such section)
+   → retry the identical dispatch once → major error → stop.
 
 Cap sizing: nothing but the cap bounds a controller's context (SDD's own
 batch cap belongs to the batch loop you replaced) — that is why
@@ -291,11 +297,17 @@ recorded branch point, N_code, M, plan path, ledger path
 `.superpowers/sdd/progress.md`) and dispatch. Expected return:
 `REVIEW_DONE rounds=<r> outcome=<converged|cap> fixes=<n> unresolved=<n>
 user_decision=<n>` or `BLOCKED: <reason>`. `unresolved > 0` or
-`user_decision > 0` → major error → stop (the findings are journaled in
-the review log; point the stop entry there and list the open items by
-their review-log ids — stop entry format below — so a resume prompt can
-answer them by id; Resume step 3 re-dispatches this phase with the
-answers in `[RESUME_ANSWER]`). On success: append and
+`user_decision > 0` → `## In-run rulings`: classify each open item by its
+review-log id, rule on every item the predicate does not escalate, record
+the rulings, and re-dispatch this phase with the answers in
+`[RESUME_ANSWER]`. Only an escalated item stops the run on the strength
+of its content (the environment stops of the Major-Error Stop Policy —
+`fork review unavailable`, a controller malformed twice — apply as
+well): the `## STOPPED`
+entry (format below) points at the review log and lists the escalated
+items on `Open:` lines and the decided ones on `Ruled:` lines, so that a
+resume prompt answers the open ids and Resume step 3 re-dispatches this
+phase with every answer in `[RESUME_ANSWER]`. On success: append and
 commit the Phase 4 log entry before Phase 5 begins.
 
 The filled `code-review-loop-prompt.md` passes `TOPIC_DIR` = the topic folder
@@ -313,7 +325,11 @@ The open-decisions file is `<topic folder>/plans/<slug>-open-decisions.md`.
    code-review rounds/fixes/outcome, harness probes owed — every
    `rejected: harness probe not runnable here — <probe>` line of the
    code-review log and the plan-review log, listed verbatim with its
-   review log path, or `none` — and the three log paths
+   review log path, or `none` — rulings made in the run — the count of
+   `## Ruling` entries in
+   `<topic folder>/plans/<slug>-open-decisions.md`, and every entry whose
+   Forks line records `contradiction: unsettled`, listed by ruling number,
+   or `none` — and the three log paths
    (orchestration, plan review, and the code review log at
    `<topic folder>/implementation/<slug>-review-log.md`).
 4. Invoke `finishing-a-development-branch` (interactive — merge/PR/keep/
@@ -339,24 +355,40 @@ plan: docs/superpowers-orchestrator/<date>-<slug>/plans/<slug>.md — <T> tasks
 _Completed — YYYY-MM-DD — HEAD <sha7>_
 ```
 
+An in-run ruling (`## In-run rulings`) writes, instead of a stop, one
+entry per ruled return and re-dispatches the phase:
+
+```
+## RULING <n> — YYYY-MM-DD — phase <p> — <one-line summary>
+Items: [<id>] <forced|design|escalated> — <answer>
+Detail: docs/superpowers-orchestrator/<date>-<slug>/plans/<slug>-open-decisions.md
+Forks: none | <k> (<lens>, <lens>[, <lens>]) — contradiction: none | settled | unsettled
+Re-dispatch: phase <p>, in-run resume <r> of 3
+```
+
 A stop writes instead:
 
 ```
 ## STOPPED — YYYY-MM-DD — phase <p> — <one-line reason>
 Detail: <path to the file holding the blocker detail>
+Open: [<id>] escalated (<spec wrong|scope|irreversible|secret|chain>) — <summary>
+Ruled: [<id>] <forced|design> — <answer>
+Owed probe: <verbatim line>
 Resume: Resume orchestration for docs/superpowers-orchestrator/<date>-<slug>/plans/<slug>.md
 ```
 
 (For a Phase 1 stop the plan may not exist: the Resume line names the
 spec path instead, and resume re-dispatches the plan-writer with the
 answer the resume prompt must supply, carried in the template's
-`[RESUME_ANSWER]` placeholder. For a Phase 4 stop, `Detail:` names the
-review log and is followed by one line per open item —
-`Open: [<id>] <user-decision|unresolved> — <summary>`, `<id>` as in the
-review log — so the resume prompt can answer each item by id; after the
-`Open:` lines comes one `Owed probe: <verbatim line>` line for every
-`rejected: harness probe not runnable here — <probe>` line of the review
-log.) Skipped
+`[RESUME_ANSWER]` placeholder. For a Phase 3 or Phase 4 stop on escalated
+items, `Detail:` names the review log (Phase 4) or the task report file
+(Phase 3) and is followed by one `Open:` line per escalated item — `<id>`
+as in the review log, or `[task <n>]` / `[task <n>/<k>]` — with the
+escalation reason in parentheses, so the resume prompt can answer each
+open item by id, and one `Ruled:` line per item the orchestrator already
+decided, carried forward by Resume step 3; after them comes one `Owed
+probe: <verbatim line>` line for every `rejected: harness probe not
+runnable here — <probe>` line of the review log.) Skipped
 loops write the
 `skipped (N_x=0)` line shapes from Phase 0. Round-by-round detail lives
 in the sub-skills' own logs — never duplicate it here. Commit the log at
@@ -364,7 +396,8 @@ every boundary: Phase 0, after Phases 1–2, after each batch, after
 Phase 4, and at completion/stop. Boundary commits use the subject
 `chore(orchestration): <slug> <boundary>`, where `<boundary>` names the
 boundary: `phase 1 log`, `phase 2 log`, `batch 2 log`, `stopped`,
-`completed`.
+`completed`, and for an in-run ruling `ruling <n>` and
+`ruling <n> follow-up` (`## In-run rulings`).
 
 ## state.md Section
 
@@ -376,6 +409,7 @@ Rewrite the plan-execution sections at every boundary (SDD's shape, cap
 Spec: <topic folder>/specs/<slug>-design.md  Plan: <topic folder>/plans/<slug>.md
 Params: N_plan=<n> N_code=<n> M=<m> cap=<n>  Branch: feature/<slug>  BASE: <sha7>
 Position: phase <p>[, next batch tasks <i>–<j>]
+Rulings: <count> (last: ruling <n>, phase <p>)
 ```
 
 ## Resume
@@ -414,18 +448,44 @@ Trigger: `Resume orchestration for <plan-or-spec path>`.
    follow the migration recipe in the v7.3.0 release note; otherwise start
    a fresh orchestration. Never reconstruct it.
 2. Log ends with `_Completed_` → report that and stop.
-3. Log ends with `## STOPPED` carrying a blocking question the resume
-   prompt does not answer → present the question and stop (Phase 4 has a
-   second trigger, below). When the
-   resume prompt does answer it, re-dispatch the stopped phase's
-   controller with that answer in the template's `[RESUME_ANSWER]`
-   placeholder — the only channel for it. Phases whose stop carries
-   answerable items: Phase 1 (the plan-writer's BLOCKED question), Phase 3
-   (a batch controller's BLOCKED task), and Phase 4 — its stop lists the
-   review log's open items by id, and the resume prompt answers them by
-   id (for example `[I2]: plan governs; [C3]: fix it`); the code-review-loop
-   controller records each answer as `decided (user): <answer>` in the
-   review log's LATEST `_Invocation` entry and re-evaluates the counts
+3. Log ends with a `## RULING` entry whose `Re-dispatch:` line does not
+   start with `none` — the re-dispatch it announces may not have completed (a crash
+   after the commit, a lost return): re-dispatch that phase again with
+   the same answers, rebuilt from the ruling-record entries the entry's
+   `Detail:` names (`## In-run rulings`, idempotence). Log ends with a
+   `## RULING` entry whose `Re-dispatch:` line starts with `none` (its
+   written form is `Re-dispatch: none — escalated`) and no `## STOPPED`
+   follows it — a crash between the ruling commit and the `stopped`
+   commit: rebuild the missing `## STOPPED` entry from the ruling-record
+   entries the `Detail:` names (each `escalated` entry gives an `Open:`
+   line with its reason, each other entry a `Ruled:` line with its
+   Resolution), commit it as `stopped`, then continue with the
+   `## STOPPED` case. Otherwise, log
+   ends with `## STOPPED`: its `Open:` lines are the escalated items the
+   resume prompt must answer, its `Ruled:` lines the items already
+   decided. A blocking question or an `Open:` id the resume prompt does
+   not answer → present the question and stop (Phase 4 has a second
+   trigger, below). When the resume prompt does answer, build
+   `[RESUME_ANSWER]` from the `Ruled:` lines, each tagged
+   `(orchestrator)`, plus the resume prompt's answers, each tagged
+   `(user)`; a resume-prompt answer for an id that stands on a `Ruled:`
+   line replaces that line — the user's answer, tagged `(user)`, is sent
+   instead of the ruled one and is appended to that item's ruling-record
+   entry as a `**Follow-up:**` line like any user answer; append each
+   user answer to its item's ruling-record entry
+   as a `**Follow-up:**` line and commit that file with subject
+   `chore(orchestration): <slug> ruling <n> follow-up` (a Phase 5 or
+   boundary clean-tree check must never find it uncommitted); then
+   re-dispatch the stopped phase's controller with that `[RESUME_ANSWER]`
+   in the template's placeholder — the only channel for it. Phases whose
+   stop carries answerable items: Phase 1 (the plan-writer's BLOCKED
+   question, a user line without a tag), Phase 3 (a batch controller's
+   BLOCKED task, answered by `[task <n>]` or `[task <n>/<k>]` lines),
+   and Phase 4 — its stop lists the review log's open items by id, and
+   the resume prompt answers them by id (for example
+   `[I2]: plan governs; [C3]: fix it`); the code-review-loop controller
+   records each answer as `decided (<who>): <answer>` in the review
+   log's LATEST `_Invocation` entry and re-evaluates the counts
    (template Deviation 5). A Phase 4 stop has a second resume trigger:
    compute the effective HEAD (multi-code-review's Pipeline rule 4) and
    compare it with the completion-marker HEAD of that latest entry. When
@@ -445,11 +505,11 @@ Trigger: `Resume orchestration for <plan-or-spec path>`.
    resumes that entry at its next round (template Deviations 2 and 5);
    nothing is journaled twice. This case takes precedence over "present
    the question and stop", because the ids in the old `## STOPPED` entry
-   may already be `decided (user)`. Present the question and stop ONLY
+   may already be `decided (…)`. Present the question and stop ONLY
    when the review log exists, its latest entry carries a completion
    marker, the effective HEAD is unchanged, the resume prompt gives no
    answers AND at least one of the stop's open ids has no
-   `decided (user)` line in that entry (a re-dispatch in that state would
+   `decided (…)` line in that entry (a re-dispatch in that state would
    return BLOCKED — never a silent no-op). When every open id is already
    decided there — a resume from another session after the addendum
    journaled the answers and re-evaluated the counts — re-dispatch Phase 4
@@ -935,9 +995,13 @@ rules apply everywhere a ruling is made:
 In-run stop = append `## STOPPED` to the log, commit it, update
 `state.md` `## Open Issues` (blocking items first), report with the
 resume prompt. Stop on: plan-writer BLOCKED; doc-review unresolved > 0 or
-loop failure; pre-flight plan conflict; batch-controller BLOCKED;
-checkbox cross-check mismatch; code-review unresolved or user-decision
-items; any controller malformed/failed twice; branch changed under you or
+loop failure; a batch-controller `BLOCKED` that the Phase 3
+discriminator classifies as a controller failure (`## In-run rulings`);
+an open item escalated by the predicate of `## In-run rulings` — the
+`## STOPPED` entry lists the escalated items on `Open:` lines and the
+decided ones on `Ruled:` lines; `fork review unavailable` (fewer than
+two usable fork returns for a design item); checkbox cross-check
+mismatch; any controller malformed/failed twice; branch changed under you or
 unexpected dirty tree at a boundary; a `### Task N` heading with zero
 checkboxes (malformed plan, Phase 3 step 1); a log or plan commit that
 fails at a phase boundary (report the git output verbatim); resume
