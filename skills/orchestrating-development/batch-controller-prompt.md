@@ -63,11 +63,13 @@ Agent tool (general-purpose):
     `BLOCKED task=<n>`, `<n>` the lowest-numbered task the conflict
     touches, with its `### Conflict <k>` sections written to that
     task's report file as Deviation 1 states — never best-guess it. A
-    conflict whose `[task <n>/<k>]` line is present in `## Resume
-    Answer` is settled: apply that answer and never return BLOCKED
-    for it again)
+    conflict or question whose `[task <n>]` or `[task <n>/<k>]` line
+    is present in `## Resume Answer` is settled: apply that answer and
+    never return BLOCKED for it again. A `[task <n>]` line answers a
+    report file that holds exactly one section, and is read as
+    `[task <n>/1]`)
 
-    ## Resume Answer (omit this whole section on a first dispatch)
+    ## Resume Answer (omit only when no answer applies to this batch)
 
     [RESUME_ANSWER]
 
@@ -79,10 +81,15 @@ Agent tool (general-purpose):
        `.superpowers/sdd/task-<n>-report.md` — never `state.md` — as
        `### Question <k>` sections (one blocking question each, `<k>`
        from 1) or `### Conflict <k>` sections (one plan conflict each,
-       quoting the plan text on both sides). A pre-flight conflict goes
+       quoting the plan text on both sides). Numbering continues across
+       attempts on the same task: append a new section after the
+       sections already in the file, and never renumber or remove an
+       earlier section. A pre-flight conflict goes
        into the report file of the lowest-numbered task it touches. A
-       `BLOCKED task=<n>` without such a section is read by the
-       orchestrator as a controller failure, not as an open item.
+       section whose `[task <n>]` or `[task <n>/<k>]` line stands in
+       this dispatch's `## Resume Answer` is settled, not open. A
+       `BLOCKED task=<n>` without such an unanswered section is read by
+       the orchestrator as a controller failure, not as an open item.
     2. Sequential only — no parallel waves inside a batch.
     3. On completing a task, tick EVERY checkbox under its `### Task N`
        heading in the plan (the orchestrator's completeness predicate is
@@ -148,10 +155,14 @@ Agent tool (general-purpose):
 - `[PLAN_PATH]` — REQUIRED: absolute plan path
 - `[FIRST_BATCH]` — REQUIRED: `yes` or `no`
 - `[RESUME_ANSWER]` — OPTIONAL: omitted, together with its `## Resume
-  Answer` heading, on a first dispatch; filled when re-dispatching
-  after a `BLOCKED task=<n>` return, with the answers, one `[task <n>]`
+  Answer` heading, only when no recorded answer applies to this batch;
+  filled otherwise — when re-dispatching
+  after a `BLOCKED task=<n>` return, and on any dispatch whose task list
+  holds a task with a recorded answer — with the answers, one `[task <n>]`
   or `[task <n>/<k>]` line each (`<k>` the `### Question <k>` or
-  `### Conflict <k>` section it answers), tagged `(orchestrator)` or
+  `### Conflict <k>` section it answers; a `[task <n>]` line answers a
+  report file that holds exactly one section, and is read as
+  `[task <n>/1]`), tagged `(orchestrator)` or
   `(user)`; authoritative either way — the controller hands each to
   the task's implementer as authoritative instead of re-deriving it
 - `[SDD_SKILL_PATH]` / `[SDD_SCRIPTS_DIR]` / `[IMPLEMENTER_PROMPT_PATH]` /

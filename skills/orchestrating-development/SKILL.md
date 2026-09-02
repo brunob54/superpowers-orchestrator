@@ -266,15 +266,24 @@ Loop until every task is complete:
    reported complete whose boxes are not all checked → major error → stop
    (a well-formed return contradicted by file state must never re-enter
    the selection loop).
-5. Append and commit the batch's log entry (the controller already
-   committed each checkbox tick per-task); rewrite `state.md`. A
+5. On `BATCH_COMPLETE`, append and commit the batch's log entry (the
+   controller already committed each checkbox tick per-task); rewrite
+   `state.md`. A `BLOCKED task=<n>` return writes no batch entry: the
+   `## RULING` entry the ruling writes — or the `## STOPPED` entry, when an
+   item is escalated — is that boundary's log entry, so that Resume step 3
+   still finds the log ending with it. A
    `BLOCKED task=<n>` return goes through the Phase 3 discriminator of
-   `## In-run rulings`: an open-item return (the task report holds
-   `### Conflict <k>` or `### Question <k>` sections) is classified,
-   ruled and recorded there, and the same batch — same task list, same
-   `First batch:` value — is re-dispatched with the answers in
+   `## In-run rulings`: an open-item return (the task report holds an
+   unanswered `### Conflict <k>` or `### Question <k>` section) is
+   classified, ruled and recorded there, and — unless an item is escalated
+   (see "Handling a return as a whole") — the same batch — same task list,
+   same `First batch:` value — is re-dispatched with the answers in
    `[RESUME_ANSWER]`; a controller failure (no such section)
    → retry the identical dispatch once → major error → stop.
+   Every batch dispatch, first or repeat, carries in `[RESUME_ANSWER]`
+   every recorded `[task <n>…]` answer whose `<n>` is in that batch's task
+   list. A pre-flight conflict ruled during an earlier batch therefore
+   reaches the later batch that implements task `<n>`.
 
 Cap sizing: nothing but the cap bounds a controller's context (SDD's own
 batch cap belongs to the batch loop you replaced) — that is why
@@ -360,11 +369,15 @@ entry per ruled return and re-dispatches the phase:
 
 ```
 ## RULING <n> — YYYY-MM-DD — phase <p> — <one-line summary>
-Items: [<id>] <forced|design|escalated> — <answer>
+Items: [<id>] <forced|design> — <answer>
+Items: [<id>] escalated (<spec wrong|scope|irreversible|secret|chain>) — <summary>
 Detail: docs/superpowers-orchestrator/<date>-<slug>/plans/<slug>-open-decisions.md
 Forks: none | <k> (<lens>, <lens>[, <lens>]) — contradiction: none | settled | unsettled
 Re-dispatch: phase <p>, in-run resume <r> of 3
 ```
+
+One `Items:` line per item of the return: the first shape for a decided
+item, the second for an escalated one, which has no answer.
 
 A stop writes instead:
 
@@ -470,11 +483,14 @@ Trigger: `Resume orchestration for <plan-or-spec path>`.
    `(orchestrator)`, plus the resume prompt's answers, each tagged
    `(user)`; a resume-prompt answer for an id that stands on a `Ruled:`
    line replaces that line — the user's answer, tagged `(user)`, is sent
-   instead of the ruled one and is appended to that item's ruling-record
-   entry as a `**Follow-up:**` line like any user answer; append each
+   instead of the ruled one; append each
    user answer to its item's ruling-record entry
-   as a `**Follow-up:**` line and commit that file with subject
-   `chore(orchestration): <slug> ruling <n> follow-up` (a Phase 5 or
+   as a `**Follow-up:**` line, skipping the append when a
+   `**Follow-up:**` line with the same text already stands in that entry
+   (a second resume answering the same ids must not append it twice), and
+   commit that file once for the whole resume, with subject
+   `chore(orchestration): <slug> ruling <n> follow-up` where `<n>` is the
+   lowest ruling number the resume touched (a Phase 5 or
    boundary clean-tree check must never find it uncommitted); then
    re-dispatch the stopped phase's controller with that `[RESUME_ANSWER]`
    in the template's placeholder — the only channel for it. Phases whose
@@ -548,9 +564,11 @@ A controller return that carries open items does not stop the run by
 itself. An **open item** is, in Phase 4, a disposition of the review log's
 LATEST `_Invocation` entry that is `user-decision` or `unresolved: <reason>`,
 named by its id (`[I2]`, `[C1]`); in Phase 3, one blocking question or one
-plan conflict behind a `BLOCKED task=<n>` return, named `[task <n>]` — or
-`[task <n>/<k>]` when the task's report file holds several `### Conflict <k>`
-or `### Question <k>` sections. A Pre-Flight Plan Review conflict is in
+plan conflict behind a `BLOCKED task=<n>` return, named `[task <n>]` when
+the task's report file holds exactly one `### Conflict <k>` or
+`### Question <k>` section — that form answers section 1 and is read as
+`[task <n>/1]` — or `[task <n>/<k>]` when the report file holds several
+sections. A Pre-Flight Plan Review conflict is in
 scope: the batch controller returns it as `BLOCKED task=<n>` with `<n>` the
 lowest-numbered task the conflict touches. Out of scope and unchanged:
 Phase 1 `BLOCKED` questions (a spec ambiguity is, by definition, the
@@ -616,12 +634,20 @@ A plan task that is impossible as written while the spec is fine is a
 
 **Phase 3 discriminator.** A batch controller returns `BLOCKED task=<n>`
 for an open item and for a failure alike, and you do not read its
-one-line reason as content. The report file decides: a `BLOCKED task=<n>`
-whose `.superpowers/sdd/task-<n>-report.md` holds at least one
-`### Conflict <k>` or `### Question <k>` section is an open-item return
-and enters the predicate; one whose report file is missing or holds no
-such section is a controller failure and takes the existing path — retry
+one-line reason as content. The report file decides, and only its
+**unanswered** sections count. A `### Conflict <k>` or `### Question <k>`
+section of `.superpowers/sdd/task-<n>-report.md` is unanswered when its
+`[task <n>]` or `[task <n>/<k>]` answer line was NOT in the
+`[RESUME_ANSWER]` of the dispatch that returned this `BLOCKED` — on a first
+dispatch, which carries no answers, every section is unanswered. A
+`BLOCKED task=<n>` whose report file holds at least one unanswered section
+is an open-item return
+and enters the predicate; one whose report file is missing, holds no
+such section, or holds only sections that dispatch already answered is a
+controller failure and takes the existing path — retry
 the identical dispatch once, then stop under the Major-Error Stop Policy.
+Nothing marks a section answered in the file, so this test is made against
+the `[RESUME_ANSWER]` you sent, not against the report file's contents.
 
 The predicate applies to every open item of a return, and the return is
 handled as a whole (below): the items that are not escalated are decided
@@ -862,9 +888,21 @@ against reference text — a plain-text answer that left a binding clause in
 force would be raised again by the task's reviewer, who receives the
 `**Global Constraints:**` block verbatim. The batch controller hands the
 answer to the task's implementer as authoritative, exactly as it hands a
-user's answer today, and treats a conflict whose `[task <n>/<k>]` line is
-present in `## Resume Answer` as settled: the pre-flight scan of a
+user's answer today, and treats a `### Conflict <k>` or `### Question <k>`
+section whose `[task <n>]` or `[task <n>/<k>]` line is
+present in `## Resume Answer` as settled — both line shapes settle, and a
+question settles exactly as a conflict does: the pre-flight scan of a
 re-dispatched first batch does not return it again.
+
+Every Phase 3 re-dispatch carries in `[RESUME_ANSWER]` every ruled
+`[task <n>…]` line recorded for that task since the **later** of the log's
+latest `_Invocation` line and its latest `## STOPPED` entry — all rulings
+of the same unit, not only the newest return's — together with the ruled
+lines of the batch's other tasks (Phase 3 step 5). Section numbers
+continue across attempts: the controller appends a new `### Conflict <k>`
+or `### Question <k>` section after the sections already in the report
+file and never renumbers or removes an earlier one, so an answer keeps
+naming the section it was written for.
 
 **Plan amendment.** A plan conflict is a collision with the plan's
 **binding** text — under the 7.7.0 Body-authority note, a
@@ -900,8 +938,9 @@ Phase 4 moves the effective HEAD past the entry's completion marker. The
 controller then journals the addendum and ALWAYS starts a new invocation
 over the amended plan (template Deviation 5) — the whole branch is
 re-reviewed under the amended plan, which is what an amendment deserves —
-instead of one fix plus one verification re-review. That new invocation
-counts as one in-run resume against the cap (below), and its rounds are
+instead of one fix plus one verification re-review. That new invocation is
+the re-dispatch the ruling's own `## RULING` entry already counts against
+the cap (below) — not a second resume on top of it — and its rounds are
 bounded by `N_code`.
 
 ### The RULING log entry, the commit and the re-dispatch
@@ -926,7 +965,9 @@ subject `chore(orchestration): <slug> ruling <n>`, holds the `## RULING`
 entry, the ruling-record entries and any plan amendment, and lands
 **before** the re-dispatch. Then rewrite `state.md` (its `Rulings:` line)
 and re-dispatch the phase's controller with the answers in
-`[RESUME_ANSWER]` — the only channel. A controller that answers an in-run
+`[RESUME_ANSWER]` — the only channel. In Phase 3 the answers are the full
+set defined above, not only the newest return's. A controller that answers
+an in-run
 resume with `BLOCKED: previous invocation left <n> open items …` did not
 receive the answers — a malformed dispatch: retry the identical dispatch
 once, then stop under the Major-Error Stop Policy.
@@ -952,8 +993,9 @@ counts per task because one long plan legitimately produces several
 unrelated blocked tasks; only a chain on the same task is the pathology.
 The fourth open return of the same unit is a stop: every open item is
 listed as `escalated (chain)`, and no further ruling is made. A new review
-invocation started by an `amend plan` ruling counts as one in-run resume
-against this cap. Together with multi-code-review's loop-side rule for
+invocation started by an `amend plan` ruling is the re-dispatch that
+ruling's `## RULING` entry already counts here; it adds no second resume
+to the count. Together with multi-code-review's loop-side rule for
 verification cycles, this bounds the chain that Case 007 of the
 orchestration issues log recorded.
 

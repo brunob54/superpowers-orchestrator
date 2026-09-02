@@ -221,7 +221,8 @@ for frag in 'escalated' 'fork review unavailable'; do
   assert_in_range "stop policy fragment '$frag'" \
     "$ORCH_SKILL" "$frag" "$RULINGS_END" "$GUARD_LINE" fragment
 done
-if awk -v a="$RULINGS_END" -v b="$GUARD_LINE" \
+if [ -n "$RULINGS_END" ] && [ -n "$GUARD_LINE" ] && \
+   awk -v a="$RULINGS_END" -v b="$GUARD_LINE" \
      'NR >= a && NR < b && index($0, "pre-flight plan conflict;") > 0 { found = 1 } END { exit found ? 1 : 0 }' "$ORCH_SKILL"; then
   ok "stop policy no longer lists a pre-flight plan conflict as a stop by itself"
 else
