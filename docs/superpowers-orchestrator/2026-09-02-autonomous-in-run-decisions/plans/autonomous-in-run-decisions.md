@@ -848,7 +848,7 @@ git commit -m "feat(orchestrating-development): ruling record, tagged answers an
   - Invariants: `plan governs (orchestrator decision)` occurs inside the section; the fragments `a Critical is never rejected`, `quotes its clause`, `recorded when it is made` occur.
   - Verification: section 5 of `bash tests/in-run-rulings/run-tests.sh`.
 
-- [ ] **Step 1: Add the section 5 checks**
+- [x] **Step 1: Add the section 5 checks**
 
 Insert immediately above the line `# --- end of checks ---` of `tests/in-run-rulings/run-tests.sh`:
 
@@ -871,12 +871,12 @@ done
 
 ```
 
-- [ ] **Step 2: Run the suite to verify it fails**
+- [x] **Step 2: Run the suite to verify it fails**
 
 Run: `bash tests/in-run-rulings/run-tests.sh; echo "exit=$?"`
 Expected: FAIL — `Re-dispatch:`, `Re-dispatch: none`, `Ruled:`, `plan governs (orchestrator decision)` and the seven fragments report `FAIL:` (`## RULING` and the commit subject already pass on Task 4's wording); `exit=1`.
 
-- [ ] **Step 3: Append the two subsections**
+- [x] **Step 3: Append the two subsections**
 
 Insert immediately above the line `## Major-Error Stop Policy`:
 
@@ -969,12 +969,12 @@ rules apply everywhere a ruling is made:
 
 ````
 
-- [ ] **Step 4: Run the suite to verify it passes**
+- [x] **Step 4: Run the suite to verify it passes**
 
 Run: `bash tests/in-run-rulings/run-tests.sh; echo "exit=$?"`
 Expected: PASS — sections 1–5 all `PASS:`, `0 failed`, `exit=0`.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add tests/in-run-rulings/run-tests.sh skills/orchestrating-development/SKILL.md
