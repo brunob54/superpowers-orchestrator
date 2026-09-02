@@ -727,6 +727,123 @@ Major-Error Stop Policy with the reason `fork review unavailable` — a
 stop, never a guess. A notice that never arrives is that same fatal
 environment failure.
 
+### The ruling record
+
+Every ruling is recorded in `<topic folder>/plans/<slug>-open-decisions.md`
+— the file the artifact layout already reserves for this skill and every
+blinding pathspec already hides from reviewers. One entry per ruling,
+appended, never rewritten, in the shape of the orchestration issues log's
+Case template so that a session keeping such a log copies it mechanically:
+
+```markdown
+## Ruling <n> — YYYY-MM-DD — phase <p> — [<id>] <short title>
+
+- **Class:** forced | design | escalated (<spec wrong|scope|irreversible|secret|chain>)
+- **Item:** [<id>] <severity> <file:line> — <finding summary, verbatim>   (Phase 3: `[task <n>]` n/a n/a — <the question or conflict, one line>)
+- **Contract clause:** "<verbatim quote>" — <path of the spec, plan or skill that holds it>
+- **Defensible answers:** <one line each; `n/a` for forced>
+- **Forks:** <lens>: <VERDICT line> (one per fork; `none` for forced); contradiction: none | <what and how it was settled, or `unsettled`>
+- **Resolution:** <the answer as written into [RESUME_ANSWER]> — <reason; for forced, the one-sentence fact>
+```
+
+`<n>` counts rulings across the whole run (all invocations). The entry is
+written **before** the phase is re-dispatched, and committed together with
+the `## RULING` log entry (below) in one commit. For an `escalated` item
+the entry holds the class and the reason, and its Resolution line reads
+`escalated — <reason>`; the user's later answer is appended to the same
+entry as a `**Follow-up:**` line by Resume step 3, never written into the
+Resolution line.
+
+### The answers, and how a ruling reaches the plan
+
+Answers travel in the controller's `[RESUME_ANSWER]` placeholder, one line
+per item, each tagged with its source; the controller records each as
+`decided (<who>): <answer>` — `decided (orchestrator): …` or
+`decided (user): …`:
+
+```
+[<id>] (orchestrator): <answer>
+[<id>] (user): <answer>
+```
+
+A line without a `(<who>)` tag is a user line — an untagged answer such as
+`[I2]: plan governs; [C3]: fix it` keeps working. Phase 4 answers:
+
+- `fix it: <what the fix must achieve>` — the finding is accepted; the
+  loop's finding-governs path applies. Valid only when the item's
+  `clause:` is `none` or names reference text (text outside the plan's
+  binding set): a bare `fix it` never authorises a fix against binding
+  text.
+- `plan governs: "<verbatim clause>" — <source path>` — the finding is
+  rejected as non-binding. The clause is mandatory (guard 1, below).
+- `amend plan: <the amendment>; fix it: <what the fix must achieve>` —
+  the plan was wrong. The only accepting answer when `clause:` names
+  binding text. You write the amendment (below) before re-dispatching;
+  the loop then fixes.
+- `accept: <reason>` — for an `unresolved` item only, and Important only;
+  an unresolved Critical is `fix it` with a new hint, or `escalated`.
+
+Phase 3 answers use the same line shape with the task id:
+
+```
+[task <n>] (orchestrator): <answer>
+[task <n>/<k>] (orchestrator): <answer>
+```
+
+where `<answer>` is the answer to the blocking question in plain text, or
+`amend plan: <the amendment>` when the task is impossible as written. A
+`### Conflict <k>` section (a task-level or pre-flight plan conflict) is
+answered in one of two forms: `plan governs: "<verbatim clause>" — <path>`,
+naming the side that governs — the implementer follows that text — or
+`amend plan: <the amendment>` when the other side governs. An answer that
+sides against binding plan text is always `amend plan: …` (the amendment
+procedure below); a plain-text answer is valid only against a question or
+against reference text — a plain-text answer that left a binding clause in
+force would be raised again by the task's reviewer, who receives the
+`**Global Constraints:**` block verbatim. The batch controller hands the
+answer to the task's implementer as authoritative, exactly as it hands a
+user's answer today, and treats a conflict whose `[task <n>/<k>]` line is
+present in `## Resume Answer` as settled: the pre-flight scan of a
+re-dispatched first batch does not return it again.
+
+**Plan amendment.** A plan conflict is a collision with the plan's
+**binding** text — under the 7.7.0 Body-authority note, a
+`**Global Constraints:**` entry or an `**Exact content:**` block; in a
+plan written before that note, any mandated text. An amendment that only
+annotates the plan would leave the binding clause in force, and the next
+review would raise the same finding. So, using the plan location the
+disposition line names (`— clause: Global Constraints` or
+`— clause: Task <n>`) or the task report names, do two things:
+
+1. **Edit the binding clause in place** — replace the Global Constraints
+   entry, the Exact-content block, or the mandated sentence with the
+   amended text — and append to the edited clause the marker
+   `(amended by ruling <n>)`.
+2. **Insert the audit note**, one block quote, immediately after the
+   block that holds the edited clause — after the `**Global Constraints:**`
+   block for a constraint, after the `### Task <n>` heading line for a
+   task-level clause:
+
+   ```markdown
+   > **Amendment <n> (orchestrator ruling):** <what changed, from what, and why — one paragraph>
+   ```
+
+Both edits go into the single `chore(orchestration): <slug> ruling <n>`
+commit (below), never into a commit of their own. On a retry, find the
+audit note by its label and the clause by its marker, and
+never apply the amendment twice.
+
+**Consequence in Phase 4, stated and intended.** The plan file is content
+for multi-code-review's effective-HEAD test (the blinding pathspecs
+exclude only the four sidecar patterns), so an `amend plan` ruling in
+Phase 4 moves the effective HEAD past the entry's completion marker. The
+controller then journals the addendum and ALWAYS starts a new invocation
+over the amended plan (template Deviation 5) — the whole branch is
+re-reviewed under the amended plan, which is what an amendment deserves —
+instead of one fix plus one verification re-review. That new invocation
+counts as one in-run resume against the cap (below), and its rounds are
+bounded by `N_code`.
+
 ## Major-Error Stop Policy
 
 In-run stop = append `## STOPPED` to the log, commit it, update

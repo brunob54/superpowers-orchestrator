@@ -156,6 +156,21 @@ TEMPLATES_LINE="$(first_line_of "$ORCH_SKILL" '## Prompt Templates')"
 assert_in_range "Guard Interaction names the forks' marker" \
   "$ORCH_SKILL" 'fork' "$GUARD_LINE" "$TEMPLATES_LINE" fragment
 
+bold "4. Ruling record, answers and plan amendment (R4, R5)"
+for pin in '-open-decisions.md' '**Follow-up:**' '## Ruling <n>' \
+           '(orchestrator):' 'decided (orchestrator)' 'amend plan:' \
+           'plan governs:' 'fix it:' 'accept:' '**Amendment' \
+           '[task <n>/<k>]'; do
+  assert_in_range "ruling-record or answer pin '$pin'" \
+    "$ORCH_SKILL" "$pin" "$RULINGS_LINE" "$RULINGS_END" exact
+done
+for frag in 'appended, never rewritten' '(amended by ruling' \
+            'never apply the amendment twice' 'new invocation' \
+            'untagged' 'sides against binding plan text'; do
+  assert_in_range "ruling-record or answer fragment '$frag'" \
+    "$ORCH_SKILL" "$frag" "$RULINGS_LINE" "$RULINGS_END" fragment
+done
+
 # --- end of checks ---
 
 echo
