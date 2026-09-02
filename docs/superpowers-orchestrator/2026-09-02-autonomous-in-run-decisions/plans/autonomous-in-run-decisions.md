@@ -1587,7 +1587,7 @@ git commit -m "feat(multi-code-review): loop decides findings against decided wo
   - Invariants: `(orchestrator)`, `(user)`, `[task <n>/<k>]` occur in the `[RESUME_ANSWER]` placeholder documentation; `### Question <k>`, `### Conflict <k>`, `lowest-numbered task`, `is settled` occur in the file.
   - Verification: section 9 of `bash tests/in-run-rulings/run-tests.sh`.
 
-- [ ] **Step 1: Add the section 9 checks**
+- [x] **Step 1: Add the section 9 checks**
 
 Insert immediately above the line `# --- end of checks ---` of `tests/in-run-rulings/run-tests.sh`:
 
@@ -1623,12 +1623,12 @@ done
 
 ```
 
-- [ ] **Step 2: Run the suite to verify it fails**
+- [x] **Step 2: Run the suite to verify it fails**
 
 Run: `bash tests/in-run-rulings/run-tests.sh; echo "exit=$?"`
 Expected: FAIL — every section 9 check reports `FAIL:` except the two code-review-loop `(user)` pins (the existing `decided (user)` text contains `(user)` in both ranges); `exit=1`.
 
-- [ ] **Step 3: Update code-review-loop-prompt.md**
+- [x] **Step 3: Update code-review-loop-prompt.md**
 
 Make these three replacements:
 
@@ -1695,7 +1695,7 @@ Make these three replacements:
    >   `(orchestrator)` or `(user)`. Authoritative either way — the
    >   controller records them as `decided (<who>): <answer>` (Deviation 5)
 
-- [ ] **Step 4: Update batch-controller-prompt.md**
+- [x] **Step 4: Update batch-controller-prompt.md**
 
 Make these three replacements:
 
@@ -1753,7 +1753,7 @@ Make these three replacements:
    >   `(user)`; authoritative either way — the controller hands each to
    >   the task's implementer as authoritative instead of re-deriving it
 
-- [ ] **Step 5: Run every gate to verify they pass**
+- [x] **Step 5: Run every gate to verify they pass**
 
 Run: `bash tests/in-run-rulings/run-tests.sh; echo "exit=$?"`
 Expected: PASS — sections 1–9 all `PASS:`, `0 failed`, `exit=0`.
@@ -1764,7 +1764,7 @@ Expected: `rt=0`, `wp=0`, `codex=0`.
 Run: `git status --porcelain`
 Expected: only the three files of this task are modified (`CLAUDE.md` never appears — it is ignored).
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add tests/in-run-rulings/run-tests.sh skills/orchestrating-development/code-review-loop-prompt.md skills/orchestrating-development/batch-controller-prompt.md
