@@ -228,6 +228,24 @@ else
   bad "stop policy still lists 'pre-flight plan conflict;' (range $RULINGS_END..$GUARD_LINE)"
 fi
 
+bold "7. multi-code-review attribution and self-sufficient lines (R8.1, R8.2)"
+for pin in 'decided (orchestrator)' 'decided (<who>)' \
+           'plan governs (orchestrator decision)' 'plan governs (user decision)' \
+           '`decided (user)` or `decided (orchestrator)`' \
+           '— clause:' 'clause: none' '(plan-mandated) — at ' \
+           '160 characters'; do
+  assert_pin "multi-code-review pin '$pin'" "$MCR_SKILL" "$pin"
+done
+MCR_FORMAT_LINE="$(line_containing_after "$MCR_SKILL" '_Invocation <k> — YYYY-MM-DD — N=<n> M=<m>' 0)"
+MCR_FORMAT_END="$(line_containing_after "$MCR_SKILL" 'Round entry with M ≥ 2' "$MCR_FORMAT_LINE")"
+MCR_M2_END="$(line_starting_with_after "$MCR_SKILL" '```' "$(line_starting_with_after "$MCR_SKILL" '```' "$MCR_FORMAT_END")")"
+assert_in_range "M = 1 log-format example carries the clause" \
+  "$MCR_SKILL" 'user-decision — <finding summary> (plan-mandated) — at <file:line> — clause:' \
+  "$MCR_FORMAT_LINE" "$MCR_FORMAT_END" exact
+assert_in_range "M >= 2 log-format example carries the clause before the annotation" \
+  "$MCR_SKILL" '— clause: <plan location> "<quoted plan text>" ← 1/3: r1:I1' \
+  "$MCR_FORMAT_END" "$((MCR_M2_END + 1))" exact
+
 # --- end of checks ---
 
 echo

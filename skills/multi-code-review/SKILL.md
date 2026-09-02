@@ -266,8 +266,9 @@ same way, with subject `chore(review): <slug> skipped` — the log is tracked
 by design, and an entry left uncommitted would show as an uncommitted
 change at the next boundary. A post-loop addendum that records the
 invoker-supplied decisions
-on open items (disposition `decided (user): <answer>`, "Resolving
-user-decision and unresolved items" below) is committed the same way,
+on open items (disposition `decided (<who>): <answer>`, `<who>` being
+`user` or `orchestrator` — "Resolving user-decision and unresolved
+items" below) is committed the same way,
 with subject `chore(review): <slug> decisions`. Each round, and the loop
 itself, ends with
 a tree that is clean except for changes that already existed when the loop
@@ -742,7 +743,7 @@ _Invocation <k> — YYYY-MM-DD — N=<n> M=<m> — BASE..HEAD <base7>..<head7> �
 ### Dispositions
 - [C1] fixed — <finding summary> → <fix commit sha>
 - [I1] rejected: <reason> — <finding summary>
-- [I2] user-decision — <finding summary> (plan-mandated)
+- [I2] user-decision — <finding summary> (plan-mandated) — at <file:line> — clause: <plan location> "<quoted plan text>"
 - [M2] carried — <finding summary>
 
 _Completed — YYYY-MM-DD — <converged|cap reached> — HEAD <sha>_
@@ -763,7 +764,7 @@ in reviewer order):
 **Converged:** no
 ### Dispositions
 - [C1] fixed — <finding summary> → <fix commit sha> ← 2/3: r1:C1, r3:I1
-- [I1] user-decision — <finding summary> (plan-mandated) ← 1/3: r1:I1
+- [I1] user-decision — <finding summary> (plan-mandated) — at <file:line> — clause: <plan location> "<quoted plan text>" ← 1/3: r1:I1
 - [I2] rejected: <reason> — <finding summary> ← 1/3: r2:I1
 - [M1] carried — <finding summary> ← 1/3: r2:M1
 ```
@@ -809,7 +810,7 @@ Rules for the added lines:
   is present). A `— harness probe: <observation>` clause (Triage, Harness
   claims item 2) sits after the disposition text and before the ` ← `
   annotation, never after it. Two kinds of disposition line carry no annotation:
-  post-loop addendum lines (`decided (user): …`, addendum `fixed …`), and
+  post-loop addendum lines (`decided (<who>): …`, addendum `fixed …`), and
   the round-1 lines written for the **Carried findings (round 1)** items
   of the Triage step — findings carried from an earlier invocation's ledger, which
   are decided from the reviewers' recommendations and never enter the
@@ -858,6 +859,26 @@ changes only the log; a failed round keeps the normal
 `- inconclusive — <reason>`; verification re-reviews use the
 `## Round <i> verification <c>` header with no Converged line.
 
+**Self-sufficient open-item lines.** A `user-decision` or `unresolved:`
+disposition line carries, after its summary and before any ` ← `
+annotation, the clause `— at <file:line> — clause: <plan location>
+"<quoted plan text>"`, where `<plan location>` is `Global Constraints`
+or `Task <n>` (the task whose text the finding collides with), or `none`
+for an `unresolved` item that collides with nothing, in which case the
+quoted text is omitted. The existing `(plan-mandated)` tag stays where it
+is, before the new clause. The quoted plan text is at most
+160 characters long and never contains the sequences ` ← ` or ` — `;
+either is replaced by a single space. Two full lines:
+
+```
+- [I2] user-decision — helper skips the 0/0 case (plan-mandated) — at tests/helpers.sh:251 — clause: Task 6 "the helper skips a 0/0 round" ← 1/3: r1:I2
+- [C1] unresolved: verification cap — race in the retry path — at src/retry.js:40 — clause: none
+```
+
+The line keeps its prefix; the source annotation stays last. This is
+what lets the orchestrator classify the item from the log alone
+(orchestrating-development, `## In-run rulings`).
+
 ## After the Loop
 
 Append the completion marker `_Completed — <date> — <converged|cap
@@ -889,15 +910,29 @@ accepted findings originate in different rounds, `<i>` — for the fix
 commit subject and the `## Round <i> verification <c>` header alike — is the
 **highest** originating round, and the single verification re-review runs
 under that round's lens. Plan
-governs → `rejected: plan governs (user decision)`. Double-fix-failure
+governs → `rejected: plan governs (user decision)`; for an answer tagged
+`(orchestrator)`, `rejected: plan governs (orchestrator decision) —
+"<clause>"`, `<clause>` being the plan, spec or skill text the answer
+quotes, verbatim — an orchestrator `plan governs` always carries one.
+An `amend plan: …; fix it: …` answer takes the finding-governs path for
+its `fix it` part (the plan is already amended when the answer arrives;
+the amendment commit moved the effective HEAD, so the verification
+re-review is skipped and the new invocation that always follows reviews
+the fix — pipeline-mode paragraph below). An `accept: <reason>` answer
+is an item decided without a code change: its `decided (<who>): accept:
+<reason>` line is its whole disposition, it no longer counts as
+unresolved, and no fix or re-review runs. Double-fix-failure
 items: the user chooses re-dispatch, manual fix, or accept-risk with
 documented rationale (logged). The gate condition is then re-evaluated —
 no loop re-run needed.
 
 In pipeline mode the decisions may arrive on a later dispatch instead — the
-orchestrator's `[RESUME_ANSWER]` placeholder carries the user's answers to
-the open items by review-log id: each named item gets the disposition
-`decided (user): <answer>` in a post-loop addendum on the log's LATEST
+orchestrator's `[RESUME_ANSWER]` placeholder carries the answers to the
+open items by review-log id — one line per item, tagged
+`(orchestrator)` or `(user)`; an untagged line is a user line: each
+named item gets the disposition `decided (<who>): <answer>` — that is
+`decided (orchestrator): <answer>` or `decided (user): <answer>`,
+`<who>` taken from the tag — in a post-loop addendum on the log's LATEST
 completed invocation entry — a latest entry without a completion marker is
 an interrupted invocation, resumed at its next round (Pipeline rule 3)
 with nothing journaled twice — committed as
@@ -915,7 +950,8 @@ unchanged while the new entry's `_Invocation` line is committed together
 with it, in the same commit (Pipeline rule 4). Over an unchanged effective
 HEAD no new invocation runs. The addendum is idempotent, because a retry
 after a lost return carries the same answers again: an id that already
-holds a `decided (user)` line is skipped, and an accepted fix whose fix
+holds a `decided (user)` or `decided (orchestrator)` line is skipped,
+and an accepted fix whose fix
 commit already exists is not dispatched again — found in `git log` by the
 `<sha>` the `fixed` line records (the token immediately after `→ `, before
 any ` ← ` source annotation) or, when none was recorded, by the fix
