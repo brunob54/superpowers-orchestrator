@@ -246,6 +246,18 @@ assert_in_range "M >= 2 log-format example carries the clause before the annotat
   "$MCR_SKILL" '— clause: <plan location> "<quoted plan text>" ← 1/3: r1:I1' \
   "$MCR_FORMAT_END" "$((MCR_M2_END + 1))" exact
 
+bold "8. Loop-side rule for verification cycles (R8.3)"
+NO_FIX_LINE="$(line_containing_after "$MCR_SKILL" '**No fix ships unreviewed:**' 0)"
+NO_FIX_END="$(line_starting_with_after "$MCR_SKILL" '## ' "$NO_FIX_LINE")"
+assert_in_range "loop-decision rejection shape" \
+  "$MCR_SKILL" 'plan governs (loop decision)' "$NO_FIX_LINE" "$NO_FIX_END" exact
+for frag in 'a Critical is never rejected under this rule' 'decided wording' \
+            '(amended by ruling' 'same BASE' 'never edits plan text' \
+            '3-cycle cap is unchanged'; do
+  assert_in_range "loop-side rule fragment '$frag'" \
+    "$MCR_SKILL" "$frag" "$NO_FIX_LINE" "$NO_FIX_END" fragment
+done
+
 # --- end of checks ---
 
 echo

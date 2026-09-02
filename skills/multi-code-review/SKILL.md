@@ -641,6 +641,28 @@ code has been revised since, so a re-pass is meaningful):
    restarting the count); findings still standing
    become `unresolved: verification cap` items (blocking).
 
+   **Decided wording in a verification cycle.** In a
+   `## Round <i> verification <c>` cycle, a Critical/Important finding
+   whose objection is against **decided wording** is the loop's to decide,
+   never `user-decision`: reject it quoting the decision line,
+   `rejected: plan governs (loop decision) — "<decision line>"`. Decided
+   wording is, exactly: text whose clause is quoted on a `decided (<who>):`
+   line or on a `rejected: plan governs (… decision)` line of any
+   `_Invocation` entry of the same orchestration run (same BASE), and a
+   plan clause carrying the marker `(amended by ruling <n>)` — so a
+   decision made in an earlier invocation, including an amendment that
+   started a new invocation, still counts. `fixed` and ordinary
+   `rejected: <reason>` dispositions are not decisions.
+   A Critical is never rejected under this rule: a Critical against
+   decided wording is logged `user-decision` and reaches the
+   orchestrator's predicate. A finding
+   against binding plan text that no decision has settled stays
+   `user-decision` (the orchestrator decides it, with its guards); a
+   finding against reference plan text or against the code the fix changed
+   stays an ordinary finding. The loop never edits plan text and never
+   applies a fix that contradicts binding text — the orchestrator's guards
+   are the only route to that. The 3-cycle cap is unchanged.
+
    A partial verification cycle (1 ≤ u < M) counts as a cycle, and its
    usable reports' findings are triaged normally. A partial round or cycle
    satisfies "a later round with a usable report ran on the updated
