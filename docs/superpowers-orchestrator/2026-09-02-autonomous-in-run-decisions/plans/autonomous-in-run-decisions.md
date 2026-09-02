@@ -470,7 +470,7 @@ git commit -m "feat(orchestrating-development): state the classification read ex
   - Must convey: forks dispatched under `## In-run rulings` open their return with `<!-- multi-review report -->`, which the guard already exempts.
   - Verification: section 3 finds `fork` between `## Guard Interaction` and `## Prompt Templates`.
 
-- [ ] **Step 1: Add the section 3 checks**
+- [x] **Step 1: Add the section 3 checks**
 
 Insert immediately above the line `# --- end of checks ---` of `tests/in-run-rulings/run-tests.sh`:
 
@@ -494,12 +494,12 @@ assert_in_range "Guard Interaction names the forks' marker" \
 
 ```
 
-- [ ] **Step 2: Run the suite to verify it fails**
+- [x] **Step 2: Run the suite to verify it fails**
 
 Run: `bash tests/in-run-rulings/run-tests.sh; echo "exit=$?"`
 Expected: FAIL — every section 3 check reports `FAIL:` (the text Tasks 1–2 wrote contains none of the pins or fragments), `exit=1`.
 
-- [ ] **Step 3: Append the fork-review subsection**
+- [x] **Step 3: Append the fork-review subsection**
 
 Insert immediately above the line `## Major-Error Stop Policy`:
 
@@ -621,18 +621,18 @@ environment failure.
 
 ````
 
-- [ ] **Step 4: Add the Guard Interaction sentence**
+- [x] **Step 4: Add the Guard Interaction sentence**
 
 In `## Guard Interaction`, after the sentence ending `…emit `<!-- multi-review report -->`, which the guard already exempts.`, append:
 
 > Forks dispatched under `## In-run rulings` open their return with that same `<!-- multi-review report -->` marker; a fork return without it is a lost return under that section's rule, never a reason to remove the marker instruction from the fork prompt.
 
-- [ ] **Step 5: Run the suite to verify it passes**
+- [x] **Step 5: Run the suite to verify it passes**
 
 Run: `bash tests/in-run-rulings/run-tests.sh; echo "exit=$?"`
 Expected: PASS — sections 1–3 all `PASS:`, `0 failed`, `exit=0`.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add tests/in-run-rulings/run-tests.sh skills/orchestrating-development/SKILL.md
