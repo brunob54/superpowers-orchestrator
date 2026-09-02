@@ -9,7 +9,13 @@ PROMPTS_DIR="$SCRIPT_DIR/prompts"
 
 SKILLS=(
     "systematic-debugging"
-    "test-driven-development"
+    # brainstorming, not test-driven-development: the routing guide reaches
+    # test-driven-development only after systematic-debugging has run, so no
+    # single naive prompt can select it. The prompt kept here is the feature
+    # request that this suite used to file under test-driven-development; the
+    # router sends it to brainstorming, which is the documented behaviour for a
+    # request that introduces behaviour and carries no design yet.
+    "brainstorming"
     "writing-plans"
     "dispatching-parallel-agents"
     "executing-plans"

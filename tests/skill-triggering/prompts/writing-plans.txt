@@ -1,10 +1,7 @@
-Here's the spec for our new authentication system:
+We finished the design discussion for the authentication system and the
+approach is settled: registration with email and password, a JWT token that
+expires after 24 hours, middleware that guards the protected routes, and
+password reset by email. Nothing about the design is still open.
 
-Requirements:
-- Users can register with email/password
-- Users can log in and receive a JWT token
-- Protected routes require valid JWT
-- Tokens expire after 24 hours
-- Support password reset via email
-
-We need to implement this. There are multiple steps involved - user model, auth routes, middleware, email service integration.
+Write a plan for the implementation. Break it down into tasks someone else can
+pick up, in the order they should be done.

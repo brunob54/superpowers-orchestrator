@@ -65,6 +65,16 @@ prompt.txt — the naive prompt under test
 (none)
 PROJECT_MAP
 
+# Copy this skill's fixture, when it has one. Some prompts name a file the
+# session is expected to act on — a plan to execute, for example. Without that
+# file the session correctly reports the file as missing instead of invoking
+# the skill, and the test reads it as a routing failure that did not happen.
+FIXTURE_DIR="$SCRIPT_DIR/fixtures/$SKILL_NAME"
+if [ -d "$FIXTURE_DIR" ]; then
+    cp -R "$FIXTURE_DIR"/. "$OUTPUT_DIR"/
+    echo "Fixture: copied $FIXTURE_DIR"
+fi
+
 # Run Claude
 LOG_FILE="$OUTPUT_DIR/claude-output.json"
 cd "$OUTPUT_DIR"
