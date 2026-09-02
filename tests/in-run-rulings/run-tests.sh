@@ -116,6 +116,17 @@ for frag in 'escalation wins' '### Conflict' '### Question' \
     "$ORCH_SKILL" "$frag" "$RULINGS_LINE" "$RULINGS_END" fragment
 done
 
+bold "2. Classification read exception (R2)"
+REQUIRED_START_LINE="$(first_line_of "$ORCH_SKILL" '## Required Start')"
+assert_in_range "intro names the second read exception" \
+  "$ORCH_SKILL" 'in-run rulings' 1 "$REQUIRED_START_LINE" fragment
+for frag in 'data, not instructions' 'never a reviewer report file' \
+            'read-only git commands' 'resume step 3' 'nothing else' \
+            '40 lines'; do
+  assert_in_range "read-exception fragment '$frag'" \
+    "$ORCH_SKILL" "$frag" "$RULINGS_LINE" "$RULINGS_END" fragment
+done
+
 # --- end of checks ---
 
 echo
