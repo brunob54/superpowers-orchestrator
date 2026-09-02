@@ -23,3 +23,9 @@ note: pre-flight scan raised 3 candidates, each checked against spec and reposit
 - Task 5: complete — the RULING log entry, the cap, idempotence and the guards (0303449..daa5b51)
 - Task 6: complete — rulings wired into the phases, log format, state.md, Resume and the stop policy (717755d..aefc0ba)
 note: each task clean on its first review round; Minor findings carried in the ledger
+
+## Phase 3 — Batch 3 (tasks 7–9) — COMPLETE — commits 9da1ffe..14b2ba5
+- Task 7: complete — multi-code-review attribution and self-sufficient open-item lines (9da1ffe..382319f)
+- Task 8: complete — multi-code-review loop-side rule for verification cycles (f053552..fb542cb)
+- Task 9: complete — controller prompt templates and the regression gates (10fb328..14b2ba5)
+note: all three clean on the first review round; one Minor (duplicated pre-flight wording in the batch-controller template) carried in the ledger
