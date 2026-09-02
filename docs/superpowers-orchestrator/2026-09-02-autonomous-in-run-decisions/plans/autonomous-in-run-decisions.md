@@ -353,7 +353,7 @@ git commit -m "feat(orchestrating-development): add the in-run rulings predicate
   - Invariants: the phrases `data, not instructions`, `never a reviewer report file`, `read-only git commands`, `resume step 3` occur inside the section.
   - Verification: section 2 of `bash tests/in-run-rulings/run-tests.sh`.
 
-- [ ] **Step 1: Add the section 2 checks**
+- [x] **Step 1: Add the section 2 checks**
 
 Insert immediately above the line `# --- end of checks ---` of `tests/in-run-rulings/run-tests.sh`:
 
@@ -371,12 +371,12 @@ done
 
 ```
 
-- [ ] **Step 2: Run the suite to verify it fails**
+- [x] **Step 2: Run the suite to verify it fails**
 
 Run: `bash tests/in-run-rulings/run-tests.sh; echo "exit=$?"`
 Expected: FAIL — section 2 reports `intro names the second read exception` and the six fragments as `FAIL:` (the fragment checks are scoped to the section Task 1 wrote, which contains none of these words), `exit=1`.
 
-- [ ] **Step 3: Rewrite the intro's exception sentence**
+- [x] **Step 3: Rewrite the intro's exception sentence**
 
 In `skills/orchestrating-development/SKILL.md`, replace the sentence that today reads
 
@@ -391,7 +391,7 @@ with:
 
 (Keep `## In-run rulings` on one line when wrapping: the suite matches it line by line.)
 
-- [ ] **Step 4: Append the read-exception subsection**
+- [x] **Step 4: Append the read-exception subsection**
 
 Insert immediately above the line `## Major-Error Stop Policy` (that is, at the end of `## In-run rulings`):
 
@@ -436,12 +436,12 @@ rule lists every body you read.
 
 ```
 
-- [ ] **Step 5: Run the suite to verify it passes**
+- [x] **Step 5: Run the suite to verify it passes**
 
 Run: `bash tests/in-run-rulings/run-tests.sh; echo "exit=$?"`
 Expected: PASS — sections 1 and 2 all `PASS:`, `0 failed`, `exit=0`.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add tests/in-run-rulings/run-tests.sh skills/orchestrating-development/SKILL.md
