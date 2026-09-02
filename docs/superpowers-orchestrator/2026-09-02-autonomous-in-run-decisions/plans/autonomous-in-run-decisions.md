@@ -662,7 +662,7 @@ git commit -m "feat(orchestrating-development): fork review under distinct lense
   - Invariants: `(orchestrator):`, `decided (orchestrator)`, `amend plan:`, `plan governs:`, `fix it:`, `accept:`, `**Amendment` occur inside the section; the fragments `(amended by ruling`, `never apply the amendment twice`, `new invocation`, `sides against binding plan text` occur.
   - Verification: section 4 of `bash tests/in-run-rulings/run-tests.sh`.
 
-- [ ] **Step 1: Add the section 4 checks**
+- [x] **Step 1: Add the section 4 checks**
 
 Insert immediately above the line `# --- end of checks ---` of `tests/in-run-rulings/run-tests.sh`:
 
@@ -684,12 +684,12 @@ done
 
 ```
 
-- [ ] **Step 2: Run the suite to verify it fails**
+- [x] **Step 2: Run the suite to verify it fails**
 
 Run: `bash tests/in-run-rulings/run-tests.sh; echo "exit=$?"`
 Expected: FAIL — every section 4 check reports `FAIL:` (the text Tasks 1–3 wrote contains none of the pins or fragments); `exit=1`.
 
-- [ ] **Step 3: Append the two subsections**
+- [x] **Step 3: Append the two subsections**
 
 Insert immediately above the line `## Major-Error Stop Policy`:
 
@@ -813,12 +813,12 @@ bounded by `N_code`.
 
 ````
 
-- [ ] **Step 4: Run the suite to verify it passes**
+- [x] **Step 4: Run the suite to verify it passes**
 
 Run: `bash tests/in-run-rulings/run-tests.sh; echo "exit=$?"`
 Expected: PASS — sections 1–4 all `PASS:`, `0 failed`, `exit=0`.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add tests/in-run-rulings/run-tests.sh skills/orchestrating-development/SKILL.md
