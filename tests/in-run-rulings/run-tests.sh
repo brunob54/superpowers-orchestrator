@@ -258,6 +258,35 @@ for frag in 'a Critical is never rejected under this rule' 'decided wording' \
     "$MCR_SKILL" "$frag" "$NO_FIX_LINE" "$NO_FIX_END" fragment
 done
 
+bold "9. Controller prompt templates (R10)"
+LOOP_RA_LINE="$(line_containing_after "$LOOP_PROMPT" '`[RESUME_ANSWER]` — OPTIONAL' 0)"
+LOOP_RA_END="$(line_containing_after "$LOOP_PROMPT" '**Nothing else may be added to the prompt.**' "$LOOP_RA_LINE")"
+for pin in '(orchestrator)' '(user)' 'decided (<who>)'; do
+  assert_in_range "code-review-loop [RESUME_ANSWER] doc pin '$pin'" \
+    "$LOOP_PROMPT" "$pin" "$LOOP_RA_LINE" "$LOOP_RA_END" exact
+done
+assert_in_range "code-review-loop [RESUME_ANSWER] doc says authoritative either way" \
+  "$LOOP_PROMPT" 'authoritative either way' "$LOOP_RA_LINE" "$LOOP_RA_END" fragment
+LOOP_DEV5_LINE="$(line_containing_after "$LOOP_PROMPT" '5. Resume answer:' 0)"
+LOOP_RETURN_LINE="$(line_containing_after "$LOOP_PROMPT" '## Return' "$LOOP_DEV5_LINE")"
+for pin in '(orchestrator)' '(user)' 'decided (<who>)' \
+           '`decided (user)` or `decided (orchestrator)`'; do
+  assert_in_range "code-review-loop Deviation 5 pin '$pin'" \
+    "$LOOP_PROMPT" "$pin" "$LOOP_DEV5_LINE" "$LOOP_RETURN_LINE" exact
+done
+BATCH_RA_LINE="$(line_containing_after "$BATCH_PROMPT" '`[RESUME_ANSWER]` — OPTIONAL' 0)"
+BATCH_RA_END="$(line_containing_after "$BATCH_PROMPT" '**Nothing else may be added to the prompt.**' "$BATCH_RA_LINE")"
+for pin in '(orchestrator)' '(user)' '[task <n>/<k>]'; do
+  assert_in_range "batch-controller [RESUME_ANSWER] doc pin '$pin'" \
+    "$BATCH_PROMPT" "$pin" "$BATCH_RA_LINE" "$BATCH_RA_END" exact
+done
+assert_in_range "batch-controller [RESUME_ANSWER] doc says authoritative either way" \
+  "$BATCH_PROMPT" 'authoritative either way' "$BATCH_RA_LINE" "$BATCH_RA_END" fragment
+for pin in '### Question <k>' '### Conflict <k>' 'lowest-numbered task' \
+           '.superpowers/sdd/task-<n>-report.md' 'is settled'; do
+  assert_pin "batch-controller report-section pin '$pin'" "$BATCH_PROMPT" "$pin"
+done
+
 # --- end of checks ---
 
 echo

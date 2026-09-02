@@ -114,9 +114,11 @@ Agent tool (general-purpose):
        pathspecs". Never hand a reviewer a diff produced without them:
        the branch under review now contains its own review log.
     5. Resume answer: the `## Resume Answer` section, when present, holds
-       the user's decisions on the open items — the `user-decision` and
+       the decisions on the open items — the `user-decision` and
        `unresolved` dispositions — of the review log's CURRENT invocation
-       entry, named by their review-log ids. No review log at
+       entry, named by their review-log ids, one line per item, each
+       tagged `(orchestrator)` or `(user)`; an untagged line is a user
+       line. Authoritative either way. No review log at
        `[TOPIC_DIR]/implementation/` (a run migrated from the pre-7.3.0
        layout): ignore the `## Resume Answer` section and start
        invocation 1. The CURRENT entry is the
@@ -131,7 +133,8 @@ Agent tool (general-purpose):
        written; it has moved when code was committed after the stop.
        Then append a post-loop addendum to that entry recording, for
        each item the answer names, the disposition
-       `decided (user): <answer>`. An item the answer resolves without a
+       `decided (<who>): <answer>`, `<who>` being the line's tag
+       (`orchestrator` or `user`). An item the answer resolves without a
        code change leaves the `unresolved` and `user_decision` counts of
        your return; an item the answer accepts as a finding to fix
        follows the skill's "Resolving user-decision and unresolved items"
@@ -155,10 +158,11 @@ Agent tool (general-purpose):
        does the addendum update the marker.
        Idempotence — a retry after a lost return carries the same
        `## Resume Answer` again: for each answered id, skip the item when
-       the latest invocation entry already holds a `decided (user)` line
-       for it (when the previous attempt had already started the new
-       invocation, the latest entry is that new one and the `decided
-       (user)` lines stand in the entry before it — an id already decided
+       the latest invocation entry already holds a `decided (user)` or `decided (orchestrator)`
+       line for it (when the previous attempt had already started the
+       new invocation, the latest entry is that new one and the
+       `decided (…)` lines stand in the entry before it — an id already
+       decided
        there is spent as well: journal nothing for it on the new entry);
        for a `fix it` answer, also skip the fix dispatch when the fix
        commit already exists — first search `git log` for the `<sha>` the
@@ -203,10 +207,11 @@ Agent tool (general-purpose):
 - `[LEDGER_PATH]` — REQUIRED: absolute path of
   `.superpowers/sdd/progress.md` at the repo root
 - `[RESUME_ANSWER]` — OPTIONAL: omitted, together with its `## Resume
-  Answer` heading, on a first dispatch; filled only when re-dispatching
-  after a stop that left `unresolved` or `user_decision` items, with the
-  user's decisions on those items by review-log id. Authoritative — the
-  controller records them as `decided (user): <answer>` (Deviation 5)
+  Answer` heading, on a first dispatch; filled when re-dispatching
+  after a return that left `unresolved` or `user_decision` items, with
+  the decisions on those items by review-log id, each line tagged
+  `(orchestrator)` or `(user)`. Authoritative either way — the
+  controller records them as `decided (<who>): <answer>` (Deviation 5)
 
 **Nothing else may be added to the prompt.**
 

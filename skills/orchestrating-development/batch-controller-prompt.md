@@ -60,7 +60,12 @@ Agent tool (general-purpose):
     Tasks to implement, in order: [TASK_LIST]
     First batch: [FIRST_BATCH]  (if "yes": run SDD's "Pre-Flight Plan
     Review" over the whole plan before task 1; any conflict → return
-    BLOCKED for that conflict — never best-guess it)
+    `BLOCKED task=<n>`, `<n>` the lowest-numbered task the conflict
+    touches, with its `### Conflict <k>` sections written to that
+    task's report file as Deviation 1 states — never best-guess it. A
+    conflict whose `[task <n>/<k>]` line is present in `## Resume
+    Answer` is settled: apply that answer and never return BLOCKED
+    for it again)
 
     ## Resume Answer (omit this whole section on a first dispatch)
 
@@ -69,8 +74,15 @@ Agent tool (general-purpose):
     ## Deviations (binding)
 
     1. Never ask the user. NEEDS_CONTEXT: answer from plan, spec, and
-       repository; underivable → BLOCKED. Blocker questions go in the
-       blocked task's report file — never `state.md`.
+       repository; underivable → BLOCKED. Every `BLOCKED task=<n>` for
+       an open item writes its detail to
+       `.superpowers/sdd/task-<n>-report.md` — never `state.md` — as
+       `### Question <k>` sections (one blocking question each, `<k>`
+       from 1) or `### Conflict <k>` sections (one plan conflict each,
+       quoting the plan text on both sides). A pre-flight conflict goes
+       into the report file of the lowest-numbered task it touches. A
+       `BLOCKED task=<n>` without such a section is read by the
+       orchestrator as a controller failure, not as an open item.
     2. Sequential only — no parallel waves inside a batch.
     3. On completing a task, tick EVERY checkbox under its `### Task N`
        heading in the plan (the orchestrator's completeness predicate is
@@ -136,10 +148,12 @@ Agent tool (general-purpose):
 - `[PLAN_PATH]` — REQUIRED: absolute plan path
 - `[FIRST_BATCH]` — REQUIRED: `yes` or `no`
 - `[RESUME_ANSWER]` — OPTIONAL: omitted, together with its `## Resume
-  Answer` heading, on a first dispatch; filled only when re-dispatching
-  after a `BLOCKED task=<n>` stop, with the user's answer to that task's
-  blocking question. Authoritative — the controller uses it instead of
-  re-deriving that answer
+  Answer` heading, on a first dispatch; filled when re-dispatching
+  after a `BLOCKED task=<n>` return, with the answers, one `[task <n>]`
+  or `[task <n>/<k>]` line each (`<k>` the `### Question <k>` or
+  `### Conflict <k>` section it answers), tagged `(orchestrator)` or
+  `(user)`; authoritative either way — the controller hands each to
+  the task's implementer as authoritative instead of re-deriving it
 - `[SDD_SKILL_PATH]` / `[SDD_SCRIPTS_DIR]` / `[IMPLEMENTER_PROMPT_PATH]` /
   `[TASK_REVIEWER_PROMPT_PATH]` — REQUIRED: absolute paths under
   `../subagent-driven-development/` resolved from this skill's base
