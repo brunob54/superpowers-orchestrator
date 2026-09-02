@@ -1014,7 +1014,7 @@ git commit -m "feat(orchestrating-development): RULING log entry, resume cap and
   - Invariants: the fragments `escalated` and `fork review unavailable` occur between `## Major-Error Stop Policy` and `## Guard Interaction`; the literal `pre-flight plan conflict;` no longer occurs there.
   - Verification: section 6 of the suite.
 
-- [ ] **Step 1: Add the section 6 checks**
+- [x] **Step 1: Add the section 6 checks**
 
 Insert immediately above the line `# --- end of checks ---` of `tests/in-run-rulings/run-tests.sh` (`GUARD_LINE` is defined by section 3):
 
@@ -1062,12 +1062,12 @@ fi
 
 ```
 
-- [ ] **Step 2: Run the suite to verify it fails**
+- [x] **Step 2: Run the suite to verify it fails**
 
 Run: `bash tests/in-run-rulings/run-tests.sh; echo "exit=$?"`
 Expected: FAIL — the Phase 3, Phase 4, Phase 5 checks, the log-format pins `## RULING`, `Ruled:`, `ruling <n> follow-up`, the `Rulings:` check, the resume pins except `(user)` (the existing `decided (user)` text already contains it), the `decided (user)` check, the two stop-policy fragments `escalated` and `fork review unavailable` and the pre-flight check report `FAIL:`; `exit=1`.
 
-- [ ] **Step 3: Rewrite Phase 3 step 5**
+- [x] **Step 3: Rewrite Phase 3 step 5**
 
 Replace the Phase 3 step 5 text
 
@@ -1087,7 +1087,7 @@ with:
 >    `[RESUME_ANSWER]`; a controller failure (no such section)
 >    → retry the identical dispatch once → major error → stop.
 
-- [ ] **Step 4: Rewrite the Phase 4 stop rule**
+- [x] **Step 4: Rewrite the Phase 4 stop rule**
 
 Replace the Phase 4 sentence
 
@@ -1113,7 +1113,7 @@ with:
 > resume prompt answers the open ids and Resume step 3 re-dispatches this
 > phase with every answer in `[RESUME_ANSWER]`.
 
-- [ ] **Step 5: Extend the Phase 5 report**
+- [x] **Step 5: Extend the Phase 5 report**
 
 In Phase 5 step 3, after `harness probes owed — … or `none` —` and before `and the three log paths`, insert:
 
@@ -1122,7 +1122,7 @@ In Phase 5 step 3, after `harness probes owed — … or `none` —` and before 
 > Forks line records `contradiction: unsettled`, listed by ruling number,
 > or `none` —
 
-- [ ] **Step 6: Extend the Orchestration Log Format**
+- [x] **Step 6: Extend the Orchestration Log Format**
 
 Replace the block
 
@@ -1195,7 +1195,7 @@ with:
 > `completed`, and for an in-run ruling `ruling <n>` and
 > `ruling <n> follow-up` (`## In-run rulings`).
 
-- [ ] **Step 7: Add the state.md line**
+- [x] **Step 7: Add the state.md line**
 
 In the `## Orchestration` block of `## state.md Section`, add after the `Position:` line:
 
@@ -1203,7 +1203,7 @@ In the `## Orchestration` block of `## state.md Section`, add after the `Positio
 Rulings: <count> (last: ruling <n>, phase <p>)
 ```
 
-- [ ] **Step 8: Rewrite Resume step 3**
+- [x] **Step 8: Rewrite Resume step 3**
 
 Replace the opening of step 3, from `3. Log ends with `## STOPPED` carrying a blocking question the resume` through `re-evaluates the counts
    (template Deviation 5).`, with:
@@ -1258,7 +1258,7 @@ Then confirm no mention is left between the two headings.
 Run: `awk '/^## Resume$/{f=1} /^## In-run rulings$/{f=0} f' skills/orchestrating-development/SKILL.md | grep -c "decided (user)"`
 Expected: `0`
 
-- [ ] **Step 9: Rewrite the Major-Error Stop Policy list**
+- [x] **Step 9: Rewrite the Major-Error Stop Policy list**
 
 Replace
 
@@ -1278,7 +1278,7 @@ with:
 > two usable fork returns for a design item); checkbox cross-check
 > mismatch; any controller malformed/failed twice;
 
-- [ ] **Step 10: Run the suite and the sibling suites to verify they pass**
+- [x] **Step 10: Run the suite and the sibling suites to verify they pass**
 
 Run: `bash tests/in-run-rulings/run-tests.sh; echo "exit=$?"`
 Expected: PASS — sections 1–6 all `PASS:`, `0 failed`, `exit=0`.
@@ -1286,7 +1286,7 @@ Expected: PASS — sections 1–6 all `PASS:`, `0 failed`, `exit=0`.
 Run: `bash tests/writing-plans/run-tests.sh >/dev/null; echo "wp=$?"`
 Expected: `wp=0`.
 
-- [ ] **Step 11: Commit**
+- [x] **Step 11: Commit**
 
 ```bash
 git add tests/in-run-rulings/run-tests.sh skills/orchestrating-development/SKILL.md
