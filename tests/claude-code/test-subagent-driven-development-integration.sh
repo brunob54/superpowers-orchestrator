@@ -148,6 +148,25 @@ IMPORTANT: Follow the skill exactly. I will be verifying that you:
 
 Begin now. Execute the plan."
 
+# Where Claude Code stores this run's transcript.
+# The path is ~/.claude/projects/<escaped-cwd>/<session-id>.jsonl, where
+# <escaped-cwd> is the ABSOLUTE path of the directory claude runs in with every
+# character that is not a letter or a digit replaced by "-". The leading "/"
+# becomes a leading "-", and "_" becomes "-" as well. The path must be resolved
+# first: "$SCRIPT_DIR/../.." still contains the literal "..".
+PLUGIN_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+WORKING_DIR_ESCAPED=$(echo "$PLUGIN_ROOT" | sed 's/[^a-zA-Z0-9]/-/g')
+SESSION_DIR="$HOME/.claude/projects/$WORKING_DIR_ESCAPED"
+
+# List the transcripts that already exist, so the one this run creates can be
+# identified afterwards by difference. Picking the newest file instead would be
+# wrong whenever an interactive session is open in this same repository: that
+# session writes to the same directory continuously and would always look
+# newest. Subagent transcripts (agent-*.jsonl) are excluded — the main session
+# transcript is the one the assertions read.
+SESSION_SNAPSHOT=$(mktemp)
+find "$SESSION_DIR" -name "*.jsonl" -type f ! -name "agent-*" 2>/dev/null | sort > "$SESSION_SNAPSHOT" || true
+
 echo "Running Claude (output will be shown below and saved to $OUTPUT_FILE)..."
 echo "================================================================================"
 cd "$SCRIPT_DIR/../.." && timeout 1800 claude -p "$PROMPT" --allowed-tools=all --add-dir "$TEST_PROJECT" --permission-mode bypassPermissions 2>&1 | tee "$OUTPUT_FILE" || {
@@ -162,17 +181,19 @@ echo ""
 echo "Execution complete. Analyzing results..."
 echo ""
 
-# Find the session transcript
-# Session files are in ~/.claude/projects/-<working-dir>/<session-id>.jsonl
-WORKING_DIR_ESCAPED=$(echo "$SCRIPT_DIR/../.." | sed 's/\//-/g' | sed 's/^-//')
-SESSION_DIR="$HOME/.claude/projects/$WORKING_DIR_ESCAPED"
-
-# Find the most recent session file (created during this test run)
-SESSION_FILE=$(find "$SESSION_DIR" -name "*.jsonl" -type f -mmin -60 2>/dev/null | sort -r | head -1)
+# The transcript this run created is the one that was not there before.
+# "|| true" is required: without it a missing directory makes "find" exit
+# non-zero, and "set -e" would kill the script here — before the guard below
+# could report what went wrong. That is a silent failure, not a diagnosis.
+SESSION_AFTER=$(mktemp)
+find "$SESSION_DIR" -name "*.jsonl" -type f ! -name "agent-*" 2>/dev/null | sort > "$SESSION_AFTER" || true
+SESSION_FILE=$(comm -13 "$SESSION_SNAPSHOT" "$SESSION_AFTER" | head -1 || true)
+rm -f "$SESSION_SNAPSHOT" "$SESSION_AFTER"
 
 if [ -z "$SESSION_FILE" ]; then
     echo "ERROR: Could not find session transcript file"
     echo "Looked in: $SESSION_DIR"
+    echo "No new *.jsonl appeared there during this run."
     exit 1
 fi
 
@@ -187,7 +208,11 @@ echo ""
 
 # Test 1: Skill was invoked
 echo "Test 1: Skill tool invoked..."
-if grep -q '"name":"Skill".*"skill":"superpowers:subagent-driven-development"' "$SESSION_FILE"; then
+# Accept any plugin namespace. The plugin is published as
+# "superpowers-orchestrator", so a pattern hard-coding "superpowers:" can never
+# match and the assertion would fail on a correct run.
+SDD_SKILL_PATTERN='"skill":"([^"]*:)?subagent-driven-development"'
+if grep -q '"name":"Skill"' "$SESSION_FILE" && grep -qE "$SDD_SKILL_PATTERN" "$SESSION_FILE"; then
     echo "  [PASS] subagent-driven-development skill was invoked"
 else
     echo "  [FAIL] Skill was not invoked"
@@ -197,7 +222,10 @@ echo ""
 
 # Test 2: Subagents were used (Task tool)
 echo "Test 2: Subagents dispatched..."
-task_count=$(grep -c '"name":"Task"' "$SESSION_FILE" || echo "0")
+# Subagents are dispatched through the Agent tool; older Claude Code versions
+# named the same tool Task. Accept either, so the assertion measures dispatches
+# rather than the CLI version.
+task_count=$(grep -cE '"name":"(Agent|Task)"' "$SESSION_FILE" || echo "0")
 if [ "$task_count" -ge 2 ]; then
     echo "  [PASS] $task_count subagents dispatched"
 else
@@ -206,13 +234,16 @@ else
 fi
 echo ""
 
-# Test 3: TodoWrite was used for tracking
-echo "Test 3: Task tracking..."
-todo_count=$(grep -c '"name":"TodoWrite"' "$SESSION_FILE" || echo "0")
-if [ "$todo_count" -ge 1 ]; then
-    echo "  [PASS] TodoWrite used $todo_count time(s) for task tracking"
+# Test 3: durable progress was recorded
+# The skill records position in the ledger at .superpowers/sdd/progress.md (its
+# "Durable Progress" section), not with TodoWrite. Asserting TodoWrite here
+# tested a design the skill no longer has, so it failed on correct runs.
+echo "Test 3: Durable progress ledger..."
+if [ -f "$TEST_PROJECT/.superpowers/sdd/progress.md" ]; then
+    ledger_lines=$(wc -l < "$TEST_PROJECT/.superpowers/sdd/progress.md")
+    echo "  [PASS] .superpowers/sdd/progress.md written ($ledger_lines lines)"
 else
-    echo "  [FAIL] TodoWrite not used"
+    echo "  [FAIL] .superpowers/sdd/progress.md not written"
     FAILED=$((FAILED + 1))
 fi
 echo ""

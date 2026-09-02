@@ -40,6 +40,41 @@ echo ""
 # Copy prompt for reference
 cp "$PROMPT_FILE" "$OUTPUT_DIR/prompt.txt"
 
+# Seed a project map so the entry sequence does not stop to ask about memory
+# setup. Without this file the session reaches the entry sequence's step-2
+# gate, sees a directory with no memory files, and — for a prompt that asks to
+# build something — asks the user a question instead of routing. In headless
+# mode nobody answers, so the session ends before any skill is chosen and the
+# test reports a routing failure that never happened.
+cat > "$OUTPUT_DIR/project-map.md" <<'PROJECT_MAP'
+# Project Map
+_Generated: fixture | Staleness: timestamps_
+
+## Directory Structure
+. — throwaway fixture for one skill-triggering test; holds only the prompt
+
+## Key Files
+prompt.txt — the naive prompt under test
+
+## Critical Constraints
+- This directory is a test fixture. It has no source code and no git
+  repository. The file exists so the entry sequence's memory-setup gate does
+  not fire; routing is what the test measures.
+
+## Hot Files
+(none)
+PROJECT_MAP
+
+# Copy this skill's fixture, when it has one. Some prompts name a file the
+# session is expected to act on — a plan to execute, for example. Without that
+# file the session correctly reports the file as missing instead of invoking
+# the skill, and the test reads it as a routing failure that did not happen.
+FIXTURE_DIR="$SCRIPT_DIR/fixtures/$SKILL_NAME"
+if [ -d "$FIXTURE_DIR" ]; then
+    cp -R "$FIXTURE_DIR"/. "$OUTPUT_DIR"/
+    echo "Fixture: copied $FIXTURE_DIR"
+fi
+
 # Run Claude
 LOG_FILE="$OUTPUT_DIR/claude-output.json"
 cd "$OUTPUT_DIR"
