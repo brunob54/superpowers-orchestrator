@@ -1316,7 +1316,7 @@ git commit -m "feat(orchestrating-development): route open items through in-run 
   - Invariants: `— clause:`, `clause: none`, `(plan-mandated) — at ` occur in the file; both log-format examples of a `user-decision` line carry `— clause:`.
   - Verification: section 7 of `bash tests/in-run-rulings/run-tests.sh`.
 
-- [ ] **Step 1: Add the section 7 checks**
+- [x] **Step 1: Add the section 7 checks**
 
 Insert immediately above the line `# --- end of checks ---` of `tests/in-run-rulings/run-tests.sh`:
 
@@ -1341,12 +1341,12 @@ assert_in_range "M >= 2 log-format example carries the clause before the annotat
 
 ```
 
-- [ ] **Step 2: Run the suite to verify it fails**
+- [x] **Step 2: Run the suite to verify it fails**
 
 Run: `bash tests/in-run-rulings/run-tests.sh; echo "exit=$?"`
 Expected: FAIL — every section 7 check except `plan governs (user decision)` reports `FAIL:`; `exit=1`.
 
-- [ ] **Step 3: Generalize the attribution**
+- [x] **Step 3: Generalize the attribution**
 
 In `skills/multi-code-review/SKILL.md` make these four replacements:
 
@@ -1399,7 +1399,7 @@ In `skills/multi-code-review/SKILL.md` make these four replacements:
    > holds a `decided (user)` or `decided (orchestrator)` line is skipped,
    > and an accepted fix whose fix
 
-- [ ] **Step 4: Add the orchestrator rejection shape**
+- [x] **Step 4: Add the orchestrator rejection shape**
 
 In the "Resolving user-decision and unresolved items" rule, replace
 
@@ -1422,7 +1422,7 @@ with
 > <reason>` line is its whole disposition, it no longer counts as
 > unresolved, and no fix or re-review runs. Double-fix-failure
 
-- [ ] **Step 5: State the self-sufficient line rule and update the examples**
+- [x] **Step 5: State the self-sufficient line rule and update the examples**
 
 After the canonical-dispositions paragraph (the one beginning `Canonical dispositions — Critical/Important:`), insert a new paragraph:
 
@@ -1457,7 +1457,7 @@ Then update the two log-format examples:
   with
   `- [I1] user-decision — <finding summary> (plan-mandated) — at <file:line> — clause: <plan location> "<quoted plan text>" ← 1/3: r1:I1`
 
-- [ ] **Step 6: Run the suite and the reviewer-templates suite to verify they pass**
+- [x] **Step 6: Run the suite and the reviewer-templates suite to verify they pass**
 
 Run: `bash tests/in-run-rulings/run-tests.sh; echo "exit=$?"`
 Expected: PASS — sections 1–7 all `PASS:`, `0 failed`, `exit=0`.
@@ -1465,7 +1465,7 @@ Expected: PASS — sections 1–7 all `PASS:`, `0 failed`, `exit=0`.
 Run: `bash tests/reviewer-templates/run-tests.sh >/dev/null; echo "rt=$?"`
 Expected: `rt=0` (the guard sentence is untouched).
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add tests/in-run-rulings/run-tests.sh skills/multi-code-review/SKILL.md
