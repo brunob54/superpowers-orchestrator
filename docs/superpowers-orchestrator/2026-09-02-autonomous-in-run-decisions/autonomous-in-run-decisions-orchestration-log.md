@@ -17,3 +17,9 @@ note: in-run parameter change requested by the user during batch 1 ("from now on
 - Task 2: complete — the classification read exception (9b3b129..9333e99)
 - Task 3: complete — fork review for a design item (a50a632..05fd0cd); one fix round on two test pins, re-review clean
 note: pre-flight scan raised 3 candidates, each checked against spec and repository and found not to be a plan conflict (recorded in .superpowers/sdd/progress.md); three Minor findings carried in the ledger
+
+## Phase 3 — Batch 2 (tasks 4–6) — COMPLETE — commits 3924678..aefc0ba
+- Task 4: complete — the ruling record, the answers and the plan amendment (3924678..a7ff0b5)
+- Task 5: complete — the RULING log entry, the cap, idempotence and the guards (0303449..daa5b51)
+- Task 6: complete — rulings wired into the phases, log format, state.md, Resume and the stop policy (717755d..aefc0ba)
+note: each task clean on its first review round; Minor findings carried in the ledger
