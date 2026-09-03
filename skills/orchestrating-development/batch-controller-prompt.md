@@ -100,6 +100,10 @@ Agent tool (general-purpose):
        bare `[task <n>]` line means `[task <n>/1]`). A
        `BLOCKED task=<n>` without such an unanswered section is read by
        the orchestrator as a controller failure, not as an open item.
+       Never copy a secret or a credential into a `### Question <k>` or
+       `### Conflict <k>` section: give its location (`file:line`) and a
+       description of the value instead. The orchestrator copies these
+       sections into files it commits.
     2. Sequential only — no parallel waves inside a batch.
     3. On completing a task, tick EVERY checkbox under its `### Task N`
        heading in the plan (the orchestrator's completeness predicate is
