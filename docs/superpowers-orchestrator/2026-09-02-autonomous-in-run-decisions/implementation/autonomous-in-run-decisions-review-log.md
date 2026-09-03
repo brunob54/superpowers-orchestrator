@@ -123,3 +123,5 @@ carried findings: 11 Minor lines read from .superpowers/sdd/progress.md
 - [M10] fixed — the fork-naming constraint's "never an `orch-` name" half was asserted nowhere; an exact pin added in the fork range (tests/in-run-rulings/run-tests.sh ~151) → 0182b1b ← 1/4: r3:M7
 - [M11] fixed — `FORK_END` took the next `### ` heading anywhere below in the file, unbounded by the section end, so the deliberate fork scoping could silently widen; it is now clamped to `RULINGS_END` (tests/in-run-rulings/run-tests.sh ~163-164) → 0182b1b ← 1/4: r4:M3
 - [M12] carried — the new suite is named in no tracked file (only the untracked CLAUDE.md), so a fresh clone has nothing instructing anyone to run it; the plan's Rollout defers the RELEASE-NOTES.md entry to the release commit ← 1/4: r4:M5
+
+_Completed — 2026-09-04 — cap reached — HEAD 0182b1b3799deac4759fcfc21b616df265c5ce28_
