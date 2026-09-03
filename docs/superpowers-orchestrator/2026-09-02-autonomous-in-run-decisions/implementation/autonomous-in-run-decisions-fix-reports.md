@@ -165,3 +165,84 @@ Results: 24 passed, 0 failed
 ```
 Results: 15 passed, 0 failed
 ```
+
+## Round 2 fixes — 2026-09-03
+
+### Findings addressed
+- [I1] skills/orchestrating-development/SKILL.md:566 and :875; skills/orchestrating-development/batch-controller-prompt.md:66 and :157 — the open item is named `[task <n>/<k>]` in every orchestrator-written line, and a bare `[task <n>]` is defined as a user shorthand that always means `[task <n>/1]`, independent of the report file's section count.
+- [I2] skills/orchestrating-development/SKILL.md:897 and :283 and :979 — one Phase 3 answer-set rule ("The Phase 3 answer set — one rule"): every dispatch carries every ruled line recorded for the run, across invocations and stops; Phase 3 step 5 and the re-dispatch step refer to it; a `## STOPPED` entry lists on `Ruled:` lines every non-escalated ruling of the stopped unit.
+- [I3] skills/orchestrating-development/SKILL.md:638 and :901; skills/orchestrating-development/batch-controller-prompt.md:84 — sections stay in `.superpowers/sdd/task-<n>-report.md`; a new section's `<k>` is 1 above the highest `<k>` in the file and in the dispatched `## Resume Answer` together, so an overwritten file never re-uses a number; a section counts as answered only for that exact `<k>`; at a task's first dispatch of the run the controller deletes sections left by an earlier run.
+- [I4] skills/orchestrating-development/SKILL.md:916; skills/multi-code-review/SKILL.md:652 — for a fenced or block-quoted `**Exact content:**` clause the `(amended by ruling <n>)` marker goes at the end of the introducing paragraph line, never inside the fence or quote, and the loop's decided-wording rule matches that paragraph line.
+- [I5] skills/orchestrating-development/SKILL.md:1031 (guard 4), :840 (Follow-up shape), :685 (read list) — a clause already decided by the user, recorded in the orchestrator's own ruling record, is never overruled: the answer repeats the user's decision tagged `(user)`, or the item is escalated; every `**Follow-up:**` line now carries the item's `clause:` text as the matching key.
+- [I6] skills/multi-code-review/SKILL.md:891; skills/orchestrating-development/SKILL.md:871, :912, :1020 — one normalization rule (` — ` and ` ← ` each replaced by one space, cut to 160 characters) and one comparison rule (normalize the plan text at the named location, test the quote as a prefix) for the `plan governs` guard, the amendment lookup and the decided-wording test.
+- [I7] skills/orchestrating-development/SKILL.md:283 and :897 — covered by the one answer-set rule: every recorded `[task <n>/<k>]` answer travels on every Phase 3 dispatch, whatever batch its task is in; the ruling record is readable under the classification read exception.
+- [I8] skills/orchestrating-development/SKILL.md:703, :752, :776 — the fork return carries a mandatory `ITEM: [<id>]` line first after the marker, the prompt's `## Item` section states the id, and with several design items open the orchestrator dispatches and consolidates one item's forks at a time.
+- [I9] skills/orchestrating-development/SKILL.md:464 — Resume step 3 verifies the `chore(orchestration): <slug> ruling <n>` commit is in `git log` before acting on a trailing `## RULING` entry, and commits the pending ruling first when it is not.
+- [I10] skills/orchestrating-development/SKILL.md:485 — when a user answer replaces a `Ruled:` line whose ruling amended the plan, Resume step 3 reverts the amendment (clause found by its marker, note by its label) in the same resume commit.
+- [I11] skills/orchestrating-development/SKILL.md:473 — the crash-window rebuild of a missing `## STOPPED` uses only the entries of that return (ruling number at or above the trailing entry's `<n>`) and never an entry that already carries a `**Follow-up:**` line.
+- [I12] skills/orchestrating-development/SKILL.md:960; skills/multi-code-review/SKILL.md:943 — the pre-commit self-check turns a bare `fix it` against binding text into `amend plan: …; fix it` or `escalated`; the loop refuses such an answer with `unresolved: fix contradicts binding text — "<clause>"`.
+- [I13] skills/orchestrating-development/SKILL.md:963 — the ruling commit is stated not to be a clean-tree boundary: the blocked task's uncommitted work may stand, is neither committed nor reverted, and the re-dispatched controller's mid-task recovery reviews it.
+- [M1] skills/orchestrating-development/SKILL.md:994 — a chain stop still records each item as `escalated (chain)` in the `## RULING` entry and the ruling record before the `## STOPPED` entry; the pinned cap sentence is unchanged.
+- [M2] skills/orchestrating-development/SKILL.md:989 — "the orchestration log's latest `_Invocation` line".
+- [M3] skills/orchestrating-development/SKILL.md:572; skills/orchestrating-development/batch-controller-prompt.md:63 and :86 — a pre-flight conflict that touches no task uses the batch's first task as `<n>` and its report file.
+- [M5] skills/orchestrating-development/SKILL.md:952 — the `## RULING` template uses the Orchestration Log Format's two `Items:` shapes, so an escalated item keeps its reason.
+- [M6] skills/orchestrating-development/SKILL.md:726 — the orchestrator writes no preference into the transcript before the forks return and lists tabled outcomes in the order they arose.
+- [M7] skills/multi-code-review/SKILL.md:936 — the clause on a `rejected: plan governs (orchestrator decision)` line is normalized like a `user-decision` quote.
+- [M11] tests/in-run-rulings/run-tests.sh:83 and :195 — new `assert_in_range_folded` helper; the two cap-sentence fragments are matched with the range's line wraps folded to spaces.
+- [M12] skills/orchestrating-development/SKILL.md:813 — a fork notice counts as lost once every other fork of the round has returned (once before the re-dispatch, once after it); no monitoring step and no other work during the wait.
+- [M13] skills/multi-code-review/SKILL.md:652 — when a marker alone decides the wording, the rejection quotes the amended clause together with its marker.
+- [M14] skills/multi-code-review/SKILL.md:891 — the ` — `/` ← ` replacement also applies to the finding summary, and a `"` inside the quoted plan text is written as `'`.
+
+Not fixed (carried by the brief, recorded not fixed): M4, M8, M9, M10, M15.
+
+### Commands run
+
+`bash tests/in-run-rulings/run-tests.sh`
+
+```
+Results: 122 passed, 0 failed
+```
+
+`bash tests/reviewer-templates/run-tests.sh`
+
+```
+Results: 24 passed, 0 failed
+```
+
+`bash tests/writing-plans/run-tests.sh`
+
+```
+Results: 15 passed, 0 failed
+```
+
+`bash tests/codex/run-unit-tests.sh`
+
+```
+ Results: 10 suites passed, 0 suites failed
+ All unit tests passed.
+```
+
+### Commit
+`68ec491 review fixes (autonomous-in-run-decisions, round 2)` — files: skills/orchestrating-development/SKILL.md, skills/orchestrating-development/batch-controller-prompt.md, skills/multi-code-review/SKILL.md, tests/in-run-rulings/run-tests.sh
+
+### Round 2 re-dispatch — I5 fix withdrawn (plan Task 2 read list) — 2026-09-03
+- reverted: the fifth entry `5. Your own ruling record for this run, …` in "What may be read — the classification read exception"; the list ends at item 4 followed by "Nothing else." again
+- reverted: guard `4. **A decision the user has already made is never overruled.** …` in "Guards against motivated judgement", and the count word restored from "Four" to "Three rules apply everywhere a ruling is made"
+- reverted: in "The ruling record", the sentence "That line carries the user's answer and, after it, the item's `clause:` text quoted — … leaves the user's decision unprotected."
+- reverted: in Resume step 3, the phrase "as a `**Follow-up:**` line carrying the item's `clause:` text (its shape is in `## In-run rulings`, "The ruling record")," restored to "as a `**Follow-up:**` line," — the rest of that hunk (finding I10, including "— with the plan file when an amendment was reverted —") is kept
+- kept: all other round-2 changes
+
+Commands run:
+
+```
+bash tests/in-run-rulings/run-tests.sh
+Results: 122 passed, 0 failed
+bash tests/reviewer-templates/run-tests.sh
+Results: 24 passed, 0 failed
+bash tests/writing-plans/run-tests.sh
+Results: 15 passed, 0 failed
+bash tests/codex/run-unit-tests.sh
+Results: 10 suites passed, 0 suites failed
+```
+
+Commit: `119b69a review fixes (autonomous-in-run-decisions, round 2)` — files: skills/orchestrating-development/SKILL.md
