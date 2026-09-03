@@ -282,3 +282,40 @@ Results: 10 suites passed, 0 suites failed
 
 ### Commit
 `cf99bc5 review fixes (autonomous-in-run-decisions, round 3)` — files: skills/orchestrating-development/SKILL.md, skills/orchestrating-development/batch-controller-prompt.md
+
+## Round 4
+
+- [I1] tests/in-run-rulings/run-tests.sh — added a case-sensitive `assert_in_range_folded_exact` helper and used it to pin the full cap sentence, byte-exact including the `: ` colon and the final period, next to the two existing case-insensitive half-fragment checks; added a separate check that no `*` appears inside the matched sentence span.
+- [I2] tests/in-run-rulings/run-tests.sh — section 7's pins are now split and range-scoped to `## Review Log Format`/`## After the Loop`/`## Error Handling` in multi-code-review/SKILL.md instead of whole-file `assert_pin`; section 9's batch-controller report-section pins are now scoped to a `DEV1_LINE`/`DEV1_END` range anchored on `1. Never ask the user.` and `2. Sequential only`. Ambiguous needles (`160 characters`) were narrowed to their distinguishing text (`cut it to 160 characters`).
+- [I3] tests/in-run-rulings/run-tests.sh — sections 1, 2, 4 and 5 now use per-`### `-subsection anchors (`CLASS_LINE`/`CLASS_END`, `READ_EXCEPTION_LINE`/`READ_EXCEPTION_END`, `RECORD_LINE`/`RECORD_END`, `ANSWERS_LINE`/`ANSWERS_END`, `LOG_ENTRY_LINE`/`LOG_ENTRY_END`, `GUARDS_LINE`/`GUARDS_END`) instead of the whole `## In-run rulings` range, computed the same way as the pre-existing `FORK_LINE`/`FORK_END` pair.
+- [I4] skills/orchestrating-development/batch-controller-prompt.md was not edited (out of scope for this fix subagent); coverage gap closed in tests/in-run-rulings/run-tests.sh instead: added Deviation-1-scoped pins for `Never copy a secret or a credential`, `re-used on the same task`, `those sections before you write your own`, `controller failure`, and `` [task <n>]` line means `[task <n>/1] ``, reading exact wording from the current file rather than inventing it.
+- [I5] tests/in-run-rulings/run-tests.sh — added range-scoped pins on both sides: multi-code-review/SKILL.md gets `**Normalization is one rule:**`, `tests the quote as a **prefix**` and `No consumer compares the quote with the raw plan text`; orchestrating-development/SKILL.md gets `**The quoted clause, and how it is compared.**`, `test whether the quote is a prefix of it` (answers subsection) and a folded check for `never as a byte-equal match` (guards subsection).
+- [I6] tests/in-run-rulings/run-tests.sh — added a new "0. Section anchors" check asserting `RULINGS_LINE < RULINGS_END`, plus a fence-aware awk scan asserting no other line starting with `## ` (outside a ` ``` ` fenced block) lies between them.
+- [I7] tests/in-run-rulings/run-tests.sh — added the pin `unresolved: fix contradicts binding text`, scoped to multi-code-review/SKILL.md's `## After the Loop` range.
+- [M1] tests/in-run-rulings/run-tests.sh — added an exact assertion for `<!-- multi-review report -->` in the Guard Interaction range, alongside the existing `fork` fragment check.
+- [M3] tests/in-run-rulings/run-tests.sh — folded into the [I3] fix: section 1's label and fragment loops now use `CLASS_LINE`/`CLASS_END` (the `### Classification — the escalation predicate` subsection) instead of the whole `## In-run rulings` range.
+- [M5] tests/in-run-rulings/run-tests.sh — added a `start -ge end` guard to `assert_in_range` that fails (rather than silently passing on an empty scan) when the range is inverted or empty; added the same guard to the two ad hoc absence checks (Resume step 3's `decided (user)` check, and the stop policy's `pre-flight plan conflict` check).
+- [M7] tests/in-run-rulings/run-tests.sh — the stop-policy absence check now matches `pre-flight plan conflict` case-insensitively without the trailing semicolon, so different punctuation around a re-added item still fails the check.
+- [M9] tests/in-run-rulings/run-tests.sh — the six fork fragment checks (`not a debate`, etc.) now use `"$FORK_LINE" "$FORK_END"` instead of the whole `## In-run rulings` range, matching the standard already used for `VERDICT:`/`TABLED:`.
+- [M10] tests/in-run-rulings/run-tests.sh — added an exact assertion for `` never an `orch-` name `` scoped to the fork range.
+- [M11] tests/in-run-rulings/run-tests.sh — `FORK_END` is now clamped to `RULINGS_END` whenever it is empty or falls past `RULINGS_END`, instead of only defaulting when empty.
+
+Additional changes made necessary by the above (not separately numbered findings):
+- Removed `assert_pin`, which the [I2] rewrite of sections 7 and 9 left with no remaining call sites.
+- `assert_in_range_folded` (and the new `assert_in_range_folded_exact`) now strip each line's leading whitespace before joining lines with a single space, so a folded needle spanning an indented list-continuation line (the Deviation 1 rules in batch-controller-prompt.md, and the guards subsection's `never as a byte-equal match`) is not broken by the indentation's extra spaces. This is a behavior change to a shared helper, needed because the guard fragment added under [I5] and a design considered for [I4] both span indented line wraps; it does not change the outcome of any previously-passing folded check, since none of those relied on multiple consecutive spaces.
+
+### Commands run
+```
+bash /Users/bruno/Programming/AI/AI_Coding/My_tools/Superpowers/tests/in-run-rulings/run-tests.sh
+```
+Exit code: 0
+
+Tail of output:
+```
+  PASS: batch-controller Deviation 1 pin '[task <n>]` line means `[task <n>/1]' (line 100, range 79..107)
+
+Results: 140 passed, 0 failed
+```
+
+### Commit
+`review fixes (autonomous-in-run-decisions, round 4)` — files: tests/in-run-rulings/run-tests.sh
