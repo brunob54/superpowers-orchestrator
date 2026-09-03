@@ -80,6 +80,27 @@ assert_in_range() { # desc file needle start end mode
   fi
 }
 
+# Same as assert_in_range in "fragment" mode, except that the range's lines
+# are first joined with single spaces. A fragment split by a line wrap — the
+# cap sentence, whose wording is pinned but whose wrapping is not — still
+# matches this way.
+assert_in_range_folded() { # desc file needle start end
+  local desc="$1" file="$2" needle="$3" start="$4" end="$5"
+  local folded
+  if [ -z "$start" ] || [ -z "$end" ]; then
+    bad "$desc (could not locate the range to search in ${file#$ROOT/})"
+    return
+  fi
+  folded="$(awk -v a="$start" -v b="$end" \
+    'NR >= a && NR < b { printf "%s ", $0 }' "$file")"
+  if awk -v needle="$needle" -v hay="$folded" \
+    'BEGIN { exit index(tolower(hay), tolower(needle)) > 0 ? 0 : 1 }'; then
+    ok "$desc (range $start..$end, line wraps folded)"
+  else
+    bad "$desc (not inside range $start..$end of ${file#$ROOT/}, line wraps folded)"
+  fi
+}
+
 # Assert that the fixed string $3 occurs anywhere in file $2 (byte pin).
 assert_pin() { # desc file needle
   if grep -qF -- "$3" "$2"; then
@@ -178,9 +199,15 @@ for pin in '## RULING' 'Re-dispatch:' 'Re-dispatch: none' 'Ruled:' \
   assert_in_range "log-entry or guard pin '$pin'" \
     "$ORCH_SKILL" "$pin" "$RULINGS_LINE" "$RULINGS_END" exact
 done
+# The cap sentence's words and punctuation are pinned, its line wrapping is
+# not (design R6), so these two fragments are matched with the range's line
+# wraps folded to spaces.
 for frag in 'in-run resumes of one phase are capped at 3 per unit' \
-            'phase itself in Phase 4, the task in Phase 3' \
-            'previous invocation left' 'durable marker' \
+            'phase itself in Phase 4, the task in Phase 3'; do
+  assert_in_range_folded "log-entry or guard fragment '$frag'" \
+    "$ORCH_SKILL" "$frag" "$RULINGS_LINE" "$RULINGS_END"
+done
+for frag in 'previous invocation left' 'durable marker' \
             'a Critical is never rejected' 'quotes its clause' \
             'recorded when it is made'; do
   assert_in_range "log-entry or guard fragment '$frag'" \

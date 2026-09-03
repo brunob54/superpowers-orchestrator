@@ -651,7 +651,14 @@ code has been revised since, so a re-pass is meaningful):
    `_Invocation` entry of the same orchestration run (same BASE), and a
    plan clause carrying the marker `(amended by ruling <n>)` — so a
    decision made in an earlier invocation, including an amendment that
-   started a new invocation, still counts. `fixed` and ordinary
+   started a new invocation, still counts. A quoted clause is matched
+   against the plan under the one normalization rule of "Self-sufficient
+   open-item lines" below: normalize both sides, then test the quote as a
+   prefix. For an `**Exact content:**` block the marker stands at the end
+   of the introducing `**Exact content:** <reason>` paragraph line and
+   covers the block below it. When a marker alone decides the wording and
+   no decision line quotes it, the rejection quotes the amended clause
+   together with its marker. `fixed` and ordinary
    `rejected: <reason>` dispositions are not decisions.
    A Critical is never rejected under this rule: a Critical against
    decided wording is logged `user-decision` and reaches the
@@ -890,7 +897,17 @@ for an `unresolved` item that collides with nothing, in which case the
 quoted text is omitted. The existing `(plan-mandated)` tag stays where it
 is, before the new clause. The quoted plan text is at most
 160 characters long and never contains the sequences ` ← ` or ` — `;
-either is replaced by a single space. Two full lines:
+either is replaced by a single space. The same replacement applies to the
+`<finding summary>` on the line, so that the first ` — at ` on the line is
+always the one that introduces the location; a `"` inside the quoted plan
+text is written as a single quotation mark `'`, so that the quote's own
+delimiters stay unambiguous. **Normalization is one rule:** take the plan
+text at `<plan location>`, replace each ` — ` and each ` ← ` with one
+space, then cut it to 160 characters. Every consumer that later compares
+this quote with the plan — the orchestrator's `plan governs` guard, its
+amendment lookup, and the decided-wording test above — normalizes the plan
+text at that location the same way and tests the quote as a **prefix** of
+it. No consumer compares the quote with the raw plan text. Two full lines:
 
 ```
 - [I2] user-decision — helper skips the 0/0 case (plan-mandated) — at tests/helpers.sh:251 — clause: Task 6 "the helper skips a 0/0 round" ← 1/3: r1:I2
@@ -935,7 +952,11 @@ under that round's lens. Plan
 governs → `rejected: plan governs (user decision)`; for an answer tagged
 `(orchestrator)`, `rejected: plan governs (orchestrator decision) —
 "<clause>"`, `<clause>` being the plan, spec or skill text the answer
-quotes, verbatim — an orchestrator `plan governs` always carries one.
+quotes, verbatim — an orchestrator `plan governs` always carries one. The
+clause on that line is written under the same normalization as a
+`user-decision` quote (each ` — ` and each ` ← ` replaced by one space,
+cut to 160 characters), so that the ` ← ` source annotation stays the last
+one on the line.
 An `amend plan: …; fix it: …` answer takes the finding-governs path for
 its `fix it` part (the plan is already amended when the answer arrives;
 the amendment commit moved the effective HEAD, so the verification
@@ -943,7 +964,12 @@ re-review is skipped and the new invocation that always follows reviews
 the fix — pipeline-mode paragraph below). An `accept: <reason>` answer
 is an item decided without a code change: its `decided (<who>): accept:
 <reason>` line is its whole disposition, it no longer counts as
-unresolved, and no fix or re-review runs. Double-fix-failure
+unresolved, and no fix or re-review runs. A bare `fix it: …` answer for an
+item whose `— clause:` names binding plan text is not applied — only an
+`amend plan: …; fix it: …` answer may change binding text: no fix
+subagent runs for it, and its disposition is
+`unresolved: fix contradicts binding text — "<clause>"`, which counts as
+unresolved in the return and sends the item back to the answerer. Double-fix-failure
 items: the user chooses re-dispatch, manual fix, or accept-risk with
 documented rationale (logged). The gate condition is then re-evaluated —
 no loop re-run needed.

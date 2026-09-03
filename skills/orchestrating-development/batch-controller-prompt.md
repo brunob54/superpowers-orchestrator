@@ -61,13 +61,14 @@ Agent tool (general-purpose):
     First batch: [FIRST_BATCH]  (if "yes": run SDD's "Pre-Flight Plan
     Review" over the whole plan before task 1; any conflict → return
     `BLOCKED task=<n>`, `<n>` the lowest-numbered task the conflict
-    touches, with its `### Conflict <k>` sections written to that
+    touches — this batch's first task when the conflict touches no task
+    at all — with its `### Conflict <k>` sections written to that
     task's report file as Deviation 1 states — never best-guess it. A
-    conflict or question whose `[task <n>]` or `[task <n>/<k>]` line
-    is present in `## Resume Answer` is settled: apply that answer and
-    never return BLOCKED for it again. A `[task <n>]` line answers a
-    report file that holds exactly one section, and is read as
-    `[task <n>/1]`)
+    conflict or question whose `[task <n>/<k>]` line with that exact
+    `<k>` is present in `## Resume Answer` is settled: apply that answer
+    and never return BLOCKED for it again. A bare `[task <n>]` line
+    always means `[task <n>/1]`, whatever the number of sections the
+    report file holds)
 
     ## Resume Answer (omit only when no answer applies to this batch)
 
@@ -81,13 +82,22 @@ Agent tool (general-purpose):
        `.superpowers/sdd/task-<n>-report.md` — never `state.md` — as
        `### Question <k>` sections (one blocking question each, `<k>`
        from 1) or `### Conflict <k>` sections (one plan conflict each,
-       quoting the plan text on both sides). Numbering continues across
-       attempts on the same task: append a new section after the
-       sections already in the file, and never renumber or remove an
-       earlier section. A pre-flight conflict goes
-       into the report file of the lowest-numbered task it touches. A
-       section whose `[task <n>]` or `[task <n>/<k>]` line stands in
-       this dispatch's `## Resume Answer` is settled, not open. A
+       quoting the plan text on both sides). A section number is never
+       re-used on the same task. The task's implementer rewrites that
+       report file, so sections written for an earlier attempt may be
+       gone from it: number a new section 1 above the highest `<k>` you
+       can see, counting the sections already in the file and the
+       `[task <n>/<k>]` lines of this dispatch's `## Resume Answer`
+       together, and never renumber a section you wrote in this
+       dispatch. At a task's first dispatch of this run — no
+       `[task <n>…]` line for it in `## Resume Answer` — any section
+       already in its report file was left by an earlier run: delete
+       those sections before you write your own. A pre-flight conflict
+       goes into the report file of the lowest-numbered task it touches,
+       or of this batch's first task when it touches no task. A
+       section whose `[task <n>/<k>]` line with that exact `<k>` stands
+       in this dispatch's `## Resume Answer` is settled, not open (a
+       bare `[task <n>]` line means `[task <n>/1]`). A
        `BLOCKED task=<n>` without such an unanswered section is read by
        the orchestrator as a controller failure, not as an open item.
     2. Sequential only — no parallel waves inside a batch.
@@ -155,14 +165,12 @@ Agent tool (general-purpose):
 - `[PLAN_PATH]` — REQUIRED: absolute plan path
 - `[FIRST_BATCH]` — REQUIRED: `yes` or `no`
 - `[RESUME_ANSWER]` — OPTIONAL: omitted, together with its `## Resume
-  Answer` heading, only when no recorded answer applies to this batch;
-  filled otherwise — when re-dispatching
-  after a `BLOCKED task=<n>` return, and on any dispatch whose task list
-  holds a task with a recorded answer — with the answers, one `[task <n>]`
-  or `[task <n>/<k>]` line each (`<k>` the `### Question <k>` or
-  `### Conflict <k>` section it answers; a `[task <n>]` line answers a
-  report file that holds exactly one section, and is read as
-  `[task <n>/1]`), tagged `(orchestrator)` or
+  Answer` heading, only when the run has recorded no answer at all;
+  filled otherwise, on every dispatch, first or repeat, with every answer
+  the run has recorded so far, whatever batch its task belongs to — one
+  `[task <n>/<k>]` line each (`<k>` the `### Question <k>` or
+  `### Conflict <k>` section it answers; a bare `[task <n>]` line from
+  the user means `[task <n>/1]`), tagged `(orchestrator)` or
   `(user)`; authoritative either way — the controller hands each to
   the task's implementer as authoritative instead of re-deriving it
 - `[SDD_SKILL_PATH]` / `[SDD_SCRIPTS_DIR]` / `[IMPLEMENTER_PROMPT_PATH]` /
