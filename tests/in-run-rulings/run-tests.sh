@@ -66,6 +66,10 @@ assert_in_range() { # desc file needle start end mode
     bad "$desc (could not locate the range to search in ${file#$ROOT/})"
     return
   fi
+  if [ "$start" -ge "$end" ]; then
+    bad "$desc (empty or inverted range $start..$end in ${file#$ROOT/})"
+    return
+  fi
   if [ "$mode" = "exact" ]; then
     hit="$(awk -v needle="$needle" -v a="$start" -v b="$end" \
       'NR >= a && NR < b && index($0, needle) > 0 { print NR; exit }' "$file")"
@@ -92,7 +96,7 @@ assert_in_range_folded() { # desc file needle start end
     return
   fi
   folded="$(awk -v a="$start" -v b="$end" \
-    'NR >= a && NR < b { printf "%s ", $0 }' "$file")"
+    'NR >= a && NR < b { line = $0; sub(/^[ \t]+/, "", line); printf "%s ", line }' "$file")"
   if awk -v needle="$needle" -v hay="$folded" \
     'BEGIN { exit index(tolower(hay), tolower(needle)) > 0 ? 0 : 1 }'; then
     ok "$desc (range $start..$end, line wraps folded)"
@@ -101,12 +105,23 @@ assert_in_range_folded() { # desc file needle start end
   fi
 }
 
-# Assert that the fixed string $3 occurs anywhere in file $2 (byte pin).
-assert_pin() { # desc file needle
-  if grep -qF -- "$3" "$2"; then
-    ok "$1"
+# Same as assert_in_range_folded, but case-sensitive: for a sentence whose
+# exact wording and punctuation are pinned (design R6's cap sentence), not
+# only its words.
+assert_in_range_folded_exact() { # desc file needle start end
+  local desc="$1" file="$2" needle="$3" start="$4" end="$5"
+  local folded
+  if [ -z "$start" ] || [ -z "$end" ]; then
+    bad "$desc (could not locate the range to search in ${file#$ROOT/})"
+    return
+  fi
+  folded="$(awk -v a="$start" -v b="$end" \
+    'NR >= a && NR < b { line = $0; sub(/^[ \t]+/, "", line); printf "%s ", line }' "$file")"
+  if awk -v needle="$needle" -v hay="$folded" \
+    'BEGIN { exit index(hay, needle) > 0 ? 0 : 1 }'; then
+    ok "$desc (range $start..$end, line wraps folded, case-sensitive)"
   else
-    bad "$1 (byte pin absent from ${2#$ROOT/})"
+    bad "$desc (not inside range $start..$end of ${file#$ROOT/}, line wraps folded, case-sensitive)"
   fi
 }
 
@@ -119,6 +134,37 @@ RULINGS_HEADING='## In-run rulings'
 RULINGS_LINE="$(first_line_of "$ORCH_SKILL" "$RULINGS_HEADING")"
 RULINGS_END="$(first_line_of "$ORCH_SKILL" '## Major-Error Stop Policy')"
 
+bold "0. Section anchors"
+if [ -n "$RULINGS_LINE" ] && [ -n "$RULINGS_END" ] && [ "$RULINGS_LINE" -lt "$RULINGS_END" ]; then
+  ok "'$RULINGS_HEADING' precedes '## Major-Error Stop Policy' (lines $RULINGS_LINE..$RULINGS_END)"
+else
+  bad "'$RULINGS_HEADING' does not precede '## Major-Error Stop Policy' (lines $RULINGS_LINE..$RULINGS_END)"
+fi
+INTERLOPER="$(awk -v a="$RULINGS_LINE" -v b="$RULINGS_END" \
+  'NR > a && NR < b { if ($0 ~ /^```/) { fence = !fence } else if (!fence && index($0, "## ") == 1) { print NR; exit } }' \
+  "$ORCH_SKILL")"
+if [ -z "$INTERLOPER" ]; then
+  ok "no other '## ' heading (outside a fenced code block) between $RULINGS_LINE and $RULINGS_END"
+else
+  bad "an unexpected '## ' heading sits at line $INTERLOPER, between $RULINGS_LINE and $RULINGS_END"
+fi
+
+# Per-subsection anchors, narrower than the whole ## In-run rulings range, so
+# that deleting one ### subsection cannot pass on a mention of the same
+# words in a sibling subsection.
+CLASS_LINE="$(first_line_of "$ORCH_SKILL" '### Classification — the escalation predicate')"
+READ_EXCEPTION_LINE="$(first_line_of "$ORCH_SKILL" '### What may be read — the classification read exception')"
+RECORD_LINE="$(first_line_of "$ORCH_SKILL" '### The ruling record')"
+ANSWERS_LINE="$(first_line_of "$ORCH_SKILL" '### The answers, and how a ruling reaches the plan')"
+LOG_ENTRY_LINE="$(first_line_of "$ORCH_SKILL" '### The RULING log entry, the commit and the re-dispatch')"
+GUARDS_LINE="$(first_line_of "$ORCH_SKILL" '### Guards against motivated judgement')"
+CLASS_END="$READ_EXCEPTION_LINE"
+READ_EXCEPTION_END="$(first_line_of "$ORCH_SKILL" '### Fork review for a design item')"
+RECORD_END="$ANSWERS_LINE"
+ANSWERS_END="$LOG_ENTRY_LINE"
+LOG_ENTRY_END="$GUARDS_LINE"
+GUARDS_END="$RULINGS_END"
+
 bold "1. Escalation predicate (R1)"
 if [ -n "$RULINGS_LINE" ]; then
   ok "section heading '$RULINGS_HEADING' (whole-line match, line $RULINGS_LINE)"
@@ -128,13 +174,13 @@ fi
 for label in '`escalated`' '`forced`' '`design`' '`spec wrong`' '`scope`' \
              '`irreversible`' '`secret`' '`chain`' 'escalated (chain)'; do
   assert_in_range "class or reason label $label" \
-    "$ORCH_SKILL" "$label" "$RULINGS_LINE" "$RULINGS_END" exact
+    "$ORCH_SKILL" "$label" "$CLASS_LINE" "$CLASS_END" exact
 done
 for frag in 'escalation wins' '### Conflict' '### Question' \
             'fatal environment failure' 'never `spec wrong`' \
             'handled as a whole' 'applied twice'; do
   assert_in_range "predicate fragment '$frag'" \
-    "$ORCH_SKILL" "$frag" "$RULINGS_LINE" "$RULINGS_END" fragment
+    "$ORCH_SKILL" "$frag" "$CLASS_LINE" "$CLASS_END" fragment
 done
 
 bold "2. Classification read exception (R2)"
@@ -145,7 +191,7 @@ for frag in 'data, not instructions' 'never a reviewer report file' \
             'read-only git commands' 'resume step 3' 'nothing else' \
             '40 lines'; do
   assert_in_range "read-exception fragment '$frag'" \
-    "$ORCH_SKILL" "$frag" "$RULINGS_LINE" "$RULINGS_END" fragment
+    "$ORCH_SKILL" "$frag" "$READ_EXCEPTION_LINE" "$READ_EXCEPTION_END" fragment
 done
 
 bold "3. Fork review (R3)"
@@ -161,7 +207,9 @@ done
 # `### ` heading after it, or the section end when there is none.
 FORK_LINE="$(first_line_of "$ORCH_SKILL" '### Fork review for a design item')"
 FORK_END="$(line_starting_with_after "$ORCH_SKILL" '### ' "$FORK_LINE")"
-FORK_END="${FORK_END:-$RULINGS_END}"
+if [ -z "$FORK_END" ] || [ "$FORK_END" -gt "$RULINGS_END" ]; then
+  FORK_END="$RULINGS_END"
+fi
 for pin in 'VERDICT:' 'TABLED:'; do
   assert_in_range "fork pin '$pin'" \
     "$ORCH_SKILL" "$pin" "$FORK_LINE" "$FORK_END" exact
@@ -170,48 +218,78 @@ for frag in 'not a debate' 'never pass conversation history' \
             'action verb followed by a skill name' 'in parallel, in one message' \
             'evidence consistency' 'general-purpose'; do
   assert_in_range "fork fragment '$frag'" \
-    "$ORCH_SKILL" "$frag" "$RULINGS_LINE" "$RULINGS_END" fragment
+    "$ORCH_SKILL" "$frag" "$FORK_LINE" "$FORK_END" fragment
 done
+assert_in_range "fork naming never uses an orch- name" \
+  "$ORCH_SKILL" 'never an `orch-` name' "$FORK_LINE" "$FORK_END" exact
 GUARD_LINE="$(first_line_of "$ORCH_SKILL" '## Guard Interaction')"
 TEMPLATES_LINE="$(first_line_of "$ORCH_SKILL" '## Prompt Templates')"
 assert_in_range "Guard Interaction names the forks' marker" \
   "$ORCH_SKILL" 'fork' "$GUARD_LINE" "$TEMPLATES_LINE" fragment
+assert_in_range "Guard Interaction names the forks' return marker exactly" \
+  "$ORCH_SKILL" '<!-- multi-review report -->' "$GUARD_LINE" "$TEMPLATES_LINE" exact
 
 bold "4. Ruling record, answers and plan amendment (R4, R5)"
-for pin in '-open-decisions.md' '**Follow-up:**' '## Ruling <n>' \
-           '(orchestrator):' 'decided (orchestrator)' 'amend plan:' \
+for pin in '-open-decisions.md' '**Follow-up:**' '## Ruling <n>'; do
+  assert_in_range "ruling-record pin '$pin'" \
+    "$ORCH_SKILL" "$pin" "$RECORD_LINE" "$RECORD_END" exact
+done
+assert_in_range "ruling-record fragment 'appended, never rewritten'" \
+  "$ORCH_SKILL" 'appended, never rewritten' "$RECORD_LINE" "$RECORD_END" fragment
+for pin in '(orchestrator):' 'decided (orchestrator)' 'amend plan:' \
            'plan governs:' 'fix it:' 'accept:' '**Amendment' \
            '[task <n>/<k>]'; do
-  assert_in_range "ruling-record or answer pin '$pin'" \
-    "$ORCH_SKILL" "$pin" "$RULINGS_LINE" "$RULINGS_END" exact
+  assert_in_range "answer pin '$pin'" \
+    "$ORCH_SKILL" "$pin" "$ANSWERS_LINE" "$ANSWERS_END" exact
 done
-for frag in 'appended, never rewritten' '(amended by ruling' \
-            'never apply the amendment twice' 'new invocation' \
-            'untagged' 'sides against binding plan text'; do
-  assert_in_range "ruling-record or answer fragment '$frag'" \
-    "$ORCH_SKILL" "$frag" "$RULINGS_LINE" "$RULINGS_END" fragment
+for frag in '(amended by ruling' 'never apply the amendment twice' \
+            'new invocation' 'untagged' 'sides against binding plan text' \
+            '**The quoted clause, and how it is compared.**' \
+            'test whether the quote is a prefix of it'; do
+  assert_in_range "answer fragment '$frag'" \
+    "$ORCH_SKILL" "$frag" "$ANSWERS_LINE" "$ANSWERS_END" fragment
 done
 
 bold "5. RULING log entry, cap and guards (R6, R7, R9)"
 for pin in '## RULING' 'Re-dispatch:' 'Re-dispatch: none' 'Ruled:' \
-           'chore(orchestration): <slug> ruling <n>' \
-           'plan governs (orchestrator decision)'; do
-  assert_in_range "log-entry or guard pin '$pin'" \
-    "$ORCH_SKILL" "$pin" "$RULINGS_LINE" "$RULINGS_END" exact
+           'chore(orchestration): <slug> ruling <n>'; do
+  assert_in_range "log-entry pin '$pin'" \
+    "$ORCH_SKILL" "$pin" "$LOG_ENTRY_LINE" "$LOG_ENTRY_END" exact
 done
+assert_in_range "guard pin 'plan governs (orchestrator decision)'" \
+  "$ORCH_SKILL" 'plan governs (orchestrator decision)' "$GUARDS_LINE" "$GUARDS_END" exact
+assert_in_range_folded "guard fragment forbidding a byte-equal match" \
+  "$ORCH_SKILL" 'never as a byte-equal match' "$GUARDS_LINE" "$GUARDS_END"
 # The cap sentence's words and punctuation are pinned, its line wrapping is
-# not (design R6), so these two fragments are matched with the range's line
-# wraps folded to spaces.
+# not (design R6), so these fragments are matched with the range's line
+# wraps folded to spaces. The whole-sentence check is case-sensitive,
+# including the colon and the final period, so that rewording or dropping
+# the punctuation is caught; the two half-fragments below stay as an
+# additional, weaker case-insensitive check.
+CAP_SENTENCE='In-run resumes of one phase are capped at 3 per unit: the phase itself in Phase 4, the task in Phase 3.'
+assert_in_range_folded_exact "log-entry sentence, byte-exact incl. punctuation" \
+  "$ORCH_SKILL" "$CAP_SENTENCE" "$LOG_ENTRY_LINE" "$LOG_ENTRY_END"
+CAP_SENTENCE_FOLDED="$(awk -v a="$LOG_ENTRY_LINE" -v b="$LOG_ENTRY_END" \
+  'NR >= a && NR < b { printf "%s ", $0 }' "$ORCH_SKILL")"
+if awk -v hay="$CAP_SENTENCE_FOLDED" -v needle="$CAP_SENTENCE" \
+  'BEGIN { s = index(hay, needle); if (s == 0) exit 1; span = substr(hay, s, length(needle)); exit index(span, "*") > 0 ? 1 : 0 }'; then
+  ok "log-entry sentence carries no '*' emphasis marker"
+else
+  bad "log-entry sentence carries a '*' emphasis marker, or the sentence could not be located"
+fi
 for frag in 'in-run resumes of one phase are capped at 3 per unit' \
             'phase itself in Phase 4, the task in Phase 3'; do
   assert_in_range_folded "log-entry or guard fragment '$frag'" \
-    "$ORCH_SKILL" "$frag" "$RULINGS_LINE" "$RULINGS_END"
+    "$ORCH_SKILL" "$frag" "$LOG_ENTRY_LINE" "$LOG_ENTRY_END"
 done
-for frag in 'previous invocation left' 'durable marker' \
-            'a Critical is never rejected' 'quotes its clause' \
+assert_in_range "log-entry fragment 'previous invocation left'" \
+  "$ORCH_SKILL" 'previous invocation left' "$LOG_ENTRY_LINE" "$LOG_ENTRY_END" fragment
+assert_in_range "guard fragment 'durable marker'" \
+  "$ORCH_SKILL" 'durable marker' "$LOG_ENTRY_LINE" "$LOG_ENTRY_END" fragment
+for frag in 'a Critical is never rejected' 'quotes its clause' \
             'recorded when it is made'; do
-  assert_in_range "log-entry or guard fragment '$frag'" \
-    "$ORCH_SKILL" "$frag" "$RULINGS_LINE" "$RULINGS_END" fragment
+  assert_in_range "guard fragment '$frag'" \
+    "$ORCH_SKILL" "$frag" "$GUARDS_LINE" "$GUARDS_END" fragment
 done
 
 bold "6. Wiring into phases, log format, state.md, Resume and stop policy (R6)"
@@ -237,32 +315,42 @@ for pin in '## RULING' 'Ruled:' '**Follow-up:**' '(orchestrator)' '(user)' 'deci
   assert_in_range "resume pin '$pin'" \
     "$ORCH_SKILL" "$pin" "$RESUME_LINE" "$RULINGS_LINE" exact
 done
-if [ -n "$RESUME_LINE" ] && [ -n "$RULINGS_LINE" ] && \
+if [ -n "$RESUME_LINE" ] && [ -n "$RULINGS_LINE" ] && [ "$RESUME_LINE" -lt "$RULINGS_LINE" ] && \
    awk -v a="$RESUME_LINE" -v b="$RULINGS_LINE" \
      'NR >= a && NR < b && index($0, "decided (user)") > 0 { found = 1 } END { exit found ? 1 : 0 }' "$ORCH_SKILL"; then
   ok "Resume step 3 no longer names decided (user) alone"
 else
-  bad "Resume step 3 still names decided (user) alone (range $RESUME_LINE..$RULINGS_LINE)"
+  bad "Resume step 3 still names decided (user) alone, or the range $RESUME_LINE..$RULINGS_LINE is empty or inverted"
 fi
 for frag in 'escalated' 'fork review unavailable'; do
   assert_in_range "stop policy fragment '$frag'" \
     "$ORCH_SKILL" "$frag" "$RULINGS_END" "$GUARD_LINE" fragment
 done
-if [ -n "$RULINGS_END" ] && [ -n "$GUARD_LINE" ] && \
+if [ -n "$RULINGS_END" ] && [ -n "$GUARD_LINE" ] && [ "$RULINGS_END" -lt "$GUARD_LINE" ] && \
    awk -v a="$RULINGS_END" -v b="$GUARD_LINE" \
-     'NR >= a && NR < b && index($0, "pre-flight plan conflict;") > 0 { found = 1 } END { exit found ? 1 : 0 }' "$ORCH_SKILL"; then
+     'NR >= a && NR < b && index(tolower($0), "pre-flight plan conflict") > 0 { found = 1 } END { exit found ? 1 : 0 }' "$ORCH_SKILL"; then
   ok "stop policy no longer lists a pre-flight plan conflict as a stop by itself"
 else
-  bad "stop policy still lists 'pre-flight plan conflict;' (range $RULINGS_END..$GUARD_LINE)"
+  bad "stop policy still lists 'pre-flight plan conflict', or the range $RULINGS_END..$GUARD_LINE is empty or inverted"
 fi
 
 bold "7. multi-code-review attribution and self-sufficient lines (R8.1, R8.2)"
+MCR_LOG_FORMAT_LINE="$(first_line_of "$MCR_SKILL" '## Review Log Format')"
+MCR_AFTER_LOOP_LINE="$(first_line_of "$MCR_SKILL" '## After the Loop')"
+MCR_ERROR_HANDLING_LINE="$(first_line_of "$MCR_SKILL" '## Error Handling')"
+for pin in '— clause:' 'clause: none' '(plan-mandated) — at ' \
+           'cut it to 160 characters' '**Normalization is one rule:**' \
+           'tests the quote as a **prefix**' \
+           'No consumer compares the quote with the raw plan text'; do
+  assert_in_range "multi-code-review pin '$pin'" \
+    "$MCR_SKILL" "$pin" "$MCR_LOG_FORMAT_LINE" "$MCR_AFTER_LOOP_LINE" exact
+done
 for pin in 'decided (orchestrator)' 'decided (<who>)' \
            'plan governs (orchestrator decision)' 'plan governs (user decision)' \
            '`decided (user)` or `decided (orchestrator)`' \
-           '— clause:' 'clause: none' '(plan-mandated) — at ' \
-           '160 characters'; do
-  assert_pin "multi-code-review pin '$pin'" "$MCR_SKILL" "$pin"
+           'unresolved: fix contradicts binding text'; do
+  assert_in_range "multi-code-review pin '$pin'" \
+    "$MCR_SKILL" "$pin" "$MCR_AFTER_LOOP_LINE" "$MCR_ERROR_HANDLING_LINE" exact
 done
 MCR_FORMAT_LINE="$(line_containing_after "$MCR_SKILL" '_Invocation <k> — YYYY-MM-DD — N=<n> M=<m>' 0)"
 MCR_FORMAT_END="$(line_containing_after "$MCR_SKILL" 'Round entry with M ≥ 2' "$MCR_FORMAT_LINE")"
@@ -310,9 +398,20 @@ for pin in '(orchestrator)' '(user)' '[task <n>/<k>]'; do
 done
 assert_in_range "batch-controller [RESUME_ANSWER] doc says authoritative either way" \
   "$BATCH_PROMPT" 'authoritative either way' "$BATCH_RA_LINE" "$BATCH_RA_END" fragment
+# Several needles above (e.g. 'is settled', 'lowest-numbered task',
+# '### Question <k>', '### Conflict <k>') also occur elsewhere in the file
+# outside Deviation 1, so a whole-file byte pin would still pass with the
+# owning rule deleted. Scope them, and the newer Deviation 1 rules below, to
+# Deviation 1's own range.
+DEV1_LINE="$(line_containing_after "$BATCH_PROMPT" '1. Never ask the user.' 0)"
+DEV1_END="$(line_containing_after "$BATCH_PROMPT" '2. Sequential only' "$DEV1_LINE")"
 for pin in '### Question <k>' '### Conflict <k>' 'lowest-numbered task' \
-           '.superpowers/sdd/task-<n>-report.md' 'is settled'; do
-  assert_pin "batch-controller report-section pin '$pin'" "$BATCH_PROMPT" "$pin"
+           '.superpowers/sdd/task-<n>-report.md' 'is settled' \
+           'Never copy a secret or a credential' 're-used on the same task' \
+           'those sections before you write your own' 'controller failure' \
+           '[task <n>]` line means `[task <n>/1]'; do
+  assert_in_range "batch-controller Deviation 1 pin '$pin'" \
+    "$BATCH_PROMPT" "$pin" "$DEV1_LINE" "$DEV1_END" exact
 done
 
 # --- end of checks ---
