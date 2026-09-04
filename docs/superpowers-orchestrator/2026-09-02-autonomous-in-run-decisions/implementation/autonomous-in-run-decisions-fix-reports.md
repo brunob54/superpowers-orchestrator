@@ -3866,3 +3866,130 @@ round reworded was rewritten in its new bytes (the `%H %s` ruling-commit
 lookup, now carrying `-F`), and 24 pins were added, one or more per
 finding. No pin was weakened to a bare token. No finding was skipped or
 partially applied.
+
+## Round 12 fixes
+
+All findings are in `tests/in-run-rulings/run-tests.sh`. Every new/changed
+needle was verified against the current file text with `grep`/a Python
+substring check before being added, and every new or changed assertion was
+then spot-checked for discriminating power by temporarily corrupting the
+target source text, confirming the check FAILs, and restoring the file
+(`git diff` clean afterwards in every case).
+
+- **I1** — The harness-probe ordering rule (Review Log Format bullet, the
+  matching Triage text, and the observation's three-replacements sentence)
+  was stated three times and pinned nowhere. Added, in the
+  `## Review Log Format`..`## After the Loop` range: an exact pin on
+  `**Order against the location clause:**`, a folded pin on the
+  location-clause-first/then-probe/then-annotation ordering clause, and a
+  folded pin on the Review Log Format side's three-replacements sentence for
+  the observation text. Added, scoped to the newly-reused
+  `MCR_PROCEDURE_LINE`..`MCR_LOG_FORMAT_LINE` range (Triage lives there): a
+  folded pin on the Triage sentence placing the observation after the
+  `— at <file:line> — clause: …` suffix.
+
+- **I2** — The batch-controller pre-flight prohibition ("never best-guess
+  the conflict itself... never decided by you from plan, spec or
+  repository") was unpinned. Added a folded pin on the prohibition's own
+  bytes (with the negation inside the needle), scoped to the existing
+  `DEV1_LINE`..`DEV1_END` range.
+
+- **M2** — "intro names the second read exception" matched any
+  case-insensitive mention of `in-run rulings` before `## Required Start`.
+  Replaced with two folded pins on the intro sentence's own bytes: "Two
+  documented exceptions" and the exception's own clause naming the
+  classification read, bounded to the stated list.
+
+- **M3** — The Phase 4 cap-accounting consequence ("the re-dispatch the
+  ruling's own `## RULING` entry already counts against the cap... not a
+  second resume on top of it") was unpinned. Added a folded pin on that
+  clause, scoped to the `ANSWERS_LINE`..`ANSWERS_END` range.
+
+- **M4** — The negative check for a resurrected unconditional
+  `batch-controller BLOCKED` stop used the byte-exact needle
+  `batch-controller BLOCKED;`, whose trailing semicolon was only the old
+  list separator. Dropped the semicolon and switched to fragment mode,
+  matching its sibling negative checks.
+
+- **M5** — The cap-sentence emphasis scan checked only for `*` runs around
+  the match. Extended the awk heuristic to treat `_` runs identically to `*`
+  runs (same open/close logic, generalized to whichever marker character
+  is found), and updated both PASS/FAIL messages to name both markers.
+
+- **M6** — The `**Exact content:**` marker-placement rule is stated on both
+  the writer side (orchestrating-development/SKILL.md) and the reader side
+  (multi-code-review/SKILL.md) and was pinned on neither. Added a folded
+  pin on each side's own sentence, in the `ANSWERS_LINE`..`ANSWERS_END`
+  range and the `MCR_PROCEDURE_LINE`..`MCR_LOG_FORMAT_LINE` range
+  respectively.
+
+- **M7** — Three checks used needles ordinary prose could satisfy even with
+  the owning rule deleted: `nothing else` (read-exception subsection),
+  `Rulings:` (state.md section — same change as M10, made once), and the
+  fragments `absent from`, `is settled`, `controller failure` (batch-
+  controller Deviation 1). Replaced each with the owning sentence's own
+  distinguishing bytes, folded: the read exception's closing exhaustiveness
+  clause; the `<n>`-may-be-a-later-batch sentence; the settled-section
+  definition; and the controller-failure sentence. (`Rulings:` handled
+  under M10 below.)
+
+- **M8** — `assert_in_range` and `assert_absent_in_range_folded` branched on
+  `mode = "exact"` and silently fell through to case-insensitive matching
+  for any other value, so a typo'd or omitted mode argument would silently
+  downgrade a byte pin without failing. Both helpers now dispatch on
+  `"exact"` / `"fragment"` explicitly and call `bad` naming the unknown mode
+  for anything else. Checked every call site's mode argument
+  (`grep -noE '(exact|fragment)$'`): all use only `exact` or `fragment`, so
+  no call site needed correction.
+
+- **M9** — The `unresolved > 0` half of the removed-old-wording negative
+  check could never have matched the base revision's text (`0a57e40`):
+  the base joined the two disjuncts as `` `unresolved > 0` or\n`user_decision
+  > 0` → major error → stop ``, so the arrow only ever directly followed
+  `user_decision > 0`, never `unresolved > 0`. Confirmed by inspection that
+  the disjunct-joining phrase (`unresolved > 0\` or \`user_decision > 0\``)
+  is unchanged in the CURRENT correct wording too (only the destination
+  changed, from `major error → stop` to `` `## In-run rulings` ``), so
+  pinning that joiner as an absent-needle would fail against today's
+  correct text — option (a) in the finding does not work here without
+  breaking the suite. Took option (b): kept the needle, and rewrote the
+  comment to state plainly that this needle guards a hypothetical
+  rewording (`unresolved > 0` routed alone, directly, to a stop) rather
+  than the actual removed sentence — which the `user_decision` needle above
+  it already guards, since `user_decision > 0` is the disjunct the arrow
+  always followed.
+
+- **M10** — The only `state.md` assertion pinned the bare label `Rulings:`.
+  Changed the needle to the whole example line with its placeholder tail,
+  `Rulings: <count> (last: ruling <n>, phase <p>)`, matching the standard
+  already applied to the orchestration-log examples. (Same change as the
+  middle item of M7.)
+
+### Verification
+
+```
+$ bash tests/in-run-rulings/run-tests.sh; echo "EXIT=$?"
+...
+Results: 361 passed, 0 failed
+EXIT=0
+
+$ bash tests/reviewer-templates/run-tests.sh; echo "EXIT=$?"
+...
+Results: 24 passed, 0 failed
+EXIT=0
+
+$ bash tests/writing-plans/run-tests.sh; echo "EXIT=$?"
+...
+Results: 15 passed, 0 failed
+EXIT=0
+```
+
+All three suites exited 0. `tests/in-run-rulings/run-tests.sh` went from
+361 checks with the fixes applied (was 328 before this round; +33: I1 added
+4, I2 added 1, M6 added 2, M3 added 1, M7 added 4 replacement pins plus kept
+the loop entries it trimmed 4 items from net -0, M9 rewrote 1 in place,
+M10/M7 rewrote 1 in place, M2 replaced 1 weak check with 2 stronger ones,
+M4/M5/M8 rewrote existing checks/helpers in place with no count change).
+Every new or rewritten assertion was spot-checked by temporarily corrupting
+the pinned source text and confirming the corresponding check FAILs, then
+restoring the file (`git diff` clean after each restore).
