@@ -37,3 +37,23 @@ Detail: docs/superpowers-orchestrator/2026-09-02-autonomous-in-run-decisions/pla
 Forks: 6 (design consistency, implementation practicality, adversarial — three per item) — contradiction: none on [I5]; settled on [I2]
 Re-dispatch: phase 4, in-run resume 1 of 3
 note: this run executes the INSTALLED 7.7.0 skill, which stops on open items; the predicate, the ruling record and this entry were applied by hand under the user's standing delegation. The installed code-review-loop template journals every resume answer as `decided (user)`, so the label in the review log will read `(user)` although both rulings are the orchestrator's — the attribution fix is part of what this branch builds and is not yet installed.
+
+## RULING 2 — 2026-09-04 — phase 4 — four coverage gaps ruled, one item escalated
+Items: [I1] forced — fix it (pin guard 2's two prohibitions)
+       [I2] forced — fix it (fold line wraps in the negative checks; folds in carried [M5])
+       [I3 v3] forced — fix it (closedness scan must fail on zero bullets)
+       [I4] forced — fix it (pin the design-to-fork-review link)
+       [I3 r5] escalated (spec wrong) — the branch amends its own spec
+Detail: docs/superpowers-orchestrator/2026-09-02-autonomous-in-run-decisions/plans/autonomous-in-run-decisions-open-decisions.md
+Forks: none — the four are forced answers; the escalated item is not the orchestrator's to decide
+Re-dispatch: none — escalated
+
+## STOPPED — 2026-09-04 — phase 4 — one open item is the spec author's decision
+Detail: docs/superpowers-orchestrator/2026-09-02-autonomous-in-run-decisions/implementation/autonomous-in-run-decisions-review-log.md
+Open: [I3] user-decision — the branch amends its own requirements document (spec R1/R2/R5/R7 markers and the new ## Amendments section) while the rule it ships classes a spec change as `escalated (spec wrong)`
+Ruled: [I1] forced — fix it (pin guard 2's two prohibitions)
+Ruled: [I2] forced — fix it (fold line wraps in the negative checks)
+Ruled: [I3 v3] forced — fix it (closedness scan must fail on zero bullets)
+Ruled: [I4] forced — fix it (pin the design-to-fork-review link)
+Owed probe: - [I12] rejected: harness probe not runnable here — dispatch one throwaway `subagent_type: "fork"` that terminates without emitting a final message and observe whether the main session receives a failure/error notice or waits with no event — (would break a constraint)
+Resume: Resume orchestration for docs/superpowers-orchestrator/2026-09-02-autonomous-in-run-decisions/plans/autonomous-in-run-decisions.md

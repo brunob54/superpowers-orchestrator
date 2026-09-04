@@ -22,3 +22,48 @@ procedure was applied by hand.
 - **Defensible answers:** (a) plan governs — the list is closed, accept the hole; (b) widen the `irreversible` definition so such an amendment escalates; (c) never `forced` — always a `design` item, so fork review always runs first
 - **Forks:** design consistency: VERDICT (c) with a correction (key the rule on the closed binding set, not on Global Constraints alone), objecting that (b) needs a spec change which the predicate itself would escalate. implementation practicality: VERDICT (b), but only keyed on edit location — "an amendment that would edit the `**Global Constraints:**` block" is decidable from the disposition line's own `— clause:`, whereas "weakens a safety rail" is not; reusing the `irreversible` label avoids adding a sixth class, which would require editing the very Global Constraint that enumerates the labels. adversarial: VERDICT (b), and (c) alone is WORSE than (a) — forks inherit the orchestrator's transcript and its framing, so three converging forks launder a ruling behind a record that reads as independent review; it also named a live path in this run (round 4 [M12] plus the CLAUDE.md staging rail). Contradiction, surfaced not resolved silently: design consistency wanted (c), adversarial called (c) actively dangerous. Settled on the merits: the design-consistency lens assumed fork review is an independent second reader, and the adversarial lens showed it is not for a decision about the user's own repository; the design-consistency lens's own argument — that (b) needs a spec change and therefore escalates — supports escalation as the outcome by a different route.
 - **Resolution:** `amend plan: spec R1 widens `irreversible` by edit location — an `amend plan` answer whose amendment would edit the plan's binding text (the `**Global Constraints:**` block or an `**Exact content:**` block) is `escalated (irreversible)`; spec R5 gains the no-delete bound (an amendment appends a scoped exception instead of deleting a clause). ; fix it: write both rules into the skill.` — Reason: two of three lenses chose (b); the third's objection was procedural, not on the merits. The trigger is the edit location the disposition line already carries, so no new judgement is introduced, and the label set stays closed at five. The change makes the run stop MORE often, never less, so it cannot be motivated judgement in the self-serving direction. **Surfaced to the user at the Phase 5 report:** the closed escalation list is the user's own wording, and this widens one of its definitions; a one-line instruction reverts it.
+
+## Ruling 3 — 2026-09-04 — phase 4 — [I1] guard 2's two prohibitions are unpinned
+
+- **Class:** forced
+- **Item:** [I1] Important tests/in-run-rulings/run-tests.sh:728 — guard 2's two prohibitions ``Never `plan governs`, never `accept``` are unpinned; only the fragment `a Critical is never rejected` is asserted, so a rewrite letting a Critical be closed with `accept:` and no code change would ship green
+- **Contract clause:** "Invariants: `a Critical is never rejected`" — plans/autonomous-in-run-decisions.md, Task 5 Contract
+- **Defensible answers:** n/a — forced
+- **Forks:** none — forced
+- **Resolution:** `fix it: pin guard 2's two prohibitions in the guards range.` — The fact that makes every other outcome indefensible: the suite exists to make a rewrite of this wording fail, and the finding names a rewrite that keeps it green. A check that cannot fail under the mutation it exists to catch verifies nothing. Reading the shipped skill confirms the wording is present and correct, so this is a test gap only.
+
+## Ruling 4 — 2026-09-04 — phase 4 — [I2] negative checks do not fold line wraps
+
+- **Class:** forced
+- **Item:** [I2] Important tests/in-run-rulings/run-tests.sh:836 — the three stop-policy and Phase 3 "the old wording is gone" negative checks scan line by line while every positive check folds line wraps first, so a re-added stop rule that straddles a re-wrapped line break reports PASS
+- **Contract clause:** none — the finding is against the suite's own consistency, not against plan text
+- **Defensible answers:** n/a — forced
+- **Forks:** none — forced
+- **Resolution:** `fix it: fold line wraps in the negative checks exactly as the positive checks do; fold in the carried Minor [M5] at the same line, which is the same defect on the `unresolved > 0` disjunct.` — Forced: the suite already fixes the folding convention for positive checks, so a negative check that does not fold is inconsistent with the suite's own stated invariant and silently passes the case it exists to catch.
+
+## Ruling 5 — 2026-09-04 — phase 4 — [I3] the closedness scan passes on zero bullets
+
+- **Class:** forced
+- **Item:** [I3] Important tests/in-run-rulings/run-tests.sh:227 — the closedness scan reports PASS when its ``^- ``<label>``` regex matches no bullet at all, so indenting or re-tabling the five escalation reasons and adding a sixth keeps the suite green while the predicate stops being closed
+- **Contract clause:** none — a vacuous-pass defect in the suite
+- **Defensible answers:** n/a — forced
+- **Forks:** none — forced
+- **Resolution:** `fix it: the scan must fail when it matches no bullet, and must assert the five expected labels are exactly the labels found.` — Forced, and it is Case 001's class exactly: a check that passes vacuously on an empty match set reports success while verifying nothing. The closed escalation list is the feature's central claim; a scan that cannot detect a sixth member does not test it.
+
+## Ruling 6 — 2026-09-04 — phase 4 — [I4] the design-to-fork-review link is unpinned
+
+- **Class:** forced
+- **Item:** [I4] Important tests/in-run-rulings/run-tests.sh:239 — nothing pins the link from the predicate's `design` class to the fork review; a mutation replacing `Decided after the fork review (below).` with `Decided directly, with no subagent.` left the suite at 300 passed, and every fork assertion is scoped to a subsection nothing would then reach
+- **Contract clause:** none — a coverage gap
+- **Defensible answers:** n/a — forced
+- **Forks:** none — forced
+- **Resolution:** `fix it: pin the sentence that sends a design item to the fork review.` — Forced: the reviewer ran the mutation and measured the suite still passing (300 passed). Independent fork review is one of the feature's three safety properties; a suite that stays green when the branch stops performing it is not testing the feature.
+
+## Ruling 7 — 2026-09-04 — phase 4 — [I3 round 5] the branch amends its own spec
+
+- **Class:** escalated (spec wrong)
+- **Item:** [I3] Important docs/superpowers-orchestrator/2026-09-02-autonomous-in-run-decisions/specs/autonomous-in-run-decisions-design.md:161 — the branch amends its own requirements document: spec R1, R2, R5 and R7 carry `(amended by ruling <n>)` markers and a new `## Amendments` section attributes them to orchestrator rulings 1 and 2, while the rule this branch ships classes a spec change as `escalated (spec wrong)` — the spec author's decision, never the orchestrator's; nothing defines how a spec amendment is recorded or by whom, and the plan's File Structure table does not list the spec as a file this plan modifies
+- **Contract clause:** "`spec wrong` — requires changing the spec, that is, changing what \"done\" means for this run" — plans/autonomous-in-run-decisions.md, Task 1 Contract
+- **Defensible answers:** (a) the amendments stand, and the spec gains a rule saying an orchestrator ruling may amend the spec and how it is recorded; (b) the amendments are reverted and both rulings are re-made without touching the spec, which means Ruling 2's widening of `irreversible` does not ship; (c) the amendments stand for Ruling 1 (a read entry, no change to the user's escalation list) and are reverted for Ruling 2 (which widens a definition the user wrote)
+- **Forks:** none — not dispatched. The finding asserts that the orchestrator exceeded its authority. Deciding it in the orchestrator's own favour is the motivated judgement the guards exist to prevent, and fork review would not cure that: the forks inherit this session's framing, which is the objection Case 013 already recorded against treating fork review as an independent second reader.
+- **Resolution:** escalated — the spec fixes what "done" means for this run, and the closed escalation list it defines is the user's own wording from the run's prompt. Two reviewers of four raised it independently, and the plan's File Structure table confirms the spec was never a file this plan may modify. The orchestrator's recommendation, offered but not applied: (c) — keep Ruling 1's read entry, which adds no class and touches no wording the user authored, and let the user decide Ruling 2's widening of `irreversible`.
