@@ -106,11 +106,16 @@ assert_in_range() { # desc file needle start end mode
 }
 
 # Print lines $2..$3 (start inclusive, end exclusive) of file $1 joined with
-# single spaces, each line's leading whitespace removed first. Every folded
-# check goes through this one function, so that they all see the same text.
+# single spaces, each line's leading AND trailing whitespace removed first.
+# Every folded check goes through this one function, so that they all see the
+# same text. Trailing whitespace is stripped too: without it, a stray
+# trailing space on a wrapped line would produce two consecutive spaces in
+# the folded haystack, and every folded needle is written with single
+# spaces — a whitespace-only edit to a target document would then produce a
+# spurious FAIL naming a wording rule instead of passing cleanly.
 fold_range() { # file start end
   awk -v a="$2" -v b="$3" \
-    'NR >= a && NR < b { line = $0; sub(/^[ \t]+/, "", line); printf "%s ", line }' "$1"
+    'NR >= a && NR < b { line = $0; sub(/^[ \t]+/, "", line); sub(/[ \t]+$/, "", line); printf "%s ", line }' "$1"
 }
 
 # Same as assert_in_range in "fragment" mode, except that the range's lines
@@ -541,7 +546,7 @@ if [ -z "$FORK_END" ] || [ -z "$RULINGS_END" ] || [ "$FORK_END" -gt "$RULINGS_EN
 fi
 for pin in 'subagent_type: "fork"' '<!-- multi-review report -->' 'fork-<lens>' \
            'fork review unavailable' 'contradiction: unsettled' \
-           'VERDICT:' 'TABLED:' 'ITEM: [<id>]' 'CONTRADICTS: none |'; do
+           'VERDICT:' 'TABLED:' 'ITEM: [<id>]' 'CONTRADICTS: none |' 'REASON:'; do
   assert_in_range "fork pin '$pin'" \
     "$ORCH_SKILL" "$pin" "$FORK_LINE" "$FORK_END" exact
 done
@@ -717,7 +722,8 @@ assert_in_range "ruling-record Forks field carries the planned count" \
 assert_in_range_folded "ruling record widens the follow-up to any answered entry" \
   "$ORCH_SKILL" 'not only to an `escalated` one' "$RECORD_LINE" "$RECORD_END"
 for pin in '(orchestrator):' 'decided (orchestrator)' 'amend plan:' \
-           'plan governs:' 'fix it:' 'accept:' '**Amendment' \
+           'plan governs:' 'fix it:' 'accept:' \
+           '**Amendment <n> (orchestrator ruling):**' \
            '[task <n>/<k>]'; do
   assert_in_range "answer pin '$pin'" \
     "$ORCH_SKILL" "$pin" "$ANSWERS_LINE" "$ANSWERS_END" exact
@@ -1130,8 +1136,12 @@ assert_in_range_folded "Phase 4 routes open items to the predicate" \
 # Each disjunct of the old rule is checked on its own: re-adding the
 # `unresolved > 0` half alone would otherwise pass a check that only looked
 # for the `user_decision > 0` half.
-assert_absent_in_range_folded "Phase 4 no longer stops directly on the user_decision count (old wording absent)" \
-  "$ORCH_SKILL" 'user_decision > 0` → major error → stop' \
+# Both needles below are run backtick-insensitive, like the sibling
+# stop-policy guards further down: the file's own style wraps a status word
+# in backticks, so a plain needle would separate forbidden from permitted
+# text by backtick formatting alone rather than by wording.
+assert_absent_in_range_folded_nobacktick "Phase 4 no longer stops directly on the user_decision count (old wording absent)" \
+  "$ORCH_SKILL" 'user_decision > 0 → major error → stop' \
   "$PHASE4_LINE" "$PHASE5_LINE" fragment
 # This needle does not guard the base revision's (0a57e40) actual removed
 # wording — the sibling check above does that. There, the arrow always
@@ -1142,8 +1152,8 @@ assert_absent_in_range_folded "Phase 4 no longer stops directly on the user_deci
 # edit that drops the `or` disjunct and lets `unresolved > 0` alone, without
 # `user_decision`, route straight to a stop — the same shape the removed
 # sentence used for the other disjunct.
-assert_absent_in_range_folded "Phase 4 does not route the bare unresolved count straight to a stop (guards a future dropped-or-disjunct rewording)" \
-  "$ORCH_SKILL" 'unresolved > 0` → major error → stop' \
+assert_absent_in_range_folded_nobacktick "Phase 4 does not route the bare unresolved count straight to a stop (guards a future dropped-or-disjunct rewording)" \
+  "$ORCH_SKILL" 'unresolved > 0 → major error → stop' \
   "$PHASE4_LINE" "$PHASE5_LINE" fragment
 assert_in_range_folded "Phase 5 report lists unsettled contradictions" \
   "$ORCH_SKILL" 'every entry whose Forks line records `contradiction: unsettled`' \
@@ -1502,7 +1512,7 @@ MCR_FORMAT_LINE="$(line_containing_after "$MCR_SKILL" '_Invocation <k> — YYYY-
 MCR_FORMAT_END="$(line_containing_after "$MCR_SKILL" 'Round entry with M ≥ 2' "$MCR_FORMAT_LINE")"
 MCR_M2_END="$(line_starting_with_after "$MCR_SKILL" '```' "$(line_starting_with_after "$MCR_SKILL" '```' "$MCR_FORMAT_END")")"
 assert_in_range "M = 1 log-format example carries the clause" \
-  "$MCR_SKILL" 'user-decision — <finding summary> (plan-mandated) — at <file:line> — clause:' \
+  "$MCR_SKILL" 'user-decision — <finding summary> (plan-mandated) — at <file:line> — clause: <plan location> "<quoted plan text>"' \
   "$MCR_FORMAT_LINE" "$MCR_FORMAT_END" exact
 assert_in_range "M >= 2 log-format example carries the clause before the annotation" \
   "$MCR_SKILL" '— clause: <plan location> "<quoted plan text>" ← 1/3: r1:I1' \
@@ -1809,6 +1819,68 @@ for pin in 're-use that `<k>`, apply the answer' 'Allocate a new `<k>` only for 
   assert_in_range "batch-controller re-derived conflict pin '$pin'" \
     "$BATCH_PROMPT" "$pin" "$DEV1_LINE" "$DEV1_END" exact
 done
+
+# The deterministic tie-break the "Consolidation" paragraph falls back to
+# when a contradiction between forks is still unsettled after the debate
+# round: absent a stated rule, this is what decides a contradicted `design`
+# ruling with no user involvement. Both halves pinned, because inverting
+# either flips the default (leaving binding plan text alone versus amending
+# the plan, or picking the largest amendment instead of the smallest).
+assert_in_range_folded "the unsettled tie-break defaults to leaving the plan's binding text unchanged" \
+  "$ORCH_SKILL" "take the defensible outcome that leaves the plan's binding text unchanged" \
+  "$FORK_LINE" "$FORK_END"
+assert_in_range_folded "the unsettled tie-break falls back to the smallest amendment" \
+  "$ORCH_SKILL" 'when every defensible outcome amends the plan, the one with the smallest amendment' \
+  "$FORK_LINE" "$FORK_END"
+
+# The ruling commit runs over a deliberately dirty tree (a blocked task's
+# uncommitted edits), so its staging rule and its one-commit atomicity are
+# pinned explicitly, the same standard the sibling `stopped` and
+# `ruling <n> follow-up` commit sites are held to.
+assert_in_range_folded "the ruling commit stages the log, ruling record and plan amendment by explicit path" \
+  "$ORCH_SKILL" 'you stage the log, the ruling record and any amended plan file by explicit path' \
+  "$LOG_ENTRY_LINE" "$LOG_ENTRY_END"
+assert_in_range_folded "the ruling commit is one commit holding the RULING entry, ruling-record entries and any plan amendment" \
+  "$ORCH_SKILL" 'holds the `## RULING` entry, the ruling-record entries and any plan amendment, and lands **before** the re-dispatch' \
+  "$LOG_ENTRY_LINE" "$LOG_ENTRY_END"
+
+# The two escalation-reason definitions the label-presence loop above does
+# not check: `spec wrong` carries the safety boundary that a disputed
+# Critical is settled only by the spec's author, and `chain` carries the rule
+# that stops an unbounded ruling loop once the cap is reached.
+assert_in_range_folded "spec wrong: a disputed Critical is settled only by the spec's author, never fixed or rejected" \
+  "$ORCH_SKILL" "settled only by the spec's author: it is escalated here, never fixed to satisfy the reviewer and never rejected" \
+  "$CLASS_LINE" "$CLASS_END"
+assert_in_range_folded "chain: every open item of a capped return is escalated, whatever its own class would have been" \
+  "$ORCH_SKILL" 'every open item of that return is `escalated (chain)`, whatever its own class would have been' \
+  "$CLASS_LINE" "$CLASS_END"
+
+# Deviation 1's "first dispatch of this run" test is a two-signal AND; only
+# the ledger half is pinned above. Pin the whole conjunction, so that
+# dropping the checkbox half cannot narrow the test to the ledger line alone.
+assert_in_range_folded "first dispatch of this run is both signals: every checkbox unticked AND no completed ledger line" \
+  "$BATCH_PROMPT" 'every checkbox under its `### Task <n>` heading is unticked AND no completed ledger line names it' \
+  "$DEV1_LINE" "$DEV1_END"
+
+# Three pieces of new phase wiring with no assertion scoped to their own
+# phase range.
+assert_in_range_folded "every batch dispatch carries the run-wide answer set so an earlier pre-flight ruling reaches a later batch" \
+  "$ORCH_SKILL" 'Every batch dispatch, first or repeat, carries in `[RESUME_ANSWER]` the answer set' \
+  "$PHASE3_LINE" "$PHASE4_LINE"
+assert_in_range_folded "only an escalated item stops the run on the strength of its content" \
+  "$ORCH_SKILL" 'Only an escalated item stops the run on the strength of its content' \
+  "$PHASE4_LINE" "$PHASE5_LINE"
+assert_in_range_folded "Phase 5 report counts the rulings made in the run" \
+  "$ORCH_SKILL" 'rulings made in the run — the count of `## Ruling` entries' \
+  "$PHASE5_LINE" "$LOG_FORMAT_LINE"
+
+# The loop-side definition of "decided wording" is pinned only by short
+# fragments; pin the enumeration itself, so that dropping either alternative
+# (the `decided (<who>):` line, or the `rejected: plan governs (… decision)`
+# line) cannot narrow or widen what the loop may reject unilaterally.
+assert_in_range_folded "decided wording is quoted on a decided line or a rejected: plan governs line of the same run" \
+  "$MCR_SKILL" 'text whose clause is quoted on a `decided (<who>):` line or on a `rejected: plan governs (… decision)` line of any `_Invocation` entry of the same orchestration run (same BASE)' \
+  "$NO_FIX_LINE" "$NO_FIX_END"
 
 # --- end of checks ---
 
