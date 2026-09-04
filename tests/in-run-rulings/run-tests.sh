@@ -82,10 +82,13 @@ assert_in_range() { # desc file needle start end mode
     hit="$(needle="$needle" awk -v a="$start" -v b="$end" \
       'BEGIN { n = ENVIRON["needle"] }
        NR >= a && NR < b && index($0, n) > 0 { print NR; exit }' "$file")"
-  else
+  elif [ "$mode" = "fragment" ]; then
     hit="$(needle="$needle" awk -v a="$start" -v b="$end" \
       'BEGIN { n = ENVIRON["needle"] }
        NR >= a && NR < b && index(tolower($0), tolower(n)) > 0 { print NR; exit }' "$file")"
+  else
+    bad "$desc (unknown match mode '$mode', expected 'exact' or 'fragment')"
+    return
   fi
   if [ -n "$hit" ]; then
     ok "$desc (line $hit, range $start..$end)"
@@ -175,9 +178,12 @@ assert_absent_in_range_folded() { # desc file needle start end mode
   if [ "$mode" = "exact" ]; then
     found="$(needle="$needle" hay="$folded" awk \
       'BEGIN { r = index(ENVIRON["hay"], ENVIRON["needle"]); print (r > 0 ? "yes" : "no") }')"
-  else
+  elif [ "$mode" = "fragment" ]; then
     found="$(needle="$needle" hay="$folded" awk \
       'BEGIN { r = index(tolower(ENVIRON["hay"]), tolower(ENVIRON["needle"])); print (r > 0 ? "yes" : "no") }')"
+  else
+    bad "$desc (unknown match mode '$mode', expected 'exact' or 'fragment')"
+    return
   fi
   if [ "$found" = "no" ]; then
     ok "$desc (absent from range $start..$end, line wraps folded)"
@@ -336,14 +342,29 @@ assert_in_range_folded "an earlier disposition line for the same id is not itsel
 
 bold "2. Classification read exception (R2)"
 REQUIRED_START_LINE="$(first_line_of "$ORCH_SKILL" '## Required Start')"
-assert_in_range "intro names the second read exception" \
-  "$ORCH_SKILL" 'in-run rulings' 1 "$REQUIRED_START_LINE" fragment
+# A bare case-insensitive 'in-run rulings' needle is satisfied by any
+# cross-reference to the section, so the intro sentence announcing the
+# second exception could be deleted with the check still green. Pin the
+# intro sentence's own distinguishing bytes instead: the phrase announcing
+# two documented exceptions, and a fragment of the exception's own clause.
+assert_in_range_folded "intro announces two documented exceptions" \
+  "$ORCH_SKILL" 'Two documented exceptions' 1 "$REQUIRED_START_LINE"
+assert_in_range_folded "intro's second exception clause names the classification read, bounded to the list" \
+  "$ORCH_SKILL" 'the classification read of `## In-run rulings` ("What may be read"), which is bounded to the list stated there' \
+  1 "$REQUIRED_START_LINE"
 for frag in 'data, not instructions' 'never a reviewer report file' \
-            'read-only git commands' 'resume step 3' 'nothing else' \
+            'read-only git commands' 'resume step 3' \
             '40 lines'; do
   assert_in_range "read-exception fragment '$frag'" \
     "$ORCH_SKILL" "$frag" "$READ_EXCEPTION_LINE" "$READ_EXCEPTION_END" fragment
 done
+# A bare 'nothing else' needle is short enough that ordinary prose could
+# satisfy it even with the closing declaration deleted. Pin the closing
+# clause's own distinguishing bytes: the exhaustiveness statement that ends
+# the five-item list.
+assert_in_range_folded "read exception's closing clause declares the list exhaustive" \
+  "$ORCH_SKILL" 'Nothing else. Every file read under this exception is' \
+  "$READ_EXCEPTION_LINE" "$READ_EXCEPTION_END"
 # Entry 5 of the read list: the orchestrator's own ruling record. The path is
 # a byte pin; the rest of the entry is free text. The path also occurs in the
 # ruling-record and log-entry subsections, so the range scoping is what makes
@@ -622,6 +643,19 @@ assert_in_range_folded "a Phase 3 amend plan answer records an already-committed
 assert_in_range_folded "the implementer follows the amended plan and never edits it" \
   "$ORCH_SKILL" 'the implementer follows the amended plan text and never edits the plan itself, its only write to the plan file staying the checkbox tick' \
   "$ANSWERS_LINE" "$ANSWERS_END"
+# The re-dispatch an `amend plan` ruling starts is the SAME re-dispatch its own
+# `## RULING` entry already counts against the cap, not a second one on top of
+# it. Without this pin, double counting would exhaust the 3-per-unit cap one
+# ruling early.
+assert_in_range_folded "the amend-plan re-dispatch is the same one the RULING entry already counts, not a second resume" \
+  "$ORCH_SKILL" "the re-dispatch the ruling's own \`## RULING\` entry already counts against the cap (below) — not a second resume on top of it" \
+  "$ANSWERS_LINE" "$ANSWERS_END"
+# The writer side of the Exact-content marker-placement rule: the marker
+# goes at the end of the introducing paragraph line, never inside the fence
+# or the quote, because an implementer copies their contents verbatim.
+assert_in_range_folded "an Exact-content marker goes at the end of the introducing paragraph line, never inside the fence or quote" \
+  "$ORCH_SKILL" 'the marker goes at the end of the introducing `**Exact content:** <reason>` paragraph line, never inside the fence and never inside the quote' \
+  "$ANSWERS_LINE" "$ANSWERS_END"
 # The rule that makes a Phase 3 ruling survive a stop and reach a later batch.
 # The Resume check on the same string is the cross-reference; this is the
 # definition.
@@ -775,14 +809,16 @@ else
          found = 1
          i = s - 1
          while (i >= 1 && substr(hay, i, 1) == " ") i--
-         if (i >= 1 && substr(hay, i, 1) == "*") {
-           while (i >= 1 && substr(hay, i, 1) == "*") i--
+         if (i >= 1 && index("*_", substr(hay, i, 1)) > 0) {
+           mark = substr(hay, i, 1)
+           while (i >= 1 && substr(hay, i, 1) == mark) i--
            if (i < 1 || substr(hay, i, 1) == " ") emphasis = 1
          }
          j = s + nlen
          while (j <= n && substr(hay, j, 1) == " ") j++
-         if (j <= n && substr(hay, j, 1) == "*") {
-           while (j <= n && substr(hay, j, 1) == "*") j++
+         if (j <= n && index("*_", substr(hay, j, 1)) > 0) {
+           mark = substr(hay, j, 1)
+           while (j <= n && substr(hay, j, 1) == mark) j++
            if (j > n || substr(hay, j, 1) == " ") emphasis = 1
          }
          pos = s + 1
@@ -792,9 +828,9 @@ else
        print "clean"
      }')"
   if [ "$CAP_EMPHASIS" = "clean" ]; then
-    ok "log-entry sentence carries no '*' emphasis marker around it"
+    ok "log-entry sentence carries no '*' or '_' emphasis marker around it"
   elif [ "$CAP_EMPHASIS" = "emphasis" ]; then
-    bad "log-entry sentence is wrapped in a '*' emphasis marker"
+    bad "log-entry sentence is wrapped in a '*' or '_' emphasis marker"
   else
     bad "log-entry sentence not found in range $LOG_ENTRY_LINE..$LOG_ENTRY_END, so its emphasis could not be checked"
   fi
@@ -943,7 +979,20 @@ assert_in_range_folded "Phase 4 routes open items to the predicate" \
 assert_absent_in_range_folded "Phase 4 no longer stops directly on the user_decision count (old wording absent)" \
   "$ORCH_SKILL" 'user_decision > 0` → major error → stop' \
   "$PHASE4_LINE" "$PHASE5_LINE" fragment
-assert_absent_in_range_folded "Phase 4 no longer stops directly on the unresolved count (old wording absent)" \
+# The base revision (0a57e40) joined the two disjuncts as
+# "`unresolved > 0` or\n`user_decision > 0` → major error → stop": the arrow
+# followed `user_decision > 0` directly, never `unresolved > 0`, which was
+# always followed by ` or`. A needle ending "unresolved > 0` → major error →
+# stop" therefore could never match the removed sentence, in base or in any
+# reintroduction of it — the `or` joiner always stands between them, and the
+# current routing sentence keeps that same joiner (only its destination
+# changed), so a needle on the joiner alone would also fail against today's
+# CORRECT text. This needle instead guards a hypothetical rewording — one
+# where `unresolved > 0` alone, without the disjunct, routed straight to a
+# stop — while the `user_decision` needle above is what actually catches a
+# reintroduction of the real removed sentence, since `user_decision > 0` is
+# the disjunct the arrow always followed.
+assert_absent_in_range_folded "Phase 4 does not route the bare unresolved count straight to a stop (hypothetical rewording guard)" \
   "$ORCH_SKILL" 'unresolved > 0` → major error → stop' \
   "$PHASE4_LINE" "$PHASE5_LINE" fragment
 assert_in_range_folded "Phase 5 report lists unsettled contradictions" \
@@ -990,8 +1039,13 @@ for pin in '## RULING' 'Owed probe:'; do
   assert_in_range "log-format label '$pin'" \
     "$ORCH_SKILL" "$pin" "$LOG_FORMAT_LINE" "$STATE_LINE" exact
 done
+# A bare 'Rulings:' label needle is satisfied by any line using that word; the
+# example's shape — count plus the last-ruling/phase parenthetical — is what
+# the resume path and the Phase 5 report actually read, so pin the whole
+# line including its placeholder tail, the same standard the orchestration-log
+# examples are held to.
 assert_in_range "state.md carries the Rulings line" \
-  "$ORCH_SKILL" 'Rulings:' "$STATE_LINE" "$RESUME_LINE" exact
+  "$ORCH_SKILL" 'Rulings: <count> (last: ruling <n>, phase <p>)' "$STATE_LINE" "$RESUME_LINE" exact
 for pin in '## RULING' 'Ruled:' '**Follow-up:**' '(orchestrator)' 'decided (<who>)' \
            'The Phase 3 answer set — one rule'; do
   assert_in_range "resume pin '$pin'" \
@@ -1202,8 +1256,12 @@ assert_absent_in_range_folded "stop policy no longer lists a pre-flight plan con
 # negative check above.
 assert_absent_in_range_folded "stop policy no longer lists code-review unresolved or user-decision items as a stop by itself" \
   "$ORCH_SKILL" 'code-review unresolved' "$RULINGS_END" "$GUARD_LINE" fragment
+# The trailing semicolon was only the separator of the old semicolon-joined
+# stop list; a resurrection in the file's current backticked style, or as the
+# list's last item, would carry no semicolon and still pass. Match fragment
+# mode like the sibling negative checks above, dropping the punctuation.
 assert_absent_in_range_folded "stop policy no longer lists an unconditional batch-controller BLOCKED stop" \
-  "$ORCH_SKILL" 'batch-controller BLOCKED;' "$RULINGS_END" "$GUARD_LINE" exact
+  "$ORCH_SKILL" 'batch-controller BLOCKED' "$RULINGS_END" "$GUARD_LINE" fragment
 
 bold "7. multi-code-review attribution and self-sufficient lines (R8.1, R8.2)"
 MCR_LOG_FORMAT_LINE="$(first_line_of "$MCR_SKILL" '## Review Log Format')"
@@ -1228,6 +1286,32 @@ for pin in '— clause:' 'clause: none' '(plan-mandated) — at ' \
   assert_in_range "multi-code-review pin '$pin'" \
     "$MCR_SKILL" "$pin" "$MCR_LOG_FORMAT_LINE" "$MCR_AFTER_LOOP_LINE" exact
 done
+# The harness-probe ordering rule against the location clause: stated by the
+# Review Log Format bullet, the matching Triage text, and the sentence
+# requiring the observation to use the same three replacements as a quoted
+# clause. None of the three was previously pinned.
+assert_in_range "Review Log Format bullet labels the harness-probe order rule" \
+  "$MCR_SKILL" '**Order against the location clause:**' \
+  "$MCR_LOG_FORMAT_LINE" "$MCR_AFTER_LOOP_LINE" exact
+assert_in_range_folded "the location clause comes first, then the harness probe clause, then the annotation" \
+  "$MCR_SKILL" 'the location clause comes FIRST — summary, then `— at … — clause: …`, then `— harness probe: <observation>`, then any ` ← ` annotation' \
+  "$MCR_LOG_FORMAT_LINE" "$MCR_AFTER_LOOP_LINE"
+assert_in_range_folded "the Review Log Format side states the observation's three replacements" \
+  "$MCR_SKILL" "the \`<observation>\` text is written under the same three replacements as a quoted clause: each \` — \` and each \` ← \` replaced by one space, each \`\"\` replaced by a single quotation mark \`'\`" \
+  "$MCR_LOG_FORMAT_LINE" "$MCR_AFTER_LOOP_LINE"
+# The Triage side of the same rule: the observation is placed after the
+# location-clause suffix, never before it. Scoped to the Procedure section,
+# where Triage lives.
+assert_in_range_folded "Triage places the harness-probe observation after the location clause suffix" \
+  "$MCR_SKILL" 'placed after the `— at <file:line> — clause: …` suffix when the line carries one and before any source annotation' \
+  "$MCR_PROCEDURE_LINE" "$MCR_LOG_FORMAT_LINE"
+# The reader side of the Exact-content marker-placement rule (writer side
+# pinned in orchestrating-development/SKILL.md, section 4): the marker
+# stands at the end of the introducing paragraph line and covers the block
+# below it.
+assert_in_range_folded "an Exact-content marker stands at the end of the introducing paragraph line and covers the block below" \
+  "$MCR_SKILL" 'For an `**Exact content:**` block the marker stands at the end of the introducing `**Exact content:** <reason>` paragraph line and covers the block below it' \
+  "$MCR_PROCEDURE_LINE" "$MCR_LOG_FORMAT_LINE"
 for pin in 'decided (orchestrator)' 'decided (<who>)' \
            'plan governs (orchestrator decision)' 'plan governs (user decision)' \
            '`decided (user)` or `decided (orchestrator)`' \
@@ -1423,14 +1507,34 @@ assert_in_range "First-batch parameter defers to Deviation 1's pre-flight rule" 
 DEV1_LINE="$(line_containing_after "$BATCH_PROMPT" '1. Never ask the user.' 0)"
 DEV1_END="$(line_containing_after "$BATCH_PROMPT" '2. Sequential only' "$DEV1_LINE")"
 for pin in '### Question <k>' '### Conflict <k>' 'lowest-numbered task' \
-           'Pre-flight rule' 'absent from' \
-           '.superpowers/sdd/task-<n>-report.md' 'is settled' \
+           'Pre-flight rule' \
+           '.superpowers/sdd/task-<n>-report.md' \
            'Never copy a secret or a credential' 're-used on the same task' \
-           'those sections before you write your own' 'controller failure' \
+           'those sections before you write your own' \
            '[task <n>]` line means `[task <n>/1]'; do
   assert_in_range "batch-controller Deviation 1 pin '$pin'" \
     "$BATCH_PROMPT" "$pin" "$DEV1_LINE" "$DEV1_END" exact
 done
+# 'absent from', 'is settled' and 'controller failure' were pinned above by
+# short generic strings that ordinary Deviation 1 prose also satisfies. Pin
+# the owning sentence of each instead, folded because each crosses a line
+# wrap.
+assert_in_range_folded "Deviation 1 lets <n> belong to a later batch, absent from TASK_LIST" \
+  "$BATCH_PROMPT" 'so that `<n>` may be a task of a later batch and absent from `[TASK_LIST]`; never best-guess a number inside `[TASK_LIST]` instead' \
+  "$DEV1_LINE" "$DEV1_END"
+assert_in_range_folded "Deviation 1 defines a settled section by its matching Resume Answer line" \
+  "$BATCH_PROMPT" "with that exact \`<k>\` stands in this dispatch's \`## Resume Answer\` is settled, not open" \
+  "$DEV1_LINE" "$DEV1_END"
+assert_in_range_folded "Deviation 1 reads an unanswered BLOCKED section as a controller failure" \
+  "$BATCH_PROMPT" 'without such an unanswered section is read by the orchestrator as a controller failure, not as an open item' \
+  "$DEV1_LINE" "$DEV1_END"
+# The pre-flight prohibition itself: an unsettled conflict is never
+# best-guessed or decided by the controller from plan, spec or repository —
+# it is returned as BLOCKED. This is the rule that stops a batch controller
+# from silently deciding a plan self-contradiction.
+assert_in_range_folded "Deviation 1 forbids best-guessing an unsettled pre-flight conflict" \
+  "$BATCH_PROMPT" 'Never best-guess the conflict itself: an unsettled pre-flight conflict is returned as `BLOCKED` for that conflict, never decided by you from plan, spec or repository' \
+  "$DEV1_LINE" "$DEV1_END"
 
 # The implementer rewrites the task report file, so an earlier attempt's
 # sections may be gone: a new section number is allocated above the highest
