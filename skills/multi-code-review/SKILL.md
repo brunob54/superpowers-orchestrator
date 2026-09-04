@@ -901,13 +901,16 @@ either is replaced by a single space. The same replacement applies to the
 `<finding summary>` on the line, so that the first ` — at ` on the line is
 always the one that introduces the location; a `"` inside the quoted plan
 text is written as a single quotation mark `'`, so that the quote's own
-delimiters stay unambiguous. **Normalization is one rule:** take the plan
-text at `<plan location>`, replace each ` — ` and each ` ← ` with one
+delimiters stay unambiguous. **Normalization is one rule:** the unit
+compared is one sentence or one list entry, never a whole section — take
+the sentence or the list entry of the plan text at `<plan location>` that
+the finding collides with, replace each ` — ` and each ` ← ` with one
 space, then cut it to 160 characters. Every consumer that later compares
 this quote with the plan — the orchestrator's `plan governs` guard, its
-amendment lookup, and the decided-wording test above — normalizes the plan
-text at that location the same way and tests the quote as a **prefix** of
-it. No consumer compares the quote with the raw plan text. Two full lines:
+amendment lookup, and the decided-wording test above — normalizes each
+sentence and each list entry of the plan text at that location the same
+way, and tests the quote as a **prefix** of one of them.
+No consumer compares the quote with the raw plan text. Two full lines:
 
 ```
 - [I2] user-decision — helper skips the 0/0 case (plan-mandated) — at tests/helpers.sh:251 — clause: Task 6 "the helper skips a 0/0 round" ← 1/3: r1:I2
@@ -968,8 +971,11 @@ unresolved, and no fix or re-review runs. A bare `fix it: …` answer for an
 item whose `— clause:` names binding plan text is not applied — only an
 `amend plan: …; fix it: …` answer may change binding text: no fix
 subagent runs for it, and its disposition is
-`unresolved: fix contradicts binding text — "<clause>"`, which counts as
-unresolved in the return and sends the item back to the answerer. Double-fix-failure
+`unresolved: fix contradicts binding text` — the mandatory `— clause:`
+suffix every `unresolved:` line carries ("Self-sufficient open-item
+lines") holds the clause, so the disposition text never repeats it. That
+item counts as unresolved in the return and is sent back to the
+answerer. Double-fix-failure
 items: the user chooses re-dispatch, manual fix, or accept-risk with
 documented rationale (logged). The gate condition is then re-evaluated —
 no loop re-run needed.

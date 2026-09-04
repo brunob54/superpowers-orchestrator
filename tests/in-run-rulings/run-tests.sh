@@ -193,6 +193,14 @@ assert_in_range_folded "irreversible entry covers an amendment of binding plan t
 assert_in_range_folded "irreversible entry triggers on the edit location, not on a judgement" \
   "$ORCH_SKILL" 'never a judgement about whether the amendment weakens anything' \
   "$CLASS_LINE" "$CLASS_END"
+# A `Task <n>` clause location is binding or reference text; which one is read
+# from the task section, and that reading is not the forbidden judgement.
+assert_in_range_folded "irreversible entry reads binding-ness from the task section" \
+  "$ORCH_SKILL" 'under entry 3 of the read exception' "$CLASS_LINE" "$CLASS_END"
+# The Phase 3 discriminator bounds <n> by the plan, not by the batch, because a
+# pre-flight conflict may name a task of a later batch.
+assert_in_range_folded "discriminator bounds <n> by the plan, not by the batch" \
+  "$ORCH_SKILL" 'may belong to a later batch' "$CLASS_LINE" "$CLASS_END"
 
 bold "2. Classification read exception (R2)"
 REQUIRED_START_LINE="$(first_line_of "$ORCH_SKILL" '## Required Start')"
@@ -262,6 +270,13 @@ for pin in '-open-decisions.md' '**Follow-up:**' '## Ruling <n>'; do
 done
 assert_in_range "ruling-record fragment 'appended, never rewritten'" \
   "$ORCH_SKILL" 'appended, never rewritten' "$RECORD_LINE" "$RECORD_END" fragment
+# The Forks field records how many of the planned forks returned.
+assert_in_range "ruling-record Forks field carries the planned count" \
+  "$ORCH_SKILL" '<k> of <planned>' "$RECORD_LINE" "$RECORD_END" exact
+# A follow-up is appended to any entry the user later answers, not only to an
+# escalated one.
+assert_in_range_folded "ruling record widens the follow-up to any answered entry" \
+  "$ORCH_SKILL" 'not only to an `escalated` one' "$RECORD_LINE" "$RECORD_END"
 for pin in '(orchestrator):' 'decided (orchestrator)' 'amend plan:' \
            'plan governs:' 'fix it:' 'accept:' '**Amendment' \
            '[task <n>/<k>]'; do
@@ -283,6 +298,12 @@ assert_in_range_folded "amendment never deletes binding text outright" \
 assert_in_range_folded "amendment appends an exception scoped to the ruling's item" \
   "$ORCH_SKILL" 'appends to it an exception scoped to the item the ruling names' \
   "$ANSWERS_LINE" "$ANSWERS_END"
+# An `amend plan` answer that would edit binding text is never a ruling of the
+# orchestrator's: it escalates, and only the user's answer carries the line.
+assert_in_range "answer pin 'escalated (irreversible)'" \
+  "$ORCH_SKILL" 'escalated (irreversible)' "$ANSWERS_LINE" "$ANSWERS_END" exact
+assert_in_range_folded "the amendment procedure is scoped to the amendments still the orchestrator's" \
+  "$ORCH_SKILL" 'never written as a ruling of your own' "$ANSWERS_LINE" "$ANSWERS_END"
 
 bold "5. RULING log entry, cap and guards (R6, R7, R9)"
 for pin in '## RULING' 'Re-dispatch:' 'Re-dispatch: none' 'Ruled:' \
@@ -318,6 +339,15 @@ for frag in 'in-run resumes of one phase are capped at 3 per unit' \
 done
 assert_in_range "log-entry fragment 'previous invocation left'" \
   "$ORCH_SKILL" 'previous invocation left' "$LOG_ENTRY_LINE" "$LOG_ENTRY_END" fragment
+# The pre-commit self-check escalates, never rewrites, a bare `fix it` whose
+# clause names binding plan text.
+assert_in_range "self-check escalates a bare fix it on binding text" \
+  "$ORCH_SKILL" 'escalated (irreversible)' "$LOG_ENTRY_LINE" "$LOG_ENTRY_END" exact
+# The Phase 3 cap counts per task number, in either written form.
+assert_in_range "cap counts a Phase 3 task in either line form" \
+  "$ORCH_SKILL" '`[task <n>]` or `[task <n>/<k>]`' "$LOG_ENTRY_LINE" "$LOG_ENTRY_END" exact
+assert_in_range "RULING Forks line carries the planned count" \
+  "$ORCH_SKILL" '<k> of <planned>' "$LOG_ENTRY_LINE" "$LOG_ENTRY_END" exact
 assert_in_range "guard fragment 'durable marker'" \
   "$ORCH_SKILL" 'durable marker' "$LOG_ENTRY_LINE" "$LOG_ENTRY_END" fragment
 for frag in 'a Critical is never rejected' 'quotes its clause' \
@@ -342,6 +372,11 @@ done
 assert_in_range_folded "guard 4 escalates when the clause match is unsure" \
   "$ORCH_SKILL" 'an unsure match never becomes a ruling' \
   "$GUARDS_LINE" "$GUARDS_END"
+# A follow-up recorded on a `forced` or `design` entry has no escalation class
+# of its own, so guard 4 names the fallback label from the same closed list.
+assert_in_range_folded "guard 4 names a fallback class for a forced or design entry" \
+  "$ORCH_SKILL" 'which has no escalation class of its own' \
+  "$GUARDS_LINE" "$GUARDS_END"
 
 bold "6. Wiring into phases, log format, state.md, Resume and stop policy (R6)"
 PHASE3_LINE="$(first_line_of "$ORCH_SKILL" '## Phase 3 — Implementation Batches')"
@@ -362,10 +397,19 @@ for pin in '## RULING' 'Ruled:' 'Open:' 'Owed probe:' 'ruling <n> follow-up'; do
 done
 assert_in_range "state.md carries the Rulings line" \
   "$ORCH_SKILL" 'Rulings:' "$STATE_LINE" "$RESUME_LINE" exact
-for pin in '## RULING' 'Ruled:' '**Follow-up:**' '(orchestrator)' '(user)' 'decided (<who>)'; do
+for pin in '## RULING' 'Ruled:' '**Follow-up:**' '(orchestrator)' '(user)' 'decided (<who>)' \
+           'The Phase 3 answer set — one rule'; do
   assert_in_range "resume pin '$pin'" \
     "$ORCH_SKILL" "$pin" "$RESUME_LINE" "$RULINGS_LINE" exact
 done
+# The pre-amendment clause is recovered from the ruling commit, never from the
+# audit note's free prose.
+assert_in_range "resume recovers the pre-amendment clause from the ruling commit" \
+  "$ORCH_SKILL" 'git show <ruling commit>^:<plan path>' "$RESUME_LINE" "$RULINGS_LINE" exact
+# The commit-landed check compares whole subjects, because --grep is unanchored.
+assert_in_range_folded "resume compares the printed subject with the full expected string" \
+  "$ORCH_SKILL" 'compare each printed subject with the full expected string' \
+  "$RESUME_LINE" "$RULINGS_LINE"
 if [ -n "$RESUME_LINE" ] && [ -n "$RULINGS_LINE" ] && [ "$RESUME_LINE" -lt "$RULINGS_LINE" ] && \
    awk -v a="$RESUME_LINE" -v b="$RULINGS_LINE" \
      'NR >= a && NR < b && index($0, "decided (user)") > 0 { found = 1 } END { exit found ? 1 : 0 }' "$ORCH_SKILL"; then
@@ -391,6 +435,7 @@ MCR_AFTER_LOOP_LINE="$(first_line_of "$MCR_SKILL" '## After the Loop')"
 MCR_ERROR_HANDLING_LINE="$(first_line_of "$MCR_SKILL" '## Error Handling')"
 for pin in '— clause:' 'clause: none' '(plan-mandated) — at ' \
            'cut it to 160 characters' '**Normalization is one rule:**' \
+           'one sentence or one list entry, never a whole section' \
            'tests the quote as a **prefix**' \
            'No consumer compares the quote with the raw plan text'; do
   assert_in_range "multi-code-review pin '$pin'" \
@@ -442,6 +487,11 @@ for pin in '(orchestrator)' '(user)' 'decided (<who>)' \
     "$LOOP_PROMPT" "$pin" "$LOOP_DEV5_LINE" "$LOOP_RETURN_LINE" exact
 done
 BATCH_RA_LINE="$(line_containing_after "$BATCH_PROMPT" '`[RESUME_ANSWER]` — OPTIONAL' 0)"
+# The section heading's condition for omitting the section must match the
+# placeholder documentation's: no answer recorded by the run at all.
+assert_in_range "batch-controller Resume Answer heading states the omit condition" \
+  "$BATCH_PROMPT" '## Resume Answer (omit only when the run has recorded no answer at all)' \
+  1 "$BATCH_RA_LINE" exact
 BATCH_RA_END="$(line_containing_after "$BATCH_PROMPT" '**Nothing else may be added to the prompt.**' "$BATCH_RA_LINE")"
 for pin in '(orchestrator)' '(user)' '[task <n>/<k>]'; do
   assert_in_range "batch-controller [RESUME_ANSWER] doc pin '$pin'" \
@@ -449,6 +499,10 @@ for pin in '(orchestrator)' '(user)' '[task <n>/<k>]'; do
 done
 assert_in_range "batch-controller [RESUME_ANSWER] doc says authoritative either way" \
   "$BATCH_PROMPT" 'authoritative either way' "$BATCH_RA_LINE" "$BATCH_RA_END" fragment
+# The First-batch parameter states the pre-flight rule once, by pointing at
+# Deviation 1, so the two copies cannot diverge again.
+assert_in_range "First-batch parameter defers to Deviation 1's pre-flight rule" \
+  "$BATCH_PROMPT" "under Deviation 1's pre-flight rule" 1 "$BATCH_RA_LINE" exact
 # Several needles above (e.g. 'is settled', 'lowest-numbered task',
 # '### Question <k>', '### Conflict <k>') also occur elsewhere in the file
 # outside Deviation 1, so a whole-file byte pin would still pass with the
@@ -457,6 +511,7 @@ assert_in_range "batch-controller [RESUME_ANSWER] doc says authoritative either 
 DEV1_LINE="$(line_containing_after "$BATCH_PROMPT" '1. Never ask the user.' 0)"
 DEV1_END="$(line_containing_after "$BATCH_PROMPT" '2. Sequential only' "$DEV1_LINE")"
 for pin in '### Question <k>' '### Conflict <k>' 'lowest-numbered task' \
+           'Pre-flight rule' 'absent from' \
            '.superpowers/sdd/task-<n>-report.md' 'is settled' \
            'Never copy a secret or a credential' 're-used on the same task' \
            'those sections before you write your own' 'controller failure' \

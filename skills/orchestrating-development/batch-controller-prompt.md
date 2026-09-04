@@ -60,17 +60,15 @@ Agent tool (general-purpose):
     Tasks to implement, in order: [TASK_LIST]
     First batch: [FIRST_BATCH]  (if "yes": run SDD's "Pre-Flight Plan
     Review" over the whole plan before task 1; any conflict → return
-    `BLOCKED task=<n>`, `<n>` the lowest-numbered task the conflict
-    touches — this batch's first task when the conflict touches no task
-    at all — with its `### Conflict <k>` sections written to that
-    task's report file as Deviation 1 states — never best-guess it. A
+    `BLOCKED task=<n>` under Deviation 1's pre-flight rule, which states
+    the task number and the report file once, for both places. A
     conflict or question whose `[task <n>/<k>]` line with that exact
     `<k>` is present in `## Resume Answer` is settled: apply that answer
     and never return BLOCKED for it again. A bare `[task <n>]` line
     always means `[task <n>/1]`, whatever the number of sections the
     report file holds)
 
-    ## Resume Answer (omit only when no answer applies to this batch)
+    ## Resume Answer (omit only when the run has recorded no answer at all)
 
     [RESUME_ANSWER]
 
@@ -92,9 +90,15 @@ Agent tool (general-purpose):
        dispatch. At a task's first dispatch of this run — no
        `[task <n>…]` line for it in `## Resume Answer` — any section
        already in its report file was left by an earlier run: delete
-       those sections before you write your own. A pre-flight conflict
-       goes into the report file of the lowest-numbered task it touches,
-       or of this batch's first task when it touches no task. A
+       those sections before you write your own. **Pre-flight rule (one
+       statement):** a conflict the Pre-Flight Plan Review finds is
+       returned as `BLOCKED task=<n>` with `<n>` the lowest-numbered task
+       the conflict touches — this batch's first task when it touches no
+       task at all — and its `### Conflict <k>` sections go into that
+       task's report file. The pre-flight review covers the whole plan,
+       so that `<n>` may be a task of a later batch and absent from
+       `[TASK_LIST]`; never best-guess a number inside `[TASK_LIST]`
+       instead. A
        section whose `[task <n>/<k>]` line with that exact `<k>` stands
        in this dispatch's `## Resume Answer` is settled, not open (a
        bare `[task <n>]` line means `[task <n>/1]`). A

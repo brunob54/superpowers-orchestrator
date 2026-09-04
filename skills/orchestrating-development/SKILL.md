@@ -376,7 +376,7 @@ entry per ruled return and re-dispatches the phase:
 Items: [<id>] <forced|design> — <answer>
 Items: [<id>] escalated (<spec wrong|scope|irreversible|secret|chain>) — <summary>
 Detail: docs/superpowers-orchestrator/<date>-<slug>/plans/<slug>-open-decisions.md
-Forks: none | <k> (<lens>, <lens>[, <lens>]) — contradiction: none | settled | unsettled
+Forks: none | <k> of <planned> (<lens>, <lens>[, <lens>]) — contradiction: none | settled | unsettled
 Re-dispatch: phase <p>, in-run resume <r> of 3
 ```
 
@@ -466,9 +466,13 @@ Trigger: `Resume orchestration for <plan-or-spec path>`.
    a fresh orchestration. Never reconstruct it.
 2. Log ends with `_Completed_` → report that and stop.
 3. Log ends with a `## RULING <n>` entry: before you act on it, check that
-   its own commit landed — `git log --oneline --grep "<slug> ruling <n>"`
-   must show the subject `chore(orchestration): <slug> ruling <n>` (a
-   `ruling <n> follow-up` subject is a different commit). When it does
+   its own commit landed — `git log --format=%s --grep "<slug> ruling <n>"`
+   must print, as a whole line, exactly the subject
+   `chore(orchestration): <slug> ruling <n>`. `--grep` is an unanchored
+   regular expression, so its output also holds a
+   `ruling <n> follow-up` subject and, for ruling 1, a `ruling 10`
+   subject: compare each printed subject with the full expected string
+   and accept only an exact match. When it does
    not, the session died between the writes and the commit: stage the
    orchestration log, the ruling record and the plan file when that
    ruling amended it, each by explicit path, make that commit now, and
@@ -483,13 +487,16 @@ Trigger: `Resume orchestration for <plan-or-spec path>`.
    `## RULING` entry whose `Re-dispatch:` line starts with `none` (its
    written form is `Re-dispatch: none — escalated`) and no `## STOPPED`
    follows it — a crash between the ruling commit and the `stopped`
-   commit: rebuild the missing `## STOPPED` entry from that return's
-   entries only — the ruling-record entries whose ruling number is at or
-   above this entry's `<n>`, never an entry that already carries a
+   commit: rebuild the missing `## STOPPED` entry from the ruling record
+   by the same rule "Handling a return as a whole" states, so that the
+   two paths to the same stop produce the same entry — an `Open:` line
+   with its reason for each `escalated` entry of that return (the
+   ruling-record entries whose ruling number is at or above this entry's
+   `<n>`), and a `Ruled:` line with its Resolution for every ruling of
+   the stopped unit that was not escalated, this return's and its
+   earlier returns' alike, never an entry that already carries a
    `**Follow-up:**` line, which the user answered at an earlier stop
-   (each `escalated` entry gives an `Open:`
-   line with its reason, each other entry a `Ruled:` line with its
-   Resolution) — commit it as `stopped`, then continue with the
+   — commit it as `stopped`, then continue with the
    `## STOPPED` case. Otherwise, log
    ends with `## STOPPED`: its `Open:` lines are the escalated items the
    resume prompt must answer, its `Ruled:` lines the items already
@@ -498,13 +505,22 @@ Trigger: `Resume orchestration for <plan-or-spec path>`.
    trigger, below). When the resume prompt does answer, build
    `[RESUME_ANSWER]` from the `Ruled:` lines, each tagged
    `(orchestrator)`, plus the resume prompt's answers, each tagged
-   `(user)`; a resume-prompt answer for an id that stands on a `Ruled:`
-   line replaces that line — the user's answer, tagged `(user)`, is sent
+   `(user)` — that construction is the Phase 4 path. For Phase 3 the
+   answer set is instead the full run-wide set defined by
+   "The Phase 3 answer set — one rule" (`## In-run rulings`): every ruled
+   `[task <n>/<k>]` line recorded for this run, for every task, taken
+   from the ruling record and tagged `(orchestrator)`, with nothing
+   dropped at this `## STOPPED` entry. In both phases a resume-prompt
+   answer for an id that stands on a `Ruled:` line, or on such a ruled
+   task line, replaces it — the user's answer, tagged `(user)`, is sent
    instead of the ruled one; when the ruling that line recorded had
    amended the plan, revert that amendment in the same resume commit —
    find the edited clause by its `(amended by ruling <n>)` marker and the
-   audit note by its `**Amendment <n>` label, restore the clause to the
-   text the note says it was changed from, and delete the note — so that
+   audit note by its `**Amendment <n>` label, restore the clause to its
+   pre-amendment text — recovered verbatim from the ruling's own commit,
+   `git show <ruling commit>^:<plan path>`, never from the audit note,
+   whose prose is not required to quote the original — and delete the
+   note, so that
    no wording the user's answer overturned stays in the plan with the
    authority of decided wording; append each
    user answer to its item's ruling-record entry
@@ -640,12 +656,21 @@ its correct resolution:
 - `irreversible` — needs an irreversible or outward-facing action: a
   force-push, deleting data, publishing, calling or configuring an
   external service, adding a dependency. An `amend plan` answer whose
-  amendment would edit the plan's **binding** text — the
-  `**Global Constraints:**` block, or an `**Exact content:**` block — is
+  amendment would edit the plan's **binding** text — the one set
+  "Plan amendment" below defines: a `**Global Constraints:**` block, an
+  `**Exact content:**` block, and, in a plan written before the 7.7.0
+  Body-authority note, any mandated text — is
   `escalated (irreversible)` as well, because that edit changes the text
   every later task is held to. The trigger is the edit location the
   item's disposition line already names after `— clause:`, never a
-  judgement about whether the amendment weakens anything.
+  judgement about whether the amendment weakens anything. A
+  `— clause: Global Constraints` location is binding on its face; a
+  `— clause: Task <n>` location can be either, so read that task section
+  under entry 3 of the read exception below to see whether the clause the
+  line quotes is an `**Exact content:**` block (or, in a pre-note plan,
+  mandated text) or reference text. That reading is not the forbidden
+  judgement: what you never judge is the amendment's effect — whether it
+  weakens the clause or leaves it harmless.
 - `secret` — the item's disposition reason or summary names an exposed
   secret or credential. You never decide a `secret` item. One producer
   exists: `code-review-loop-prompt.md` Deviation 3 logs a secret found in
@@ -669,9 +694,14 @@ A plan task that is impossible as written while the spec is fine is a
 
 **Phase 3 discriminator.** A batch controller returns `BLOCKED task=<n>`
 for an open item and for a failure alike, and you do not read its
-one-line reason as content. `<n>` must be one of the task numbers you
-dispatched in this batch, that is, an integer present in the `[TASK_LIST]`
-you filled. Any other value is a malformed return: no file is read for it,
+one-line reason as content. `<n>` must be a task number of the plan — an
+integer that has a `### Task <n>` heading in the plan you cheap-scanned in
+Phase 3 step 1 — and not only one of this batch's task numbers: the
+Pre-Flight Plan Review runs over the whole plan, so the batch template
+returns a pre-flight conflict under the lowest-numbered task the conflict
+touches, which may belong to a later batch and be absent from the
+`[TASK_LIST]` you filled. A value that is no task number of the plan is a
+malformed return: no file is read for it,
 and it takes the controller-failure path below — retry the identical
 dispatch once, then stop under the Major-Error Stop Policy. The report
 file decides, and only its
@@ -679,8 +709,8 @@ file decides, and only its
 section of `.superpowers/sdd/task-<n>-report.md` is unanswered when the
 `[RESUME_ANSWER]` of the dispatch that returned this `BLOCKED` carried no
 `[task <n>/<k>]` line with that exact `<k>` (a bare `[task <n>]` line
-counts as `[task <n>/1]`) — on a first
-dispatch, which carries no answers, every section is unanswered. A
+counts as `[task <n>/1]`) — a dispatch that carries no answer line for
+this task leaves every section of it unanswered. A
 `BLOCKED task=<n>` whose report file holds at least one unanswered section
 is an open-item return
 and enters the predicate; one whose report file is missing, holds no
@@ -908,10 +938,10 @@ Case template so that a session keeping such a log copies it mechanically:
 ## Ruling <n> — YYYY-MM-DD — phase <p> — [<id>] <short title>
 
 - **Class:** forced | design | escalated (<spec wrong|scope|irreversible|secret|chain>)
-- **Item:** [<id>] <severity> <file:line> — <finding summary, verbatim>   (Phase 3: `[task <n>]` n/a n/a — <the question or conflict, one line>)
+- **Item:** [<id>] <severity> <file:line> — <finding summary, verbatim>   (Phase 3: `[task <n>/<k>]` n/a n/a — <the question or conflict, one line>)
 - **Contract clause:** "<verbatim quote>" — <path of the spec, plan or skill that holds it>
 - **Defensible answers:** <one line each; `n/a` for forced>
-- **Forks:** <lens>: <VERDICT line> (one per fork; `none` for forced); contradiction: none | <what and how it was settled, or `unsettled`>
+- **Forks:** <k> of <planned> — <lens>: <VERDICT line> (one per fork; `none` for forced); contradiction: none | <what and how it was settled, or `unsettled`>
 - **Resolution:** <the answer as written into [RESUME_ANSWER]> — <reason; for forced, the one-sentence fact>
 ```
 
@@ -929,7 +959,11 @@ the `## RULING` log entry (below) in one commit. For an `escalated` item
 the entry holds the class and the reason, and its Resolution line reads
 `escalated — <reason>`; the user's later answer is appended to the same
 entry as a `**Follow-up:**` line by Resume step 3, never written into the
-Resolution line. That line carries the user's answer and, after it, the
+Resolution line. Resume step 3 appends that line to **any** entry the
+user later answers, not only to an `escalated` one: a resume-prompt
+answer that replaces a `Ruled:` line lands as a `**Follow-up:**` line on
+that item's `forced` or `design` entry the same way. That line carries
+the user's answer and, after it, the
 item's `clause:` text quoted — `**Follow-up:** <answer> — clause:
 <plan location> "<quoted plan text>"`, copied from the item's disposition
 line, or `— clause: none`. The quote is the key guard 4 (below) matches a
@@ -960,8 +994,13 @@ A line without a `(<who>)` tag is a user line — an untagged answer such as
   rejected as non-binding. The clause is mandatory (guard 1, below).
 - `amend plan: <the amendment>; fix it: <what the fix must achieve>` —
   the plan was wrong. The only accepting answer when `clause:` names
-  binding text. You write the amendment (below) before re-dispatching;
-  the loop then fixes.
+  binding text, and never one of yours when the amendment's edit location
+  is itself binding text ("Plan amendment", below, defines that set):
+  such an item is `escalated (irreversible)` (classification, above), and
+  only the user's answer on the resume carries this line. You write the
+  amendment (below) before re-dispatching — for a ruling of your own, an
+  amendment of reference text; and for a user's `amend plan` answer when
+  it arrives on a resume; the loop then fixes.
 - `accept: <reason>` — for an `unresolved` item only, and Important only;
   an unresolved Critical is `fix it` with a new hint, or `escalated`.
 
@@ -999,7 +1038,10 @@ answered in one of two forms: `plan governs: "<verbatim clause>" — <path>`,
 naming the side that governs — the implementer follows that text — or
 `amend plan: <the amendment>` when the other side governs. An answer that
 sides against binding plan text is always `amend plan: …` (the amendment
-procedure below); a plain-text answer is valid only against a question or
+procedure below), and such an answer is never yours to rule: the item is
+`escalated (irreversible)` (classification, above), and the `amend plan`
+line reaches the controller as the user's answer on the resume. A
+plain-text answer is valid only against a question or
 against reference text — a plain-text answer that left a binding clause in
 force would be raised again by the task's reviewer, who receives the
 `**Global Constraints:**` block verbatim. The batch controller hands the
@@ -1033,7 +1075,12 @@ written for.
 **Plan amendment.** A plan conflict is a collision with the plan's
 **binding** text — under the 7.7.0 Body-authority note, a
 `**Global Constraints:**` entry or an `**Exact content:**` block; in a
-plan written before that note, any mandated text. An amendment that only
+plan written before that note, any mandated text. This procedure serves
+the amendments that are still yours — a ruling on **reference** text —
+and a user's `amend plan` answer arriving on a resume, which is what
+authorises an edit to binding text: an amendment of binding text is never
+written as a ruling of your own (classification, `irreversible`). An
+amendment that only
 annotates the plan would leave the binding clause in force, and the next
 review would raise the same finding. An amendment also never **deletes**
 binding text outright: it keeps the clause and appends to it an exception
@@ -1044,8 +1091,10 @@ disposition line names (`— clause: Global Constraints` or
 inside it by the prefix rule above, never by a byte-equal match — do two
 things:
 
-1. **Edit the binding clause in place** — replace the Global Constraints
-   entry, the Exact-content block, or the mandated sentence with the
+1. **Edit the named clause in place** — for a user-authorised amendment
+   of binding text, the Global Constraints entry, the Exact-content block
+   or the mandated sentence; for a ruling of your own, the reference
+   sentence or list entry the location names — replacing it with the
    amended text — and append to the edited clause the marker
    `(amended by ruling <n>)`. When the clause is a fenced code block or a
    block quote — an `**Exact content:**` block — the marker goes at the
@@ -1091,7 +1140,7 @@ appends to the orchestration log instead:
 Items: [<id>] <forced|design> — <answer>
 Items: [<id>] escalated (<spec wrong|scope|irreversible|secret|chain>) — <summary>
 Detail: <topic folder>/plans/<slug>-open-decisions.md
-Forks: none | <k> (<lens>, <lens>[, <lens>]) — contradiction: none | settled | unsettled
+Forks: none | <k> of <planned> (<lens>, <lens>[, <lens>]) — contradiction: none | settled | unsettled
 Re-dispatch: phase <p>, in-run resume <r> of 3
 ```
 
@@ -1107,8 +1156,11 @@ answer lines: a `plan governs` without a clause becomes `fix it`,
 `amend plan …; fix it`, or `escalated (spec wrong)`; an `accept` on a
 Critical becomes `fix it` or `escalated (spec wrong)`; a bare `fix it`
 whose item's `clause:` names binding plan text becomes
-`amend plan: …; fix it` or `escalated`, because a fix against binding text
-needs the amendment (the loop refuses such a `fix it` outright, and the
+`escalated (irreversible)`, because the amendment such a fix needs would
+edit binding text and is never yours to write (classification, above),
+while a bare `fix it` whose `clause:` names reference text becomes
+`amend plan: …; fix it` when the fix contradicts that clause (the loop
+refuses such a `fix it` outright, and the
 item comes back `unresolved`). **One commit**,
 subject `chore(orchestration): <slug> ruling <n>`, holds the `## RULING`
 entry, the ruling-record entries and any plan amendment, and lands
@@ -1143,8 +1195,10 @@ only the `Open:` ids; Resume step 3 carries the `Ruled:` lines forward as
 
 **The cap.** In-run resumes of one phase are capped at 3 per unit: the
 phase itself in Phase 4, the task in Phase 3. The count is the number of
-`## RULING` entries of the same phase — and, in Phase 3, of the same
-`[task <n>]` — whose `Re-dispatch:` line does not start with `none` (the
+`## RULING` entries of the same phase — and, in Phase 3, of the same task
+number, counted on an `Items:` line naming that task in either form,
+`[task <n>]` or `[task <n>/<k>]` — whose `Re-dispatch:` line does not
+start with `none` (the
 escalated form is `Re-dispatch: none — escalated`), written after the
 **later** of the orchestration log's latest `_Invocation` line and its
 latest `## STOPPED` entry, so that a resume after a stop starts from zero. Phase 3
@@ -1156,7 +1210,8 @@ not a ruling: that return still gets its `## RULING` entry with
 `Re-dispatch: none — escalated` and one ruling-record entry per item, each
 with the class `escalated (chain)`, written and committed before the
 `## STOPPED` entry — Resume step 3 rebuilds a missing `## STOPPED` entry
-from exactly those entries. A new review
+from those entries together with the unit's earlier non-escalated
+rulings. A new review
 invocation started by an `amend plan` ruling is the re-dispatch that
 ruling's `## RULING` entry already counts here; it adds no second resume
 to the count. Together with multi-code-review's loop-side rule for
@@ -1204,7 +1259,10 @@ rules apply everywhere a ruling is made:
    the same clause as this item — compared under the normalization rule
    above. When such an answer stands there, the user has already decided
    that clause, and you do not decide the item at all: it is **escalated**,
-   under the class that first sent it to the user, so that the same
+   under the class that first sent it to the user — and under
+   `spec wrong` when the entry carrying that answer is a `forced` or a
+   `design` one, which has no escalation class of its own, so that the
+   label is always one of the five of the closed list. The same
    decision goes back to the same decider. You never re-answer it in the
    user's place, and you never amend a clause the user's answer left in
    force. When you cannot tell whether the clause is the same one — the
