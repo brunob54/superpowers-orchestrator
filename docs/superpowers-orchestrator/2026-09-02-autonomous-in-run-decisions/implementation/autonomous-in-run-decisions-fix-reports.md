@@ -4039,3 +4039,95 @@ All three suites exited 0, with empty stderr on the first. Every check in
 2 new helper functions, ~28 new assertions, 1 negative check rewired onto a
 qualifier-aware helper, 1 check's comment/description reworded in place with
 no count change, 1 check's scan folded in place with no count change).
+
+## Round 12 verification 2 fixes
+
+- **I1** — `tests/in-run-rulings/run-tests.sh`: added two folded pins, scoped
+  to `$FORK_LINE..$FORK_END`, for both halves of the deterministic tie-break
+  sentence in `skills/orchestrating-development/SKILL.md` (around line 1064):
+  "take the defensible outcome that leaves the plan's binding text
+  unchanged" and "when every defensible outcome amends the plan, the one
+  with the smallest amendment". Mutation-tested: inverting either half now
+  fails the suite (396/1).
+- **I2** — `tests/in-run-rulings/run-tests.sh`: added two folded pins, scoped
+  to `$LOG_ENTRY_LINE..$LOG_ENTRY_END`, for the ruling commit's staging
+  clause ("you stage the log, the ruling record and any amended plan file by
+  explicit path") and its one-commit atomicity sentence ("holds the
+  `## RULING` entry, the ruling-record entries and any plan amendment, and
+  lands **before** the re-dispatch"). Mutation-tested: replacing the staging
+  clause with a `git add -A` mention, and splitting the one commit into
+  separate commits, each now fails the suite (396/1).
+- **I3** — `tests/in-run-rulings/run-tests.sh`: changed both Phase 4
+  regression guards (the `user_decision > 0` and the bare `unresolved > 0`
+  negative checks) from `assert_absent_in_range_folded` to
+  `assert_absent_in_range_folded_nobacktick`, and dropped the stray backtick
+  from each needle, matching the sibling stop-policy guards. Mutation-tested:
+  re-adding `user_decision > 0 → major error → stop` without backticks into
+  the Phase 4 range now fails the suite (396/1).
+- **I4** — `tests/in-run-rulings/run-tests.sh`: added two folded pins, scoped
+  to `$CLASS_LINE..$CLASS_END`, for the `spec wrong` operative clause ("settled
+  only by the spec's author: it is escalated here, never fixed to satisfy the
+  reviewer and never rejected") and the `chain` operative clause ("every open
+  item of that return is `escalated (chain)`, whatever its own class would
+  have been"). Mutation-tested: deleting the disputed-Critical sentence, and
+  narrowing `chain` to "only the last open item", each now fails the suite
+  (395/2 and 396/1 respectively).
+- **M4** — `tests/in-run-rulings/run-tests.sh`: extended the `M = 1`
+  log-format example needle from `... — clause:` to the full line `...  —
+  clause: <plan location> "<quoted plan text>"`, matching the standard the
+  `M >= 2` sibling pin already meets.
+- **M5** — `tests/in-run-rulings/run-tests.sh`: added `REASON:` to the fork
+  return-contract pin loop (`$FORK_LINE..$FORK_END`), alongside the existing
+  `ITEM:`, `VERDICT:`, `CONTRADICTS:` and `TABLED:` field pins.
+- **M6** — `tests/in-run-rulings/run-tests.sh`: replaced the 10-character
+  prefix pin `**Amendment` with a whole-label pin `**Amendment <n>
+  (orchestrator ruling):**`, matching the plan-amendment audit-note template
+  as it is written in `skills/orchestrating-development/SKILL.md`.
+- **M7** — `tests/in-run-rulings/run-tests.sh`: added a folded pin, scoped to
+  `$DEV1_LINE..$DEV1_END`, for the whole "first dispatch of this run"
+  conjunction ("every checkbox under its `### Task <n>` heading is unticked
+  AND no completed ledger line names it"), not only its ledger half.
+  Mutation-tested: dropping the checkbox half now fails the suite (396/1).
+- **M9** — `tests/in-run-rulings/run-tests.sh`: added three folded pins, each
+  scoped to its own phase range: the Phase 3 paragraph ("Every batch
+  dispatch, first or repeat, carries in `[RESUME_ANSWER]` the answer set"),
+  the Phase 4 sentence ("Only an escalated item stops the run on the
+  strength of its content"), and the Phase 5 report item ("rulings made in
+  the run — the count of `## Ruling` entries"). Mutation-tested: deleting
+  each sentence in turn now fails the suite (396/1 each).
+- **M10** — `tests/in-run-rulings/run-tests.sh`: added a folded pin, scoped
+  to `$NO_FIX_LINE..$NO_FIX_END`, for the "decided wording" enumeration in
+  `skills/multi-code-review/SKILL.md` ("text whose clause is quoted on a
+  `decided (<who>):` line or on a `rejected: plan governs (… decision)` line
+  of any `_Invocation` entry of the same orchestration run (same BASE)").
+  Mutation-tested: removing the `rejected: plan governs` alternative now
+  fails the suite (396/1).
+- **M11** — `tests/in-run-rulings/run-tests.sh`: `fold_range` now strips each
+  line's trailing whitespace (`sub(/[ \t]+$/, "", line)`) in addition to its
+  leading whitespace, before joining lines with single spaces.
+
+### Verification
+
+```
+$ bash tests/in-run-rulings/run-tests.sh; echo "EXIT=$?"
+...
+Results: 397 passed, 0 failed
+EXIT=0
+(stderr: empty)
+
+$ bash tests/reviewer-templates/run-tests.sh; echo "EXIT=$?"
+...
+Results: 24 passed, 0 failed
+EXIT=0
+
+$ bash tests/writing-plans/run-tests.sh; echo "EXIT=$?"
+...
+Results: 15 passed, 0 failed
+EXIT=0
+```
+
+All three suites exited 0, with empty stderr on the first. Every check in
+`tests/in-run-rulings/run-tests.sh` is PASS (397, up from 385: +12 net — 11
+new assertions across I1/I2/I4/M7/M9/M10, 1 pin count unchanged for M5
+(added inside an existing loop), and in-place edits with no count change for
+I3, M4, M6, M11).
