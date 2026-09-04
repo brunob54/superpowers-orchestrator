@@ -44,16 +44,22 @@ first_line_of() { grep -nxF -- "$2" "$1" | head -n 1 | cut -d: -f1; }
 
 # Line number of the first line of file $1 after line $3 that contains the
 # fixed string $2 anywhere; empty when absent.
+# The needle reaches awk through the environment, never through `awk -v`:
+# see the comment on assert_in_range_folded below for why.
 line_containing_after() {
-  awk -v needle="$2" -v start="$3" \
-    'NR > start && index($0, needle) > 0 { print NR; exit }' "$1"
+  local file="$1" needle="$2" start="$3"
+  needle="$needle" awk -v start="$start" \
+    'BEGIN { n = ENVIRON["needle"] }
+     NR > start && index($0, n) > 0 { print NR; exit }' "$file"
 }
 
 # Line number of the first line of file $1 after line $3 whose text starts
 # with the fixed string $2; empty when absent.
 line_starting_with_after() {
-  awk -v pfx="$2" -v start="$3" \
-    'NR > start && index($0, pfx) == 1 { print NR; exit }' "$1"
+  local file="$1" pfx="$2" start="$3"
+  pfx="$pfx" awk -v start="$start" \
+    'BEGIN { p = ENVIRON["pfx"] }
+     NR > start && index($0, p) == 1 { print NR; exit }' "$file"
 }
 
 # Assert that the fixed string $3 occurs in file $2 on a line at or after
@@ -70,12 +76,16 @@ assert_in_range() { # desc file needle start end mode
     bad "$desc (empty or inverted range $start..$end in ${file#$ROOT/})"
     return
   fi
+  # The needle reaches awk through the environment, never through `awk -v`:
+  # see the comment on assert_in_range_folded below for why.
   if [ "$mode" = "exact" ]; then
-    hit="$(awk -v needle="$needle" -v a="$start" -v b="$end" \
-      'NR >= a && NR < b && index($0, needle) > 0 { print NR; exit }' "$file")"
+    hit="$(needle="$needle" awk -v a="$start" -v b="$end" \
+      'BEGIN { n = ENVIRON["needle"] }
+       NR >= a && NR < b && index($0, n) > 0 { print NR; exit }' "$file")"
   else
-    hit="$(awk -v needle="$needle" -v a="$start" -v b="$end" \
-      'NR >= a && NR < b && index(tolower($0), tolower(needle)) > 0 { print NR; exit }' "$file")"
+    hit="$(needle="$needle" awk -v a="$start" -v b="$end" \
+      'BEGIN { n = ENVIRON["needle"] }
+       NR >= a && NR < b && index(tolower($0), tolower(n)) > 0 { print NR; exit }' "$file")"
   fi
   if [ -n "$hit" ]; then
     ok "$desc (line $hit, range $start..$end)"
@@ -103,6 +113,10 @@ assert_in_range_folded() { # desc file needle start end
     bad "$desc (could not locate the range to search in ${file#$ROOT/})"
     return
   fi
+  if [ "$start" -ge "$end" ]; then
+    bad "$desc (empty or inverted range $start..$end in ${file#$ROOT/})"
+    return
+  fi
   folded="$(fold_range "$file" "$start" "$end")"
   # Both values reach awk through the environment, never through `awk -v`:
   # `-v` performs escape-sequence processing on the value it assigns, so a
@@ -127,6 +141,10 @@ assert_in_range_folded_exact() { # desc file needle start end
   local folded
   if [ -z "$start" ] || [ -z "$end" ]; then
     bad "$desc (could not locate the range to search in ${file#$ROOT/})"
+    return
+  fi
+  if [ "$start" -ge "$end" ]; then
+    bad "$desc (empty or inverted range $start..$end in ${file#$ROOT/})"
     return
   fi
   folded="$(fold_range "$file" "$start" "$end")"
@@ -198,6 +216,26 @@ for label in '`escalated`' '`forced`' '`design`' '`spec wrong`' '`scope`' \
   assert_in_range "class or reason label $label" \
     "$ORCH_SKILL" "$label" "$CLASS_LINE" "$CLASS_END" exact
 done
+# The closed list keeps its five members. The label loop above only checks
+# that each of the five is PRESENT; nothing checks that no sixth reason (a
+# `deadline` or `cost` escalation, say) was added to the predicate's own
+# bulleted list. This scans that list's own bullet lines (`- `<label>` — `,
+# the shape every one of the five uses) for a label outside the closed set.
+if [ -z "$CLASS_LINE" ] || [ -z "$CLASS_END" ] || [ "$CLASS_LINE" -ge "$CLASS_END" ]; then
+  bad "escalation list closedness check (empty or inverted range $CLASS_LINE..$CLASS_END in ${ORCH_SKILL#$ROOT/})"
+else
+  EXTRA_LABEL="$(awk -v a="$CLASS_LINE" -v b="$CLASS_END" \
+    'NR >= a && NR < b && match($0, /^- `[^`]+`/) {
+       label = substr($0, RSTART + 3, RLENGTH - 4)
+       if (label != "spec wrong" && label != "scope" && label != "irreversible" \
+           && label != "secret" && label != "chain") { print label; exit }
+     }' "$ORCH_SKILL")"
+  if [ -z "$EXTRA_LABEL" ]; then
+    ok "the closed escalation list still has exactly its five members"
+  else
+    bad "the closed escalation list carries an unexpected member '$EXTRA_LABEL'"
+  fi
+fi
 for frag in 'escalation wins' '### Conflict' '### Question' \
             'fatal environment failure' 'never `spec wrong`' \
             'handled as a whole' 'applied twice'; do
@@ -330,7 +368,7 @@ if [ -z "$FORK_END" ] || [ "$FORK_END" -gt "$RULINGS_END" ]; then
 fi
 for pin in 'subagent_type: "fork"' '<!-- multi-review report -->' 'fork-<lens>' \
            'fork review unavailable' 'contradiction: unsettled' \
-           'VERDICT:' 'TABLED:'; do
+           'VERDICT:' 'TABLED:' 'ITEM: [<id>]' 'CONTRADICTS: none |'; do
   assert_in_range "fork pin '$pin'" \
     "$ORCH_SKILL" "$pin" "$FORK_LINE" "$FORK_END" exact
 done
@@ -610,51 +648,82 @@ assert_in_range_folded_exact "log-entry sentence, byte-exact incl. punctuation" 
 # space (or the end of the text) closes a span around the sentence, while one
 # followed by any other character opens a new span, such as a bold lead-in of
 # the next sentence.
-CAP_SENTENCE_FOLDED="$(fold_range "$ORCH_SKILL" "$LOG_ENTRY_LINE" "$LOG_ENTRY_END")"
-CAP_EMPHASIS="$(hay="$CAP_SENTENCE_FOLDED" needle="$CAP_SENTENCE" awk \
-  'BEGIN {
-     hay = ENVIRON["hay"]; needle = ENVIRON["needle"]
-     s = index(hay, needle)
-     if (s == 0) { print "missing"; exit }
-     i = s - 1
-     while (i >= 1 && substr(hay, i, 1) == " ") i--
-     if (i >= 1 && substr(hay, i, 1) == "*") {
-       while (i >= 1 && substr(hay, i, 1) == "*") i--
-       if (i < 1 || substr(hay, i, 1) == " ") { print "emphasis"; exit }
-     }
-     n = length(hay)
-     j = s + length(needle)
-     while (j <= n && substr(hay, j, 1) == " ") j++
-     if (j <= n && substr(hay, j, 1) == "*") {
-       while (j <= n && substr(hay, j, 1) == "*") j++
-       if (j > n || substr(hay, j, 1) == " ") { print "emphasis"; exit }
-     }
-     print "clean"
-   }')"
-if [ "$CAP_EMPHASIS" = "clean" ]; then
-  ok "log-entry sentence carries no '*' emphasis marker around it"
-elif [ "$CAP_EMPHASIS" = "emphasis" ]; then
-  bad "log-entry sentence is wrapped in a '*' emphasis marker"
+# Both anchors are guarded the same way assert_in_range guards them: with an
+# empty or inverted range, awk's `NR >= a` would compare strings and fold in
+# every line of the file, and the emphasis check below would silently run
+# over the wrong text and report PASS for a subsection that does not exist.
+if [ -z "$LOG_ENTRY_LINE" ] || [ -z "$LOG_ENTRY_END" ]; then
+  bad "log-entry sentence emphasis check (could not locate the range to search in ${ORCH_SKILL#$ROOT/})"
+elif [ "$LOG_ENTRY_LINE" -ge "$LOG_ENTRY_END" ]; then
+  bad "log-entry sentence emphasis check (empty or inverted range $LOG_ENTRY_LINE..$LOG_ENTRY_END in ${ORCH_SKILL#$ROOT/})"
 else
-  bad "log-entry sentence not found in range $LOG_ENTRY_LINE..$LOG_ENTRY_END, so its emphasis could not be checked"
+  CAP_SENTENCE_FOLDED="$(fold_range "$ORCH_SKILL" "$LOG_ENTRY_LINE" "$LOG_ENTRY_END")"
+  # Every occurrence of the sentence is checked, not only the first: with the
+  # sentence written twice in the range — once bare, once inside a `**...**`
+  # span — a first-occurrence-only scan would report clean on the bare one
+  # and miss the emphasized copy, and the constraint ("written in exactly
+  # this form, without emphasis markers") is a statement about every
+  # occurrence.
+  CAP_EMPHASIS="$(hay="$CAP_SENTENCE_FOLDED" needle="$CAP_SENTENCE" awk \
+    'BEGIN {
+       hay = ENVIRON["hay"]; needle = ENVIRON["needle"]
+       nlen = length(needle)
+       n = length(hay)
+       pos = 1; found = 0; emphasis = 0
+       while (1) {
+         s = index(substr(hay, pos), needle)
+         if (s == 0) break
+         s = pos + s - 1
+         found = 1
+         i = s - 1
+         while (i >= 1 && substr(hay, i, 1) == " ") i--
+         if (i >= 1 && substr(hay, i, 1) == "*") {
+           while (i >= 1 && substr(hay, i, 1) == "*") i--
+           if (i < 1 || substr(hay, i, 1) == " ") emphasis = 1
+         }
+         j = s + nlen
+         while (j <= n && substr(hay, j, 1) == " ") j++
+         if (j <= n && substr(hay, j, 1) == "*") {
+           while (j <= n && substr(hay, j, 1) == "*") j++
+           if (j > n || substr(hay, j, 1) == " ") emphasis = 1
+         }
+         pos = s + 1
+       }
+       if (!found) { print "missing"; exit }
+       if (emphasis) { print "emphasis"; exit }
+       print "clean"
+     }')"
+  if [ "$CAP_EMPHASIS" = "clean" ]; then
+    ok "log-entry sentence carries no '*' emphasis marker around it"
+  elif [ "$CAP_EMPHASIS" = "emphasis" ]; then
+    bad "log-entry sentence is wrapped in a '*' emphasis marker"
+  else
+    bad "log-entry sentence not found in range $LOG_ENTRY_LINE..$LOG_ENTRY_END, so its emphasis could not be checked"
+  fi
 fi
 for frag in 'in-run resumes of one phase are capped at 3 per unit' \
             'phase itself in Phase 4, the task in Phase 3'; do
-  assert_in_range_folded "log-entry or guard fragment '$frag'" \
+  assert_in_range_folded "log-entry fragment '$frag'" \
     "$ORCH_SKILL" "$frag" "$LOG_ENTRY_LINE" "$LOG_ENTRY_END"
 done
 assert_in_range "log-entry fragment 'previous invocation left'" \
   "$ORCH_SKILL" 'previous invocation left' "$LOG_ENTRY_LINE" "$LOG_ENTRY_END" fragment
 # The pre-commit self-check escalates, never rewrites, a bare `fix it` whose
-# clause names binding plan text.
-assert_in_range "self-check escalates a bare fix it on binding text" \
-  "$ORCH_SKILL" 'escalated (irreversible)' "$LOG_ENTRY_LINE" "$LOG_ENTRY_END" exact
+# item's `clause:` names binding plan text. The antecedent is carried in the
+# needle itself, not only the bare `escalated (irreversible)` token that also
+# occurs on entries this sentence does not govern.
+assert_in_range_folded "self-check escalates a bare fix it whose clause names binding text" \
+  "$ORCH_SKILL" "a bare \`fix it\` whose item's \`clause:\` names binding plan text becomes \`escalated (irreversible)\`" \
+  "$LOG_ENTRY_LINE" "$LOG_ENTRY_END"
 # The Phase 3 cap counts per task number, in either written form.
 assert_in_range "cap counts a Phase 3 task in either line form" \
   "$ORCH_SKILL" '`[task <n>]` or `[task <n>/<k>]`' "$LOG_ENTRY_LINE" "$LOG_ENTRY_END" exact
 assert_in_range "RULING Forks line carries the planned count" \
   "$ORCH_SKILL" '<k> of <planned>' "$LOG_ENTRY_LINE" "$LOG_ENTRY_END" exact
-assert_in_range "guard fragment 'durable marker'" \
+# The match is the idempotence paragraph's closing sentence ("Idempotence of
+# an in-run resume after a crash"), which sits inside the log-entry range,
+# not the ## Guards Against Motivated Judgement subsection.
+assert_in_range "log-entry (idempotence paragraph) fragment 'durable marker'" \
   "$ORCH_SKILL" 'durable marker' "$LOG_ENTRY_LINE" "$LOG_ENTRY_END" fragment
 for frag in 'a Critical is never rejected' 'quotes its clause' \
             'recorded when it is made'; do
@@ -712,6 +781,32 @@ assert_in_range_folded "guard 4 ignores a clause-less follow-up" \
   "$ORCH_SKILL" 'quotes NO clause and matches nothing' \
   "$GUARDS_LINE" "$GUARDS_END"
 
+# "Handling a return as a whole": a mixed return (>= 1 escalated item) rules
+# and records the non-escalated items too, tagging their `## RULING` entry
+# `Re-dispatch: none — escalated`, then writes a `## STOPPED` entry listing
+# each escalated item on an `Open:` line and every non-escalated ruling of
+# the stopped unit on a `Ruled:` line. Three other places in this file
+# cross-reference the bold label by name, so it is pinned exactly.
+assert_in_range "log-entry pin '**Handling a return as a whole.**'" \
+  "$ORCH_SKILL" '**Handling a return as a whole.**' \
+  "$LOG_ENTRY_LINE" "$LOG_ENTRY_END" exact
+assert_in_range_folded "mixed-return handling records the non-escalated items too" \
+  "$ORCH_SKILL" 'rule and record the others' "$LOG_ENTRY_LINE" "$LOG_ENTRY_END"
+assert_in_range_folded "mixed-return STOPPED entry lists every non-escalated ruling on a Ruled: line" \
+  "$ORCH_SKILL" 'a `Ruled:` line every ruling of the stopped unit that was not' \
+  "$LOG_ENTRY_LINE" "$LOG_ENTRY_END"
+
+# "Idempotence of an in-run resume after a crash": Phase 3 is idempotent by
+# construction (ruling and amendment committed before the re-dispatch, so a
+# retry rebuilds the identical [RESUME_ANSWER]); only the closing sentence
+# was previously pinned, via the 'durable marker' fragment.
+assert_in_range_folded "Phase 3 is idempotent by construction" \
+  "$ORCH_SKILL" 'Phase 3 is idempotent by construction: the ruling and any amendment are committed before the re-dispatch' \
+  "$LOG_ENTRY_LINE" "$LOG_ENTRY_END"
+assert_in_range_folded "a retry rebuilds the identical [RESUME_ANSWER]" \
+  "$ORCH_SKILL" 'a retry rebuilds the identical `[RESUME_ANSWER]` from the ruling-record entry' \
+  "$LOG_ENTRY_LINE" "$LOG_ENTRY_END"
+
 bold "6. Wiring into phases, log format, state.md, Resume and stop policy (R6)"
 PHASE3_LINE="$(first_line_of "$ORCH_SKILL" '## Phase 3 — Implementation Batches')"
 PHASE4_LINE="$(first_line_of "$ORCH_SKILL" '## Phase 4 — Final Code Review Loop')"
@@ -730,6 +825,22 @@ assert_in_range_folded "Phase 3 routes BLOCKED task=<n> to the predicate" \
 assert_in_range_folded "Phase 4 routes open items to the predicate" \
   "$ORCH_SKILL" '`## In-run rulings`: classify each open item by its review-log id' \
   "$PHASE4_LINE" "$PHASE5_LINE"
+# The old wording this branch replaced ('`unresolved > 0` or `user_decision >
+# 0` -> major error -> stop') must be GONE, not merely superseded: a positive
+# pin on the new routing sentence alone would still pass if the old stop
+# sentence were re-added beside it.
+if [ -z "$PHASE4_LINE" ] || [ -z "$PHASE5_LINE" ] || [ "$PHASE4_LINE" -ge "$PHASE5_LINE" ]; then
+  bad "Phase 4 old-wording check (empty or inverted range $PHASE4_LINE..$PHASE5_LINE in ${ORCH_SKILL#$ROOT/})"
+else
+  PHASE4_FOLDED="$(fold_range "$ORCH_SKILL" "$PHASE4_LINE" "$PHASE5_LINE")"
+  if needle='user_decision > 0` → major error → stop' hay="$PHASE4_FOLDED" awk \
+       'BEGIN { n = ENVIRON["needle"]; h = ENVIRON["hay"]
+                exit index(tolower(h), tolower(n)) > 0 ? 0 : 1 }'; then
+    bad "Phase 4 still carries the old 'unresolved/user_decision -> major error -> stop' wording beside the routing sentence"
+  else
+    ok "Phase 4 no longer stops directly on unresolved/user_decision counts (old wording absent)"
+  fi
+fi
 assert_in_range_folded "Phase 5 report lists unsettled contradictions" \
   "$ORCH_SKILL" 'every entry whose Forks line records `contradiction: unsettled`' \
   "$PHASE5_LINE" "$LOG_FORMAT_LINE"
@@ -824,6 +935,12 @@ for frag in 'escalated' 'fork review unavailable'; do
   assert_in_range "stop policy fragment '$frag'" \
     "$ORCH_SKILL" "$frag" "$RULINGS_END" "$GUARD_LINE" fragment
 done
+# The bare word 'escalated' above is a weak spelling check only: a rewrite
+# that kept the word but negated the rule (e.g. "never stops on an open item
+# escalated by the predicate") would still pass it. Pin the sentence itself.
+assert_in_range_folded "stop policy states an escalated open item stops the run" \
+  "$ORCH_SKILL" 'an open item escalated by the predicate of `## In-run rulings` — the' \
+  "$RULINGS_END" "$GUARD_LINE"
 # A `stopped` commit can be made over a deliberately dirty tree, so its staging
 # is stated once, in the stop policy, and both `stopped` commit sites point at
 # it. Without the rule a sweeping stage commits the blocked task's unreviewed
@@ -863,11 +980,41 @@ if [ -n "$RULINGS_END" ] && [ -n "$GUARD_LINE" ] && [ "$RULINGS_END" -lt "$GUARD
 else
   bad "stop policy still lists 'pre-flight plan conflict', or the range $RULINGS_END..$GUARD_LINE is empty or inverted"
 fi
+# This branch also removes an unconditional `batch-controller BLOCKED` stop
+# (replaced by the Phase 3 discriminator classification) and a
+# `code-review unresolved or user-decision items` stop (replaced by routing
+# to the predicate). Both removals are checked, modelled on the pre-flight
+# negative check above.
+if [ -n "$RULINGS_END" ] && [ -n "$GUARD_LINE" ] && [ "$RULINGS_END" -lt "$GUARD_LINE" ] && \
+   awk -v a="$RULINGS_END" -v b="$GUARD_LINE" \
+     'NR >= a && NR < b && index(tolower($0), "code-review unresolved") > 0 { found = 1 } END { exit found ? 1 : 0 }' "$ORCH_SKILL"; then
+  ok "stop policy no longer lists code-review unresolved or user-decision items as a stop by itself"
+else
+  bad "stop policy still lists 'code-review unresolved', or the range $RULINGS_END..$GUARD_LINE is empty or inverted"
+fi
+if [ -n "$RULINGS_END" ] && [ -n "$GUARD_LINE" ] && [ "$RULINGS_END" -lt "$GUARD_LINE" ] && \
+   awk -v a="$RULINGS_END" -v b="$GUARD_LINE" \
+     'NR >= a && NR < b && index($0, "batch-controller BLOCKED;") > 0 { found = 1 } END { exit found ? 1 : 0 }' "$ORCH_SKILL"; then
+  ok "stop policy no longer lists an unconditional batch-controller BLOCKED stop"
+else
+  bad "stop policy still lists 'batch-controller BLOCKED;' unconditionally, or the range $RULINGS_END..$GUARD_LINE is empty or inverted"
+fi
 
 bold "7. multi-code-review attribution and self-sufficient lines (R8.1, R8.2)"
 MCR_LOG_FORMAT_LINE="$(first_line_of "$MCR_SKILL" '## Review Log Format')"
 MCR_AFTER_LOOP_LINE="$(first_line_of "$MCR_SKILL" '## After the Loop')"
 MCR_ERROR_HANDLING_LINE="$(first_line_of "$MCR_SKILL" '## Error Handling')"
+# Pipeline rule 1's post-loop-addendum sentence names the same `<who>`
+# generalization (`decided (<who>): <answer>`, `<who>` being `user` or
+# `orchestrator`) as the other three places the plan's Task 7 contract names,
+# but it sits above `## Review Log Format`, so none of the ranges above cover
+# it; scope this pin to `## Workspace and Log`..`## Procedure` instead, where
+# Pipeline rule 1 lives.
+MCR_WORKSPACE_LINE="$(first_line_of "$MCR_SKILL" '## Workspace and Log')"
+MCR_PROCEDURE_LINE="$(first_line_of "$MCR_SKILL" '## Procedure')"
+assert_in_range_folded "Pipeline rule 1 generalizes the addendum disposition to decided (<who>)" \
+  "$MCR_SKILL" 'decided (<who>): <answer>`, `<who>` being' \
+  "$MCR_WORKSPACE_LINE" "$MCR_PROCEDURE_LINE"
 for pin in '— clause:' 'clause: none' '(plan-mandated) — at ' \
            'cut it to 160 characters' '**Normalization is one rule:**' \
            'one sentence or one list entry, never a whole section' \
