@@ -70,6 +70,13 @@ Agent tool (general-purpose):
 
     ## Resume Answer (omit only when the run has recorded no answer at all)
 
+    An `amend plan: …` answer in this section is the record of an
+    amendment the orchestrator has already made and committed to the
+    plan file: the plan already reads the amended way. Hand it to the
+    implementer as the reason the plan says what it says — the
+    implementer follows the amended plan text and never edits the plan
+    itself, its only write to the plan file staying the checkbox tick.
+
     [RESUME_ANSWER]
 
     ## Deviations (binding)
@@ -201,7 +208,12 @@ Agent tool (general-purpose):
   `### Conflict <k>` section it answers; a bare `[task <n>]` line from
   the user means `[task <n>/1]`), tagged `(orchestrator)` or
   `(user)`; authoritative either way — the controller hands each to
-  the task's implementer as authoritative instead of re-deriving it
+  the task's implementer as authoritative instead of re-deriving it.
+  An `amend plan: …` answer is the record of an amendment the
+  orchestrator has already made and committed: the plan file already
+  reads the amended way, so the implementer follows the amended plan
+  text and never edits the plan itself, its only write to the plan file
+  staying the checkbox tick
 - `[SDD_SKILL_PATH]` / `[SDD_SCRIPTS_DIR]` / `[IMPLEMENTER_PROMPT_PATH]` /
   `[TASK_REVIEWER_PROMPT_PATH]` — REQUIRED: absolute paths under
   `../subagent-driven-development/` resolved from this skill's base

@@ -404,7 +404,10 @@ answer the resume prompt must supply, carried in the template's
 items, `Detail:` names the review log (Phase 4) or the task report file
 (Phase 3) and is followed by one `Open:` line per escalated item — `<id>`
 as in the review log, or `[task <n>/<k>]`, never the bare `[task <n>]`
-form, on an `Open:` and on a `Ruled:` line alike — with the
+form, on an `Open:` and on a `Ruled:` line alike; on a Phase 4 `Ruled:`
+line that `<id>` is written in the qualified form `[<id> inv <i>]`, with
+the review-log `_Invocation` number the ruling was made against
+(`## In-run rulings`, "A carried Phase 4 id names its invocation") — with the
 escalation reason in parentheses, so the resume prompt can answer each
 open item by id, and one `Ruled:` line per item the orchestrator already
 decided, carried forward by Resume step 3; after them comes one `Owed
@@ -489,12 +492,38 @@ Trigger: `Resume orchestration for <plan-or-spec path>`.
    edit, delete its `**Amendment <n>` note when one stands, and continue;
    never leave the marker standing, because the loop reads a clause
    carrying it as decided wording on the strength of the marker alone.
-   A `## RULING` entry whose `Re-dispatch:` value is not `none`
+   **The other two writes of the fixed order are checked the same way,
+   because a crash can leave either of them missing.** A `## Ruling <n>`
+   entry in the ruling record for which the orchestration log holds no
+   `## RULING` entry carrying that same `<n>` is an **incomplete
+   ruling** — the session died after the first write and before the
+   second — and it is repaired BEFORE any `[RESUME_ANSWER]` is built
+   from it: complete the writes in their order (append the `## RULING`
+   entry, apply the amendment when the entry's `**Resolution:**` begins
+   `amend plan`, then make the ruling commit), or, when the entry names
+   no answer at all on its `**Resolution:**` line — the ruling was never
+   decided — delete that entry, which has authorised nothing. An
+   unlogged ruling must never reach a controller: it is invisible to the
+   cap, which counts `## RULING` entries, and to the Phase 5 report,
+   which counts `## Ruling` entries. And before you act on a `## RULING`
+   entry one of whose items has a `**Resolution:**` beginning
+   `amend plan`, check the third write: the clause that ruling names must
+   carry `(amended by ruling <n>)` and its `**Amendment <n>` note must
+   stand. When they do not, the session died before the plan amendment —
+   re-apply it now by the amendment procedure (`## In-run rulings`,
+   "Plan amendment"), and when that procedure finds no target for it,
+   discard the ruling rather than re-dispatching its answer: present it
+   as a blocking question and stop, the exit "No match is never an edit
+   by guess" already gives an `amend plan` answer with no target. Never
+   send `amend plan: …; fix it: …` for a plan that was never amended —
+   the loop takes it on the finding-governs path believing the amendment
+   landed, and the fix lands against a binding clause still in force.
+   A `## RULING` entry whose `Re-dispatch:` value does not start with `none`
    — the re-dispatch it announces may not have completed (a crash
    after the commit, a lost return): re-dispatch that phase again with
    the same answers, rebuilt from the ruling-record entries the entry's
    `Detail:` names (`## In-run rulings`, idempotence). A
-   `## RULING` entry whose `Re-dispatch:` value is `none` (the whole
+   `## RULING` entry whose `Re-dispatch:` value starts with `none` (the whole
    line is written `Re-dispatch: none — escalated`) and no `## STOPPED`
    follows it — a crash between the ruling commit and the `stopped`
    commit: rebuild the missing `## STOPPED` entry from the ruling record
@@ -505,7 +534,9 @@ Trigger: `Resume orchestration for <plan-or-spec path>`.
    `<n>`), and a `Ruled:` line with its Resolution for every ruling of
    the stopped unit that was not escalated, this return's and its
    earlier returns' alike, never an entry that already carries a
-   `**Follow-up:**` line, which the user answered at an earlier stop
+   `**Follow-up:**` line, which the user answered at an earlier stop,
+   each Phase 4 `Ruled:` id written in the qualified form
+   `[<id> inv <i>]` that rule states
    — commit it as `stopped`, staging by explicit path under the
    Major-Error Stop Policy's rule for a `stopped` commit, then continue
    with the `## STOPPED` case. Otherwise, log
@@ -516,7 +547,10 @@ Trigger: `Resume orchestration for <plan-or-spec path>`.
    trigger, below). When the resume prompt does answer, build
    `[RESUME_ANSWER]` from the `Ruled:` lines, each tagged
    `(orchestrator)`, plus the resume prompt's answers, each tagged
-   `(user)` — that construction is the Phase 4 path. For Phase 3 the
+   `(user)` — that construction is the Phase 4 path. A `Ruled:` line's
+   `inv <i>` qualifier travels with it into its answer line, unchanged;
+   a resume-prompt answer is written unqualified, because the user
+   answers the entry the controller is about to act on. For Phase 3 the
    answer set is instead the full run-wide set defined by
    "The Phase 3 answer set — one rule" (`## In-run rulings`): every ruled
    `[task <n>/<k>]` line recorded for this run, for every task, taken
@@ -533,7 +567,21 @@ Trigger: `Resume orchestration for <plan-or-spec path>`.
    whose prose is not required to quote the original — and delete the
    note, so that
    no wording the user's answer overturned stays in the plan with the
-   authority of decided wording. **Finding that commit, and reading it:**
+   authority of decided wording. **Reverting the plan is only half of
+   the revert.** The same ruling's `fix it` half may already have been
+   committed by the loop, and that code change would otherwise stay on
+   the branch against a clause the user has just reinstated. So, in the
+   same resume commit, revert that fix commit too: find it by the
+   `fixed — <summary> → <sha>` line the review-log addendum recorded for
+   that id, and revert it without a commit of its own
+   (`git revert --no-commit <sha>`), staging the result by explicit
+   path. When it does not revert cleanly — later commits changed the
+   same lines — make no code change at all: record `— fix <sha> not
+   reverted` at the end of the item's `**Follow-up:**` line, and the new
+   Phase 4 invocation that the reverted plan file forces (the plan is
+   content for the effective-HEAD test) re-raises the finding against the
+   restored clause. Either way the branch never silently keeps a change
+   the user's decision rejected. **Finding that commit, and reading it:**
    `git log --format="%H %s" --grep "<slug> ruling <n>"` prints one
    `<hash> <subject>` line per match, and `--grep` is an unanchored
    regular expression, so keep only the lines whose subject equals, as a
@@ -546,7 +594,8 @@ Trigger: `Resume orchestration for <plan-or-spec path>`.
    it stood before the ruling: copy the clause's own text out of what it
    prints, and never write that output over the plan file, which would
    revert every checkbox tick and every later amendment. Append each
-   user answer to its item's ruling-record entry
+   user answer **that has a ruling-record entry of its own** to that
+   entry
    as a `**Follow-up:**` line carrying the item's `clause:` text (its
    shape is in `## In-run rulings`, "The ruling record"), skipping the
    append when a
@@ -557,7 +606,16 @@ Trigger: `Resume orchestration for <plan-or-spec path>`.
    commit once for the whole resume, with subject
    `chore(orchestration): <slug> ruling <n> follow-up` where `<n>` is the
    lowest ruling number the resume touched (a Phase 5 or
-   boundary clean-tree check must never find it uncommitted); then
+   boundary clean-tree check must never find it uncommitted).
+   **A stop that made no ruling has no entry to append to and writes no
+   follow-up commit.** Two supported stop kinds are of that shape: a
+   Phase 1 plan-writer `BLOCKED` question, which `## In-run rulings`
+   puts out of its own scope, and a Phase 3 `BLOCKED task=<n>` the
+   discriminator classified as a controller failure. Both take the plain
+   re-dispatch path — the answer goes into `[RESUME_ANSWER]` and
+   nothing else is written, no `**Follow-up:**` line and no
+   `ruling <n> follow-up` commit — because `<n>` is undefined when the
+   resume touched no ruling. Then
    re-dispatch the stopped phase's controller with that `[RESUME_ANSWER]`
    in the template's placeholder — the only channel for it. Phases whose
    stop carries answerable items: Phase 1 (the plan-writer's BLOCKED
@@ -629,7 +687,14 @@ teardown for a wedged or superseded run.
 A controller return that carries open items does not stop the run by
 itself. An **open item** is, in Phase 4, a disposition of the review log's
 LATEST `_Invocation` entry that is `user-decision` or `unresolved: <reason>`,
-named by its id (`[I2]`, `[C1]`); in Phase 3, one blocking question or one
+named by its id (`[I2]`, `[C1]`). **When an id carries more than one
+disposition line in that entry, the LAST one in file order is the item's
+current disposition** — the loop appends its post-loop addendum below the
+round's own lines, so a round's `user-decision` line stays standing beside
+the addendum's later `unresolved:` line for the same id. Only that last
+line decides whether the id is an open item and what its reason is; an
+earlier line for the same id is history and is never itself an open item.
+In Phase 3, an open item is one blocking question or one
 plan conflict behind a `BLOCKED task=<n>` return, named `[task <n>/<k>]`,
 where `<k>` is the number of the `### Conflict <k>` or `### Question <k>`
 section it answers. Every line YOU write uses that form — an answer line,
@@ -762,7 +827,10 @@ three purposes — classifying an open item, resuming a stopped run
 you and your forks may read exactly:
 
 1. For a Phase 4 item: in `<topic folder>/implementation/<slug>-review-log.md`,
-   the LATEST `_Invocation` entry's disposition line for that id. The line
+   the LATEST `_Invocation` entry's **current** disposition line for that
+   id — when that entry carries more than one disposition line for the id,
+   the last one in file order, never an earlier one (the open-item
+   definition above). The line
    is self-sufficient — multi-code-review writes on it the finding summary,
    the `file:line`, and, after `— clause:`, the plan location and the
    quoted plan text the finding collides with. Never an earlier entry, and
@@ -960,21 +1028,27 @@ never resolved silently.
 **Lost returns.** `hooks/subagent-guard.js` exempts a final message that
 opens with the marker line; a message without it that names a plugin
 skill is answered with `decision: block` and a redo instruction, so the
-fork spends another turn rewriting — the notice still arrives, later. A
-fork's return is **lost** when its completion notice arrives without the
-marker line, or reports that the fork failed. A lost return is
+fork spends another turn rewriting — the notice still arrives, later.
+
+Every bound below is stated over the **reviewer returns of the round**,
+never over the dispatch type: a lens of a round is dispatched as a fork
+or, under the inheritance rule above, as a fresh `general-purpose`
+subagent, and the bounds read the same for both. A **reviewer's return**
+is **lost** when its completion notice arrives without the marker line,
+or reports that the reviewer failed. A lost return is
 re-dispatched once under the same lens; a second loss leaves that lens out
 and the ruling records `forks: <k> of <planned>`. A `design` ruling needs
-at least two usable fork returns; with fewer, the review tooling is
+at least **two usable reviewer returns** of the round; with fewer, the
+review tooling is
 unavailable, which is a fatal environment failure: stop under the
 Major-Error Stop Policy with the reason `fork review unavailable` — a
 stop, never a guess. A notice that never arrives is that same fatal
 environment failure, and "never" has a bound. **The bound is stated over
 the ROUND, never over one lens**, because two lenses can be missing at
 the same time and each would otherwise wait for the other. A round is
-**finished** when no fork of it is still running: every lens of the round
+**finished** when no reviewer of it is still running: every lens of the round
 has delivered its completion notice, or the platform has reported that
-fork as failed or as no longer running. Until the round is finished, a
+reviewer as failed or as no longer running. Until the round is finished, a
 lens whose notice has not come is merely outstanding, and you keep
 waiting for it — another lens's notice arriving says nothing about it and
 never marks it lost. At the moment the round is finished, EVERY lens of
@@ -990,6 +1064,31 @@ reports it as a failed dispatch or an error — the fatal environment
 failure named above. You wait
 for the notices without adding a monitoring step and without doing any
 other work.
+
+**The partial case has one permitted observation.** Some lenses of the
+round return and the platform volunteers nothing at all about the rest:
+the finished-test above would then never be met, and the run would wait
+for ever at the ruling. So, when you are waiting on a round with nothing
+else to do and no further notice is arriving, make exactly ONE platform
+status read covering every lens of that round still outstanding — one
+read for the whole round, never one read per lens and never a second
+read. **A single status read of the reviewers you dispatched is not the
+monitoring step forbidden above**; a repeated read, or a read made while
+notices are still arriving, is. The round is **finished** at that read
+whatever it reports, and every lens of it without a usable return by then
+counts as one loss under the rule above: the re-dispatch round starts,
+the ruling records `forks: <k> of <planned>`, and fewer than two usable
+returns still stops with `fork review unavailable`.
+
+**The tie-break round is bounded the same way.** The tie-break reviewer
+of the optional second round is one lens (`evidence consistency`)
+dispatched as a fresh `general-purpose` subagent, and it is a round of
+its own: it is finished by the same finished-test, including the single
+status read, and its return is lost by the same rule. When that round
+produces no usable return, the contradiction is simply unsettled and the
+fixed tie-break stated above applies — the run never stops for it. That
+loss is never counted in the ruling's `Forks:` field either: the field
+counts the `design` item's own review round, never a tie-break reviewer.
 
 ### The ruling record
 
@@ -1012,14 +1111,17 @@ appended, never rewritten, in the shape below:
 **Never reproduce a secret.** For an item classified `escalated (secret)`,
 and for any item whose text carries a credential, every line written about
 it names the location only (`file:line`, or the report section that holds
-it) and describes the value. **Every** line, in every file a ruling commit
+it) and describes the value. **Every** line, in every file a ruling
+**or a `stopped`** commit
 touches — the ruling record, the orchestration log and the plan — with no
 exempt field. The list below is not closed; these free-text fields are
 named because they are the ones most easily forgotten: the
 `## Ruling <n> — … — [<id>] <short title>` heading and the `**Item:**` and
 `**Resolution:**` lines of the ruling-record entry above, and the
 `## RULING <n> — … — <one-line summary>` heading, the `Items:` line of the
-`## RULING` entry and the `Open:` line of the `## STOPPED` entry.
+`## RULING` entry and the `Open:` and `Ruled:` lines of the `## STOPPED`
+entry — a `Ruled:` line carries a ruling's answer and can quote a clause
+that holds a credential.
 No line ever copies the value itself: these files are committed, so a
 copied value would enter git history in the very commit that escalates it.
 
@@ -1081,7 +1183,26 @@ per item, each tagged with its source; the controller records each as
 ```
 
 A line without a `(<who>)` tag is a user line — an untagged answer such as
-`[I2]: plan governs; [C3]: fix it` keeps working. Phase 4 answers:
+`[I2]: plan governs; [C3]: fix it` keeps working.
+
+**A carried Phase 4 id names its invocation.** Review-log ids are not
+stable across invocations: every `_Invocation` entry of the review log
+numbers its own findings from `[C1]`, `[I1]` upwards, so the same id
+names a different finding in a different entry. A Phase 4 answer line
+whose ruling was made against an EARLIER entry therefore writes that
+entry's number inside the brackets — `[I2 inv 3] (orchestrator): <answer>`
+— and every `Ruled:` line of a `## STOPPED` entry carries the same
+qualified form. An unqualified `[<id>]` is about the controller's current
+entry: a resume prompt's own answers are unqualified, and so are the
+lines of an older run. The controller drops a qualified line whose `<i>`
+is not its current entry's invocation number instead of acting on it
+(`code-review-loop-prompt.md` Deviation 5), so a ruling made two
+invocations ago can never be applied to an unrelated finding that re-uses
+its id. Matching an id against another line — a resume-prompt answer
+replacing a `Ruled:` line, the cap counting `Items:` lines — compares the
+bare id, ignoring the qualifier.
+
+Phase 4 answers:
 
 - `fix it: <what the fix must achieve>` — the finding is accepted; the
   loop's finding-governs path applies. Valid only when the item's
@@ -1130,7 +1251,12 @@ where `<answer>` is the answer to the blocking question in plain text, or
 `### Conflict <k>` section (a task-level or pre-flight plan conflict) is
 answered in one of two forms: `plan governs: "<verbatim clause>" — <path>`,
 naming the side that governs — the implementer follows that text — or
-`amend plan: <the amendment>` when the other side governs. An answer that
+`amend plan: <the amendment>` when the other side governs. **An
+`amend plan: …` answer is the record of an amendment you have already
+made and committed** — in the ruling commit, which lands before this
+re-dispatch — so the plan file already reads the amended way: the
+implementer follows the amended plan text and never edits the plan
+itself, its only write to the plan file staying the checkbox tick. An answer that
 sides against binding plan text is always `amend plan: …` (the amendment
 procedure below); a plain-text answer is valid only against a question or
 against reference text — a plain-text answer that left a binding clause in
@@ -1289,7 +1415,12 @@ and on a `Ruled:` line every ruling of the stopped unit that was not
 escalated — the decided items of this return and the decided items of its
 earlier returns alike, taken from the ruling record, so that a stop drops
 no ruling, and never an entry that already carries a `**Follow-up:**`
-line, which the user answered at an earlier stop — with its answer. The user answers
+line, which the user answered at an earlier stop — with its answer. In
+Phase 4 each `Ruled:` line writes its id in the qualified form
+`[<id> inv <i>]`, `<i>` being the review-log `_Invocation` number the
+ruling was made against, so that a line carried forward from an earlier
+return can never attach to a later entry's finding that re-uses the id.
+The user answers
 only the `Open:` ids; Resume step 3 carries the `Ruled:` lines forward as
 `(orchestrator)` answers. The `stopped` commit that follows stages by
 explicit path under the Major-Error Stop Policy's rule for a `stopped`
@@ -1297,14 +1428,19 @@ commit: the tree still holds the blocked task's uncommitted work, so
 `git add -A` and `git commit -a` are forbidden there.
 
 **The cap.** In-run resumes of one phase are capped at 3 per unit: the
-phase itself in Phase 4, the task in Phase 3. The count is the number of
+phase itself in Phase 4, the task in Phase 3. On the `Re-dispatch:` line,
+`<r>` **includes the entry being written**, so the first ruling of a unit
+writes `in-run resume 1 of 3` and the third writes `3 of 3`; `<r>` is
+never a count of the resumes that came before. The count is the number of
 `## RULING` entries of the same phase — and, in Phase 3, of the same task
 number, counted on an `Items:` line naming that task in either form,
 `[task <n>]` or `[task <n>/<k>]`, matched as the whole bracketed token —
 `[task <n>]` exactly, or `[task <n>/` as a prefix, so that task 1 counts
-no `[task 12/1]` and no `[task 10]` line — whose `Re-dispatch:` value is
-not `none` (the escalated line is written
-`Re-dispatch: none — escalated`), written after the
+no `[task 12/1]` and no `[task 10]` line — whose `Re-dispatch:` value
+does not start with `none` — the test is on the value's opening word, so
+that an escalated entry, whose line is written
+`Re-dispatch: none — escalated`, is not counted: its value starts with
+`none` exactly as a bare `none` does — written after the
 **later** of the orchestration log's latest `_Invocation` line and its
 latest `## STOPPED` entry, so that a resume after a stop starts from zero. Phase 3
 counts per task because one long plan legitimately produces several
@@ -1390,9 +1526,14 @@ In-run stop = append `## STOPPED` to the log, commit it, update
 `state.md` `## Open Issues` (blocking items first), report with the
 resume prompt.
 
-**Every `stopped` commit stages by explicit path.** The only files it
-stages are the orchestration log and, when it is committed together with
-the log, `state.md`; name each one on the command line. Never `git add -A`
+**Every `stopped` commit stages by explicit path.** The only file it
+stages is the orchestration log; name it on the command line.
+**`state.md` is never staged by a `stopped` commit**: Phase 0 step 3
+makes it an ignored path in every orchestrated run, so naming it would
+make `git add` refuse and the commit fail — and a log commit that fails
+at a phase boundary is itself a stop, which would fail the run at the
+exact moment an escalated item must reach the user. It is excluded state:
+written for the next session, never committed. Never `git add -A`
 and never `git add .`, and never `git commit -a`. The reason is that a
 stop can happen over a deliberately dirty tree — a task that blocked in
 the middle of its work leaves its uncommitted edits standing
@@ -1409,7 +1550,7 @@ discriminator classifies as a controller failure (`## In-run rulings`);
 an open item escalated by the predicate of `## In-run rulings` — the
 `## STOPPED` entry lists the escalated items on `Open:` lines and the
 decided ones on `Ruled:` lines; `fork review unavailable` (fewer than
-two usable fork returns for a design item); checkbox cross-check
+two usable reviewer returns for a design item); checkbox cross-check
 mismatch; any controller malformed/failed twice; branch changed under you or
 unexpected dirty tree at a boundary; a `### Task N` heading with zero
 checkboxes (malformed plan, Phase 3 step 1); a log or plan commit that

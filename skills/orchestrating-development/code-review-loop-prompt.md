@@ -132,7 +132,14 @@ Agent tool (general-purpose):
        `unresolved` dispositions — of the review log's CURRENT invocation
        entry, named by their review-log ids, one line per item, each
        tagged `(orchestrator)` or `(user)`; an untagged line is a user
-       line. Authoritative either way. No review log at
+       line. Authoritative either way. An id may arrive **qualified**
+       with the invocation it was decided against — `[I2 inv 3]`, naming
+       review-log `_Invocation` entry 3. Apply a qualified line only when
+       its `<i>` is the CURRENT entry's invocation number; **drop any
+       other qualified line, journaling nothing for it**, because review-
+       log ids are re-used and that id names a different finding in your
+       entry. An unqualified `[<id>]` is always about the current entry.
+       No review log at
        `[TOPIC_DIR]/implementation/` (a run migrated from the pre-7.3.0
        layout): ignore the `## Resume Answer` section and start
        invocation 1. The CURRENT entry is the
@@ -225,7 +232,10 @@ Agent tool (general-purpose):
   after a return that left `unresolved` or `user_decision` items, with
   the decisions on those items by review-log id, each line tagged
   `(orchestrator)` or `(user)`. Authoritative either way — the
-  controller records them as `decided (<who>): <answer>` (Deviation 5)
+  controller records them as `decided (<who>): <answer>` (Deviation 5).
+  An id decided against an earlier review-log invocation is written
+  qualified, `[<id> inv <i>]`; the controller drops a qualified line
+  whose `<i>` is not its current entry's (Deviation 5)
 
 **Nothing else may be added to the prompt.**
 

@@ -324,6 +324,15 @@ assert_in_range_folded "bare task id is never a form the orchestrator writes" \
 assert_in_range_folded "a bare user answer is resolved, never defaulted to section 1" \
   "$ORCH_SKILL" 'never default it to `[task <n>/1]`' \
   "$RULINGS_LINE" "$CLASS_LINE"
+# One id can carry two disposition lines in the same entry — the round's own
+# line and the post-loop addendum's — so the definition must say which one is
+# current, or the same finding is ruled twice from the stale line.
+assert_in_range_folded "the last disposition line of an id is its current one" \
+  "$ORCH_SKILL" 'the LAST one in file order is the item'"'"'s current disposition' \
+  "$RULINGS_LINE" "$CLASS_LINE"
+assert_in_range_folded "an earlier disposition line for the same id is not itself an open item" \
+  "$ORCH_SKILL" 'an earlier line for the same id is history and is never itself an open item' \
+  "$RULINGS_LINE" "$CLASS_LINE"
 
 bold "2. Classification read exception (R2)"
 REQUIRED_START_LINE="$(first_line_of "$ORCH_SKILL" '## Required Start')"
@@ -344,6 +353,11 @@ assert_in_range "read-exception entry 5 names the ruling-record path" \
   "$READ_EXCEPTION_LINE" "$READ_EXCEPTION_END" exact
 assert_in_range_folded "read-exception entry 5 calls it the file you write yourself" \
   "$ORCH_SKILL" 'the file you write yourself' \
+  "$READ_EXCEPTION_LINE" "$READ_EXCEPTION_END"
+# Entry 1 reads the CURRENT disposition line, not merely "the" line: with an
+# addendum appended, the entry holds two lines for the id.
+assert_in_range_folded "read-exception entry 1 reads the current disposition line" \
+  "$ORCH_SKILL" 'the last one in file order, never an earlier one' \
   "$READ_EXCEPTION_LINE" "$READ_EXCEPTION_END"
 for frag in 'Guard 4 (below) reads it' \
             'earlier answer tagged `(user)` on the same clause'; do
@@ -413,7 +427,7 @@ done
 # The stop threshold itself, not only the `fork review unavailable` label it
 # stops with.
 assert_in_range_folded "a design ruling needs at least two usable fork returns" \
-  "$ORCH_SKILL" 'needs at least two usable fork returns' "$FORK_LINE" "$FORK_END"
+  "$ORCH_SKILL" 'needs at least **two usable reviewer returns** of the round' "$FORK_LINE" "$FORK_END"
 GUARD_LINE="$(first_line_of "$ORCH_SKILL" '## Guard Interaction')"
 TEMPLATES_LINE="$(first_line_of "$ORCH_SKILL" '## Prompt Templates')"
 # The sentence this branch adds to Guard Interaction: the forks open their
@@ -454,13 +468,44 @@ assert_in_range_folded "lost-return bound is stated over the round" \
 # running — never the arrival of the first notice, which would mark the lenses
 # still working as lost and throw away the independent review.
 assert_in_range_folded "the bound fires only when the round is finished" \
-  "$ORCH_SKILL" 'A round is **finished** when no fork of it is still running' \
+  "$ORCH_SKILL" 'A round is **finished** when no reviewer of it is still running' \
   "$FORK_LINE" "$FORK_END"
 assert_in_range_folded "an outstanding notice is never marked lost by another lens arriving" \
   "$ORCH_SKILL" "another lens's notice arriving says nothing about it and never marks it lost" \
   "$FORK_LINE" "$FORK_END"
 assert_in_range_folded "every still-missing lens of a round is lost at that moment" \
   "$ORCH_SKILL" 'At the moment the round is finished, EVERY lens of that round that produced no usable return counts as one loss' \
+  "$FORK_LINE" "$FORK_END"
+# Every lost-return bound reads over the round's REVIEWER returns, because a
+# later design item's lenses and every tie-break reviewer are dispatched as
+# fresh general-purpose subagents, not as forks: a bound written over forks
+# alone would leave them unbounded, and the two-usable threshold would stop
+# every second design item with a spurious `fork review unavailable`.
+assert_in_range_folded "the bounds are stated over the round's reviewer returns, not the dispatch type" \
+  "$ORCH_SKILL" 'Every bound below is stated over the **reviewer returns of the round**, never over the dispatch type' \
+  "$FORK_LINE" "$FORK_END"
+# The partial case — some lenses returned, the platform volunteers nothing
+# about the rest — needs a terminating condition the orchestrator is allowed
+# to reach, or the unattended run waits for ever at the ruling.
+assert_in_range_folded "the partial case permits exactly one status read" \
+  "$ORCH_SKILL" 'make exactly ONE platform status read covering every lens of that round still outstanding' \
+  "$FORK_LINE" "$FORK_END"
+assert_in_range_folded "a single status read is not the forbidden monitoring step" \
+  "$ORCH_SKILL" '**A single status read of the reviewers you dispatched is not the monitoring step forbidden above**' \
+  "$FORK_LINE" "$FORK_END"
+assert_in_range_folded "the round is finished at that read whatever it reports" \
+  "$ORCH_SKILL" 'The round is **finished** at that read whatever it reports' \
+  "$FORK_LINE" "$FORK_END"
+# The tie-break reviewer is not a fork, so its own missing return needs a
+# stated bound and must not inflate the Forks field.
+assert_in_range_folded "the tie-break round carries its own bound" \
+  "$ORCH_SKILL" '**The tie-break round is bounded the same way.**' \
+  "$FORK_LINE" "$FORK_END"
+assert_in_range_folded "a lost tie-break return leaves the contradiction unsettled and stops nothing" \
+  "$ORCH_SKILL" 'the contradiction is simply unsettled and the fixed tie-break stated above applies — the run never stops for it' \
+  "$FORK_LINE" "$FORK_END"
+assert_in_range_folded "a tie-break loss is never counted in the Forks field" \
+  "$ORCH_SKILL" 'never counted in the ruling'"'"'s `Forks:` field' \
   "$FORK_LINE" "$FORK_END"
 # A later item's forks would inherit the earlier items' verdicts, so only the
 # first design item uses the fork path, and consolidation waits for the round.
@@ -527,6 +572,26 @@ done
 assert_in_range_folded "a bare fix it never authorises a fix against binding text" \
   "$ORCH_SKILL" 'a bare `fix it` never authorises a fix against binding text' \
   "$ANSWERS_LINE" "$ANSWERS_END"
+# Review-log ids are re-used by every `_Invocation` entry, so a carried Phase 4
+# answer must name the entry it was decided against, or a ruling made two
+# invocations earlier is applied to an unrelated finding with the same id.
+assert_in_range_folded "a carried Phase 4 id names its invocation" \
+  "$ORCH_SKILL" '**A carried Phase 4 id names its invocation.**' \
+  "$ANSWERS_LINE" "$ANSWERS_END"
+assert_in_range "the qualified Phase 4 answer-line form" \
+  "$ORCH_SKILL" '`[I2 inv 3] (orchestrator): <answer>`' \
+  "$ANSWERS_LINE" "$ANSWERS_END" exact
+assert_in_range_folded "the controller drops a qualified line of another invocation" \
+  "$ORCH_SKILL" 'The controller drops a qualified line whose `<i>` is not its current entry'"'"'s invocation number' \
+  "$ANSWERS_LINE" "$ANSWERS_END"
+# A Phase 3 `amend plan` answer is a record, never an instruction to the
+# implementer to edit the plan a second time.
+assert_in_range_folded "a Phase 3 amend plan answer records an already-committed amendment" \
+  "$ORCH_SKILL" '**An `amend plan: …` answer is the record of an amendment you have already made and committed**' \
+  "$ANSWERS_LINE" "$ANSWERS_END"
+assert_in_range_folded "the implementer follows the amended plan and never edits it" \
+  "$ORCH_SKILL" 'the implementer follows the amended plan text and never edits the plan itself, its only write to the plan file staying the checkbox tick' \
+  "$ANSWERS_LINE" "$ANSWERS_END"
 # The rule that makes a Phase 3 ruling survive a stop and reach a later batch.
 # The Resume check on the same string is the cross-reference; this is the
 # definition.
@@ -571,12 +636,17 @@ assert_in_range_folded "the marker's ruling number is compared as a whole number
 # The "never reproduce a secret" rule is not a closed three-item list: the
 # entry headings and the Resolution field are free text on the same commit.
 assert_in_range_folded "the secret rule covers every file a ruling commit touches" \
-  "$ORCH_SKILL" 'in every file a ruling commit touches' \
+  "$ORCH_SKILL" 'in every file a ruling **or a `stopped`** commit touches' \
   "$RECORD_LINE" "$RECORD_END"
 assert_in_range_folded "the secret rule's field list is open, not closed" \
   "$ORCH_SKILL" 'The list below is not closed' "$RECORD_LINE" "$RECORD_END"
 assert_in_range_folded "the secret rule names the Resolution field" \
   "$ORCH_SKILL" '`**Resolution:**` lines of the ruling-record entry above' \
+  "$RECORD_LINE" "$RECORD_END"
+# The `Ruled:` line carries a ruling's answer and can quote a clause holding a
+# credential, and it is written by the `stopped` commit, not the ruling commit.
+assert_in_range_folded "the secret rule names the Open: and Ruled: lines of the STOPPED entry" \
+  "$ORCH_SKILL" 'the `Open:` and `Ruled:` lines of the `## STOPPED` entry' \
   "$RECORD_LINE" "$RECORD_END"
 # Normalization is one rule of three operations; the `"` replacement is part
 # of it on the orchestrator side as well.
@@ -756,7 +826,7 @@ assert_in_range "cap matches the whole bracketed token" \
   "$ORCH_SKILL" '`[task <n>/` as a prefix' "$LOG_ENTRY_LINE" "$LOG_ENTRY_END" exact
 # The test is on the Re-dispatch VALUE; the line itself starts with the label.
 assert_in_range_folded "cap tests the Re-dispatch value, not the line's first word" \
-  "$ORCH_SKILL" 'whose `Re-dispatch:` value is not `none`' \
+  "$ORCH_SKILL" 'whose `Re-dispatch:` value does not start with `none`' \
   "$LOG_ENTRY_LINE" "$LOG_ENTRY_END"
 # The cap's reset anchor: without it the count would run across a stop and the
 # fourth ruling of a resumed unit would escalate as a chain that never
@@ -791,6 +861,17 @@ assert_in_range_folded "mixed-return handling records the non-escalated items to
   "$ORCH_SKILL" 'rule and record the others' "$LOG_ENTRY_LINE" "$LOG_ENTRY_END"
 assert_in_range_folded "mixed-return STOPPED entry lists every non-escalated ruling on a Ruled: line" \
   "$ORCH_SKILL" 'a `Ruled:` line every ruling of the stopped unit that was not' \
+  "$LOG_ENTRY_LINE" "$LOG_ENTRY_END"
+# A carried `Ruled:` line must be self-identifying: without the invocation
+# number, a ruling made against an earlier review-log entry is re-sent against
+# a later entry's finding that re-uses the id.
+assert_in_range_folded "a Phase 4 Ruled: line carries its review-log invocation number" \
+  "$ORCH_SKILL" 'In Phase 4 each `Ruled:` line writes its id in the qualified form `[<id> inv <i>]`' \
+  "$LOG_ENTRY_LINE" "$LOG_ENTRY_END"
+# `<r>` has a defined base, so two agents cannot write `1 of 3` and `0 of 3`
+# for the same first ruling.
+assert_in_range_folded "the in-run resume counter includes the entry being written" \
+  "$ORCH_SKILL" '`<r>` **includes the entry being written**, so the first ruling of a unit writes `in-run resume 1 of 3`' \
   "$LOG_ENTRY_LINE" "$LOG_ENTRY_END"
 
 # "Idempotence of an in-run resume after a crash": Phase 3 is idempotent by
@@ -924,6 +1005,47 @@ assert_in_range_folded "resume copies the clause, never the whole printed file" 
 assert_in_range_folded "resume reverts an orphan amendment marker" \
   "$ORCH_SKILL" 'is an inconsistent state whatever the log ends with' \
   "$RESUME_LINE" "$RULINGS_LINE"
+# The other two crash windows of the fixed write order. Without them, an
+# unlogged ruling reaches a controller (invisible to the cap and to the Phase 5
+# report), and an `amend plan` answer is re-sent for a plan never amended.
+assert_in_range_folded "a ruling-record entry with no RULING log entry is an incomplete ruling" \
+  "$ORCH_SKILL" 'is an **incomplete ruling**' "$RESUME_LINE" "$RULINGS_LINE"
+assert_in_range_folded "an incomplete ruling is repaired before any answer set is built from it" \
+  "$ORCH_SKILL" 'it is repaired BEFORE any `[RESUME_ANSWER]` is built from it' \
+  "$RESUME_LINE" "$RULINGS_LINE"
+assert_in_range_folded "resume verifies the amendment landed before acting on an amend plan ruling" \
+  "$ORCH_SKILL" 'the clause that ruling names must carry `(amended by ruling <n>)` and its `**Amendment <n>` note must stand' \
+  "$RESUME_LINE" "$RULINGS_LINE"
+assert_in_range_folded "an amend plan answer is never re-sent for a plan that was never amended" \
+  "$ORCH_SKILL" 'Never send `amend plan: …; fix it: …` for a plan that was never amended' \
+  "$RESUME_LINE" "$RULINGS_LINE"
+# Reverting the amendment without reverting the fix it authorised leaves the
+# branch contradicting the clause the user reinstated.
+assert_in_range_folded "reverting a plan amendment also reverts the fix it authorised" \
+  "$ORCH_SKILL" '**Reverting the plan is only half of the revert.**' \
+  "$RESUME_LINE" "$RULINGS_LINE"
+assert_in_range_folded "the fix commit is found by the addendum's fixed line and reverted into the resume commit" \
+  "$ORCH_SKILL" 'revert it without a commit of its own (`git revert --no-commit <sha>`)' \
+  "$RESUME_LINE" "$RULINGS_LINE"
+assert_in_range_folded "an unrevertable fix is re-raised by the next invocation instead" \
+  "$ORCH_SKILL" 're-raises the finding against the restored clause' \
+  "$RESUME_LINE" "$RULINGS_LINE"
+# The follow-up append and its commit are gated on the item having a
+# ruling-record entry: two supported stop kinds produce none, and `<n>` would
+# be undefined for them.
+assert_in_range_folded "the follow-up append is gated on the item having a ruling-record entry" \
+  "$ORCH_SKILL" 'Append each user answer **that has a ruling-record entry of its own**' \
+  "$RESUME_LINE" "$RULINGS_LINE"
+assert_in_range_folded "a stop that made no ruling writes no follow-up commit" \
+  "$ORCH_SKILL" '**A stop that made no ruling has no entry to append to and writes no follow-up commit.**' \
+  "$RESUME_LINE" "$RULINGS_LINE"
+assert_in_range_folded "the two ruling-less stop kinds are named" \
+  "$ORCH_SKILL" 'a Phase 3 `BLOCKED task=<n>` the discriminator classified as a controller failure' \
+  "$RESUME_LINE" "$RULINGS_LINE"
+# The escalated `Re-dispatch:` value is read the same way here as in the cap.
+assert_in_range_folded "resume reads the escalated Re-dispatch value as starting with none" \
+  "$ORCH_SKILL" 'whose `Re-dispatch:` value starts with `none`' \
+  "$RESUME_LINE" "$RULINGS_LINE"
 
 for frag in 'escalated' 'fork review unavailable'; do
   assert_in_range "stop policy fragment '$frag'" \
@@ -957,8 +1079,17 @@ for pin in 'git add -A' 'git add .' 'git commit -a'; do
   assert_in_range "stop policy names '$pin' for a stopped commit" \
     "$ORCH_SKILL" "$pin" "$RULINGS_END" "$GUARD_LINE" exact
 done
-assert_in_range_folded "stop policy names the only files a stopped commit stages" \
-  "$ORCH_SKILL" 'the orchestration log and, when it is committed together with the log, `state.md`' \
+assert_in_range_folded "stop policy names the only file a stopped commit stages" \
+  "$ORCH_SKILL" 'The only file it stages is the orchestration log; name it on the command line.' \
+  "$RULINGS_END" "$GUARD_LINE"
+# Phase 0 step 3 makes `state.md` an ignored path, so naming it on the command
+# line makes `git add` refuse and the whole `stopped` commit fail — at the one
+# moment an escalated item must reach the user.
+assert_in_range_folded "stop policy forbids staging state.md in a stopped commit" \
+  "$ORCH_SKILL" '**`state.md` is never staged by a `stopped` commit**' \
+  "$RULINGS_END" "$GUARD_LINE"
+assert_in_range_folded "stop policy gives the reason: Phase 0 makes state.md an ignored path" \
+  "$ORCH_SKILL" 'makes it an ignored path in every orchestrated run' \
   "$RULINGS_END" "$GUARD_LINE"
 # Both `stopped` commit sites refer to that one rule.
 assert_in_range_folded "the Resume rebuild path stages its stopped commit by explicit path" \
@@ -1141,6 +1272,17 @@ done
 assert_in_range_folded "code-review-loop Deviation 5 treats an untagged line as a user line" \
   "$LOOP_PROMPT" 'an untagged line is a user line' \
   "$LOOP_DEV5_LINE" "$LOOP_RETURN_LINE"
+# The consuming side of the qualified Phase 4 id: review-log ids are re-used
+# per invocation, so a carried line naming another entry must be dropped, not
+# applied to whatever finding now holds that id.
+assert_in_range "code-review-loop Deviation 5 names the qualified id form" \
+  "$LOOP_PROMPT" '`[I2 inv 3]`' "$LOOP_DEV5_LINE" "$LOOP_RETURN_LINE" exact
+assert_in_range_folded "code-review-loop Deviation 5 applies a qualified line only for the current entry" \
+  "$LOOP_PROMPT" 'Apply a qualified line only when its `<i>` is the CURRENT entry'"'"'s invocation number' \
+  "$LOOP_DEV5_LINE" "$LOOP_RETURN_LINE"
+assert_in_range_folded "code-review-loop Deviation 5 drops a qualified line of another invocation" \
+  "$LOOP_PROMPT" '**drop any other qualified line, journaling nothing for it**' \
+  "$LOOP_DEV5_LINE" "$LOOP_RETURN_LINE"
 BATCH_RA_LINE="$(line_containing_after "$BATCH_PROMPT" '`[RESUME_ANSWER]` — OPTIONAL' 0)"
 # The section heading's condition for omitting the section must match the
 # placeholder documentation's: no answer recorded by the run at all.
@@ -1154,6 +1296,20 @@ for pin in '(orchestrator)' '(user)' '[task <n>/<k>]'; do
 done
 assert_in_range "batch-controller [RESUME_ANSWER] doc says authoritative either way" \
   "$BATCH_PROMPT" 'authoritative either way' "$BATCH_RA_LINE" "$BATCH_RA_END" fragment
+# A Phase 3 `amend plan: …` answer reaches the implementer as authoritative
+# text; without this rule the implementer edits the plan a second time and the
+# stray edit lands inside the checkbox-tick commit.
+assert_in_range_folded "batch-controller [RESUME_ANSWER] doc says an amend plan answer is already committed" \
+  "$BATCH_PROMPT" 'An `amend plan: …` answer is the record of an amendment the orchestrator has already made and committed' \
+  "$BATCH_RA_LINE" "$BATCH_RA_END"
+assert_in_range_folded "batch-controller [RESUME_ANSWER] doc keeps the checkbox tick as the only plan write" \
+  "$BATCH_PROMPT" 'never edits the plan itself, its only write to the plan file staying the checkbox tick' \
+  "$BATCH_RA_LINE" "$BATCH_RA_END"
+# The same rule stated in the prompt BODY, where the controller actually reads
+# it: the placeholder documentation above is read by the orchestrator only.
+assert_in_range_folded "batch-controller prompt body states the amend plan rule to the controller" \
+  "$BATCH_PROMPT" 'the implementer follows the amended plan text and never edits the plan itself' \
+  1 "$BATCH_RA_LINE"
 # The answer set is run-wide, not batch-wide: a pre-flight conflict ruled
 # during an earlier batch must still reach the later batch that implements
 # another task it touches.
