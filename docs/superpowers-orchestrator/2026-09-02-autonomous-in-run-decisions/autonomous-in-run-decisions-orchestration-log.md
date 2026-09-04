@@ -64,3 +64,21 @@ Items: [I3 r5] (user) — Ruling 1 confirmed; Ruling 2 withdrawn in full; the sp
 Detail: docs/superpowers-orchestrator/2026-09-02-autonomous-in-run-decisions/plans/autonomous-in-run-decisions-open-decisions.md
 Forks: none — the author decided the escalated item; the rest are forced
 Re-dispatch: phase 4, in-run resume 2 of 3
+
+## RULING 9 — 2026-09-04 — phase 4 — two forced, two escalated by guard 4
+Items: [I1 v3] forced — fix it (pin each fork rule with an assertion that fails when it is deleted)
+       [I7] forced — fix it, applied directly (amendment markers removed from reference text)
+       [I8] escalated (spec wrong) — the secret class cannot match a Phase 3 item
+       [I3 r11] escalated (spec wrong) — nothing delivers the secret residue
+Detail: docs/superpowers-orchestrator/2026-09-02-autonomous-in-run-decisions/plans/autonomous-in-run-decisions-open-decisions.md
+Forks: none — two forced answers; the two escalations are barred from a ruling by guard 4, which the author's 2026-09-04 decision triggers
+Re-dispatch: none — escalated
+
+## STOPPED — 2026-09-04 — phase 4 — two secret-class gaps are the spec author's decision
+Detail: docs/superpowers-orchestrator/2026-09-02-autonomous-in-run-decisions/implementation/autonomous-in-run-decisions-review-log.md
+Open: [I8] user-decision — the `secret` class cannot match a Phase 3 open item, so a credential raised as a Phase 3 question is decided autonomously
+Open: [I3] user-decision — nothing delivers the secret residue: a credential scrubbed at HEAD survives in history with nobody told to rotate it
+Ruled: [I1 v3] forced — fix it (pin each fork rule against deletion)
+Ruled: [I7] forced — applied directly, markers removed from reference text
+Owed probe: none
+Resume: Resume orchestration for docs/superpowers-orchestrator/2026-09-02-autonomous-in-run-decisions/plans/autonomous-in-run-decisions.md

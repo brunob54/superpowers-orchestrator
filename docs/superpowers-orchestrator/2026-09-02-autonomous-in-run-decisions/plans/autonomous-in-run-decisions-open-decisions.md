@@ -85,3 +85,39 @@ plan's File Structure table now lists the spec (ruling 8).
 - **Defensible answers:** n/a — forced
 - **Forks:** none — forced
 - **Resolution:** `amend plan: add the spec to the File Structure table, marked as edited only by an author-confirmed orchestrator ruling and implemented by no task.` — Forced: the file is modified on this branch and the table claims to list every file the plan touches, so leaving it out states something false. The row records the authority the author has now given, which is the "by whom" the finding said was undefined.
+
+## Ruling 9 — 2026-09-04 — phase 4 — [I1 v3] the fork subsection's rules have no failing assertion
+
+- **Class:** forced
+- **Item:** [I1] Important tests/in-run-rulings/run-tests.sh:553 — the fork subsection is covered only by the bare fragments `evidence consistency` and `general-purpose`, each occurring several times in range, so five mutations each left the suite at 397 passed: removing the fresh non-inheriting reviewers rule, removing the fresh-subagent-never-a-fork clause, removing the wait-for-all-notices rule, widening the 25-line return bound to 200, and removing the platform-degradation sentence
+- **Contract clause:** "Verification: section 3 of `bash tests/in-run-rulings/run-tests.sh`" — plans/autonomous-in-run-decisions.md, Task 3 Contract
+- **Defensible answers:** n/a — forced
+- **Forks:** none — forced
+- **Resolution:** `fix it: pin each fork rule with an assertion that fails when that rule is deleted, scoped inside the fork subsection.` — Forced: the reviewer ran five mutations and measured the suite green each time, and the plan's Task 3 Contract names this section as the verification for exactly those rules, so the contract is unmet as written. The first two mutations remove the independence guarantee that makes a contradicted `design` ruling reviewed rather than self-confirmed, which is one of the feature's three safety properties.
+
+## Ruling 10 — 2026-09-04 — phase 4 — [I7] amendment markers sit on reference text
+
+- **Class:** forced
+- **Item:** [I7] Important skills/multi-code-review/SKILL.md:652 — the definition of decided wording includes a plan clause carrying `(amended by ruling <n>)` without requiring the clause to be binding text, while this branch's own plan carried the marker on a File Structure table row and inside a Contract bullet, both reference text, so a finding against either would be rejected as `plan governs (loop decision)` although the same rule says a finding against reference plan text stays an ordinary finding
+- **Contract clause:** "the exact definition of decided wording (… and a plan clause carrying `(amended by ruling <n>)`)" — plans/autonomous-in-run-decisions.md, Task 8 Contract
+- **Defensible answers:** (a) bound the marker branch to binding text, which narrows wording Task 8's Contract fixes verbatim; (b) remove the markers from the reference text they should never have carried
+- **Forks:** none — forced. The skill's own amendment procedure writes the marker exclusively onto binding clauses, so a marker on a reference row is a defect in that row, not in the rule. Answer (a) would narrow a verbatim contract to accommodate an error answer (b) removes at its source.
+- **Resolution:** `fix it — applied directly by the orchestrator, since both edits are plan text: the File Structure row added by ruling 8 keeps its explanation but loses the marker, because adding a row is not amending a clause; the Task 2 Contract bullet keeps its amendment record in the block quote under the task heading and loses the marker, because a Contract bullet is not in the plan's closed binding set. No marker now sits on reference text.` — Recorded follow-up, not taken here: bounding the rule itself to binding text would harden it against a future ruling repeating this error, and it narrows plan-mandated wording, so it belongs to a change the author assents to.
+
+## Ruling 11 — 2026-09-04 — phase 4 — [I8] the secret class cannot match a Phase 3 item
+
+- **Class:** escalated (spec wrong)
+- **Item:** [I8] Important skills/orchestrating-development/SKILL.md:688 — the `secret` class is defined over an item's disposition reason or summary and narrowed to one producer in the review loop, both Phase 4 constructs, while a Phase 3 open item is a `### Question <k>` or `### Conflict <k>` section with no disposition line. The batch template on this same branch anticipates a credential there. An implementer that raises a hard-coded credential as a Phase 3 question therefore falls through to `forced` or `design` and is decided autonomously, which is what "You never decide a `secret` item" exists to prevent
+- **Contract clause:** "the closed escalation list `spec wrong`, `scope`, `irreversible`, `secret`, `chain` with the spec's definition of each" — plans/autonomous-in-run-decisions.md, Task 1 Contract
+- **Defensible answers:** (a) widen the `secret` definition to cover a Phase 3 section that names a credential; (b) leave it and record the gap
+- **Forks:** none — not dispatched. Guard 4 fires: the spec's author decided this exact clause on 2026-09-04, ruling that the escalation list and all five definitions stay exactly as written. A ruling that widened one of them now would overturn that decision, which guard 4 forbids without qualification.
+- **Resolution:** escalated — the author's decision of 2026-09-04 covers the clause this item cites. The orchestrator's recommendation, offered not applied: widen it, because the gap defeats the one class the predicate says the orchestrator never decides.
+
+## Ruling 12 — 2026-09-04 — phase 4 — [I3 r11] nothing delivers the secret residue
+
+- **Class:** escalated (spec wrong)
+- **Item:** [I3] Important skills/orchestrating-development/SKILL.md:760 — the `secret` definition asserts that for a credential in reviewed code "a secret in reviewed code is a Critical the loop's fix removes, and only the residue (rotation, history) reaches you", but no mechanism delivers that residue: once the fix subagent removes the credential the disposition is `fixed`, which is not an open item, so the predicate never sees it, and neither the loop's return, its disposition shapes nor the Phase 5 report carries a secrets field. The branch reaches the merge decision with the credential scrubbed at HEAD, still in the branch's history, and nobody told to rotate it — while the sentence actively tells the orchestrator not to escalate, because it believes something else will
+- **Contract clause:** "the closed escalation list `spec wrong`, `scope`, `irreversible`, `secret`, `chain` with the spec's definition of each" — plans/autonomous-in-run-decisions.md, Task 1 Contract
+- **Defensible answers:** (a) edit the `secret` definition to drop the false assurance and escalate instead; (b) add a secrets field to the Phase 5 report and to the loop's return, which the plan does not carry today; (c) leave it and record the gap
+- **Forks:** none — not dispatched. Guard 4 fires for the same reason as ruling 11: the item cites the clause the author decided on 2026-09-04.
+- **Resolution:** escalated — the orchestrator's recommendation, offered not applied: (b), because it closes the hole without touching the definitions the author reserved. A secret found in reviewed code is real, its history survives the fix, and the sentence that tells the orchestrator to stay silent about it is the dangerous half.
