@@ -978,6 +978,14 @@ rejection line, or `Harness probes owed: none`. The line is always written; a
 report without it is defective. The user runs the owed probes after the
 loop.
 
+Also report a `Secrets found:` line, in the same shape as the
+`Harness probes owed:` line above — one item `- [<id>] <file> — (round
+<i>)` per finding of this invocation that reported an exposed secret or
+credential in reviewed code, whatever that finding's final disposition,
+naming the file and the round, or `Secrets found: none`. The line is
+always written; a report without it is defective. The item never
+reproduces the secret value itself.
+
 **Resolving user-decision and unresolved items** (interactive; batched
 mode journals and ends the batch instead): present each once, at this
 report. Finding governs → one fix subagent for all accepted findings,

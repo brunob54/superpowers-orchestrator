@@ -347,7 +347,13 @@ The open-decisions file is `<topic folder>/plans/<slug>-open-decisions.md`.
    listed by ruling number with its item summary, or `none` — and the
    three log paths
    (orchestration, plan review, and the code review log at
-   `<topic folder>/implementation/<slug>-review-log.md`).
+   `<topic folder>/implementation/<slug>-review-log.md`) — and, under a
+   heading naming the two actions a person must take, rotate the
+   credential, and decide what to do about the branch history, which the
+   fix does not rewrite, the `Secrets found:` list gathered from the
+   code review log: one item per finding that reported an exposed secret
+   or credential in reviewed code, naming the file and the round, or
+   `Secrets found: none`.
 4. Invoke `finishing-a-development-branch` (interactive — merge/PR/keep/
    discard is the user's call).
 

@@ -558,6 +558,38 @@ for frag in 'not a debate' 'never pass conversation history' \
 done
 assert_in_range "fork naming never uses an orch- name" \
   "$ORCH_SKILL" 'never an `orch-` name' "$FORK_LINE" "$FORK_END" exact
+# The bare 'evidence consistency' and 'general-purpose' fragments above occur
+# several times each in this subsection, so none of them fails when one of
+# the five rules below is deleted. Each rule below is pinned on its own
+# sentence instead.
+# Rule 1: every later design item's reviewers, and every tie-break reviewer,
+# are fresh non-inheriting subagents, never forks that would inherit the
+# earlier item's (or round's) verdicts and consolidation reasoning.
+assert_in_range_folded "later design items and every tie-break reviewer use fresh non-inheriting subagents" \
+  "$ORCH_SKILL" "Every later item's reviewers, and every tie-break reviewer, are dispatched instead as fresh \`general-purpose\` subagents" \
+  "$FORK_LINE" "$FORK_END"
+# Rule 2: the tie-break reviewer of the optional second round is dispatched
+# as a fresh subagent, never a fork, precisely so it does not inherit the
+# consolidation reasoning it exists to check.
+assert_in_range_folded "tie-break reviewer is a fresh subagent, never a fork, so it does not inherit the consolidation reasoning it checks" \
+  "$ORCH_SKILL" 'a fresh `general-purpose` subagent, never a fork: the inheritance rule above dispatches every tie-break reviewer that way, so that it does not inherit the consolidation reasoning it exists to check' \
+  "$FORK_LINE" "$FORK_END"
+# Rule 3: wait for every fork notice of a round before doing anything else —
+# no partial-round work in between.
+assert_in_range_folded "wait for the notices of all forks of a round before doing other work" \
+  "$ORCH_SKILL" 'Wait for the notices of all forks of a round, doing no other work in between' \
+  "$FORK_LINE" "$FORK_END"
+# Rule 4: the fork return's line bound. Exact-line pin (no wrap), so a
+# widened bound (e.g. 25 -> 200) fails this check.
+assert_in_range "fork return is bounded to at most 25 lines" \
+  "$ORCH_SKILL" '## Return (final message, at most 25 lines)' "$FORK_LINE" "$FORK_END" exact
+# Rule 5: on a platform with no fork type, degrade to a fresh general-purpose
+# subagent given the "What may be read" list as explicit paths and the same
+# prompt — the same degradation the inheritance rule (Rule 1) invokes by
+# name, stated here as the platform's own fallback.
+assert_in_range_folded "platform with no fork type degrades to a fresh general-purpose subagent with explicit paths" \
+  "$ORCH_SKILL" 'When the platform has no `fork` type, dispatch a fresh `general-purpose` subagent instead, given the "What may be read" list as explicit paths and the same prompt' \
+  "$FORK_LINE" "$FORK_END"
 # The numbers of the fork review: how many forks run by default, when two are
 # enough, which four lenses exist, and how few usable returns stop the run.
 # A silent change to any of them is the difference between an independently
@@ -1163,6 +1195,13 @@ assert_in_range_folded "Phase 5 report lists unsettled contradictions" \
 assert_in_range_folded "Phase 5 report lists every accepted ruling" \
   "$ORCH_SKILL" 'every entry whose Resolution line begins with `accept:`, listed by ruling number' \
   "$PHASE5_LINE" "$LOG_FORMAT_LINE"
+# R13 (Amendment 13): the Phase 5 report carries the Secrets found list
+# gathered from the code review log, under a heading naming the two actions
+# a person must take. Pinned on the heading sentence, not the bare
+# `Secrets found:` label, which a cross-reference elsewhere could satisfy.
+assert_in_range_folded "Phase 5 report carries the Secrets found list under the rotate/history heading (R13)" \
+  "$ORCH_SKILL" 'rotate the credential, and decide what to do about the branch history, which the fix does not rewrite, the `Secrets found:` list gathered from the code review log' \
+  "$PHASE5_LINE" "$LOG_FORMAT_LINE"
 # A `BLOCKED task=<n>` return writes no batch entry, so the ruling's own
 # `## RULING` entry is the boundary entry Resume step 3 finds the log ending
 # with. Without the rule, a batch entry would stand between them and the
@@ -1501,6 +1540,14 @@ assert_in_range_folded "Triage places the harness-probe observation after the lo
 assert_in_range_folded "an Exact-content marker stands at the end of the introducing paragraph line and covers the block below" \
   "$MCR_SKILL" 'For an `**Exact content:**` block the marker stands at the end of the introducing `**Exact content:** <reason>` paragraph line and covers the block below it' \
   "$MCR_PROCEDURE_LINE" "$MCR_LOG_FORMAT_LINE"
+# R13 (Amendment 13): the completion report also carries a Secrets found
+# line, one item per finding of this invocation that reported an exposed
+# secret or credential in reviewed code. Pinned on the rule's own sentence,
+# scoped to "## After the Loop", not the bare `Secrets found:` label, which
+# the Phase 5 cross-reference (section 6 above) could otherwise satisfy.
+assert_in_range_folded "completion report carries a Secrets found line, one item per exposed-secret finding (R13)" \
+  "$MCR_SKILL" 'one item `- [<id>] <file> — (round <i>)` per finding of this invocation that reported an exposed secret or credential in reviewed code' \
+  "$MCR_AFTER_LOOP_LINE" "$MCR_ERROR_HANDLING_LINE"
 for pin in 'decided (orchestrator)' 'decided (<who>)' \
            'plan governs (orchestrator decision)' 'plan governs (user decision)' \
            '`decided (user)` or `decided (orchestrator)`' \
