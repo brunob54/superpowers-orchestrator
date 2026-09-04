@@ -48,6 +48,12 @@ first_line_of() { grep -nxF -- "$2" "$1" | head -n 1 | cut -d: -f1; }
 # see the comment on assert_in_range_folded below for why.
 line_containing_after() {
   local file="$1" needle="$2" start="$3"
+  # An empty $start means the upstream anchor was not found. Returning empty
+  # here, rather than falling into the awk call, matters because `NR > start`
+  # with an empty $start is a STRING comparison in awk (true from line 1),
+  # which would scan the whole file and hand back a plausible but wrong line
+  # number instead of propagating the missing anchor.
+  [ -z "$start" ] && return
   needle="$needle" awk -v start="$start" \
     'BEGIN { n = ENVIRON["needle"] }
      NR > start && index($0, n) > 0 { print NR; exit }' "$file"
@@ -57,6 +63,8 @@ line_containing_after() {
 # with the fixed string $2; empty when absent.
 line_starting_with_after() {
   local file="$1" pfx="$2" start="$3"
+  # Same reason as line_containing_after above.
+  [ -z "$start" ] && return
   pfx="$pfx" awk -v start="$start" \
     'BEGIN { p = ENVIRON["pfx"] }
      NR > start && index($0, p) == 1 { print NR; exit }' "$file"
@@ -192,6 +200,85 @@ assert_absent_in_range_folded() { # desc file needle start end mode
   fi
 }
 
+# Same as assert_absent_in_range_folded, except that backtick characters are
+# stripped from both the folded haystack and the needle before the
+# comparison. Use this when the file's own Markdown style would wrap the
+# forbidden phrase in backticks (`` `BLOCKED` ``, say): a plain needle would
+# then never match the file's actual style in either direction — a
+# regression restated in that style would pass, and a cosmetic edit that
+# merely drops backticks from unrelated, permitted text could fail. $6 is
+# the match mode: "exact" (case-sensitive) or "fragment" (case-insensitive).
+assert_absent_in_range_folded_nobacktick() { # desc file needle start end mode
+  local desc="$1" file="$2" needle="$3" start="$4" end="$5" mode="$6"
+  local folded folded_nb needle_nb found
+  if [ -z "$start" ] || [ -z "$end" ] || [ "$start" -ge "$end" ]; then
+    bad "$desc (the range $start..$end of ${file#$ROOT/} is missing, empty or inverted)"
+    return
+  fi
+  folded="$(fold_range "$file" "$start" "$end")"
+  folded_nb="${folded//\`/}"
+  needle_nb="${needle//\`/}"
+  # Environment, not `awk -v`, for the reason given above assert_in_range_folded.
+  if [ "$mode" = "exact" ]; then
+    found="$(needle="$needle_nb" hay="$folded_nb" awk \
+      'BEGIN { r = index(ENVIRON["hay"], ENVIRON["needle"]); print (r > 0 ? "yes" : "no") }')"
+  elif [ "$mode" = "fragment" ]; then
+    found="$(needle="$needle_nb" hay="$folded_nb" awk \
+      'BEGIN { r = index(tolower(ENVIRON["hay"]), tolower(ENVIRON["needle"])); print (r > 0 ? "yes" : "no") }')"
+  else
+    bad "$desc (unknown match mode '$mode', expected 'exact' or 'fragment')"
+    return
+  fi
+  if [ "$found" = "no" ]; then
+    ok "$desc (absent from range $start..$end, line wraps folded, backticks ignored)"
+  else
+    bad "$desc (still present in range $start..$end of ${file#$ROOT/}, line wraps folded, backticks ignored)"
+  fi
+}
+
+# Same as assert_absent_in_range_folded_nobacktick, except that ONE
+# occurrence of $3 (the phrase) is permitted when it is immediately followed
+# by $4 (the qualifier): the qualifier text is what turns an unconditional
+# phrase into a conditional one. The check removes the first phrase+qualifier
+# pair found (case-insensitive, backticks stripped) from the folded haystack,
+# then tests whether the bare phrase still occurs in what remains. A
+# resurrection of the phrase WITHOUT its qualifier — an unconditional
+# reintroduction, in whatever backtick style — still fails this check; the
+# compliant, qualified phrase, in any backtick style, does not. $7 is the
+# match mode for the final absence test: "exact" or "fragment".
+assert_absent_unless_qualified_in_range_folded() { # desc file phrase qualifier start end mode
+  local desc="$1" file="$2" phrase="$3" qualifier="$4" start="$5" end="$6" mode="$7"
+  local folded folded_nb remainder found
+  if [ -z "$start" ] || [ -z "$end" ] || [ "$start" -ge "$end" ]; then
+    bad "$desc (the range $start..$end of ${file#$ROOT/} is missing, empty or inverted)"
+    return
+  fi
+  folded="$(fold_range "$file" "$start" "$end")"
+  folded_nb="${folded//\`/}"
+  # Environment, not `awk -v`, for the reason given above assert_in_range_folded.
+  remainder="$(hay="$folded_nb" pair="${phrase}${qualifier}" awk \
+    'BEGIN { h = ENVIRON["hay"]; p = ENVIRON["pair"]
+             lh = tolower(h); lp = tolower(p)
+             i = index(lh, lp)
+             if (i > 0) { h = substr(h, 1, i - 1) substr(h, i + length(p)) }
+             print h }')"
+  if [ "$mode" = "exact" ]; then
+    found="$(needle="$phrase" hay="$remainder" awk \
+      'BEGIN { r = index(ENVIRON["hay"], ENVIRON["needle"]); print (r > 0 ? "yes" : "no") }')"
+  elif [ "$mode" = "fragment" ]; then
+    found="$(needle="$phrase" hay="$remainder" awk \
+      'BEGIN { r = index(tolower(ENVIRON["hay"]), tolower(ENVIRON["needle"])); print (r > 0 ? "yes" : "no") }')"
+  else
+    bad "$desc (unknown match mode '$mode', expected 'exact' or 'fragment')"
+    return
+  fi
+  if [ "$found" = "no" ]; then
+    ok "$desc (no unqualified occurrence in range $start..$end, line wraps folded, backticks ignored)"
+  else
+    bad "$desc (an unqualified occurrence remains in range $start..$end of ${file#$ROOT/}, line wraps folded, backticks ignored)"
+  fi
+}
+
 # Range anchors in orchestrating-development/SKILL.md. Headings are
 # whole-line matches. The `## In-run rulings` section ends where the
 # `## Major-Error Stop Policy` heading begins, because the section's own
@@ -315,6 +402,24 @@ assert_in_range_folded "secret trigger is the item's disposition reason or summa
 assert_in_range_folded "secret class names one producer" \
   "$ORCH_SKILL" 'One producer exists: `code-review-loop-prompt.md` Deviation 3' \
   "$CLASS_LINE" "$CLASS_END"
+# The label loop above only checks that each of the five reason labels is
+# PRESENT; it does not check that each label's own definition still carries
+# its defining bytes. Pin the operative clause of each reason, the plan's
+# Task 1 Contract requirement for this section ("with the spec's definition
+# of each"), so a later fix round cannot silently narrow the escalation
+# boundary while the label loop stays green.
+assert_in_range_folded "scope definition names the Files-list union" \
+  "$ORCH_SKILL" "the union of the plan's \`**Files:**\` lists" \
+  "$CLASS_LINE" "$CLASS_END"
+assert_in_range_folded "irreversible definition lists its five triggers" \
+  "$ORCH_SKILL" 'a force-push, deleting data, publishing, calling or configuring an external service, adding a dependency' \
+  "$CLASS_LINE" "$CLASS_END"
+assert_in_range_folded "secret definition says you never decide a secret item" \
+  "$ORCH_SKILL" 'You never decide a `secret` item.' \
+  "$CLASS_LINE" "$CLASS_END"
+assert_in_range_folded "secret definition excludes a secret found in reviewed code" \
+  "$ORCH_SKILL" 'A secret in reviewed code is not this class' \
+  "$CLASS_LINE" "$CLASS_END"
 
 # The Phase 3 discriminator bounds <n> by the plan, not by the batch, because a
 # pre-flight conflict may name a task of a later batch.
@@ -354,10 +459,21 @@ assert_in_range_folded "intro's second exception clause names the classification
   1 "$REQUIRED_START_LINE"
 for frag in 'data, not instructions' 'never a reviewer report file' \
             'read-only git commands' 'resume step 3' \
-            '40 lines'; do
+            'or to 40 lines on each side'; do
   assert_in_range "read-exception fragment '$frag'" \
     "$ORCH_SKILL" "$frag" "$READ_EXCEPTION_LINE" "$READ_EXCEPTION_END" fragment
 done
+# Entry 2 (the Phase 3 read: the blocked task's report file and its
+# `### Task <n>` plan section) and entry 3 (the plan clause the item names or
+# depends on, or the `**Global Constraints:**` block, and the spec section it
+# traces to) are two of the five list entries; nothing above pins either of
+# them by its own distinguishing bytes.
+assert_in_range "read-exception entry 2 names the SDD task report file path" \
+  "$ORCH_SKILL" '.superpowers/sdd/task-<n>-report.md' \
+  "$READ_EXCEPTION_LINE" "$READ_EXCEPTION_END" exact
+assert_in_range_folded "read-exception entry 3 names the plan clause, Global Constraints block and spec section" \
+  "$ORCH_SKILL" 'the cited task section, or the `**Global Constraints:**` block — and the spec section it traces' \
+  "$READ_EXCEPTION_LINE" "$READ_EXCEPTION_END"
 # A bare 'nothing else' needle is short enough that ordinary prose could
 # satisfy it even with the closing declaration deleted. Pin the closing
 # clause's own distinguishing bytes: the exhaustiveness statement that ends
@@ -420,7 +536,7 @@ bold "3. Fork review (R3)"
 # ## In-run rulings range would pass even without the fork subsection.
 FORK_LINE="$(first_line_of "$ORCH_SKILL" '### Fork review for a design item')"
 FORK_END="$(line_starting_with_after "$ORCH_SKILL" '### ' "$FORK_LINE")"
-if [ -z "$FORK_END" ] || [ "$FORK_END" -gt "$RULINGS_END" ]; then
+if [ -z "$FORK_END" ] || [ -z "$RULINGS_END" ] || [ "$FORK_END" -gt "$RULINGS_END" ]; then
   FORK_END="$RULINGS_END"
 fi
 for pin in 'subagent_type: "fork"' '<!-- multi-review report -->' 'fork-<lens>' \
@@ -725,6 +841,26 @@ assert_in_range_folded "amendment lookup escalates when no clause matches" \
 assert_in_range_folded "a re-derived conflict keeps its answered number" \
   "$ORCH_SKILL" 'A re-derived conflict keeps its old number' \
   "$ANSWERS_LINE" "$ANSWERS_END"
+# The orchestrator's own copy of "which text is binding" — what makes a plan
+# conflict a collision with the plan's binding text in the first place. The
+# suite already pins the loop's copy of this rule (section 7); without this
+# pin, only that side is protected, and the two copies could drift apart with
+# the suite green.
+assert_in_range_folded "orchestrator's binding-text definition names Global Constraints, Exact content, and pre-7.7.0 mandated text" \
+  "$ORCH_SKILL" "a \`**Global Constraints:**\` entry or an \`**Exact content:**\` block; in a plan written before that note, any mandated text" \
+  "$ANSWERS_LINE" "$ANSWERS_END"
+# Plan amendment step 1: the binding clause is REPLACED in place, never
+# merely annotated — an annotation would leave the binding clause in force
+# and the next review would raise the same finding again.
+assert_in_range_folded "plan amendment step 1 replaces the binding clause in place" \
+  "$ORCH_SKILL" '**Edit the binding clause in place** — replace the Global Constraints entry, the Exact-content block, or the mandated sentence with the amended text' \
+  "$ANSWERS_LINE" "$ANSWERS_END"
+# Plan amendment step 2: the audit note's placement — immediately after the
+# block that holds the edited clause — is what lets the resume path's revert
+# find it again.
+assert_in_range_folded "plan amendment step 2 inserts the audit note immediately after the edited clause's block" \
+  "$ORCH_SKILL" '**Insert the audit note**, one block quote, immediately after the block that holds the edited clause' \
+  "$ANSWERS_LINE" "$ANSWERS_END"
 
 bold "5. RULING log entry, cap and guards (R6, R7, R9)"
 for pin in '## RULING' 'Re-dispatch:' 'Re-dispatch: none' 'Ruled:' \
@@ -885,6 +1021,24 @@ assert_in_range_folded "guard 4 escalates when the clause match is unsure" \
 assert_in_range_folded "guard 4 names a fallback class for a forced or design entry" \
   "$ORCH_SKILL" 'which has no escalation class of its own' \
   "$GUARDS_LINE" "$GUARDS_END"
+# Guard 1's operative clause: a `plan governs` answer for which no clause can
+# be quoted is not a rejection at all. Without it, the fragment loop's short
+# 'a Critical is never rejected' pin above leaves this sentence unprotected.
+assert_in_range_folded "guard 1: a plan governs answer with no quotable clause is not a rejection at all" \
+  "$ORCH_SKILL" 'A `plan governs` answer for which no clause can be quoted is not a rejection at all' \
+  "$GUARDS_LINE" "$GUARDS_END"
+# Guard 3's timing requirement: every ruling is recorded BEFORE the
+# re-dispatch. "recorded when it is made" (pinned above) does not itself
+# carry this timing; this is what makes the cap countable and the
+# crash-recovery cases of the resume path reachable.
+assert_in_range_folded "guard 3 records the ruling before the re-dispatch" \
+  "$ORCH_SKILL" 'in the ruling record and the `## RULING` log entry, before the re-dispatch' \
+  "$GUARDS_LINE" "$GUARDS_END"
+# Guard 4's tie-back to the same decider: the escalated item goes to the same
+# person who decided the earlier clause, not to whoever handles this run.
+assert_in_range_folded "guard 4: the same decision goes back to the same decider" \
+  "$ORCH_SKILL" 'The same decision goes back to the same decider.' \
+  "$GUARDS_LINE" "$GUARDS_END"
 
 # The Phase 3 cap matches the whole bracketed token, so task 1 never counts a
 # `[task 12/1]` or a `[task 10]` line.
@@ -979,20 +1133,16 @@ assert_in_range_folded "Phase 4 routes open items to the predicate" \
 assert_absent_in_range_folded "Phase 4 no longer stops directly on the user_decision count (old wording absent)" \
   "$ORCH_SKILL" 'user_decision > 0` → major error → stop' \
   "$PHASE4_LINE" "$PHASE5_LINE" fragment
-# The base revision (0a57e40) joined the two disjuncts as
-# "`unresolved > 0` or\n`user_decision > 0` → major error → stop": the arrow
-# followed `user_decision > 0` directly, never `unresolved > 0`, which was
-# always followed by ` or`. A needle ending "unresolved > 0` → major error →
-# stop" therefore could never match the removed sentence, in base or in any
-# reintroduction of it — the `or` joiner always stands between them, and the
-# current routing sentence keeps that same joiner (only its destination
-# changed), so a needle on the joiner alone would also fail against today's
-# CORRECT text. This needle instead guards a hypothetical rewording — one
-# where `unresolved > 0` alone, without the disjunct, routed straight to a
-# stop — while the `user_decision` needle above is what actually catches a
-# reintroduction of the real removed sentence, since `user_decision > 0` is
-# the disjunct the arrow always followed.
-assert_absent_in_range_folded "Phase 4 does not route the bare unresolved count straight to a stop (hypothetical rewording guard)" \
+# This needle does not guard the base revision's (0a57e40) actual removed
+# wording — the sibling check above does that. There, the arrow always
+# followed `user_decision > 0` directly, never `unresolved > 0` (which was
+# always followed by ` or`), so a needle ending "unresolved > 0` → major
+# error → stop" cannot match the removed sentence, in base or in any
+# reintroduction of it. What this needle DOES guard, concretely: a future
+# edit that drops the `or` disjunct and lets `unresolved > 0` alone, without
+# `user_decision`, route straight to a stop — the same shape the removed
+# sentence used for the other disjunct.
+assert_absent_in_range_folded "Phase 4 does not route the bare unresolved count straight to a stop (guards a future dropped-or-disjunct rewording)" \
   "$ORCH_SKILL" 'unresolved > 0` → major error → stop' \
   "$PHASE4_LINE" "$PHASE5_LINE" fragment
 assert_in_range_folded "Phase 5 report lists unsettled contradictions" \
@@ -1083,13 +1233,22 @@ assert_in_range_folded "resume gives the metacharacter reason for -F" \
 # What is forbidden is the BARE `decided (user)`, not the label itself: the
 # correct wording enumerates both tags, and the sibling files are required to
 # carry that enumeration. So a `decided (user)` occurrence fails this check
-# only when its own line does not also carry `decided (orchestrator)`.
-if [ -n "$RESUME_LINE" ] && [ -n "$RULINGS_LINE" ] && [ "$RESUME_LINE" -lt "$RULINGS_LINE" ] && \
-   awk -v a="$RESUME_LINE" -v b="$RULINGS_LINE" \
-     'NR >= a && NR < b && index($0, "decided (user)") > 0 && index($0, "decided (orchestrator)") == 0 { found = 1 } END { exit found ? 1 : 0 }' "$ORCH_SKILL"; then
-  ok "Resume step 3 never names decided (user) without decided (orchestrator) beside it"
+# only when it is not also accompanied by `decided (orchestrator)`. The range
+# is folded first, the way every other positive check in this suite folds its
+# range: a per-physical-line scan would false-fail a compliant sentence whose
+# `decided (user)` half and `decided (orchestrator)` half land on different
+# lines after reflow.
+if [ -n "$RESUME_LINE" ] && [ -n "$RULINGS_LINE" ] && [ "$RESUME_LINE" -lt "$RULINGS_LINE" ]; then
+  DECIDED_FOLDED="$(fold_range "$ORCH_SKILL" "$RESUME_LINE" "$RULINGS_LINE")"
+  if hay="$DECIDED_FOLDED" awk \
+       'BEGIN { h = ENVIRON["hay"]
+                exit (index(h, "decided (user)") > 0 && index(h, "decided (orchestrator)") == 0) ? 1 : 0 }'; then
+    ok "Resume step 3 never names decided (user) without decided (orchestrator) beside it"
+  else
+    bad "Resume step 3 names a bare decided (user), line wraps folded"
+  fi
 else
-  bad "Resume step 3 names a bare decided (user), or the range $RESUME_LINE..$RULINGS_LINE is empty or inverted"
+  bad "Resume step 3 never names decided (user) without decided (orchestrator) beside it (the range $RESUME_LINE..$RULINGS_LINE is missing, empty or inverted)"
 fi
 # The revert step produces the commit hash itself, under the same
 # exact-subject filter as the landed-check, and copies only the clause out of
@@ -1253,15 +1412,35 @@ assert_absent_in_range_folded "stop policy no longer lists a pre-flight plan con
 # (replaced by the Phase 3 discriminator classification) and a
 # `code-review unresolved or user-decision items` stop (replaced by routing
 # to the predicate). Both removals are checked, modelled on the pre-flight
-# negative check above.
-assert_absent_in_range_folded "stop policy no longer lists code-review unresolved or user-decision items as a stop by itself" \
+# negative check above. Both negative needles are run backtick-insensitive:
+# the file's own style wraps a status word like `BLOCKED` in backticks, so a
+# plain needle would separate forbidden from permitted text by backtick
+# formatting alone, rather than by the unconditional-versus-conditional
+# distinction each check is named for.
+assert_absent_in_range_folded_nobacktick "stop policy no longer lists code-review unresolved or user-decision items as a stop by itself" \
   "$ORCH_SKILL" 'code-review unresolved' "$RULINGS_END" "$GUARD_LINE" fragment
 # The trailing semicolon was only the separator of the old semicolon-joined
 # stop list; a resurrection in the file's current backticked style, or as the
 # list's last item, would carry no semicolon and still pass. Match fragment
 # mode like the sibling negative checks above, dropping the punctuation.
-assert_absent_in_range_folded "stop policy no longer lists an unconditional batch-controller BLOCKED stop" \
-  "$ORCH_SKILL" 'batch-controller BLOCKED' "$RULINGS_END" "$GUARD_LINE" fragment
+# Unlike the sibling checks, a plain absence test cannot be used here at all:
+# the compliant, CONDITIONAL text itself contains the bare phrase
+# "batch-controller BLOCKED" as a substring (backticks stripped), so an
+# ordinary absence check would fail on compliant text too. Instead, permit
+# exactly the one occurrence that carries its Phase 3 discriminator
+# qualifier, and fail only on an occurrence that does not.
+assert_absent_unless_qualified_in_range_folded "stop policy no longer lists an unconditional batch-controller BLOCKED stop" \
+  "$ORCH_SKILL" 'batch-controller BLOCKED' ' that the Phase 3 discriminator classifies as a controller failure' \
+  "$RULINGS_END" "$GUARD_LINE" fragment
+# The positive counterpart of the check above: the batch-controller `BLOCKED`
+# stop that IS still listed carries its qualifying condition — the clause
+# naming that the Phase 3 discriminator classifies it as a controller
+# failure. Without this pin, the negative check above only forbids the
+# unconditional wording; it does not require the conditional wording to be
+# present at all.
+assert_in_range_folded "stop policy's batch-controller BLOCKED entry carries its Phase 3 discriminator condition" \
+  "$ORCH_SKILL" 'a batch-controller `BLOCKED` that the Phase 3 discriminator classifies as a controller failure' \
+  "$RULINGS_END" "$GUARD_LINE"
 
 bold "7. multi-code-review attribution and self-sufficient lines (R8.1, R8.2)"
 MCR_LOG_FORMAT_LINE="$(first_line_of "$MCR_SKILL" '## Review Log Format')"
@@ -1349,6 +1528,25 @@ assert_in_range_folded "the binding-text test is stated where the refusal rule l
 assert_in_range "binding-text test names the Exact content block" \
   "$MCR_SKILL" '`**Exact content:**` block' \
   "$MCR_AFTER_LOOP_LINE" "$MCR_ERROR_HANDLING_LINE" exact
+# The test's own operative clauses: the two pins above only locate the test's
+# heading and one of its terms; nothing yet pins what the test actually
+# decides — whether a `fix it` answer is applied or refused with
+# `unresolved: fix contradicts binding text`.
+assert_in_range_folded "binding-text test: a Global Constraints clause is binding on its face" \
+  "$MCR_SKILL" '`— clause: Global Constraints` location is binding on its face' \
+  "$MCR_AFTER_LOOP_LINE" "$MCR_ERROR_HANDLING_LINE"
+assert_in_range_folded "binding-text test: every other Task <n> clause is reference text, and a bare clause is none at all" \
+  "$MCR_SKILL" 'Every other `Task <n>` clause is reference text, and `— clause: none` is no clause at all; a bare `fix it` against either is applied normally.' \
+  "$MCR_AFTER_LOOP_LINE" "$MCR_ERROR_HANDLING_LINE"
+assert_in_range_folded "binding-text test: an unsure reading is treated as reference text and the fix is applied" \
+  "$MCR_SKILL" 'When that reading leaves you unsure, treat the clause as reference text and apply the fix' \
+  "$MCR_AFTER_LOOP_LINE" "$MCR_ERROR_HANDLING_LINE"
+# A `plan governs (orchestrator decision)` clause is written under all three
+# normalization replacements plus the 160-character cut — not just the `"`
+# replacement pinned elsewhere in this range.
+assert_in_range_folded "plan governs clause is written under the full normalization rule, cut to 160 characters" \
+  "$MCR_SKILL" 'written under the one normalization rule of "Self-sufficient open-item lines" above — all three of its replacements, the `"` one included, then the cut to 160 characters' \
+  "$MCR_AFTER_LOOP_LINE" "$MCR_ERROR_HANDLING_LINE"
 # The tag-to-`<who>` mapping on the loop's own side. The pins above assert
 # only that the three tag tokens occur somewhere in this 187-line range, and
 # unrelated sentences in it produce those same tokens, so the mapping itself
@@ -1426,6 +1624,14 @@ assert_in_range_folded "Deviation 3 names the real mechanism: the secret class s
   "$LOOP_DEV3_LINE" "$LOOP_DEV3_END"
 assert_in_range_folded "Deviation 3 forbids copying the value into the line" \
   "$LOOP_PROMPT" 'Never copy the value itself' "$LOOP_DEV3_LINE" "$LOOP_DEV3_END"
+# The fixed leading form is followed by the mandatory `— at <file:line> —
+# clause: …` (or `— clause: none`) suffix multi-code-review requires on every
+# `unresolved:` line. This is pinned on the reader side (section 7/8) but not
+# here, on the writer side; without it the two files could drift and the
+# `secret` classification would meet a line it cannot parse for location.
+assert_in_range_folded "Deviation 3 says the mandatory unresolved suffix still follows the fixed leading form" \
+  "$LOOP_PROMPT" 'the suffix that multi-code-review makes mandatory on every `unresolved:` line — `— at <file:line> — clause: <plan location> "<quoted plan text>"`, or `— clause: none` for a secret that collides with no plan text ("Self-sufficient open-item lines") — still follows it' \
+  "$LOOP_DEV3_LINE" "$LOOP_DEV3_END"
 LOOP_RA_LINE="$(line_containing_after "$LOOP_PROMPT" '`[RESUME_ANSWER]` — OPTIONAL' 0)"
 LOOP_RA_END="$(line_containing_after "$LOOP_PROMPT" '**Nothing else may be added to the prompt.**' "$LOOP_RA_LINE")"
 # A bare '(user)' needle would pass against the pre-branch wording, which
@@ -1437,6 +1643,11 @@ for pin in '(orchestrator)' '`(orchestrator)` or `(user)`' 'decided (<who>)'; do
 done
 assert_in_range "code-review-loop [RESUME_ANSWER] doc says authoritative either way" \
   "$LOOP_PROMPT" 'authoritative either way' "$LOOP_RA_LINE" "$LOOP_RA_END" fragment
+# The qualified-id rule is what the orchestrator reads when it fills this
+# section; it is otherwise pinned only in its Deviation 5 copy (below).
+assert_in_range_folded "code-review-loop [RESUME_ANSWER] doc drops a qualified line naming another invocation" \
+  "$LOOP_PROMPT" 'the controller drops a qualified line whose `<i>` is not its current entry'"'"'s' \
+  "$LOOP_RA_LINE" "$LOOP_RA_END"
 LOOP_DEV5_LINE="$(line_containing_after "$LOOP_PROMPT" '5. Resume answer:' 0)"
 LOOP_RETURN_LINE="$(line_containing_after "$LOOP_PROMPT" '## Return' "$LOOP_DEV5_LINE")"
 # Same reason as above: the bare '(user)' needle is replaced by bytes that
@@ -1461,6 +1672,12 @@ assert_in_range_folded "code-review-loop Deviation 5 applies a qualified line on
   "$LOOP_DEV5_LINE" "$LOOP_RETURN_LINE"
 assert_in_range_folded "code-review-loop Deviation 5 drops a qualified line of another invocation" \
   "$LOOP_PROMPT" '**drop any other qualified line, journaling nothing for it**' \
+  "$LOOP_DEV5_LINE" "$LOOP_RETURN_LINE"
+# The counterpart of the qualified-id rules above: an UNQUALIFIED `[<id>]` is
+# always about the current entry. Without this, the scope of a plain answer
+# line is undefined on the consuming side.
+assert_in_range_folded "code-review-loop Deviation 5 says an unqualified id is always about the current entry" \
+  "$LOOP_PROMPT" 'An unqualified `[<id>]` is always about the current entry.' \
   "$LOOP_DEV5_LINE" "$LOOP_RETURN_LINE"
 BATCH_RA_LINE="$(line_containing_after "$BATCH_PROMPT" '`[RESUME_ANSWER]` — OPTIONAL' 0)"
 # The section heading's condition for omitting the section must match the
@@ -1499,6 +1716,16 @@ assert_in_range_folded "batch-controller [RESUME_ANSWER] carries the run-wide an
 # Deviation 1, so the two copies cannot diverge again.
 assert_in_range "First-batch parameter defers to Deviation 1's pre-flight rule" \
   "$BATCH_PROMPT" "under Deviation 1's pre-flight rule" 1 "$BATCH_RA_LINE" exact
+# The bare `[task <n>]` default is written three times: the Batch Parameters
+# block, Deviation 1 (pinned below), and the [RESUME_ANSWER] placeholder
+# documentation. The controller reads the Batch Parameters block too, so its
+# own copy needs its own pin.
+assert_in_range_folded "Batch Parameters block states the bare task id default" \
+  "$BATCH_PROMPT" 'A bare `[task <n>]` line always means `[task <n>/1]`, whatever the number of sections the report file holds' \
+  1 "$BATCH_RA_LINE"
+assert_in_range_folded "[RESUME_ANSWER] placeholder doc states the bare task id default" \
+  "$BATCH_PROMPT" 'a bare `[task <n>]` line from the user means `[task <n>/1]`' \
+  "$BATCH_RA_LINE" "$BATCH_RA_END"
 # Several needles above (e.g. 'is settled', 'lowest-numbered task',
 # '### Question <k>', '### Conflict <k>') also occur elsewhere in the file
 # outside Deviation 1, so a whole-file byte pin would still pass with the
@@ -1535,6 +1762,13 @@ assert_in_range_folded "Deviation 1 reads an unanswered BLOCKED section as a con
 assert_in_range_folded "Deviation 1 forbids best-guessing an unsettled pre-flight conflict" \
   "$BATCH_PROMPT" 'Never best-guess the conflict itself: an unsettled pre-flight conflict is returned as `BLOCKED` for that conflict, never decided by you from plan, spec or repository' \
   "$DEV1_LINE" "$DEV1_END"
+# The <n> fallback: when a pre-flight conflict touches no task at all, <n> is
+# this batch's first task. Without this, a conflict touching no task has no
+# defined <n>, and the Phase 3 discriminator reads the return as a controller
+# failure.
+assert_in_range_folded "Deviation 1 falls back to this batch's first task when the conflict touches no task" \
+  "$BATCH_PROMPT" "this batch's first task when it touches no task at all" \
+  "$DEV1_LINE" "$DEV1_END"
 
 # The implementer rewrites the task report file, so an earlier attempt's
 # sections may be gone: a new section number is allocated above the highest
@@ -1542,6 +1776,14 @@ assert_in_range_folded "Deviation 1 forbids best-guessing an unsettled pre-fligh
 # renumbered afterwards.
 assert_in_range_folded "Deviation 1 allocates a new section number above the highest visible one" \
   "$BATCH_PROMPT" 'number a new section 1 above the highest `<k>` you can see' \
+  "$DEV1_LINE" "$DEV1_END"
+# The counting clause behind that rule: the highest `<k>` is found by
+# counting both the sections already in the report file and the
+# `[task <n>/<k>]` lines of this dispatch's own Resume Answer. Without it, the
+# "above the highest <k> you can see" rule no longer says where to look, and a
+# new <k> can collide with an already-answered line.
+assert_in_range_folded "Deviation 1 counts both the report file's sections and this dispatch's Resume Answer lines" \
+  "$BATCH_PROMPT" "counting the sections already in the file and the \`[task <n>/<k>]\` lines of this dispatch's \`## Resume Answer\` together" \
   "$DEV1_LINE" "$DEV1_END"
 assert_in_range_folded "Deviation 1 never renumbers a section written in this dispatch" \
   "$BATCH_PROMPT" 'never renumber a section you wrote in this dispatch' \
