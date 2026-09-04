@@ -3010,3 +3010,114 @@ exit=0
 
 All three suites exit 0. The third reports 287 checks, more than the
 244 the round-8 baseline reported.
+
+### Round 8 verification 2 fixes
+
+Findings fixed (all in `tests/in-run-rulings/run-tests.sh`; no SKILL.md
+changes needed — every finding was a test-coverage gap, not a wording
+defect):
+
+- **I1** — added three new assertions in section 5, scoped to
+  `$LOG_ENTRY_LINE..$LOG_ENTRY_END`: a byte pin on
+  `**Handling a return as a whole.**`, a folded pin on `rule and record the
+  others`, and a folded pin on `a \`Ruled:\` line every ruling of the
+  stopped unit that was not`. Also added two folded pins for the
+  Idempotence paragraph's mechanism clauses (`Phase 3 is idempotent by
+  construction: the ruling and any amendment are committed before the
+  re-dispatch` and `a retry rebuilds the identical \`[RESUME_ANSWER]\` from
+  the ruling-record entry`) — this also fixes M11, the same finding class.
+- **I2** — added `MCR_WORKSPACE_LINE`/`MCR_PROCEDURE_LINE` anchors
+  (`## Workspace and Log`..`## Procedure`) and a folded pin on
+  `` decided (<who>): <answer>`, `<who>` being `` in section 7, covering
+  Pipeline rule 1's generalization sentence at multi-code-review
+  SKILL.md:269.
+- **M2** — converted `assert_in_range`, `line_containing_after` and
+  `line_starting_with_after` to pass their needle through `ENVIRON`
+  instead of `awk -v`, matching the pattern the folded helpers already
+  use, so no helper silently rewrites escape sequences in a pinned needle.
+- **M3** — added a folded pin on the escalated-item stop sentence itself
+  (not just the bare word `escalated`), and two new negative checks in the
+  stop-policy range for `code-review unresolved` and bare
+  `batch-controller BLOCKED;`, modelled on the existing pre-flight
+  negative check.
+- **M5** — renamed the ~657 description to
+  "log-entry (idempotence paragraph) fragment 'durable marker'" (it
+  searches the idempotence paragraph, not the guards subsection); renamed
+  the ~643 loop's description from "log-entry or guard fragment" to
+  "log-entry fragment" (the range is log-entry only); extended the ~650
+  check's needle to the full sentence antecedent — `a bare \`fix it\` whose
+  item's \`clause:\` names binding plan text becomes
+  \`escalated (irreversible)\`` — instead of the bare token.
+- **M6** — added a negative check in the Phase 4 range (guarded for an
+  empty/inverted range) asserting the old
+  `` `user_decision > 0` → major error → stop `` wording is absent, so a
+  re-added old stop sentence beside the new routing sentence now fails.
+- **M7** — guarded `CAP_SENTENCE_FOLDED`'s computation with the same
+  empty/inverted-range check `assert_in_range` uses, before calling
+  `fold_range`, so an empty `LOG_ENTRY_LINE` reports a failure instead of
+  silently folding lines 1..`GUARDS_LINE`.
+- **M8** — added `ITEM: [<id>]` and `CONTRADICTS: none |` to the fork pin
+  list.
+- **M9** — added a closedness check over `$CLASS_LINE..$CLASS_END` that
+  scans the predicate's own `- \`<label>\` — ` bullet lines and fails when
+  any label falls outside the closed set of five (`spec wrong`, `scope`,
+  `irreversible`, `secret`, `chain`).
+- **M10** — rewrote the cap-sentence emphasis check to loop over every
+  occurrence of the sentence in the folded range and fail if any one
+  carries `*` emphasis markers, instead of inspecting only the first
+  occurrence.
+- **M11** — see I1 above (same edit fixes both).
+- **M12** — added the `[ "$start" -ge "$end" ]` inverted-range guard (with
+  a distinct message) to both `assert_in_range_folded` and
+  `assert_in_range_folded_exact`, matching `assert_in_range`.
+
+Verification, beyond the required suite run: spot-checked that the new/
+changed assertions actually catch what they claim to, by mutating a
+temporary copy of the target SKILL.md files and re-running the suite
+against each mutation, then restoring the original:
+
+- Deleting SKILL.md lines 1322-1328 ("Handling a return as a whole") now
+  fails 3 checks (was: suite green). Restored → 300 passed, 0 failed.
+- Reverting multi-code-review SKILL.md:269 to the pre-branch
+  `` decided (user): <answer> `` wording now fails 1 check (was: suite
+  green). Restored → 300 passed, 0 failed.
+- Re-adding the old Phase 4 stop sentence
+  (`` `unresolved > 0` or `user_decision > 0` → major error → stop ``)
+  beside the new routing sentence now fails 1 check (was: suite green).
+  Restored → 300 passed, 0 failed.
+- Injecting a sixth escalation reason (`` - `deadline` — test injected
+  reason ``) into the predicate's bullet list is caught by the new M9
+  closedness scan in isolation (awk unit check).
+
+Commands and pass/fail evidence:
+
+```
+$ bash tests/in-run-rulings/run-tests.sh
+...
+Results: 300 passed, 0 failed
+exit=0
+
+$ bash tests/reviewer-templates/run-tests.sh
+...
+Results: 24 passed, 0 failed
+exit=0
+
+$ bash tests/writing-plans/run-tests.sh
+...
+Results: 15 passed, 0 failed
+exit=0
+```
+
+All three suites exit 0. `tests/in-run-rulings/run-tests.sh` grew from
+the round-8-baseline count to 300 checks (18 net new assertions across
+I1/I2/M3/M6/M8/M9/M11, plus the M5 rename/extension of 3 existing
+checks and the M2/M7/M10/M12 changes to shared helper logic that apply
+across all existing checks using them).
+
+Commit: `fca4a92ec1544a2b27158d62a6d2fc700386fa56` — "review fixes
+(autonomous-in-run-decisions, round 8)" — 1 file changed
+(`tests/in-run-rulings/run-tests.sh`, 187 insertions, 40 deletions).
+
+No findings were skipped. All 12 findings (I1, I2, M2, M3, M5, M6, M7,
+M8, M9, M10, M11, M12) resulted in edits confined to
+`tests/in-run-rulings/run-tests.sh`.
