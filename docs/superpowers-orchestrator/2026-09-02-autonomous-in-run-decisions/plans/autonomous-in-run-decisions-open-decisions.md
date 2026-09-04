@@ -121,3 +121,22 @@ plan's File Structure table now lists the spec (ruling 8).
 - **Defensible answers:** (a) edit the `secret` definition to drop the false assurance and escalate instead; (b) add a secrets field to the Phase 5 report and to the loop's return, which the plan does not carry today; (c) leave it and record the gap
 - **Forks:** none — not dispatched. Guard 4 fires for the same reason as ruling 11: the item cites the clause the author decided on 2026-09-04.
 - **Resolution:** escalated — the orchestrator's recommendation, offered not applied: (b), because it closes the hole without touching the definitions the author reserved. A secret found in reviewed code is real, its history survives the fix, and the sentence that tells the orchestrator to stay silent about it is the dangerous half.
+
+**Follow-up (Rulings 11 and 12) — 2026-09-04, the spec's author decided.**
+Ruling 12's item is closed by the author's chosen route: a `Secrets found:`
+line on the review loop's completion report and the same list on the Phase 5
+report, which touches no escalation-class definition. Spec R13 and the plan's
+Task 6 and Task 7 amendments carry it, author-confirmed. Ruling 11's item —
+the `secret` class cannot match a Phase 3 section — stays open by the
+author's decision and is recorded in the spec's Amendments as a known
+limitation. The author also chose the branch outcome: merge to main once the
+remaining fixes land and pass review.
+
+## Ruling 13 — 2026-09-04 — phase 4 — the secret residue reaches a person
+
+- **Class:** design (decided by the spec's author, applied by the orchestrator)
+- **Item:** round 11 `[I3]`, escalated as Ruling 12
+- **Contract clause:** none — the author's decision authorises the change
+- **Defensible answers:** as tabled in Ruling 12
+- **Forks:** none — the author decided; the orchestrator applies
+- **Resolution:** `amend plan: spec R13 and the Task 6 and Task 7 amendments, committed with this ruling. ; fix it: write the Secrets found: line into multi-code-review's completion report and the same list into Phase 5 step 3 of orchestrating-development, with assertions in tests/in-run-rulings/run-tests.sh.`

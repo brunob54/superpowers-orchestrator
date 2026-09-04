@@ -659,6 +659,35 @@ Add `bash tests/in-run-rulings/run-tests.sh` to the Testing list. `CLAUDE.md`
 is gitignored in this repository: the edit is on disk only and no task may
 `git add` it.
 
+### R13 — The secret residue reaches a person (amended by ruling 13)
+
+The `secret` class says a credential in reviewed code is a Critical the
+loop's fix removes, and that only the residue — rotation, and the history
+the fix does not rewrite — reaches the orchestrator. Nothing carried that
+residue: after the fix the disposition is `fixed`, which is not an open
+item, so the predicate never saw it, and no field of the loop's return or
+of the Phase 5 report named it. A run could therefore reach the merge
+decision with a credential scrubbed at HEAD, still in the branch's
+history, and nobody told to rotate it.
+
+Two additions close it, and neither touches the five escalation
+definitions:
+
+1. **`multi-code-review`** writes a `Secrets found:` line on its
+   completion report, one item per finding that reported an exposed
+   secret or credential in reviewed code, whatever that finding's final
+   disposition, naming the file and the round, or `Secrets found: none`.
+   The line is always written; a report without it is defective. This is
+   the same shape as the existing `Harness probes owed:` line, and like
+   it, it never reproduces the secret value itself.
+2. **Phase 5's report** carries the same list, gathered from the review
+   log, under a heading that states the two actions a person must take:
+   rotate the credential, and decide what to do about the branch history,
+   which the fix does not rewrite.
+
+The Phase 3 half of the same class stays open by the author's decision
+and is recorded under Amendments as a known limitation.
+
 ## Error handling
 
 - **Fork return blocked by the guard or lost:** one re-dispatch under the
@@ -725,11 +754,29 @@ An orchestrator ruling does not amend this spec on its own authority; the
 `spec wrong` class sends such a change to the author, which is what
 happened here.
 
-**Known limitation, recorded not closed.** An `amend plan` ruling can edit
-a `**Global Constraints:**` entry that acts as a safety rail, under a
+**Known limitation, recorded not closed (1).** An `amend plan` ruling can
+edit a `**Global Constraints:**` entry that acts as a safety rail, under a
 `forced` classification with no second reader. Two reviewers of four found
 this in round 3, and it stays open by the author's decision. Any future
 fix changes the escalation list, so it belongs to the author.
+
+**Ruling 13 — 2026-09-04 — the secret residue reaches a person, confirmed
+by the author.** Round 11 finding `[I3]` showed that nothing delivered the
+residue the `secret` definition promises. The author decided on 2026-09-04
+to close this half without touching the five definitions: R13 adds a
+`Secrets found:` line to the review loop's completion report and the same
+list to the Phase 5 report. Guard 4 had barred the orchestrator from
+ruling it, because the item cited the clause the author decided the day
+before.
+
+**Known limitation, recorded not closed (2).** The `secret` class is
+defined over a Phase 4 disposition line, so a credential an implementer
+raises in a Phase 3 `### Question <k>` or `### Conflict <k>` section
+matches no class and is decided autonomously as `forced` or `design`.
+Round 10 finding `[I8]` found this. Closing it would widen one of the five
+definitions, and the author decided on 2026-09-04 to leave it open and
+record it here. A run whose implementers may meet real credentials should
+treat this as the gap it is.
 
 ## Rollout
 

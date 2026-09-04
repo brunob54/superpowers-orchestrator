@@ -82,3 +82,13 @@ Ruled: [I1 v3] forced — fix it (pin each fork rule against deletion)
 Ruled: [I7] forced — applied directly, markers removed from reference text
 Owed probe: none
 Resume: Resume orchestration for docs/superpowers-orchestrator/2026-09-02-autonomous-in-run-decisions/plans/autonomous-in-run-decisions.md
+
+## RULING 13 — 2026-09-04 — phase 4 — author's answer applied; secret residue closed, Phase 3 gap recorded
+Items: [I3 r11] (user) — fix it: Secrets found: line on the loop's report and the Phase 5 report (spec R13)
+       [I8] (user) — recorded as a known limitation in the spec; no code change
+       [I1 v3] forced — fix it, carried from RULING 9's Ruled: lines
+       [I7] forced — already applied in cb9824f
+Detail: docs/superpowers-orchestrator/2026-09-02-autonomous-in-run-decisions/plans/autonomous-in-run-decisions-open-decisions.md
+Forks: none — the author decided the escalated items
+Re-dispatch: phase 4, in-run resume 3 of 3
+note: the author also chose the branch outcome — merge to main once these fixes land and pass review.

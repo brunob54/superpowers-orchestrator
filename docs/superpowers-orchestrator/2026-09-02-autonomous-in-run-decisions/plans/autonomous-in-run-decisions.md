@@ -994,6 +994,14 @@ git commit -m "feat(orchestrating-development): RULING log entry, resume cap and
 
 ### Task 6: Wire the rulings into the phases, the log format, state.md, Resume and the stop policy
 
+> **Amendment 13 (orchestrator ruling, confirmed by the spec's author):**
+> the Phase 5 report gains the `Secrets found:` list of spec R13. Round 11
+> finding `[I3]` showed that a credential found in reviewed code is
+> scrubbed at HEAD and then reaches nobody: the disposition becomes
+> `fixed`, which is no longer an open item, and no report field named it.
+> The author confirmed this fix on 2026-09-04 and reserved the two
+> escalation-class definitions, which this amendment does not touch.
+
 **Files:**
 - Modify: `skills/orchestrating-development/SKILL.md` (Phase 3 step 5; Phase 4 stop rule; Phase 5 step 3; `## Orchestration Log Format`; `## state.md Section`; `## Resume` step 3; `## Major-Error Stop Policy`)
 - Modify: `tests/in-run-rulings/run-tests.sh` (section 6 checks)
@@ -1005,7 +1013,7 @@ git commit -m "feat(orchestrating-development): RULING log entry, resume cap and
 
 **Contract:**
 - Phase 3 step 5, Phase 4 stop rule, Phase 5 step 3
-  - Must convey: a `BLOCKED task=<n>` in Phase 3 goes through the Phase 3 discriminator of `## In-run rulings` (open-item return → ruled and re-dispatched; controller failure → the existing retry-then-stop path); `unresolved > 0` or `user_decision > 0` in Phase 4 goes to `## In-run rulings` (rule, record, re-dispatch; only an escalated item writes `## STOPPED`); the Phase 5 report lists the rulings made (count, and every ruling recorded `contradiction: unsettled` by its number).
+  - Must convey: a `BLOCKED task=<n>` in Phase 3 goes through the Phase 3 discriminator of `## In-run rulings` (open-item return → ruled and re-dispatched; controller failure → the existing retry-then-stop path); `unresolved > 0` or `user_decision > 0` in Phase 4 goes to `## In-run rulings` (rule, record, re-dispatch; only an escalated item writes `## STOPPED`); the Phase 5 report lists the rulings made (count, and every ruling recorded `contradiction: unsettled` by its number); the Phase 5 report also carries the `Secrets found:` list of spec R13, gathered from the review log, under a heading naming the two actions a person must take — rotate the credential, and decide what to do about the branch history the fix does not rewrite — or `Secrets found: none`.
   - Verification: section 6 finds `In-run rulings` in the Phase 3 range and in the Phase 4 range, and `contradiction: unsettled` in the Phase 5 range.
 - `## Orchestration Log Format`
   - Must convey: the `## RULING` entry shape as an in-run alternative to `## STOPPED`; the `## STOPPED` block with `Detail:`, `Open:` (escalated items only, with the reason in parentheses), `Ruled:` (the already decided items), `Owed probe:` and `Resume:` lines; the two new boundary commit subjects `ruling <n>` and `ruling <n> follow-up`.
@@ -1305,6 +1313,14 @@ git commit -m "feat(orchestrating-development): route open items through in-run 
 ---
 
 ### Task 7: multi-code-review attribution and self-sufficient open-item lines
+
+> **Amendment 13 (orchestrator ruling, confirmed by the spec's author):**
+> `multi-code-review`'s completion report gains a `Secrets found:` line,
+> in the same shape as its existing `Harness probes owed:` line: one item
+> per finding that reported an exposed secret or credential in reviewed
+> code, whatever that finding's final disposition, naming the file and the
+> round, or `Secrets found: none`, always written, never reproducing the
+> secret value. Spec R13; author-confirmed 2026-09-04.
 
 **Files:**
 - Modify: `skills/multi-code-review/SKILL.md` (Pipeline rule 1 addendum sentence; log-format examples; the annotation-exception sentence; the canonical-dispositions paragraph; the "Resolving user-decision and unresolved items" rule; the pipeline-mode resume paragraph; the idempotency sentence)
