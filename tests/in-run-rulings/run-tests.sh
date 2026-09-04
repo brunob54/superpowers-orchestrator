@@ -84,6 +84,14 @@ assert_in_range() { # desc file needle start end mode
   fi
 }
 
+# Print lines $2..$3 (start inclusive, end exclusive) of file $1 joined with
+# single spaces, each line's leading whitespace removed first. Every folded
+# check goes through this one function, so that they all see the same text.
+fold_range() { # file start end
+  awk -v a="$2" -v b="$3" \
+    'NR >= a && NR < b { line = $0; sub(/^[ \t]+/, "", line); printf "%s ", line }' "$1"
+}
+
 # Same as assert_in_range in "fragment" mode, except that the range's lines
 # are first joined with single spaces. A fragment split by a line wrap — the
 # cap sentence, whose wording is pinned but whose wrapping is not — still
@@ -95,8 +103,7 @@ assert_in_range_folded() { # desc file needle start end
     bad "$desc (could not locate the range to search in ${file#$ROOT/})"
     return
   fi
-  folded="$(awk -v a="$start" -v b="$end" \
-    'NR >= a && NR < b { line = $0; sub(/^[ \t]+/, "", line); printf "%s ", line }' "$file")"
+  folded="$(fold_range "$file" "$start" "$end")"
   if awk -v needle="$needle" -v hay="$folded" \
     'BEGIN { exit index(tolower(hay), tolower(needle)) > 0 ? 0 : 1 }'; then
     ok "$desc (range $start..$end, line wraps folded)"
@@ -115,8 +122,7 @@ assert_in_range_folded_exact() { # desc file needle start end
     bad "$desc (could not locate the range to search in ${file#$ROOT/})"
     return
   fi
-  folded="$(awk -v a="$start" -v b="$end" \
-    'NR >= a && NR < b { line = $0; sub(/^[ \t]+/, "", line); printf "%s ", line }' "$file")"
+  folded="$(fold_range "$file" "$start" "$end")"
   if awk -v needle="$needle" -v hay="$folded" \
     'BEGIN { exit index(hay, needle) > 0 ? 0 : 1 }'; then
     ok "$desc (range $start..$end, line wraps folded, case-sensitive)"
@@ -140,13 +146,20 @@ if [ -n "$RULINGS_LINE" ] && [ -n "$RULINGS_END" ] && [ "$RULINGS_LINE" -lt "$RU
 else
   bad "'$RULINGS_HEADING' does not precede '## Major-Error Stop Policy' (lines $RULINGS_LINE..$RULINGS_END)"
 fi
-INTERLOPER="$(awk -v a="$RULINGS_LINE" -v b="$RULINGS_END" \
-  'NR > a && NR < b { if ($0 ~ /^```/) { fence = !fence } else if (!fence && index($0, "## ") == 1) { print NR; exit } }' \
-  "$ORCH_SKILL")"
-if [ -z "$INTERLOPER" ]; then
-  ok "no other '## ' heading (outside a fenced code block) between $RULINGS_LINE and $RULINGS_END"
+# The scan is only meaningful over a real range: with both anchors missing,
+# awk would compare strings, produce no output, and report a PASS naming an
+# empty range. Guard it the way the negative checks further down are guarded.
+if [ -z "$RULINGS_LINE" ] || [ -z "$RULINGS_END" ] || [ "$RULINGS_LINE" -ge "$RULINGS_END" ]; then
+  bad "cannot scan for an unexpected '## ' heading: the range $RULINGS_LINE..$RULINGS_END is missing, empty or inverted"
 else
-  bad "an unexpected '## ' heading sits at line $INTERLOPER, between $RULINGS_LINE and $RULINGS_END"
+  INTERLOPER="$(awk -v a="$RULINGS_LINE" -v b="$RULINGS_END" \
+    'NR > a && NR < b { if ($0 ~ /^```/) { fence = !fence } else if (!fence && index($0, "## ") == 1) { print NR; exit } }' \
+    "$ORCH_SKILL")"
+  if [ -z "$INTERLOPER" ]; then
+    ok "no other '## ' heading (outside a fenced code block) between $RULINGS_LINE and $RULINGS_END"
+  else
+    bad "an unexpected '## ' heading sits at line $INTERLOPER, between $RULINGS_LINE and $RULINGS_END"
+  fi
 fi
 
 # Per-subsection anchors, narrower than the whole ## In-run rulings range, so
@@ -284,22 +297,19 @@ assert_in_range "fork diff form mandates the negative flags" \
   "$READ_EXCEPTION_LINE" "$READ_EXCEPTION_END" exact
 
 bold "3. Fork review (R3)"
-for pin in 'subagent_type: "fork"' '<!-- multi-review report -->' 'fork-<lens>' \
-           'fork review unavailable' 'contradiction: unsettled'; do
-  assert_in_range "fork pin '$pin'" \
-    "$ORCH_SKILL" "$pin" "$RULINGS_LINE" "$RULINGS_END" exact
-done
-# 'VERDICT:' and 'TABLED:' also occur as prose in the "Classification" section
-# above (its escalation-predicate text mentions both words), so pinning them
-# to the whole ## In-run rulings range would pass even without the fork
-# subsection. Scope them to the fork subsection itself, whose end is the next
-# `### ` heading after it, or the section end when there is none.
+# Every fork pin is scoped to the fork subsection itself, whose end is the
+# next `### ` heading after it, or the section end when there is none. Words
+# such as 'VERDICT:' and 'TABLED:' also occur as prose in the
+# "Classification" section above, so pinning any of them to the whole
+# ## In-run rulings range would pass even without the fork subsection.
 FORK_LINE="$(first_line_of "$ORCH_SKILL" '### Fork review for a design item')"
 FORK_END="$(line_starting_with_after "$ORCH_SKILL" '### ' "$FORK_LINE")"
 if [ -z "$FORK_END" ] || [ "$FORK_END" -gt "$RULINGS_END" ]; then
   FORK_END="$RULINGS_END"
 fi
-for pin in 'VERDICT:' 'TABLED:'; do
+for pin in 'subagent_type: "fork"' '<!-- multi-review report -->' 'fork-<lens>' \
+           'fork review unavailable' 'contradiction: unsettled' \
+           'VERDICT:' 'TABLED:'; do
   assert_in_range "fork pin '$pin'" \
     "$ORCH_SKILL" "$pin" "$FORK_LINE" "$FORK_END" exact
 done
@@ -313,9 +323,21 @@ assert_in_range "fork naming never uses an orch- name" \
   "$ORCH_SKILL" 'never an `orch-` name' "$FORK_LINE" "$FORK_END" exact
 GUARD_LINE="$(first_line_of "$ORCH_SKILL" '## Guard Interaction')"
 TEMPLATES_LINE="$(first_line_of "$ORCH_SKILL" '## Prompt Templates')"
-assert_in_range "Guard Interaction names the forks' marker" \
-  "$ORCH_SKILL" 'fork' "$GUARD_LINE" "$TEMPLATES_LINE" fragment
-assert_in_range "Guard Interaction names the forks' return marker exactly" \
+# The sentence this branch adds to Guard Interaction: the forks open their
+# return with the nested-reviewer marker, and a return without it is a lost
+# return, never a reason to drop the marker instruction. Both fragments are
+# folded, because both cross a line wrap.
+assert_in_range_folded "Guard Interaction states that forks open with the reviewer marker" \
+  "$ORCH_SKILL" 'Forks dispatched under `## In-run rulings` open their return with that same `<!-- multi-review report -->` marker' \
+  "$GUARD_LINE" "$TEMPLATES_LINE"
+assert_in_range_folded "Guard Interaction makes a markerless fork return a lost return" \
+  "$ORCH_SKILL" 'a fork return without it is a lost return under that section' \
+  "$GUARD_LINE" "$TEMPLATES_LINE"
+# Unchanged-wording regression pin only: the marker itself predates this
+# branch and occurs in the section's nested-reviewer sentence too, so this
+# assertion cannot fail when the fork sentence above is deleted. It guards
+# the marker's spelling, nothing else.
+assert_in_range "Guard Interaction still spells the nested-reviewer marker exactly" \
   "$ORCH_SKILL" '<!-- multi-review report -->' "$GUARD_LINE" "$TEMPLATES_LINE" exact
 
 # The fork prompt states the same negative diff flags as the read exception.
@@ -414,6 +436,12 @@ assert_in_range_folded "the marker check is not the Resume-only check" \
 assert_in_range_folded "an unbacked marker is reference text, not decided wording" \
   "$ORCH_SKILL" 'A marker with no such entry behind it is reference text' \
   "$RECORD_LINE" "$RECORD_END"
+# The heading number is compared as a whole number, so ruling 10's entry can
+# never back a `(amended by ruling 1)` marker by prefix. The loop states the
+# same rule (section 8), so the two actors apply one rule.
+assert_in_range_folded "the marker's ruling number is compared as a whole number" \
+  "$ORCH_SKILL" 'compared as a whole number, so ruling 1 is not matched by a `## Ruling 10` heading' \
+  "$RECORD_LINE" "$RECORD_END"
 # The "never reproduce a secret" rule is not a closed three-item list: the
 # entry headings and the Resolution field are free text on the same commit.
 assert_in_range_folded "the secret rule covers every file a ruling commit touches" \
@@ -457,13 +485,30 @@ assert_in_range_folded "guard fragment forbidding a byte-equal match" \
 CAP_SENTENCE='In-run resumes of one phase are capped at 3 per unit: the phase itself in Phase 4, the task in Phase 3.'
 assert_in_range_folded_exact "log-entry sentence, byte-exact incl. punctuation" \
   "$ORCH_SKILL" "$CAP_SENTENCE" "$LOG_ENTRY_LINE" "$LOG_ENTRY_END"
-CAP_SENTENCE_FOLDED="$(awk -v a="$LOG_ENTRY_LINE" -v b="$LOG_ENTRY_END" \
-  'NR >= a && NR < b { printf "%s ", $0 }' "$ORCH_SKILL")"
-if awk -v hay="$CAP_SENTENCE_FOLDED" -v needle="$CAP_SENTENCE" \
-  'BEGIN { s = index(hay, needle); if (s == 0) exit 1; span = substr(hay, s, length(needle)); exit index(span, "*") > 0 ? 1 : 0 }'; then
-  ok "log-entry sentence carries no '*' emphasis marker"
+# The sentence must also be written without emphasis markers. A marker that
+# wraps the sentence (`**In-run resumes … Phase 3.**`) sits AROUND the pinned
+# bytes, never inside them, so the match itself can never carry one: this
+# check inspects the single character on each side of the match instead. It
+# folds through the same helper as the byte-exact check above, so the two can
+# never disagree about the text they search. The two failure causes get
+# distinct messages. Only the touching characters are examined, because the
+# paragraph opens with a bolded `**The cap.**` lead-in that is separated from
+# the sentence by a space and is not emphasis on the sentence.
+CAP_SENTENCE_FOLDED="$(fold_range "$ORCH_SKILL" "$LOG_ENTRY_LINE" "$LOG_ENTRY_END")"
+CAP_EMPHASIS="$(awk -v hay="$CAP_SENTENCE_FOLDED" -v needle="$CAP_SENTENCE" \
+  'BEGIN {
+     s = index(hay, needle)
+     if (s == 0) { print "missing"; exit }
+     before = (s > 1 ? substr(hay, s - 1, 1) : "")
+     after = substr(hay, s + length(needle), 1)
+     print (before == "*" || after == "*" ? "emphasis" : "clean")
+   }')"
+if [ "$CAP_EMPHASIS" = "clean" ]; then
+  ok "log-entry sentence carries no '*' emphasis marker around it"
+elif [ "$CAP_EMPHASIS" = "emphasis" ]; then
+  bad "log-entry sentence is wrapped in a '*' emphasis marker"
 else
-  bad "log-entry sentence carries a '*' emphasis marker, or the sentence could not be located"
+  bad "log-entry sentence not found in range $LOG_ENTRY_LINE..$LOG_ENTRY_END, so its emphasis could not be checked"
 fi
 for frag in 'in-run resumes of one phase are capped at 3 per unit' \
             'phase itself in Phase 4, the task in Phase 3'; do
@@ -540,13 +585,27 @@ PHASE5_LINE="$(first_line_of "$ORCH_SKILL" '## Phase 5 — Completion')"
 LOG_FORMAT_LINE="$(first_line_of "$ORCH_SKILL" '## Orchestration Log Format')"
 STATE_LINE="$(first_line_of "$ORCH_SKILL" '## state.md Section')"
 RESUME_LINE="$(first_line_of "$ORCH_SKILL" '## Resume')"
-assert_in_range "Phase 3 routes BLOCKED task=<n> to the predicate" \
-  "$ORCH_SKILL" 'In-run rulings' "$PHASE3_LINE" "$PHASE4_LINE" fragment
-assert_in_range "Phase 4 routes open items to the predicate" \
-  "$ORCH_SKILL" 'In-run rulings' "$PHASE4_LINE" "$PHASE5_LINE" fragment
-assert_in_range "Phase 5 report lists unsettled contradictions" \
-  "$ORCH_SKILL" 'contradiction: unsettled' "$PHASE5_LINE" "$LOG_FORMAT_LINE" fragment
-for pin in '## RULING' 'Ruled:' 'Open:' 'Owed probe:' 'ruling <n> follow-up'; do
+# Each phase range mentions `## In-run rulings` more than once — the routing
+# sentence itself, and cross-references to rules the section states. So each
+# pin below carries bytes of its own routing sentence, folded because every
+# one of them crosses a line wrap; a bare 'In-run rulings' fragment would
+# survive the deletion of the routing sentence.
+assert_in_range_folded "Phase 3 routes BLOCKED task=<n> to the predicate" \
+  "$ORCH_SKILL" 'return goes through the Phase 3 discriminator of `## In-run rulings`' \
+  "$PHASE3_LINE" "$PHASE4_LINE"
+assert_in_range_folded "Phase 4 routes open items to the predicate" \
+  "$ORCH_SKILL" '`## In-run rulings`: classify each open item by its review-log id' \
+  "$PHASE4_LINE" "$PHASE5_LINE"
+assert_in_range_folded "Phase 5 report lists unsettled contradictions" \
+  "$ORCH_SKILL" 'every entry whose Forks line records `contradiction: unsettled`' \
+  "$PHASE5_LINE" "$LOG_FORMAT_LINE"
+# The `Ruled:` and `Open:` labels also occur in the prose below the example
+# blocks, so a bare label pin survives the deletion of the example. Pin each
+# field line whole, placeholder tail included, so that only the example's own
+# line can satisfy it.
+for pin in '## RULING' 'Owed probe:' 'ruling <n> follow-up' \
+           'Open: [<id>] escalated (<spec wrong|scope|irreversible|secret|chain>) — <summary>' \
+           'Ruled: [<id>] <forced|design> — <answer>'; do
   assert_in_range "log-format pin '$pin'" \
     "$ORCH_SKILL" "$pin" "$LOG_FORMAT_LINE" "$STATE_LINE" exact
 done
@@ -565,12 +624,16 @@ assert_in_range "resume recovers the pre-amendment clause from the ruling commit
 assert_in_range_folded "resume compares the printed subject with the full expected string" \
   "$ORCH_SKILL" 'compare each printed subject with the full expected string' \
   "$RESUME_LINE" "$RULINGS_LINE"
+# What is forbidden is the BARE `decided (user)`, not the label itself: the
+# correct wording enumerates both tags, and the sibling files are required to
+# carry that enumeration. So a `decided (user)` occurrence fails this check
+# only when its own line does not also carry `decided (orchestrator)`.
 if [ -n "$RESUME_LINE" ] && [ -n "$RULINGS_LINE" ] && [ "$RESUME_LINE" -lt "$RULINGS_LINE" ] && \
    awk -v a="$RESUME_LINE" -v b="$RULINGS_LINE" \
-     'NR >= a && NR < b && index($0, "decided (user)") > 0 { found = 1 } END { exit found ? 1 : 0 }' "$ORCH_SKILL"; then
-  ok "Resume step 3 no longer names decided (user) alone"
+     'NR >= a && NR < b && index($0, "decided (user)") > 0 && index($0, "decided (orchestrator)") == 0 { found = 1 } END { exit found ? 1 : 0 }' "$ORCH_SKILL"; then
+  ok "Resume step 3 never names decided (user) without decided (orchestrator) beside it"
 else
-  bad "Resume step 3 still names decided (user) alone, or the range $RESUME_LINE..$RULINGS_LINE is empty or inverted"
+  bad "Resume step 3 names a bare decided (user), or the range $RESUME_LINE..$RULINGS_LINE is empty or inverted"
 fi
 # The revert step produces the commit hash itself, under the same
 # exact-subject filter as the landed-check, and copies only the clause out of
@@ -694,6 +757,12 @@ assert_in_range "loop names the ruling-record path it checks the marker against"
   "$NO_FIX_LINE" "$NO_FIX_END" exact
 assert_in_range_folded "loop treats an unbacked marker as reference text" \
   "$MCR_SKILL" 'the marker is **reference text**' "$NO_FIX_LINE" "$NO_FIX_END"
+# The same whole-number comparison the orchestrator states (section 4): a
+# prefix match would let ruling 10's entry back an `(amended by ruling 1)`
+# marker.
+assert_in_range_folded "loop compares the marker's ruling number as a whole number" \
+  "$MCR_SKILL" 'compared as a whole number, so ruling 1 is not matched by a `## Ruling 10` heading' \
+  "$NO_FIX_LINE" "$NO_FIX_END"
 assert_in_range_folded "loop covers the no-TOPIC_DIR case, where no record exists" \
   "$MCR_SKILL" 'the loop was called without `TOPIC_DIR`' \
   "$NO_FIX_LINE" "$NO_FIX_END"
@@ -718,7 +787,10 @@ assert_in_range_folded "Deviation 3 forbids copying the value into the line" \
   "$LOOP_PROMPT" 'Never copy the value itself' "$LOOP_DEV3_LINE" "$LOOP_DEV3_END"
 LOOP_RA_LINE="$(line_containing_after "$LOOP_PROMPT" '`[RESUME_ANSWER]` — OPTIONAL' 0)"
 LOOP_RA_END="$(line_containing_after "$LOOP_PROMPT" '**Nothing else may be added to the prompt.**' "$LOOP_RA_LINE")"
-for pin in '(orchestrator)' '(user)' 'decided (<who>)'; do
+# A bare '(user)' needle would pass against the pre-branch wording, which
+# already contained `decided (user)`. The per-line tagging this branch adds
+# is pinned by the enumeration itself.
+for pin in '(orchestrator)' '`(orchestrator)` or `(user)`' 'decided (<who>)'; do
   assert_in_range "code-review-loop [RESUME_ANSWER] doc pin '$pin'" \
     "$LOOP_PROMPT" "$pin" "$LOOP_RA_LINE" "$LOOP_RA_END" exact
 done
@@ -726,11 +798,18 @@ assert_in_range "code-review-loop [RESUME_ANSWER] doc says authoritative either 
   "$LOOP_PROMPT" 'authoritative either way' "$LOOP_RA_LINE" "$LOOP_RA_END" fragment
 LOOP_DEV5_LINE="$(line_containing_after "$LOOP_PROMPT" '5. Resume answer:' 0)"
 LOOP_RETURN_LINE="$(line_containing_after "$LOOP_PROMPT" '## Return' "$LOOP_DEV5_LINE")"
-for pin in '(orchestrator)' '(user)' 'decided (<who>)' \
+# Same reason as above: the bare '(user)' needle is replaced by bytes that
+# exist only in the new per-line tagging wording.
+for pin in '(orchestrator)' 'tagged `(orchestrator)` or `(user)`' 'decided (<who>)' \
            '`decided (user)` or `decided (orchestrator)`'; do
   assert_in_range "code-review-loop Deviation 5 pin '$pin'" \
     "$LOOP_PROMPT" "$pin" "$LOOP_DEV5_LINE" "$LOOP_RETURN_LINE" exact
 done
+# An answer line with no tag belongs to the user; the orchestrator states the
+# same rule under "The answers, and how a ruling reaches the plan".
+assert_in_range_folded "code-review-loop Deviation 5 treats an untagged line as a user line" \
+  "$LOOP_PROMPT" 'an untagged line is a user line' \
+  "$LOOP_DEV5_LINE" "$LOOP_RETURN_LINE"
 BATCH_RA_LINE="$(line_containing_after "$BATCH_PROMPT" '`[RESUME_ANSWER]` — OPTIONAL' 0)"
 # The section heading's condition for omitting the section must match the
 # placeholder documentation's: no answer recorded by the run at all.
@@ -744,6 +823,12 @@ for pin in '(orchestrator)' '(user)' '[task <n>/<k>]'; do
 done
 assert_in_range "batch-controller [RESUME_ANSWER] doc says authoritative either way" \
   "$BATCH_PROMPT" 'authoritative either way' "$BATCH_RA_LINE" "$BATCH_RA_END" fragment
+# The answer set is run-wide, not batch-wide: a pre-flight conflict ruled
+# during an earlier batch must still reach the later batch that implements
+# another task it touches.
+assert_in_range_folded "batch-controller [RESUME_ANSWER] carries the run-wide answer set" \
+  "$BATCH_PROMPT" 'with every answer the run has recorded so far, whatever batch its task belongs to' \
+  "$BATCH_RA_LINE" "$BATCH_RA_END"
 # The First-batch parameter states the pre-flight rule once, by pointing at
 # Deviation 1, so the two copies cannot diverge again.
 assert_in_range "First-batch parameter defers to Deviation 1's pre-flight rule" \
@@ -764,6 +849,17 @@ for pin in '### Question <k>' '### Conflict <k>' 'lowest-numbered task' \
   assert_in_range "batch-controller Deviation 1 pin '$pin'" \
     "$BATCH_PROMPT" "$pin" "$DEV1_LINE" "$DEV1_END" exact
 done
+
+# The implementer rewrites the task report file, so an earlier attempt's
+# sections may be gone: a new section number is allocated above the highest
+# `<k>` still visible, and a section written in this dispatch is never
+# renumbered afterwards.
+assert_in_range_folded "Deviation 1 allocates a new section number above the highest visible one" \
+  "$BATCH_PROMPT" 'number a new section 1 above the highest `<k>` you can see' \
+  "$DEV1_LINE" "$DEV1_END"
+assert_in_range_folded "Deviation 1 never renumbers a section written in this dispatch" \
+  "$BATCH_PROMPT" 'never renumber a section you wrote in this dispatch' \
+  "$DEV1_LINE" "$DEV1_END"
 
 # The stale-section deletion keys on work this run produced, never on the
 # absence of an answer line — the run-wide answer set fills those in for

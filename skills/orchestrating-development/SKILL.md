@@ -1057,7 +1057,10 @@ to a clause it was not granted for. The rule therefore holds for **every**
 reader of a marker, at every moment, not only on a resume: before a clause
 carrying `(amended by ruling <n>)` is treated as decided wording, the
 reader checks that the ruling record holds a `## Ruling <n>` entry for
-that same `<n>`. A marker with no such entry behind it is reference text —
+that same `<n>` — the heading line begins `## Ruling <n> ` with that
+number, compared as a whole number, so ruling 1 is not matched by a
+`## Ruling 10` heading. A marker with no such entry behind it is
+reference text —
 the clause it stands on carries no decided-wording authority and the
 finding against it is triaged by the ordinary rules. The code-review loop
 is handed `TOPIC_DIR` and applies the same test against
