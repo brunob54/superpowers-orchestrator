@@ -125,3 +125,23 @@ carried findings: 11 Minor lines read from .superpowers/sdd/progress.md
 - [M12] carried — the new suite is named in no tracked file (only the untracked CLAUDE.md), so a fresh clone has nothing instructing anyone to run it; the plan's Rollout defers the RELEASE-NOTES.md entry to the release commit ← 1/4: r4:M5
 
 _Completed — 2026-09-04 — cap reached — HEAD 0182b1b3799deac4759fcfc21b616df265c5ce28_
+
+#### Post-loop addendum — 2026-09-04 — decisions on invocation 1's open items
+
+The effective HEAD had moved past this entry's completion marker
+(bf3d7de vs 0182b1b) before this addendum was written, so the marker above
+is left unchanged, the verification re-review is skipped, and invocation 2
+below reviews the fix.
+
+- [I5] decided (orchestrator): amend plan — already done in bf3d7de (the plan's Task 2 contract states a five-entry read list and carries its audit note; spec R2, R5, R7 and R1 amended); fix it — restore read entry 5 (the ruling record `<topic folder>/plans/<slug>-open-decisions.md`) and add a fourth guard: a user's decision is never overturned by a ruling, an earlier `(user)` answer on the same clause escalates the item under the class that first sent it to the user, and an unsure clause match escalates as well
+- [I5] fixed — read entry 5 restored in `### What may be read — the classification read exception`; guard 4 added and the count word changed to "Four"; the two `**Follow-up:** … — clause:` passages withdrawn in 119b69a restored, because guard 4's "recorded quote" has no referent without them; range-scoped assertions added in the read-exception and guard ranges (skills/orchestrating-development/SKILL.md, tests/in-run-rulings/run-tests.sh) → d725f17
+- [I2] decided (orchestrator): amend plan — already done in bf3d7de (spec R1 and R5 amended); fix it — widen the `irreversible` entry of the closed escalation list so it also covers an `amend plan` answer whose amendment would edit the plan's binding text, adding no sixth class, and bound the plan-amendment procedure so an amendment never deletes binding text outright
+- [I2] fixed — the `irreversible` entry now covers an `amend plan` answer whose amendment would edit a `**Global Constraints:**` block or an `**Exact content:**` block, triggered by the edit location the disposition line names after `— clause:` and never by a weakening judgement; the label set is unchanged; the plan-amendment procedure now keeps the clause and appends an exception scoped to the item the ruling names; assertions added in the classification and plan-amendment ranges (skills/orchestrating-development/SKILL.md, tests/in-run-rulings/run-tests.sh) → d725f17
+
+`bash tests/reviewer-templates/run-tests.sh` (24 passed), `bash tests/writing-plans/run-tests.sh` (15 passed) and `bash tests/in-run-rulings/run-tests.sh` (156 passed) all exit 0 at d725f17.
+
+---
+
+_Invocation 2 — 2026-09-04 — N=4 M=4 — BASE..HEAD 0a57e40..d725f17 — branch feature/autonomous-in-run-decisions — gate: orchestration_
+
+Carried Minor findings supplied to round 5 from `.superpowers/sdd/progress.md`.
