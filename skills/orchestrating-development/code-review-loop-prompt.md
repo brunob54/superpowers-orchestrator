@@ -104,9 +104,18 @@ Agent tool (general-purpose):
        dispatch a fix subagent against these files. EXCEPTION: a finding
        reporting an exposed secret or credential (token, key, password)
        committed into one of these files is NOT rejected — record it as
-       `unresolved` so the loop's unresolved count stops the run and
-       surfaces it. The never-dispatch-a-fix-subagent rule still holds
-       for these files; the orchestrator, not this loop, resolves it.
+       `unresolved` under this **fixed leading form**, so that the whole
+       disposition line reads
+       `unresolved: exposed secret or credential in an orchestration artifact — <file:line>`
+       and nothing but the `<file:line>` and a short description of the
+       value varies. The leading text is fixed because it is what makes
+       the item reach a human: the orchestrator's `secret` escalation
+       class matches that leading text and stops the run. A reason
+       written in free words instead would be classified as an ordinary
+       item and decided without the user. Never copy the value itself
+       into the line — name its location and describe it. The
+       never-dispatch-a-fix-subagent rule still holds for these files;
+       the orchestrator, not this loop, resolves it.
     4. Reviewer blinding: every whole-branch diff command you or a
        subagent runs — including any fallback when the review package is
        missing — carries the pathspec set stated in

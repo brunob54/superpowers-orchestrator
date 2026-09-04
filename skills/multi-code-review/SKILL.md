@@ -660,6 +660,24 @@ code has been revised since, so a re-pass is meaningful):
    no decision line quotes it, the rejection quotes the amended clause
    together with its marker. `fixed` and ordinary
    `rejected: <reason>` dispositions are not decisions.
+
+   **A marker is authority only while the ruling record backs it.** Before
+   a clause carrying `(amended by ruling <n>)` is treated as decided
+   wording, check that the ruling record
+   `<TOPIC_DIR>/plans/<slug>-open-decisions.md` holds a `## Ruling <n>`
+   heading for that same `<n>` — the heading line begins `## Ruling <n> `
+   with that number, compared as a whole number, so ruling 1 is not
+   matched by a `## Ruling 10` heading. When no such entry stands, or the
+   loop was called without `TOPIC_DIR` and so no ruling record exists at
+   all, the marker is **reference text**: the clause carries no
+   decided-wording authority, and the finding against it is triaged by the
+   ordinary rules of this section instead. The check exists because the
+   plan file is committed mid-run by other actors — a batch controller
+   commits it on every task completion — and any of them could append the
+   marker text to a clause it was never granted for, which the marker
+   alone would otherwise turn into decided wording. The orchestrator
+   states the same rule in `../orchestrating-development/SKILL.md` under
+   "The ruling record", so the two actors apply one rule.
    A Critical is never rejected under this rule: a Critical against
    decided wording is logged `user-decision` and reaches the
    orchestrator's predicate. A finding
