@@ -168,14 +168,7 @@ correct resolution:
   is the set of files changed between `BASE` and `HEAD`.
 - **`irreversible`** — needs an irreversible or outward-facing action: a
   force-push, deleting data, publishing, calling or configuring an external
-  service, adding a dependency. It also covers one in-run action, because
-  that action removes the test every later action would face: an
-  `amend plan` answer whose amendment would edit the plan's **binding**
-  text — the `**Global Constraints:**` block, or an `**Exact content:**`
-  block — is `escalated (irreversible)`. The trigger is the edit location,
-  which the disposition line already names after `— clause:`, never a
-  judgement about whether the amendment "weakens" anything. (amended by
-  ruling 2)
+  service, adding a dependency.
 - **`secret`** — the item's disposition reason or summary names an exposed
   secret or credential. One producer exists today:
   `code-review-loop-prompt.md` Deviation 4 logs a secret found in an
@@ -424,13 +417,6 @@ disposition line names (R8.2) or the task report names, does two things:
    ```markdown
    > **Amendment <n> (orchestrator ruling):** <what changed, from what, and why — one paragraph>
    ```
-
-An amendment never deletes binding text outright. It keeps the clause and
-appends an exception scoped to the item the ruling names — for example
-`… (amended by ruling <n>: task 9 only)` — so the clause still governs
-every other task. This bounds the breadth of an amendment; it does not
-replace the escalation of R1, which bounds its severity. (amended by
-ruling 2)
 
 Both edits go into the single `chore(orchestration): <slug> ruling <n>`
 commit of R6, never into a commit of their own. A retry finds the audit
@@ -719,15 +705,31 @@ three rejected widening the loop-side rule instead, because that rule's
 orchestrator's own rulings unchallengeable too. R2 gains entry 5 and R7
 gains guard 4, including its escalate-when-unsure branch.
 
-**Ruling 2 — 2026-09-04 — `irreversible` covers an amendment to binding
-text.** Phase 4 round 3 finding `[I2]` showed that an `amend plan` ruling
-could remove a safety rail — this plan's "never `git add -A`", or "no task
-may `git add` CLAUDE.md" — under a `forced` classification with no second
-reader, because the escalation list tested the action in front of it and
-not the meta-action that removes a later test. R1's `irreversible`
-definition is widened by edit location, adding no sixth class, and R5
-gains the no-delete bound. The change makes the run stop MORE often, never
-less; the closed list keeps its five members.
+**Ruling 2 — 2026-09-04 — withdrawn by the spec's author.** Phase 4 round 3
+finding `[I2]` showed that an `amend plan` ruling could remove a safety
+rail — this plan's "never `git add -A`", or "no task may `git add`
+CLAUDE.md" — under a `forced` classification with no second reader,
+because the escalation list tests the action in front of it and not the
+meta-action that removes a later test. The orchestrating session ruled
+that `irreversible` should be widened by edit location. Round 5 finding
+`[I3]` then objected that a spec change is the author's decision, never
+the orchestrator's, and the run stopped on that objection. **The author
+decided on 2026-09-04 to withdraw Ruling 2 in full**: the escalation list
+and all five of its definitions stay exactly as the author wrote them, and
+the no-delete bound is withdrawn with it. The gap is recorded below as a
+known limitation rather than closed here.
+
+**Authority for these amendments.** Ruling 1's amendments to R2 and R7
+were confirmed by the spec's author on 2026-09-04, in the same decision.
+An orchestrator ruling does not amend this spec on its own authority; the
+`spec wrong` class sends such a change to the author, which is what
+happened here.
+
+**Known limitation, recorded not closed.** An `amend plan` ruling can edit
+a `**Global Constraints:**` entry that acts as a safety rail, under a
+`forced` classification with no second reader. Two reviewers of four found
+this in round 3, and it stays open by the author's decision. Any future
+fix changes the escalation list, so it belongs to the author.
 
 ## Rollout
 

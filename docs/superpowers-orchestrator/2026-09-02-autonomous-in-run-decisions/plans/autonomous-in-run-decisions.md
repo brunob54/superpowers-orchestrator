@@ -38,6 +38,7 @@
 | `skills/orchestrating-development/code-review-loop-prompt.md` (modify, Task 9) | `[RESUME_ANSWER]` lines tagged `(orchestrator)` or `(user)`; Deviation 5 records `decided (<who>)`; idempotence names both labels. |
 | `skills/orchestrating-development/batch-controller-prompt.md` (modify, Task 9) | `[RESUME_ANSWER]` as tagged `[task <n>]` / `[task <n>/<k>]` lines; every open-item `BLOCKED task=<n>` writes `### Question <k>` / `### Conflict <k>` sections to the task report; pre-flight conflicts returned the same way. |
 | `CLAUDE.md` (modify on disk only, Task 1) | One line in the Testing list. Never staged. |
+| `specs/autonomous-in-run-decisions-design.md` (modify, orchestrator rulings only) | The requirements document. It is not implemented by any task. It is edited only by an orchestrator ruling that the spec's author has confirmed, and every such edit is recorded in its own `## Amendments` section. (amended by ruling 8) |
 
 The `## In-run rulings` section's subsection order, fixed so that later tasks append at a known place: `### Classification — the escalation predicate` (Task 1), `### What may be read — the classification read exception` (Task 2), `### Fork review for a design item` (Task 3), `### The ruling record` and `### The answers, and how a ruling reaches the plan` (Task 4), `### The RULING log entry, the commit and the re-dispatch` and `### Guards against motivated judgement` (Task 5). Each task appends its subsection at the end of the section, that is, immediately above the `## Major-Error Stop Policy` heading.
 

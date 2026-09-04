@@ -57,3 +57,10 @@ Ruled: [I3 v3] forced — fix it (closedness scan must fail on zero bullets)
 Ruled: [I4] forced — fix it (pin the design-to-fork-review link)
 Owed probe: - [I12] rejected: harness probe not runnable here — dispatch one throwaway `subagent_type: "fork"` that terminates without emitting a final message and observe whether the main session receives a failure/error notice or waits with no event — (would break a constraint)
 Resume: Resume orchestration for docs/superpowers-orchestrator/2026-09-02-autonomous-in-run-decisions/plans/autonomous-in-run-decisions.md
+
+## RULING 8 — 2026-09-04 — phase 4 — author's answer applied, ruling 2 withdrawn
+Items: [I3 r5] (user) — Ruling 1 confirmed; Ruling 2 withdrawn in full; the spec joins the plan's File Structure table
+       [I1] [I2] [I3 v3] [I4] forced — fix it, carried from RULING 2's Ruled: lines
+Detail: docs/superpowers-orchestrator/2026-09-02-autonomous-in-run-decisions/plans/autonomous-in-run-decisions-open-decisions.md
+Forks: none — the author decided the escalated item; the rest are forced
+Re-dispatch: phase 4, in-run resume 2 of 3

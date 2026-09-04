@@ -67,3 +67,21 @@ procedure was applied by hand.
 - **Defensible answers:** (a) the amendments stand, and the spec gains a rule saying an orchestrator ruling may amend the spec and how it is recorded; (b) the amendments are reverted and both rulings are re-made without touching the spec, which means Ruling 2's widening of `irreversible` does not ship; (c) the amendments stand for Ruling 1 (a read entry, no change to the user's escalation list) and are reverted for Ruling 2 (which widens a definition the user wrote)
 - **Forks:** none — not dispatched. The finding asserts that the orchestrator exceeded its authority. Deciding it in the orchestrator's own favour is the motivated judgement the guards exist to prevent, and fork review would not cure that: the forks inherit this session's framing, which is the objection Case 013 already recorded against treating fork review as an independent second reader.
 - **Resolution:** escalated — the spec fixes what "done" means for this run, and the closed escalation list it defines is the user's own wording from the run's prompt. Two reviewers of four raised it independently, and the plan's File Structure table confirms the spec was never a file this plan may modify. The orchestrator's recommendation, offered but not applied: (c) — keep Ruling 1's read entry, which adds no class and touches no wording the user authored, and let the user decide Ruling 2's widening of `irreversible`.
+
+**Follow-up (Ruling 7) — 2026-09-04, the spec's author decided.** Option (c),
+the orchestrator's recommendation: Ruling 1's amendments stand, confirmed by
+the author in the same decision; Ruling 2 is withdrawn in full, so the closed
+escalation list and all five of its definitions stay exactly as the author
+wrote them, and the no-delete bound is withdrawn with it. The safety-rail gap
+is recorded in the spec as a known limitation, not closed. The skill text and
+the test pins that implemented Ruling 2 are removed by the resume, and the
+plan's File Structure table now lists the spec (ruling 8).
+
+## Ruling 8 — 2026-09-04 — phase 4 — the plan never listed the spec as a file it modifies
+
+- **Class:** forced
+- **Item:** the second half of round 5 `[I3]` — the plan's File Structure table does not list the spec, yet Ruling 1's confirmed amendments modify it
+- **Contract clause:** none — the table is reference text under the plan's Body-authority note
+- **Defensible answers:** n/a — forced
+- **Forks:** none — forced
+- **Resolution:** `amend plan: add the spec to the File Structure table, marked as edited only by an author-confirmed orchestrator ruling and implemented by no task.` — Forced: the file is modified on this branch and the table claims to list every file the plan touches, so leaving it out states something false. The row records the authority the author has now given, which is the "by whom" the finding said was undefined.
