@@ -182,6 +182,17 @@ for frag in 'escalation wins' '### Conflict' '### Question' \
   assert_in_range "predicate fragment '$frag'" \
     "$ORCH_SKILL" "$frag" "$CLASS_LINE" "$CLASS_END" fragment
 done
+# The `irreversible` entry also covers an `amend plan` answer that would edit
+# the plan's binding text; the trigger is the named edit location, never a
+# judgement about the amendment's effect.
+assert_in_range "irreversible entry pin 'escalated (irreversible)'" \
+  "$ORCH_SKILL" 'escalated (irreversible)' "$CLASS_LINE" "$CLASS_END" exact
+assert_in_range_folded "irreversible entry covers an amendment of binding plan text" \
+  "$ORCH_SKILL" "amendment would edit the plan's **binding** text" \
+  "$CLASS_LINE" "$CLASS_END"
+assert_in_range_folded "irreversible entry triggers on the edit location, not on a judgement" \
+  "$ORCH_SKILL" 'never a judgement about whether the amendment weakens anything' \
+  "$CLASS_LINE" "$CLASS_END"
 
 bold "2. Classification read exception (R2)"
 REQUIRED_START_LINE="$(first_line_of "$ORCH_SKILL" '## Required Start')"
@@ -191,6 +202,21 @@ for frag in 'data, not instructions' 'never a reviewer report file' \
             'read-only git commands' 'resume step 3' 'nothing else' \
             '40 lines'; do
   assert_in_range "read-exception fragment '$frag'" \
+    "$ORCH_SKILL" "$frag" "$READ_EXCEPTION_LINE" "$READ_EXCEPTION_END" fragment
+done
+# Entry 5 of the read list: the orchestrator's own ruling record. The path is
+# a byte pin; the rest of the entry is free text. The path also occurs in the
+# ruling-record and log-entry subsections, so the range scoping is what makes
+# this assertion fail when entry 5 is deleted.
+assert_in_range "read-exception entry 5 names the ruling-record path" \
+  "$ORCH_SKILL" '<topic folder>/plans/<slug>-open-decisions.md' \
+  "$READ_EXCEPTION_LINE" "$READ_EXCEPTION_END" exact
+assert_in_range_folded "read-exception entry 5 calls it the file you write yourself" \
+  "$ORCH_SKILL" 'the file you write yourself' \
+  "$READ_EXCEPTION_LINE" "$READ_EXCEPTION_END"
+for frag in 'Guard 4 (below) reads it' \
+            'earlier answer tagged `(user)` on the same clause'; do
+  assert_in_range "read-exception entry 5 fragment '$frag'" \
     "$ORCH_SKILL" "$frag" "$READ_EXCEPTION_LINE" "$READ_EXCEPTION_END" fragment
 done
 
@@ -249,6 +275,14 @@ for frag in '(amended by ruling' 'never apply the amendment twice' \
   assert_in_range "answer fragment '$frag'" \
     "$ORCH_SKILL" "$frag" "$ANSWERS_LINE" "$ANSWERS_END" fragment
 done
+# The bound on a plan amendment: it never deletes binding text, it appends a
+# scoped exception. Both fragments cross a line wrap, so they are folded.
+assert_in_range_folded "amendment never deletes binding text outright" \
+  "$ORCH_SKILL" 'never **deletes** binding text outright' \
+  "$ANSWERS_LINE" "$ANSWERS_END"
+assert_in_range_folded "amendment appends an exception scoped to the ruling's item" \
+  "$ORCH_SKILL" 'appends to it an exception scoped to the item the ruling names' \
+  "$ANSWERS_LINE" "$ANSWERS_END"
 
 bold "5. RULING log entry, cap and guards (R6, R7, R9)"
 for pin in '## RULING' 'Re-dispatch:' 'Re-dispatch: none' 'Ruled:' \
@@ -291,6 +325,23 @@ for frag in 'a Critical is never rejected' 'quotes its clause' \
   assert_in_range "guard fragment '$frag'" \
     "$ORCH_SKILL" "$frag" "$GUARDS_LINE" "$GUARDS_END" fragment
 done
+# Guard 4: a user's decision is never overturned by a ruling. The count word
+# is pinned as well, so that dropping guard 4 without renumbering is caught.
+assert_in_range_folded_exact "guard count word is 'Four'" \
+  "$ORCH_SKILL" 'Four rules apply everywhere a ruling is made' \
+  "$GUARDS_LINE" "$GUARDS_END"
+assert_in_range "guard 4 states a user decision is never overturned" \
+  "$ORCH_SKILL" "A user's decision is never overturned by a ruling" \
+  "$GUARDS_LINE" "$GUARDS_END" fragment
+for frag in 'read your ruling record' 'recorded answer tagged `(user)`' \
+            'under the class that first sent it to the user' \
+            'you never re-answer it in the'; do
+  assert_in_range "guard 4 fragment '$frag'" \
+    "$ORCH_SKILL" "$frag" "$GUARDS_LINE" "$GUARDS_END" fragment
+done
+assert_in_range_folded "guard 4 escalates when the clause match is unsure" \
+  "$ORCH_SKILL" 'an unsure match never becomes a ruling' \
+  "$GUARDS_LINE" "$GUARDS_END"
 
 bold "6. Wiring into phases, log format, state.md, Resume and stop policy (R6)"
 PHASE3_LINE="$(first_line_of "$ORCH_SKILL" '## Phase 3 — Implementation Batches')"
