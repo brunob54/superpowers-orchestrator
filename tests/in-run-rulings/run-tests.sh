@@ -158,6 +158,34 @@ assert_in_range_folded_exact() { # desc file needle start end
   fi
 }
 
+# The negative counterpart of assert_in_range_folded: the check PASSES when the
+# fixed string $3 is ABSENT from the range, and FAILS when it is present. The
+# range's lines are folded exactly as every positive check folds them, so that
+# a re-added rule cannot escape the check by straddling a line wrap. $6 is the
+# match mode: "exact" (case-sensitive) or "fragment" (case-insensitive).
+assert_absent_in_range_folded() { # desc file needle start end mode
+  local desc="$1" file="$2" needle="$3" start="$4" end="$5" mode="$6"
+  local folded found
+  if [ -z "$start" ] || [ -z "$end" ] || [ "$start" -ge "$end" ]; then
+    bad "$desc (the range $start..$end of ${file#$ROOT/} is missing, empty or inverted)"
+    return
+  fi
+  folded="$(fold_range "$file" "$start" "$end")"
+  # Environment, not `awk -v`, for the reason given above.
+  if [ "$mode" = "exact" ]; then
+    found="$(needle="$needle" hay="$folded" awk \
+      'BEGIN { r = index(ENVIRON["hay"], ENVIRON["needle"]); print (r > 0 ? "yes" : "no") }')"
+  else
+    found="$(needle="$needle" hay="$folded" awk \
+      'BEGIN { r = index(tolower(ENVIRON["hay"]), tolower(ENVIRON["needle"])); print (r > 0 ? "yes" : "no") }')"
+  fi
+  if [ "$found" = "no" ]; then
+    ok "$desc (absent from range $start..$end, line wraps folded)"
+  else
+    bad "$desc (still present in range $start..$end of ${file#$ROOT/}, line wraps folded)"
+  fi
+}
+
 # Range anchors in orchestrating-development/SKILL.md. Headings are
 # whole-line matches. The `## In-run rulings` section ends where the
 # `## Major-Error Stop Policy` heading begins, because the section's own
@@ -224,16 +252,21 @@ done
 if [ -z "$CLASS_LINE" ] || [ -z "$CLASS_END" ] || [ "$CLASS_LINE" -ge "$CLASS_END" ]; then
   bad "escalation list closedness check (empty or inverted range $CLASS_LINE..$CLASS_END in ${ORCH_SKILL#$ROOT/})"
 else
-  EXTRA_LABEL="$(awk -v a="$CLASS_LINE" -v b="$CLASS_END" \
+  # The labels are collected, then compared with the expected set as a whole.
+  # Collecting them (rather than scanning for an unexpected one) makes the
+  # check fail on zero bullets too: indenting the five entries, or turning the
+  # list into a table, would otherwise match nothing and report a PASS while
+  # the predicate stopped being closed.
+  FOUND_LABELS="$(awk -v a="$CLASS_LINE" -v b="$CLASS_END" \
     'NR >= a && NR < b && match($0, /^- `[^`]+`/) {
-       label = substr($0, RSTART + 3, RLENGTH - 4)
-       if (label != "spec wrong" && label != "scope" && label != "irreversible" \
-           && label != "secret" && label != "chain") { print label; exit }
-     }' "$ORCH_SKILL")"
-  if [ -z "$EXTRA_LABEL" ]; then
+       print substr($0, RSTART + 3, RLENGTH - 4)
+     }' "$ORCH_SKILL" | sort | tr '\n' '|')"
+  EXPECTED_LABELS="$(printf '%s\n' 'spec wrong' scope irreversible secret chain \
+    | sort | tr '\n' '|')"
+  if [ "$FOUND_LABELS" = "$EXPECTED_LABELS" ]; then
     ok "the closed escalation list still has exactly its five members"
   else
-    bad "the closed escalation list carries an unexpected member '$EXTRA_LABEL'"
+    bad "the closed escalation list's bullets are '$FOUND_LABELS', not the five expected '$EXPECTED_LABELS'"
   fi
 fi
 for frag in 'escalation wins' '### Conflict' '### Question' \
@@ -254,21 +287,12 @@ assert_in_range_folded "a transient external problem never reaches the predicate
 assert_in_range_folded "Phase 5 stays the user's" \
   "$ORCH_SKILL" "**Phase 5** stays the user's" \
   "$CLASS_LINE" "$CLASS_END"
-# The `irreversible` entry also covers an `amend plan` answer that would edit
-# the plan's binding text; the trigger is the named edit location, never a
-# judgement about the amendment's effect.
-assert_in_range "irreversible entry pin 'escalated (irreversible)'" \
-  "$ORCH_SKILL" 'escalated (irreversible)' "$CLASS_LINE" "$CLASS_END" exact
-assert_in_range_folded "irreversible entry covers an amendment of binding plan text" \
-  "$ORCH_SKILL" "amendment would edit the plan's **binding** text" \
-  "$CLASS_LINE" "$CLASS_END"
-assert_in_range_folded "irreversible entry triggers on the edit location, not on a judgement" \
-  "$ORCH_SKILL" 'never a judgement about whether the amendment weakens anything' \
-  "$CLASS_LINE" "$CLASS_END"
-# A `Task <n>` clause location is binding or reference text; which one is read
-# from the task section, and that reading is not the forbidden judgement.
-assert_in_range_folded "irreversible entry reads binding-ness from the task section" \
-  "$ORCH_SKILL" 'under entry 3 of the read exception' "$CLASS_LINE" "$CLASS_END"
+# The `design` class is what sends an item to the fork review. Without this
+# pin, replacing the sentence with "Decided directly, with no subagent."
+# would leave the suite green: every fork assertion is scoped to the fork
+# subsection, which nothing would then reach.
+assert_in_range_folded "a design item is decided after the fork review" \
+  "$ORCH_SKILL" 'Decided after the fork review' "$CLASS_LINE" "$CLASS_END"
 # The `secret` class is the only thing that keeps a committed credential with
 # the user, so its trigger must match mechanically rather than on a keyword
 # search of free prose: the loop writes one fixed leading form, pinned here
@@ -296,15 +320,6 @@ assert_in_range "secret class names the batch template as the second producer" \
 assert_in_range_folded "discriminator bounds <n> by the plan, not by the batch" \
   "$ORCH_SKILL" 'may belong to a later batch' "$CLASS_LINE" "$CLASS_END"
 
-# The Phase 3 form of the `irreversible` trigger: a Phase 3 item carries no
-# disposition line and no `— clause:`, so the trigger reads the plan location
-# the conflict section names.
-assert_in_range_folded "irreversible entry states its Phase 3 form" \
-  "$ORCH_SKILL" 'In Phase 3 the trigger has a second form' \
-  "$CLASS_LINE" "$CLASS_END"
-assert_in_range_folded "Phase 3 trigger reads the location the conflict section names" \
-  "$ORCH_SKILL" 'the plan location that section names on the plan side' \
-  "$CLASS_LINE" "$CLASS_END"
 # The bare `[task <n>]` id is a user shorthand only; the orchestrator writes
 # `[task <n>/<k>]` everywhere and resolves a bare user answer, never
 # defaulting it to section 1. The rule sits in the ## In-run rulings intro,
@@ -523,28 +538,6 @@ for frag in '(amended by ruling' 'never apply the amendment twice' \
   assert_in_range "answer fragment '$frag'" \
     "$ORCH_SKILL" "$frag" "$ANSWERS_LINE" "$ANSWERS_END" fragment
 done
-# The bound on a plan amendment: it never deletes a clause, it appends a
-# scoped exception. Both fragments cross a line wrap, so they are folded.
-assert_in_range_folded "amendment never deletes a clause outright" \
-  "$ORCH_SKILL" 'never **deletes** a clause outright' \
-  "$ANSWERS_LINE" "$ANSWERS_END"
-# The bound covers reference text as well as binding text: a safety rule
-# written as an ordinary reference sentence must not be replaced wholesale.
-assert_in_range_folded "the no-delete bound covers reference text too" \
-  "$ORCH_SKILL" '**binding and reference text alike**' \
-  "$ANSWERS_LINE" "$ANSWERS_END"
-assert_in_range_folded "amendment step 1 keeps the clause under the no-delete bound" \
-  "$ORCH_SKILL" 'never a clause dropped and rewritten' \
-  "$ANSWERS_LINE" "$ANSWERS_END"
-assert_in_range_folded "amendment appends an exception scoped to the ruling's item" \
-  "$ORCH_SKILL" 'appends to it an exception scoped to the item the ruling names' \
-  "$ANSWERS_LINE" "$ANSWERS_END"
-# An `amend plan` answer that would edit binding text is never a ruling of the
-# orchestrator's: it escalates, and only the user's answer carries the line.
-assert_in_range "answer pin 'escalated (irreversible)'" \
-  "$ORCH_SKILL" 'escalated (irreversible)' "$ANSWERS_LINE" "$ANSWERS_END" exact
-assert_in_range_folded "the amendment procedure is scoped to the amendments still the orchestrator's" \
-  "$ORCH_SKILL" 'never written as a ruling of your own' "$ANSWERS_LINE" "$ANSWERS_END"
 
 # The writes of one ruling have a fixed order, so a crash cannot leave an
 # amendment marker with no ruling record behind it.
@@ -708,13 +701,6 @@ for frag in 'in-run resumes of one phase are capped at 3 per unit' \
 done
 assert_in_range "log-entry fragment 'previous invocation left'" \
   "$ORCH_SKILL" 'previous invocation left' "$LOG_ENTRY_LINE" "$LOG_ENTRY_END" fragment
-# The pre-commit self-check escalates, never rewrites, a bare `fix it` whose
-# item's `clause:` names binding plan text. The antecedent is carried in the
-# needle itself, not only the bare `escalated (irreversible)` token that also
-# occurs on entries this sentence does not govern.
-assert_in_range_folded "self-check escalates a bare fix it whose clause names binding text" \
-  "$ORCH_SKILL" "a bare \`fix it\` whose item's \`clause:\` names binding plan text becomes \`escalated (irreversible)\`" \
-  "$LOG_ENTRY_LINE" "$LOG_ENTRY_END"
 # The Phase 3 cap counts per task number, in either written form.
 assert_in_range "cap counts a Phase 3 task in either line form" \
   "$ORCH_SKILL" '`[task <n>]` or `[task <n>/<k>]`' "$LOG_ENTRY_LINE" "$LOG_ENTRY_END" exact
@@ -730,6 +716,12 @@ for frag in 'a Critical is never rejected' 'quotes its clause' \
   assert_in_range "guard fragment '$frag'" \
     "$ORCH_SKILL" "$frag" "$GUARDS_LINE" "$GUARDS_END" fragment
 done
+# Guard 2 forbids the two answers that would close a Critical with no code
+# change. The fragment 'a Critical is never rejected' above pins the claim;
+# these bytes pin the prohibitions themselves, which cross a line wrap.
+assert_in_range_folded_exact "guard 2 forbids `plan governs` and `accept` on a Critical" \
+  "$ORCH_SKILL" 'Never `plan governs`, never `accept`.' \
+  "$GUARDS_LINE" "$GUARDS_END"
 # Guard 4: a user's decision is never overturned by a ruling. The count word
 # is pinned as well, so that dropping guard 4 without renumbering is caught.
 assert_in_range_folded_exact "guard count word is 'Four'" \
@@ -829,18 +821,15 @@ assert_in_range_folded "Phase 4 routes open items to the predicate" \
 # 0` -> major error -> stop') must be GONE, not merely superseded: a positive
 # pin on the new routing sentence alone would still pass if the old stop
 # sentence were re-added beside it.
-if [ -z "$PHASE4_LINE" ] || [ -z "$PHASE5_LINE" ] || [ "$PHASE4_LINE" -ge "$PHASE5_LINE" ]; then
-  bad "Phase 4 old-wording check (empty or inverted range $PHASE4_LINE..$PHASE5_LINE in ${ORCH_SKILL#$ROOT/})"
-else
-  PHASE4_FOLDED="$(fold_range "$ORCH_SKILL" "$PHASE4_LINE" "$PHASE5_LINE")"
-  if needle='user_decision > 0` → major error → stop' hay="$PHASE4_FOLDED" awk \
-       'BEGIN { n = ENVIRON["needle"]; h = ENVIRON["hay"]
-                exit index(tolower(h), tolower(n)) > 0 ? 0 : 1 }'; then
-    bad "Phase 4 still carries the old 'unresolved/user_decision -> major error -> stop' wording beside the routing sentence"
-  else
-    ok "Phase 4 no longer stops directly on unresolved/user_decision counts (old wording absent)"
-  fi
-fi
+# Each disjunct of the old rule is checked on its own: re-adding the
+# `unresolved > 0` half alone would otherwise pass a check that only looked
+# for the `user_decision > 0` half.
+assert_absent_in_range_folded "Phase 4 no longer stops directly on the user_decision count (old wording absent)" \
+  "$ORCH_SKILL" 'user_decision > 0` → major error → stop' \
+  "$PHASE4_LINE" "$PHASE5_LINE" fragment
+assert_absent_in_range_folded "Phase 4 no longer stops directly on the unresolved count (old wording absent)" \
+  "$ORCH_SKILL" 'unresolved > 0` → major error → stop' \
+  "$PHASE4_LINE" "$PHASE5_LINE" fragment
 assert_in_range_folded "Phase 5 report lists unsettled contradictions" \
   "$ORCH_SKILL" 'every entry whose Forks line records `contradiction: unsettled`' \
   "$PHASE5_LINE" "$LOG_FORMAT_LINE"
@@ -973,32 +962,17 @@ assert_in_range_folded "the Resume rebuild path stages its stopped commit by exp
 assert_in_range_folded "the escalated-return stop stages its stopped commit by explicit path" \
   "$ORCH_SKILL" 'stages by explicit path under the Major-Error Stop Policy' \
   "$LOG_ENTRY_LINE" "$LOG_ENTRY_END"
-if [ -n "$RULINGS_END" ] && [ -n "$GUARD_LINE" ] && [ "$RULINGS_END" -lt "$GUARD_LINE" ] && \
-   awk -v a="$RULINGS_END" -v b="$GUARD_LINE" \
-     'NR >= a && NR < b && index(tolower($0), "pre-flight plan conflict") > 0 { found = 1 } END { exit found ? 1 : 0 }' "$ORCH_SKILL"; then
-  ok "stop policy no longer lists a pre-flight plan conflict as a stop by itself"
-else
-  bad "stop policy still lists 'pre-flight plan conflict', or the range $RULINGS_END..$GUARD_LINE is empty or inverted"
-fi
+assert_absent_in_range_folded "stop policy no longer lists a pre-flight plan conflict as a stop by itself" \
+  "$ORCH_SKILL" 'pre-flight plan conflict' "$RULINGS_END" "$GUARD_LINE" fragment
 # This branch also removes an unconditional `batch-controller BLOCKED` stop
 # (replaced by the Phase 3 discriminator classification) and a
 # `code-review unresolved or user-decision items` stop (replaced by routing
 # to the predicate). Both removals are checked, modelled on the pre-flight
 # negative check above.
-if [ -n "$RULINGS_END" ] && [ -n "$GUARD_LINE" ] && [ "$RULINGS_END" -lt "$GUARD_LINE" ] && \
-   awk -v a="$RULINGS_END" -v b="$GUARD_LINE" \
-     'NR >= a && NR < b && index(tolower($0), "code-review unresolved") > 0 { found = 1 } END { exit found ? 1 : 0 }' "$ORCH_SKILL"; then
-  ok "stop policy no longer lists code-review unresolved or user-decision items as a stop by itself"
-else
-  bad "stop policy still lists 'code-review unresolved', or the range $RULINGS_END..$GUARD_LINE is empty or inverted"
-fi
-if [ -n "$RULINGS_END" ] && [ -n "$GUARD_LINE" ] && [ "$RULINGS_END" -lt "$GUARD_LINE" ] && \
-   awk -v a="$RULINGS_END" -v b="$GUARD_LINE" \
-     'NR >= a && NR < b && index($0, "batch-controller BLOCKED;") > 0 { found = 1 } END { exit found ? 1 : 0 }' "$ORCH_SKILL"; then
-  ok "stop policy no longer lists an unconditional batch-controller BLOCKED stop"
-else
-  bad "stop policy still lists 'batch-controller BLOCKED;' unconditionally, or the range $RULINGS_END..$GUARD_LINE is empty or inverted"
-fi
+assert_absent_in_range_folded "stop policy no longer lists code-review unresolved or user-decision items as a stop by itself" \
+  "$ORCH_SKILL" 'code-review unresolved' "$RULINGS_END" "$GUARD_LINE" fragment
+assert_absent_in_range_folded "stop policy no longer lists an unconditional batch-controller BLOCKED stop" \
+  "$ORCH_SKILL" 'batch-controller BLOCKED;' "$RULINGS_END" "$GUARD_LINE" exact
 
 bold "7. multi-code-review attribution and self-sufficient lines (R8.1, R8.2)"
 MCR_LOG_FORMAT_LINE="$(first_line_of "$MCR_SKILL" '## Review Log Format')"

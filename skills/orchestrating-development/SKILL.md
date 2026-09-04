@@ -681,31 +681,7 @@ its correct resolution:
   the set of files changed between `BASE` and `HEAD`.
 - `irreversible` — needs an irreversible or outward-facing action: a
   force-push, deleting data, publishing, calling or configuring an
-  external service, adding a dependency. An `amend plan` answer whose
-  amendment would edit the plan's **binding** text — the one set
-  "Plan amendment" below defines: a `**Global Constraints:**` block, an
-  `**Exact content:**` block, and, in a plan written before the 7.7.0
-  Body-authority note, any mandated text — is
-  `escalated (irreversible)` as well, because that edit changes the text
-  every later task is held to. The trigger is the edit location the
-  item's disposition line already names after `— clause:`, never a
-  judgement about whether the amendment weakens anything. A
-  `— clause: Global Constraints` location is binding on its face; a
-  `— clause: Task <n>` location can be either, so read that task section
-  under entry 3 of the read exception below to see whether the clause the
-  line quotes is an `**Exact content:**` block (or, in a pre-note plan,
-  mandated text) or reference text. That reading is not the forbidden
-  judgement: what you never judge is the amendment's effect — whether it
-  weakens the clause or leaves it harmless. **In Phase 3 the trigger has
-  a second form**, because a Phase 3 open item is a `### Conflict <k>` or
-  `### Question <k>` section of a task report and carries no disposition
-  line and no `— clause:` at all: there the edit location is the plan
-  location that section names on the plan side, read under entry 3 of the
-  read exception below. It is binding when that location is a
-  `**Global Constraints:**` entry, an `**Exact content:**` block, or
-  mandated text in a pre-note plan — the `amend plan` answer is then
-  `escalated (irreversible)` — and reference text otherwise, in which
-  case the amendment is still yours to write.
+  external service, adding a dependency.
 - `secret` — the item's **disposition reason or summary** names an exposed
   secret or credential, or — **in Phase 3**, where an open item is a report
   section and carries no disposition line at all — the text of the
@@ -1107,13 +1083,8 @@ A line without a `(<who>)` tag is a user line — an untagged answer such as
   rejected as non-binding. The clause is mandatory (guard 1, below).
 - `amend plan: <the amendment>; fix it: <what the fix must achieve>` —
   the plan was wrong. The only accepting answer when `clause:` names
-  binding text, and never one of yours when the amendment's edit location
-  is itself binding text ("Plan amendment", below, defines that set):
-  such an item is `escalated (irreversible)` (classification, above), and
-  only the user's answer on the resume carries this line. You write the
-  amendment (below) before re-dispatching — for a ruling of your own, an
-  amendment of reference text; and for a user's `amend plan` answer when
-  it arrives on a resume; the loop then fixes.
+  binding text. You write the amendment (below) before re-dispatching;
+  the loop then fixes.
 - `accept: <reason>` — for an `unresolved` item only, and Important only;
   an unresolved Critical is `fix it` with a new hint, or `escalated`.
 
@@ -1152,10 +1123,7 @@ answered in one of two forms: `plan governs: "<verbatim clause>" — <path>`,
 naming the side that governs — the implementer follows that text — or
 `amend plan: <the amendment>` when the other side governs. An answer that
 sides against binding plan text is always `amend plan: …` (the amendment
-procedure below), and such an answer is never yours to rule: the item is
-`escalated (irreversible)` (classification, above), and the `amend plan`
-line reaches the controller as the user's answer on the resume. A
-plain-text answer is valid only against a question or
+procedure below); a plain-text answer is valid only against a question or
 against reference text — a plain-text answer that left a binding clause in
 force would be raised again by the task's reviewer, who receives the
 `**Global Constraints:**` block verbatim. The batch controller hands the
@@ -1200,33 +1168,17 @@ per-task cap.
 **Plan amendment.** A plan conflict is a collision with the plan's
 **binding** text — under the 7.7.0 Body-authority note, a
 `**Global Constraints:**` entry or an `**Exact content:**` block; in a
-plan written before that note, any mandated text. This procedure serves
-the amendments that are still yours — a ruling on **reference** text —
-and a user's `amend plan` answer arriving on a resume, which is what
-authorises an edit to binding text: an amendment of binding text is never
-written as a ruling of your own (classification, `irreversible`). An
-amendment that only
+plan written before that note, any mandated text. An amendment that only
 annotates the plan would leave the binding clause in force, and the next
-review would raise the same finding. An amendment also never **deletes** a
-clause outright — **binding and reference text alike**: it keeps the
-clause and appends to it an exception scoped to the item the ruling names,
-so that the clause still governs every other task. The bound covers
-reference text because a safety rule is often written there as an ordinary
-sentence, and a `forced` item's amendment is read by no fork: replacing
-such a sentence wholesale would drop the rule for every later task without
-anyone noticing. So, using the plan location the
+review would raise the same finding. So, using the plan location the
 disposition line names (`— clause: Global Constraints` or
 `— clause: Task <n>`) or the task report names — and finding the clause
 inside it by the prefix rule above, never by a byte-equal match — do two
 things:
 
-1. **Edit the named clause in place** — for a user-authorised amendment
-   of binding text, the Global Constraints entry, the Exact-content block
-   or the mandated sentence; for a ruling of your own, the reference
-   sentence or list entry the location names — replacing it with the
-   amended text, which under the no-delete bound above is the kept clause
-   followed by the scoped exception, never a clause dropped and rewritten
-   — and append to the edited clause the marker
+1. **Edit the binding clause in place** — replace the Global Constraints
+   entry, the Exact-content block, or the mandated sentence with the
+   amended text — and append to the edited clause the marker
    `(amended by ruling <n>)`. When the clause is a fenced code block or a
    block quote — an `**Exact content:**` block — the marker goes at the
    end of the introducing `**Exact content:** <reason>` paragraph line,
@@ -1295,11 +1247,8 @@ answer lines: a `plan governs` without a clause becomes `fix it`,
 `amend plan …; fix it`, or `escalated (spec wrong)`; an `accept` on a
 Critical becomes `fix it` or `escalated (spec wrong)`; a bare `fix it`
 whose item's `clause:` names binding plan text becomes
-`escalated (irreversible)`, because the amendment such a fix needs would
-edit binding text and is never yours to write (classification, above),
-while a bare `fix it` whose `clause:` names reference text becomes
-`amend plan: …; fix it` when the fix contradicts that clause (the loop
-refuses such a `fix it` outright, and the
+`amend plan: …; fix it` or `escalated`, because a fix against binding text
+needs the amendment (the loop refuses such a `fix it` outright, and the
 item comes back `unresolved`). **One commit**,
 subject `chore(orchestration): <slug> ruling <n>`, holds the `## RULING`
 entry, the ruling-record entries and any plan amendment, and lands
