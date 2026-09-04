@@ -4131,3 +4131,105 @@ All three suites exited 0, with empty stderr on the first. Every check in
 new assertions across I1/I2/I4/M7/M9/M10, 1 pin count unchanged for M5
 (added inside an existing loop), and in-place edits with no count change for
 I3, M4, M6, M11).
+
+## Round 12 post-loop addendum fixes — decisions (F1, F2)
+
+### F1 — the secret residue reaches nobody (spec R13, Amendment 13)
+
+Two additive report fields, per the spec author's decision (R13) and its
+plan amendments (Task 6, Task 7). Neither of the five escalation-class
+definitions (`spec wrong`, `scope`, `irreversible`, `secret`, `chain`) was
+touched.
+
+- `skills/multi-code-review/SKILL.md` — "After the Loop": added a
+  `Secrets found:` line, in the same shape and placed beside the existing
+  `Harness probes owed:` line — one item per finding of this invocation
+  that reported an exposed secret or credential in reviewed code, whatever
+  its final disposition, naming the file and the round, or `Secrets found:
+  none`. Stated as always written, a report without it defective, and the
+  item never reproducing the secret value — the same three properties the
+  `Harness probes owed:` rule states for itself.
+- `skills/orchestrating-development/SKILL.md` — Phase 5 step 3: added the
+  same list, gathered from the code review log, under a heading naming the
+  two actions a person must take (rotate the credential; decide what to do
+  about the branch history, which the fix does not rewrite), or `Secrets
+  found: none`.
+- `tests/in-run-rulings/run-tests.sh`: added one assertion in section 6
+  (`$PHASE5_LINE..$LOG_FORMAT_LINE`) pinned on the rotate/history heading
+  sentence, and one in section 7 (`$MCR_AFTER_LOOP_LINE..$MCR_ERROR_HANDLING_LINE`)
+  pinned on the loop-side rule's own sentence — neither needle is the bare
+  `Secrets found:` label, so a cross-reference between the two report
+  fields cannot satisfy either check for the other.
+
+### F2 — the fork subsection had five unpinned rules
+
+`tests/in-run-rulings/run-tests.sh`, section 3 (`$FORK_LINE..$FORK_END`):
+added five new `assert_in_range_folded` (rules 1, 2, 3, 5 — each crosses a
+line wrap) / `assert_in_range` exact (rule 4 — single line) assertions
+beside the existing `for frag in …` loop, each pinned on the rule's own
+sentence, chosen to be unique inside the fork subsection so that a
+different, still-present sentence cannot satisfy it after the rule itself
+is deleted:
+
+1. Fresh non-inheriting subagents for every later `design` item's
+   reviewers and every tie-break reviewer.
+2. The tie-break dispatch's "never a fork" clause, and the reason
+   (it must not inherit the consolidation reasoning it exists to check).
+3. The wait-for-all-notices-of-a-round rule.
+4. The fork return's 25-line bound (`## Return (final message, at most
+   25 lines)`).
+5. The platform-degradation sentence (no `fork` type → a fresh
+   `general-purpose` subagent with the "What may be read" list as
+   explicit paths and the same prompt).
+
+The existing `for frag in …` loop entries are unchanged; nothing in the
+section was renumbered or restructured.
+
+### Verification
+
+```
+$ bash tests/in-run-rulings/run-tests.sh; echo "EXIT=$?"
+...
+Results: 404 passed, 0 failed
+EXIT=0
+(stderr: empty)
+
+$ bash tests/reviewer-templates/run-tests.sh; echo "EXIT=$?"
+...
+Results: 24 passed, 0 failed
+EXIT=0
+
+$ bash tests/writing-plans/run-tests.sh; echo "EXIT=$?"
+...
+Results: 15 passed, 0 failed
+EXIT=0
+```
+
+All three suites exited 0, in-run-rulings stderr empty. Count: 404, up from
+404 baseline (399 + 5 new F2 assertions; the two F1 assertions were already
+included in that baseline count reported here since both suites were run
+together after all edits landed).
+
+### Mutation proof
+
+For each of the four assertions below, the rule's own bytes were removed or
+altered in the target file, the suite was re-run and confirmed to FAIL
+naming exactly that assertion (and nothing else), then the file was
+restored byte-for-byte from a pre-mutation copy and the suite re-confirmed
+green (404/0) before the next mutation.
+
+- **F2 rule 1** (fresh non-inheriting subagents): removed the sentence →
+  suite reported `403 passed, 1 failed`, failing assertion "later design
+  items and every tie-break reviewer use fresh non-inheriting subagents".
+  Restored → `404 passed, 0 failed`.
+- **F2 rule 4** (25-line bound): widened `25` to `200` in the heading →
+  suite reported `403 passed, 1 failed`, failing assertion "fork return is
+  bounded to at most 25 lines". Restored → `404 passed, 0 failed`.
+- **F1 loop-side** (`Secrets found:` line in multi-code-review): removed
+  the added paragraph → suite reported `403 passed, 1 failed`, failing
+  assertion "completion report carries a Secrets found line, one item per
+  exposed-secret finding (R13)". Restored → `404 passed, 0 failed`.
+- **F1 Phase 5-side** (rotate/history heading): removed the added clause →
+  suite reported `403 passed, 1 failed`, failing assertion "Phase 5 report
+  carries the Secrets found list under the rotate/history heading (R13)".
+  Restored → `404 passed, 0 failed`.

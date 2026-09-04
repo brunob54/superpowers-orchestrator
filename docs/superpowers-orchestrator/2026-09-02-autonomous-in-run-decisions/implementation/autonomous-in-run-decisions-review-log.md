@@ -526,3 +526,26 @@ Carried Minor findings supplied to round 9 from `.superpowers/sdd/progress.md`.
 - [M10] carried — the `pre-flight plan conflict` and `code-review unresolved` absence checks have no positive counterpart requiring a specific replacement wording, so a reintroduction phrased differently passes both; the third removal in the same block was given that treatment and these two were not (tests/in-run-rulings/run-tests.sh) ← 1/4: r4:M3
 
 _Completed — 2026-09-04 — cap reached — HEAD b63b51c7423777836cefe9995b275c7f29815472_
+
+#### Post-loop addendum — 2026-09-04 — decisions on invocation 3's open items
+
+The effective HEAD had moved past this entry's completion marker
+(ca24bef vs b63b51c) before this addendum was written, so the marker above
+is left unchanged, the verification re-review is skipped, and invocation 4
+below reviews the fix. One fix subagent applied both accepted findings in a
+single commit. Invocation 3's fourth open item, `[I7 round 9]`, is named by
+no answer and stays `user-decision`; the orchestration log's RULING 9 and
+RULING 13 record it as `forced — applied directly` in cb9824f, so what it
+needs is a journal line, not a fix.
+
+- [I3 round 11] decided (user): fix it — the spec's author decided this escalated item. Spec R13 and the plan's Task 6 and Task 7 amendments are already committed in ca24bef and are not repeated here. Two code changes only: `skills/multi-code-review/SKILL.md`'s completion report gains a `Secrets found:` line in the same shape as its existing `Harness probes owed:` line — one item per finding of this invocation that reported an exposed secret or credential in reviewed code, whatever that finding's final disposition, naming the file and the round, or `Secrets found: none`; the line is always written, a report without it is defective, and it never reproduces the secret value — and Phase 5 step 3 of `skills/orchestrating-development/SKILL.md` carries the same list, gathered from the review log, under a heading naming the two actions a person must take: rotate the credential, and decide what to do about the branch history the fix does not rewrite. Assertions for both in `tests/in-run-rulings/run-tests.sh`. No escalation-class definition is touched.
+- [I3 round 11] fixed — the `Secrets found:` paragraph was added to the completion report of `skills/multi-code-review/SKILL.md`, beside the `Harness probes owed:` rule and in its shape (`- [<id>] <file> — (round <i>)`, or `Secrets found: none`), with the always-written, defective-without-it and never-reproduce-the-value clauses; Phase 5 step 3 of `skills/orchestrating-development/SKILL.md` gained the same list under the rotate-and-decide-about-history heading. Two folded assertions were added to `tests/in-run-rulings/run-tests.sh`, one per side, each pinned on its rule's own sentence rather than on the bare `Secrets found:` label; both were mutation-proven — deleting either rule turns the suite red (tests/in-run-rulings/run-tests.sh, skills/multi-code-review/SKILL.md, skills/orchestrating-development/SKILL.md) → e27ef2b
+- [I8 round 10] decided (user): accept — the `secret` class not matching a Phase 3 `### Question <k>` or `### Conflict <k>` section stays open by the spec author's decision. It is recorded in the spec's `## Amendments` section as "Known limitation, recorded not closed (2)", committed in ca24bef. No code change, and no escalation-class definition is widened.
+- [I1 verification 3] decided (orchestrator): fix it — the fork subsection of `skills/orchestrating-development/SKILL.md` is covered only by the bare fragments `evidence consistency` and `general-purpose`, each occurring several times in range, so five measured mutations each left the suite at 397 passed. Pin each of those five rules with an assertion that fails when that rule is deleted, scoped inside the fork subsection: the fresh-non-inheriting-subagent sentence for every later `design` item's reviewers and every tie-break reviewer, the fresh-subagent-never-a-fork clause of the tie-break dispatch, the wait-for-all-notices rule, the fork return's 25-line bound, and the platform-degradation sentence.
+- [I1 verification 3] fixed — five assertions were added inside the `$FORK_LINE`..`$FORK_END` range of section 3, four folded and one exact for the 25-line bound, each pinned on its own rule's bytes and each with a comment naming what it protects; the existing `for frag in …` entries were kept and the section was not restructured. Mutations were run for the fresh-subagent sentence (removed) and the return bound (25 widened to 200) and each turns the suite red (tests/in-run-rulings/run-tests.sh) → e27ef2b
+
+`bash tests/in-run-rulings/run-tests.sh` (404 passed, 0 failed, empty standard error), `bash tests/reviewer-templates/run-tests.sh` (24 passed) and `bash tests/writing-plans/run-tests.sh` (15 passed) all exit 0 at e27ef2b.
+
+---
+
+_Invocation 4 — 2026-09-04 — N=4 M=4 — BASE..HEAD 0a57e40..e27ef2b — branch feature/autonomous-in-run-decisions — gate: orchestration_
