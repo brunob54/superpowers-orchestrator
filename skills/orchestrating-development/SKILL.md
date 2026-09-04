@@ -255,7 +255,10 @@ Loop until every task is complete:
    vacuously and silently skip the task). Select the next ≤ cap unchecked
    tasks in plan order.
 2. Fill `./batch-controller-prompt.md` (plan path, task numbers,
-   first-batch flag for SDD's Pre-Flight Plan Review) and dispatch.
+   first-batch flag for SDD's Pre-Flight Plan Review, and
+   `[RESUME_ANSWER]` — the run-wide answer set that step 5 states, filled
+   on every dispatch, first or repeat, whenever this run has recorded any
+   answer) and dispatch.
 3. Expected return: `BATCH_COMPLETE tasks=<i>..<j>` + one
    `Task <n>: complete commits <base7>..<head7>` line per task, or
    `BLOCKED task=<n>: <one-line reason>` (detail in the task's report
@@ -683,21 +686,15 @@ its correct resolution:
   force-push, deleting data, publishing, calling or configuring an
   external service, adding a dependency.
 - `secret` — the item's **disposition reason or summary** names an exposed
-  secret or credential, or — **in Phase 3**, where an open item is a report
-  section and carries no disposition line at all — the text of the
-  `### Conflict <k>` or `### Question <k>` section names one. You never
-  decide a `secret` item. **Two producers exist.**
-  `code-review-loop-prompt.md` Deviation 3 logs a secret found in an
-  orchestration artifact under a fixed leading form, so that the whole
+  secret or credential. You never decide a `secret` item. One producer
+  exists: `code-review-loop-prompt.md` Deviation 3 logs a secret found in
+  an orchestration artifact under a fixed leading form, so that the whole
   disposition line reads
   `unresolved: exposed secret or credential in an orchestration artifact — <file:line>`;
   match that leading text, and treat any other reason naming a secret as
-  this class too. `batch-controller-prompt.md` Deviation 1 lets an
-  implementer that found a credential raise it as a `### Question <k>` or
-  `### Conflict <k>` section giving the location and a description of the
-  value; that section's text is the second half of the trigger above. A
-  secret in reviewed code is neither: it is a Critical the loop's fix
-  removes, and only the residue (rotation, history) reaches you.
+  this class too. A secret in reviewed code is not this class: it is a
+  Critical the loop's fix removes, and only the residue (rotation,
+  history) reaches you.
 - `chain` — the cap (below) is reached: every open item of that return is
   `escalated (chain)`, whatever its own class would have been.
 
@@ -778,10 +775,14 @@ you and your forks may read exactly:
    to.
 4. The code at each cited `file:line`, bounded to the enclosing function
    or to 40 lines on each side, whichever is smaller, and
-   `git log --oneline <BASE>..HEAD`. You alone — never a fork — and only
-   when Resume step 3 reverts a plan amendment, may also run
-   `git log --format="%H %s" --grep "<slug> ruling <n>"` and
-   `git show <ruling commit>^:<plan path>`.
+   `git log --oneline <BASE>..HEAD`. You alone — never a fork — may also
+   make the `## RULING` entry checks of Resume step 3: the landed check
+   `git log --grep "<slug> ruling <n>"` in either of the two `--format`
+   spellings that step uses (`--format=%s` for the commit-landed check,
+   `--format="%H %s"` when an amendment must be reverted),
+   `git show <ruling commit>^:<plan path>`, and a scan of the whole plan
+   file for an orphan `(amended by ruling <n>)` marker and its
+   `**Amendment <n>` note.
 5. Your own ruling record for this run,
    `<topic folder>/plans/<slug>-open-decisions.md` — the file you write
    yourself. Guard 4 (below) reads it, before every decision, for an
@@ -869,8 +870,9 @@ for an item only after that item's round has fully returned.
 
 Forks are **reviewers**, never controllers: they read, they judge, they
 return a verdict; they write nothing and dispatch nothing. The Controller
-Dispatch Rules "never pass conversation history" and "nothing else may be
-added to the prompt" apply to controllers, not to forks. A fork is
+Dispatch Rules' "never pass conversation history", and the prompt
+templates' "nothing else may be added to the prompt", apply to
+controllers, not to forks. A fork is
 dispatched with `subagent_type: "fork"`, inherits this conversation by
 construction, and is named `fork-<lens>` with the lens words joined by
 hyphens (`fork-design-consistency`) — never an `orch-` name, which is
@@ -941,8 +943,11 @@ Agent tool:
 when they contradict, decide on the merits if you can name the fact that
 settles the contradiction. **Debate is the optional second round only**:
 when the forks contradict each other and the contradiction cannot be
-settled on the merits, dispatch one further fork under
-`evidence consistency`, given the contradicting `VERDICT` and `REASON`
+settled on the merits, dispatch one further reviewer under
+`evidence consistency` — a fresh `general-purpose` subagent, never a
+fork: the inheritance rule above dispatches every tie-break reviewer that
+way, so that it does not inherit the consolidation reasoning it exists to
+check — given the contradicting `VERDICT` and `REASON`
 lines verbatim and the question "which fact decides this"; its return is
 data for your ruling, never the ruling. When the contradiction is still
 unsettled after that round, the tie-break is fixed: take the defensible
@@ -966,13 +971,18 @@ Major-Error Stop Policy with the reason `fork review unavailable` — a
 stop, never a guess. A notice that never arrives is that same fatal
 environment failure, and "never" has a bound. **The bound is stated over
 the ROUND, never over one lens**, because two lenses can be missing at
-the same time and each would otherwise wait for the other: as soon as at
-least one notice of the round has arrived, EVERY lens of that round
-whose notice is still missing counts as one loss at that same moment —
+the same time and each would otherwise wait for the other. A round is
+**finished** when no fork of it is still running: every lens of the round
+has delivered its completion notice, or the platform has reported that
+fork as failed or as no longer running. Until the round is finished, a
+lens whose notice has not come is merely outstanding, and you keep
+waiting for it — another lens's notice arriving says nothing about it and
+never marks it lost. At the moment the round is finished, EVERY lens of
+that round that produced no usable return counts as one loss —
 re-dispatch each of them once, in one message, under the lost-return rule
-above. The same test then applies to the re-dispatch round: as soon as at
-least one of its notices has arrived, every lens still missing is lost
-for good and is left out, and the ruling records `forks: <k> of
+above. The same test then applies to the re-dispatch round: when that
+round is finished, every lens still without a usable return is lost for
+good and is left out, and the ruling records `forks: <k> of
 <planned>`. The `design` ruling still needs its two usable returns; with
 fewer it stops with `fork review unavailable`, as above. When no notice
 of the round arrives at all, the dispatch itself failed and the platform
@@ -986,8 +996,7 @@ other work.
 Every ruling is recorded in `<topic folder>/plans/<slug>-open-decisions.md`
 — the file the artifact layout already reserves for this skill and every
 blinding pathspec already hides from reviewers. One entry per ruling,
-appended, never rewritten, in the shape of the orchestration issues log's
-Case template so that a session keeping such a log copies it mechanically:
+appended, never rewritten, in the shape below:
 
 ```markdown
 ## Ruling <n> — YYYY-MM-DD — phase <p> — [<id>] <short title>
@@ -1130,7 +1139,9 @@ force would be raised again by the task's reviewer, who receives the
 answer to the task's implementer as authoritative, exactly as it hands a
 user's answer today, and treats a `### Conflict <k>` or `### Question <k>`
 section whose `[task <n>]` or `[task <n>/<k>]` line is
-present in `## Resume Answer` as settled — both line shapes settle, and a
+present in `## Resume Answer` as settled — both line shapes settle, a
+`[task <n>/<k>]` line the section with that exact `<k>` and a bare
+`[task <n>]` line section 1 only, and a
 question settles exactly as a conflict does: the pre-flight scan of a
 re-dispatched first batch does not return it again.
 
@@ -1309,8 +1320,8 @@ rulings. A new review
 invocation started by an `amend plan` ruling is the re-dispatch that
 ruling's `## RULING` entry already counts here; it adds no second resume
 to the count. Together with multi-code-review's loop-side rule for
-verification cycles, this bounds the chain that Case 007 of the
-orchestration issues log recorded.
+verification cycles, this bounds the chain of repeated open returns on
+one unit that motivated the cap.
 
 **Idempotence of an in-run resume after a crash.** Phase 4 is idempotent
 by the loop's existing rule (an id already carrying a `decided (…)` line

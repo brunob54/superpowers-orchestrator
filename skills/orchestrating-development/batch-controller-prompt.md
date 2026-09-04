@@ -94,13 +94,20 @@ Agent tool (general-purpose):
        the absence of a `[task <n>…]` line in `## Resume Answer`, which
        the orchestrator fills in for every task it has ruled on,
        dispatched or not. At such a first dispatch, any section already
-       in its report file was left by an earlier run: delete
+       in its report file was left by a previous run, or by an earlier
+       dispatch of this one that returned `BLOCKED` and produced no
+       ticked checkbox and no ledger line: delete
        those sections before you write your own. **Pre-flight rule (one
        statement):** a conflict the Pre-Flight Plan Review finds is
        returned as `BLOCKED task=<n>` with `<n>` the lowest-numbered task
        the conflict touches — this batch's first task when it touches no
        task at all — and its `### Conflict <k>` sections go into that
-       task's report file. The pre-flight review covers the whole plan,
+       task's report file. Never best-guess the conflict itself: an
+       unsettled pre-flight conflict is returned as `BLOCKED` for that
+       conflict, never decided by you from plan, spec or repository —
+       the sentence above about answering NEEDS_CONTEXT that way covers a
+       missing fact, not a plan that contradicts itself.
+       The pre-flight review covers the whole plan,
        so that `<n>` may be a task of a later batch and absent from
        `[TASK_LIST]`; never best-guess a number inside `[TASK_LIST]`
        instead. A

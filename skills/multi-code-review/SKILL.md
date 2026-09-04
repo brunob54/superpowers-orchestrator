@@ -472,9 +472,13 @@ code has been revised since, so a re-pass is meaningful):
         - it supports the claim → triage the finding as if it had been
           `harness: tested`; the ordinary rules below apply from here, and
           the observation is recorded on the disposition line as a
-          trailing clause `— harness probe: <observation>`, placed before
-          any source annotation (` ← a/m: …`), whatever the disposition
-          (`fixed`, `user-decision`, …);
+          trailing clause `— harness probe: <observation>`, placed after
+          the `— at <file:line> — clause: …` suffix when the line carries
+          one and before any source annotation (` ← a/m: …`), whatever the
+          disposition (`fixed`, `user-decision`, …), and with the
+          `<observation>` text written under the same three replacements
+          as a quoted clause (Review Log Format, the disposition-line
+          bullet);
         - the probe cannot be run here (tool missing, a platform without
           nested dispatch, the dispatch rule of item 1 fails, the reviewer
           tagged it `not settled by one probe`, the probe would break a
@@ -856,7 +860,17 @@ Rules for the added lines:
   takes the token immediately after `→ ` (before ` ← ` when an annotation
   is present). A `— harness probe: <observation>` clause (Triage, Harness
   claims item 2) sits after the disposition text and before the ` ← `
-  annotation, never after it. Two kinds of disposition line carry no annotation:
+  annotation, never after it. **Order against the location clause:** on a
+  line that also carries the `— at <file:line> — clause: <plan location>
+  "<quoted plan text>"` suffix ("Self-sufficient open-item lines" below),
+  the location clause comes FIRST — summary, then `— at … — clause: …`,
+  then `— harness probe: <observation>`, then any ` ← ` annotation — so
+  that the first ` — at ` on the line is always the one that introduces
+  the location. The `<observation>` text is written under the same three
+  replacements as a quoted clause: each ` — ` and each ` ← ` replaced by
+  one space, each `"` replaced by a single quotation mark `'`. Without
+  them an observation holding ` — at ` would forge the location
+  separator. Two kinds of disposition line carry no annotation:
   post-loop addendum lines (`decided (<who>): …`, addendum `fixed …`,
   addendum `unresolved: …`), and
   the round-1 lines written for the **Carried findings (round 1)** items
@@ -909,7 +923,9 @@ changes only the log; a failed round keeps the normal
 
 **Self-sufficient open-item lines.** A `user-decision` or `unresolved:`
 disposition line carries, after its summary and before any ` ← `
-annotation, the clause `— at <file:line> — clause: <plan location>
+annotation — and before a `— harness probe: <observation>` clause when
+the line carries one (Review Log Format, the `— harness probe:` order
+rule) — the clause `— at <file:line> — clause: <plan location>
 "<quoted plan text>"`, where `<plan location>` is `Global Constraints`
 or `Task <n>` (the task whose text the finding collides with), or `none`
 for an `unresolved` item that collides with nothing, in which case the
@@ -978,10 +994,11 @@ governs → `rejected: plan governs (user decision)`; for an answer tagged
 `(orchestrator)`, `rejected: plan governs (orchestrator decision) —
 "<clause>"`, `<clause>` being the plan, spec or skill text the answer
 quotes, verbatim — an orchestrator `plan governs` always carries one. The
-clause on that line is written under the same normalization as a
-`user-decision` quote (each ` — ` and each ` ← ` replaced by one space,
-cut to 160 characters), so that the ` ← ` source annotation stays the last
-one on the line.
+clause on that line is written under the one normalization rule of
+"Self-sufficient open-item lines" above — all three of its replacements,
+the `"` one included, then the cut to 160 characters — so that the ` ← `
+source annotation stays the last one on the line and the clause's own
+`"…"` delimiters stay unambiguous.
 An `amend plan: …; fix it: …` answer takes the finding-governs path for
 its `fix it` part (the plan is already amended when the answer arrives;
 the amendment commit moved the effective HEAD, so the verification
@@ -1003,8 +1020,9 @@ location is binding on its face. A `— clause: Task <n>` location is
 binding only when the quoted clause sits in that task's
 `**Exact content:**` block — its introducing `**Exact content:**
 <reason>` paragraph line together with the fenced block or block quote it
-introduces — or, in a plan written before the orchestrating-development
-7.7.0 Body-authority note, is text the task mandates. Every other
+introduces — or, in a plan written before the `**Body authority:**` note
+that the plan-writing skill (`../writing-plans/SKILL.md`) puts in every
+plan header, is text the task mandates. Every other
 `Task <n>` clause is reference text, and `— clause: none` is no clause at
 all; a bare `fix it` against either is applied normally. Read the named
 task section of the plan to decide. When that reading leaves you unsure,

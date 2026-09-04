@@ -104,11 +104,16 @@ Agent tool (general-purpose):
        dispatch a fix subagent against these files. EXCEPTION: a finding
        reporting an exposed secret or credential (token, key, password)
        committed into one of these files is NOT rejected — record it as
-       `unresolved` under this **fixed leading form**, so that the whole
-       disposition line reads
+       `unresolved` under this **fixed leading form**, so that the
+       disposition line BEGINS
        `unresolved: exposed secret or credential in an orchestration artifact — <file:line>`
        and nothing but the `<file:line>` and a short description of the
-       value varies. The leading text is fixed because it is what makes
+       value varies inside that leading text. Only the leading text is
+       fixed: the suffix that multi-code-review makes mandatory on every
+       `unresolved:` line — `— at <file:line> — clause: <plan location>
+       "<quoted plan text>"`, or `— clause: none` for a secret that
+       collides with no plan text ("Self-sufficient open-item lines") —
+       still follows it. The leading text is fixed because it is what makes
        the item reach a human: the orchestrator's `secret` escalation
        class matches that leading text and stops the run. A reason
        written in free words instead would be classified as an ordinary

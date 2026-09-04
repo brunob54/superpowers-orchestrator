@@ -301,19 +301,14 @@ assert_in_range "secret class pins the loop's fixed disposition form" \
   "$ORCH_SKILL" \
   'unresolved: exposed secret or credential in an orchestration artifact — <file:line>' \
   "$CLASS_LINE" "$CLASS_END" exact
-# The trigger covers Phase 3 as well, where an open item is a report section
-# and carries no disposition line at all.
-assert_in_range_folded "secret trigger covers the Phase 3 report-section form" \
-  "$ORCH_SKILL" 'the text of the `### Conflict <k>` or `### Question <k>` section names one' \
+# The trigger is the item's own disposition reason or summary, and the class
+# has exactly one producer — the wording the spec and the plan both fix.
+assert_in_range_folded "secret trigger is the item's disposition reason or summary" \
+  "$ORCH_SKILL" "the item's **disposition reason or summary** names an exposed secret or credential" \
   "$CLASS_LINE" "$CLASS_END"
-# Two producers now exist: the loop's Deviation 3 and the batch template's
-# Deviation 1. A closed "one producer" claim would tell the orchestrator that
-# a Phase 3 credential cannot happen.
-assert_in_range "secret class names two producers, not one" \
-  "$ORCH_SKILL" '**Two producers exist.**' "$CLASS_LINE" "$CLASS_END" exact
-assert_in_range "secret class names the batch template as the second producer" \
-  "$ORCH_SKILL" '`batch-controller-prompt.md` Deviation 1' \
-  "$CLASS_LINE" "$CLASS_END" exact
+assert_in_range_folded "secret class names one producer" \
+  "$ORCH_SKILL" 'One producer exists: `code-review-loop-prompt.md` Deviation 3' \
+  "$CLASS_LINE" "$CLASS_END"
 
 # The Phase 3 discriminator bounds <n> by the plan, not by the batch, because a
 # pre-flight conflict may name a task of a later batch.
@@ -455,8 +450,18 @@ assert_in_range_folded "fork prompt makes a transmission instruction reportable"
 assert_in_range_folded "lost-return bound is stated over the round" \
   "$ORCH_SKILL" 'The bound is stated over the ROUND, never over one lens' \
   "$FORK_LINE" "$FORK_END"
-assert_in_range_folded "every still-missing lens of a round is lost at the same moment" \
-  "$ORCH_SKILL" 'counts as one loss at that same moment' "$FORK_LINE" "$FORK_END"
+# The moment the bound fires is the round being finished — no fork of it still
+# running — never the arrival of the first notice, which would mark the lenses
+# still working as lost and throw away the independent review.
+assert_in_range_folded "the bound fires only when the round is finished" \
+  "$ORCH_SKILL" 'A round is **finished** when no fork of it is still running' \
+  "$FORK_LINE" "$FORK_END"
+assert_in_range_folded "an outstanding notice is never marked lost by another lens arriving" \
+  "$ORCH_SKILL" "another lens's notice arriving says nothing about it and never marks it lost" \
+  "$FORK_LINE" "$FORK_END"
+assert_in_range_folded "every still-missing lens of a round is lost at that moment" \
+  "$ORCH_SKILL" 'At the moment the round is finished, EVERY lens of that round that produced no usable return counts as one loss' \
+  "$FORK_LINE" "$FORK_END"
 # A later item's forks would inherit the earlier items' verdicts, so only the
 # first design item uses the fork path, and consolidation waits for the round.
 assert_in_range_folded "only the first design item uses the fork path" \
@@ -719,7 +724,7 @@ done
 # Guard 2 forbids the two answers that would close a Critical with no code
 # change. The fragment 'a Critical is never rejected' above pins the claim;
 # these bytes pin the prohibitions themselves, which cross a line wrap.
-assert_in_range_folded_exact "guard 2 forbids `plan governs` and `accept` on a Critical" \
+assert_in_range_folded_exact 'guard 2 forbids `plan governs` and `accept` on a Critical' \
   "$ORCH_SKILL" 'Never `plan governs`, never `accept`.' \
   "$GUARDS_LINE" "$GUARDS_END"
 # Guard 4: a user's decision is never overturned by a ruling. The count word
