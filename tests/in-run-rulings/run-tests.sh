@@ -202,6 +202,25 @@ assert_in_range_folded "irreversible entry reads binding-ness from the task sect
 assert_in_range_folded "discriminator bounds <n> by the plan, not by the batch" \
   "$ORCH_SKILL" 'may belong to a later batch' "$CLASS_LINE" "$CLASS_END"
 
+# The Phase 3 form of the `irreversible` trigger: a Phase 3 item carries no
+# disposition line and no `— clause:`, so the trigger reads the plan location
+# the conflict section names.
+assert_in_range_folded "irreversible entry states its Phase 3 form" \
+  "$ORCH_SKILL" 'In Phase 3 the trigger has a second form' \
+  "$CLASS_LINE" "$CLASS_END"
+assert_in_range_folded "Phase 3 trigger reads the location the conflict section names" \
+  "$ORCH_SKILL" 'the plan location that section names on the plan side' \
+  "$CLASS_LINE" "$CLASS_END"
+# The bare `[task <n>]` id is a user shorthand only; the orchestrator writes
+# `[task <n>/<k>]` everywhere and resolves a bare user answer, never
+# defaulting it to section 1. The rule sits in the ## In-run rulings intro,
+# above the classification subsection.
+assert_in_range_folded "bare task id is never a form the orchestrator writes" \
+  "$ORCH_SKILL" 'never the bare form' "$RULINGS_LINE" "$CLASS_LINE"
+assert_in_range_folded "a bare user answer is resolved, never defaulted to section 1" \
+  "$ORCH_SKILL" 'never default it to `[task <n>/1]`' \
+  "$RULINGS_LINE" "$CLASS_LINE"
+
 bold "2. Classification read exception (R2)"
 REQUIRED_START_LINE="$(first_line_of "$ORCH_SKILL" '## Required Start')"
 assert_in_range "intro names the second read exception" \
@@ -227,6 +246,20 @@ for frag in 'Guard 4 (below) reads it' \
   assert_in_range "read-exception entry 5 fragment '$frag'" \
     "$ORCH_SKILL" "$frag" "$READ_EXCEPTION_LINE" "$READ_EXCEPTION_END" fragment
 done
+
+# The exception serves three purposes, not classification alone: Resume and
+# the Phase 5 report read under it too.
+assert_in_range_folded "read exception names its three purposes" \
+  "$ORCH_SKILL" 'classifying an open item, resuming a stopped run' \
+  "$READ_EXCEPTION_LINE" "$READ_EXCEPTION_END"
+assert_in_range "read exception permits the ruling-commit read for the orchestrator" \
+  "$ORCH_SKILL" 'git show <ruling commit>^:<plan path>' \
+  "$READ_EXCEPTION_LINE" "$READ_EXCEPTION_END" exact
+# The permitted diff form turns the default helper programs OFF; forbidding
+# the positive flags would grant no protection.
+assert_in_range "fork diff form mandates the negative flags" \
+  "$ORCH_SKILL" 'git diff --no-ext-diff --no-textconv <BASE>..HEAD -- <path>' \
+  "$READ_EXCEPTION_LINE" "$READ_EXCEPTION_END" exact
 
 bold "3. Fork review (R3)"
 for pin in 'subagent_type: "fork"' '<!-- multi-review report -->' 'fork-<lens>' \
@@ -262,6 +295,26 @@ assert_in_range "Guard Interaction names the forks' marker" \
   "$ORCH_SKILL" 'fork' "$GUARD_LINE" "$TEMPLATES_LINE" fragment
 assert_in_range "Guard Interaction names the forks' return marker exactly" \
   "$ORCH_SKILL" '<!-- multi-review report -->' "$GUARD_LINE" "$TEMPLATES_LINE" exact
+
+# The fork prompt states the same negative diff flags as the read exception.
+assert_in_range "fork prompt mandates the negative diff flags" \
+  "$ORCH_SKILL" 'git diff --no-ext-diff --no-textconv <BASE>..HEAD -- <path>' \
+  "$FORK_LINE" "$FORK_END" exact
+# Lost returns are bounded over the ROUND: two missing notices at once do not
+# wait for each other.
+assert_in_range_folded "lost-return bound is stated over the round" \
+  "$ORCH_SKILL" 'The bound is stated over the ROUND, never over one lens' \
+  "$FORK_LINE" "$FORK_END"
+assert_in_range_folded "every still-missing lens of a round is lost at the same moment" \
+  "$ORCH_SKILL" 'counts as one loss at that same moment' "$FORK_LINE" "$FORK_END"
+# A later item's forks would inherit the earlier items' verdicts, so only the
+# first design item uses the fork path, and consolidation waits for the round.
+assert_in_range_folded "only the first design item uses the fork path" \
+  "$ORCH_SKILL" 'only the FIRST `design` item of a return uses the fork path' \
+  "$FORK_LINE" "$FORK_END"
+assert_in_range_folded "consolidation reasoning waits for the item's round" \
+  "$ORCH_SKILL" "only after that item's round has fully returned" \
+  "$FORK_LINE" "$FORK_END"
 
 bold "4. Ruling record, answers and plan amendment (R4, R5)"
 for pin in '-open-decisions.md' '**Follow-up:**' '## Ruling <n>'; do
@@ -304,6 +357,25 @@ assert_in_range "answer pin 'escalated (irreversible)'" \
   "$ORCH_SKILL" 'escalated (irreversible)' "$ANSWERS_LINE" "$ANSWERS_END" exact
 assert_in_range_folded "the amendment procedure is scoped to the amendments still the orchestrator's" \
   "$ORCH_SKILL" 'never written as a ruling of your own' "$ANSWERS_LINE" "$ANSWERS_END"
+
+# The writes of one ruling have a fixed order, so a crash cannot leave an
+# amendment marker with no ruling record behind it.
+assert_in_range_folded "ruling writes have a fixed order" \
+  "$ORCH_SKILL" 'The writes of one ruling have a fixed order' \
+  "$RECORD_LINE" "$RECORD_END"
+# Normalization is one rule of three operations; the `"` replacement is part
+# of it on the orchestrator side as well.
+assert_in_range_folded "normalization also replaces a double quotation mark" \
+  "$ORCH_SKILL" 'each `"` replaced by a single quotation mark' \
+  "$ANSWERS_LINE" "$ANSWERS_END"
+# An amendment whose clause cannot be found is escalated, never guessed.
+assert_in_range_folded "amendment lookup escalates when no clause matches" \
+  "$ORCH_SKILL" 'No match is never an edit by guess' \
+  "$ANSWERS_LINE" "$ANSWERS_END"
+# A re-derived pre-flight conflict re-uses the number it was answered under.
+assert_in_range_folded "a re-derived conflict keeps its answered number" \
+  "$ORCH_SKILL" 'A re-derived conflict keeps its old number' \
+  "$ANSWERS_LINE" "$ANSWERS_END"
 
 bold "5. RULING log entry, cap and guards (R6, R7, R9)"
 for pin in '## RULING' 'Re-dispatch:' 'Re-dispatch: none' 'Ruled:' \
@@ -378,6 +450,28 @@ assert_in_range_folded "guard 4 names a fallback class for a forced or design en
   "$ORCH_SKILL" 'which has no escalation class of its own' \
   "$GUARDS_LINE" "$GUARDS_END"
 
+# The Phase 3 cap matches the whole bracketed token, so task 1 never counts a
+# `[task 12/1]` or a `[task 10]` line.
+assert_in_range "cap matches the whole bracketed token" \
+  "$ORCH_SKILL" '`[task <n>/` as a prefix' "$LOG_ENTRY_LINE" "$LOG_ENTRY_END" exact
+# The test is on the Re-dispatch VALUE; the line itself starts with the label.
+assert_in_range_folded "cap tests the Re-dispatch value, not the line's first word" \
+  "$ORCH_SKILL" 'whose `Re-dispatch:` value is not `none`' \
+  "$LOG_ENTRY_LINE" "$LOG_ENTRY_END"
+# A stop drops no ruling, and skips an entry the user already answered — the
+# same Follow-up exclusion the rebuild path in Resume step 3 states.
+assert_in_range_folded "a stop skips an entry already carrying a follow-up" \
+  "$ORCH_SKILL" 'never an entry that already carries a `**Follow-up:**`' \
+  "$LOG_ENTRY_LINE" "$LOG_ENTRY_END"
+# Guard 1: the clause the loop supplies is not itself the justification.
+assert_in_range_folded "guard 1 says a quotable clause is not by itself a reason" \
+  "$ORCH_SKILL" 'quotable clause is not by itself a reason to reject' \
+  "$GUARDS_LINE" "$GUARDS_END"
+# Guard 4: a clause-less follow-up matches nothing.
+assert_in_range_folded "guard 4 ignores a clause-less follow-up" \
+  "$ORCH_SKILL" 'quotes NO clause and matches nothing' \
+  "$GUARDS_LINE" "$GUARDS_END"
+
 bold "6. Wiring into phases, log format, state.md, Resume and stop policy (R6)"
 PHASE3_LINE="$(first_line_of "$ORCH_SKILL" '## Phase 3 — Implementation Batches')"
 PHASE4_LINE="$(first_line_of "$ORCH_SKILL" '## Phase 4 — Final Code Review Loop')"
@@ -417,6 +511,23 @@ if [ -n "$RESUME_LINE" ] && [ -n "$RULINGS_LINE" ] && [ "$RESUME_LINE" -lt "$RUL
 else
   bad "Resume step 3 still names decided (user) alone, or the range $RESUME_LINE..$RULINGS_LINE is empty or inverted"
 fi
+# The revert step produces the commit hash itself, under the same
+# exact-subject filter as the landed-check, and copies only the clause out of
+# the printed file.
+assert_in_range "resume ruling-commit lookup prints the hash" \
+  "$ORCH_SKILL" 'git log --format="%H %s" --grep "<slug> ruling <n>"' \
+  "$RESUME_LINE" "$RULINGS_LINE" exact
+assert_in_range_folded "resume ruling-commit lookup keeps exactly one subject" \
+  "$ORCH_SKILL" 'Exactly one line must survive' "$RESUME_LINE" "$RULINGS_LINE"
+assert_in_range_folded "resume copies the clause, never the whole printed file" \
+  "$ORCH_SKILL" 'never write that output over the plan file' \
+  "$RESUME_LINE" "$RULINGS_LINE"
+# An amendment marker with no ruling-record entry is reverted, never left
+# standing as decided wording.
+assert_in_range_folded "resume reverts an orphan amendment marker" \
+  "$ORCH_SKILL" 'is an inconsistent state whatever the log ends with' \
+  "$RESUME_LINE" "$RULINGS_LINE"
+
 for frag in 'escalated' 'fork review unavailable'; do
   assert_in_range "stop policy fragment '$frag'" \
     "$ORCH_SKILL" "$frag" "$RULINGS_END" "$GUARD_LINE" fragment
@@ -457,6 +568,27 @@ assert_in_range "M = 1 log-format example carries the clause" \
 assert_in_range "M >= 2 log-format example carries the clause before the annotation" \
   "$MCR_SKILL" '— clause: <plan location> "<quoted plan text>" ← 1/3: r1:I1' \
   "$MCR_FORMAT_END" "$((MCR_M2_END + 1))" exact
+
+# Normalization is one rule of three operations, stated the same way on the
+# writer's side.
+assert_in_range "multi-code-review normalization replaces a double quotation mark" \
+  "$MCR_SKILL" "replace each \`\"\` with a single quotation mark \`'\`" \
+  "$MCR_LOG_FORMAT_LINE" "$MCR_AFTER_LOOP_LINE" exact
+assert_in_range_folded "multi-code-review names all three replacements as one rule" \
+  "$MCR_SKILL" 'All THREE replacements belong to the one rule' \
+  "$MCR_LOG_FORMAT_LINE" "$MCR_AFTER_LOOP_LINE"
+# A post-loop `unresolved:` addendum line carries no source annotation either.
+assert_in_range "addendum shapes include an unresolved line" \
+  "$MCR_SKILL" 'addendum `unresolved: …`' \
+  "$MCR_LOG_FORMAT_LINE" "$MCR_AFTER_LOOP_LINE" exact
+# The binding-text test is stated where the refusal rule lives, so the loop
+# and the answerer apply one test.
+assert_in_range_folded "the binding-text test is stated where the refusal rule lives" \
+  "$MCR_SKILL" 'Which text is binding — one test' \
+  "$MCR_AFTER_LOOP_LINE" "$MCR_ERROR_HANDLING_LINE"
+assert_in_range "binding-text test names the Exact content block" \
+  "$MCR_SKILL" '`**Exact content:**` block' \
+  "$MCR_AFTER_LOOP_LINE" "$MCR_ERROR_HANDLING_LINE" exact
 
 bold "8. Loop-side rule for verification cycles (R8.3)"
 NO_FIX_LINE="$(line_containing_after "$MCR_SKILL" '**No fix ships unreviewed:**' 0)"
@@ -517,6 +649,20 @@ for pin in '### Question <k>' '### Conflict <k>' 'lowest-numbered task' \
            'those sections before you write your own' 'controller failure' \
            '[task <n>]` line means `[task <n>/1]'; do
   assert_in_range "batch-controller Deviation 1 pin '$pin'" \
+    "$BATCH_PROMPT" "$pin" "$DEV1_LINE" "$DEV1_END" exact
+done
+
+# The stale-section deletion keys on work this run produced, never on the
+# absence of an answer line — the run-wide answer set fills those in for
+# tasks that were ruled on but not yet dispatched.
+assert_in_range "Deviation 1 keys the stale-section deletion on this run's own work" \
+  "$BATCH_PROMPT" 'no completed ledger line' "$DEV1_LINE" "$DEV1_END" exact
+assert_in_range "Deviation 1 rejects the answer line as the first-dispatch signal" \
+  "$BATCH_PROMPT" 'the absence of a `[task <n>…]` line in `## Resume Answer`' \
+  "$DEV1_LINE" "$DEV1_END" exact
+# A re-derived pre-flight conflict re-uses the `<k>` it was answered under.
+for pin in 're-use that `<k>`, apply the answer' 'Allocate a new `<k>` only for a'; do
+  assert_in_range "batch-controller re-derived conflict pin '$pin'" \
     "$BATCH_PROMPT" "$pin" "$DEV1_LINE" "$DEV1_END" exact
 done
 

@@ -839,7 +839,8 @@ Rules for the added lines:
   is present). A `— harness probe: <observation>` clause (Triage, Harness
   claims item 2) sits after the disposition text and before the ` ← `
   annotation, never after it. Two kinds of disposition line carry no annotation:
-  post-loop addendum lines (`decided (<who>): …`, addendum `fixed …`), and
+  post-loop addendum lines (`decided (<who>): …`, addendum `fixed …`,
+  addendum `unresolved: …`), and
   the round-1 lines written for the **Carried findings (round 1)** items
   of the Triage step — findings carried from an earlier invocation's ledger, which
   are decided from the reviewers' recommendations and never enter the
@@ -905,7 +906,10 @@ delimiters stay unambiguous. **Normalization is one rule:** the unit
 compared is one sentence or one list entry, never a whole section — take
 the sentence or the list entry of the plan text at `<plan location>` that
 the finding collides with, replace each ` — ` and each ` ← ` with one
-space, then cut it to 160 characters. Every consumer that later compares
+space, replace each `"` with a single quotation mark `'`, then
+cut it to 160 characters. All THREE replacements belong to the one
+rule: a consumer that skips the `"` replacement fails every clause
+holding a double quotation mark. Every consumer that later compares
 this quote with the plan — the orchestrator's `plan governs` guard, its
 amendment lookup, and the decided-wording test above — normalizes each
 sentence and each list entry of the plan text at that location the same
@@ -975,7 +979,21 @@ subagent runs for it, and its disposition is
 suffix every `unresolved:` line carries ("Self-sufficient open-item
 lines") holds the clause, so the disposition text never repeats it. That
 item counts as unresolved in the return and is sent back to the
-answerer. Double-fix-failure
+answerer. **Which text is binding — one test, so that the answerer and
+this loop apply the same one.** A `— clause: Global Constraints`
+location is binding on its face. A `— clause: Task <n>` location is
+binding only when the quoted clause sits in that task's
+`**Exact content:**` block — its introducing `**Exact content:**
+<reason>` paragraph line together with the fenced block or block quote it
+introduces — or, in a plan written before the orchestrating-development
+7.7.0 Body-authority note, is text the task mandates. Every other
+`Task <n>` clause is reference text, and `— clause: none` is no clause at
+all; a bare `fix it` against either is applied normally. Read the named
+task section of the plan to decide. When that reading leaves you unsure,
+treat the clause as reference text and apply the fix: the answerer's own
+pre-commit self-check has already escalated the binding case, and a
+second refusal here would only send an item both sides agreed to fix
+around the loop again. Double-fix-failure
 items: the user chooses re-dispatch, manual fix, or accept-risk with
 documented rationale (logged). The gate condition is then re-evaluated —
 no loop re-run needed.

@@ -87,9 +87,14 @@ Agent tool (general-purpose):
        can see, counting the sections already in the file and the
        `[task <n>/<k>]` lines of this dispatch's `## Resume Answer`
        together, and never renumber a section you wrote in this
-       dispatch. At a task's first dispatch of this run — no
-       `[task <n>…]` line for it in `## Resume Answer` — any section
-       already in its report file was left by an earlier run: delete
+       dispatch. A task is at its **first dispatch of this run** when
+       this run has produced no work for it — every checkbox under its
+       `### Task <n>` heading is unticked AND no completed ledger line
+       names it (the two signals Deviation 4 already reads) — never by
+       the absence of a `[task <n>…]` line in `## Resume Answer`, which
+       the orchestrator fills in for every task it has ruled on,
+       dispatched or not. At such a first dispatch, any section already
+       in its report file was left by an earlier run: delete
        those sections before you write your own. **Pre-flight rule (one
        statement):** a conflict the Pre-Flight Plan Review finds is
        returned as `BLOCKED task=<n>` with `<n>` the lowest-numbered task
@@ -101,7 +106,16 @@ Agent tool (general-purpose):
        instead. A
        section whose `[task <n>/<k>]` line with that exact `<k>` stands
        in this dispatch's `## Resume Answer` is settled, not open (a
-       bare `[task <n>]` line means `[task <n>/1]`). A
+       bare `[task <n>]` line means `[task <n>/1]`). The pre-flight
+       review runs again on every re-dispatch and derives the same
+       conflict again over unchanged plan text, while the section it was
+       written into may be gone from the report file: before allocating
+       a new `<k>` for a conflict, compare it with the answered
+       `[task <n>/<k>]` lines of this dispatch's `## Resume Answer`, and
+       when one of them answers that same conflict — its answer names the
+       same plan text — re-use that `<k>`, apply the answer and never
+       return `BLOCKED` for it again. Allocate a new `<k>` only for a
+       conflict no answered line matches. A
        `BLOCKED task=<n>` without such an unanswered section is read by
        the orchestrator as a controller failure, not as an open item.
        Never copy a secret or a credential into a `### Question <k>` or
