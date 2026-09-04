@@ -3121,3 +3121,190 @@ Commit: `fca4a92ec1544a2b27158d62a6d2fc700386fa56` — "review fixes
 No findings were skipped. All 12 findings (I1, I2, M2, M3, M5, M6, M7,
 M8, M9, M10, M11, M12) resulted in edits confined to
 `tests/in-run-rulings/run-tests.sh`.
+
+---
+
+## Round 8 follow-up — Ruling 2 withdrawal (F1) and suite hardening (F2-F5)
+
+Files edited: `skills/orchestrating-development/SKILL.md`,
+`tests/in-run-rulings/run-tests.sh`. No document under `docs/` and no spec
+or plan file was touched.
+
+### F1 — Critical: remove "Ruling 2" from the orchestrating-development skill
+
+The spec author withdrew Ruling 2 in full. Every part of it was removed from
+`skills/orchestrating-development/SKILL.md`, and each of the five sites was
+restored to the wording it had at `bf3d7de` (the state just before `d725f17`),
+reconciled with the wording later rounds legitimately changed:
+
+1. The `irreversible` entry of the closed escalation list now reads again as
+   the plain list of an irreversible or outward-facing action. The
+   binding-set definition, the "trigger is the edit location" paragraph, the
+   `— clause:` reading instruction and the whole "In Phase 3 the trigger has
+   a second form" paragraph are gone.
+2. The plan-amendment procedure lost the no-delete bound (including its
+   "**binding and reference text alike**" half and the justification about a
+   safety rule written as an ordinary reference sentence) and the opening
+   sentence that scoped the procedure to "the amendments that are still
+   yours". Numbered step 1 is back to "**Edit the binding clause in place** —
+   replace the Global Constraints entry, the Exact-content block, or the
+   mandated sentence with the amended text": the "which under the no-delete
+   bound above …" clause is removed, and with the bound and the opening
+   sentence gone, the binding/reference split that step 1 carried had no
+   remaining definition, so the step was restored to its pre-Ruling-2 form.
+3. The `amend plan: <the amendment>; fix it: …` answers bullet is back to
+   "The only accepting answer when `clause:` names binding text. You write the
+   amendment (below) before re-dispatching; the loop then fixes."
+4. The Phase 3 `### Conflict <k>` answer sentence is back to
+   "… is always `amend plan: …` (the amendment procedure below); a plain-text
+   answer is valid only against a question or against reference text …".
+5. The pre-commit self-check is back to "a bare `fix it` whose item's
+   `clause:` names binding plan text becomes `amend plan: …; fix it` or
+   `escalated`, because a fix against binding text needs the amendment …".
+
+Ruling 1 was not touched: the fifth read entry (the ruling record) in the
+classification read exception, and guard 4 with its count word "Four", are
+unchanged. Nothing was added to any spec.
+
+The token `escalated (irreversible)` no longer occurs in the skill; the class
+enumeration `escalated (<spec wrong|scope|irreversible|secret|chain>)` stays
+(5 occurrences):
+
+```
+$ grep -c "escalated (irreversible)" skills/orchestrating-development/SKILL.md
+0
+$ grep -n "irreversible" skills/orchestrating-development/SKILL.md
+377:Items: [<id>] escalated (<spec wrong|scope|irreversible|secret|chain>) — <summary>
+391:Open: [<id>] escalated (<spec wrong|scope|irreversible|secret|chain>) — <summary>
+682:- `irreversible` — needs an irreversible or outward-facing action: a
+995:- **Class:** forced | design | escalated (<spec wrong|scope|irreversible|secret|chain>)
+1232:Items: [<id>] escalated (<spec wrong|scope|irreversible|secret|chain>) — <summary>
+```
+
+In `tests/in-run-rulings/run-tests.sh` the assertions pinning the deleted
+passages were removed, with the comments that belonged only to them: the
+`irreversible entry pin 'escalated (irreversible)'` check and the
+edit-location / binding-text / task-section / Phase-3-second-form checks beside
+it in the classification range; the `answer pin 'escalated (irreversible)'`
+check and the five no-delete checks in the answers range; and the self-check
+check in the log-entry range. Every other assertion was kept, including the
+five class labels and the closedness scan, and no assertion targeting
+`skills/multi-code-review/SKILL.md` (`$MCR_SKILL`) was changed.
+
+Search confirming no assertion still pins deleted text (no output = none):
+
+```
+$ grep -n "escalated (irreversible)\|deletes\*\* a clause\|binding and reference text alike\|clause dropped and rewritten\|exception scoped to the item\|ruling of your own\|In Phase 3 the trigger has a second form\|plan location that section names\|under entry 3 of the read exception\|amendment would edit the plan" tests/in-run-rulings/run-tests.sh
+$ echo $?
+1
+```
+
+### F2 — Important: pin guard 2's two prohibitions
+
+Added, in the guards range, a case-sensitive folded pin on guard 2's own
+bytes ``Never `plan governs`, never `accept`.``, which cross a line wrap.
+
+Mutation proof — inverting the prohibition in the skill:
+
+```
+F2 guard2 inverted -> exit=1
+  FAIL: guard 2 forbids `plan governs` and `accept` on a Critical (not inside range 1328..1376 of skills/orchestrating-development/SKILL.md, line wraps folded, case-sensitive)
+```
+
+### F3 — Important: negative checks must fold line wraps
+
+Added one helper, `assert_absent_in_range_folded` (desc file needle start end
+mode), beside the folded positive helpers: it reuses `fold_range`, fails when
+the range anchors are missing/empty/inverted, and reports PASS only when the
+needle is absent from the folded range. The three stop-policy negative checks
+(pre-flight plan conflict, code-review unresolved, unconditional
+`batch-controller BLOCKED;`) now go through it instead of scanning line by
+line. The Phase 4 negative check goes through it too, and is now two checks —
+one per disjunct of the removed sentence — so that re-adding the
+`unresolved > 0` half alone is caught.
+
+Mutation proof:
+
+```
+F3 wrapped pre-flight stop re-added -> exit=1
+  FAIL: stop policy no longer lists a pre-flight plan conflict as a stop by itself (still present in range 1376..1415 of skills/orchestrating-development/SKILL.md, line wraps folded)
+F3 unresolved-half Phase 4 stop re-added -> exit=1
+  FAIL: Phase 4 no longer stops directly on the unresolved count (old wording absent) (still present in range 300..330 of skills/orchestrating-development/SKILL.md, line wraps folded)
+```
+
+### F4 — Important: the closedness scan passed on zero bullets
+
+The scan now collects every ``^- `<label>` `` bullet label of the
+classification range, sorts them, and compares the whole set with the five
+expected labels (`spec wrong`, `scope`, `irreversible`, `secret`, `chain`).
+A set that is empty, larger or different fails.
+
+Mutation proof:
+
+```
+F4 sixth label -> exit=1
+  FAIL: the closed escalation list's bullets are 'chain|deadline|irreversible|scope|secret|spec wrong|', not the five expected 'chain|irreversible|scope|secret|spec wrong|'
+F4 indented bullets -> exit=1
+  FAIL: the closed escalation list's bullets are '', not the five expected 'chain|irreversible|scope|secret|spec wrong|'
+```
+
+### F5 — Important: pin the design-class-to-fork-review link
+
+Added a folded pin on the sentence that sends a `design` item to the fork
+review, in the classification range: `Decided after the fork review`.
+
+Mutation proof — replacing it with "Decided directly, with no subagent.":
+
+```
+F5 fork link removed -> exit=1
+  FAIL: a design item is decided after the fork review (not inside range 654..759 of skills/orchestrating-development/SKILL.md, line wraps folded)
+```
+
+### Verification — fresh output
+
+```
+$ bash tests/reviewer-templates/run-tests.sh
+...
+  PASS: gate label matches between writing-plans and multi-doc-review (**Body authority:**)
+
+Results: 24 passed, 0 failed
+exit=0
+
+$ bash tests/writing-plans/run-tests.sh
+...
+  PASS: self-review scoping statement 'plan-header content is out of scope' (check 5) (line 338, range 338..340)
+
+Results: 15 passed, 0 failed
+exit=0
+
+$ bash tests/in-run-rulings/run-tests.sh
+...
+  PASS: batch-controller re-derived conflict pin 'Allocate a new `<k>` only for a' (line 117, range 77..125)
+
+Results: 290 passed, 0 failed
+exit=0
+```
+
+Covering suites:
+
+```
+$ bash tests/codex/run-unit-tests.sh
+...
+ Results: 10 suites passed, 0 suites failed
+ All unit tests passed.
+==================================================
+exit=0
+
+$ bash tests/smart-compress/run-tests.sh
+...
+\n\n══════════════════════════════════════════
+  Results: 87 passed
+  0 failed
+══════════════════════════════════════════
+exit=0
+```
+
+The in-run-rulings suite went from 300 checks to 290: 12 assertions pinning
+withdrawn Ruling 2 text were removed (F1), 1 was added for guard 2 (F2), 1 for
+the design/fork link (F5), and the Phase 4 negative check became two checks
+(F3). No finding was skipped or partially applied.

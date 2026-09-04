@@ -327,3 +327,28 @@ ship unreviewed.
 - [M15] rejected: the weaker pins are deliberate, documented spelling checks — round 8 verification 1's [M1] fix added a folded pin precisely while keeping the bare ones beside it, and the suite comments say why; a dominated pin costs one PASS line, never coverage — the reported redundancy at ~600/~879 (same finding rejected in verification 2 as [M4]) ← 1/4: r4:M3
 
 _Completed — 2026-09-04 — cap reached — HEAD fca4a92ec1544a2b27158d62a6d2fc700386fa56_
+
+#### Post-loop addendum — 2026-09-04 — decisions on invocation 2's open items
+
+The effective HEAD had moved past this entry's completion marker
+(a0becae vs fca4a92) before this addendum was written, so the marker above
+is left unchanged, the verification re-review is skipped, and invocation 3
+below reviews the fix. One fix subagent applied all five accepted findings
+in a single commit.
+
+- [I3 round 5] decided (user): fix it — the spec's author decided this escalated item. Ruling 1 stands and is confirmed: the fifth read entry and guard 4 stay exactly as they are. Ruling 2 is withdrawn in full — remove from `skills/orchestrating-development/SKILL.md` every part of Ruling 2 that a fix subagent added, and remove the assertions that pin those passages; the five class labels and the closedness scan stay. The spec and plan edits for this were already committed in a0becae and are not repeated. The safety-rail gap Ruling 2 addressed is recorded in the spec's Amendments section as a known limitation, deliberately left open.
+- [I3 round 5] fixed — Ruling 2 removed at all five sites of `skills/orchestrating-development/SKILL.md`: the `irreversible` entry's binding-text passage including its Phase 3 second form, the plan-amendment procedure's no-delete bound with its "binding and reference text alike" half and its scoping sentence, the `amend plan …; fix it` answers bullet, the Phase 3 `### Conflict <k>` answer sentence, and the pre-commit self-check branch; the token `escalated (irreversible)` no longer occurs in the file, while the class enumeration `escalated (<spec wrong|scope|irreversible|secret|chain>)` is unchanged. The 12 assertions pinning that text were removed from `tests/in-run-rulings/run-tests.sh`; every other assertion, the five class labels and the closedness scan were kept, and no `skills/multi-code-review/SKILL.md` assertion was touched → 5f9983f
+- [I1 verification 3] decided (orchestrator): fix it — pin guard 2's two prohibitions ``Never `plan governs`, never `accept``` in the guards range; today only `a Critical is never rejected` is asserted, so a rewrite letting a Critical be closed with `accept:` would ship green
+- [I1 verification 3] fixed — a folded pin on guard 2's own bytes ``Never `plan governs`, never `accept`.`` was added in the guards range; inverting the prohibition in the skill turns the suite red (tests/in-run-rulings/run-tests.sh) → 5f9983f
+- [I2 verification 3] decided (orchestrator): fix it — fold line wraps in the three stop-policy and Phase 3 negative checks the same way every positive check does; fold in the carried Minor [M5] at the same line, the Phase 4 negative check covering only the `user_decision > 0` disjunct
+- [I2 verification 3] fixed — a folded negative helper built on the suite's existing `fold_range` now backs the three stop-policy negative checks, and the Phase 4 negative check became two folded checks, one per disjunct, so re-adding the `unresolved > 0` half alone turns the suite red; both mutations were run and both fail (tests/in-run-rulings/run-tests.sh) → 5f9983f
+- [I3 verification 3] decided (orchestrator): fix it — the closedness scan must fail when it matches no bullet, and must assert that the labels found are exactly the five expected ones, so that indenting or re-tabling the reasons, or adding a sixth, turns the suite red
+- [I3 verification 3] fixed — the scan now collects the bullet labels and compares the whole sorted set against the five expected labels, so an empty match set fails; adding a sixth label and indenting the bullets were each run as mutations and each turns the suite red (tests/in-run-rulings/run-tests.sh) → 5f9983f
+- [I4 verification 3] decided (orchestrator): fix it — nothing pins the link from the predicate's `design` class to the fork review; a mutation replacing `Decided after the fork review (below).` with `Decided directly, with no subagent.` left the suite at 300 passed
+- [I4 verification 3] fixed — a folded pin on `Decided after the fork review` was added in the classification range; the named mutation was run and turns the suite red (tests/in-run-rulings/run-tests.sh) → 5f9983f
+
+`bash tests/reviewer-templates/run-tests.sh` (24 passed), `bash tests/writing-plans/run-tests.sh` (15 passed) and `bash tests/in-run-rulings/run-tests.sh` (290 passed) all exit 0 at 5f9983f; the covering suites `tests/codex/run-unit-tests.sh` (10 suites) and `tests/smart-compress/run-tests.sh` (87 passed) exit 0 as well.
+
+---
+
+_Invocation 3 — 2026-09-04 — N=4 M=4 — BASE..HEAD 0a57e40..5f9983f — branch feature/autonomous-in-run-decisions — gate: orchestration_
