@@ -3993,3 +3993,49 @@ M4/M5/M8 rewrote existing checks/helpers in place with no count change).
 Every new or rewritten assertion was spot-checked by temporarily corrupting
 the pinned source text and confirming the corresponding check FAILs, then
 restoring the file (`git diff` clean after each restore).
+
+## Round 12 verification 1 fixes
+
+### Changes, per finding
+
+- **I1** — `tests/in-run-rulings/run-tests.sh`, MCR "After the Loop" range (section 7): added four folded pins for the "Which text is binding" test's operative clauses — the `— clause: Global Constraints` on-its-face rule, the "every other `Task <n>` clause is reference text / `— clause: none` is no clause" rule, the unsure-reading tie-break rule, and the `plan governs` clause's full three-replacement-plus-160-character-cut normalization requirement.
+- **I2** — `tests/in-run-rulings/run-tests.sh`, escalation predicate range (section 1): added four folded pins for the closed list's own reason definitions — the `scope` Files-list union, the `irreversible` five-item trigger list, "You never decide a `secret` item.", and "A secret in reviewed code is not this class".
+- **I3** — `tests/in-run-rulings/run-tests.sh`: added `assert_absent_in_range_folded_nobacktick` (backtick-stripped absence check) and used it for the `code-review unresolved` sibling check. For the batch-controller `BLOCKED` check, a plain backtick-stripped absence test still false-failed on the compliant conditional text (which itself contains the bare phrase once backticks are stripped), so instead added `assert_absent_unless_qualified_in_range_folded`, which removes one phrase+qualifier pair before testing absence, and used it for that check. Also added a positive folded pin asserting the batch-controller `BLOCKED` entry carries its Phase 3 discriminator qualifying clause.
+- **M1** — `tests/in-run-rulings/run-tests.sh`: `line_containing_after` and `line_starting_with_after` now return empty immediately when `$start` is empty, instead of falling into an awk `NR > start` string comparison that scans the whole file. The `FORK_END -gt RULINGS_END` guard now also checks `-z "$RULINGS_END"` before the `-gt` comparison.
+- **M3** — `tests/in-run-rulings/run-tests.sh`, answers range (section 4): added a folded pin for the orchestrator's own copy of "which text is binding" (the `**Global Constraints:**` / `**Exact content:**` / pre-7.7.0-mandated-text sentence), mirroring the loop-side pin from I1.
+- **M4** — `tests/in-run-rulings/run-tests.sh`, answers range (section 4): added two folded pins for the plan-amendment procedure — step 1's "replace... in place" requirement and step 2's "insert the audit note immediately after the block that holds the edited clause" placement rule.
+- **M5** — `tests/in-run-rulings/run-tests.sh`, read-exception range (section 2): added pins for entry 2 (the SDD task report file path) and entry 3 (the plan clause / `**Global Constraints:**` block / spec section it traces to); narrowed the `40 lines` fragment needle to `or to 40 lines on each side` so it is no longer a substring of a hypothetical `140 lines`.
+- **M7** — `tests/in-run-rulings/run-tests.sh`: added a folded pin for the Batch Parameters block's copy of the bare-`[task <n>]`-means-`[task <n>/1]` rule (scoped `1..$BATCH_RA_LINE`, matching the existing First-batch-parameter check's range) and one for the `[RESUME_ANSWER]` placeholder documentation's copy (scoped to `$BATCH_RA_LINE..$BATCH_RA_END`).
+- **M10** — `tests/in-run-rulings/run-tests.sh`, loop `[RESUME_ANSWER]` placeholder range: added a folded pin for "the controller drops a qualified line whose `<i>` is not its current entry's".
+- **M11** — `tests/in-run-rulings/run-tests.sh`, Deviation 1 range: added folded pins for the `<n>` fallback ("this batch's first task when it touches no task at all") and the section-numbering source clause ("counting the sections already in the file and the `[task <n>/<k>]` lines of this dispatch's `## Resume Answer` together").
+- **M12** — `tests/in-run-rulings/run-tests.sh`, Guards range: added folded pins for Guard 1's "not a rejection at all" clause, Guard 3's "before the re-dispatch" timing clause, and Guard 4's "same decision goes back to the same decider" clause.
+- **M13** — `tests/in-run-rulings/run-tests.sh`, loop-prompt Deviation 3 range: added a folded pin asserting the fixed secret leading form is followed by the mandatory `unresolved:` suffix clause.
+- **M14** — `tests/in-run-rulings/run-tests.sh`, loop-prompt Deviation 5 range: added a folded pin for "An unqualified `[<id>]` is always about the current entry."
+- **M15** — `tests/in-run-rulings/run-tests.sh`: rewrote the comment above the "Phase 4 does not route the bare unresolved count straight to a stop" check (and its description) to name the concrete rewording it guards — a future edit that drops the `or` disjunct and routes `unresolved > 0` alone to a stop — instead of only explaining what it does not guard. Kept the check (least churn). Along the way fixed a bug the new comment wording introduced: unescaped backticks in a double-quoted description string triggered bash command substitution (`or: command not found` on stderr); reworded to avoid backticks in that string.
+- **M17** — `tests/in-run-rulings/run-tests.sh`: the "Resume step 3 never names decided (user) without decided (orchestrator) beside it" check now folds the `$RESUME_LINE..$RULINGS_LINE` range with `fold_range` before scanning, instead of scanning per physical line, so a compliant sentence that wraps across lines cannot false-fail the check.
+
+### Verification
+
+```
+$ bash tests/in-run-rulings/run-tests.sh; echo "EXIT=$?"
+...
+Results: 385 passed, 0 failed
+EXIT=0
+(stderr: empty)
+
+$ bash tests/reviewer-templates/run-tests.sh; echo "EXIT=$?"
+...
+Results: 24 passed, 0 failed
+EXIT=0
+
+$ bash tests/writing-plans/run-tests.sh; echo "EXIT=$?"
+...
+Results: 15 passed, 0 failed
+EXIT=0
+```
+
+All three suites exited 0, with empty stderr on the first. Every check in
+`tests/in-run-rulings/run-tests.sh` is PASS (385, up from 361: +24 net —
+2 new helper functions, ~28 new assertions, 1 negative check rewired onto a
+qualifier-aware helper, 1 check's comment/description reworded in place with
+no count change, 1 check's scan folded in place with no count change).
