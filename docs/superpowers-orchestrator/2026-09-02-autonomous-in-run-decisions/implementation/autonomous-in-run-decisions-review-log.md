@@ -288,3 +288,42 @@ Carried Minor findings supplied to round 5 from `.superpowers/sdd/progress.md`.
 - [M10] fixed — the emphasis-marker negative check took `index(hay, needle)` once and scanned around that one position, so a second, emphasised copy of the cap sentence in the same range would go undetected while the bare first copy reported clean; the check now scans every occurrence (tests/in-run-rulings/run-tests.sh ~614) → fca4a92 ← 1/4: r3:M5
 - [M11] fixed — the idempotence rule's mechanism sentences, which are what makes an in-run resume after a crash safe, were deletable with the suite green: only the closing sentence was pinned, through the `durable marker` fragment; the two mechanism clauses are now pinned (SKILL.md ~1366, tests/in-run-rulings/run-tests.sh section 5) → fca4a92 ← 1/4: r4:M1
 - [M12] fixed — the two folded helpers guarded an empty anchor but not an inverted range, so a collapsed range reported `not inside range` and read as missing wording rather than a broken anchor; the inverted-range branch from `assert_in_range` was copied into both with its own message (tests/in-run-rulings/run-tests.sh ~99/~125) → fca4a92 ← 1/4: r4:M3
+
+## Round 8 verification 3 — Test & coverage quality — opus
+**Reviewers:** M=4, usable 4/4
+**Reviewer verdicts:** r1: 0 Critical, 0 Important, 6 Minor | r2: 0 Critical, 2 Important, 5 Minor | r3: 0 Critical, 1 Important, 4 Minor | r4: 0 Critical, 1 Important, 4 Minor
+**Sources mapped:** 23/23
+**Reviewer verdict:** 0 Critical, 4 Important, 15 Minor
+
+Third and last verification cycle of round 8: it reviewed the cycle-2 fix
+`fca4a92`, so no fix ships unreviewed. The cycle budget is spent (three
+`## Round 8 verification <c>` entries), so the four Important findings it
+raises cannot be fixed and re-reviewed inside this invocation and are
+recorded `unresolved: verification cap`. All four are coverage gaps in
+`tests/in-run-rulings/run-tests.sh`: the wording each names is present and
+correct in the shipped files, and every reviewer confirmed that by mutation.
+The Minor findings are carried for the same reason — a fix applied now would
+ship unreviewed.
+
+### Dispositions
+- [I1] unresolved: verification cap — guard 2's two prohibitions `Never `plan governs`, never `accept`` are unpinned; only the fragment `a Critical is never rejected` is asserted, so a rewrite letting a Critical be closed with `accept:` and no code change would ship green — at tests/in-run-rulings/run-tests.sh:728 — clause: Task 5 "Invariants: `a Critical is never rejected`" ← 1/4: r2:I1
+- [I2] unresolved: verification cap — the three stop-policy and Phase 3 "the old wording is gone" negative checks scan line by line while every positive check folds line wraps first, so a re-added stop rule that straddles a re-wrapped line break reports PASS — at tests/in-run-rulings/run-tests.sh:836 — clause: none ← 1/4: r2:I2
+- [I3] unresolved: verification cap — the closedness scan added by verification cycle 2 reports PASS when its `^- ``<label>``` regex matches no bullet at all, so indenting or re-tabling the five escalation reasons and adding a sixth keeps the suite green while the predicate stops being closed — at tests/in-run-rulings/run-tests.sh:227 — clause: none ← 1/4: r3:I1
+- [I4] unresolved: verification cap — nothing pins the link from the predicate's `design` class to the fork review; a mutation replacing `Decided after the fork review (below).` with `Decided directly, with no subagent.` left the suite at 300 passed, and every fork assertion is scoped to a subsection nothing would then reach — at tests/in-run-rulings/run-tests.sh:239 — clause: none ← 1/4: r4:I1
+- [M1] carried — the suite is still named in no tracked file; the plan's Non-goals keep `RELEASE-NOTES.md` out of this branch and defer the tracked reference to the release step (carried in round 4 as [M12], round 8 as [M4], verification 1 as [M3] and verification 2 as [M1]) ← 3/4: r1:M1, r2:M4, r4:M4
+- [M2] carried — the `state.md` example line `Rulings: <count> (last: ruling <n>, phase <p>)` is pinned by the bare label `Rulings:` only, the one example line in the suite that keeps the weak form (tests/in-run-rulings/run-tests.sh ~883) ← 2/4: r1:M4, r2:M2
+- [M3] carried — the loop's unsure binding-text default, `treat the clause as reference text and apply the fix`, is unpinned while its deliberately opposite orchestrator counterpart is; a later harmonisation would invert it undetected (multi-code-review SKILL.md ~1010, tests/in-run-rulings/run-tests.sh ~1058) ← 2/4: r3:M4, r4:M2
+- [M4] carried — the intro read-exception check asserts only the fragment `in-run rulings`, not that a read exception is named, so a second mention of the section in the intro would keep it green after the clause is deleted (tests/in-run-rulings/run-tests.sh ~320) ← 1/4: r1:M2
+- [M5] carried — the Phase 4 negative check covers only the `user_decision > 0` disjunct of the removed sentence, so re-adding the `unresolved > 0` half alone reports PASS (tests/in-run-rulings/run-tests.sh ~836) ← 1/4: r1:M3
+- [M6] carried — only the `## In-run rulings` range carries an interloper guard; the other eight ranges are heading pairs that merely happen to be adjacent today, so a new `## ` section between a pair would silently widen it (tests/in-run-rulings/run-tests.sh ~407/~811) ← 1/4: r1:M5
+- [M7] carried — `[ "$FORK_END" -gt "$RULINGS_END" ]` compares before testing `RULINGS_END` is non-empty, so a missing `## Major-Error Stop Policy` heading prints a shell diagnostic on standard error instead of a clean FAIL (tests/in-run-rulings/run-tests.sh ~366) ← 1/4: r1:M6
+- [M8] carried — Phase 3 step 5 lost the sentence `` `BLOCKED` → major error → stop `` but has positive routing pins only, so the old unconditional stop could be re-added beside the new sentence with the suite green (tests/in-run-rulings/run-tests.sh ~822) ← 1/4: r2:M1
+- [M9] carried — the `secret`-class trigger form is written as two independent string literals, one per document checked, although the suite's own comment requires the two documents to carry it in the same bytes; one variable would enforce it (tests/in-run-rulings/run-tests.sh ~278/~1131) ← 1/4: r2:M3
+- [M10] carried — the first-batch parameter check searches the whole head of the batch template rather than its `## Batch Parameters` block, so the phrase moving into Deviation 1 would still pass (tests/in-run-rulings/run-tests.sh ~1170/~1187) ← 1/4: r2:M5
+- [M11] carried — the fragment pins `applied twice` and `handled as a whole` are substring tests that match the negated sentence as well, so inverting the rule keeps them green; the plan's Task 1 test step prescribes exactly this fragment list (tests/in-run-rulings/run-tests.sh ~241) ← 1/4: r3:M1
+- [M12] carried — the negative bare-`decided (user)` check is line-based while the wording it guards may be reflowed, so a pure re-wrap that splits the enumeration across two lines would raise a false failure (tests/in-run-rulings/run-tests.sh ~912) ← 1/4: r3:M2
+- [M13] carried — the mandatory `— at <file:line> — clause:` suffix on produced `user-decision` and `unresolved:` lines is asserted only against the documentation and the two example lines; the behavioural suite's disposition assertion still checks vocabulary alone (multi-code-review SKILL.md ~910, tests/claude-code/test-multi-code-review.sh) ← 1/4: r3:M3
+- [M14] carried — the cap-sentence emphasis scan recognises `*` runs only, so italicising the sentence with `_` passes both it and the byte-exact pin, although the constraint says "without emphasis markers" (tests/in-run-rulings/run-tests.sh ~667) ← 1/4: r4:M1
+- [M15] rejected: the weaker pins are deliberate, documented spelling checks — round 8 verification 1's [M1] fix added a folded pin precisely while keeping the bare ones beside it, and the suite comments say why; a dominated pin costs one PASS line, never coverage — the reported redundancy at ~600/~879 (same finding rejected in verification 2 as [M4]) ← 1/4: r4:M3
+
+_Completed — 2026-09-04 — cap reached — HEAD fca4a92ec1544a2b27158d62a6d2fc700386fa56_
