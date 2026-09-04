@@ -798,6 +798,7 @@ _Invocation <k> — YYYY-MM-DD — N=<n> M=<m> — BASE..HEAD <base7>..<head7> �
 - [M2] carried — <finding summary>
 
 _Completed — YYYY-MM-DD — <converged|cap reached> — HEAD <sha>_
+Secrets found: none
 ```
 
 Round entry with M ≥ 2 — three lines added after the header, and a source
@@ -966,7 +967,16 @@ reached> — HEAD <sha>_` with `<sha>` = in **direct mode**,
 `git rev-parse HEAD` **now** (post-fix); in **pipeline mode**, the
 effective HEAD as defined in "Pipeline rule 4" below, beside "Once per
 gate" — the raw HEAD at marker time is the round's own log commit, which
-would never match on a later comparison. Then report to the host gate: rounds run, per-round finding
+would never match on a later comparison. Immediately after the
+completion marker, append to the log itself the `Secrets found:` line —
+one item `- [<id>] <file> — (round <i>)` per finding of this invocation
+that reported an exposed secret or credential in reviewed code, whatever
+its final disposition, naming the file and the round, or `Secrets found:
+none`; the item never reproduces the secret value. This is the durable
+copy: it is committed with the completion marker, under Pipeline rule 1's
+`chore(review): <slug> completed` commit, so that an orchestrator reading
+the log later — never the transient report below — finds it there. Then
+report to the host gate: rounds run, per-round finding
 counts, fixes applied (commit SHAs), unresolved and user-decision items,
 converged vs cap reached, log path, effective M (and any substitution),
 and a `Harness probes owed:` line — one item
@@ -978,13 +988,9 @@ rejection line, or `Harness probes owed: none`. The line is always written; a
 report without it is defective. The user runs the owed probes after the
 loop.
 
-Also report a `Secrets found:` line, in the same shape as the
-`Harness probes owed:` line above — one item `- [<id>] <file> — (round
-<i>)` per finding of this invocation that reported an exposed secret or
-credential in reviewed code, whatever that finding's final disposition,
-naming the file and the round, or `Secrets found: none`. The line is
-always written; a report without it is defective. The item never
-reproduces the secret value itself.
+Also report the `Secrets found:` line — the same items just written to
+the log above, in the same shape as the `Harness probes owed:` line
+above. The line is always written; a report without it is defective.
 
 **Resolving user-decision and unresolved items** (interactive; batched
 mode journals and ends the batch instead): present each once, at this

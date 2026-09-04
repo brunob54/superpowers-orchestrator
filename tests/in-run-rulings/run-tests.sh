@@ -484,7 +484,17 @@ assert_in_range_folded "read-exception entry 3 names the plan clause, Global Con
 # clause's own distinguishing bytes: the exhaustiveness statement that ends
 # the five-item list.
 assert_in_range_folded "read exception's closing clause declares the list exhaustive" \
-  "$ORCH_SKILL" 'Nothing else. Every file read under this exception is' \
+  "$ORCH_SKILL" "Nothing else. Phase 5 step 3's report-gathering scans of the code-review" \
+  "$READ_EXCEPTION_LINE" "$READ_EXCEPTION_END"
+# The Phase 5 carve-out immediately after "Nothing else.": the report's
+# harness-probe and Secrets-found scans of the two review logs are named by
+# Phase 5 itself and are outside this five-entry list, matching only fixed
+# line shapes and never entering a ruling.
+assert_in_range_folded "the Nothing-else clause carves out Phase 5's own report-gathering scans" \
+  "$ORCH_SKILL" 'are named by Phase 5 itself and are outside this list' \
+  "$READ_EXCEPTION_LINE" "$READ_EXCEPTION_END"
+assert_in_range_folded "Phase 5's report-gathering scans never enter a ruling" \
+  "$ORCH_SKILL" 'read nothing else from those files, and never enter a ruling' \
   "$READ_EXCEPTION_LINE" "$READ_EXCEPTION_END"
 # Entry 5 of the read list: the orchestrator's own ruling record. The path is
 # a byte pin; the rest of the entry is free text. The path also occurs in the
@@ -495,6 +505,15 @@ assert_in_range "read-exception entry 5 names the ruling-record path" \
   "$READ_EXCEPTION_LINE" "$READ_EXCEPTION_END" exact
 assert_in_range_folded "read-exception entry 5 calls it the file you write yourself" \
   "$ORCH_SKILL" 'the file you write yourself' \
+  "$READ_EXCEPTION_LINE" "$READ_EXCEPTION_END"
+# Entry 5's fork carve-out (I4): only the orchestrator, never a reviewer,
+# reads the ruling record; a reviewer's own "What you may read" block never
+# lists that path.
+assert_in_range_folded "entry 5 carve-out: only the orchestrator, never a reviewer, reads the ruling record" \
+  "$ORCH_SKILL" 'You alone — never a reviewer — may read this entry' \
+  "$READ_EXCEPTION_LINE" "$READ_EXCEPTION_END"
+assert_in_range_folded "entry 5 carve-out: a reviewer's What-you-may-read block never lists the ruling-record path" \
+  "$ORCH_SKILL" "a reviewer's \`## What you may read\` block never lists the ruling-record path" \
   "$READ_EXCEPTION_LINE" "$READ_EXCEPTION_END"
 # Entry 1 reads the CURRENT disposition line, not merely "the" line: with an
 # addendum appended, the entry holds two lines for the id.
@@ -727,6 +746,20 @@ for pin in '-open-decisions.md' '**Follow-up:**' '## Ruling <n>'; do
 done
 assert_in_range "ruling-record fragment 'appended, never rewritten'" \
   "$ORCH_SKILL" 'appended, never rewritten' "$RECORD_LINE" "$RECORD_END" fragment
+# I5: a Phase 3 item has no disposition line, so the Follow-up clause's
+# source must name a Phase 3 fallback — the plan text the item's
+# `### Conflict <k>` section quotes, or, failing that, this same entry's own
+# `**Contract clause:**` field — so that guard 4 has a clause to match a
+# Phase 3 item against too.
+assert_in_range_folded "Follow-up clause for a Phase 3 item comes from the Conflict section's quoted plan text" \
+  "$ORCH_SKILL" 'A Phase 3 item has no disposition line: for it, the clause is taken instead from the plan text' \
+  "$RECORD_LINE" "$RECORD_END"
+assert_in_range_folded "Follow-up clause falls back to this entry's own Contract clause field" \
+  "$ORCH_SKILL" "from this same ruling-record entry's own \`**Contract clause:**\` field" \
+  "$RECORD_LINE" "$RECORD_END"
+assert_in_range_folded "clause: none is written only when the item names no plan text at all" \
+  "$ORCH_SKILL" '`— clause: none` is written only when the item names no plan text at all' \
+  "$RECORD_LINE" "$RECORD_END"
 # The entry template's six field lines. Guard 4, the Resume rebuild and the
 # marker-backing check each read one of these fields, so the record must not
 # be gutted field by field with the suite green. `**Resolution:**` and
@@ -921,6 +954,12 @@ for pin in '## RULING <n> — YYYY-MM-DD — phase <p> — <one-line summary>' \
   assert_in_range "RULING example line '$pin'" \
     "$ORCH_SKILL" "$pin" "$LOG_ENTRY_LINE" "$LOG_ENTRY_END" exact
 done
+# M3: this copy of the `## RULING` entry block names itself as the same
+# block already shown under `## Orchestration Log Format`, so the two
+# copies read as one normative shape rather than two independent ones.
+assert_in_range_folded "the RULING entry block cross-references its earlier copy under Orchestration Log Format" \
+  "$ORCH_SKILL" 'this is the same `## RULING` entry block already shown under `## Orchestration Log Format`' \
+  "$LOG_ENTRY_LINE" "$LOG_ENTRY_END"
 assert_in_range "guard pin 'plan governs (orchestrator decision)'" \
   "$ORCH_SKILL" 'plan governs (orchestrator decision)' "$GUARDS_LINE" "$GUARDS_END" exact
 assert_in_range_folded "guard fragment forbidding a byte-equal match" \
@@ -1196,11 +1235,17 @@ assert_in_range_folded "Phase 5 report lists every accepted ruling" \
   "$ORCH_SKILL" 'every entry whose Resolution line begins with `accept:`, listed by ruling number' \
   "$PHASE5_LINE" "$LOG_FORMAT_LINE"
 # R13 (Amendment 13): the Phase 5 report carries the Secrets found list
-# gathered from the code review log, under a heading naming the two actions
-# a person must take. Pinned on the heading sentence, not the bare
-# `Secrets found:` label, which a cross-reference elsewhere could satisfy.
+# under its own heading text, naming the two actions a person must take.
+# Pinned on the heading's own quoted words, not the bare `Secrets found:`
+# label, which a cross-reference elsewhere could satisfy.
 assert_in_range_folded "Phase 5 report carries the Secrets found list under the rotate/history heading (R13)" \
-  "$ORCH_SKILL" 'rotate the credential, and decide what to do about the branch history, which the fix does not rewrite, the `Secrets found:` list gathered from the code review log' \
+  "$ORCH_SKILL" 'the heading `Secrets found — rotate the credential and decide what to do about the branch history, which the fix does not rewrite`' \
+  "$PHASE5_LINE" "$LOG_FORMAT_LINE"
+# I2: the source is explicit — Phase 5 reads the durable `Secrets found:`
+# line multi-code-review writes into the code review log's invocation
+# entries, never the transient completion report.
+assert_in_range_folded "Phase 5 gathers Secrets found from the log's own Secrets found line, not the transient report" \
+  "$ORCH_SKILL" "gathered from that \`Secrets found:\` line of the code review log's invocation entries" \
   "$PHASE5_LINE" "$LOG_FORMAT_LINE"
 # A `BLOCKED task=<n>` return writes no batch entry, so the ruling's own
 # `## RULING` entry is the boundary entry Resume step 3 finds the log ending
@@ -1219,7 +1264,8 @@ assert_in_range_folded "a BLOCKED task return writes no batch log entry" \
 for pin in '## RULING <n> — YYYY-MM-DD — phase <p> — <one-line summary>' \
            'Owed probe: <verbatim line>' \
            'Open: [<id>] escalated (<spec wrong|scope|irreversible|secret|chain>) — <summary>' \
-           'Ruled: [<id>] <forced|design> — <answer>'; do
+           'Ruled: [<id> inv <i>] <forced|design> — <answer>' \
+           'Ruled: [task <n>/<k>] <forced|design> — <answer>'; do
   assert_in_range "log-format example line '$pin'" \
     "$ORCH_SKILL" "$pin" "$LOG_FORMAT_LINE" "$STATE_LINE" exact
 done
@@ -1323,6 +1369,18 @@ assert_in_range_folded "a ruling-record entry with no RULING log entry is an inc
 assert_in_range_folded "an incomplete ruling is repaired before any answer set is built from it" \
   "$ORCH_SKILL" 'it is repaired BEFORE any `[RESUME_ANSWER]` is built from it' \
   "$RESUME_LINE" "$RULINGS_LINE"
+# I6: a multi-item return writes only ONE `## RULING` entry (carrying the
+# return's first ruling number) for every ruling-record entry that return
+# produced, so "logged" must mean covered by that entry, not merely carrying
+# its own number in the heading — else every ruling after the first of such a
+# return is wrongly repaired and the cap is inflated over a chain that never
+# happened.
+assert_in_range_folded "a ruling-record entry is logged when a RULING entry's Items lines name it, or its number falls in that return's range" \
+  "$ORCH_SKILL" "is **logged** — covered by a \`## RULING\` entry — when some \`## RULING\` entry's \`Items:\` lines name its item, or when \`<n>\` falls inside the range of ruling numbers that entry's return produced" \
+  "$RESUME_LINE" "$RULINGS_LINE"
+assert_in_range_folded "one RULING entry covers every ruling-record entry its return wrote, not only its own numbered heading" \
+  "$ORCH_SKILL" "one \`## RULING\` entry covers every ruling-record entry its return wrote, not only the one whose number the \`## RULING\` heading itself carries" \
+  "$RESUME_LINE" "$RULINGS_LINE"
 assert_in_range_folded "resume verifies the amendment landed before acting on an amend plan ruling" \
   "$ORCH_SKILL" 'the clause that ruling names must carry `(amended by ruling <n>)` and its `**Amendment <n>` note must stand' \
   "$RESUME_LINE" "$RULINGS_LINE"
@@ -1339,6 +1397,16 @@ assert_in_range_folded "the fix commit is found by the addendum's fixed line and
   "$RESUME_LINE" "$RULINGS_LINE"
 assert_in_range_folded "an unrevertable fix is re-raised by the next invocation instead" \
   "$ORCH_SKILL" 're-raises the finding against the restored clause' \
+  "$RESUME_LINE" "$RULINGS_LINE"
+# I3: a Phase 3 ruling's amended clause was implemented inside an ordinary
+# task commit, never through the code-review loop, so there is no fix commit
+# to find or revert; the task must instead be re-implemented against the
+# restored clause by un-ticking it and dropping its ledger line.
+assert_in_range_folded "a Phase 3 ruling has no fix commit to revert" \
+  "$ORCH_SKILL" 'When the reverted ruling was made in Phase 3, there is no fix commit to revert at all' \
+  "$RESUME_LINE" "$RULINGS_LINE"
+assert_in_range_folded "a reverted Phase 3 amendment un-ticks the task and drops its ledger line so the batch loop re-dispatches it" \
+  "$ORCH_SKILL" 'untick that task'"'"'s checkboxes in the plan and remove its completed line from `.superpowers/sdd/progress.md`' \
   "$RESUME_LINE" "$RULINGS_LINE"
 # `git revert --no-commit` does not leave the tree untouched on a conflict: it
 # writes conflict markers, stages the clean hunks of every other file it
@@ -1548,6 +1616,19 @@ assert_in_range_folded "an Exact-content marker stands at the end of the introdu
 assert_in_range_folded "completion report carries a Secrets found line, one item per exposed-secret finding (R13)" \
   "$MCR_SKILL" 'one item `- [<id>] <file> — (round <i>)` per finding of this invocation that reported an exposed secret or credential in reviewed code' \
   "$MCR_AFTER_LOOP_LINE" "$MCR_ERROR_HANDLING_LINE"
+# I2: the `Secrets found:` line gets a durable home in the log itself — not
+# only the transient completion report — committed with the completion
+# marker under Pipeline rule 1's completed commit, so that "gathered from
+# the review log" (Phase 5, section 6) is satisfiable.
+assert_in_range_folded "the Secrets found line is appended to the log itself, beside the completion marker" \
+  "$MCR_SKILL" 'append to the log itself the `Secrets found:` line' \
+  "$MCR_AFTER_LOOP_LINE" "$MCR_ERROR_HANDLING_LINE"
+assert_in_range_folded "the logged Secrets found line is the durable copy, committed under Pipeline rule 1's completed commit" \
+  "$MCR_SKILL" "this is the durable copy: it is committed with the completion marker, under Pipeline rule 1's \`chore(review): <slug> completed\` commit" \
+  "$MCR_AFTER_LOOP_LINE" "$MCR_ERROR_HANDLING_LINE"
+assert_in_range "Review Log Format example carries a Secrets found: none line beside the completion marker" \
+  "$MCR_SKILL" 'Secrets found: none' \
+  "$MCR_LOG_FORMAT_LINE" "$MCR_AFTER_LOOP_LINE" exact
 for pin in 'decided (orchestrator)' 'decided (<who>)' \
            'plan governs (orchestrator decision)' 'plan governs (user decision)' \
            '`decided (user)` or `decided (orchestrator)`' \
