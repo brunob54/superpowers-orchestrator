@@ -3537,3 +3537,175 @@ withdrawn `secret` wording were replaced by two on the restored wording (I2),
 and one pin on the withdrawn lost-return moment was replaced by three on the
 new round-finished rule (I6). Standard error is empty (I5). No finding was
 skipped or partially applied.
+
+## Round 10 — review fixes
+
+Files edited: `skills/orchestrating-development/SKILL.md`,
+`skills/orchestrating-development/code-review-loop-prompt.md`,
+`skills/orchestrating-development/batch-controller-prompt.md`,
+`tests/in-run-rulings/run-tests.sh`. No file under `docs/`, no plan, no
+spec, no version file, no `RELEASE-NOTES.md`, no `CLAUDE.md`, and no
+`skills/multi-code-review/` file was changed. The closed escalation list
+keeps exactly its five labels and their definitions.
+
+### C1 — a carried `Ruled:` line can attach an old answer to an unrelated finding
+
+Added **"A carried Phase 4 id names its invocation."** to
+`### The answers, and how a ruling reaches the plan`: a Phase 4 answer line
+whose ruling was made against an earlier review-log `_Invocation` entry is
+written qualified, `[I2 inv 3] (orchestrator): <answer>`; an unqualified
+`[<id>]` is about the controller's current entry; id matching elsewhere (a
+resume-prompt answer replacing a `Ruled:` line, the cap's `Items:` counting)
+compares the bare id. "Handling a return as a whole" now states that each
+Phase 4 `Ruled:` line writes the qualified form, the Orchestration Log Format
+prose says the same for a Phase 4 `Ruled:` line, the Resume rebuild path
+writes the qualifier, and Resume step 3 carries the qualifier into the answer
+line while a resume-prompt answer stays unqualified. Earlier decided items are
+still carried forward, so the "handled as a whole" property is unchanged.
+Consuming side: `code-review-loop-prompt.md` Deviation 5 now applies a
+qualified line only when its `<i>` is the CURRENT entry's number and drops any
+other, journaling nothing for it; the `[RESUME_ANSWER]` placeholder
+documentation states the same.
+
+### I1 — the round-finished bound needed a forbidden observation
+
+Added the paragraph **"The partial case has one permitted observation."** to
+the lost-returns rule: when the orchestrator is waiting on a round with
+nothing else to do and no further notice is arriving, it makes exactly ONE
+platform status read covering every lens of the round still outstanding, and
+that single read is explicitly not the monitoring step the section forbids.
+The round is finished at that read whatever it reports, every lens without a
+usable return counts as one loss, the re-dispatch round starts, the ruling
+records `forks: <k> of <planned>`, and fewer than two usable returns still
+stops with `fork review unavailable`. The bound stays stated over the round;
+the re-dispatch-once rule and the field spellings are unchanged.
+
+### I7 + M1 — the tie-break reviewer and the "fork returns" threshold
+
+One coherent edit. The lost-return rule now opens with "Every bound below is
+stated over the **reviewer returns of the round**, never over the dispatch
+type"; "a fork's return is lost" became "a **reviewer's return** is lost"; "no
+fork of it is still running" became "no reviewer of it is still running"; and
+the threshold reads "at least **two usable reviewer returns** of the round".
+Added **"The tie-break round is bounded the same way."**: the tie-break
+reviewer is a round of one lens, finished by the same test including the
+single status read; when it produces no usable return the contradiction is
+unsettled and the fixed tie-break already written applies, and that loss is
+never counted in the `Forks:` field. The Major-Error Stop Policy's
+parenthetical now says "reviewer returns". `subagent_type: "fork"`, the
+`fork-<lens>` naming, the `fork review unavailable` reason string and the
+`forks: <k> of <planned>` field spelling are untouched.
+
+### I2 — the two unhandled crash windows of the ruling write order
+
+Resume step 3 now checks the other two writes of the fixed order. Window A: a
+`## Ruling <n>` entry with no `## RULING` log entry for the same `<n>` is an
+**incomplete ruling**, repaired BEFORE any `[RESUME_ANSWER]` is built from it
+— complete the writes in order, or delete an entry whose `**Resolution:**`
+names no answer. Window B: before acting on a `## RULING` entry whose
+Resolution begins `amend plan`, the named clause must carry
+`(amended by ruling <n>)` and its `**Amendment <n>` note must stand; when they
+do not, re-apply the amendment, and when the amendment procedure finds no
+target, discard the ruling and stop with a blocking question rather than
+re-dispatch `amend plan: …; fix it: …` for a plan that was never amended.
+
+### I3 — reverting a plan amendment left the code change on the branch
+
+Added **"Reverting the plan is only half of the revert."** to Resume step 3:
+the same resume commit also reverts the ruling's fix commit, found by the
+review-log addendum's `fixed — <summary> → <sha>` line for that id, with
+`git revert --no-commit <sha>` staged by explicit path. When it does not
+revert cleanly, no code change is made, `— fix <sha> not reverted` is recorded
+on the item's `**Follow-up:**` line, and the new Phase 4 invocation that the
+reverted plan file forces re-raises the finding against the restored clause.
+
+### I4 — the `stopped` commit staged a path Phase 0 makes ignored
+
+The Major-Error Stop Policy now says the orchestration log is the only file a
+`stopped` commit stages, and that **`state.md` is never staged by a `stopped`
+commit** — Phase 0 step 3 makes it an ignored path, so naming it would make
+`git add` refuse and fail the commit at the one moment an escalated item must
+reach the user. The explicit-path rule and the `git add -A` / `git add .` /
+`git commit -a` prohibitions are unchanged.
+
+### I5 — the follow-up commit's ruling number for two ruling-less stop kinds
+
+Resume step 3's follow-up append is now gated: "Append each user answer **that
+has a ruling-record entry of its own**". Added **"A stop that made no ruling
+has no entry to append to and writes no follow-up commit."**, naming the two
+supported kinds — a Phase 1 plan-writer `BLOCKED` question and a Phase 3
+`BLOCKED task=<n>` classified as a controller failure — which take the plain
+re-dispatch path with no `**Follow-up:**` line and no `ruling <n> follow-up`
+commit, because `<n>` is undefined when the resume touched no ruling.
+
+### I6 — a Phase 3 `amend plan` answer read as an instruction to edit the plan
+
+The Phase 3 answer definition now states that an `amend plan: …` answer is the
+record of an amendment the orchestrator has already made and committed in the
+ruling commit: the plan already reads the amended way, the implementer follows
+the amended plan text and never edits the plan itself, its only write to the
+plan file staying the checkbox tick. `batch-controller-prompt.md` states the
+same twice — in the `## Resume Answer` section the controller reads, and in
+the `[RESUME_ANSWER]` placeholder documentation.
+
+### I9 — one id carrying two disposition lines
+
+The open-item definition now says that when an id carries more than one
+disposition line in the latest `_Invocation` entry, the LAST one in file order
+is the item's current disposition and alone decides whether the id is open;
+an earlier line for the same id is history and is never itself an open item.
+The read exception's entry 1 reads that **current** line — "the last one in
+file order, never an earlier one".
+
+### M2 — the never-reproduce-a-secret scope
+
+The scope phrase now reads "in every file a ruling **or a `stopped`** commit
+touches", and the named-fields list adds the `Ruled:` line of the
+`## STOPPED` entry with the reason it belongs there.
+
+### M3 — the cap's counting rule and the resume rule disagreed
+
+Both places now test whether the `Re-dispatch:` value **starts with** `none`.
+The cap counts entries whose value "does not start with `none`", stating that
+the escalated line starts with `none` exactly as a bare one does; Resume step
+3's two branches read "does not start with `none`" and "starts with `none`".
+
+### M7 — the in-run resume counter had no base
+
+The cap paragraph now states that `<r>` **includes the entry being written**,
+so the first ruling of a unit writes `in-run resume 1 of 3` and the third
+writes `3 of 3`.
+
+### Verification — fresh output
+
+```
+$ bash tests/in-run-rulings/run-tests.sh
+Results: 328 passed, 0 failed
+exit 0; standard error: 0 bytes (empty)
+
+$ bash tests/reviewer-templates/run-tests.sh
+Results: 24 passed, 0 failed
+exit 0
+
+$ bash tests/writing-plans/run-tests.sh
+Results: 15 passed, 0 failed
+exit 0
+
+$ bash tests/codex/run-unit-tests.sh
+Results: 10 suites passed, 0 suites failed
+All unit tests passed.
+exit 0
+
+$ bash tests/smart-compress/run-tests.sh
+Results: 87 passed
+0 failed
+exit 0
+```
+
+Standard error was captured explicitly for every run; all five were empty.
+The in-run-rulings suite went from 291 checks to 328: 5 pins whose text this
+round reworded were rewritten in the new bytes (round-finished over reviewers,
+the two-usable threshold, the secret scope phrase, the `Re-dispatch:` value
+test, the `stopped` staging list), and 32 pins were added, one or more per
+finding. No pin was weakened to a bare token. No finding was skipped or
+partially applied.
