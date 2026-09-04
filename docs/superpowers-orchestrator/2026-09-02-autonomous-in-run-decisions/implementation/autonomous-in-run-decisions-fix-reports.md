@@ -1994,3 +1994,461 @@ $ bash tests/in-run-rulings/run-tests.sh
 Results: 237 passed, 0 failed
 exit=0
 ```
+
+## Round 8 fixes — 2026-09-04
+
+Findings I1–I3 and M1–M3, M5–M8 of round 8. Files touched:
+`skills/orchestrating-development/SKILL.md`,
+`tests/in-run-rulings/run-tests.sh`.
+
+Every finding of round 8 except M1's first half was a defect in the test
+suite itself, so the two source-file changes are small: only M1 required a
+wording change (`skills/orchestrating-development/SKILL.md`, the ruling
+record's marker paragraph).
+
+### Findings addressed
+
+- **I1 — the Phase 3 routing assertion could not fail.**
+  `tests/in-run-rulings/run-tests.sh`, the three phase-routing assertions.
+  Each pinned only a fragment that occurs more than once in its phase
+  range (`In-run rulings`, or `contradiction: unsettled`), so deleting the
+  routing sentence left the suite green. Each now pins bytes of its own
+  routing sentence, folded because every one of them crosses a line wrap:
+  Phase 3 pins ``return goes through the Phase 3 discriminator of `## In-run rulings` ``,
+  Phase 4 pins ``` `## In-run rulings`: classify each open item by its review-log id ```,
+  Phase 5 pins ``every entry whose Forks line records `contradiction: unsettled` ``.
+
+- **I2 — the emphasis check was a tautology.**
+  Same file, the check named "log-entry sentence carries no `*` emphasis
+  marker". It searched the match itself, which is byte-identical to the
+  needle and can never hold a `*`. It now reads the single character on
+  each side of the match and fails when either is `*`. Only the touching
+  characters are examined, because the paragraph opens with a bolded
+  `**The cap.**` lead-in that is separated from the sentence by a space
+  and is not emphasis on the sentence.
+
+- **I3 — the `Ruled:` and `Open:` log-format pins survived deleting the
+  example.** Same file, the log-format pin list. Both labels also occur in
+  the prose below the `## STOPPED` example block. Each is now pinned as a
+  whole field line, placeholder tail included:
+  `Open: [<id>] escalated (<spec wrong|scope|irreversible|secret|chain>) — <summary>`
+  and `Ruled: [<id>] <forced|design> — <answer>`, so that only the
+  example's own line can satisfy the pin.
+
+- **M1 — four new rules carried no assertion, and one had already
+  diverged.**
+  1. `skills/orchestrating-development/SKILL.md`, the ruling record's
+     "A marker is authority only while the ruling record backs it"
+     paragraph, now carries the whole-number qualifier the loop already
+     stated: "the heading line begins `## Ruling <n> ` with that number,
+     compared as a whole number, so ruling 1 is not matched by a
+     `## Ruling 10` heading." The rule is now pinned on both sides — in
+     the ruling-record range and in the loop's no-fix range.
+  2. The batch template's section-number allocation rule is pinned in
+     Deviation 1's range, in two parts: "number a new section 1 above the
+     highest `<k>` you can see" and "never renumber a section you wrote in
+     this dispatch".
+  3. The batch template's run-wide `[RESUME_ANSWER]` scope is pinned in
+     the placeholder's range: "with every answer the run has recorded so
+     far, whatever batch its task belongs to".
+  4. The loop template's "an untagged line is a user line" is pinned in
+     Deviation 5's range.
+
+- **M2 — the two folded checks folded differently.** Same file. The
+  emphasis check folded its range with `printf "%s "` and kept each line's
+  leading whitespace, while `assert_in_range_folded_exact` stripped it.
+  The fold is now one helper, `fold_range`, used by
+  `assert_in_range_folded`, `assert_in_range_folded_exact` and the
+  emphasis check, so the three can never disagree about the text they
+  search. The emphasis check's two outcomes now get distinct messages:
+  "is wrapped in a `*` emphasis marker" versus "not found in range …".
+
+- **M3 — the Guard Interaction fork wiring was untested.** Same file. The
+  bare case-insensitive `fork` fragment and the pre-existing
+  `<!-- multi-review report -->` marker pin both survived deleting the
+  sentence this branch adds. Two folded pins now carry bytes of that
+  sentence: "Forks dispatched under `## In-run rulings` open their return
+  with that same `<!-- multi-review report -->` marker" and "a fork return
+  without it is a lost return under that section". The marker pin is kept
+  and its comment now states explicitly that it is an unchanged-wording
+  regression pin only, which cannot fail when the fork sentence is
+  deleted.
+
+- **M5 — the Resume negative check failed on correct content.** Same
+  file. It forbade every occurrence of `decided (user)` in the Resume
+  range, including the correct enumeration
+  ``` `decided (user)` or `decided (orchestrator)` ``` that the same suite
+  REQUIRES in the sibling files. It now fails only on a `decided (user)`
+  occurrence whose own line does not also carry `decided (orchestrator)`.
+
+- **M6 — five fork pins were scoped to the whole section.** Same file.
+  The `FORK_LINE`/`FORK_END` computation moved above the loop, and all
+  seven fork pins (the five plus `VERDICT:` and `TABLED:`) now use it.
+
+- **M7 — the interloper scan reported PASS over an absent range.** Same
+  file. With both anchors empty, `awk -v a="" -v b=""` compared strings,
+  produced no output, and the check printed PASS. It is now guarded with
+  a non-empty and start-before-end test, the way the two negative checks
+  elsewhere in the suite are guarded, and reports a FAIL naming the
+  missing range instead.
+
+- **M8 — two bare `(user)` needles added no coverage.** Same file. Both
+  loop-prompt ranges already held `decided (user)` before this branch. In
+  the `[RESUME_ANSWER]` doc range the needle is now the byte pin
+  ``` `(orchestrator)` or `(user)` ```; in Deviation 5's range it is
+  ``` tagged `(orchestrator)` or `(user)` ```. Both exist only in the new
+  per-line tagging wording.
+
+### Mutation check on the new and repaired assertions
+
+Every assertion below was verified by mutating or deleting the rule it
+pins in a working copy of the file, running the suite, confirming the
+named assertion FAILED, and restoring the file. The tree was clean
+afterwards apart from the two intended files.
+
+| Finding | Mutation applied | Assertion that failed |
+| --- | --- | --- |
+| I1 | Phase 3 routing sentence reworded to drop "goes through the Phase 3 discriminator of `## In-run rulings`" (the section's other `## In-run rulings` mention left in place) | `Phase 3 routes BLOCKED task=<n> to the predicate` |
+| I1 | Phase 4 routing sentence reworded to drop "`## In-run rulings`: classify each open item by its review-log id" | `Phase 4 routes open items to the predicate` |
+| I1 | Phase 5 report clause "and every entry whose Forks line records `contradiction: unsettled` …" deleted | `Phase 5 report lists unsettled contradictions` |
+| I2 | cap sentence wrapped as `**In-run resumes … Phase 3.**` | `log-entry sentence is wrapped in a '*' emphasis marker` (while the byte-exact sibling still PASSED, which is the gap this closes) |
+| I3 | the `Open:` and `Ruled:` field lines of the `## STOPPED` example block deleted | both `log-format pin 'Open: …'` and `log-format pin 'Ruled: …'` |
+| M1.1 | whole-number qualifier removed from `skills/orchestrating-development/SKILL.md` | `the marker's ruling number is compared as a whole number` |
+| M1.1 | whole-number qualifier removed from `skills/multi-code-review/SKILL.md` | `loop compares the marker's ruling number as a whole number` |
+| M1.2 | "number a new section 1 above the highest `<k>` you can see" replaced by "pick any unused section number" | `Deviation 1 allocates a new section number above the highest visible one` |
+| M1.2 | "and never renumber a section you wrote in this dispatch." deleted | `Deviation 1 never renumbers a section written in this dispatch` |
+| M1.3 | "the run has recorded so far, whatever batch its task belongs to" replaced by "this batch has recorded so far" | `batch-controller [RESUME_ANSWER] carries the run-wide answer set` |
+| M1.4 | "; an untagged line is a user line." deleted from Deviation 5 | `code-review-loop Deviation 5 treats an untagged line as a user line` |
+| M2 | cap sentence indented as a list item (`- **The cap.** …`) | nothing — both folded checks PASSED and agreed (244 passed, 0 failed). Before the fix the emphasis check would have reported a marker that is not there. |
+| M3 | the Guard Interaction fork sentence deleted | `Guard Interaction states that forks open with the reviewer marker` and `Guard Interaction makes a markerless fork return a lost return`; the marker regression pin still PASSED, as its comment now says |
+| M5 | Resume step 3 given the correct enumeration ``` `decided (user)` or `decided (orchestrator)` ``` | nothing — 244 passed, 0 failed (the old check turned red on correct content) |
+| M5 | Resume step 3 given a bare `decided (user)` | `Resume step 3 names a bare decided (user)` |
+| M6 | `<!-- multi-review report -->` removed from the fork subsection and mentioned in the sibling "### The ruling record" subsection instead | `fork pin '<!-- multi-review report -->'` (it would have PASSED under the old whole-section scope) |
+| M7 | both range anchors renamed (`## In-run rulings` → `## In-run decisions`) | `cannot scan for an unexpected '## ' heading: the range ..1427 is missing, empty or inverted` (previously this printed PASS) |
+| M8 | the `[RESUME_ANSWER]` doc's per-line tagging reverted to the untagged wording | `code-review-loop [RESUME_ANSWER] doc pin '`(orchestrator)` or `(user)`'` |
+| M8 | Deviation 5's per-line tagging reverted to the untagged wording | `code-review-loop Deviation 5 pin 'tagged `(orchestrator)` or `(user)`'` (while the bare `(orchestrator)` and `decided (<who>)` pins still PASSED, which is the gap this closes) |
+
+### Commands run
+
+```
+$ bash tests/reviewer-templates/run-tests.sh
+1. Harness claims rule is inside the prompt block
+  PASS: doc-review template: Harness claims rule inside the prompt block (line 42, block 25..133)
+  PASS: code-review template: Harness claims rule inside the prompt block (line 64, block 24..193)
+2. Finding-format field spellings
+  PASS: doc-review template: field spelling 'harness: tested —'
+  PASS: doc-review template: field spelling 'harness: untested —'
+  PASS: code-review template: field spelling 'harness: tested —'
+  PASS: code-review template: field spelling 'harness: untested —'
+3. Controller triage reason strings and completion-report line
+  PASS: multi-doc-review SKILL.md: reason string 'harness probe —'
+  PASS: multi-doc-review SKILL.md: reason string 'harness probe not runnable here'
+  PASS: multi-doc-review SKILL.md: completion-report line 'Harness probes owed:'
+  PASS: multi-code-review SKILL.md: reason string 'harness probe —'
+  PASS: multi-code-review SKILL.md: reason string 'harness probe not runnable here'
+  PASS: multi-code-review SKILL.md: completion-report line 'Harness probes owed:'
+4. user-decision guard
+  PASS: multi-code-review SKILL.md: guard fragment
+5. Rule text drift between the two templates
+  PASS: doc-review template: rule extract is non-empty
+  PASS: code-review template: rule extract is non-empty
+  PASS: rule text identical in both templates
+6. Unchanged contracts
+  PASS: code-review template: blinding pathspec line
+  PASS: code-review template: report marker instruction
+  PASS: doc-review template: report marker instruction
+7. Ambiguity & testability plan-cell contract targets
+  PASS: multi-doc-review SKILL.md: Ambiguity plan-cell extract is non-empty
+  PASS: Ambiguity plan cell: fragment 'no stated contract'
+  PASS: Ambiguity plan cell: fragment 'self-pin'
+  PASS: Ambiguity plan cell: gate label '**Body authority:**'
+8. Body-authority gate label consistency (writing-plans vs multi-doc-review)
+  PASS: gate label matches between writing-plans and multi-doc-review (**Body authority:**)
+
+Results: 24 passed, 0 failed
+exit=0
+
+$ bash tests/writing-plans/run-tests.sh
+1. Contracts and Literal Bodies section (R1)
+  PASS: section heading '## Contracts and Literal Bodies' (whole-line match, line 122)
+  PASS: exact-content label '**Exact content:**' (rule 4) (line 172, range 170..184)
+  PASS: procedural tie-break fragment 'treat the block as not procedural' (rule 1) (line 149, range 129..154)
+  PASS: authority-default fragment 'ordinary fix' (rule 3) (line 166, range 163..170)
+  PASS: self-pin fragment 'together as one ordinary fix' (rule 5) (line 187, range 184..194)
+2. Task Template Contract field (R2)
+  PASS: Task Template block carries '**Contract:**' (line 261, block 249..291)
+3. Plan Header authority note (R3)
+  PASS: Plan Header template carries 'reference implementations' (line 86, block 81..96)
+  PASS: Plan Header template carries '**Body authority:**' (line 86, block 81..96)
+  PASS: Plan Header note states the closed binding set 'Exactly two things in this plan bind' (line 86, block 81..96)
+  PASS: Plan Header note states the exact-content binding condition 'names a pin this plan does not itself write or edit' (line 86, block 81..96)
+  PASS: Plan Header note states the residue clause 'Everything else is reference' (line 86, block 81..96)
+  PASS: Plan Header note states the non-conflict disposition 'is never a plan conflict: record it against the plan-writing skill' (line 86, block 81..96)
+  PASS: Plan Header note states the disposition's scoping guard 'covers the note's own text alone' (line 86, block 81..96)
+4. Self-Review contract audit (R4)
+  PASS: self-review fragment 'falsifiable' (check 5) (line 338, range 338..340)
+  PASS: self-review scoping statement 'plan-header content is out of scope' (check 5) (line 338, range 338..340)
+
+Results: 15 passed, 0 failed
+exit=0
+
+$ bash tests/in-run-rulings/run-tests.sh
+0. Section anchors
+  PASS: '## In-run rulings' precedes '## Major-Error Stop Policy' (lines 624..1427)
+  PASS: no other '## ' heading (outside a fenced code block) between 624 and 1427
+1. Escalation predicate (R1)
+  PASS: section heading '## In-run rulings' (whole-line match, line 624)
+  PASS: class or reason label `escalated` (line 659, range 654..783)
+  PASS: class or reason label `forced` (line 662, range 654..783)
+  PASS: class or reason label `design` (line 667, range 654..783)
+  PASS: class or reason label `spec wrong` (line 674, range 654..783)
+  PASS: class or reason label `scope` (line 678, range 654..783)
+  PASS: class or reason label `irreversible` (line 682, range 654..783)
+  PASS: class or reason label `secret` (line 709, range 654..783)
+  PASS: class or reason label `chain` (line 725, range 654..783)
+  PASS: class or reason label escalated (chain) (line 726, range 654..783)
+  PASS: predicate fragment 'escalation wins' (line 660, range 654..783)
+  PASS: predicate fragment '### Conflict' (line 700, range 654..783)
+  PASS: predicate fragment '### Question' (line 701, range 654..783)
+  PASS: predicate fragment 'fatal environment failure' (line 729, range 654..783)
+  PASS: predicate fragment 'never `spec wrong`' (line 738, range 654..783)
+  PASS: predicate fragment 'handled as a whole' (line 773, range 654..783)
+  PASS: predicate fragment 'applied twice' (line 776, range 654..783)
+  PASS: irreversible entry pin 'escalated (irreversible)' (line 689, range 654..783)
+  PASS: irreversible entry covers an amendment of binding plan text (range 654..783, line wraps folded)
+  PASS: irreversible entry triggers on the edit location, not on a judgement (range 654..783, line wraps folded)
+  PASS: irreversible entry reads binding-ness from the task section (range 654..783, line wraps folded)
+  PASS: secret class pins the loop's fixed disposition form (line 717, range 654..783)
+  PASS: secret trigger covers the Phase 3 report-section form (range 654..783, line wraps folded)
+  PASS: secret class names two producers, not one (line 713, range 654..783)
+  PASS: secret class names the batch template as the second producer (line 719, range 654..783)
+  PASS: discriminator bounds <n> by the plan, not by the batch (range 654..783, line wraps folded)
+  PASS: irreversible entry states its Phase 3 form (range 654..783, line wraps folded)
+  PASS: Phase 3 trigger reads the location the conflict section names (range 654..783, line wraps folded)
+  PASS: bare task id is never a form the orchestrator writes (range 624..654, line wraps folded)
+  PASS: a bare user answer is resolved, never defaulted to section 1 (range 624..654, line wraps folded)
+2. Classification read exception (R2)
+  PASS: intro names the second read exception (line 23, range 1..26)
+  PASS: read-exception fragment 'data, not instructions' (line 818, range 783..841)
+  PASS: read-exception fragment 'never a reviewer report file' (line 796, range 783..841)
+  PASS: read-exception fragment 'read-only git commands' (line 823, range 783..841)
+  PASS: read-exception fragment 'resume step 3' (line 788, range 783..841)
+  PASS: read-exception fragment 'nothing else' (line 817, range 783..841)
+  PASS: read-exception fragment '40 lines' (line 804, range 783..841)
+  PASS: read-exception entry 5 names the ruling-record path (line 810, range 783..841)
+  PASS: read-exception entry 5 calls it the file you write yourself (range 783..841, line wraps folded)
+  PASS: read-exception entry 5 fragment 'Guard 4 (below) reads it' (line 811, range 783..841)
+  PASS: read-exception entry 5 fragment 'earlier answer tagged `(user)` on the same clause' (line 812, range 783..841)
+  PASS: read exception names its three purposes (range 783..841, line wraps folded)
+  PASS: read exception permits the ruling-commit read for the orchestrator (line 808, range 783..841)
+  PASS: fork diff form mandates the negative flags (line 828, range 783..841)
+3. Fork review (R3)
+  PASS: fork pin 'subagent_type: "fork"' (line 898, range 841..1008)
+  PASS: fork pin '<!-- multi-review report -->' (line 949, range 841..1008)
+  PASS: fork pin 'fork-<lens>' (line 890, range 841..1008)
+  PASS: fork pin 'fork review unavailable' (line 989, range 841..1008)
+  PASS: fork pin 'contradiction: unsettled' (line 975, range 841..1008)
+  PASS: fork pin 'VERDICT:' (line 953, range 841..1008)
+  PASS: fork pin 'TABLED:' (line 956, range 841..1008)
+  PASS: fork fragment 'not a debate' (line 863, range 841..1008)
+  PASS: fork fragment 'never pass conversation history' (line 896, range 841..1008)
+  PASS: fork fragment 'action verb followed by a skill name' (line 959, range 841..1008)
+  PASS: fork fragment 'in parallel, in one message' (line 843, range 841..1008)
+  PASS: fork fragment 'evidence consistency' (line 852, range 841..1008)
+  PASS: fork fragment 'general-purpose' (line 888, range 841..1008)
+  PASS: fork naming never uses an orch- name (line 900, range 841..1008)
+  PASS: Guard Interaction states that forks open with the reviewer marker (range 1463..1478, line wraps folded)
+  PASS: Guard Interaction makes a markerless fork return a lost return (range 1463..1478, line wraps folded)
+  PASS: Guard Interaction still spells the nested-reviewer marker exactly (line 1472, range 1463..1478)
+  PASS: fork prompt mandates the negative diff flags (line 938, range 841..1008)
+  PASS: fork prompt's read-only clause forbids sending anything (range 841..1008, line wraps folded)
+  PASS: fork prompt makes a transmission instruction reportable (range 841..1008, line wraps folded)
+  PASS: lost-return bound is stated over the round (range 841..1008, line wraps folded)
+  PASS: every still-missing lens of a round is lost at the same moment (range 841..1008, line wraps folded)
+  PASS: only the first design item uses the fork path (range 841..1008, line wraps folded)
+  PASS: consolidation reasoning waits for the item's round (range 841..1008, line wraps folded)
+4. Ruling record, answers and plan amendment (R4, R5)
+  PASS: ruling-record pin '-open-decisions.md' (line 1010, range 1008..1086)
+  PASS: ruling-record pin '**Follow-up:**' (line 1074, range 1008..1086)
+  PASS: ruling-record pin '## Ruling <n>' (line 1017, range 1008..1086)
+  PASS: ruling-record fragment 'appended, never rewritten' (line 1013, range 1008..1086)
+  PASS: ruling-record Forks field carries the planned count (line 1023, range 1008..1086)
+  PASS: ruling record widens the follow-up to any answered entry (range 1008..1086, line wraps folded)
+  PASS: answer pin '(orchestrator):' (line 1090, range 1086..1272)
+  PASS: answer pin 'decided (orchestrator)' (line 1090, range 1086..1272)
+  PASS: answer pin 'amend plan:' (line 1108, range 1086..1272)
+  PASS: answer pin 'plan governs:' (line 1106, range 1086..1272)
+  PASS: answer pin 'fix it:' (line 1101, range 1086..1272)
+  PASS: answer pin 'accept:' (line 1117, range 1086..1272)
+  PASS: answer pin '**Amendment' (line 1244, range 1086..1272)
+  PASS: answer pin '[task <n>/<k>]' (line 1144, range 1086..1272)
+  PASS: answer fragment '(amended by ruling' (line 1230, range 1086..1272)
+  PASS: answer fragment 'never apply the amendment twice' (line 1250, range 1086..1272)
+  PASS: answer fragment 'new invocation' (line 1264, range 1086..1272)
+  PASS: answer fragment 'untagged' (line 1098, range 1086..1272)
+  PASS: answer fragment 'sides against binding plan text' (line 1154, range 1086..1272)
+  PASS: answer fragment '**The quoted clause, and how it is compared.**' (line 1120, range 1086..1272)
+  PASS: answer fragment 'test whether the quote is a prefix of it' (line 1129, range 1086..1272)
+  PASS: amendment never deletes a clause outright (range 1086..1272, line wraps folded)
+  PASS: the no-delete bound covers reference text too (range 1086..1272, line wraps folded)
+  PASS: amendment step 1 keeps the clause under the no-delete bound (range 1086..1272, line wraps folded)
+  PASS: amendment appends an exception scoped to the ruling's item (range 1086..1272, line wraps folded)
+  PASS: answer pin 'escalated (irreversible)' (line 1112, range 1086..1272)
+  PASS: the amendment procedure is scoped to the amendments still the orchestrator's (range 1086..1272, line wraps folded)
+  PASS: ruling writes have a fixed order (range 1008..1086, line wraps folded)
+  PASS: ruling record bounds the marker's authority to a backing entry (line 1052, range 1008..1086)
+  PASS: the marker check is not the Resume-only check (range 1008..1086, line wraps folded)
+  PASS: an unbacked marker is reference text, not decided wording (range 1008..1086, line wraps folded)
+  PASS: the marker's ruling number is compared as a whole number (range 1008..1086, line wraps folded)
+  PASS: the secret rule covers every file a ruling commit touches (range 1008..1086, line wraps folded)
+  PASS: the secret rule's field list is open, not closed (range 1008..1086, line wraps folded)
+  PASS: the secret rule names the Resolution field (range 1008..1086, line wraps folded)
+  PASS: normalization also replaces a double quotation mark (range 1086..1272, line wraps folded)
+  PASS: amendment lookup escalates when no clause matches (range 1086..1272, line wraps folded)
+  PASS: a re-derived conflict keeps its answered number (range 1086..1272, line wraps folded)
+5. RULING log entry, cap and guards (R6, R7, R9)
+  PASS: log-entry pin '## RULING' (line 1278, range 1272..1379)
+  PASS: log-entry pin 'Re-dispatch:' (line 1283, range 1272..1379)
+  PASS: log-entry pin 'Re-dispatch: none' (line 1325, range 1272..1379)
+  PASS: log-entry pin 'Ruled:' (line 1328, range 1272..1379)
+  PASS: log-entry pin 'chore(orchestration): <slug> ruling <n>' (line 1304, range 1272..1379)
+  PASS: guard pin 'plan governs (orchestrator decision)' (line 1391, range 1379..1427)
+  PASS: guard fragment forbidding a byte-equal match (range 1379..1427, line wraps folded)
+  PASS: log-entry sentence, byte-exact incl. punctuation (range 1272..1379, line wraps folded, case-sensitive)
+  PASS: log-entry sentence carries no '*' emphasis marker around it
+  PASS: log-entry or guard fragment 'in-run resumes of one phase are capped at 3 per unit' (range 1272..1379, line wraps folded)
+  PASS: log-entry or guard fragment 'phase itself in Phase 4, the task in Phase 3' (range 1272..1379, line wraps folded)
+  PASS: log-entry fragment 'previous invocation left' (line 1318, range 1272..1379)
+  PASS: self-check escalates a bare fix it on binding text (line 1298, range 1272..1379)
+  PASS: cap counts a Phase 3 task in either line form (line 1343, range 1272..1379)
+  PASS: RULING Forks line carries the planned count (line 1282, range 1272..1379)
+  PASS: guard fragment 'durable marker' (line 1376, range 1272..1379)
+  PASS: guard fragment 'a Critical is never rejected' (line 1401, range 1379..1427)
+  PASS: guard fragment 'quotes its clause' (line 1384, range 1379..1427)
+  PASS: guard fragment 'recorded when it is made' (line 1404, range 1379..1427)
+  PASS: guard count word is 'Four' (range 1379..1427, line wraps folded, case-sensitive)
+  PASS: guard 4 states a user decision is never overturned (line 1407, range 1379..1427)
+  PASS: guard 4 fragment 'read your ruling record' (line 1408, range 1379..1427)
+  PASS: guard 4 fragment 'recorded answer tagged `(user)`' (line 1409, range 1379..1427)
+  PASS: guard 4 fragment 'under the class that first sent it to the user' (line 1413, range 1379..1427)
+  PASS: guard 4 fragment 'you never re-answer it in the' (line 1417, range 1379..1427)
+  PASS: guard 4 escalates when the clause match is unsure (range 1379..1427, line wraps folded)
+  PASS: guard 4 names a fallback class for a forced or design entry (range 1379..1427, line wraps folded)
+  PASS: cap matches the whole bracketed token (line 1344, range 1272..1379)
+  PASS: cap tests the Re-dispatch value, not the line's first word (range 1272..1379, line wraps folded)
+  PASS: a stop skips an entry already carrying a follow-up (range 1272..1379, line wraps folded)
+  PASS: guard 1 says a quotable clause is not by itself a reason (range 1379..1427, line wraps folded)
+  PASS: guard 4 ignores a clause-less follow-up (range 1379..1427, line wraps folded)
+6. Wiring into phases, log format, state.md, Resume and stop policy (R6)
+  PASS: Phase 3 routes BLOCKED task=<n> to the predicate (range 246..300, line wraps folded)
+  PASS: Phase 4 routes open items to the predicate (range 300..329, line wraps folded)
+  PASS: Phase 5 report lists unsettled contradictions (range 329..351, line wraps folded)
+  PASS: log-format pin '## RULING' (line 375, range 351..420)
+  PASS: log-format pin 'Owed probe:' (line 393, range 351..420)
+  PASS: log-format pin 'ruling <n> follow-up' (line 418, range 351..420)
+  PASS: log-format pin 'Open: [<id>] escalated (<spec wrong|scope|irreversible|secret|chain>) — <summary>' (line 391, range 351..420)
+  PASS: log-format pin 'Ruled: [<id>] <forced|design> — <answer>' (line 392, range 351..420)
+  PASS: state.md carries the Rulings line (line 430, range 420..433)
+  PASS: resume pin '## RULING' (line 469, range 433..624)
+  PASS: resume pin 'Ruled:' (line 502, range 433..624)
+  PASS: resume pin '**Follow-up:**' (line 505, range 433..624)
+  PASS: resume pin '(orchestrator)' (line 515, range 433..624)
+  PASS: resume pin '(user)' (line 516, range 433..624)
+  PASS: resume pin 'decided (<who>)' (line 566, range 433..624)
+  PASS: resume pin 'The Phase 3 answer set — one rule' (line 518, range 433..624)
+  PASS: resume recovers the pre-amendment clause from the ruling commit (line 542, range 433..624)
+  PASS: resume compares the printed subject with the full expected string (range 433..624, line wraps folded)
+  PASS: Resume step 3 never names decided (user) without decided (orchestrator) beside it
+  PASS: resume ruling-commit lookup prints the hash (line 534, range 433..624)
+  PASS: resume ruling-commit lookup keeps exactly one subject (range 433..624, line wraps folded)
+  PASS: resume copies the clause, never the whole printed file (range 433..624, line wraps folded)
+  PASS: resume reverts an orphan amendment marker (range 433..624, line wraps folded)
+  PASS: stop policy fragment 'escalated' (line 1449, range 1427..1463)
+  PASS: stop policy fragment 'fork review unavailable' (line 1451, range 1427..1463)
+  PASS: stop policy states the stopped commit's staging rule (line 1433, range 1427..1463)
+  PASS: stop policy forbids 'git add -A' for a stopped commit (line 1435, range 1427..1463)
+  PASS: stop policy forbids 'git add .' for a stopped commit (line 1436, range 1427..1463)
+  PASS: stop policy forbids 'git commit -a' for a stopped commit (line 1436, range 1427..1463)
+  PASS: stop policy names the only files a stopped commit stages (range 1427..1463, line wraps folded)
+  PASS: the Resume rebuild path stages its stopped commit by explicit path (range 433..624, line wraps folded)
+  PASS: the escalated-return stop stages its stopped commit by explicit path (range 1272..1379, line wraps folded)
+  PASS: stop policy no longer lists a pre-flight plan conflict as a stop by itself
+7. multi-code-review attribution and self-sufficient lines (R8.1, R8.2)
+  PASS: multi-code-review pin '— clause:' (line 793, range 776..946)
+  PASS: multi-code-review pin 'clause: none' (line 939, range 776..946)
+  PASS: multi-code-review pin '(plan-mandated) — at ' (line 793, range 776..946)
+  PASS: multi-code-review pin 'cut it to 160 characters' (line 928, range 776..946)
+  PASS: multi-code-review pin '**Normalization is one rule:**' (line 923, range 776..946)
+  PASS: multi-code-review pin 'one sentence or one list entry, never a whole section' (line 924, range 776..946)
+  PASS: multi-code-review pin 'tests the quote as a **prefix**' (line 934, range 776..946)
+  PASS: multi-code-review pin 'No consumer compares the quote with the raw plan text' (line 935, range 776..946)
+  PASS: multi-code-review pin 'decided (orchestrator)' (line 1024, range 946..1133)
+  PASS: multi-code-review pin 'decided (<who>)' (line 990, range 946..1133)
+  PASS: multi-code-review pin 'plan governs (orchestrator decision)' (line 978, range 946..1133)
+  PASS: multi-code-review pin 'plan governs (user decision)' (line 977, range 946..1133)
+  PASS: multi-code-review pin '`decided (user)` or `decided (orchestrator)`' (line 1043, range 946..1133)
+  PASS: multi-code-review pin 'unresolved: fix contradicts binding text' (line 996, range 946..1133)
+  PASS: M = 1 log-format example carries the clause (line 793, range 784..799)
+  PASS: M >= 2 log-format example carries the clause before the annotation (line 814, range 799..818)
+  PASS: multi-code-review normalization replaces a double quotation mark (line 927, range 776..946)
+  PASS: multi-code-review names all three replacements as one rule (range 776..946, line wraps folded)
+  PASS: addendum shapes include an unresolved line (line 861, range 776..946)
+  PASS: the binding-text test is stated where the refusal rule lives (range 946..1133, line wraps folded)
+  PASS: binding-text test names the Exact content block (line 1004, range 946..1133)
+8. Loop-side rule for verification cycles (R8.3)
+  PASS: loop-decision rejection shape (line 648, range 623..703)
+  PASS: loop-side rule fragment 'a Critical is never rejected under this rule' (line 681, range 623..703)
+  PASS: loop-side rule fragment 'decided wording' (line 644, range 623..703)
+  PASS: loop-side rule fragment '(amended by ruling' (line 652, range 623..703)
+  PASS: loop-side rule fragment 'same BASE' (line 651, range 623..703)
+  PASS: loop-side rule fragment 'never edits plan text' (line 687, range 623..703)
+  PASS: loop-side rule fragment '3-cycle cap is unchanged' (line 689, range 623..703)
+  PASS: loop bounds the marker's authority to a backing entry (line 664, range 623..703)
+  PASS: loop names the ruling-record path it checks the marker against (line 667, range 623..703)
+  PASS: loop treats an unbacked marker as reference text (range 623..703, line wraps folded)
+  PASS: loop compares the marker's ruling number as a whole number (range 623..703, line wraps folded)
+  PASS: loop covers the no-TOPIC_DIR case, where no record exists (range 623..703, line wraps folded)
+9. Controller prompt templates (R10)
+  PASS: Deviation 3 pins the fixed secret disposition form (line 109, range 94..119)
+  PASS: Deviation 3 says the leading text is fixed (range 94..119, line wraps folded)
+  PASS: Deviation 3 names the real mechanism: the secret class stops the run (range 94..119, line wraps folded)
+  PASS: Deviation 3 forbids copying the value into the line (range 94..119, line wraps folded)
+  PASS: code-review-loop [RESUME_ANSWER] doc pin '(orchestrator)' (line 222, range 218..225)
+  PASS: code-review-loop [RESUME_ANSWER] doc pin '`(orchestrator)` or `(user)`' (line 222, range 218..225)
+  PASS: code-review-loop [RESUME_ANSWER] doc pin 'decided (<who>)' (line 223, range 218..225)
+  PASS: code-review-loop [RESUME_ANSWER] doc says authoritative either way (line 222, range 218..225)
+  PASS: code-review-loop Deviation 5 pin '(orchestrator)' (line 129, range 125..186)
+  PASS: code-review-loop Deviation 5 pin 'tagged `(orchestrator)` or `(user)`' (line 129, range 125..186)
+  PASS: code-review-loop Deviation 5 pin 'decided (<who>)' (line 145, range 125..186)
+  PASS: code-review-loop Deviation 5 pin '`decided (user)` or `decided (orchestrator)`' (line 170, range 125..186)
+  PASS: code-review-loop Deviation 5 treats an untagged line as a user line (range 125..186, line wraps folded)
+  PASS: batch-controller Resume Answer heading states the omit condition (line 71, range 1..189)
+  PASS: batch-controller [RESUME_ANSWER] doc pin '(orchestrator)' (line 195, range 189..203)
+  PASS: batch-controller [RESUME_ANSWER] doc pin '(user)' (line 196, range 189..203)
+  PASS: batch-controller [RESUME_ANSWER] doc pin '[task <n>/<k>]' (line 193, range 189..203)
+  PASS: batch-controller [RESUME_ANSWER] doc says authoritative either way (line 196, range 189..203)
+  PASS: batch-controller [RESUME_ANSWER] carries the run-wide answer set (range 189..203, line wraps folded)
+  PASS: First-batch parameter defers to Deviation 1's pre-flight rule (line 63, range 1..189)
+  PASS: batch-controller Deviation 1 pin '### Question <k>' (line 81, range 77..125)
+  PASS: batch-controller Deviation 1 pin '### Conflict <k>' (line 82, range 77..125)
+  PASS: batch-controller Deviation 1 pin 'lowest-numbered task' (line 100, range 77..125)
+  PASS: batch-controller Deviation 1 pin 'Pre-flight rule' (line 98, range 77..125)
+  PASS: batch-controller Deviation 1 pin 'absent from' (line 104, range 77..125)
+  PASS: batch-controller Deviation 1 pin '.superpowers/sdd/task-<n>-report.md' (line 80, range 77..125)
+  PASS: batch-controller Deviation 1 pin 'is settled' (line 108, range 77..125)
+  PASS: batch-controller Deviation 1 pin 'Never copy a secret or a credential' (line 121, range 77..125)
+  PASS: batch-controller Deviation 1 pin 're-used on the same task' (line 84, range 77..125)
+  PASS: batch-controller Deviation 1 pin 'those sections before you write your own' (line 98, range 77..125)
+  PASS: batch-controller Deviation 1 pin 'controller failure' (line 120, range 77..125)
+  PASS: batch-controller Deviation 1 pin '[task <n>]` line means `[task <n>/1]' (line 109, range 77..125)
+  PASS: Deviation 1 allocates a new section number above the highest visible one (range 77..125, line wraps folded)
+  PASS: Deviation 1 never renumbers a section written in this dispatch (range 77..125, line wraps folded)
+  PASS: Deviation 1 keys the stale-section deletion on this run's own work (line 92, range 77..125)
+  PASS: Deviation 1 rejects the answer line as the first-dispatch signal (line 94, range 77..125)
+  PASS: batch-controller re-derived conflict pin 're-use that `<k>`, apply the answer' (line 116, range 77..125)
+  PASS: batch-controller re-derived conflict pin 'Allocate a new `<k>` only for a' (line 117, range 77..125)
+
+Results: 244 passed, 0 failed
+exit=0
+
+```
