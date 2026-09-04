@@ -4233,3 +4233,232 @@ green (404/0) before the next mutation.
   suite reported `403 passed, 1 failed`, failing assertion "Phase 5 report
   carries the Secrets found list under the rotate/history heading (R13)".
   Restored → `404 passed, 0 failed`.
+
+## Round 13 fixes
+
+Fixes applied against review round 13 findings. Edits touched
+`skills/orchestrating-development/SKILL.md`, `skills/multi-code-review/SKILL.md`
+and `tests/in-run-rulings/run-tests.sh` only.
+
+### [I1] The read exception's Phase 5 purpose has no matching entry
+
+`skills/orchestrating-development/SKILL.md`, "What may be read — the
+classification read exception": added one sentence immediately after
+`Nothing else.`, before the untouched `Every file read under this
+exception is …` sentence. It states that Phase 5 step 3's scans of the
+code-review log and the plan-review log for `rejected: harness probe not
+runnable here — <probe>` lines and for `Secrets found:` items are named
+by Phase 5 itself and sit outside this five-entry list — they match only
+those fixed line shapes, read nothing else from the two logs, and never
+enter a ruling. The five numbered entries, their order, and the `Nothing
+else.` sentence are byte-identical to before.
+
+Test: two new assertions in section 2 (`READ_EXCEPTION_LINE`..
+`READ_EXCEPTION_END`), and the pre-existing "closing clause declares the
+list exhaustive" assertion's needle was updated (it pinned a substring
+that used to sit right after `Nothing else.` and now sits after the new
+sentence instead).
+
+### [I2] `Secrets found:` had no durable carrier into the review log
+
+`skills/multi-code-review/SKILL.md`:
+- `## Review Log Format`'s fixed example now shows `Secrets found: none`
+  on the line immediately after the completion marker.
+- `## After the Loop`: the completion-marker paragraph now also appends
+  the `Secrets found:` line to the log itself — one item
+  `- [<id>] <file> — (round <i>)` per finding of the invocation that
+  reported an exposed secret or credential in reviewed code, whatever its
+  final disposition, or `Secrets found: none` — committed with the
+  completion marker under Pipeline rule 1's `chore(review): <slug>
+  completed` commit, and stating the item never reproduces the secret
+  value. The following "Also report a `Secrets found:` line" paragraph
+  was simplified to point at that same set of items, instead of
+  re-defining the shape a second time (DRY).
+
+`skills/orchestrating-development/SKILL.md` Phase 5 step 3: the clause
+now reads "the `Secrets found:` list gathered from that `Secrets found:`
+line of the code review log's invocation entries", naming the actual
+source instead of the vague "gathered from the code review log". Folded
+into the same edit as [M2] below (both touch the same sentence).
+
+Test: three new assertions — two in section 7 (`MCR_AFTER_LOOP_LINE`..
+`MCR_ERROR_HANDLING_LINE`, loop side) plus one in `## Review Log Format`'s
+range (loop side, the `Secrets found: none` example line), and one in
+section 6's Phase 5 range (orchestrator side, `PHASE5_LINE`..
+`LOG_FORMAT_LINE`).
+
+### [I3] Phase 3 amendment revert had no code-side half
+
+`skills/orchestrating-development/SKILL.md` Resume step 3: added a
+lead-in sentence after `**Reverting the plan is only half of the
+revert.**` pointing to the two paragraphs (Phase 4's, unchanged; Phase
+3's, new) that cover each phase's other half. Added a new paragraph
+after the Phase 4 "re-raises the finding against the restored clause"
+sentence and before "Either way the branch never silently keeps a
+change…": when the reverted ruling was made in Phase 3, there is no fix
+commit to revert — the amended clause was implemented inside an ordinary
+task commit by the task's own implementer, never through the code-review
+loop — so instead the task is re-implemented against the restored
+clause: untick its checkboxes in the plan and remove its completed line
+from `.superpowers/sdd/progress.md` (the ledger), in the same resume
+commit, so Phase 3's task-complete predicate no longer treats it as done
+and the batch loop dispatches it again. The existing Phase 4 wording, the
+three sweeping-command prohibitions, and the closing "Either way…"
+sentence are all unchanged text — the new paragraph sits between the
+Phase 4 paragraph and that closing sentence, so "Either way" now truthfully
+covers both phases.
+
+Test: two new assertions in section 6's Resume range (`RESUME_LINE`..
+`RULINGS_LINE`).
+
+### [I4] Read-exception entry 5 had no fork/reviewer carve-out
+
+`skills/orchestrating-development/SKILL.md`, read exception entry 5:
+appended "You alone — never a reviewer — may read this entry: a
+reviewer's `## What you may read` block never lists the ruling-record
+path." after the existing entry-5 text. Entries 1–4 and the list's
+numbering are unchanged.
+
+Test: two new assertions in section 2.
+
+### [I5] `**Follow-up:**` clause source undefined for a Phase 3 item
+
+`skills/orchestrating-development/SKILL.md`, the `**Follow-up:**` line
+definition: extended the source rule so a Phase 3 item (which has no
+disposition line) takes its clause instead from the plan text the item's
+`### Conflict <k>` section quotes (per the batch controller's Deviation
+1, which requires both sides quoted), or, failing that, from the same
+ruling-record entry's own `**Contract clause:**` field; `— clause: none`
+is now written only when the item names no plan text at all.
+
+Test: three new assertions in section 4 (`RECORD_LINE`..`RECORD_END`).
+
+### [I6] Incomplete-ruling repair miscounted a multi-item return
+
+`skills/orchestrating-development/SKILL.md` Resume step 3: reworded the
+incomplete-ruling test. A ruling-record entry now counts as **logged**
+when some `## RULING` entry's `Items:` lines name its item, or when its
+number falls inside the range of ruling numbers that entry's return
+produced — not only when a `## RULING` heading carries that exact
+number. This matches how `<n>` is actually defined elsewhere in the same
+section (the FIRST ruling number of a return, one `## RULING` entry per
+return however many items it carried), so a three-item return no longer
+gets two of its three ruling-record entries wrongly "repaired" with
+extra `## RULING` entries and an inflated cap count on the next resume.
+
+Test: two new assertions in section 6's Resume range.
+
+### [M1] `## STOPPED` example showed an unqualified Phase 4 `Ruled:` id
+
+`skills/orchestrating-development/SKILL.md`, the `## STOPPED` example
+block: the single `Ruled: [<id>] <forced|design> — <answer>` line was
+split into two example lines — `Ruled: [<id> inv <i>] <forced|design> —
+<answer>` (the qualified Phase 4 form) and `Ruled: [task <n>/<k>]
+<forced|design> — <answer>` (the Phase 3 form) — so the example matches
+the qualifier rule stated in the prose below it.
+
+Test: updated the existing `log-format example line` assertion loop
+(section 6) to pin both new lines instead of the old single line.
+
+### [M2] Phase 5 secrets clause buried its own heading text
+
+Folded into the [I2] orchestrator-side edit above: the clause now reads
+"under the heading `Secrets found — rotate the credential and decide
+what to do about the branch history, which the fix does not rewrite`,
+the `Secrets found:` list gathered from …", so the heading's own words
+are quoted as a unit instead of reading as two more report list items.
+Both required actions and the `Secrets found: none` form are preserved.
+
+Test: the same section-6 Phase 5 assertion covers this; its needle was
+updated to the new heading-quote text.
+
+### [M3] `## RULING` entry block defined twice with drifted `Detail:` paths
+
+`skills/orchestrating-development/SKILL.md`: changed the first copy's
+(`## Orchestration Log Format`) `Detail:` line from the fully spelled-out
+`docs/superpowers-orchestrator/<date>-<slug>/plans/<slug>-open-decisions.md`
+to `<topic folder>/plans/<slug>-open-decisions.md`, matching the second
+copy (`### The RULING log entry…`) exactly. Added a one-line
+cross-reference in the second copy's lead-in sentence naming it as the
+same block already shown under `## Orchestration Log Format`.
+
+Test: one new assertion in section 5 (`LOG_ENTRY_LINE`..`LOG_ENTRY_END`)
+pinning the cross-reference sentence; no existing assertion pinned the
+old spelled-out path, so nothing else needed updating.
+
+### [M4] One-item-at-a-time wording implied forks for every item
+
+`skills/orchestrating-development/SKILL.md`, the fork-review section:
+reworded "only then dispatch the next item's forks" to "only then
+dispatch the next item's reviewers — forks for the first item, fresh
+subagents after it, by the inheritance rule below", pointing forward to
+the existing "only the FIRST `design` item of a return uses the fork
+path" rule. The one-item-at-a-time ordering and the wait-for-all-notices
+rule are untouched (both already pinned by existing assertions, still
+green).
+
+Test: no new assertion required — the two rules the finding says must
+stay intact were already pinned and remain so; nothing pinned the exact
+"next item's forks" wording that changed.
+
+### Verification
+
+```
+$ bash tests/in-run-rulings/run-tests.sh; echo "EXIT=$?"
+...
+Results: 421 passed, 0 failed
+EXIT=0
+(stderr: empty)
+
+$ bash tests/reviewer-templates/run-tests.sh; echo "EXIT=$?"
+...
+Results: 24 passed, 0 failed
+EXIT=0
+
+$ bash tests/writing-plans/run-tests.sh; echo "EXIT=$?"
+...
+Results: 15 passed, 0 failed
+EXIT=0
+```
+
+All three suites exited 0; in-run-rulings suite's stderr was empty.
+Count: 421, up from 411 baseline (14 new assertions from this round's
+fixes, net of two pre-existing assertions whose needles were updated
+in place rather than added).
+
+### Mutation proof
+
+For every new or edited assertion, the rule's own bytes were removed or
+altered in the target file, the suite was re-run and confirmed to FAIL
+naming exactly that assertion, then the file was restored byte-for-byte
+from a pre-mutation copy and the suite re-confirmed green (421/0) before
+the next mutation.
+
+- **I1** (Phase 5 carve-out sentence): deleted the sentence between
+  `Nothing else.` and `Every file read…` → 3 assertions failed (the
+  updated exhaustiveness pin plus the two new carve-out pins). Restored →
+  green.
+- **I4** (entry 5 fork carve-out): deleted the appended sentence → both
+  new assertions failed. Restored → green.
+- **I2/M2 orchestrator side** (Phase 5 heading + source clause): reverted
+  to the old "heading naming the two actions… gathered from the code
+  review log" wording → both assertions failed. Restored → green.
+- **I2 loop side** (three edits: `Secrets found: none` example line, "append
+  to the log itself" sentence, "durable copy… Pipeline rule 1" sentence):
+  each mutated independently → each failed exactly its own assertion.
+  Restored → green after each.
+- **I3** (Phase 3 no-fix-commit paragraph, both halves): reworded the
+  lead-in and the untick/ledger sentence → both assertions failed.
+  Restored → green.
+- **I5** (Follow-up Phase 3 clause source, all three clauses): collapsed
+  back to the old "or `— clause: none`" ending → all three assertions
+  failed. Restored → green.
+- **I6** (incomplete-ruling test, both new sentences): reverted to the old
+  "orchestration log holds no `## RULING` entry carrying that same `<n>`"
+  wording → both assertions failed. Restored → green.
+- **M1** (`## STOPPED` example `Ruled:` lines): reverted to the single
+  unqualified line → both updated assertions failed. Restored → green.
+- **M3** (RULING block cross-reference): deleted the appended clause →
+  the new assertion failed. Restored → green.
+
+No finding was left unfixed.
