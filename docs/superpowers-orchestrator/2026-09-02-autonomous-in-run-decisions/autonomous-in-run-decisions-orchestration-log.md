@@ -29,3 +29,11 @@ note: each task clean on its first review round; Minor findings carried in the l
 - Task 8: complete — multi-code-review loop-side rule for verification cycles (f053552..fb542cb)
 - Task 9: complete — controller prompt templates and the regression gates (10fb328..14b2ba5)
 note: all three clean on the first review round; one Minor (duplicated pre-flight wording in the batch-controller template) carried in the ledger
+
+## RULING 1 — 2026-09-04 — phase 4 — both open items decided after independent fork review
+Items: [I5] design — amend plan (five-entry read list, guard 4); fix it
+       [I2] design — amend plan (irreversible widened by edit location, no-delete bound); fix it
+Detail: docs/superpowers-orchestrator/2026-09-02-autonomous-in-run-decisions/plans/autonomous-in-run-decisions-open-decisions.md
+Forks: 6 (design consistency, implementation practicality, adversarial — three per item) — contradiction: none on [I5]; settled on [I2]
+Re-dispatch: phase 4, in-run resume 1 of 3
+note: this run executes the INSTALLED 7.7.0 skill, which stops on open items; the predicate, the ruling record and this entry were applied by hand under the user's standing delegation. The installed code-review-loop template journals every resume answer as `decided (user)`, so the label in the review log will read `(user)` although both rulings are the orchestrator's — the attribution fix is part of what this branch builds and is not yet installed.
