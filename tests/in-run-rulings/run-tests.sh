@@ -104,8 +104,15 @@ assert_in_range_folded() { # desc file needle start end
     return
   fi
   folded="$(fold_range "$file" "$start" "$end")"
-  if awk -v needle="$needle" -v hay="$folded" \
-    'BEGIN { exit index(tolower(hay), tolower(needle)) > 0 ? 0 : 1 }'; then
+  # Both values reach awk through the environment, never through `awk -v`:
+  # `-v` performs escape-sequence processing on the value it assigns, so a
+  # backslash inside a pinned range — a line continuation in a fenced shell
+  # example, an escaped Markdown character — would be rewritten before the
+  # comparison and could turn a real match into a FAIL. ENVIRON copies the
+  # bytes unchanged.
+  if needle="$needle" hay="$folded" awk \
+    'BEGIN { n = ENVIRON["needle"]; h = ENVIRON["hay"]
+             exit index(tolower(h), tolower(n)) > 0 ? 0 : 1 }'; then
     ok "$desc (range $start..$end, line wraps folded)"
   else
     bad "$desc (not inside range $start..$end of ${file#$ROOT/}, line wraps folded)"
@@ -123,8 +130,10 @@ assert_in_range_folded_exact() { # desc file needle start end
     return
   fi
   folded="$(fold_range "$file" "$start" "$end")"
-  if awk -v needle="$needle" -v hay="$folded" \
-    'BEGIN { exit index(hay, needle) > 0 ? 0 : 1 }'; then
+  # Environment, not `awk -v`, for the reason given above.
+  if needle="$needle" hay="$folded" awk \
+    'BEGIN { n = ENVIRON["needle"]; h = ENVIRON["hay"]
+             exit index(h, n) > 0 ? 0 : 1 }'; then
     ok "$desc (range $start..$end, line wraps folded, case-sensitive)"
   else
     bad "$desc (not inside range $start..$end of ${file#$ROOT/}, line wraps folded, case-sensitive)"
@@ -195,6 +204,18 @@ for frag in 'escalation wins' '### Conflict' '### Question' \
   assert_in_range "predicate fragment '$frag'" \
     "$ORCH_SKILL" "$frag" "$CLASS_LINE" "$CLASS_END" fragment
 done
+# The three sentences that keep the predicate closed, and so bound what may be
+# decided without the user: the `forced` test itself, and the two exits that
+# are not classes of the predicate. Folded, because each crosses a line wrap.
+assert_in_range_folded "the forced test is the one sentence that makes every other outcome indefensible" \
+  "$ORCH_SKILL" 'a fact that makes every other outcome indefensible' \
+  "$CLASS_LINE" "$CLASS_END"
+assert_in_range_folded "a transient external problem never reaches the predicate" \
+  "$ORCH_SKILL" 'never reaches the predicate either' \
+  "$CLASS_LINE" "$CLASS_END"
+assert_in_range_folded "Phase 5 stays the user's" \
+  "$ORCH_SKILL" "**Phase 5** stays the user's" \
+  "$CLASS_LINE" "$CLASS_END"
 # The `irreversible` entry also covers an `amend plan` answer that would edit
 # the plan's binding text; the trigger is the named edit location, never a
 # judgement about the amendment's effect.
@@ -321,6 +342,30 @@ for frag in 'not a debate' 'never pass conversation history' \
 done
 assert_in_range "fork naming never uses an orch- name" \
   "$ORCH_SKILL" 'never an `orch-` name' "$FORK_LINE" "$FORK_END" exact
+# The numbers of the fork review: how many forks run by default, when two are
+# enough, which four lenses exist, and how few usable returns stop the run.
+# A silent change to any of them is the difference between an independently
+# reviewed ruling and an unreviewed one.
+assert_in_range_folded "fork subsection states the default of three forks" \
+  "$ORCH_SKILL" 'The default is three forks' "$FORK_LINE" "$FORK_END"
+assert_in_range_folded "fork subsection states the two-fork condition" \
+  "$ORCH_SKILL" "when the item's \`file:line\` names a single file and none of the outcomes you tabled amends the plan" \
+  "$FORK_LINE" "$FORK_END"
+# Each lens is pinned by its own defining bullet, not by the bare lens name:
+# three of the four names also occur in the "default is three forks" sentence
+# and in the fork prompt, so a bare name would survive the deletion of the
+# fixed list.
+for pin in '`design consistency` — does each outcome agree with the spec' \
+           '`implementation practicality` — what each outcome costs to build' \
+           '`adversarial` — how each outcome fails' \
+           '`evidence consistency` — does the finding'; do
+  assert_in_range "fork lens definition '$pin'" \
+    "$ORCH_SKILL" "$pin" "$FORK_LINE" "$FORK_END" exact
+done
+# The stop threshold itself, not only the `fork review unavailable` label it
+# stops with.
+assert_in_range_folded "a design ruling needs at least two usable fork returns" \
+  "$ORCH_SKILL" 'needs at least two usable fork returns' "$FORK_LINE" "$FORK_END"
 GUARD_LINE="$(first_line_of "$ORCH_SKILL" '## Guard Interaction')"
 TEMPLATES_LINE="$(first_line_of "$ORCH_SKILL" '## Prompt Templates')"
 # The sentence this branch adds to Guard Interaction: the forks open their
@@ -375,6 +420,25 @@ for pin in '-open-decisions.md' '**Follow-up:**' '## Ruling <n>'; do
 done
 assert_in_range "ruling-record fragment 'appended, never rewritten'" \
   "$ORCH_SKILL" 'appended, never rewritten' "$RECORD_LINE" "$RECORD_END" fragment
+# The entry template's six field lines. Guard 4, the Resume rebuild and the
+# marker-backing check each read one of these fields, so the record must not
+# be gutted field by field with the suite green. `**Resolution:**` and
+# `**Item:**` also occur in the "Never reproduce a secret" prose of this same
+# subsection, so each field is pinned as a WHOLE field line with its
+# placeholder tail — the way the `Ruled:` and `Open:` lines of the log format
+# are pinned — and only the template's own line can satisfy it.
+for pin in '- **Class:** forced | design | escalated (<spec wrong|scope|irreversible|secret|chain>)' \
+           '- **Item:** [<id>] <severity> <file:line> — <finding summary, verbatim>' \
+           '- **Contract clause:** "<verbatim quote>" — <path of the spec, plan or skill that holds it>' \
+           '- **Defensible answers:** <one line each; `n/a` for forced>' \
+           '- **Forks:** <k> of <planned> — <lens>: <VERDICT line>' \
+           '- **Resolution:** <the answer as written into [RESUME_ANSWER]>'; do
+  assert_in_range "ruling-record entry field line '$pin'" \
+    "$ORCH_SKILL" "$pin" "$RECORD_LINE" "$RECORD_END" exact
+done
+assert_in_range "ruling-record entry heading line carries its placeholder tail" \
+  "$ORCH_SKILL" '## Ruling <n> — YYYY-MM-DD — phase <p> — [<id>] <short title>' \
+  "$RECORD_LINE" "$RECORD_END" exact
 # The Forks field records how many of the planned forks returned.
 assert_in_range "ruling-record Forks field carries the planned count" \
   "$ORCH_SKILL" '<k> of <planned>' "$RECORD_LINE" "$RECORD_END" exact
@@ -388,6 +452,32 @@ for pin in '(orchestrator):' 'decided (orchestrator)' 'amend plan:' \
   assert_in_range "answer pin '$pin'" \
     "$ORCH_SKILL" "$pin" "$ANSWERS_LINE" "$ANSWERS_END" exact
 done
+# Each Phase 4 answer is pinned by its own defining bytes, not by the bare
+# label: every one of the four labels recurs elsewhere in this range (the
+# pre-commit self-check, the amendment procedure, the Phase 3 answer shapes),
+# so the bare-label pins above survive the deletion of the definition list
+# itself. These pins do not.
+for pin in '`fix it: <what the fix must achieve>` — the finding is accepted' \
+           'plan governs: "<verbatim clause>" — <source path>' \
+           'amend plan: <the amendment>; fix it: <what the fix must achieve>' \
+           '`accept: <reason>` — for an `unresolved` item only'; do
+  assert_in_range "Phase 4 answer definition '$pin'" \
+    "$ORCH_SKILL" "$pin" "$ANSWERS_LINE" "$ANSWERS_END" exact
+done
+# The rule inside the `fix it` bullet: a bare `fix it` authorises no fix
+# against binding text.
+assert_in_range_folded "a bare fix it never authorises a fix against binding text" \
+  "$ORCH_SKILL" 'a bare `fix it` never authorises a fix against binding text' \
+  "$ANSWERS_LINE" "$ANSWERS_END"
+# The rule that makes a Phase 3 ruling survive a stop and reach a later batch.
+# The Resume check on the same string is the cross-reference; this is the
+# definition.
+assert_in_range "the Phase 3 answer set is defined once, here" \
+  "$ORCH_SKILL" '**The Phase 3 answer set — one rule.**' \
+  "$ANSWERS_LINE" "$ANSWERS_END" exact
+assert_in_range_folded "the Phase 3 answer set carries every ruled line of the run" \
+  "$ORCH_SKILL" 'every ruled `[task <n>/<k>]` line recorded for this run, for every task, whatever batch the task belongs to' \
+  "$ANSWERS_LINE" "$ANSWERS_END"
 for frag in '(amended by ruling' 'never apply the amendment twice' \
             'new invocation' 'untagged' 'sides against binding plan text' \
             '**The quoted clause, and how it is compared.**' \
@@ -472,6 +562,21 @@ for pin in '## RULING' 'Re-dispatch:' 'Re-dispatch: none' 'Ruled:' \
   assert_in_range "log-entry pin '$pin'" \
     "$ORCH_SKILL" "$pin" "$LOG_ENTRY_LINE" "$LOG_ENTRY_END" exact
 done
+# The `## RULING` example block's own lines. The bare `## RULING`,
+# `Re-dispatch:` and `Ruled:` pins above are short prefixes that the prose of
+# this subsection satisfies on its own, so the example block could be deleted
+# — fence and all — with the suite green. Pin the header line and the two
+# field labels the branch's consumers read, each as a whole line with its
+# placeholder tail.
+for pin in '## RULING <n> — YYYY-MM-DD — phase <p> — <one-line summary>' \
+           'Items: [<id>] <forced|design> — <answer>' \
+           'Items: [<id>] escalated (<spec wrong|scope|irreversible|secret|chain>) — <summary>' \
+           'Detail: <topic folder>/plans/<slug>-open-decisions.md' \
+           'Forks: none | <k> of <planned> (<lens>, <lens>[, <lens>]) — contradiction: none | settled | unsettled' \
+           'Re-dispatch: phase <p>, in-run resume <r> of 3'; do
+  assert_in_range "RULING example line '$pin'" \
+    "$ORCH_SKILL" "$pin" "$LOG_ENTRY_LINE" "$LOG_ENTRY_END" exact
+done
 assert_in_range "guard pin 'plan governs (orchestrator decision)'" \
   "$ORCH_SKILL" 'plan governs (orchestrator decision)' "$GUARDS_LINE" "$GUARDS_END" exact
 assert_in_range_folded "guard fragment forbidding a byte-equal match" \
@@ -488,20 +593,43 @@ assert_in_range_folded_exact "log-entry sentence, byte-exact incl. punctuation" 
 # The sentence must also be written without emphasis markers. A marker that
 # wraps the sentence (`**In-run resumes … Phase 3.**`) sits AROUND the pinned
 # bytes, never inside them, so the match itself can never carry one: this
-# check inspects the single character on each side of the match instead. It
-# folds through the same helper as the byte-exact check above, so the two can
-# never disagree about the text they search. The two failure causes get
-# distinct messages. Only the touching characters are examined, because the
-# paragraph opens with a bolded `**The cap.**` lead-in that is separated from
-# the sentence by a space and is not emphasis on the sentence.
+# check inspects what stands on each side of the match instead. It folds
+# through the same helper as the byte-exact check above, so the two can never
+# disagree about the text they search. The two failure causes get distinct
+# messages.
+#
+# `fold_range` turns every line wrap into a space, so a marker separated from
+# the sentence by a wrap would read as `** In-run resumes …`. The scan
+# therefore steps over any spaces before it looks for a `*` run, and tells an
+# emphasis marker on the sentence from a neighbouring bold span by the run's
+# OTHER side: a `*` run before the match whose own left neighbour is a space
+# (or the start of the text) OPENS a span around the sentence, while one whose
+# left neighbour is any other character CLOSES an earlier span — the
+# paragraph's `**The cap.**` lead-in ends that way and is not emphasis on the
+# sentence. The mirror rule applies after the match: a `*` run followed by a
+# space (or the end of the text) closes a span around the sentence, while one
+# followed by any other character opens a new span, such as a bold lead-in of
+# the next sentence.
 CAP_SENTENCE_FOLDED="$(fold_range "$ORCH_SKILL" "$LOG_ENTRY_LINE" "$LOG_ENTRY_END")"
-CAP_EMPHASIS="$(awk -v hay="$CAP_SENTENCE_FOLDED" -v needle="$CAP_SENTENCE" \
+CAP_EMPHASIS="$(hay="$CAP_SENTENCE_FOLDED" needle="$CAP_SENTENCE" awk \
   'BEGIN {
+     hay = ENVIRON["hay"]; needle = ENVIRON["needle"]
      s = index(hay, needle)
      if (s == 0) { print "missing"; exit }
-     before = (s > 1 ? substr(hay, s - 1, 1) : "")
-     after = substr(hay, s + length(needle), 1)
-     print (before == "*" || after == "*" ? "emphasis" : "clean")
+     i = s - 1
+     while (i >= 1 && substr(hay, i, 1) == " ") i--
+     if (i >= 1 && substr(hay, i, 1) == "*") {
+       while (i >= 1 && substr(hay, i, 1) == "*") i--
+       if (i < 1 || substr(hay, i, 1) == " ") { print "emphasis"; exit }
+     }
+     n = length(hay)
+     j = s + length(needle)
+     while (j <= n && substr(hay, j, 1) == " ") j++
+     if (j <= n && substr(hay, j, 1) == "*") {
+       while (j <= n && substr(hay, j, 1) == "*") j++
+       if (j > n || substr(hay, j, 1) == " ") { print "emphasis"; exit }
+     }
+     print "clean"
    }')"
 if [ "$CAP_EMPHASIS" = "clean" ]; then
   ok "log-entry sentence carries no '*' emphasis marker around it"
@@ -564,6 +692,12 @@ assert_in_range "cap matches the whole bracketed token" \
 assert_in_range_folded "cap tests the Re-dispatch value, not the line's first word" \
   "$ORCH_SKILL" 'whose `Re-dispatch:` value is not `none`' \
   "$LOG_ENTRY_LINE" "$LOG_ENTRY_END"
+# The cap's reset anchor: without it the count would run across a stop and the
+# fourth ruling of a resumed unit would escalate as a chain that never
+# happened.
+assert_in_range_folded "cap counts from the later of the invocation line and the last stop" \
+  "$ORCH_SKILL" "the orchestration log's latest \`_Invocation\` line and its latest \`## STOPPED\` entry, so that a resume after a stop starts from zero" \
+  "$LOG_ENTRY_LINE" "$LOG_ENTRY_END"
 # A stop drops no ruling, and skips an entry the user already answered — the
 # same Follow-up exclusion the rebuild path in Resume step 3 states.
 assert_in_range_folded "a stop skips an entry already carrying a follow-up" \
@@ -599,23 +733,57 @@ assert_in_range_folded "Phase 4 routes open items to the predicate" \
 assert_in_range_folded "Phase 5 report lists unsettled contradictions" \
   "$ORCH_SKILL" 'every entry whose Forks line records `contradiction: unsettled`' \
   "$PHASE5_LINE" "$LOG_FORMAT_LINE"
-# The `Ruled:` and `Open:` labels also occur in the prose below the example
-# blocks, so a bare label pin survives the deletion of the example. Pin each
-# field line whole, placeholder tail included, so that only the example's own
-# line can satisfy it.
-for pin in '## RULING' 'Owed probe:' 'ruling <n> follow-up' \
+# The sibling requirement: an item decided with `accept:` changed no code, so
+# the report is the only place the user learns it was accepted.
+assert_in_range_folded "Phase 5 report lists every accepted ruling" \
+  "$ORCH_SKILL" 'every entry whose Resolution line begins with `accept:`, listed by ruling number' \
+  "$PHASE5_LINE" "$LOG_FORMAT_LINE"
+# A `BLOCKED task=<n>` return writes no batch entry, so the ruling's own
+# `## RULING` entry is the boundary entry Resume step 3 finds the log ending
+# with. Without the rule, a batch entry would stand between them and the
+# "log ends with `## RULING`" case would never be reached.
+assert_in_range_folded "a BLOCKED task return writes no batch log entry" \
+  "$ORCH_SKILL" 'A `BLOCKED task=<n>` return writes no batch entry' \
+  "$PHASE3_LINE" "$PHASE4_LINE"
+# The `Ruled:`, `Open:`, `## RULING` and `Owed probe:` labels also occur in
+# the prose below the example blocks, so a bare label pin survives the
+# deletion of the example. Pin each field line whole, placeholder tail
+# included, so that only the example's own line can satisfy it. (`Owed probe:`
+# occurs in the prose too — "one `Owed probe: <verbatim line>` line for every
+# …" — but only with a line wrap between `Owed` and `probe:`, so the whole
+# field line matches the example's line alone.)
+for pin in '## RULING <n> — YYYY-MM-DD — phase <p> — <one-line summary>' \
+           'Owed probe: <verbatim line>' \
            'Open: [<id>] escalated (<spec wrong|scope|irreversible|secret|chain>) — <summary>' \
            'Ruled: [<id>] <forced|design> — <answer>'; do
-  assert_in_range "log-format pin '$pin'" \
+  assert_in_range "log-format example line '$pin'" \
+    "$ORCH_SKILL" "$pin" "$LOG_FORMAT_LINE" "$STATE_LINE" exact
+done
+# Not an example line: the boundary-commit sentence names the two ruling
+# subjects, and `ruling <n> follow-up` is the one Resume step 3 writes.
+assert_in_range "log format names the follow-up commit subject" \
+  "$ORCH_SKILL" 'ruling <n> follow-up' "$LOG_FORMAT_LINE" "$STATE_LINE" exact
+# Retained weaker pins: the bare labels alone, in case a later edit moves the
+# example's placeholder tails.
+for pin in '## RULING' 'Owed probe:'; do
+  assert_in_range "log-format label '$pin'" \
     "$ORCH_SKILL" "$pin" "$LOG_FORMAT_LINE" "$STATE_LINE" exact
 done
 assert_in_range "state.md carries the Rulings line" \
   "$ORCH_SKILL" 'Rulings:' "$STATE_LINE" "$RESUME_LINE" exact
-for pin in '## RULING' 'Ruled:' '**Follow-up:**' '(orchestrator)' '(user)' 'decided (<who>)' \
+for pin in '## RULING' 'Ruled:' '**Follow-up:**' '(orchestrator)' 'decided (<who>)' \
            'The Phase 3 answer set — one rule'; do
   assert_in_range "resume pin '$pin'" \
     "$ORCH_SKILL" "$pin" "$RESUME_LINE" "$RULINGS_LINE" exact
 done
+# A bare `(user)` needle would pass against the pre-branch wording, which
+# already carried `decided (user)` three times in this range. What this branch
+# adds is the per-line tagging of the rebuilt `[RESUME_ANSWER]`, so pin the
+# enumerating bytes of that construction instead — the same way the two
+# loop-prompt checks in section 9 are pinned.
+assert_in_range_folded "Resume step 3 tags the Ruled lines and the user's answers per line" \
+  "$ORCH_SKILL" "each tagged \`(orchestrator)\`, plus the resume prompt's answers, each tagged \`(user)\`" \
+  "$RESUME_LINE" "$RULINGS_LINE"
 # The pre-amendment clause is recovered from the ruling commit, never from the
 # audit note's free prose.
 assert_in_range "resume recovers the pre-amendment clause from the ruling commit" \
@@ -663,8 +831,19 @@ done
 assert_in_range "stop policy states the stopped commit's staging rule" \
   "$ORCH_SKILL" '**Every `stopped` commit stages by explicit path.**' \
   "$RULINGS_END" "$GUARD_LINE" exact
+# The prohibition itself, carrying its verb and all three commands. A bare
+# presence pin cannot tell a prohibition from a recommendation — text telling
+# the orchestrator to USE `git add -A` would satisfy one just as well — and
+# `git add .` is a substring of any explicit-path command that begins with a
+# dot, so a compliant example command would satisfy that one on its own. The
+# sentence wraps between `git add -A` and `and never`, so it is folded.
+assert_in_range_folded "stop policy forbids the three sweeping stage commands" \
+  "$ORCH_SKILL" 'Never `git add -A` and never `git add .`, and never `git commit -a`.' \
+  "$RULINGS_END" "$GUARD_LINE"
+# The three bare pins stay as additional, weaker checks on the spelling of
+# each command.
 for pin in 'git add -A' 'git add .' 'git commit -a'; do
-  assert_in_range "stop policy forbids '$pin' for a stopped commit" \
+  assert_in_range "stop policy names '$pin' for a stopped commit" \
     "$ORCH_SKILL" "$pin" "$RULINGS_END" "$GUARD_LINE" exact
 done
 assert_in_range_folded "stop policy names the only files a stopped commit stages" \
@@ -734,6 +913,32 @@ assert_in_range_folded "the binding-text test is stated where the refusal rule l
 assert_in_range "binding-text test names the Exact content block" \
   "$MCR_SKILL" '`**Exact content:**` block' \
   "$MCR_AFTER_LOOP_LINE" "$MCR_ERROR_HANDLING_LINE" exact
+# The tag-to-`<who>` mapping on the loop's own side. The pins above assert
+# only that the three tag tokens occur somewhere in this 187-line range, and
+# unrelated sentences in it produce those same tokens, so the mapping itself
+# could be reworded away with the suite green. The sibling rule is pinned on
+# the template side in section 9; these two pin the skill side.
+assert_in_range_folded "loop reads the answer line's tag, and treats an untagged line as a user line" \
+  "$MCR_SKILL" 'tagged `(orchestrator)` or `(user)`; an untagged line is a user line' \
+  "$MCR_AFTER_LOOP_LINE" "$MCR_ERROR_HANDLING_LINE"
+assert_in_range_folded "loop takes <who> from that tag" \
+  "$MCR_SKILL" 'or `decided (user): <answer>`, `<who>` taken from the tag' \
+  "$MCR_AFTER_LOOP_LINE" "$MCR_ERROR_HANDLING_LINE"
+# The two orchestrator-answer mappings this branch adds. They decide whether a
+# fix subagent runs at all and whether an item still counts as unresolved, and
+# nothing else in the suite asserts either of them.
+assert_in_range "the accept disposition shape" \
+  "$MCR_SKILL" '`decided (<who>): accept:' \
+  "$MCR_AFTER_LOOP_LINE" "$MCR_ERROR_HANDLING_LINE" exact
+assert_in_range_folded "an accept answer runs no fix and no re-review, and stops counting as unresolved" \
+  "$MCR_SKILL" 'line is its whole disposition, it no longer counts as unresolved, and no fix or re-review runs' \
+  "$MCR_AFTER_LOOP_LINE" "$MCR_ERROR_HANDLING_LINE"
+assert_in_range_folded "an amend plan answer takes the finding-governs path for its fix it part" \
+  "$MCR_SKILL" 'An `amend plan: …; fix it: …` answer takes the finding-governs path for its `fix it` part' \
+  "$MCR_AFTER_LOOP_LINE" "$MCR_ERROR_HANDLING_LINE"
+assert_in_range_folded "that path skips the verification re-review, because a new invocation follows" \
+  "$MCR_SKILL" 'the verification re-review is skipped and the new invocation that always follows reviews the fix' \
+  "$MCR_AFTER_LOOP_LINE" "$MCR_ERROR_HANDLING_LINE"
 
 bold "8. Loop-side rule for verification cycles (R8.3)"
 NO_FIX_LINE="$(line_containing_after "$MCR_SKILL" '**No fix ships unreviewed:**' 0)"
@@ -866,7 +1071,14 @@ assert_in_range_folded "Deviation 1 never renumbers a section written in this di
 # tasks that were ruled on but not yet dispatched.
 assert_in_range "Deviation 1 keys the stale-section deletion on this run's own work" \
   "$BATCH_PROMPT" 'no completed ledger line' "$DEV1_LINE" "$DEV1_END" exact
-assert_in_range "Deviation 1 rejects the answer line as the first-dispatch signal" \
+# The negation belongs in the needle: without the two words "never by", the
+# rule reads as the opposite instruction and the controller would delete a
+# task's already-answered report sections. The words wrap, so this is folded;
+# the byte pin below stays as the weaker spelling check.
+assert_in_range_folded "Deviation 1 rejects the answer line as the first-dispatch signal" \
+  "$BATCH_PROMPT" 'never by the absence of a `[task <n>…]` line in `## Resume Answer`' \
+  "$DEV1_LINE" "$DEV1_END"
+assert_in_range "Deviation 1 spells the rejected first-dispatch signal exactly" \
   "$BATCH_PROMPT" 'the absence of a `[task <n>…]` line in `## Resume Answer`' \
   "$DEV1_LINE" "$DEV1_END" exact
 # A re-derived pre-flight conflict re-uses the `<k>` it was answered under.
