@@ -3308,3 +3308,232 @@ The in-run-rulings suite went from 300 checks to 290: 12 assertions pinning
 withdrawn Ruling 2 text were removed (F1), 1 was added for guard 2 (F2), 1 for
 the design/fork link (F5), and the Phase 4 negative check became two checks
 (F3). No finding was skipped or partially applied.
+
+## Round 9 fixes — 2026-09-04
+
+Findings I1–I6, M1–M3, M6, M8–M12. All fixes are wording changes in the four
+skill files plus the pin updates they require in
+`tests/in-run-rulings/run-tests.sh`. No file under `docs/`, no plan, no spec,
+no version file was touched.
+
+### [I5] backticks inside a double-quoted check description
+
+`tests/in-run-rulings/run-tests.sh` line 722 wrote the description of the
+guard-2 check in double quotes with two backtick-quoted terms inside, so bash
+ran `plan governs` and `accept` as command substitutions on every run of the
+suite. Fixed by single-quoting the description, the spelling every other
+backtick-bearing description in the file already uses.
+
+Scan for other occurrences (only escaped backticks remain inside double
+quotes, which bash treats as literal):
+
+```
+$ grep -nP '"[^"]*(?<!\\)`' tests/in-run-rulings/run-tests.sh | grep -v "\\$ORCH_SKILL\|\\$MCR_SKILL\|\\$BATCH_PROMPT\|\\$LOOP_PROMPT\|^ *#"
+(no line whose backtick sits inside an actual double-quoted string remains;
+ the suite's standard error is now empty — see the verification section)
+```
+
+Before the fix:
+
+```
+$ bash tests/in-run-rulings/run-tests.sh 2>&1 >/dev/null
+tests/in-run-rulings/run-tests.sh: line 722: plan: command not found
+tests/in-run-rulings/run-tests.sh: line 722: accept: command not found
+```
+
+After the fix:
+
+```
+$ bash tests/in-run-rulings/run-tests.sh 2>/tmp/e1.txt >/tmp/o1.txt; echo "exit=$?  stderr_bytes=$(wc -c </tmp/e1.txt)"
+exit=0  stderr_bytes=       0
+```
+
+The PASS line now carries the whole description:
+
+```
+  PASS: guard 2 forbids `plan governs` and `accept` on a Critical (range …, line wraps folded, case-sensitive)
+```
+
+### [I1] read exception did not cover two reads Resume step 3 mandates
+
+`skills/orchestrating-development/SKILL.md`, entry 4 of
+`### What may be read — the classification read exception`, permitted the
+`git log --format="%H %s" --grep …` and `git show <ruling commit>^:<plan path>`
+reads only when Resume step 3 reverts a plan amendment. Resume step 3 also
+runs the commit-landed check (`--format=%s`, on every resume whose log ends
+with a `## RULING` entry) and scans the whole plan for an orphan
+`(amended by ruling <n>)` marker. Entry 4 now covers the `## RULING` entry
+checks of Resume step 3 generally: both `--format` spellings of the
+`git log --grep` landed check, the `git show` read, and the whole-plan scan
+for an orphan marker and its `**Amendment <n>` note. The "Nothing else."
+close is unchanged.
+
+### [I2] the `secret` entry did not match the spec's and the plan's definition
+
+The entry claimed "**Two producers exist.**", added a Phase 3 report-section
+trigger, and named `batch-controller-prompt.md` Deviation 1 as a second
+producer. The requirements document (design doc line 172) and the plan
+(reference text lines 269–275, Assumptions line 13) both define the class by
+the item's **disposition reason or summary** and both say **one** producer,
+`code-review-loop-prompt.md` Deviation 3. The entry now reads that way. The
+decidability refinement is kept: Deviation 3's fixed leading disposition form
+is still quoted verbatim, and any other reason naming a secret is still
+treated as this class. The closing sentence about a secret in reviewed code is
+kept, reworded from "is neither" (which referred to the two producers) to "is
+not this class". No other entry of the escalation list and none of the five
+class labels changed.
+
+Suite pins updated in the same bytes: the two pins asserting the two-producer
+claim and the Phase 3 report-section trigger were replaced by two pins on the
+restored wording — the disposition-reason trigger and the one-producer
+sentence naming Deviation 3.
+
+### [I6] the lost-return bound contradicted the waiting rule
+
+The bound fired "as soon as at least one notice of the round has arrived",
+which on a three-fork round marked the two lenses still working as lost. The
+bound is now stated over a condition that can only hold once the round is
+genuinely over: a round is **finished** when no fork of it is still running —
+every lens has delivered its completion notice, or the platform has reported
+that fork as failed or as no longer running. Until then a missing notice is
+merely outstanding and the orchestrator keeps waiting; another lens's notice
+arriving never marks it lost. At the moment the round is finished, every lens
+of the round with no usable return counts as one loss, is re-dispatched once
+in one message, and after the re-dispatch round is finished is left out with
+`forks: <k> of <planned>`. The bound stays stated over the round, and the
+`fork review unavailable` stop for fewer than two usable returns is unchanged.
+
+Suite pins: the pin on the withdrawn phrase `counts as one loss at that same
+moment` was replaced by three pins on the new rule — the finished-round
+definition, the "never marks it lost" clause, and the loss-at-finish sentence.
+
+### [I3] orchestrator-rejection line named two of three replacements
+
+`skills/multi-code-review/SKILL.md`, the
+`rejected: plan governs (orchestrator decision) — "<clause>"` paragraph,
+described normalization as "each ` — ` and each ` ← ` replaced by one space,
+cut to 160 characters" — the `"` replacement was missing, so a clause holding
+a double quotation mark kept it and the line's own `"…"` delimiters closed
+early. The parenthetical is replaced by a pointer to the one normalization
+rule of "Self-sufficient open-item lines", naming all three replacements and
+the 160-character cut. The one rule itself is unchanged.
+
+### [I4] two clauses claimed the same slot with no stated order
+
+The `— at <file:line> — clause: …` suffix and the
+`— harness probe: <observation>` clause were both placed "before the ` ← `
+annotation" with no relative order, and the observation text was exempt from
+the replacements the location clause relies on. The Review Log Format bullet
+now states the order explicitly — summary, then `— at … — clause: …`, then
+`— harness probe: <observation>`, then any ` ← ` annotation — so that the
+first ` — at ` on the line is always the one that introduces the location, and
+requires the same three replacements (` — `, ` ← `, `"`) on the observation
+text. The Triage harness-claims item and the "Self-sufficient open-item lines"
+paragraph both point at that one rule. The location clause keeps the position
+the plan requires: after the summary and before any ` ← ` annotation.
+
+### [M1] Deviation 1's stale-section rationale was false for a same-run re-dispatch
+
+`skills/orchestrating-development/batch-controller-prompt.md`: a task that
+returned `BLOCKED` and is re-dispatched after a ruling still shows both
+first-dispatch signals inside the same run, so "was left by an earlier run"
+was false exactly in the case this branch adds. The rationale now reads "was
+left by a previous run, or by an earlier dispatch of this one that returned
+`BLOCKED` and produced no ticked checkbox and no ledger line". The deletion
+itself and the section-numbering rule are unchanged.
+
+### [M2] Deviation 3's fixed secret line contradicted the mandatory suffix
+
+`skills/orchestrating-development/code-review-loop-prompt.md`: the deviation
+fixed the *whole* disposition line, which no controller can satisfy together
+with multi-code-review's mandatory `— at … — clause:` suffix on every
+`unresolved:` line. It now fixes only the **leading** text ("the disposition
+line BEGINS …") and states that the mandatory suffix still follows, with
+`— clause: none` for a secret that collides with no plan text. The mandatory
+suffix rule itself is untouched.
+
+### [M3] the tie-break round was told to dispatch a fork and not to dispatch one
+
+`skills/orchestrating-development/SKILL.md`: the consolidation paragraph now
+dispatches "one further reviewer under `evidence consistency` — a fresh
+`general-purpose` subagent, never a fork", cross-referencing the
+anti-anchoring inheritance rule earlier in the same subsection. The
+`evidence consistency` lens name and the `contradiction: unsettled` outcome
+are unchanged.
+
+### [M6] binding-text test cited a note that does not exist where it said
+
+`skills/multi-code-review/SKILL.md`: "the orchestrating-development 7.7.0
+Body-authority note" is now "the `**Body authority:**` note that the
+plan-writing skill (`../writing-plans/SKILL.md`) puts in every plan header".
+`skills/writing-plans/` was not edited.
+
+### [M8] Phase 3 step 2's fill list omitted `[RESUME_ANSWER]`
+
+`skills/orchestrating-development/SKILL.md`, Phase 3 step 2 now lists
+`[RESUME_ANSWER]` — the run-wide answer set that step 5 states, filled on
+every dispatch, first or repeat, whenever the run has recorded any answer.
+
+### [M9] two references pointed at a file absent from a fresh clone
+
+`skills/orchestrating-development/SKILL.md`: the ruling-record shape no longer
+attributes itself to "the orchestration issues log's Case template" (it reads
+"in the shape below:", and the fenced block below supplies it), and the cap
+paragraph no longer cites "Case 007 of the orchestration issues log" (it now
+names the chain it bounds: "the chain of repeated open returns on one unit
+that motivated the cap").
+
+### [M10] a quoted rule was attributed to the wrong section
+
+`skills/orchestrating-development/SKILL.md`: both quotes stay verbatim, and
+the attribution is corrected — the Controller Dispatch Rules' "never pass
+conversation history", and the prompt templates' "nothing else may be added to
+the prompt".
+
+### [M11] a bare task line was described as settling any section of that task
+
+`skills/orchestrating-development/SKILL.md`: the sentence now says that a
+`[task <n>/<k>]` line settles the section with that exact `<k>` and a bare
+`[task <n>]` line settles section 1 only. Both line shapes stay valid.
+
+### [M12] the prohibition on best-guessing a pre-flight conflict lost its subject
+
+`skills/orchestrating-development/batch-controller-prompt.md`: the pre-flight
+rule now carries the clause back explicitly — "Never best-guess the conflict
+itself: an unsettled pre-flight conflict is returned as `BLOCKED` for that
+conflict, never decided by you from plan, spec or repository — the sentence
+above about answering NEEDS_CONTEXT that way covers a missing fact, not a plan
+that contradicts itself." The existing "never best-guess a number inside
+`[TASK_LIST]`" sentence is unchanged, so no duplication is re-introduced.
+
+### Verification — fresh output
+
+```
+$ bash tests/in-run-rulings/run-tests.sh 2>/tmp/e1.txt >/tmp/o1.txt; echo "exit=$?  stderr_bytes=$(wc -c </tmp/e1.txt)"; tail -2 /tmp/o1.txt
+exit=0  stderr_bytes=       0
+
+Results: 291 passed, 0 failed
+
+$ bash tests/reviewer-templates/run-tests.sh 2>&1 | tail -2
+Results: 24 passed, 0 failed
+exit=0
+
+$ bash tests/writing-plans/run-tests.sh 2>&1 | tail -2
+Results: 15 passed, 0 failed
+exit=0
+
+$ bash tests/codex/run-unit-tests.sh 2>&1 | tail -2
+ All unit tests passed.
+exit=0
+
+$ bash tests/smart-compress/run-tests.sh 2>&1 | tail -3
+  Results: 87 passed
+  0 failed
+exit=0
+```
+
+The in-run-rulings suite went from 290 checks to 291: two pins on the
+withdrawn `secret` wording were replaced by two on the restored wording (I2),
+and one pin on the withdrawn lost-return moment was replaced by three on the
+new round-finished rule (I6). Standard error is empty (I5). No finding was
+skipped or partially applied.
