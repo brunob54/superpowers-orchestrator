@@ -319,6 +319,7 @@ assert_absent_in_range_folded_nobacktick() { # desc file needle start end mode
 assert_absent_unless_qualified_in_range_folded() { # desc file phrase qualifier start end mode
   local desc="$1" file="$2" phrase="$3" qualifier="$4" start="$5" end="$6" mode="$7"
   local folded folded_nb phrase_nb qualifier_nb pair remainder before found
+  local removed_any out
   if [ -z "$start" ] || [ -z "$end" ] || [ "$start" -ge "$end" ]; then
     bad "$desc (the range $start..$end of ${file#$ROOT/} is missing, empty or inverted)"
     return
@@ -329,26 +330,38 @@ assert_absent_unless_qualified_in_range_folded() { # desc file phrase qualifier 
   qualifier_nb="${qualifier//\`/}"
   pair="${phrase_nb}${qualifier_nb}"
   # Environment, not `awk -v`, for the reason given above assert_in_range_folded.
+  # Each iteration's awk call reports, via a leading "1|" or "0|" marker,
+  # whether it actually found and removed a pair this time — never inferred
+  # from whether the string changed, which a legitimate full consumption of
+  # the haystack (below) makes indistinguishable from a broken awk call.
   remainder="$folded_nb"
+  removed_any=0
   while :; do
     before="$remainder"
-    remainder="$(hay="$remainder" pair="$pair" awk \
+    out="$(hay="$remainder" pair="$pair" awk \
       'BEGIN { h = ENVIRON["hay"]; p = ENVIRON["pair"]
                lh = tolower(h); lp = tolower(p)
                i = index(lh, lp)
-               if (i > 0) { h = substr(h, 1, i - 1) substr(h, i + length(p)) }
-               print h }')"
+               if (i > 0) { h = substr(h, 1, i - 1) substr(h, i + length(p)); printf "1|%s", h }
+               else { printf "0|%s", h } }')"
+    case "$out" in
+      1\|*) removed_any=1; remainder="${out#1|}" ;;
+      0\|*) remainder="${out#0|}" ;;
+      *) remainder="" ;;
+    esac
     [ "$remainder" = "$before" ] && break
   done
-  # M13: fail closed. If the pair-removal `awk` above ever exits without
-  # printing (any non-zero-output condition), `remainder` collapses to the
-  # empty string, the loop's equality test then terminates on the very next
-  # iteration (empty equals empty), and the final absence test below would
-  # run against an empty haystack and report "not found" — an unconditional
-  # PASS regardless of what the range actually contains. A haystack that was
-  # genuinely non-empty before the loop must not come out of it empty.
-  if [ -n "$folded_nb" ] && [ -z "$remainder" ]; then
-    bad "$desc (the pair-removal step emptied a non-empty haystack in range $start..$end of ${file#$ROOT/}; failing closed instead of testing absence against nothing)"
+  # M13: fail closed, but only when NO pair was actually removed. If the
+  # pair-removal awk above ever exits without printing a recognised marker
+  # (any malformed-output condition), `removed_any` stays 0 and `remainder`
+  # collapses to the empty string, so the check below still fires. But when
+  # the range's entire folded text IS the qualified phrase plus its
+  # qualifier — the compliant case this helper exists to accept — the
+  # removal loop legitimately empties the remainder too, WITH `removed_any`
+  # left at 1: that case must pass through to the final absence test below,
+  # never fail closed.
+  if [ -n "$folded_nb" ] && [ -z "$remainder" ] && [ "$removed_any" != "1" ]; then
+    bad "$desc (the pair-removal step emptied a non-empty haystack in range $start..$end of ${file#$ROOT/} without removing a pair; failing closed instead of testing absence against nothing)"
     return
   fi
   if [ "$mode" = "exact" ]; then
@@ -604,13 +617,13 @@ assert_in_range_folded "read-exception entry 3 names the plan clause, Global Con
 # A bare 'nothing else' needle is short enough that ordinary prose could
 # satisfy it even with the closing declaration deleted. Pin the closing
 # clause's own distinguishing bytes: the exhaustiveness statement that ends
-# the five-item list.
+# the six-item list.
 assert_in_range_folded "read exception's closing clause declares the list exhaustive" \
   "$ORCH_SKILL" "Nothing else. Phase 5 step 3's report-gathering scans of the code-review" \
   "$READ_EXCEPTION_LINE" "$READ_EXCEPTION_END"
 # The Phase 5 carve-out immediately after "Nothing else.": the report's
 # harness-probe and Secrets-found scans of the two review logs are named by
-# Phase 5 itself and are outside this five-entry list, matching only fixed
+# Phase 5 itself and are outside this six-entry list, matching only fixed
 # line shapes and never entering a ruling.
 assert_in_range_folded "the Nothing-else clause carves out Phase 5's own report-gathering scans" \
   "$ORCH_SKILL" 'are named by Phase 5 itself and are outside this list' \
@@ -872,8 +885,20 @@ assert_in_range_folded "the partial case permits exactly one status read" \
 assert_in_range_folded "a single status read is not the forbidden monitoring step" \
   "$ORCH_SKILL" '**A single status read of the reviewers you dispatched is not the monitoring step forbidden above**' \
   "$FORK_LINE" "$FORK_END"
-assert_in_range_folded "the round is finished at that read whatever it reports" \
-  "$ORCH_SKILL" 'The round is **finished** at that read whatever it reports' \
+assert_in_range_folded "the read has a stated minimum wait precondition" \
+  "$ORCH_SKILL" "once at least 10 minutes of wall-clock time have passed since the round's last completion notice" \
+  "$FORK_LINE" "$FORK_END"
+assert_in_range_folded "a read finding no reviewer still running finishes the round" \
+  "$ORCH_SKILL" 'A read reporting that no reviewer of the round is still running **finishes** the round' \
+  "$FORK_LINE" "$FORK_END"
+assert_in_range_folded "a read finding a lens still running leaves it outstanding instead of finishing the round" \
+  "$ORCH_SKILL" 'A read reporting a lens still running does **not** finish the round: that lens stays outstanding' \
+  "$FORK_LINE" "$FORK_END"
+assert_in_range_folded "exactly one further read is permitted, after the same minimum wait" \
+  "$ORCH_SKILL" "once at least 10 more minutes have passed since that read, make one further status read, the second and last one permitted for the round" \
+  "$FORK_LINE" "$FORK_END"
+assert_in_range_folded "the second read finishes the round whatever it reports" \
+  "$ORCH_SKILL" 'That second read finishes the round whatever it reports' \
   "$FORK_LINE" "$FORK_END"
 # The tie-break reviewer is not a fork, so its own missing return needs a
 # stated bound and must not inflate the Forks field.
@@ -1388,6 +1413,26 @@ done
 assert_in_range_folded "guard 4 escalates when the clause match is unsure" \
   "$ORCH_SKILL" 'an unsure match never becomes a ruling' \
   "$GUARDS_LINE" "$GUARDS_END"
+# F7: guard 4 also catches a user decision made at a stop that produced no
+# ruling-record entry (fork review unavailable, a controller malformed or
+# failed twice, a checkbox cross-check mismatch) by reading this run's
+# `decided (user):` lines in the review log for the same clause, permitted
+# under read exception 6.
+assert_in_range_folded "guard 4 falls back to the review log when the item had no ruling-record entry" \
+  "$ORCH_SKILL" 'the item it answered had no ruling-record entry of its own' \
+  "$GUARDS_LINE" "$GUARDS_END"
+assert_in_range_folded "guard 4's review-log fallback names the ruling-less stop kinds" \
+  "$ORCH_SKILL" 'fork review unavailable`, a controller malformed or failed twice, a checkbox cross-check mismatch, or any other ruling-less stop' \
+  "$GUARDS_LINE" "$GUARDS_END"
+assert_in_range_folded "guard 4's review-log fallback reads decided (user) lines under read exception 6" \
+  "$ORCH_SKILL" "read instead, under read exception 6 above, this run's \`decided (user): <answer>\` lines in the review log" \
+  "$GUARDS_LINE" "$GUARDS_END"
+assert_in_range_folded "read exception 6 is scoped to guard 4 and reads decided (user) lines for their quoted clause" \
+  "$ORCH_SKILL" "For guard 4 below only" \
+  "$READ_EXCEPTION_LINE" "$READ_EXCEPTION_END"
+assert_in_range_folded "read exception 6 covers the item's earlier answer when entry 5 holds no Follow-up" \
+  "$ORCH_SKILL" "This covers the item's earlier answer when entry 5 above holds no" \
+  "$READ_EXCEPTION_LINE" "$READ_EXCEPTION_END"
 # F5: guard 4's `(user)` lookup and its escalate-when-unsure branch, inverted.
 # `(orchestrator)` never appears in the guards section on its own (only the
 # `(user)` follow-up guard 4 reads), so this is a safe, specific negative:
@@ -2150,13 +2195,18 @@ assert_in_range "M >= 2 log-format example carries the clause before the annotat
   "$MCR_SKILL" '— clause: <plan location> "<quoted plan text>" ← 1/3: r1:I1' \
   "$MCR_FORMAT_END" "$((MCR_M2_END + 1))" exact
 
-# Normalization is one rule of three operations, stated the same way on the
-# writer's side.
+# Normalization is one rule of four operations, stated the same way on the
+# writer's side. The fourth — folding whitespace and newlines — is what
+# lets a clause the plan wraps across more than one physical line still be
+# quoted and matched as a single-line disposition.
 assert_in_range "multi-code-review normalization replaces a double quotation mark" \
   "$MCR_SKILL" "replace each \`\"\` with a single quotation mark \`'\`" \
   "$MCR_LOG_FORMAT_LINE" "$MCR_AFTER_LOOP_LINE" exact
-assert_in_range_folded "multi-code-review names all three replacements as one rule" \
-  "$MCR_SKILL" 'All THREE replacements belong to the one rule' \
+assert_in_range_folded "multi-code-review normalization collapses whitespace and newlines" \
+  "$MCR_SKILL" "collapse every run of whitespace" \
+  "$MCR_LOG_FORMAT_LINE" "$MCR_AFTER_LOOP_LINE"
+assert_in_range_folded "multi-code-review names all four replacements as one rule" \
+  "$MCR_SKILL" 'All FOUR replacements belong to the one rule' \
   "$MCR_LOG_FORMAT_LINE" "$MCR_AFTER_LOOP_LINE"
 # A post-loop `unresolved:` addendum line carries no source annotation either.
 assert_in_range "addendum shapes include an unresolved line" \
@@ -2203,11 +2253,11 @@ assert_in_range_folded "binding-text test: an unsure reading on an orchestrator 
 assert_in_range_folded "binding-text test: an unsure reading on a user or untagged answer takes the binding-case path" \
   "$MCR_SKILL" 'For a `(user)` or untagged answer, which passes through no such self-check, take the binding-case path instead' \
   "$MCR_AFTER_LOOP_LINE" "$MCR_ERROR_HANDLING_LINE"
-# A `plan governs (orchestrator decision)` clause is written under all three
+# A `plan governs (orchestrator decision)` clause is written under all four
 # normalization replacements plus the 160-character cut — not just the `"`
 # replacement pinned elsewhere in this range.
 assert_in_range_folded "plan governs clause is written under the full normalization rule, cut to 160 characters" \
-  "$MCR_SKILL" 'written under the one normalization rule of "Self-sufficient open-item lines" above — all three of its replacements, the `"` one included, then the cut to 160 characters' \
+  "$MCR_SKILL" 'written under the one normalization rule of "Self-sufficient open-item lines" above — all four of its replacements, the whitespace collapse and the `"` one included, then the cut to 160 characters' \
   "$MCR_AFTER_LOOP_LINE" "$MCR_ERROR_HANDLING_LINE"
 # The tag-to-`<who>` mapping on the loop's own side. The pins above assert
 # only that the three tag tokens occur somewhere in this 187-line range, and
@@ -2582,7 +2632,18 @@ assert_in_range_folded "Deviation 4 never uses a checkbox-tick commit as REVIEW_
   "$BATCH_PROMPT" '**Never the most recent checkbox-tick commit for task <n>**' \
   "$DEV4_LINE" "$DEV4_END"
 assert_in_range_folded "Deviation 4's REVIEW_BASE chain is ledger line, else merge-base — no middle fallback" \
-  "$BATCH_PROMPT" 'with no ledger line, the branch'"'"'s merge-base with the default branch' \
+  "$BATCH_PROMPT" 'REVIEW_BASE is the branch'"'"'s merge-base with the default branch, never a later task'"'"'s recorded HEAD' \
+  "$DEV4_LINE" "$DEV4_END"
+# F1 fix: "no ledger line" is read over task <n> alone, never over the run as
+# a whole, so a Phase 3 revert of only task <n>'s own ledger line — while a
+# later task's line still stands — falls to the merge-base too, instead of
+# reading the later task's line as "the last completed ledger line" and
+# leaving task <n>'s work out of the review range.
+assert_in_range_folded "Deviation 4 reads no-ledger-line over the task alone, never the run as a whole" \
+  "$BATCH_PROMPT" 'Read "no ledger line" strictly, over task `<n>` alone, never over the run as a whole' \
+  "$DEV4_LINE" "$DEV4_END"
+assert_in_range_folded "Deviation 4 covers the Phase 3 revert of only task <n>'s own ledger line" \
+  "$BATCH_PROMPT" 'a Phase 3 ruling revert removed only task `<n>`'"'"'s line while a later task'"'"'s line still stands' \
   "$DEV4_LINE" "$DEV4_END"
 
 # Three pieces of new phase wiring with no assertion scoped to their own

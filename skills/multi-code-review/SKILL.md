@@ -974,15 +974,21 @@ text is written as a single quotation mark `'`, so that the quote's own
 delimiters stay unambiguous. **Normalization is one rule:** the unit
 compared is one sentence or one list entry, never a whole section — take
 the sentence or the list entry of the plan text at `<plan location>` that
-the finding collides with, replace each ` — ` and each ` ← ` with one
+the finding collides with, collapse every run of whitespace — a newline
+and its leading indentation included — to one space, replace each ` — `
+and each ` ← ` with one
 space, replace each `"` with a single quotation mark `'`, then
-cut it to 160 characters. All THREE replacements belong to the one
+cut it to 160 characters. All FOUR replacements belong to the one
 rule: a consumer that skips the `"` replacement fails every clause
-holding a double quotation mark. Every consumer that later compares
+holding a double quotation mark, and a consumer that skips the
+whitespace collapse fails every clause the plan wraps across more than
+one physical line — the ordinary shape of a wrapped Markdown sentence,
+including this branch's own `**Global Constraints:**` bullets. Every
+consumer that later compares
 this quote with the plan — the orchestrator's `plan governs` guard, its
 amendment lookup, and the decided-wording test above — normalizes each
 sentence and each list entry of the plan text at that location the same
-way, and tests the quote as a **prefix** of one of them.
+way, all four replacements included, and tests the quote as a **prefix** of one of them.
 No consumer compares the quote with the raw plan text. Two full lines:
 
 ```
@@ -1044,13 +1050,19 @@ accepted findings originate in different rounds, `<i>` — for the fix
 commit subject and the `## Round <i> verification <c>` header alike — is the
 **highest** originating round, and the single verification re-review runs
 under that round's lens. Plan
-governs → `rejected: plan governs (user decision)`; for an answer tagged
-`(orchestrator)`, `rejected: plan governs (orchestrator decision) —
-"<clause>"`, `<clause>` being the plan, spec or skill text the answer
-quotes, verbatim — an orchestrator `plan governs` always carries one. The
+governs → `rejected: plan governs (user decision) — "<clause>"`; for an
+answer tagged `(orchestrator)`, `rejected: plan governs (orchestrator decision)
+— "<clause>"`. Either way `<clause>` is the plan, spec or skill
+text the answer quotes, verbatim, when the answer itself supplies one —
+an orchestrator `plan governs` always carries one — and, when a user's
+`plan governs` answer supplies none, `<clause>` is instead the text
+already quoted after `— clause:` on that item's own open-item line: a
+user `plan governs` is never recorded bare, because the loop already
+holds the clause it needs. The
 clause on that line is written under the one normalization rule of
-"Self-sufficient open-item lines" above — all three of its replacements,
-the `"` one included, then the cut to 160 characters — so that the ` ← `
+"Self-sufficient open-item lines" above — all four of its replacements,
+the whitespace collapse and the `"` one included, then the cut to 160
+characters — so that the ` ← `
 source annotation stays the last one on the line and the clause's own
 `"…"` delimiters stay unambiguous.
 An `amend plan: …; fix it: …` answer takes the finding-governs path for
@@ -1101,7 +1113,15 @@ open items by review-log id — one line per item, tagged
 `(orchestrator)` or `(user)`; an untagged line is a user line: each
 named item gets the disposition `decided (<who>): <answer>` — that is
 `decided (orchestrator): <answer>` or `decided (user): <answer>`,
-`<who>` taken from the tag — in a post-loop addendum on the log's LATEST
+`<who>` taken from the tag. **A bare `plan governs` `<answer>` — one
+carrying no `"<clause>"` — is never written verbatim**, whichever `<who>`
+sent it: before writing the disposition, fill it in as `plan governs:
+"<clause>" — <path>`, `<clause>` and `<path>` taken from that item's own
+open-item line (the same `— clause:` text already recorded there), the
+same form an orchestrator answer already carries — so a
+`decided (user): <answer>` line always quotes a clause too, and enters
+the decided-wording set on the same terms as an orchestrator's. The
+disposition is written — in a post-loop addendum on the log's LATEST
 completed invocation entry — a latest entry without a completion marker is
 an interrupted invocation, resumed at its next round (Pipeline rule 3)
 with nothing journaled twice — committed as

@@ -472,16 +472,22 @@ Trigger: `Resume orchestration for <plan-or-spec path>`.
    the clean-tree check to pass:
 
    ```bash
-   git status --porcelain -- ':(top)' ':(top,exclude)<topic>/implementation/*'
+   git status --porcelain -- ':(top)' ':(top,exclude)<topic>/implementation/*' ':(top,exclude)<topic>/plans/*-open-decisions.md'
    ```
 
-   must be empty (else stop). The exclusion mirrors multi-code-review's
+   must be empty (else stop). The `implementation/*` exclusion mirrors multi-code-review's
    pipeline-mode precondition: an interruption between a round's first log
    write and its `chore(review)` commit — a controller that died, a commit
    that failed — leaves `implementation/` modified or untracked. Without the
    exclusion, resume would stop with "dirty tree" before the review loop's own
    resume rule could run. The resumed loop's next `chore(review)` commit picks
-   those files up.
+   those files up. The `*-open-decisions.md` exclusion covers the matching
+   crash on the ruling record: a session that died after writing a
+   ruling-record entry and before the `## RULING` log entry leaves that file
+   modified or untracked. Without it, resume would stop here with "dirty
+   tree" before step 1's incomplete-ruling scan (below) could run and repair
+   it; with it, step 1 runs unconditionally next and reconciles the file
+   itself.
 1. Read the orchestration log — locate it with
    `docs/superpowers-orchestrator/????-??-??-<slug>/<slug>-orchestration-log.md`;
    more than one match is an "ambiguous slug" stop — authoritative for parameters and last
@@ -492,7 +498,16 @@ Trigger: `Resume orchestration for <plan-or-spec path>`.
    stop and report what is missing; for a run stopped under the pre-7.3.0
    layout — its log and plan sit at the old flat paths, outside the glob —
    follow the migration recipe in the v7.3.0 release note; otherwise start
-   a fresh orchestration. Never reconstruct it.
+   a fresh orchestration. Never reconstruct it. Before checking how the log
+   ends (steps 2-4 below), scan the ruling record
+   (`<topic>/plans/<slug>-open-decisions.md`) for an incomplete ruling and
+   repair it now, unconditionally — whatever the log's last entry is, not
+   only when it is a `## RULING <n>` entry: see "The other two writes of
+   the fixed order are checked the same way" under step 3 below for what an
+   incomplete ruling is and how it is repaired; that repair belongs here,
+   not inside step 3's own branch, because a crash between the ruling-record
+   write and the `## RULING` log write leaves the log ending with whatever
+   entry preceded the ruling, never with the ruling itself.
 2. Log ends with `_Completed_` → report that and stop.
 3. Log ends with a `## RULING <n>` entry: before you act on it, check that
    its own commit landed — `git log -F --format=%s --grep "<slug> ruling <n>"`
@@ -530,7 +545,10 @@ Trigger: `Resume orchestration for <plan-or-spec path>`.
    never leave the marker standing, because the loop reads a clause
    carrying it as decided wording on the strength of the marker alone.
    **The other two writes of the fixed order are checked the same way,
-   because a crash can leave either of them missing.** A `## Ruling <n>`
+   because a crash can leave either of them missing.** (This check runs in
+   step 1 above, unconditionally, before the branch on how the log ends;
+   it is stated here, next to the fixed write order, for reference — do not
+   run it a second time on reaching this branch.) A `## Ruling <n>`
    entry in the ruling record is **logged** — covered by a `## RULING`
    entry — when some `## RULING` entry's `Items:` lines name its item, or
    when `<n>` falls inside the range of ruling numbers that entry's return
@@ -647,14 +665,20 @@ Trigger: `Resume orchestration for <plan-or-spec path>`.
    **Never `git reset --hard`, never
    `git checkout .`, never `git clean`**: a stop can happen over a
    deliberately dirty tree, and those three would delete the blocked task's
-   legitimate uncommitted work. Then require `git status --porcelain` to
+   legitimate uncommitted work. After that cleanup, and only on this
+   non-zero-exit path, require `git status --porcelain` to
    print exactly the pre-revert state you saved; a mismatch is a major
    error — stop and report both outputs, never commit over it. Only when
    it matches do you make no code change at all: record `— fix <sha> not
    reverted` at the end of the item's `**Follow-up:**` line, and the new
    Phase 4 invocation that the reverted plan file forces (the plan is
    content for the effective-HEAD test) re-raises the finding against the
-   restored clause. **When the reverted ruling was made in Phase 3,
+   restored clause. **On the success path — a zero exit from `git revert
+   --no-commit` — skip that status check**: a successful revert leaves the
+   reverted hunks staged, which never matches the pre-revert state, and
+   that mismatch is expected, not an error. Stage the reverted paths (already
+   done above) and continue straight to the follow-up commit below. **When
+   the reverted ruling was made in Phase 3,
    there is no fix commit to revert at all** — the amended clause was
    implemented by the task's own implementer, inside an ordinary task
    commit, never through the code-review loop, so no
@@ -960,6 +984,15 @@ you and your forks may read exactly:
    and scans its `## Ruling` entries. You alone — never a reviewer — may
    read this entry: a reviewer's `## What you may read` block never lists
    the ruling-record path.
+6. For guard 4 below only (`## In-run rulings`, "The predicate, forced or
+   forked"): in `<topic folder>/implementation/<slug>-review-log.md`, any
+   `_Invocation` entry's `decided (user): <answer>` line, whatever id it
+   stands under, read only to compare its quoted clause against the item
+   being classified, under the normalization rule — never its surrounding
+   context, and never a disposition line other than `decided (user): …`.
+   This covers the item's earlier answer when entry 5 above holds no
+   `**Follow-up:**` line for it — the stop that answer resolved made no
+   ruling.
 
 Nothing else. Phase 5 step 3's report-gathering scans of the code-review
 log and the plan-review log are named by Phase 5 itself and are outside
@@ -1195,20 +1228,26 @@ failure named above. You wait
 for the notices without adding a monitoring step and without doing any
 other work.
 
-**The partial case has one permitted observation.** Some lenses of the
-round return and the platform volunteers nothing at all about the rest:
-the finished-test above would then never be met, and the run would wait
-for ever at the ruling. So, when you are waiting on a round with nothing
-else to do and no further notice is arriving, make exactly ONE platform
-status read covering every lens of that round still outstanding — one
-read for the whole round, never one read per lens and never a second
-read. **A single status read of the reviewers you dispatched is not the
-monitoring step forbidden above**; a repeated read, or a read made while
-notices are still arriving, is. The round is **finished** at that read
-whatever it reports, and every lens of it without a usable return by then
-counts as one loss under the rule above: the re-dispatch round starts,
-the ruling records `forks: <k> of <planned>`, and fewer than two usable
-returns still stops with `fork review unavailable`.
+**The partial case has two permitted observations, never more.** Some
+lenses of the round return and the platform volunteers nothing at all
+about the rest: the finished-test above would then never be met, and the
+run would wait for ever at the ruling. So, once at least 10 minutes of
+wall-clock time have passed since the round's last completion notice, and
+you have nothing else to do, make exactly ONE platform status read
+covering every lens of that round still outstanding — one read for the
+whole round, never one read per lens. **A single status read of the
+reviewers you dispatched is not the monitoring step forbidden above**; a
+read made before that 10-minute wait has elapsed, or a third read of the
+same round, is. A read reporting that no reviewer of the round is still
+running **finishes** the round. A read reporting a lens still running
+does **not** finish the round: that lens stays outstanding and you keep
+waiting — once at least 10 more minutes have passed since that read, make
+one further status read, the second and last one permitted for the
+round. That second read finishes the round whatever it reports, and every
+lens of it without a usable return by then counts as one loss under the
+rule above: the re-dispatch round starts, the ruling records `forks: <k>
+of <planned>`, and fewer than two usable returns still stops with `fork
+review unavailable`.
 
 **The tie-break round is bounded the same way.** The tie-break reviewer
 of the optional second round is one lens (`evidence consistency`)
@@ -1427,9 +1466,18 @@ Phase 3 answers use the same line shape with the task id:
 where `<answer>` is the answer to the blocking question in plain text, or
 `amend plan: <the amendment>` when the task is impossible as written. A
 `### Conflict <k>` section (a task-level or pre-flight plan conflict) is
-answered in one of two forms: `plan governs: "<verbatim clause>" — <path>`,
+answered in one of two forms: `plan governs: "<clause>" — <path>`,
 naming the side that governs — the implementer follows that text — or
-`amend plan: <the amendment>` when the other side governs. **An
+`amend plan: <the amendment>` when the other side governs. `<clause>` is
+the plan text the conflict section quotes, put through the same
+normalization and 160-character cut Phase 4's quoted clause takes above
+— each ` — ` and each ` ← ` replaced by one space, each `"` replaced by
+`'`, then cut to 160 characters — before it is written into this answer,
+and the whole `plan governs: …` line occupies one physical line, never
+wrapped: an un-normalized quotation mark inside the clause would close
+the answer's own `"…"` early, and a wrapped clause would put a
+continuation line where the controller reads line-initial text as prompt
+structure. **An
 `amend plan: …` answer is the record of an amendment you have already
 made and committed** — in the ruling commit, which lands before this
 re-dispatch — so the plan file already reads the amended way: the
@@ -1704,10 +1752,17 @@ rules apply everywhere a ruling is made:
    never reconstructed after the run.
 4. **A user's decision is never overturned by a ruling.** Before you decide
    an item, read your ruling record for an entry of this run whose
-   `**Follow-up:**` line — the only place a recorded answer tagged `(user)`
-   is written into the record — quotes
+   `**Follow-up:**` line — the place a recorded answer tagged `(user)`
+   is written into the record when the item it answered had a
+   ruling-record entry of its own — quotes
    the same clause as this item — compared under the normalization rule
-   above. When such an answer stands there, the user has already decided
+   above. When the item it answered had no ruling-record entry of its own
+   — the stop that answer resolved made no ruling
+   (`fork review unavailable`, a controller malformed or failed twice, a
+   checkbox cross-check mismatch, or any other ruling-less stop) — read
+   instead, under read exception 6 above, this run's `decided (user):
+   <answer>` lines in the review log for one quoting the same clause. When
+   either read finds such an answer, the user has already decided
    that clause, and you do not decide the item at all: it is **escalated**,
    under the class that first sent it to the user — and under
    `spec wrong` when the entry carrying that answer is a `forced` or a
