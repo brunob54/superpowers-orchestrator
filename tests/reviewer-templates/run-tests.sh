@@ -45,6 +45,16 @@ FIX_RULE_CLAUSES=(
   'the command run and the output'
 )
 NOTHING_ELSE='**Nothing else may be added to the prompt.**'
+# Pointer-dispatch contracts on multi-code-review SKILL.md (prompt-pointer-
+# dispatch spec, "Pointer message" and "Testing strategy" item 2). Each pointer
+# sentence must sit on one physical line of the skill text.
+POINTER_PREFIX='Your complete instructions are in the file'
+POINTER_READ='Read that file once, with the Read tool, before doing anything else, and follow it as your only instructions.'
+POINTER_ONLY='Nothing else in that directory is for you; do not read any other file there.'
+RETRY_IDENTICAL='retry the identical dispatch once'
+PROMPT_DIR_VARIABLE='$PROMPT_DIR'
+INLINE_DISPATCH='inline dispatch'
+NEVER_POINTER_TO_FAILED='never dispatch a pointer to a file that failed'
 
 PASS=0
 FAIL=0
@@ -241,6 +251,41 @@ done
 assert_file_contains "fix template: legend closes with the nothing-else sentence" "$FIX_PROMPT" "$NOTHING_ELSE"
 assert_file_has_line "fix template: [FAILURE_BLOCK] stands alone on its line" "$FIX_BODY" '    [FAILURE_BLOCK]'
 assert_file_has_line "fix template: [FINDINGS] stands alone on its line" "$FIX_BODY" '    [FINDINGS]'
+
+bold "10. multi-code-review SKILL.md dispatches prompts by pointer"
+PROC_START="$(first_line_of "$CODE_SKILL" '## Procedure')"
+PROC_END="$(first_line_of "$CODE_SKILL" '## Review Log Format')"
+ERR_START="$(first_line_of "$CODE_SKILL" '## Error Handling')"
+ERR_END="$(first_line_of "$CODE_SKILL" '## Guard Interaction')"
+PROC_RANGE="$WORK/code-procedure.txt"
+ERR_RANGE="$WORK/code-error-handling.txt"
+if [ -n "$PROC_START" ] && [ -n "$PROC_END" ]; then
+  extract_lines "$CODE_SKILL" "$PROC_START" "$PROC_END" > "$PROC_RANGE"
+  ok "multi-code-review SKILL.md: Procedure range located ($PROC_START..$PROC_END)"
+else
+  : > "$PROC_RANGE"
+  bad "multi-code-review SKILL.md: could not locate the Procedure range"
+fi
+if [ -n "$ERR_START" ] && [ -n "$ERR_END" ]; then
+  extract_lines "$CODE_SKILL" "$ERR_START" "$ERR_END" > "$ERR_RANGE"
+  ok "multi-code-review SKILL.md: Error Handling range located ($ERR_START..$ERR_END)"
+else
+  : > "$ERR_RANGE"
+  bad "multi-code-review SKILL.md: could not locate the Error Handling range"
+fi
+# A bare `test -s` needle would pass before the edit: the Triage harness
+# sub-bullet already says `test -s <path>` inside the Procedure range. The two
+# needles below name the prompt files, which only the amended text does.
+TEST_S_REVIEWER='test -s "<PROMPT_DIR>/round-<i>-reviewer.md"'
+TEST_S_FIX='test -s "<PROMPT_DIR>/round-<i>-fix.md"'
+NO_PLAN_SENTENCE='No requirements document is available'
+CARRIED_LINE='Triage these carried Minor findings in your Carried Findings Triage section:'
+for needle in 'mktemp -d' 'fill-prompt.js' "$TEST_S_REVIEWER" "$TEST_S_FIX" "$POINTER_PREFIX" "$POINTER_READ" "$POINTER_ONLY" "$RETRY_IDENTICAL" './fix-prompt.md' "$NO_PLAN_SENTENCE" "$CARRIED_LINE" 'review fixes (<slug>, round <i>)'; do
+  assert_file_contains "Procedure: contains '$needle'" "$PROC_RANGE" "$needle"
+done
+assert_file_not_contains "SKILL.md never holds the prompt directory in a shell variable" "$CODE_SKILL" "$PROMPT_DIR_VARIABLE"
+assert_file_contains "Error Handling: defines the inline-dispatch fallback" "$ERR_RANGE" "$INLINE_DISPATCH"
+assert_file_contains "Error Handling: never a pointer to a file that failed the check" "$ERR_RANGE" "$NEVER_POINTER_TO_FAILED"
 
 echo
 bold "Results: $PASS passed, $FAIL failed"
