@@ -141,3 +141,18 @@ _Invocation 2 — 2026-09-05 — N=2 M=2 — BASE..HEAD b9b9ffb..f534fea — bra
 - [M4] fixed — the 'Fix subagent fails' bullet named round-<i>-failure.txt and round-<i>-fix-retry.md literally, so a second fix failure inside a verification cycle would collide with an existing file; the bullet now names the cycle and addendum file names of the table → 1131676 ← 1/2: r2:M1
 - [M5] carried — fill-prompt.js: a whitespace-only value file survives as a stray line and an inline value with an embedded newline is inserted verbatim; neither is reachable from the values the skill prescribes ← 1/2: r2:M2
 - [M6] carried — plan Architecture paragraph and Assumption 5 still describe the removed inline fallback (also round 3 [M7]; plan text, the loop never edits it; for the orchestrator) ← 1/2: r2:M3
+
+## Round 4 verification 1 — Adversarial red-team — fable
+**Reviewers:** M=2, usable 2/2
+**Reviewer verdicts:** r1: 0 Critical, 2 Important, 3 Minor | r2: 0 Critical, 2 Important, 3 Minor
+**Sources mapped:** 10/10
+**Reviewer verdict:** 0 Critical, 3 Important, 5 Minor
+### Dispositions
+- [I1] rejected: duplicate of round 4 [I3], an open user-decision item (a findings-file Write that hooks/safety/protect-secrets.js denies for a credential-shaped string is fatal and repeats on every resume; both suggested fixes contradict the amended fatal rule) ← 2/2: r1:I1, r2:I1
+- [I2] rejected: harness probe not runnable here — in a session running in acceptEdits mode, Write a one-line file into a fresh `mktemp -d` directory and observe whether a permission prompt appears — (ambiguous observation) — a value-file Write outside the working directories may raise a permission prompt in a non-bypass session, which none of the fatal rows names; this session runs in bypass mode, so no observation here can match or contradict the claim ← 1/2: r1:I2
+- [I3] fixed — fill-prompt.js took the first column-0 fence after the opening fence as the closing fence, so a fenced example inside the prompt body truncated the body silently with exit 0; it now exits 2 when the first non-blank line after that fence is indented, with a fixture and test → dbcbaa1 ← 1/2: r2:I2
+- [M1] rejected: duplicate of round 4 [M2] (carried; the u = 0 wording is fixed by the Task 3 Contract) ← 2/2: r1:M1, r2:M3
+- [M2] carried — fill-prompt.js writeAtomic: the exists check followed by rename is not atomic against a concurrent fill of the same --out (also Invocation 1 round 2 verification 2 [M2]); a hard-link write is not portable to every filesystem ← 1/2: r1:M2
+- [M3] fixed — 'copy the full text verbatim' left open whether the lens's bold heading line is part of the LENS_INSTRUCTIONS value; both places now name the paragraph under the heading, without the heading line → dbcbaa1 ← 1/2: r1:M3
+- [M4] rejected: duplicate of round 4 [M3] (carried; an empty findings file is unreachable by the procedure) ← 1/2: r2:M1
+- [M5] fixed — fix-prompt.md never said what the fix subagent does when the covering tests fail; step 2 now says do not stage or commit, report and stop → dbcbaa1 ← 1/2: r2:M2

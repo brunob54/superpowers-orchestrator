@@ -264,3 +264,54 @@ $ git commit -m "review fixes (prompt-pointer-dispatch, round 4)" -- skills/mult
 [feature/prompt-pointer-dispatch 1131676] review fixes (prompt-pointer-dispatch, round 4)
  3 files changed, 65 insertions(+), 15 deletions(-)
 ```
+
+## Round 4 verification 1
+
+### Findings addressed
+- [I3] fill-prompt.js `extract()` now exits 2 (`malformed template: the first fenced block closes inside the prompt body`) when the first non-blank line after the chosen closing fence is indented, so a column-0 fenced example inside the prompt body can no longer truncate the body silently; added fixture `tests/fill-prompt/fixtures/inner-fence-template.md` and section 9 of the suite.
+- [M3] SKILL.md step 2.1 and the Lens Rotation copy instruction now say the value is the paragraph under the lens's bold heading, without the heading line.
+- [M5] fix-prompt.md step 2 now says: if the covering tests fail, do not stage or commit; report the failure in the final message and stop.
+
+### Commands and output
+
+```
+$ bash tests/fill-prompt/run-tests.sh
+  PASS: trailing whole-line placeholder given the empty value: output matches expected byte for byte (exactly one trailing newline)
+9. Round 4 fix: a fenced example inside the prompt body
+  PASS: fenced example inside the body exits 2
+  PASS: inner fence: message says the template is malformed
+  PASS: inner fence: message gives the reason
+  PASS: inner fence: nothing written
+
+Results: 96 passed, 0 failed
+
+$ bash tests/reviewer-templates/run-tests.sh
+  PASS: Error Handling: every failure of the mechanism returns BLOCKED
+  PASS: Error Handling: never a pointer to a file that failed the check
+  PASS: Procedure: no inline-dispatch fallback
+  PASS: Error Handling: no inline-dispatch fallback
+  PASS: fix-prompt.md: no inline-dispatch fallback (hyphenated)
+  PASS: fix-prompt.md: no inline-dispatch fallback (spaced)
+
+Results: 59 passed, 0 failed
+
+$ bash tests/in-run-rulings/run-tests.sh
+  PASS: Deviation 4 reads no-ledger-line over the task alone, never the run as a whole (range 154..184, line wraps folded)
+  PASS: Deviation 4 covers the Phase 3 revert of only task <n>'s own ledger line (range 154..184, line wraps folded)
+  PASS: every batch dispatch carries the run-wide answer set so an earlier pre-flight ruling reaches a later batch (range 246..305, line wraps folded)
+  PASS: only an escalated item stops the run on the strength of its content (range 305..334, line wraps folded)
+  PASS: Phase 5 report counts the rulings made in the run (range 334..362, line wraps folded)
+  PASS: decided wording is quoted on a decided line or a rejected: plan governs line of the same run (range 838..938, line wraps folded)
+
+Results: 496 passed, 0 failed
+
+$ git commit -m "review fixes (prompt-pointer-dispatch, round 4)" -- <the five paths>
+[feature/prompt-pointer-dispatch dbcbaa1] review fixes (prompt-pointer-dispatch, round 4)
+
+ skills/multi-code-review/SKILL.md                  |  8 +++++---
+ skills/multi-code-review/fix-prompt.md             |  2 ++
+ skills/multi-code-review/scripts/fill-prompt.js    | 12 ++++++++++++
+ tests/fill-prompt/fixtures/inner-fence-template.md | 18 ++++++++++++++++++
+ tests/fill-prompt/run-tests.sh                     | 12 ++++++++++++
+ 5 files changed, 49 insertions(+), 3 deletions(-)
+```
