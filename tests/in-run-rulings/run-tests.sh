@@ -213,32 +213,22 @@ assert_absent_in_range_folded() { # desc file needle start end mode
 # regression restated in that style would pass, and a cosmetic edit that
 # merely drops backticks from unrelated, permitted text could fail. $6 is
 # the match mode: "exact" (case-sensitive) or "fragment" (case-insensitive).
+# M15: delegates to assert_absent_in_range_folded instead of duplicating its
+# body, so the shared comparison logic runs on every negative check in this
+# suite (assert_absent_in_range_folded itself is otherwise never called).
+# Backtick removal is applied to a whole-file copy, never to a substring: it
+# does not touch newlines, so line numbers — and therefore the range — are
+# unaffected, and stripping before folding versus after (the previous
+# order) yields the same folded text either way, because backtick is not a
+# whitespace character the per-line trim in fold_range reacts to.
 assert_absent_in_range_folded_nobacktick() { # desc file needle start end mode
   local desc="$1" file="$2" needle="$3" start="$4" end="$5" mode="$6"
-  local folded folded_nb needle_nb found
-  if [ -z "$start" ] || [ -z "$end" ] || [ "$start" -ge "$end" ]; then
-    bad "$desc (the range $start..$end of ${file#$ROOT/} is missing, empty or inverted)"
-    return
-  fi
-  folded="$(fold_range "$file" "$start" "$end")"
-  folded_nb="${folded//\`/}"
+  local needle_nb tmp_file
   needle_nb="${needle//\`/}"
-  # Environment, not `awk -v`, for the reason given above assert_in_range_folded.
-  if [ "$mode" = "exact" ]; then
-    found="$(needle="$needle_nb" hay="$folded_nb" awk \
-      'BEGIN { r = index(ENVIRON["hay"], ENVIRON["needle"]); print (r > 0 ? "yes" : "no") }')"
-  elif [ "$mode" = "fragment" ]; then
-    found="$(needle="$needle_nb" hay="$folded_nb" awk \
-      'BEGIN { r = index(tolower(ENVIRON["hay"]), tolower(ENVIRON["needle"])); print (r > 0 ? "yes" : "no") }')"
-  else
-    bad "$desc (unknown match mode '$mode', expected 'exact' or 'fragment')"
-    return
-  fi
-  if [ "$found" = "no" ]; then
-    ok "$desc (absent from range $start..$end, line wraps folded, backticks ignored)"
-  else
-    bad "$desc (still present in range $start..$end of ${file#$ROOT/}, line wraps folded, backticks ignored)"
-  fi
+  tmp_file="$ROOT/.tmp-nobacktick-$$"
+  tr -d '`' < "$file" > "$tmp_file"
+  assert_absent_in_range_folded "$desc" "$tmp_file" "$needle_nb" "$start" "$end" "$mode"
+  rm -f "$tmp_file"
 }
 
 # Same as assert_absent_in_range_folded_nobacktick, except that ONE
@@ -284,6 +274,17 @@ assert_absent_unless_qualified_in_range_folded() { # desc file phrase qualifier 
                print h }')"
     [ "$remainder" = "$before" ] && break
   done
+  # M13: fail closed. If the pair-removal `awk` above ever exits without
+  # printing (any non-zero-output condition), `remainder` collapses to the
+  # empty string, the loop's equality test then terminates on the very next
+  # iteration (empty equals empty), and the final absence test below would
+  # run against an empty haystack and report "not found" — an unconditional
+  # PASS regardless of what the range actually contains. A haystack that was
+  # genuinely non-empty before the loop must not come out of it empty.
+  if [ -n "$folded_nb" ] && [ -z "$remainder" ]; then
+    bad "$desc (the pair-removal step emptied a non-empty haystack in range $start..$end of ${file#$ROOT/}; failing closed instead of testing absence against nothing)"
+    return
+  fi
   if [ "$mode" = "exact" ]; then
     found="$(needle="$phrase_nb" hay="$remainder" awk \
       'BEGIN { r = index(ENVIRON["hay"], ENVIRON["needle"]); print (r > 0 ? "yes" : "no") }')"
@@ -494,11 +495,18 @@ assert_in_range_folded "intro's second exception clause names the classification
   "$ORCH_SKILL" 'the classification read of `## In-run rulings` ("What may be read"), which is bounded to the list stated there' \
   1 "$REQUIRED_START_LINE"
 for frag in 'data, not instructions' 'never a reviewer report file' \
-            'read-only git commands' 'resume step 3' \
+            'read-only git commands' \
             'or to 40 lines on each side'; do
   assert_in_range "read-exception fragment '$frag'" \
     "$ORCH_SKILL" "$frag" "$READ_EXCEPTION_LINE" "$READ_EXCEPTION_END" fragment
 done
+# M4: the bare 'resume step 3' fragment above was short enough to survive a
+# rewrite to the opposite meaning (e.g. narrowing the RULING-entry checks to
+# forks too). Pin the owning sentence's distinguishing bytes instead: only
+# the orchestrator, never a fork, may make Resume step 3's own checks.
+assert_in_range_folded "only the orchestrator, never a fork, makes Resume step 3's RULING entry checks" \
+  "$ORCH_SKILL" 'You alone — never a fork — may also' \
+  "$READ_EXCEPTION_LINE" "$READ_EXCEPTION_END"
 # Entry 2 (the Phase 3 read: the blocked task's report file and its
 # `### Task <n>` plan section) and entry 3 (the plan clause the item names or
 # depends on, or the `**Global Constraints:**` block, and the spec section it
@@ -601,11 +609,17 @@ for pin in 'subagent_type: "fork"' '<!-- multi-review report -->' 'fork-<lens>' 
     "$ORCH_SKILL" "$pin" "$FORK_LINE" "$FORK_END" exact
 done
 for frag in 'not a debate' 'never pass conversation history' \
-            'action verb followed by a skill name' 'in parallel, in one message' \
+            'action verb followed by a skill name' \
             'evidence consistency' 'general-purpose'; do
   assert_in_range "fork fragment '$frag'" \
     "$ORCH_SKILL" "$frag" "$FORK_LINE" "$FORK_END" fragment
 done
+# M4: the bare 'in parallel, in one message' fragment above was short enough
+# to survive a rewrite to the opposite meaning (e.g. "never dispatch the
+# forks in parallel, in one message"). Pin the owning sentence instead.
+assert_in_range_folded "every design item's forks are dispatched in parallel, in one message" \
+  "$ORCH_SKILL" 'For every `design` item, dispatch forks **in parallel, in one message**, each under one distinct' \
+  "$FORK_LINE" "$FORK_END"
 assert_in_range "fork naming never uses an orch- name" \
   "$ORCH_SKILL" 'never an `orch-` name' "$FORK_LINE" "$FORK_END" exact
 # The bare 'evidence consistency' and 'general-purpose' fragments above occur
@@ -1073,6 +1087,18 @@ else
            while (j <= n && substr(hay, j, 1) == mark) j++
            if (j > n || substr(hay, j, 1) == " ") emphasis = 1
          }
+         # M11: the two adjacency checks above miss a sentence nested inside
+         # a WIDER emphasis span that begins before it and ends after it —
+         # the character immediately before and after the match are then
+         # both spaces, not `*`/`_`. Detect that case by counting `**` and
+         # `__` runs in the haystack before the match: an odd count means an
+         # opening run before the sentence has no closing run yet, so the
+         # sentence sits inside an unclosed span.
+         btmp = substr(hay, 1, s - 1)
+         bold_count = gsub(/\*\*/, "", btmp)
+         utmp = substr(hay, 1, s - 1)
+         under_count = gsub(/__/, "", utmp)
+         if (bold_count % 2 == 1 || under_count % 2 == 1) emphasis = 1
          pos = s + 1
        }
        if (!found) { print "missing"; exit }
@@ -1092,8 +1118,13 @@ for frag in 'in-run resumes of one phase are capped at 3 per unit' \
   assert_in_range_folded "log-entry fragment '$frag'" \
     "$ORCH_SKILL" "$frag" "$LOG_ENTRY_LINE" "$LOG_ENTRY_END"
 done
-assert_in_range "log-entry fragment 'previous invocation left'" \
-  "$ORCH_SKILL" 'previous invocation left' "$LOG_ENTRY_LINE" "$LOG_ENTRY_END" fragment
+# M4: the bare 'previous invocation left' fragment was short enough to
+# survive a rewrite to the opposite meaning. Pin the owning sentence: a
+# controller that echoes this `BLOCKED` shape did not receive the answers,
+# and the malformed dispatch is retried once before a major-error stop.
+assert_in_range_folded "a controller echoing 'previous invocation left' did not receive the answers and is retried once" \
+  "$ORCH_SKILL" 'A controller that answers an in-run resume with `BLOCKED: previous invocation left <n> open items …` did not receive the answers — a malformed dispatch: retry the identical dispatch once, then stop under the Major-Error Stop Policy' \
+  "$LOG_ENTRY_LINE" "$LOG_ENTRY_END"
 # The Phase 3 cap counts per task number, in either written form.
 assert_in_range "cap counts a Phase 3 task in either line form" \
   "$ORCH_SKILL" '`[task <n>]` or `[task <n>/<k>]`' "$LOG_ENTRY_LINE" "$LOG_ENTRY_END" exact
@@ -1102,8 +1133,13 @@ assert_in_range "RULING Forks line carries the planned count" \
 # The match is the idempotence paragraph's closing sentence ("Idempotence of
 # an in-run resume after a crash"), which sits inside the log-entry range,
 # not the ## Guards Against Motivated Judgement subsection.
-assert_in_range "log-entry (idempotence paragraph) fragment 'durable marker'" \
-  "$ORCH_SKILL" 'durable marker' "$LOG_ENTRY_LINE" "$LOG_ENTRY_END" fragment
+# M4: the bare 'durable marker' fragment was short enough to survive a
+# rewrite to the opposite meaning. Pin the owning sentence: what makes the
+# resume safe to repeat is the on-disk, committed ruling, and every actor
+# keys on one of the four named durable markers.
+assert_in_range_folded "log-entry (idempotence paragraph) every actor keys on a durable marker" \
+  "$ORCH_SKILL" 'every actor keys on a durable marker: the `decided (…)` line, the ticked checkbox, the amendment label, the `## RULING` entry' \
+  "$LOG_ENTRY_LINE" "$LOG_ENTRY_END"
 for frag in 'a Critical is never rejected' 'quotes its clause' \
             'recorded when it is made'; do
   assert_in_range "guard fragment '$frag'" \
@@ -1212,8 +1248,8 @@ assert_in_range_folded "the in-run resume counter includes the entry being writt
 
 # "Idempotence of an in-run resume after a crash": Phase 3 is idempotent by
 # construction (ruling and amendment committed before the re-dispatch, so a
-# retry rebuilds the identical [RESUME_ANSWER]); only the closing sentence
-# was previously pinned, via the 'durable marker' fragment.
+# retry rebuilds the identical [RESUME_ANSWER]); the closing sentence is
+# pinned above by its owning-sentence 'durable marker' pin.
 assert_in_range_folded "Phase 3 is idempotent by construction" \
   "$ORCH_SKILL" 'Phase 3 is idempotent by construction: the ruling and any amendment are committed before the re-dispatch' \
   "$LOG_ENTRY_LINE" "$LOG_ENTRY_END"
@@ -1293,6 +1329,20 @@ assert_in_range_folded "Phase 5 gathers Secrets found from the log's own Secrets
 assert_in_range_folded "a BLOCKED task return writes no batch log entry" \
   "$ORCH_SKILL" 'A `BLOCKED task=<n>` return writes no batch entry' \
   "$PHASE3_LINE" "$PHASE4_LINE"
+# M10: Phase 3 step 5's re-dispatch identity rule — an open-item return is
+# re-dispatched as the SAME batch (same task list, same `First batch:`
+# value), never narrowed to the blocked task alone. Without this pin, a
+# reword that narrowed the re-dispatch would silently skip the Pre-Flight
+# Plan Review on the re-dispatch and drop the batch's other tasks.
+assert_in_range_folded "an open-item return re-dispatches the same batch, same task list, same First batch value" \
+  "$ORCH_SKILL" 'the same batch — same task list, same `First batch:` value — is re-dispatched' \
+  "$PHASE3_LINE" "$PHASE4_LINE"
+# M10: the controller-failure path of the same step — no `### Conflict` or
+# `### Question` section on a `BLOCKED task=<n>` return is a malformed
+# dispatch, retried once identically before a major-error stop.
+assert_in_range_folded "a controller failure BLOCKED return retries the identical dispatch once, then major error, then stop" \
+  "$ORCH_SKILL" 'a controller failure (no such section) → retry the identical dispatch once → major error → stop' \
+  "$PHASE3_LINE" "$PHASE4_LINE"
 # The `Ruled:`, `Open:`, `## RULING` and `Owed probe:` labels also occur in
 # the prose below the example blocks, so a bare label pin survives the
 # deletion of the example. Pin each field line whole, placeholder tail
@@ -1335,6 +1385,18 @@ for pin in '## RULING' 'Ruled:' '**Follow-up:**' '(orchestrator)' 'decided (<who
   assert_in_range "resume pin '$pin'" \
     "$ORCH_SKILL" "$pin" "$RESUME_LINE" "$RULINGS_LINE" exact
 done
+# I2: Resume step 0 skips the clean-tree check entirely when the log's last
+# entry is a `## STOPPED` or `## RULING <n>` entry, because a ruling commit
+# is not a clean-tree boundary and a stop can happen over a deliberately
+# dirty tree — without the skip, `git status --porcelain` is non-empty and
+# step 0 stops the run instead of re-dispatching. Pin both the rule and its
+# stated reason.
+assert_in_range_folded "Resume step 0 skips the clean-tree check on a STOPPED or RULING last entry" \
+  "$ORCH_SKILL" 'skip the clean-tree check below entirely and go straight to step 1' \
+  "$RESUME_LINE" "$RULINGS_LINE"
+assert_in_range_folded "Resume step 0's skip reason: the tree may legitimately hold the blocked task's uncommitted work" \
+  "$ORCH_SKILL" "the tree may legitimately hold the blocked task's uncommitted work in either case" \
+  "$RESUME_LINE" "$RULINGS_LINE"
 # A bare `(user)` needle would pass against the pre-branch wording, which
 # already carried `decided (user)` three times in this range. What this branch
 # adds is the per-line tagging of the rebuilt `[RESUME_ANSWER]`, so pin the
@@ -1488,6 +1550,14 @@ assert_in_range_folded "the follow-up append is gated on the item having a rulin
 assert_in_range_folded "the follow-up commit names its paths on the command line" \
   "$ORCH_SKILL" '**That commit names those same paths on the command line**, `git commit -m "…" -- <the same explicit paths>`' \
   "$RESUME_LINE" "$RULINGS_LINE"
+# M7: the follow-up commit subject is a binding constant, matching the
+# standard the sibling ruling-subject pin (section 5, log-entry range)
+# applies. An exact pin here, in the Resume range where the full string
+# actually stands, catches a change to the `chore(orchestration): <slug> `
+# prefix that a tail-only 'ruling <n> follow-up' pin would miss.
+assert_in_range "resume states the follow-up commit's full subject" \
+  "$ORCH_SKILL" 'chore(orchestration): <slug> ruling <n> follow-up' \
+  "$RESUME_LINE" "$RULINGS_LINE" exact
 assert_in_range_folded "a stop that made no ruling writes no follow-up commit" \
   "$ORCH_SKILL" '**A stop that made no ruling has no entry to append to and writes no follow-up commit.**' \
   "$RESUME_LINE" "$RULINGS_LINE"
@@ -1508,6 +1578,13 @@ done
 # escalated by the predicate") would still pass it. Pin the sentence itself.
 assert_in_range_folded "stop policy states an escalated open item stops the run" \
   "$ORCH_SKILL" 'an open item escalated by the predicate of `## In-run rulings` — the' \
+  "$RULINGS_END" "$GUARD_LINE"
+# M16: the bare 'fork review unavailable' fragment above is a weak spelling
+# check only, the same way the bare 'escalated' fragment was: a rewrite that
+# kept the phrase but inverted the rule (e.g. requiring MORE than two usable
+# returns to stop) would still pass it. Pin the sentence's own trigger.
+assert_in_range_folded "fork review unavailable stop triggers on fewer than two usable reviewer returns" \
+  "$ORCH_SKILL" '`fork review unavailable` (fewer than two usable reviewer returns for a design item)' \
   "$RULINGS_END" "$GUARD_LINE"
 # A `stopped` commit can be made over a deliberately dirty tree, so its staging
 # is stated once, in the stop policy, and both `stopped` commit sites point at
@@ -1641,6 +1718,28 @@ assert_in_range "Secrets found multi-item example's first item line" \
 assert_in_range "Secrets found multi-item example's second item line" \
   "$MCR_SKILL" '- [I5] path/to/other.py:9 — (round 3)' \
   "$MCR_LOG_FORMAT_LINE" "$MCR_AFTER_LOOP_LINE" exact
+# M3: the blank-line terminator is the parsing contract between the producer
+# and the Phase 5 reader, but fold_range collapses blank lines into a single
+# space, so no folded check can verify it. This scans the raw file instead:
+# the physical line right after the multi-item example's last item line must
+# be empty.
+SECRETS_LAST_ITEM_LINE="$(first_line_of "$MCR_SKILL" '- [I5] path/to/other.py:9 — (round 3)')"
+if [ -z "$SECRETS_LAST_ITEM_LINE" ]; then
+  bad "Secrets found multi-item example's last item line is followed by a blank line (could not locate the example's last item line in ${MCR_SKILL#$ROOT/})"
+else
+  SECRETS_TOTAL_LINES="$(wc -l < "$MCR_SKILL" | tr -d ' ')"
+  SECRETS_NEXT_LINE_NUM=$((SECRETS_LAST_ITEM_LINE + 1))
+  if [ "$SECRETS_NEXT_LINE_NUM" -gt "$SECRETS_TOTAL_LINES" ]; then
+    bad "Secrets found multi-item example's last item line is followed by a blank line (line $SECRETS_NEXT_LINE_NUM does not exist in ${MCR_SKILL#$ROOT/})"
+  else
+    SECRETS_NEXT_LINE_TEXT="$(sed -n "${SECRETS_NEXT_LINE_NUM}p" "$MCR_SKILL")"
+    if [ -z "$SECRETS_NEXT_LINE_TEXT" ]; then
+      ok "Secrets found multi-item example's last item line is followed by a blank line (line $SECRETS_NEXT_LINE_NUM)"
+    else
+      bad "Secrets found multi-item example's last item line is followed by non-blank text (line $SECRETS_NEXT_LINE_NUM of ${MCR_SKILL#$ROOT/}): '$SECRETS_NEXT_LINE_TEXT'"
+    fi
+  fi
+fi
 # The harness-probe ordering rule against the location clause: stated by the
 # Review Log Format bullet, the matching Triage text, and the sentence
 # requiring the observation to use the same three replacements as a quoted
@@ -1685,9 +1784,24 @@ assert_in_range_folded "the Secrets found line is appended to the log itself, be
 assert_in_range_folded "the logged Secrets found line is the durable copy, committed under Pipeline rule 1's completed commit" \
   "$MCR_SKILL" "this is the durable copy: it is committed with the completion marker, under Pipeline rule 1's \`chore(review): <slug> completed\` commit" \
   "$MCR_AFTER_LOOP_LINE" "$MCR_ERROR_HANDLING_LINE"
-assert_in_range "Review Log Format example carries a Secrets found: none line beside the completion marker" \
-  "$MCR_SKILL" 'Secrets found: none' \
-  "$MCR_LOG_FORMAT_LINE" "$MCR_AFTER_LOOP_LINE" exact
+# M14: the producer's mandatory-output rule for the `Secrets found:` line —
+# always written, and a report without it is defective — is what makes
+# Phase 5's "gathered from the log" side (section 6 above) satisfiable: a
+# report omitting the line for a no-finding invocation would otherwise leave
+# Phase 5 with nothing to report where it should report `none`.
+assert_in_range_folded "the Secrets found line is always written; a report without it is defective" \
+  "$MCR_SKILL" 'Also report the `Secrets found:` line — the same items just written to the log above, in the same shape as the `Harness probes owed:` line above. The line is always written; a report without it is defective.' \
+  "$MCR_AFTER_LOOP_LINE" "$MCR_ERROR_HANDLING_LINE"
+# M3: a bare 'Secrets found: none' needle, searched across the whole
+# range, is satisfied by any prose mention of it too — a rewrite that
+# deleted the example's own two lines but kept a mention elsewhere in the
+# range would still pass. Pin the pair whole instead: the completion
+# marker immediately followed by the bare `Secrets found: none` line, the
+# same adjacency the example itself shows. Folded, because the pair spans
+# two physical lines.
+assert_in_range_folded_exact "Review Log Format example pairs the completion marker with a bare Secrets found: none line" \
+  "$MCR_SKILL" '_Completed — YYYY-MM-DD — <converged|cap reached> — HEAD <sha>_ Secrets found: none' \
+  "$MCR_LOG_FORMAT_LINE" "$MCR_AFTER_LOOP_LINE"
 for pin in 'decided (orchestrator)' 'decided (<who>)' \
            'plan governs (orchestrator decision)' 'plan governs (user decision)' \
            '`decided (user)` or `decided (orchestrator)`' \
