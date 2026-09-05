@@ -121,3 +121,54 @@ Result: `Results: 87 passed, 0 failed`
 
 All seven covering test suites passed after the fixes. Commit SHA:
 `32ecce86b51b9f578c1b96a7b75c3936734ee189`.
+
+## Round 2 (post-loop decisions)
+
+### Findings addressed
+- [I2] The Procedure preamble now says the prompt directory is created once per invocation (before round 1, or before the round a resumed invocation continues at), a second or resumed invocation creates a fresh directory, and the lost-path rule now runs `mktemp -d` again instead of forbidding a second directory.
+- [I1] Every failure of the pointer mechanism is now fatal: the preamble, step 2, step 3, the fix-dispatch bullet and Error Handling state the exact `BLOCKED:` outcomes (directory, prompt file, value file, Node missing, no usable report in a round), and every inline-dispatch fallback sentence was removed; `tests/reviewer-templates/run-tests.sh` section 10 now asserts `BLOCKED:` in the Error Handling range and the absence of `inline dispatch` from the Procedure and Error Handling ranges.
+
+### Commands and output
+
+```
+$ bash tests/reviewer-templates/run-tests.sh
+  PASS: multi-code-review SKILL.md: Error Handling range located (1419..1519)
+  PASS: Procedure: contains 'mktemp -d'
+  PASS: Procedure: contains 'fill-prompt.js'
+  PASS: Procedure: contains 'test -s "<PROMPT_DIR>/round-<i>-reviewer.md"'
+  PASS: Procedure: contains 'test -s "<PROMPT_DIR>/round-<i>-fix.md"'
+  PASS: Procedure: contains 'Your complete instructions are in the file'
+  PASS: Procedure: contains 'Read that file once, with the Read tool, before doing anything else, and follow it as your only instructions.'
+  PASS: Procedure: contains 'Nothing else in that directory is for you; do not read any other file there.'
+  PASS: Procedure: contains 'retry the identical dispatch once'
+  PASS: Procedure: contains './fix-prompt.md'
+  PASS: Procedure: contains 'No requirements document is available'
+  PASS: Procedure: contains 'Triage these carried Minor findings in your Carried Findings Triage section:'
+  PASS: Procedure: contains 'review fixes (<slug>, round <i>)'
+  PASS: SKILL.md never holds the prompt directory in a shell variable
+  PASS: Error Handling: every failure of the mechanism returns BLOCKED
+  PASS: Error Handling: never a pointer to a file that failed the check
+  PASS: Procedure: no inline-dispatch fallback
+  PASS: Error Handling: no inline-dispatch fallback
+
+Results: 57 passed, 0 failed
+
+$ bash tests/fill-prompt/run-tests.sh
+  PASS: fix template: re-dispatch (FAILURE_BLOCK from file) exits 0
+  PASS: fix template: failure heading present on the re-dispatch
+  PASS: fix template: failure text present on the re-dispatch
+  PASS: fix template: no residual placeholder on the re-dispatch
+8. Round 2 fixes: refuse to overwrite --out, and trailing blank after fill
+  PASS: existing --out: exits 5
+  PASS: existing --out: message names the path
+  PASS: existing --out: content unchanged
+  PASS: trailing whole-line placeholder given the empty value: exits 0
+  PASS: trailing whole-line placeholder given the empty value: output matches expected byte for byte (exactly one trailing newline)
+
+Results: 86 passed, 0 failed
+
+$ git add -- skills/multi-code-review/SKILL.md tests/reviewer-templates/run-tests.sh
+$ git commit -m "review fixes (prompt-pointer-dispatch, round 2)" -- skills/multi-code-review/SKILL.md tests/reviewer-templates/run-tests.sh
+[feature/prompt-pointer-dispatch f534fea] review fixes (prompt-pointer-dispatch, round 2)
+ 2 files changed, 77 insertions(+), 48 deletions(-)
+```
