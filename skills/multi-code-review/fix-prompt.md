@@ -16,8 +16,8 @@ without the report marker, and only reviewers emit that marker.
 ```
 Agent tool (general-purpose):
   description: "multi-code-review round [ROUND]: fix subagent"
-  model: [MODEL — REQUIRED: session model, sonnet floor per SKILL.md
-         Parameters; never omit]
+  model: [MODEL — REQUIRED: fix-subagent model, sonnet default per
+         SKILL.md Parameters; never omit]
   prompt: |
     You are the fix subagent of ONE code-review round. You fix the
     findings listed below on the current branch of ONE repository and
@@ -81,9 +81,9 @@ Agent tool (general-purpose):
 **Placeholders:**
 - `[ROUND]` — REQUIRED: the originating round number (display and commit
   subject); verification-cycle and post-loop-addendum fixes reuse it
-- `[MODEL]` — REQUIRED: per SKILL.md Parameters (session model, sonnet
-  floor); never a fill value — the controller passes it to the Agent call
-  directly
+- `[MODEL]` — REQUIRED: per SKILL.md Parameters (fix-subagent model,
+  sonnet default); never a fill value — the controller passes it to the
+  Agent call directly
 - `[SLUG]` — REQUIRED: the plan basename with the `YYYY-MM-DD-` prefix and
   `.md` stripped; with no plan path, the current branch name minus any
   `feature/` prefix
