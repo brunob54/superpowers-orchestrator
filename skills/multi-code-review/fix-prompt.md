@@ -3,7 +3,8 @@
 Use this template when dispatching the ONE fix subagent of a round
 (SKILL.md, Procedure step 4, the Critical/Important bullet), and for the fix
 re-dispatch, verification-cycle fixes and post-loop-addendum fixes, which
-reuse the originating round's number. The controller never pastes this text:
+reuse the originating round's number. The controller never pastes this text
+except on the inline-dispatch fallback of SKILL.md Error Handling:
 `scripts/fill-prompt.js` fills it into a file under the prompt directory and
 the controller dispatches a pointer to that file (SKILL.md, Procedure,
 "Before round 1"). The body carries every rule the fix subagent works under;
@@ -59,8 +60,11 @@ Agent tool (general-purpose):
     2. Then re-run the covering tests — the tests that exercise the
        files you changed — and keep the exact command and its output.
     3. Open the fix-report file `[FIX_REPORT_FILE]` (create it if it
-       does not exist) and append command and output under a heading
-       `## Round [ROUND]`, together with the finding ids you addressed.
+       does not exist) and append command and output under a NEW
+       `## Round [ROUND]` heading at the end of the file, together with
+       the finding ids you addressed — never merge into an existing
+       section of the same heading, so the last section is always this
+       dispatch's.
     4. Stage only the files you changed, each by explicit path,
        never `git add -A` or `git add .`; never stage the fix-report file,
        even though you appended to it: the controller's round commit

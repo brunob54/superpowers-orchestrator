@@ -203,11 +203,18 @@ function fill(body, values) {
 function writeAtomic(outPath, text) {
   const random = crypto.randomBytes(6).toString('hex');
   const tmp = path.join(path.dirname(outPath), `.${path.basename(outPath)}.${process.pid}.${random}.tmp`);
+  // Set only once the 'wx' open below has actually created the temporary
+  // file, so the catch block never unlinks a pre-existing file or symlink
+  // at that name that caused the open itself to fail.
+  let created = false;
   try {
     fs.writeFileSync(tmp, text, { encoding: 'utf8', flag: 'wx', mode: 0o600 });
+    created = true;
     fs.renameSync(tmp, outPath);
   } catch (err) {
-    try { fs.unlinkSync(tmp); } catch (ignored) { /* the temporary file was never created */ }
+    if (created) {
+      try { fs.unlinkSync(tmp); } catch (ignored) { /* already gone, e.g. renamed */ }
+    }
     fail(EXIT_IO, `cannot write ${outPath}: ${err.message}`);
   }
 }

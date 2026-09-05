@@ -149,6 +149,7 @@ assert_eq "option without a value exits 1" "$STATUS" "1"
 fill --template "$SMALL" --out "$WORK/s5.md" ROUND=3 LENS_NAME=Security OPTIONAL_LINE= INLINE_VALUE=plain "BODY_VALUE=@$WORK/does-not-exist.md" SHARED=y
 assert_eq "missing @file exits 5" "$STATUS" "5"
 assert_file_contains "missing @file: message names the file" "$ERRF" 'does-not-exist.md'
+assert_absent "missing @file: nothing written" "$WORK/s5.md"
 fill --template "$FIXTURES/no-prompt-template.md" --out "$WORK/s2.md" ROUND=3
 assert_eq "template without a prompt block exits 2" "$STATUS" "2"
 assert_absent "template without a prompt block: nothing written" "$WORK/s2.md"
@@ -199,6 +200,7 @@ fill --template "$MIXED_EOL_TEMPLATE" --out "$WORK/mixed-eol.md" ROUND=3
 assert_eq "mixed line endings: exits 0" "$STATUS" "0"
 MIXED_EOL_LINE_COUNT="$(line_count "$WORK/mixed-eol.md")"
 MIXED_EOL_CR_COUNT="$(grep -c $'\r$' "$WORK/mixed-eol.md" | tr -d ' ')"
+assert_eq "mixed line endings: output has exactly 2 lines (fails if the file is missing)" "$MIXED_EOL_LINE_COUNT" "2"
 assert_eq "mixed line endings: no output line holds an embedded bare newline (every line ends with CR)" "$MIXED_EOL_CR_COUNT" "$MIXED_EOL_LINE_COUNT"
 printf 'First line 3.\nSecond line.\n' > "$WORK/mixed-eol-expected.txt"
 tr -d '\r' < "$WORK/mixed-eol.md" > "$WORK/mixed-eol-normalized.txt"

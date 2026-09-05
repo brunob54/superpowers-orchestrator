@@ -473,9 +473,11 @@ code has been revised since, so a re-pass is meaningful):
       because every placeholder varies per round or per invocation and
       none varies per reviewer (the package is generated once per round).
       Reviewer `j` of the round is written `r<j>`. The reviewers are not
-      told that other reviewers exist: only the Agent call's
-      `description` differs, and only when M ≥ 2 (the
-      `(reviewer <j>/<m>)` suffix shown in the template). A platform
+      told that other reviewers exist: each call's `description` is
+      `multi-code-review round <i>: <lens name>`, with
+      ` (reviewer <j>/<m>)` appended only when M ≥ 2 — only the
+      `description` differs between the M calls, and only when M ≥ 2. A
+      platform
       that runs the calls one after another gives the same result, only
       slower. The M reviewers of a round share one working tree and run
       at the same time: a reviewer must not run any command that writes
