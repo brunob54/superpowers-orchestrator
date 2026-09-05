@@ -624,7 +624,7 @@ git commit -m "feat(multi-code-review): add fill-prompt.js template fill script 
   - Invariants: same helper style as the rest of each file; the clause assertions run on the body extracted between the `  prompt: |` line and the closing fence, not on the whole file, so a clause moved into the legend fails; no `/dev/stdin`, no process substitution.
   - Verification: both suites fail before Step 3 (template absent) and pass after it.
 
-- [ ] **Step 1: Add the failing wording contracts to the reviewer-templates suite**
+- [x] **Step 1: Add the failing wording contracts to the reviewer-templates suite**
 
 In `tests/reviewer-templates/run-tests.sh`, after the line `CODE_SKILL="$ROOT/skills/multi-code-review/SKILL.md"` add:
 
@@ -698,7 +698,7 @@ assert_file_has_line "fix template: [FAILURE_BLOCK] stands alone on its line" "$
 assert_file_has_line "fix template: [FINDINGS] stands alone on its line" "$FIX_BODY" '    [FINDINGS]'
 ```
 
-- [ ] **Step 2: Add the failing real-fix-template cases to the fill-prompt suite**
+- [x] **Step 2: Add the failing real-fix-template cases to the fill-prompt suite**
 
 In `tests/fill-prompt/run-tests.sh`, before the final `echo` / `bold "Results: ..."` lines add:
 
@@ -720,12 +720,12 @@ assert_file_contains "fix template: failure text present on the re-dispatch" "$W
 assert_file_not_matches "fix template: no residual placeholder on the re-dispatch" "$WORK/fix-retry.md" "$PLACEHOLDER_ERE"
 ```
 
-- [ ] **Step 3: Run both suites to verify they fail**
+- [x] **Step 3: Run both suites to verify they fail**
 
 Run: `bash tests/reviewer-templates/run-tests.sh; bash tests/fill-prompt/run-tests.sh`
 Expected: FAIL — reviewer-templates section 9 reports "prompt body extract is empty" and every clause missing; fill-prompt section 7 reports exit 5 (the template cannot be read) instead of 0. Sections 1 to 8 of reviewer-templates and 1 to 6 of fill-prompt still pass.
 
-- [ ] **Step 4: Write the template**
+- [x] **Step 4: Write the template**
 
 `skills/multi-code-review/fix-prompt.md` (the fenced block starts at column 0; the body is indented four spaces; every clause of section 9 sits on one physical line):
 
@@ -836,12 +836,12 @@ Agent tool (general-purpose):
 reports, prior rounds' findings and the review log are never passed.
 ````
 
-- [ ] **Step 5: Run both suites to verify they pass**
+- [x] **Step 5: Run both suites to verify they pass**
 
 Run: `bash tests/reviewer-templates/run-tests.sh && bash tests/fill-prompt/run-tests.sh`
 Expected: PASS for both — each prints `Results: <p> passed, 0 failed` and exits 0.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add skills/multi-code-review/fix-prompt.md tests/reviewer-templates/run-tests.sh tests/fill-prompt/run-tests.sh
