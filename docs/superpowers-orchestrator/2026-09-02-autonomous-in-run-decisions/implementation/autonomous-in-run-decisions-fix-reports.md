@@ -5421,3 +5421,63 @@ exit=0
 Files changed: `skills/multi-code-review/SKILL.md`,
 `skills/orchestrating-development/SKILL.md`,
 `tests/in-run-rulings/run-tests.sh`.
+
+## Round 17 fix report
+
+Commands run and their output.
+
+### bash tests/in-run-rulings/run-tests.sh
+```
+Results: 481 passed, 0 failed
+```
+
+### bash tests/reviewer-templates/run-tests.sh
+```
+Results: 24 passed, 0 failed
+```
+
+### bash tests/writing-plans/run-tests.sh
+```
+Results: 15 passed, 0 failed
+```
+
+### Findings addressed
+
+- F1: skills/orchestrating-development/SKILL.md, Resume step 3's Phase-3
+  revert path (~line 661) — split the sentence: the plan's unticked
+  checkboxes go into the resume commit; the ledger line
+  (`.superpowers/sdd/progress.md`) is removed on disk only and never
+  staged, mirroring the existing `state.md` wording in the Major-Error
+  Stop Policy.
+- F2: skills/orchestrating-development/batch-controller-prompt.md,
+  Deviation 4 (~lines 154-169) — deleted the dead middle fallback (the
+  most-recent tick-commit search); the chain is now stated once: ledger
+  line's HEAD, else merge-base. Kept the stale-tick-commit sentence only
+  as the stated reason a tick commit is never used.
+- F3: skills/orchestrating-development/SKILL.md ("The ruling record",
+  ~line 1286) and skills/multi-code-review/SKILL.md ("Decided wording in
+  a verification cycle", ~line 674) — replaced the text-prefix
+  marker-backing test with a location-based one: an entry backs a marker
+  only when its `**Resolution:**` line begins `amend plan`, confirmed by
+  the amendment procedure's own `**Amendment <n>` audit note standing at
+  the amended clause's location in the plan — never by comparing the
+  entry's `**Contract clause:**` text (which holds pre-amendment wording
+  by the fixed write order). Both files state the same rule. No new
+  ruling-record field added; the six-field shape is unchanged.
+- F4: skills/orchestrating-development/SKILL.md — the ruling-record
+  entry template's `**Item:**` field (~line 1233) now writes
+  `[<id> inv <i>]` for a Phase 4 ruling, `<i>` being the review-log
+  `_Invocation` the ruling was made against; a new sentence states this
+  field is the qualifier's only durable record. Both the live stop path
+  ("Handling a return as a whole", ~line 1616) and Resume step 3's
+  rebuild of a missing `## STOPPED` entry (~line 583) now read `<i>` from
+  that field. No new field added; the six-field shape is unchanged.
+- F5: tests/in-run-rulings/run-tests.sh — `cleanup_tmpfiles` now guards
+  `"${TMPFILES[@]}"` with `[ "${#TMPFILES[@]}" -gt 0 ] || return` before
+  the loop, avoiding an `unbound variable` abort under `set -u` on bash
+  3.2 when the array is still empty at EXIT.
+
+Test-suite wording assertions updated in tests/in-run-rulings/run-tests.sh
+to match the new wording for F1-F4 (old pins for the removed/changed
+sentences replaced; new pins added for the new location-based marker
+check and the `inv <i>` sourcing), never weakened.
