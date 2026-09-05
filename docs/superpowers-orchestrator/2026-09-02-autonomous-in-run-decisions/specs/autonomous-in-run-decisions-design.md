@@ -257,10 +257,20 @@ The existing undocumented read in Resume step 3 (the review log's completion
 marker and `decided (…)` lines) is named in the same exception, so the rule
 lists every body the orchestrator reads.
 
-### R3 — Fork review for a `design` item
+### R3 — Fork review for a `design` item (amended by ruling 22)
 
-For every `design` item the orchestrator dispatches forks **in parallel, in
-one message**, under **distinct lenses** from the Vocabulary list. The
+For the **first** `design` item of a return the orchestrator dispatches
+forks **in parallel, in one message**, under **distinct lenses** from the
+Vocabulary list. Every later `design` item of the same return, and every
+tie-break reviewer, is dispatched instead as a fresh `general-purpose`
+subagent — given the R2 read list as explicit paths and the same prompt —
+and is named `fork-<lens>` all the same, so the ruling's `Forks:` field
+stays readable. The reason: a fork inherits the orchestrator's transcript,
+and by the time a second item is reviewed that transcript holds the first
+item's verdicts and the orchestrator's consolidation of them, so later
+forks would share one anchor instead of judging independently. This is the
+same substitute this section already specifies for a platform with no
+`fork` type (amended by ruling 22). The
 default is three: `design consistency`, `implementation practicality`,
 `adversarial`. Two — `design consistency` and `adversarial` — when the
 item's `file:line` names a single file and none of the outcomes the
@@ -809,6 +819,22 @@ Round 10 finding `[I8]` found this. Closing it would widen one of the five
 definitions, and the author decided on 2026-09-04 to leave it open and
 record it here. A run whose implementers may meet real credentials should
 treat this as the gap it is.
+
+**Ruling 22 — 2026-09-05 — the fork path covers the first `design` item
+of a return, decided by the author.** Round 17 finding `[I3]` showed that
+the shipped skill restricts the fork path to the FIRST `design` item of a
+return, dispatching every later item's reviewers and every tie-break
+reviewer as fresh `general-purpose` subagents, while R3 still read "for
+every `design` item" and nothing here recorded the narrowing. The skill is
+right and the spec was stale: a fork inherits the transcript, so a second
+item's forks would inherit the first item's verdicts and the
+orchestrator's consolidation of them, and a tie-break fork would inherit
+the consolidation reasoning of its own round — one shared anchor instead
+of independent judgement. The author decided on 2026-09-05 to amend R3's
+opening rule to match the skill; no skill behaviour and no test changed.
+This was the author's decision as the spec's owner, not an orchestrator
+ruling: the run had stopped on the item as `user-decision`, and closing it
+edits the spec, which the `spec wrong` class reserves to the author.
 
 ### R14 — The binding test reads the plan's note (amended by ruling 21)
 
