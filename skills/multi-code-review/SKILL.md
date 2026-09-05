@@ -329,39 +329,44 @@ file is never moved aside — its history is committed.
 ## Procedure
 
 **Before the first round this controller runs — the prompt directory.**
-Run `mktemp -d` as its own command, once per controller, before round 1
+Run `mktemp -d` as its own command, once per invocation, before round 1
 or before the round a resumed invocation continues at, and copy the
 literal path it prints — written `<PROMPT_DIR>` in this section — into
-every later command, Write call and pointer. The path is never logged
+every later command, Write call and pointer. Once per invocation, never
+once per controller: a controller that runs a second invocation in the
+same session, or that resumes one, creates a fresh directory first, so
+no file name of the later invocation collides with a file the earlier
+one wrote. The path is never logged
 (it never appears in a log entry, below), so a resumed controller always
 runs `mktemp -d` again here and gets its own fresh directory; file names
-stay unique within that controller by construction because the directory
+stay unique within that invocation by construction because the directory
 itself is new. On Git Bash (Windows) — when `uname -s` prints a name
 beginning with `MINGW` or `MSYS` — first convert that path once with
 `cygpath -m "<printed path>"` as its own command and use the converted
 path as `<PROMPT_DIR>`: native Node and the Read tool do not resolve a
-`/tmp/…` path there. If `cygpath` fails, use inline dispatch for the
-whole invocation, as for a `mktemp -d` failure. On every other platform
+`/tmp/…` path there. If `cygpath` fails, stop and return
+`BLOCKED: prompt directory could not be created — <error text>` with
+nothing dispatched, as for a `mktemp -d` failure. On every other platform
 the printed path is used as is. A shell variable set in one tool call
 does not exist in the next: the path is always spelled out in full,
 never held in a variable of any name. It never appears in a log entry.
 If the printed path is no longer in the controller's context partway
 through the invocation — after a context compaction, for example — the
-controller does not guess it, does not search for it, and does not run
-`mktemp -d` a second time (the directory is created once per
-controller): it uses inline dispatch for every remaining dispatch of the
-invocation, as for a `mktemp -d` failure, and states this in the
-completion report. Every reviewer and fix-subagent prompt this
+controller does not guess it and does not search for it: it runs
+`mktemp -d` again, uses that new directory for every remaining dispatch
+of the invocation — writing again there any value file a later dispatch
+reuses — and states this in the completion report. Every reviewer and fix-subagent prompt this
 skill dispatches — in rounds, verification cycles and post-loop addenda
 alike; the throwaway probe subagent of Triage is neither and is dispatched
 as today — is filled by `scripts/fill-prompt.js` (relative to this
 skill's own base directory, written `<skill-dir>` below) from its template
 into a file in that directory and delivered as a pointer; the controller
-never reads a template except on the inline-dispatch fallback of Error
-Handling. The verification re-review of step 6 and the post-loop addendum
+never reads a template and never pastes a prompt inline — there is no
+inline fallback of any kind. The verification re-review of step 6 and the
+post-loop addendum
 of After the Loop dispatch exactly as step 2 and the Critical/Important
 bullet do, with their own file names from this table (unique within one
-controller by construction):
+invocation by construction):
 
 | Dispatch | Prompt file | Value files |
 |---|---|---|
@@ -397,8 +402,17 @@ Read that file once, with the Read tool, before doing anything else, and follow 
 Nothing else in that directory is for you; do not read any other file there.
 ```
 
-If `mktemp -d` fails, use inline dispatch for the whole invocation (Error
-Handling).
+Every failure of this mechanism is fatal and nothing falls back:
+`mktemp -d` or `cygpath` failing, `fill-prompt.js` exiting non-zero,
+`test -s` failing, Node missing (treated as the script failing), a
+value-file write refused by a hook or failing, and a round in which no
+reviewer returned a usable report after the pointer dispatch and the one
+identical retry of step 3. In each case the controller writes the round
+entry it owes — if a round is in progress — and then returns
+`BLOCKED: <cause>`, naming the failure in the wording of Error Handling.
+If `mktemp -d` fails, that means: stop and return
+`BLOCKED: prompt directory could not be created — <error text>`, with
+nothing dispatched (Error Handling).
 
 For each round `i` in 1..N (for N > 4, lenses cycle from lens 1 — the
 code has been revised since, so a re-pass is meaningful):
@@ -446,9 +460,10 @@ code has been revised since, so a re-pass is meaningful):
       carried list, and every later round, instead use the empty value
       `'CARRIED_BLOCK='` — step 1 writes `round-1-carried.txt` only when
       there is a carried list, so passing the `@<file>` form when that file
-      was never written makes the script exit 5 and the round fall back to
-      inline dispatch. Every `NAME=` argument stays single-quoted either
-      way.
+      was never written makes the script exit 5, which is fatal and ends
+      the loop with `BLOCKED: prompt file round-<i>-reviewer.md not
+      produced — <the script's message>`. Every `NAME=` argument stays
+      single-quoted either way.
 
       Two rules hold for this fill and for the fix fill of step 4 alike.
       First, text that comes from reviewer output — findings, carried
@@ -479,10 +494,10 @@ code has been revised since, so a re-pass is meaningful):
       findings, fix reports, or the log — neither in a value nor beside
       the pointer.
    3. Run `test -s "<PROMPT_DIR>/round-<i>-reviewer.md"` as its own
-      command. If the script exited non-zero or the check fails, fall
-      back to inline dispatch for this round's M reviewers (Error
-      Handling); never dispatch a pointer to a file that failed the
-      check.
+      command. If the script exited non-zero or the check fails, stop and
+      return `BLOCKED: prompt file round-<i>-reviewer.md not produced —
+      <the script's message, or "empty">` (Error Handling); never dispatch
+      a pointer to a file that failed the check.
    4. Dispatch all M calls in a single message with multiple parallel
       Agent tool calls (the single-message mechanic of
       `../dispatching-parallel-agents/SKILL.md` Procedure step 3,
@@ -514,8 +529,11 @@ code has been revised since, so a re-pass is meaningful):
    present. Each unusable report → retry the identical dispatch once,
    keeping the same reviewer number; the retries of one round may go out
    together in one message. After the retries, *u* = the number of usable
-   reports. u = 0 → log the round `inconclusive` (never clean; nothing is
-   triaged) and continue to the next round. u ≥ 1 → build one
+   reports. u = 0 → write the round entry in the `inconclusive` form
+   (never clean; nothing is triaged), then stop and return
+   `BLOCKED: no reviewer of round <i> could use its prompt file — <each
+   reviewer's final message, one line each>`: a round in which no reviewer
+   could use its prompt file never lets the loop continue. u ≥ 1 → build one
    **consolidated finding set** from the usable reports by the rules
    below, then continue; a round with u < M is *partial* — it is logged
    with its counts and is never clean. With M = 1 the consolidated set is
@@ -717,7 +735,8 @@ code has been revised since, so a re-pass is meaningful):
      ```
 
      Run `test -s "<PROMPT_DIR>/round-<i>-fix.md"` as its own command
-     (failure → inline dispatch for this fix dispatch, Error Handling),
+     (failure → stop and return `BLOCKED: prompt file round-<i>-fix.md
+     not produced — <the script's message, or "empty">`, Error Handling),
      then dispatch one `general-purpose` Agent call with the
      `description` `multi-code-review round <i>: fix subagent` (the
      wording of `./fix-prompt.md`) and the fix-subagent model of
@@ -1399,7 +1418,10 @@ completed invocation only on explicit user request.
 
 ## Error Handling
 
-- Unusable report twice → `inconclusive` round, continue (never clean).
+- Unusable report twice, with at least one other reviewer usable →
+  partial round, continue (never clean); with none usable in the round,
+  the `inconclusive` entry is written and the loop returns `BLOCKED`
+  (pointer-mechanism rows below).
 - Empty or invalid range (BASE = HEAD, no merge-base, or BASE does not
   resolve to a commit) → stop and report; nothing dispatched.
 - `review-package` missing or failing → dispatch with `[PACKAGE_FILE]` =
@@ -1417,7 +1439,10 @@ completed invocation only on explicit user request.
 - One or more reviewers unusable after one retry, u ≥ 1 → partial round:
   consolidate the usable reports, log `usable <u>/<m>` and `r<j>: unusable`,
   triage normally; the round is never clean.
-- All reviewers unusable after retries (u = 0) → `inconclusive` round.
+- All reviewers unusable after retries (u = 0) → `inconclusive` round
+  entry, then `BLOCKED: no reviewer of round <i> could use its prompt
+  file — <each reviewer's final message, one line each>`; the loop does
+  not continue.
 - Sources-mapped mismatch (source ids mapped ≠ findings enumerated) →
   repair the consolidation before writing the entry; never write the line
   with unequal numbers.
@@ -1439,36 +1464,37 @@ completed invocation only on explicit user request.
   invocation always comes from its parameters, never from the log.
 - Platform without parallel dispatch → reviewers run one after another;
   the procedure is unchanged.
-- `mktemp -d` fails at Procedure start → inline dispatch for the whole
-  invocation. **Inline dispatch** means: read the relevant template
-  (`reviewer-prompt.md` or `fix-prompt.md`), fill its body by hand under
-  the legend's rules, copying the body verbatim and changing nothing but
-  the placeholder text, and paste the result as the Agent prompt — the
-  only case in which the controller reads a template; it reintroduces the
-  old context cost for the affected dispatches and nothing else. State the
-  fallback and the reason in the completion report. The loop never stalls
-  on the pointer mechanism.
+- Every failure of the pointer mechanism — the five rows below — is
+  fatal and nothing falls back: the controller writes the round entry it
+  owes, if a round is in progress, then returns `BLOCKED: <cause>` naming
+  the failure. The controller never reads a template and never pastes a
+  prompt inline: there is no inline fallback of any kind.
+- `mktemp -d` fails at Procedure start, or `cygpath` fails where the path
+  must be converted → `BLOCKED: prompt directory could not be created —
+  <error text>`; nothing is dispatched.
 - `fill-prompt.js` exits non-zero, or `test -s` fails, for one prompt
-  file → inline dispatch for every dispatch that file serves — all M
-  reviewers of that round, or the one fix dispatch — stated in the
-  completion report with the script's message. The rule of "Before
+  file → `BLOCKED: prompt file <name> not produced — <the script's
+  message, or "empty">`. The rule of "Before
   round 1" holds: never dispatch a pointer to a file that failed the check.
   Node missing is impossible on a platform that runs this plugin's hooks
   and is treated as the script failing.
-- A value-file write is denied by a hook or fails → inline dispatch for the
-  dispatch that value serves, stated in the completion report with the
-  hook's reason. This plugin's `hooks/safety/protect-secrets.js` scans the
+- A value-file write is denied by a hook or fails → `BLOCKED: value file
+  <name> could not be written — <the hook's reason, or the error>`. This
+  plugin's `hooks/safety/protect-secrets.js` scans the
   content and the path of every Write, and — together with
   `hooks/safety/block-dangerous-commands.js` — the whole Bash command
   string, a heredoc body included; a Security-lens finding may quote
-  exactly such text. Neither hook scans an Agent prompt, so inline
-  dispatch carries the same text as today. Never alter finding text to
+  exactly such text. Never alter finding text to
   pass a hook, and never retry the write through the other form to get
   around a denial.
 - A reviewer returns no usable report after a pointer (did not read the
-  file, or read it and produced no marker) → the existing rule: retry the
-  identical pointer once; then the reviewer is unusable under
-  `usable <u>/<m>`. No new failure class. A reviewer that reads another
+  file, or read it and produced no marker) → retry the
+  identical pointer once; then the reviewer is unusable. With at least one
+  other usable report the round proceeds under `usable <u>/<m>`. With no
+  usable report in the round at all (u = 0) write the round entry in the
+  `inconclusive` form, then return `BLOCKED: no reviewer of round <i>
+  could use its prompt file — <each reviewer's final message, one line
+  each>`. A reviewer that reads another
   file in the directory cannot be prevented by wording alone; the
   directory is outside every search the reviewer is allowed to run, and
   the pointer forbids it — the same exposure the `.superpowers/reviews/`
