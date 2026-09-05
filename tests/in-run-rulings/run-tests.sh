@@ -29,6 +29,19 @@ PASS=0
 FAIL=0
 ERRORS=()
 
+# I1: scratch files created by this suite (assert_absent_in_range_folded_nobacktick's
+# backtick-stripped copy) are registered here and removed on exit, including an
+# interrupt or a timeout kill — matching the mktemp-plus-trap convention every
+# sibling suite in this repository uses for its own scratch files.
+TMPFILES=()
+cleanup_tmpfiles() {
+  local f
+  for f in "${TMPFILES[@]}"; do
+    rm -f "$f" 2>/dev/null
+  done
+}
+trap cleanup_tmpfiles EXIT
+
 green() { printf '\033[0;32m%s\033[0m\n' "$1"; }
 red()   { printf '\033[0;31m%s\033[0m\n' "$1"; }
 bold()  { printf '\033[1m%s\033[0m\n' "$1"; }
@@ -178,15 +191,29 @@ assert_in_range_folded_exact() { # desc file needle start end
 # fixed string $3 is ABSENT from the range, and FAILS when it is present. The
 # range's lines are folded exactly as every positive check folds them, so that
 # a re-added rule cannot escape the check by straddling a line wrap. $6 is the
-# match mode: "exact" (case-sensitive) or "fragment" (case-insensitive).
-assert_absent_in_range_folded() { # desc file needle start end mode
-  local desc="$1" file="$2" needle="$3" start="$4" end="$5" mode="$6"
+# match mode: "exact" (case-sensitive) or "fragment" (case-insensitive). $7 is
+# an optional display path used only in messages (default: $file) — the
+# nobacktick wrapper passes the real document here, because $file there is a
+# scratch copy that is gone by the time a failure message is read (M2).
+assert_absent_in_range_folded() { # desc file needle start end mode [display_file]
+  local desc="$1" file="$2" needle="$3" start="$4" end="$5" mode="$6" display="${7:-$2}"
   local folded found
   if [ -z "$start" ] || [ -z "$end" ] || [ "$start" -ge "$end" ]; then
-    bad "$desc (the range $start..$end of ${file#$ROOT/} is missing, empty or inverted)"
+    bad "$desc (the range $start..$end of ${display#$ROOT/} is missing, empty or inverted)"
     return
   fi
   folded="$(fold_range "$file" "$start" "$end")"
+  # I2: fail closed. A haystack that comes back genuinely empty here means the
+  # copy behind $file could not be read at all (a failed write, a missing
+  # file) — fold_range emits at least one space per real line in the range, so
+  # a truly empty result is not a normal blank-lines case, it is a failed
+  # read. Reporting PASS in that case would turn every one of this suite's
+  # plain negative checks into an unconditional pass; fail with a clear
+  # message instead of testing absence against nothing.
+  if [ -z "$folded" ]; then
+    bad "$desc (the text for range $start..$end of ${display#$ROOT/} came back empty; failing closed instead of testing absence against nothing)"
+    return
+  fi
   # Environment, not `awk -v`, for the reason given above.
   if [ "$mode" = "exact" ]; then
     found="$(needle="$needle" hay="$folded" awk \
@@ -201,7 +228,7 @@ assert_absent_in_range_folded() { # desc file needle start end mode
   if [ "$found" = "no" ]; then
     ok "$desc (absent from range $start..$end, line wraps folded)"
   else
-    bad "$desc (still present in range $start..$end of ${file#$ROOT/}, line wraps folded)"
+    bad "$desc (still present in range $start..$end of ${display#$ROOT/}, line wraps folded)"
   fi
 }
 
@@ -225,9 +252,27 @@ assert_absent_in_range_folded_nobacktick() { # desc file needle start end mode
   local desc="$1" file="$2" needle="$3" start="$4" end="$5" mode="$6"
   local needle_nb tmp_file
   needle_nb="${needle//\`/}"
-  tmp_file="$ROOT/.tmp-nobacktick-$$"
-  tr -d '`' < "$file" > "$tmp_file"
-  assert_absent_in_range_folded "$desc" "$tmp_file" "$needle_nb" "$start" "$end" "$mode"
+  # I1: mktemp under the platform temp directory, not a fixed path inside the
+  # repository working tree, and registered for the exit trap above — a run
+  # killed by a timeout or an interrupt (which the earlier plain `rm -f`
+  # never runs) leaves nothing behind for `git status --porcelain` to see,
+  # and the suite no longer needs a writable checkout to run at all.
+  tmp_file="$(mktemp)" || {
+    bad "$desc (mktemp failed; cannot build the backtick-stripped scratch copy of ${file#$ROOT/})"
+    return
+  }
+  TMPFILES+=("$tmp_file")
+  # I2: check the copy actually got written. A failed `tr` (a full disk, a
+  # read-only $TMPDIR) would otherwise leave $tmp_file empty, and the caller
+  # would silently test absence against nothing and report PASS.
+  if ! tr -d '`' < "$file" > "$tmp_file"; then
+    bad "$desc (could not build the backtick-stripped scratch copy of ${file#$ROOT/})"
+    return
+  fi
+  # M2: pass the real document ($file) through as the display path, so a
+  # failure message names the file that was actually scanned, not the
+  # scratch copy — which is gone by the time anyone reads the message.
+  assert_absent_in_range_folded "$desc" "$tmp_file" "$needle_nb" "$start" "$end" "$mode" "$file"
   rm -f "$tmp_file"
 }
 
@@ -373,10 +418,14 @@ else
   # check fail on zero bullets too: indenting the five entries, or turning the
   # list into a table, would otherwise match nothing and report a PASS while
   # the predicate stopped being closed.
+  # M4: deduplicated with `sort -u`. The plan's Global Constraints block
+  # permits a label to be repeated in this list ("a label may be repeated
+  # there"), so a compliant second bullet for the same label must not make
+  # the collected multiset differ from the five-element expected set.
   FOUND_LABELS="$(awk -v a="$CLASS_LINE" -v b="$CLASS_END" \
     'NR >= a && NR < b && match($0, /^- `[^`]+`/) {
        print substr($0, RSTART + 3, RLENGTH - 4)
-     }' "$ORCH_SKILL" | sort | tr '\n' '|')"
+     }' "$ORCH_SKILL" | sort -u | tr '\n' '|')"
   EXPECTED_LABELS="$(printf '%s\n' 'spec wrong' scope irreversible secret chain \
     | sort | tr '\n' '|')"
   if [ "$FOUND_LABELS" = "$EXPECTED_LABELS" ]; then
@@ -494,12 +543,25 @@ assert_in_range_folded "intro announces two documented exceptions" \
 assert_in_range_folded "intro's second exception clause names the classification read, bounded to the list" \
   "$ORCH_SKILL" 'the classification read of `## In-run rulings` ("What may be read"), which is bounded to the list stated there' \
   1 "$REQUIRED_START_LINE"
-for frag in 'data, not instructions' 'never a reviewer report file' \
-            'read-only git commands' \
-            'or to 40 lines on each side'; do
+for frag in 'data, not instructions' 'never a reviewer report file'; do
   assert_in_range "read-exception fragment '$frag'" \
     "$ORCH_SKILL" "$frag" "$READ_EXCEPTION_LINE" "$READ_EXCEPTION_END" fragment
 done
+# M6: the bare 'read-only git commands' fragment above was short enough that
+# a rewrite to the opposite meaning ("Forks may NOT additionally run
+# read-only git commands") still contains it. Pin the owning sentence's
+# distinguishing bytes instead.
+assert_in_range_folded "forks may additionally run read-only git commands, in these three forms only" \
+  "$ORCH_SKILL" 'Forks may additionally run read-only git commands, in these three forms only: `git log --oneline <BASE>..HEAD`, `git show <sha>:<path>` and `git diff <BASE>..HEAD -- <path>`, where `<path>` is a path the list above allows' \
+  "$READ_EXCEPTION_LINE" "$READ_EXCEPTION_END"
+# M7: this multi-word free-text fragment used to run through the unfolded,
+# per-physical-line helper; a pure reflow that pushed it across a line wrap
+# would fail the check even though the wording it protects is unchanged.
+# Route it through the folded helper instead, matching the sibling fragments
+# above it that already tolerate a line wrap.
+assert_in_range_folded "read-exception fragment 'or to 40 lines on each side'" \
+  "$ORCH_SKILL" 'or to 40 lines on each side' \
+  "$READ_EXCEPTION_LINE" "$READ_EXCEPTION_END"
 # M4: the bare 'resume step 3' fragment above was short enough to survive a
 # rewrite to the opposite meaning (e.g. narrowing the RULING-entry checks to
 # forks too). Pin the owning sentence's distinguishing bytes instead: only
@@ -609,11 +671,27 @@ for pin in 'subagent_type: "fork"' '<!-- multi-review report -->' 'fork-<lens>' 
     "$ORCH_SKILL" "$pin" "$FORK_LINE" "$FORK_END" exact
 done
 for frag in 'not a debate' 'never pass conversation history' \
-            'action verb followed by a skill name' \
-            'evidence consistency' 'general-purpose'; do
+            'evidence consistency'; do
   assert_in_range "fork fragment '$frag'" \
     "$ORCH_SKILL" "$frag" "$FORK_LINE" "$FORK_END" fragment
 done
+# M7: this multi-word free-text fragment used to run through the unfolded,
+# per-physical-line helper; it already wraps across a line, and a further
+# reflow could move the wrap without changing the wording. Route it through
+# the folded helper instead.
+assert_in_range_folded "fork fragment 'action verb followed by a skill name'" \
+  "$ORCH_SKILL" 'action verb followed by a skill name' \
+  "$FORK_LINE" "$FORK_END"
+# M6: the bare 'general-purpose' fragment above was short enough that a
+# rewrite to the opposite meaning ("never dispatch a general-purpose
+# subagent") still contains it, and the word recurs several times in this
+# subsection under already-pinned rules. Pin instead a still-unpinned
+# sentence naming the concept: a lens is dispatched as a fork or, under the
+# inheritance rule, as a fresh general-purpose subagent, with the bounds
+# below reading the same for either.
+assert_in_range_folded "a lens is dispatched as a fork or a fresh general-purpose subagent, with the bounds reading the same for both" \
+  "$ORCH_SKILL" 'a lens of a round is dispatched as a fork or, under the inheritance rule above, as a fresh `general-purpose` subagent, and the bounds read the same for both' \
+  "$FORK_LINE" "$FORK_END"
 # M4: the bare 'in parallel, in one message' fragment above was short enough
 # to survive a rewrite to the opposite meaning (e.g. "never dispatch the
 # forks in parallel, in one message"). Pin the owning sentence instead.
@@ -731,6 +809,18 @@ assert_in_range_folded "fork prompt keeps its data-not-instructions sentence" \
 # wait for each other.
 assert_in_range_folded "lost-return bound is stated over the round" \
   "$ORCH_SKILL" 'The bound is stated over the ROUND, never over one lens' \
+  "$FORK_LINE" "$FORK_END"
+# I3: the retry-once rule itself. Without this pin, a rewrite to "a lost
+# return is never re-dispatched" would leave every other fork assertion
+# green: nothing else in this suite names the retry.
+assert_in_range_folded "a lost return is re-dispatched once, a second loss leaves that lens out and the ruling records the planned count" \
+  "$ORCH_SKILL" 'A lost return is re-dispatched once under the same lens; a second loss leaves that lens out and the ruling records `forks: <k> of <planned>`' \
+  "$FORK_LINE" "$FORK_END"
+# I3: a lens contributes at most one usable return to the round — what makes
+# a re-dispatch's return the only one counted, never added to an earlier,
+# discarded completion notice from the same lens.
+assert_in_range_folded "a lens contributes at most one usable return to the round" \
+  "$ORCH_SKILL" 'A lens contributes at most one usable return to the round' \
   "$FORK_LINE" "$FORK_END"
 # The moment the bound fires is the round being finished — no fork of it still
 # running — never the arrival of the first notice, which would mark the lenses
@@ -1046,16 +1136,27 @@ assert_in_range_folded_exact "log-entry sentence, byte-exact incl. punctuation" 
 # space (or the end of the text) closes a span around the sentence, while one
 # followed by any other character opens a new span, such as a bold lead-in of
 # the next sentence.
+# M1: the nested-span check below (the bold_count/under_count parity test)
+# used to count `**`/`__` runs over the WHOLE log-entry subsection before the
+# match. That made it a proxy, not the property: any odd-parity token earlier
+# in that whole subsection — an unrelated unbalanced marker anywhere above
+# the cap sentence — would flip the parity and report an emphasis marker that
+# is not actually there. Restrict the parity scan to the cap sentence's own
+# enclosing paragraph instead — from its `**The cap.**` lead-in to the next
+# paragraph's own lead-in — so a token outside that one paragraph cannot
+# affect the result.
+CAP_PARA_LINE="$(line_containing_after "$ORCH_SKILL" '**The cap.**' "$LOG_ENTRY_LINE")"
+CAP_PARA_END="$(line_containing_after "$ORCH_SKILL" '**Idempotence of an in-run resume after a crash.**' "$LOG_ENTRY_LINE")"
 # Both anchors are guarded the same way assert_in_range guards them: with an
 # empty or inverted range, awk's `NR >= a` would compare strings and fold in
 # every line of the file, and the emphasis check below would silently run
 # over the wrong text and report PASS for a subsection that does not exist.
-if [ -z "$LOG_ENTRY_LINE" ] || [ -z "$LOG_ENTRY_END" ]; then
-  bad "log-entry sentence emphasis check (could not locate the range to search in ${ORCH_SKILL#$ROOT/})"
-elif [ "$LOG_ENTRY_LINE" -ge "$LOG_ENTRY_END" ]; then
-  bad "log-entry sentence emphasis check (empty or inverted range $LOG_ENTRY_LINE..$LOG_ENTRY_END in ${ORCH_SKILL#$ROOT/})"
+if [ -z "$CAP_PARA_LINE" ] || [ -z "$CAP_PARA_END" ]; then
+  bad "log-entry sentence emphasis check (could not locate the cap sentence's enclosing paragraph in ${ORCH_SKILL#$ROOT/})"
+elif [ "$CAP_PARA_LINE" -ge "$CAP_PARA_END" ]; then
+  bad "log-entry sentence emphasis check (empty or inverted paragraph range $CAP_PARA_LINE..$CAP_PARA_END in ${ORCH_SKILL#$ROOT/})"
 else
-  CAP_SENTENCE_FOLDED="$(fold_range "$ORCH_SKILL" "$LOG_ENTRY_LINE" "$LOG_ENTRY_END")"
+  CAP_SENTENCE_FOLDED="$(fold_range "$ORCH_SKILL" "$CAP_PARA_LINE" "$CAP_PARA_END")"
   # Every occurrence of the sentence is checked, not only the first: with the
   # sentence written twice in the range — once bare, once inside a `**...**`
   # span — a first-occurrence-only scan would report clean on the bare one
@@ -1110,7 +1211,7 @@ else
   elif [ "$CAP_EMPHASIS" = "emphasis" ]; then
     bad "log-entry sentence is wrapped in a '*' or '_' emphasis marker"
   else
-    bad "log-entry sentence not found in range $LOG_ENTRY_LINE..$LOG_ENTRY_END, so its emphasis could not be checked"
+    bad "log-entry sentence not found in range $CAP_PARA_LINE..$CAP_PARA_END, so its emphasis could not be checked"
   fi
 fi
 for frag in 'in-run resumes of one phase are capped at 3 per unit' \
@@ -1140,11 +1241,22 @@ assert_in_range "RULING Forks line carries the planned count" \
 assert_in_range_folded "log-entry (idempotence paragraph) every actor keys on a durable marker" \
   "$ORCH_SKILL" 'every actor keys on a durable marker: the `decided (…)` line, the ticked checkbox, the amendment label, the `## RULING` entry' \
   "$LOG_ENTRY_LINE" "$LOG_ENTRY_END"
-for frag in 'a Critical is never rejected' 'quotes its clause' \
-            'recorded when it is made'; do
+for frag in 'a Critical is never rejected'; do
   assert_in_range "guard fragment '$frag'" \
     "$ORCH_SKILL" "$frag" "$GUARDS_LINE" "$GUARDS_END" fragment
 done
+# M6: the bare 'quotes its clause' fragment above was short enough that a
+# rewrite to the opposite meaning ("A rejection never quotes its clause")
+# still contains it. Pin the owning sentence's distinguishing bytes instead.
+assert_in_range_folded "guard 1's title sentence: a rejection quotes its clause" \
+  "$ORCH_SKILL" 'A rejection quotes its clause.' \
+  "$GUARDS_LINE" "$GUARDS_END"
+# M6: same reasoning for the bare 'recorded when it is made' fragment — a
+# rewrite ("is NOT recorded when it is made") still contains it. Pin the
+# owning sentence's distinguishing bytes instead.
+assert_in_range_folded "guard 3's title sentence: every ruling is recorded when it is made" \
+  "$ORCH_SKILL" 'Every ruling is recorded when it is made**, forced or forked, in the ruling record and the `## RULING` log entry, before the re-dispatch' \
+  "$GUARDS_LINE" "$GUARDS_END"
 # Guard 2 forbids the two answers that would close a Critical with no code
 # change. The fragment 'a Critical is never rejected' above pins the claim;
 # these bytes pin the prohibitions themselves, which cross a line wrap.
