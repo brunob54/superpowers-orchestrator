@@ -5113,3 +5113,217 @@ Result: `Results: 24 passed, 0 failed`
 bash tests/writing-plans/run-tests.sh
 ```
 Result: `Results: 15 passed, 0 failed`
+
+## Round 16 verification 2 fixes
+
+All findings target `tests/in-run-rulings/run-tests.sh` only.
+
+### I1 — scratch-file leak on interrupt, no read-only-checkout support
+
+`assert_absent_in_range_folded_nobacktick` now creates its backtick-stripped
+copy with `mktemp` (under `${TMPDIR:-/tmp}`, via a bare `mktemp` call — no
+fixed path under `$ROOT`), registers the path in a new top-level `TMPFILES`
+array, and a `trap cleanup_tmpfiles EXIT` (added right after `ERRORS=()`)
+removes every registered path on exit, matching `tests/smart-compress/run-tests.sh`'s
+`mktmp`/`TMPFILES`/`trap` convention.
+
+Standalone proof (fixture, outside this checkout — the current run's
+scratchpad, not the repo working tree): extracted lines 1-277 of the fixed
+script (every helper through `assert_absent_in_range_folded_nobacktick`) into
+`helpers-extract.sh` and ran it against fixture files.
+- Backgrounded a `bash -c` process that sources the helpers, calls
+  `mktemp`, registers the path in `TMPFILES`, sets the `trap`, then sleeps;
+  sent it `SIGINT` after 1s. Observed: the scratch file existed right after
+  creation, and was gone immediately after the process exited from the
+  signal — `OK: scratch file .../tmp.m3OJRU69mi was removed by the EXIT trap
+  on SIGINT`. The pre-fix code (`rm -f` with no trap) does not run on a
+  signal-induced exit, so the same interrupt would have left that file
+  behind.
+- Ran the real `assert_absent_in_range_folded_nobacktick` against a fixture
+  document; the scratch path it created and registered was
+  `/var/folders/.../T/tmp.h1rT3uLpS6` — under the platform temp directory,
+  never under the fixture tree or the checkout — and after the calling
+  subshell exited normally, the count of `tmp.*` entries directly under
+  `$TMPDIR` was unchanged (before=5066, after=5066), confirming the trap
+  cleaned it up.
+
+### I2 — negative checks fail open on a failed copy or an empty haystack
+
+Two independent fail-closed guards:
+1. In `assert_absent_in_range_folded_nobacktick`, the `tr -d '`' < "$file" >
+   "$tmp_file"` copy is now guarded by `if ! tr ...; then bad ...; return;
+   fi`, so a failed copy reports FAIL with a named cause instead of silently
+   proceeding.
+2. In `assert_absent_in_range_folded` itself, immediately after
+   `fold_range`, `[ -z "$folded" ]` now reports FAIL ("failing closed
+   instead of testing absence against nothing") before the comparison runs.
+   `fold_range` emits at least one space per real line in a valid range, so
+   a byte-empty result only happens when the underlying file could not be
+   read at all — never on ordinary blank-line content — matching the
+   sibling helper `assert_absent_unless_qualified_in_range_folded`'s
+   existing M13 fail-closed guard.
+
+Standalone proof (same `helpers-extract.sh` fixture harness):
+- Called the nobacktick wrapper with a source path that does not exist
+  (`fixture_root/DOES-NOT-EXIST.md`). Observed: `tr` failed
+  (`No such file or directory`), and the wrapper reported `FAIL: fixture:
+  tr-failure case (could not build the backtick-stripped scratch copy of
+  .../DOES-NOT-EXIST.md)` — not a silent PASS.
+- Called `assert_absent_in_range_folded` directly against a 0-byte fixture
+  file with range `1..2`. Observed: `FAIL: fixture: empty-file fail-closed
+  (the text for range 1..2 of .../empty.md came back empty; failing closed
+  instead of testing absence against nothing)`.
+
+### M2 — negative-check failure message names the deleted scratch copy
+
+`assert_absent_in_range_folded` gained an optional 7th parameter `display`
+(default `$file`, the previous behaviour), used only in the `bad`/message
+paths; `assert_absent_in_range_folded_nobacktick` passes its own `$file` (the
+real document) as that 7th argument when it delegates, so a failure message
+names the document that was actually scanned instead of the (by-then-deleted)
+scratch copy. No duplicate comparison logic was introduced — the nobacktick
+wrapper still delegates its entire comparison to the shared function (M15's
+concern from an earlier round).
+
+Standalone proof: ran the nobacktick wrapper with a needle
+(`BLOCKED`) that IS present in the fixture document, forcing a FAIL.
+Observed message: `FAIL: fixture: BLOCKED must be absent (will FAIL on
+purpose) (still present in range 1..5 of
+.../round16-proof/fixture_root/doc.md, line wraps folded)` — the real
+fixture document path, not the scratch file's `/var/folders/...` path (which
+no longer exists by the time the message prints).
+
+### I3 — fork lost-return retry rule and one-usable-return-per-lens rule unpinned
+
+Added two `assert_in_range_folded` pins inside the fork subsection
+(`$FORK_LINE`..`$FORK_END`), next to the existing "lost-return bound is
+stated over the round" pin:
+- `'A lost return is re-dispatched once under the same lens; a second loss
+  leaves that lens out and the ruling records `forks: <k> of <planned>`'`
+- `'A lens contributes at most one usable return to the round'`
+
+Negation proof (backup/edit/restore against the real
+`skills/orchestrating-development/SKILL.md`, each cycle diff-clean before and
+after): changed "is re-dispatched once" to "is never re-dispatched" — new
+check FAILed: `a lost return is re-dispatched once, a second loss leaves
+that lens out and the ruling records the planned count (not inside range
+987..1217 ...)`. Changed "at most one" to "unlimited" — new check FAILed:
+`a lens contributes at most one usable return to the round (not inside
+range 987..1217 ...)`. Restored both times; `git status --porcelain` clean
+after.
+
+### M1 — cap-sentence emphasis check used the whole subsection as its parity range
+
+The nested-span parity scan (bold_count/under_count of `**`/`__` before the
+match) now runs over the cap sentence's own enclosing paragraph only —
+anchored `CAP_PARA_LINE` (the `**The cap.**` line) to `CAP_PARA_END` (the
+next paragraph's `**Idempotence of an in-run resume after a crash.**` line)
+— instead of the whole `### The RULING log entry...` subsection, with the
+same empty/inverted-range guard the rest of the suite uses.
+
+Proof (backup/edit/restore against the real SKILL.md):
+- Regression check preserved: wrapping the actual cap sentence in `**...**`
+  still FAILs: `log-entry sentence is wrapped in a '*' or '_' emphasis
+  marker`.
+- False-positive fixed: inserted one unbalanced `**` well before the cap
+  paragraph, inside the same subsection but outside its paragraph (`An
+  in-run ruling re-dispatches **the phase without a `## STOPPED` entry.
+  It`). With the fix, the check correctly PASSes:
+  `log-entry sentence carries no '*' or '_' emphasis marker around it`.
+- Confirmed this is a real fix, not a coincidence: re-ran the identical
+  mutated file with the range temporarily reverted to the old
+  `$LOG_ENTRY_LINE..$LOG_ENTRY_END` (whole subsection). It reproduced the
+  reported bug: `log-entry sentence is wrapped in a '*' or '_' emphasis
+  marker` (a false FAIL, since no marker actually wraps the sentence).
+  Reverted the temporary range edit and the SKILL.md mutation; both files
+  diff-clean against baseline afterward.
+
+### M4 — closed escalation-list check rejects a permitted repeated label
+
+`FOUND_LABELS` is now built with `sort -u` instead of `sort`, so a
+compliant second bullet repeating a label (the plan's Global Constraints
+block: "a label may be repeated there") no longer differs from the
+five-element `EXPECTED_LABELS` set.
+
+Standalone proof (fixture, outside this checkout): built three fixture
+bullet lists and ran the exact `awk` extraction against each, comparing the
+old (`sort`) and new (`sort -u`) built label strings against the same
+`EXPECTED_LABELS`:
+- Compliant repeat (`chain` bullet twice): OLD verdict FAIL
+  (`chain|chain|irreversible|scope|secret|spec wrong|` ≠ expected) — NEW
+  verdict PASS (`chain|irreversible|scope|secret|spec wrong|` = expected).
+- Genuine sixth label (`deadline` added): OLD verdict FAIL, NEW verdict
+  FAIL (unchanged — the check still catches a real violation).
+- Zero bullets: OLD verdict FAIL, NEW verdict FAIL (unchanged).
+
+### M6 — four short fragments too weak against an opposite-meaning rewrite
+
+Removed `'read-only git commands'`, `'general-purpose'`,
+`'quotes its clause'` and `'recorded when it is made'` from their fragment
+loops (the read-exception loop, the fork loop and the guards loop — each
+loop's other members and structure kept), and added one
+`assert_in_range_folded` per removed fragment, each pinned to the sentence
+that owns the rule:
+- `'Forks may additionally run read-only git commands, in these three forms
+  only: ...'`
+- `'a lens of a round is dispatched as a fork or, under the inheritance
+  rule above, as a fresh `general-purpose` subagent, and the bounds read
+  the same for both'`
+- `'A rejection quotes its clause.'`
+- `'Every ruling is recorded when it is made**, forced or forked, in the
+  ruling record and the `## RULING` log entry, before the re-dispatch'`
+
+Negation proof (backup/edit/restore against the real SKILL.md, each cycle
+diff-clean before and after):
+- `may additionally run` → `may NOT additionally run`: new check FAILed
+  (`forks may additionally run read-only git commands, in these three
+  forms only (not inside range 914..987 ...)`).
+- `the bounds read the same for both` → `the bounds differ for each`: new
+  check FAILed (`a lens is dispatched as a fork or a fresh general-purpose
+  subagent, with the bounds reading the same for both (not inside range
+  987..1217 ...)`).
+- `A rejection quotes its clause.` → `A rejection never quotes its
+  clause.`: new check FAILed (`guard 1's title sentence: a rejection
+  quotes its clause (not inside range 1632..1681 ...)`).
+- `Every ruling is recorded` → `Every ruling is NOT recorded`: new check
+  FAILed (`guard 3's title sentence: every ruling is recorded when it is
+  made (not inside range 1632..1681 ...)`).
+
+### M7 — multi-word free-text fragments matched by the unfolded, per-line helper
+
+Moved `'or to 40 lines on each side'` (read-exception loop) and
+`'action verb followed by a skill name'` (fork loop) out of their unfolded
+`assert_in_range ... fragment` loops into standalone `assert_in_range_folded`
+calls with the same text, so a line-wrap reflow of the surrounding prose can
+no longer break the check. The unfolded loops keep their remaining
+single-line byte-pin members unchanged.
+
+Negation proof (backup/edit/restore against the real SKILL.md, each cycle
+diff-clean before and after): deleted `'or to 40 lines on each side'` from
+its sentence — new check FAILed (`read-exception fragment 'or to 40 lines
+on each side' (not inside range 914..987 ...)`). Deleted `'action verb
+followed by a skill name'` from its sentence — new check FAILed (`fork
+fragment 'action verb followed by a skill name' (not inside range
+987..1217 ...)`).
+
+### False positives
+
+None. All eight findings (I1, I2, I3, M1, M2, M4, M6, M7) were confirmed and
+fixed.
+
+### Commands run
+
+```
+bash tests/in-run-rulings/run-tests.sh
+```
+Result: `Results: 444 passed, 0 failed`
+
+```
+bash tests/reviewer-templates/run-tests.sh
+```
+Result: `Results: 24 passed, 0 failed`
+
+```
+bash tests/writing-plans/run-tests.sh
+```
+Result: `Results: 15 passed, 0 failed`
