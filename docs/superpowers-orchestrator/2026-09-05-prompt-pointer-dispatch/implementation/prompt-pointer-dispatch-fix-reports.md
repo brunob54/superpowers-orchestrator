@@ -230,3 +230,37 @@ $ git commit -m "review fixes (prompt-pointer-dispatch, round 3)" -- <the same f
 [feature/prompt-pointer-dispatch 15efd82] review fixes (prompt-pointer-dispatch, round 3)
  5 files changed, 54 insertions(+), 25 deletions(-)
 ```
+
+## Round 4
+
+### Findings addressed
+- [I2] `skills/multi-code-review/SKILL.md`: in both the Procedure preamble and Error Handling, defined the post-report failure case — the controller writes the round entry with the consolidated set and the normal lines, marks unfixed Critical/Important findings `unresolved: <the BLOCKED cause> — at <file:line> — clause: none`, marks Minor findings `carried`, then returns `BLOCKED: <cause>`.
+- [M1] `skills/multi-code-review/scripts/fill-prompt.js`: `writeAtomic` now exits 0 without writing when the existing `--out` content is byte-identical to the text it would write, and keeps exit 5 when the content differs; comment updated, one sentence added to the write-once paragraph of `skills/multi-code-review/SKILL.md`, and `tests/fill-prompt/run-tests.sh` section 8 gained an identical-repeat case (exit 0, file unchanged byte for byte, no temporary file left behind).
+- [M4] `skills/multi-code-review/SKILL.md`: the "Fix subagent fails" bullet now points at the matching `round-<i>-cycle-<c>-failure.txt` / `round-<i>-cycle-<c>-fix-retry.md` and addendum names of the table above.
+
+### Commands and output
+
+```
+$ bash tests/reviewer-templates/run-tests.sh
+  PASS: Procedure: no inline-dispatch fallback
+  PASS: Error Handling: no inline-dispatch fallback
+  PASS: fix-prompt.md: no inline-dispatch fallback (hyphenated)
+  PASS: fix-prompt.md: no inline-dispatch fallback (spaced)
+
+Results: 59 passed, 0 failed
+
+$ bash tests/fill-prompt/run-tests.sh
+  PASS: identical repeat: the first fill exits 0
+  PASS: identical repeat: exits 0
+  PASS: identical repeat: content unchanged byte for byte
+  PASS: identical repeat: no temporary file left behind
+  PASS: trailing whole-line placeholder given the empty value: exits 0
+  PASS: trailing whole-line placeholder given the empty value: output matches expected byte for byte (exactly one trailing newline)
+
+Results: 92 passed, 0 failed
+
+$ git add -- skills/multi-code-review/SKILL.md skills/multi-code-review/scripts/fill-prompt.js tests/fill-prompt/run-tests.sh
+$ git commit -m "review fixes (prompt-pointer-dispatch, round 4)" -- skills/multi-code-review/SKILL.md skills/multi-code-review/scripts/fill-prompt.js tests/fill-prompt/run-tests.sh
+[feature/prompt-pointer-dispatch 1131676] review fixes (prompt-pointer-dispatch, round 4)
+ 3 files changed, 65 insertions(+), 15 deletions(-)
+```
