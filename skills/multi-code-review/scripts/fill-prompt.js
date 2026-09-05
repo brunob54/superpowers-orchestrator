@@ -209,14 +209,28 @@ function fill(body, values) {
 }
 
 // Write to a temporary name in the output's directory, then rename, so a
-// partial file never passes `test -s`. Exits 5 before any write when
-// `outPath` already exists, so a prompt file is written once and never
-// silently replaced by a later fill. The temporary name carries a random
+// partial file never passes `test -s`. When `outPath` already exists, the
+// rule is: exit 0 without writing anything if its content is byte-identical
+// to the text this run would write — the same fill was already completed,
+// for example when the caller lost the result of the first run and repeated
+// the command, and the file stays written once and never rewritten —
+// otherwise exit 5 before any write, so a prompt file is never silently
+// replaced by a different fill. The temporary name carries a random
 // component in addition to the process id so it cannot be predicted, and
 // 'wx' opens with O_EXCL: a pre-existing file or symlink at that name makes
 // the write fail instead of writing through it.
 function writeAtomic(outPath, text) {
   if (fs.existsSync(outPath)) {
+    let existing = null;
+    try {
+      existing = fs.readFileSync(outPath);
+    } catch (err) {
+      // Unreadable, or not a regular file: treat it as different content.
+      existing = null;
+    }
+    if (existing !== null && existing.equals(Buffer.from(text, 'utf8'))) {
+      return;
+    }
     fail(EXIT_IO, `cannot write ${outPath}: file already exists`);
   }
   const random = crypto.randomBytes(6).toString('hex');

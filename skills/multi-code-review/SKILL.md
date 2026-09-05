@@ -380,7 +380,11 @@ invocation by construction):
 
 A prompt file is written once and never rewritten: the identical retry of
 step 3 resends the same pointer to the same file; a fix re-dispatch is a
-different prompt (the failure appended) and has its own file. Value files
+different prompt (the failure appended) and has its own file. Repeating a
+fill command whose first run already completed — its tool result was lost,
+say — is not a failure: the script exits 0 without writing when the
+existing file's content is byte-identical to what the repeat would write,
+and exits 5 only when the content differs. Value files
 are written once for their dispatch — a fix re-dispatch reuses its findings
 file and a verification cycle reuses its round's lens file — with the Write
 tool or a quoted heredoc (`<<'EOF'`), never an unquoted one — finding text
@@ -410,10 +414,18 @@ value-file write refused by a hook or failing, and a round in which no
 reviewer returned a usable report after the pointer dispatch and the one
 identical retry of step 3. A failure that happens before any reviewer
 report of the round was received owes no round entry: nothing is written
-for that round. The one case that owes an entry is the u = 0 case — no
-usable report in the round at all — which writes the round entry in the
-`inconclusive` form. In every case the controller then returns
-`BLOCKED: <cause>`, naming the failure in the wording of Error Handling.
+for that round. The u = 0 case — no usable report in the round at all —
+owes an entry, and writes the round entry in the `inconclusive` form. A
+failure that happens after the round's reviewer reports were received
+owes an entry too — the `round-<i>-findings.txt` write denied by a hook
+and the fix fill exiting non-zero are this case: the controller writes
+the round entry with the round's consolidated set and the normal lines
+(the M >= 2 header lines, the source annotations), gives every Critical
+or Important finding that was not fixed the disposition
+`unresolved: <the BLOCKED cause> — at <file:line> — clause: none`, and
+gives every Minor finding `carried`. In every case the controller then
+returns `BLOCKED: <cause>`, naming the failure in the wording of Error
+Handling.
 If `mktemp -d` fails, that means: stop and return
 `BLOCKED: prompt directory could not be created — <error text>`, with
 nothing dispatched (Error Handling).
@@ -794,7 +806,10 @@ code has been revised since, so a re-pass is meaningful):
      `FINDINGS=@<PROMPT_DIR>/round-<i>-findings.txt` (the findings file is
      not rewritten) and
      `FAILURE_BLOCK=@<PROMPT_DIR>/round-<i>-failure.txt` in place of the
-     empty value, run `test -s` on the new file, and dispatch the pointer
+     empty value (or the matching `round-<i>-cycle-<c>-failure.txt` /
+     `round-<i>-cycle-<c>-fix-retry.md` and addendum names of the table
+     above, when the fix being retried is a verification-cycle fix or an
+     addendum fix), run `test -s` on the new file, and dispatch the pointer
      to it. On second failure the affected findings become
      `unresolved: <reason>` (blocking) and the loop continues — later
      rounds review the branch as-is.
@@ -1475,10 +1490,17 @@ completed invocation only on explicit user request.
 - Every failure of the pointer mechanism — the four rows below — is
   fatal and nothing falls back. A failure that happens before any reviewer
   report of the round was received owes no round entry: nothing is written
-  for that round. The one case that owes an entry is the u = 0 case — no
-  usable report in the round at all — which writes the round entry in the
-  `inconclusive` form. In every case the controller then returns
-  `BLOCKED: <cause>` naming the failure. The controller never reads a
+  for that round. The u = 0 case — no usable report in the round at all —
+  owes an entry, and writes the round entry in the `inconclusive` form. A
+  failure that happens after the round's reviewer reports were received
+  owes an entry too — the `round-<i>-findings.txt` write denied by a hook
+  and the fix fill exiting non-zero are this case: the controller writes
+  the round entry with the round's consolidated set and the normal lines
+  (the M >= 2 header lines, the source annotations), gives every Critical
+  or Important finding that was not fixed the disposition
+  `unresolved: <the BLOCKED cause> — at <file:line> — clause: none`, and
+  gives every Minor finding `carried`. In every case the controller then
+  returns `BLOCKED: <cause>` naming the failure. The controller never reads a
   template and never pastes a prompt inline: there is no inline fallback
   of any kind.
 - `mktemp -d` fails at Procedure start, or `cygpath` fails where the path

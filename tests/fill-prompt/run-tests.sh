@@ -259,8 +259,9 @@ assert_file_contains "fix template: failure text present on the re-dispatch" "$W
 assert_file_not_matches "fix template: no residual placeholder on the re-dispatch" "$WORK/fix-retry.md" "$PLACEHOLDER_ERE"
 
 bold "8. Round 2 fixes: refuse to overwrite --out, and trailing blank after fill"
-# M1: filling onto an existing --out exits 5 and leaves the existing file's
-# content unchanged; no temporary file is left behind either.
+# M1: filling onto an existing --out whose content DIFFERS exits 5 and leaves
+# the existing file's content unchanged; no temporary file is left behind
+# either.
 EXISTING_OUT="$WORK/existing.md"
 printf 'pre-existing content\n' > "$EXISTING_OUT"
 fill --template "$SMALL" --out "$EXISTING_OUT" ROUND=3 LENS_NAME=Security OPTIONAL_LINE= INLINE_VALUE=plain BODY_VALUE=x SHARED=y
@@ -270,6 +271,19 @@ assert_eq "existing --out: content unchanged" "$(cat "$EXISTING_OUT")" "pre-exis
 # The atomic write names its temporary file `.<out basename>.<pid>.<hex>.tmp`
 # in the output directory; none may survive the refusal.
 assert_eq "existing --out: no temporary file left behind" "$(find "$WORK" -maxdepth 1 -name '.existing.md.*' | wc -l | tr -d ' ')" "0"
+
+# Round 4 [M1]: a repeat of a fill whose first run completed — the caller lost
+# the tool result and re-issued the same command — finds an --out whose content
+# is byte-identical to what this run would write, so it exits 0 without writing
+# anything. The file is unchanged and no temporary file survives.
+IDENTICAL_OUT="$WORK/identical.md"
+fill --template "$SMALL" --out "$IDENTICAL_OUT" ROUND=3 LENS_NAME=Security OPTIONAL_LINE= INLINE_VALUE=plain BODY_VALUE=x SHARED=y
+assert_eq "identical repeat: the first fill exits 0" "$STATUS" "0"
+cp "$IDENTICAL_OUT" "$WORK/identical-expected.txt"
+fill --template "$SMALL" --out "$IDENTICAL_OUT" ROUND=3 LENS_NAME=Security OPTIONAL_LINE= INLINE_VALUE=plain BODY_VALUE=x SHARED=y
+assert_eq "identical repeat: exits 0" "$STATUS" "0"
+assert_same "identical repeat: content unchanged byte for byte" "$IDENTICAL_OUT" "$WORK/identical-expected.txt"
+assert_eq "identical repeat: no temporary file left behind" "$(find "$WORK" -maxdepth 1 -name '.identical.md.*' | wc -l | tr -d ' ')" "0"
 
 # M2: a template whose last body line is a whole-line placeholder given the
 # empty value. Dropping trailing blanks BEFORE fill would miss the blank
