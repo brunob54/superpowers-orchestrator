@@ -504,7 +504,12 @@ Trigger: `Resume orchestration for <plan-or-spec path>`.
    or `[` either matches unintended subjects or makes git reject the
    pattern outright — and a rejected pattern reads back as "the ruling
    commit did not land", driving the recovery branch below over a ruling
-   that was in fact committed. `-F` fixes the metacharacter property only;
+   that was in fact committed. `-F` fixes the metacharacter property only
+   — it says nothing about the shell: pass `<slug>` as a single-quoted
+   argument, or assign it to a shell variable and reference that variable,
+   never splice it into the double-quoted `--grep` string shown above, or
+   a slug holding `$(…)` or a backtick is expanded by the shell before git
+   ever sees the pattern.
    `--grep` stays unanchored, so its output also holds a
    `ruling <n> follow-up` subject and, for ruling 1, a `ruling 10`
    subject: compare each printed subject with the full expected string
@@ -663,7 +668,10 @@ Trigger: `Resume orchestration for <plan-or-spec path>`.
    `git log -F --format="%H %s" --grep "<slug> ruling <n>"` prints one
    `<hash> <subject>` line per match — `-F` for the same reason as in the
    commit-landed check above, so that a slug holding a regular-expression
-   metacharacter is matched as a fixed string — and `--grep` is still an
+   metacharacter is matched as a fixed string, and `<slug>` passed the
+   same way — single-quoted, or from a shell variable, never spliced into
+   the double-quoted `--grep` string — so that a slug holding `$(…)` or a
+   backtick is never expanded by the shell — and `--grep` is still an
    unanchored pattern, so keep only the lines whose subject equals, as a
    whole string, `chore(orchestration): <slug> ruling <n>` — for `<n>` =
    1 that filter drops the `ruling 10`, `ruling 11` and
@@ -1238,6 +1246,11 @@ named because they are the ones most easily forgotten: the
 `## RULING` entry and the `Open:` and `Ruled:` lines of the `## STOPPED`
 entry — a `Ruled:` line carries a ruling's answer and can quote a clause
 that holds a credential.
+The rule follows the answer wherever it travels, not only into those
+three files: the `[RESUME_ANSWER]` payload itself, and the committed code
+review log's `decided (orchestrator): <answer>` line and its
+`rejected: plan governs (orchestrator decision) — "<clause>"` line, carry
+the same answer and are bound by the same rule.
 No line ever copies the value itself: these files are committed, so a
 copied value would enter git history in the very commit that escalates it.
 
@@ -1265,7 +1278,14 @@ number, compared as a whole number, so ruling 1 is not matched by a
 `## Ruling 10` heading. A marker with no such entry behind it is
 reference text —
 the clause it stands on carries no decided-wording authority and the
-finding against it is triaged by the ordinary rules. The code-review loop
+finding against it is triaged by the ordinary rules. **An entry for `<n>`
+is not enough on its own — it must have been granted for this clause**:
+the reader also normalizes the marked plan clause and the entry's
+`**Contract clause:**` text under the same rule stated below in "The
+quoted clause, and how it is compared", and treats the marker as backed
+only when one is a prefix of the other. A marker whose clause does not
+match that entry's recorded target is reference text, exactly as a
+marker with no entry behind it at all. The code-review loop
 is handed `TOPIC_DIR` and applies the same test against
 `<TOPIC_DIR>/plans/<slug>-open-decisions.md`; the rule is written for it
 in `../multi-code-review/SKILL.md` under "Decided wording in a

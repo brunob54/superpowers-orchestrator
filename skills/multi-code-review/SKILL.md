@@ -671,9 +671,15 @@ code has been revised since, so a re-pass is meaningful):
    `<TOPIC_DIR>/plans/<slug>-open-decisions.md` holds a `## Ruling <n>`
    heading for that same `<n>` — the heading line begins `## Ruling <n> `
    with that number, compared as a whole number, so ruling 1 is not
-   matched by a `## Ruling 10` heading. When no such entry stands, or the
-   loop was called without `TOPIC_DIR` and so no ruling record exists at
-   all, the marker is **reference text**: the clause carries no
+   matched by a `## Ruling 10` heading. An entry for `<n>` is not enough on
+   its own — it must have been granted for this clause: normalize the
+   marked plan clause and the entry's `**Contract clause:**` text under the
+   same rule the orchestrator states under "The quoted clause, and how it
+   is compared" (normalize both sides, then test one as a prefix of the
+   other), and treat the marker as backed only when they match. When no
+   such entry stands, or the loop was called without `TOPIC_DIR` and so no
+   ruling record exists at all, or the entry stands but its clause does not
+   match, the marker is **reference text**: the clause carries no
    decided-wording authority, and the finding against it is triaged by the
    ordinary rules of this section instead. The check exists because the
    plan file is committed mid-run by other actors — a batch controller
