@@ -328,18 +328,30 @@ file is never moved aside — its history is committed.
 
 ## Procedure
 
-**Before round 1 — the prompt directory.** Run `mktemp -d` as its own
-command and copy the literal path it prints — written `<PROMPT_DIR>` in
-this section — into every later command, Write call and pointer. On Git
-Bash (Windows) — when `uname -s` prints a name beginning with `MINGW` or
-`MSYS` — first convert that path once with `cygpath -m "<printed path>"`
-as its own command and use the converted path as `<PROMPT_DIR>`: native
-Node and the Read tool do not resolve a `/tmp/…` path there. If `cygpath`
-fails, use inline dispatch for the whole invocation, as for a `mktemp -d`
-failure. On every other platform the printed path is used as is. A shell
-variable set in one tool call does not exist in the next: the path is
-always spelled out in full, never held in a variable of any name. It
-never appears in a log entry. Every reviewer and fix-subagent prompt this
+**Before the first round this controller runs — the prompt directory.**
+Run `mktemp -d` as its own command, once per controller, before round 1
+or before the round a resumed invocation continues at, and copy the
+literal path it prints — written `<PROMPT_DIR>` in this section — into
+every later command, Write call and pointer. The path is never logged
+(it never appears in a log entry, below), so a resumed controller always
+runs `mktemp -d` again here and gets its own fresh directory; file names
+stay unique within that controller by construction because the directory
+itself is new. On Git Bash (Windows) — when `uname -s` prints a name
+beginning with `MINGW` or `MSYS` — first convert that path once with
+`cygpath -m "<printed path>"` as its own command and use the converted
+path as `<PROMPT_DIR>`: native Node and the Read tool do not resolve a
+`/tmp/…` path there. If `cygpath` fails, use inline dispatch for the
+whole invocation, as for a `mktemp -d` failure. On every other platform
+the printed path is used as is. A shell variable set in one tool call
+does not exist in the next: the path is always spelled out in full,
+never held in a variable of any name. It never appears in a log entry.
+If the printed path is no longer in the controller's context partway
+through the invocation — after a context compaction, for example — the
+controller does not guess it, does not search for it, and does not run
+`mktemp -d` a second time (the directory is created once per
+controller): it uses inline dispatch for every remaining dispatch of the
+invocation, as for a `mktemp -d` failure, and states this in the
+completion report. Every reviewer and fix-subagent prompt this
 skill dispatches — in rounds, verification cycles and post-loop addenda
 alike; the throwaway probe subagent of Triage is neither and is dispatched
 as today — is filled by `scripts/fill-prompt.js` (relative to this
@@ -354,7 +366,7 @@ controller by construction):
 | Dispatch | Prompt file | Value files |
 |---|---|---|
 | Round `i`, reviewers | `round-<i>-reviewer.md` | `round-<i>-lens.txt`; round 1 with a carried list also `round-1-carried.txt` |
-| Round `i`, verification cycle `c`, reviewers | `round-<i>-cycle-<c>-reviewer.md` | reuses `round-<i>-lens.txt` (same lens by construction) |
+| Round `i`, verification cycle `c`, reviewers | `round-<i>-cycle-<c>-reviewer.md` | reuses `round-<i>-lens.txt` (same lens by construction); never reuses `round-1-carried.txt` — `CARRIED_BLOCK` is always the empty value `CARRIED_BLOCK=` here, because the carried-findings triage happens on round 1 only |
 | Round `i`, fix subagent | `round-<i>-fix.md` | `round-<i>-findings.txt` |
 | Round `i`, fix re-dispatch | `round-<i>-fix-retry.md` | `round-<i>-failure.txt`; reuses `round-<i>-findings.txt` |
 | Verification cycle `c` fixes (`<c>` = the cycle whose re-review produced the findings being fixed) | `round-<i>-cycle-<c>-fix.md`, `round-<i>-cycle-<c>-fix-retry.md` | `round-<i>-cycle-<c>-findings.txt` (reused by the re-dispatch), `round-<i>-cycle-<c>-failure.txt` |
@@ -426,8 +438,12 @@ code has been revised since, so a re-pass is meaningful):
         'ROUND=<i>' 'REPO_ROOT=<root anchor>' 'BASE_SHA=<base sha>' 'HEAD_SHA=<head sha>' \
         'PACKAGE_FILE=<package path>' 'LENS_NAME=<lens name>' \
         'LENS_INSTRUCTIONS=@<PROMPT_DIR>/round-<i>-lens.txt' \
-        'PLAN_LINE=<plan line>' 'CARRIED_BLOCK=<carried block>'
+        'PLAN_LINE=<plan line>' 'CARRIED_BLOCK=@<PROMPT_DIR>/round-1-carried.txt'
       ```
+
+      Shown above is round 1 with a carried list; on every other round the
+      last argument is the empty value `'CARRIED_BLOCK='`. Every `NAME=`
+      argument stays single-quoted either way.
 
       Two rules hold for this fill and for the fix fill of step 4 alike.
       First, text that comes from reviewer output — findings, carried
