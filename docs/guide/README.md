@@ -367,9 +367,11 @@ and silently fall through to inline execution.
 The `orchestrating-development` skill drives an **approved spec** through the
 entire pipeline with no interaction after setup: plan writing → N plan-review
 rounds → batched implementation → N whole-branch code-review rounds. It runs
-for hours unattended, stops only on major errors, and always ends *before*
-merge — creating the PR or merging is your call, made interactively at the
-end via `finishing-a-development-branch`.
+for hours unattended, settles the review findings and blocked tasks that
+collide with the plan by its own recorded rulings (since v7.8.0), stops
+only for a closed list of reasons, and always ends *before* merge —
+creating the PR or merging is your call, made interactively at the end via
+`finishing-a-development-branch`.
 
 What it will **never** do: merge or open a PR on its own, ask you questions
 mid-run, stash or commit unrelated changes it finds in your tree, or silently
@@ -391,9 +393,12 @@ flowchart TD
         P3 -->|tasks remain| P3
         P3 --> P4["Phase 4 — N_code whole-branch<br/>review rounds, fixes committed"]
         P4 --> P5["Phase 5 — verify all checkboxes<br/>+ clean tree"]
+        P3 & P4 -. "open item, not escalated" .-> R["## RULING in orchestration log<br/>ruling committed, phase re-dispatched"]
+        R -.-> P3 & P4
     end
 
     P1 & P2 & P3 & P4 -. "major error" .-> S["## STOPPED in orchestration log<br/>reason + ready-made resume prompt"]
+    R -. "escalated: spec wrong / scope /<br/>irreversible / secret / chain" .-> S
     S -. "Resume orchestration for &lt;plan&gt; (§5)" .-> AUTO
 
     P5 --> F
@@ -496,6 +501,16 @@ plan: docs/superpowers-orchestrator/2026-08-04-my-feature/plans/my-feature.md �
 The plan's task checkboxes are the other live signal — each tick is committed
 the moment its task completes.
 
+Since v7.8.0 the log also carries `## RULING <n>` entries. Each one records
+a decision the orchestrator made inside the run — a review finding that
+collided with the plan, or a task blocked on a plan conflict or a question
+— with one `Items:` line per item, its class (`forced`, `design` or
+`escalated`), the answer given, the forked reviews used, and the phase it
+re-dispatched. The full reasoning is in
+`docs/superpowers-orchestrator/<date>-<slug>/plans/<slug>-open-decisions.md`,
+one `## Ruling <n>` entry per item, committed together with the log entry
+before the phase continues.
+
 ### When it stops instead of finishing
 
 Any major error — a blocked controller, unresolved review findings, a plan
@@ -506,13 +521,28 @@ prompt to use. Nothing is lost: everything up to the stop is committed.
 A review finding that merely differs from a code block the plan showed is
 *not* one of these stops: since v7.7.0 those bodies are reference
 implementations, so the fix is applied and the run continues. A plan
-inconsistency now means a genuine conflict — with a task's stated
-`**Contract:**`, or with the plan's `**Global Constraints:**`. See
-§5 for resuming, overriding parameters on resume, and abandoning a wedged run.
-A Phase 4 stop entry lists each open review item on an `Open:` line, then
-one `Owed probe:` line for every harness probe the review loop could not run
-(see Stage 1 in §3) — these probes are yours to run; they are not blockers
-and need no answer in the resume prompt.
+inconsistency means a genuine conflict — with a task's stated
+`**Contract:**`, or with the plan's `**Global Constraints:**` — and since
+v7.8.0 even that is not a stop by itself. The orchestrator classifies each
+open item of a Phase 4 review return, and each conflict or question behind
+a Phase 3 `BLOCKED task=<n>`, and decides it in the run: directly when
+only one outcome is defensible, otherwise after two or three forked
+reviews under distinct lenses. An item reaches you only when its correct
+resolution would change the spec (`spec wrong`), grow the work beyond the
+spec (`scope`), need an irreversible or outward-facing action
+(`irreversible`), concern an exposed credential (`secret`), or when the
+same phase has already been re-dispatched three times on rulings
+(`chain`). A Critical is never rejected by a ruling, and a decision you
+made earlier in the run is never overturned by one.
+
+A Phase 3 or Phase 4 stop entry therefore lists two kinds of items: each
+escalated item on an `Open:` line with its reason — these are the ones
+you answer — and each item the orchestrator already decided on a `Ruled:`
+line, which needs no answer. A Phase 4 stop also carries one `Owed probe:`
+line for every harness probe the review loop could not run (see Stage 1
+in §3) — these probes are yours to run; they are not blockers and need no
+answer in the resume prompt. See §5 for resuming, overriding parameters on
+resume, and abandoning a wedged run.
 
 Phase 0 itself can also refuse to start, before the log even exists: the
 prior-art intake check (see Prerequisites above) reads the spec, and when
@@ -523,10 +553,12 @@ missing section or sentence to the spec and re-run orchestration.
 
 ### On completion
 
-You get a summary (tasks, batches, review rounds and outcomes, the harness
-probes owed by the plan and code review loops — or `none` — and the three log
-paths), and `finishing-a-development-branch` takes over interactively —
-merge, PR, keep, or discard is yours to decide.
+You get a summary (tasks, batches, review rounds and outcomes, the rulings
+made in the run with a pointer to the ruling record, the harness probes
+owed by the plan and code review loops — or `none` — the `Secrets found:`
+items of the code review loop — or `none` — and the three log paths), and
+`finishing-a-development-branch` takes over interactively — merge, PR,
+keep, or discard is yours to decide.
 
 ## 5. "My run was interrupted" — resuming and recovering
 
@@ -570,6 +602,15 @@ reviewed together with the task's completion, never blindly trusted.
 
 If a stop recorded a blocking question, answer it in the resume prompt;
 resume with an unanswered blocker just presents the question and stops again.
+A Phase 3 or Phase 4 stop lists the items to answer on its `Open:` lines,
+by id; answer those and only those. The `Ruled:` lines are decisions the
+orchestrator already made and recorded — resume carries them forward as
+they are. If you disagree with one, answer that id yourself in the resume
+prompt: the run then reverts that ruling, and the change made under it,
+before continuing. A crash after a ruling was committed but before its
+re-dispatch completed is recovered the same way as any other: resume reads
+the trailing `## RULING` entry and re-dispatches the phase with the same
+answers.
 
 **Interrupted during plan writing or a review round?** Resume re-enters any
 phase whose completion entry never made it into the orchestration log, but

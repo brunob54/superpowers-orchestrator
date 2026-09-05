@@ -266,8 +266,9 @@ same way, with subject `chore(review): <slug> skipped` — the log is tracked
 by design, and an entry left uncommitted would show as an uncommitted
 change at the next boundary. A post-loop addendum that records the
 invoker-supplied decisions
-on open items (disposition `decided (user): <answer>`, "Resolving
-user-decision and unresolved items" below) is committed the same way,
+on open items (disposition `decided (<who>): <answer>`, `<who>` being
+`user` or `orchestrator` — "Resolving user-decision and unresolved
+items" below) is committed the same way,
 with subject `chore(review): <slug> decisions`. Each round, and the loop
 itself, ends with
 a tree that is clean except for changes that already existed when the loop
@@ -471,9 +472,13 @@ code has been revised since, so a re-pass is meaningful):
         - it supports the claim → triage the finding as if it had been
           `harness: tested`; the ordinary rules below apply from here, and
           the observation is recorded on the disposition line as a
-          trailing clause `— harness probe: <observation>`, placed before
-          any source annotation (` ← a/m: …`), whatever the disposition
-          (`fixed`, `user-decision`, …);
+          trailing clause `— harness probe: <observation>`, placed after
+          the `— at <file:line> — clause: …` suffix when the line carries
+          one and before any source annotation (` ← a/m: …`), whatever the
+          disposition (`fixed`, `user-decision`, …), and with the
+          `<observation>` text written under the same three replacements
+          as a quoted clause (Review Log Format, the disposition-line
+          bullet);
         - the probe cannot be run here (tool missing, a platform without
           nested dispatch, the dispatch rule of item 1 fails, the reviewer
           tagged it `not settled by one probe`, the probe would break a
@@ -640,6 +645,73 @@ code has been revised since, so a re-pass is meaningful):
    restarting the count); findings still standing
    become `unresolved: verification cap` items (blocking).
 
+   **Decided wording in a verification cycle.** In a
+   `## Round <i> verification <c>` cycle, a Critical/Important finding
+   whose objection is against **decided wording** is the loop's to decide,
+   never `user-decision`: reject it quoting the decision line,
+   `rejected: plan governs (loop decision) — "<decision line>"`. Decided
+   wording is, exactly: text whose clause is quoted on a `decided (<who>):`
+   line or on a `rejected: plan governs (… decision)` line of any
+   `_Invocation` entry of the same orchestration run (same BASE), and a
+   plan clause carrying the marker `(amended by ruling <n>)` — so a
+   decision made in an earlier invocation, including an amendment that
+   started a new invocation, still counts. A quoted clause is matched
+   against the plan under the one normalization rule of "Self-sufficient
+   open-item lines" below: normalize both sides, then test the quote as a
+   prefix. For an `**Exact content:**` block the marker stands at the end
+   of the introducing `**Exact content:** <reason>` paragraph line and
+   covers the block below it. When a marker alone decides the wording and
+   no decision line quotes it, the rejection quotes the amended clause
+   together with its marker. `fixed` and ordinary
+   `rejected: <reason>` dispositions are not decisions.
+
+   **A marker is authority only while the ruling record backs it.** Before
+   a clause carrying `(amended by ruling <n>)` is treated as decided
+   wording, check that the ruling record
+   `<TOPIC_DIR>/plans/<slug>-open-decisions.md` holds a `## Ruling <n>`
+   heading for that same `<n>` — the heading line begins `## Ruling <n> `
+   with that number, compared as a whole number, so ruling 1 is not
+   matched by a `## Ruling 10` heading. An entry for `<n>` is not enough on
+   its own — it must have been granted for this clause: the entry backs
+   the marker only when its `**Resolution:**` line begins `amend plan` —
+   no other resolution ever places a marker — and, for such an entry, the
+   grant is confirmed by plan location, never by comparing quoted text:
+   the amendment procedure inserts the block quote `**Amendment <n>
+   (orchestrator ruling):**` immediately after the block holding the
+   edited clause, so the marker is backed exactly when that same-numbered
+   audit note stands at that location in the plan, next to the clause
+   carrying the marker. The entry's `**Contract clause:**` text is never
+   compared for this check: the ruling record is written before the plan
+   amendment (fixed write order), so it holds the clause's pre-amendment
+   wording, and a text-prefix test against the post-amendment clause would
+   fail for the very entries this guard exists to pass. (An entry whose
+   `**Resolution:**` does not begin `amend plan` never legitimately backs
+   a marker; if one is nonetheless found on a clause, its `**Contract
+   clause:**` text is compared to that clause under the prefix rule the
+   orchestrator states under "The quoted clause, and how it is compared"
+   — a mismatch, the expected outcome, confirms the marker is unbacked.)
+   When no `## Ruling <n>` entry stands, or the loop was called without
+   `TOPIC_DIR` and so no ruling record exists at all, or the entry stands
+   but fails this test, the marker is **reference text**: the clause
+   carries no decided-wording authority, and the finding against it is
+   triaged by the ordinary rules of this section instead. The check
+   exists because the
+   plan file is committed mid-run by other actors — a batch controller
+   commits it on every task completion — and any of them could append the
+   marker text to a clause it was never granted for, which the marker
+   alone would otherwise turn into decided wording. The orchestrator
+   states the same rule in `../orchestrating-development/SKILL.md` under
+   "The ruling record", so the two actors apply one rule.
+   A Critical is never rejected under this rule: a Critical against
+   decided wording is logged `user-decision` and reaches the
+   orchestrator's predicate. A finding
+   against binding plan text that no decision has settled stays
+   `user-decision` (the orchestrator decides it, with its guards); a
+   finding against reference plan text or against the code the fix changed
+   stays an ordinary finding. The loop never edits plan text and never
+   applies a fix that contradicts binding text — the orchestrator's guards
+   are the only route to that. The 3-cycle cap is unchanged.
+
    A partial verification cycle (1 ≤ u < M) counts as a cycle, and its
    usable reports' findings are triaged normally. A partial round or cycle
    satisfies "a later round with a usable report ran on the updated
@@ -742,10 +814,25 @@ _Invocation <k> — YYYY-MM-DD — N=<n> M=<m> — BASE..HEAD <base7>..<head7> �
 ### Dispositions
 - [C1] fixed — <finding summary> → <fix commit sha>
 - [I1] rejected: <reason> — <finding summary>
-- [I2] user-decision — <finding summary> (plan-mandated)
+- [I2] user-decision — <finding summary> (plan-mandated) — at <file:line> — clause: <plan location> "<quoted plan text>"
 - [M2] carried — <finding summary>
 
 _Completed — YYYY-MM-DD — <converged|cap reached> — HEAD <sha>_
+Secrets found: none
+```
+
+When at least one finding of the invocation reported an exposed secret or
+credential, the `Secrets found:` line carries no items itself; each item
+follows on its own line directly below it, and a blank line terminates
+the list — mandatory even when nothing follows it in the file, so a
+reader never mistakes a later post-loop addendum's `- [<id>] …` lines for
+list items:
+
+```
+Secrets found:
+- [C2] path/to/file.py:41 — (round 2)
+- [I5] path/to/other.py:9 — (round 3)
+
 ```
 
 Round entry with M ≥ 2 — three lines added after the header, and a source
@@ -763,7 +850,7 @@ in reviewer order):
 **Converged:** no
 ### Dispositions
 - [C1] fixed — <finding summary> → <fix commit sha> ← 2/3: r1:C1, r3:I1
-- [I1] user-decision — <finding summary> (plan-mandated) ← 1/3: r1:I1
+- [I1] user-decision — <finding summary> (plan-mandated) — at <file:line> — clause: <plan location> "<quoted plan text>" ← 1/3: r1:I1
 - [I2] rejected: <reason> — <finding summary> ← 1/3: r2:I1
 - [M1] carried — <finding summary> ← 1/3: r2:M1
 ```
@@ -808,8 +895,19 @@ Rules for the added lines:
   takes the token immediately after `→ ` (before ` ← ` when an annotation
   is present). A `— harness probe: <observation>` clause (Triage, Harness
   claims item 2) sits after the disposition text and before the ` ← `
-  annotation, never after it. Two kinds of disposition line carry no annotation:
-  post-loop addendum lines (`decided (user): …`, addendum `fixed …`), and
+  annotation, never after it. **Order against the location clause:** on a
+  line that also carries the `— at <file:line> — clause: <plan location>
+  "<quoted plan text>"` suffix ("Self-sufficient open-item lines" below),
+  the location clause comes FIRST — summary, then `— at … — clause: …`,
+  then `— harness probe: <observation>`, then any ` ← ` annotation — so
+  that the first ` — at ` on the line is always the one that introduces
+  the location. The `<observation>` text is written under the same three
+  replacements as a quoted clause: each ` — ` and each ` ← ` replaced by
+  one space, each `"` replaced by a single quotation mark `'`. Without
+  them an observation holding ` — at ` would forge the location
+  separator. Two kinds of disposition line carry no annotation:
+  post-loop addendum lines (`decided (<who>): …`, addendum `fixed …`,
+  addendum `unresolved: …`), and
   the round-1 lines written for the **Carried findings (round 1)** items
   of the Triage step — findings carried from an earlier invocation's ledger, which
   are decided from the reviewers' recommendations and never enter the
@@ -858,6 +956,50 @@ changes only the log; a failed round keeps the normal
 `- inconclusive — <reason>`; verification re-reviews use the
 `## Round <i> verification <c>` header with no Converged line.
 
+**Self-sufficient open-item lines.** A `user-decision` or `unresolved:`
+disposition line carries, after its summary and before any ` ← `
+annotation — and before a `— harness probe: <observation>` clause when
+the line carries one (Review Log Format, the `— harness probe:` order
+rule) — the clause `— at <file:line> — clause: <plan location>
+"<quoted plan text>"`, where `<plan location>` is `Global Constraints`
+or `Task <n>` (the task whose text the finding collides with), or `none`
+for an `unresolved` item that collides with nothing, in which case the
+quoted text is omitted. The existing `(plan-mandated)` tag stays where it
+is, before the new clause. The quoted plan text is at most
+160 characters long and never contains the sequences ` ← ` or ` — `;
+either is replaced by a single space. The same replacement applies to the
+`<finding summary>` on the line, so that the first ` — at ` on the line is
+always the one that introduces the location; a `"` inside the quoted plan
+text is written as a single quotation mark `'`, so that the quote's own
+delimiters stay unambiguous. **Normalization is one rule:** the unit
+compared is one sentence or one list entry, never a whole section — take
+the sentence or the list entry of the plan text at `<plan location>` that
+the finding collides with, collapse every run of whitespace — a newline
+and its leading indentation included — to one space, replace each ` — `
+and each ` ← ` with one
+space, replace each `"` with a single quotation mark `'`, then
+cut it to 160 characters. All FOUR replacements belong to the one
+rule: a consumer that skips the `"` replacement fails every clause
+holding a double quotation mark, and a consumer that skips the
+whitespace collapse fails every clause the plan wraps across more than
+one physical line — the ordinary shape of a wrapped Markdown sentence,
+including this branch's own `**Global Constraints:**` bullets. Every
+consumer that later compares
+this quote with the plan — the orchestrator's `plan governs` guard, its
+amendment lookup, and the decided-wording test above — normalizes each
+sentence and each list entry of the plan text at that location the same
+way, all four replacements included, and tests the quote as a **prefix** of one of them.
+No consumer compares the quote with the raw plan text. Two full lines:
+
+```
+- [I2] user-decision — helper skips the 0/0 case (plan-mandated) — at tests/helpers.sh:251 — clause: Task 6 "the helper skips a 0/0 round" ← 1/3: r1:I2
+- [C1] unresolved: verification cap — race in the retry path — at src/retry.js:40 — clause: none
+```
+
+The line keeps its prefix; the source annotation stays last. This is
+what lets the orchestrator classify the item from the log alone
+(orchestrating-development, `## In-run rulings`).
+
 ## After the Loop
 
 Append the completion marker `_Completed — <date> — <converged|cap
@@ -865,7 +1007,22 @@ reached> — HEAD <sha>_` with `<sha>` = in **direct mode**,
 `git rev-parse HEAD` **now** (post-fix); in **pipeline mode**, the
 effective HEAD as defined in "Pipeline rule 4" below, beside "Once per
 gate" — the raw HEAD at marker time is the round's own log commit, which
-would never match on a later comparison. Then report to the host gate: rounds run, per-round finding
+would never match on a later comparison. Immediately after the
+completion marker, append to the log itself the `Secrets found:` line —
+one item `- [<id>] <file> — (round <i>)` per finding of this invocation
+that reported an exposed secret or credential in reviewed code, whatever
+its final disposition, naming the file and the round, or `Secrets found:
+none`; the item never reproduces the secret value. With no finding to
+report, `Secrets found: none` is the whole line, nothing below it. With
+at least one, `Secrets found:` carries no item on its own line, each item
+follows directly below it, one per line, and a blank line — mandatory
+even at end of file — terminates the list, so that a later post-loop
+addendum's own `- [<id>] …` lines are never read as part of it (Review Log
+Format above shows both shapes). This is the durable
+copy: it is committed with the completion marker, under Pipeline rule 1's
+`chore(review): <slug> completed` commit, so that an orchestrator reading
+the log later — never the transient report below — finds it there. Then
+report to the host gate: rounds run, per-round finding
 counts, fixes applied (commit SHAs), unresolved and user-decision items,
 converged vs cap reached, log path, effective M (and any substitution),
 and a `Harness probes owed:` line — one item
@@ -876,6 +1033,10 @@ made in a post-loop addendum, and the reason clause copied from the
 rejection line, or `Harness probes owed: none`. The line is always written; a
 report without it is defective. The user runs the owed probes after the
 loop.
+
+Also report the `Secrets found:` line — the same items just written to
+the log above, in the same shape as the `Harness probes owed:` line
+above. The line is always written; a report without it is defective.
 
 **Resolving user-decision and unresolved items** (interactive; batched
 mode journals and ends the batch instead): present each once, at this
@@ -889,15 +1050,78 @@ accepted findings originate in different rounds, `<i>` — for the fix
 commit subject and the `## Round <i> verification <c>` header alike — is the
 **highest** originating round, and the single verification re-review runs
 under that round's lens. Plan
-governs → `rejected: plan governs (user decision)`. Double-fix-failure
+governs → `rejected: plan governs (user decision) — "<clause>"`; for an
+answer tagged `(orchestrator)`, `rejected: plan governs (orchestrator decision)
+— "<clause>"`. Either way `<clause>` is the plan, spec or skill
+text the answer quotes, verbatim, when the answer itself supplies one —
+an orchestrator `plan governs` always carries one — and, when a user's
+`plan governs` answer supplies none, `<clause>` is instead the text
+already quoted after `— clause:` on that item's own open-item line: a
+user `plan governs` is never recorded bare, because the loop already
+holds the clause it needs. The
+clause on that line is written under the one normalization rule of
+"Self-sufficient open-item lines" above — all four of its replacements,
+the whitespace collapse and the `"` one included, then the cut to 160
+characters — so that the ` ← `
+source annotation stays the last one on the line and the clause's own
+`"…"` delimiters stay unambiguous.
+An `amend plan: …; fix it: …` answer takes the finding-governs path for
+its `fix it` part (the plan is already amended when the answer arrives;
+the amendment commit moved the effective HEAD, so the verification
+re-review is skipped and the new invocation that always follows reviews
+the fix — pipeline-mode paragraph below). An `accept: <reason>` answer
+is an item decided without a code change: its `decided (<who>): accept:
+<reason>` line is its whole disposition, it no longer counts as
+unresolved, and no fix or re-review runs. A bare `fix it: …` answer for an
+item whose `— clause:` names binding plan text is not applied — only an
+`amend plan: …; fix it: …` answer may change binding text: no fix
+subagent runs for it, and its disposition is
+`unresolved: fix contradicts binding text` — the mandatory `— clause:`
+suffix every `unresolved:` line carries ("Self-sufficient open-item
+lines") holds the clause, so the disposition text never repeats it. That
+item counts as unresolved in the return and is sent back to the
+answerer. **Which text is binding — one test, so that the answerer and
+this loop apply the same one.** Read the plan header's
+`**Body authority:**` note (the plan-writing skill,
+`../writing-plans/SKILL.md`, puts one in every plan it writes) and apply
+what it says: whichever text that note calls binding is binding — the
+note already treats a finding against a stated `**Contract:**` as a plan
+conflict, on the same footing as one against its other binding text, so a
+`— clause: Task <n>` location naming a Contract-contradicting finding is
+binding too. A plan whose header carries no such note keeps today's
+behaviour instead: any mandated `Task <n>` text is binding there. Every
+other `Task <n>` clause is reference text, and `— clause: none` is no
+clause at all; a bare `fix it` against either is applied normally. Read
+the note and the named task section of the plan to decide. When that
+reading leaves you unsure,
+the answer's own tag decides: for an answer tagged `(orchestrator)`,
+treat the clause as reference text and apply the fix — the orchestrator's
+own pre-commit self-check has already escalated the binding case, and a
+second refusal here would only send an item both sides agreed to fix
+around the loop again. For a `(user)` or untagged answer, which passes
+through no such self-check, take the binding-case path instead: no fix
+subagent runs, and the disposition is
+`unresolved: fix contradicts binding text`, sending the item back to the
+answerer. Double-fix-failure
 items: the user chooses re-dispatch, manual fix, or accept-risk with
 documented rationale (logged). The gate condition is then re-evaluated —
 no loop re-run needed.
 
 In pipeline mode the decisions may arrive on a later dispatch instead — the
-orchestrator's `[RESUME_ANSWER]` placeholder carries the user's answers to
-the open items by review-log id: each named item gets the disposition
-`decided (user): <answer>` in a post-loop addendum on the log's LATEST
+orchestrator's `[RESUME_ANSWER]` placeholder carries the answers to the
+open items by review-log id — one line per item, tagged
+`(orchestrator)` or `(user)`; an untagged line is a user line: each
+named item gets the disposition `decided (<who>): <answer>` — that is
+`decided (orchestrator): <answer>` or `decided (user): <answer>`,
+`<who>` taken from the tag. **A bare `plan governs` `<answer>` — one
+carrying no `"<clause>"` — is never written verbatim**, whichever `<who>`
+sent it: before writing the disposition, fill it in as `plan governs:
+"<clause>" — <path>`, `<clause>` and `<path>` taken from that item's own
+open-item line (the same `— clause:` text already recorded there), the
+same form an orchestrator answer already carries — so a
+`decided (user): <answer>` line always quotes a clause too, and enters
+the decided-wording set on the same terms as an orchestrator's. The
+disposition is written — in a post-loop addendum on the log's LATEST
 completed invocation entry — a latest entry without a completion marker is
 an interrupted invocation, resumed at its next round (Pipeline rule 3)
 with nothing journaled twice — committed as
@@ -915,7 +1139,8 @@ unchanged while the new entry's `_Invocation` line is committed together
 with it, in the same commit (Pipeline rule 4). Over an unchanged effective
 HEAD no new invocation runs. The addendum is idempotent, because a retry
 after a lost return carries the same answers again: an id that already
-holds a `decided (user)` line is skipped, and an accepted fix whose fix
+holds a `decided (user)` or `decided (orchestrator)` line is skipped,
+and an accepted fix whose fix
 commit already exists is not dispatched again — found in `git log` by the
 `<sha>` the `fixed` line records (the token immediately after `→ `, before
 any ` ← ` source annotation) or, when none was recorded, by the fix
