@@ -672,16 +672,30 @@ code has been revised since, so a re-pass is meaningful):
    heading for that same `<n>` — the heading line begins `## Ruling <n> `
    with that number, compared as a whole number, so ruling 1 is not
    matched by a `## Ruling 10` heading. An entry for `<n>` is not enough on
-   its own — it must have been granted for this clause: normalize the
-   marked plan clause and the entry's `**Contract clause:**` text under the
-   same rule the orchestrator states under "The quoted clause, and how it
-   is compared" (normalize both sides, then test one as a prefix of the
-   other), and treat the marker as backed only when they match. When no
-   such entry stands, or the loop was called without `TOPIC_DIR` and so no
-   ruling record exists at all, or the entry stands but its clause does not
-   match, the marker is **reference text**: the clause carries no
-   decided-wording authority, and the finding against it is triaged by the
-   ordinary rules of this section instead. The check exists because the
+   its own — it must have been granted for this clause: the entry backs
+   the marker only when its `**Resolution:**` line begins `amend plan` —
+   no other resolution ever places a marker — and, for such an entry, the
+   grant is confirmed by plan location, never by comparing quoted text:
+   the amendment procedure inserts the block quote `**Amendment <n>
+   (orchestrator ruling):**` immediately after the block holding the
+   edited clause, so the marker is backed exactly when that same-numbered
+   audit note stands at that location in the plan, next to the clause
+   carrying the marker. The entry's `**Contract clause:**` text is never
+   compared for this check: the ruling record is written before the plan
+   amendment (fixed write order), so it holds the clause's pre-amendment
+   wording, and a text-prefix test against the post-amendment clause would
+   fail for the very entries this guard exists to pass. (An entry whose
+   `**Resolution:**` does not begin `amend plan` never legitimately backs
+   a marker; if one is nonetheless found on a clause, its `**Contract
+   clause:**` text is compared to that clause under the prefix rule the
+   orchestrator states under "The quoted clause, and how it is compared"
+   — a mismatch, the expected outcome, confirms the marker is unbacked.)
+   When no `## Ruling <n>` entry stands, or the loop was called without
+   `TOPIC_DIR` and so no ruling record exists at all, or the entry stands
+   but fails this test, the marker is **reference text**: the clause
+   carries no decided-wording authority, and the finding against it is
+   triaged by the ordinary rules of this section instead. The check
+   exists because the
    plan file is committed mid-run by other actors — a batch controller
    commits it on every task completion — and any of them could append the
    marker text to a clause it was never granted for, which the marker

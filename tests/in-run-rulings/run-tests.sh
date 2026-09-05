@@ -50,6 +50,7 @@ ERRORS=()
 TMPFILES=()
 cleanup_tmpfiles() {
   local f
+  [ "${#TMPFILES[@]}" -gt 0 ] || return
   for f in "${TMPFILES[@]}"; do
     rm -f "$f" 2>/dev/null
   done
@@ -935,7 +936,7 @@ assert_in_range_folded "clause: none is written only when the item names no plan
 # placeholder tail — the way the `Ruled:` and `Open:` lines of the log format
 # are pinned — and only the template's own line can satisfy it.
 for pin in '- **Class:** forced | design | escalated (<spec wrong|scope|irreversible|secret|chain>)' \
-           '- **Item:** [<id>] <severity> <file:line> — <finding summary, verbatim>' \
+           '- **Item:** [<id> inv <i>] <severity> <file:line> — <finding summary, verbatim>' \
            '- **Contract clause:** "<verbatim quote>" — <path of the spec, plan or skill that holds it>' \
            '- **Defensible answers:** <one line each; `n/a` for forced>' \
            '- **Forks:** <k> of <planned> — <lens>: <VERDICT line>' \
@@ -949,6 +950,16 @@ assert_in_range "ruling-record entry heading line carries its placeholder tail" 
 # The Forks field records how many of the planned forks returned.
 assert_in_range "ruling-record Forks field carries the planned count" \
   "$ORCH_SKILL" '<k> of <planned>' "$RECORD_LINE" "$RECORD_END" exact
+# F4 (round 17): the Item field's `inv <i>` is the qualifier's only durable
+# record, since the review log itself is never read past its LATEST
+# `_Invocation` entry — without this, a later return has no source for
+# `<i>` and either guesses the current invocation or omits the qualifier.
+assert_in_range_folded "Item field's inv <i> is the qualifier's only durable record" \
+  "$ORCH_SKILL" "this field is the qualifier's only durable record" \
+  "$RECORD_LINE" "$RECORD_END"
+assert_in_range_folded "a Phase 3 entry carries no inv <i>" \
+  "$ORCH_SKILL" 'A Phase 3 entry carries no `<i>`' \
+  "$RECORD_LINE" "$RECORD_END"
 # A follow-up is appended to any entry the user later answers, not only to an
 # escalated one.
 assert_in_range_folded "ruling record widens the follow-up to any answered entry" \
@@ -1078,6 +1089,20 @@ assert_in_range_folded "the marker's ruling number is compared as a whole number
 # the attack this paragraph names.
 assert_in_range_folded "an entry for <n> is not enough on its own — it must have been granted for this clause" \
   "$ORCH_SKILL" 'An entry for `<n>` is not enough on its own — it must have been granted for this clause' \
+  "$RECORD_LINE" "$RECORD_END"
+# F3 (round 17): the grant is confirmed by plan location — the amendment
+# procedure's own audit note standing at the amended clause — never by
+# comparing quoted text, because the Contract clause field holds the
+# clause's PRE-amendment wording (written before the plan amendment) and so
+# can never prefix-match the POST-amendment marked clause.
+assert_in_range_folded "only an amend-plan resolution ever backs a marker" \
+  "$ORCH_SKILL" 'the entry backs the marker only when its `**Resolution:**` line begins `amend plan`' \
+  "$RECORD_LINE" "$RECORD_END"
+assert_in_range_folded "the marker is backed by the audit note's plan location, not by quoted text" \
+  "$ORCH_SKILL" 'the marker is backed exactly when that same-numbered audit note stands at that location in the plan' \
+  "$RECORD_LINE" "$RECORD_END"
+assert_in_range_folded "the Contract clause field is never compared for the marker-backing check" \
+  "$ORCH_SKILL" "The entry's \`**Contract clause:**\` text is never compared for this check" \
   "$RECORD_LINE" "$RECORD_END"
 # The "never reproduce a secret" rule is not a closed three-item list: the
 # entry headings and the Resolution field are free text on the same commit.
@@ -1474,6 +1499,11 @@ assert_in_range_folded "mixed-return STOPPED entry lists every non-escalated rul
 assert_in_range_folded "a Phase 4 Ruled: line carries its review-log invocation number" \
   "$ORCH_SKILL" 'In Phase 4 each `Ruled:` line writes its id in the qualified form `[<id> inv <i>]`' \
   "$LOG_ENTRY_LINE" "$LOG_ENTRY_END"
+# F4 (round 17): the live stop path's source for `<i>` when an earlier
+# return's ruling is carried onto this stop's `Ruled:` line.
+assert_in_range_folded "live stop path reads inv <i> from the ruling-record entry's Item field" \
+  "$ORCH_SKILL" "read from that ruling's own ruling-record entry \`**Item:**\` field" \
+  "$LOG_ENTRY_LINE" "$LOG_ENTRY_END"
 # `<r>` has a defined base, so two agents cannot write `1 of 3` and `0 of 3`
 # for the same first ruling.
 assert_in_range_folded "the in-run resume counter includes the entry being written" \
@@ -1656,6 +1686,22 @@ assert_in_range_folded "Resume step 0's skip reason: the tree may legitimately h
 assert_in_range_folded "Resume step 3 tags the Ruled lines and the user's answers per line" \
   "$ORCH_SKILL" "each tagged \`(orchestrator)\`, plus the resume prompt's answers, each tagged \`(user)\`" \
   "$RESUME_LINE" "$RULINGS_LINE"
+# F1 (round 17): a Phase 3 ruling revert unticks the plan's checkboxes (into
+# the resume commit) and removes the ledger line on disk only — never
+# staged, because `.superpowers/` is an ignored path (Phase 0 step 3), the
+# same reason `state.md` is never staged by a `stopped` commit.
+assert_in_range_folded "resume never stages the ledger when reverting a Phase 3 ruling" \
+  "$ORCH_SKILL" 'never stage the ledger' \
+  "$RESUME_LINE" "$RULINGS_LINE"
+assert_in_range_folded "the ledger is an ignored path, same reason state.md is never staged" \
+  "$ORCH_SKILL" 'the same reason `state.md` is never staged (Major-Error Stop Policy, below)' \
+  "$RESUME_LINE" "$RULINGS_LINE"
+# F4 (round 17): Resume step 3's rebuild of a missing `## STOPPED` entry
+# reads a carried `Ruled:` line's `inv <i>` from the ruling-record entry's
+# own Item field — the qualifier's only durable source.
+assert_in_range_folded "Resume step 3 rebuild reads inv <i> from the ruling-record entry's Item field" \
+  "$ORCH_SKILL" "\`<i>\` read from that ruling's own ruling-record entry \`**Item:**\` field" \
+  "$RESUME_LINE" "$RULINGS_LINE"
 # The pre-amendment clause is recovered from the ruling commit, never from the
 # audit note's free prose.
 assert_in_range "resume recovers the pre-amendment clause from the ruling commit" \
@@ -1778,7 +1824,10 @@ assert_in_range_folded "a Phase 3 ruling has no fix commit to revert" \
   "$ORCH_SKILL" 'When the reverted ruling was made in Phase 3, there is no fix commit to revert at all' \
   "$RESUME_LINE" "$RULINGS_LINE"
 assert_in_range_folded "a reverted Phase 3 amendment un-ticks the task and drops its ledger line so the batch loop re-dispatches it" \
-  "$ORCH_SKILL" 'untick that task'"'"'s checkboxes in the plan and remove its completed line from `.superpowers/sdd/progress.md`' \
+  "$ORCH_SKILL" 'untick that task'"'"'s checkboxes in the plan and include the plan file in the same' \
+  "$RESUME_LINE" "$RULINGS_LINE"
+assert_in_range_folded "the ledger line is removed on disk only, never staged" \
+  "$ORCH_SKILL" 'also remove its completed line from `.superpowers/sdd/progress.md` (the ledger), but on disk only' \
   "$RESUME_LINE" "$RULINGS_LINE"
 # `git revert --no-commit` does not leave the tree untouched on a conflict: it
 # writes conflict markers, stages the clean hunks of every other file it
@@ -2227,6 +2276,18 @@ assert_in_range_folded "loop compares the marker's ruling number as a whole numb
 assert_in_range_folded "loop requires an entry for <n> to have been granted for this clause, not just to exist" \
   "$MCR_SKILL" 'An entry for `<n>` is not enough on its own — it must have been granted for this clause' \
   "$NO_FIX_LINE" "$NO_FIX_END"
+# F3 (round 17): the loop's own copy of the location-based grant check, so
+# that it never re-raises a legitimate amendment as `user-decision` on a
+# stale Contract-clause quote.
+assert_in_range_folded "loop backs a marker only for an amend-plan resolution" \
+  "$MCR_SKILL" 'the entry backs the marker only when its `**Resolution:**` line begins `amend plan`' \
+  "$NO_FIX_LINE" "$NO_FIX_END"
+assert_in_range_folded "loop confirms the grant by plan location, never by comparing quoted text" \
+  "$MCR_SKILL" 'the grant is confirmed by plan location, never by comparing' \
+  "$NO_FIX_LINE" "$NO_FIX_END"
+assert_in_range_folded "loop never compares the Contract clause field for the marker-backing check" \
+  "$MCR_SKILL" "The entry's \`**Contract clause:**\` text is never compared for this check" \
+  "$NO_FIX_LINE" "$NO_FIX_END"
 assert_in_range_folded "loop covers the no-TOPIC_DIR case, where no record exists" \
   "$MCR_SKILL" 'the loop was called without `TOPIC_DIR`' \
   "$NO_FIX_LINE" "$NO_FIX_END"
@@ -2517,11 +2578,11 @@ assert_in_range_folded "first dispatch of this run is both signals: every checkb
 # work can fall outside the task's review range.
 DEV4_LINE="$(line_containing_after "$BATCH_PROMPT" '4. Mid-task crash recovery:' 0)"
 DEV4_END="$(line_containing_after "$BATCH_PROMPT" '5. A task with' "$DEV4_LINE")"
-assert_in_range_folded "Deviation 4 treats a tick commit found while unticked as stale, never REVIEW_BASE" \
-  "$BATCH_PROMPT" '**A tick commit found while the checkbox is unticked is stale, never REVIEW_BASE**' \
+assert_in_range_folded "Deviation 4 never uses a checkbox-tick commit as REVIEW_BASE" \
+  "$BATCH_PROMPT" '**Never the most recent checkbox-tick commit for task <n>**' \
   "$DEV4_LINE" "$DEV4_END"
-assert_in_range_folded "Deviation 4 falls through to the merge-base rule for a stale tick commit" \
-  "$BATCH_PROMPT" 'treat this as "no ledger line and no tick commit" and fall through to the merge-base rule instead' \
+assert_in_range_folded "Deviation 4's REVIEW_BASE chain is ledger line, else merge-base — no middle fallback" \
+  "$BATCH_PROMPT" 'with no ledger line, the branch'"'"'s merge-base with the default branch' \
   "$DEV4_LINE" "$DEV4_END"
 
 # Three pieces of new phase wiring with no assertion scoped to their own

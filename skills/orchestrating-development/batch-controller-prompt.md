@@ -153,20 +153,16 @@ Agent tool (general-purpose):
        reads plan bodies and cannot supply it).
     4. Mid-task crash recovery: for each assigned task that is unchecked
        when you start, set REVIEW_BASE = the HEAD recorded by the last
-       completed ledger line; with no ledger line, the most recent
-       checkbox-tick commit for task <n> on the branch (subject
-       `chore(plan): <slug> task <n> complete`; find it with
-       `git log --grep "task <n> complete"`, which also matches ticks
-       from before the slug was added); with neither, the branch's merge-base with the
-       default branch. **A tick commit found while the checkbox is
-       unticked is stale, never REVIEW_BASE**: the checkbox is unticked
-       only when the run has never completed the task, or a Phase 3
-       ruling revert unticked it again after completion (`SKILL.md`,
-       Resume step 3) — the found tick commit is that earlier attempt's,
-       sitting after all of the task's original work, so using it as
-       REVIEW_BASE would leave that work out of the review package;
-       treat this as "no ledger line and no tick commit" and fall
-       through to the merge-base rule instead. Never fall back to your own starting HEAD — on a
+       completed ledger line; with no ledger line, the branch's merge-base
+       with the default branch. **Never the most recent checkbox-tick
+       commit for task <n>** (subject `chore(plan): <slug> task <n>
+       complete`), even when `git log --grep "task <n> complete"` finds
+       one: the checkbox is unticked only when the run has never
+       completed the task, or a Phase 3 ruling revert unticked it again
+       after completion (`SKILL.md`, Resume step 3) — in the revert case
+       the found tick commit is that earlier attempt's, sitting after all
+       of the task's original work, so using it as REVIEW_BASE would
+       leave that work out of the review package. Never fall back to your own starting HEAD — on a
        retried controller it already contains the crashed attempt's
        commits, so `git log REVIEW_BASE..HEAD` comes back empty and
        those orphans silently bypass the task-review gate. Then check

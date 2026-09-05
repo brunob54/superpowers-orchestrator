@@ -580,7 +580,8 @@ Trigger: `Resume orchestration for <plan-or-spec path>`.
    earlier returns' alike, never an entry that already carries a
    `**Follow-up:**` line, which the user answered at an earlier stop,
    each Phase 4 `Ruled:` id written in the qualified form
-   `[<id> inv <i>]` that rule states
+   `[<id> inv <i>]` that rule states, `<i>` read from that ruling's own
+   ruling-record entry `**Item:**` field
    — commit it as `stopped`, staging by explicit path under the
    Major-Error Stop Policy's rule for a `stopped` commit, then continue
    with the `## STOPPED` case. Otherwise, log
@@ -658,11 +659,16 @@ Trigger: `Resume orchestration for <plan-or-spec path>`.
    implemented by the task's own implementer, inside an ordinary task
    commit, never through the code-review loop, so no
    `fixed — <summary> → <sha>` line exists for it to find. Instead, the
-   task must be re-implemented against the restored clause: in the same
-   resume commit, untick that task's checkboxes in the plan and remove
-   its completed line from `.superpowers/sdd/progress.md` (the ledger),
-   so that Phase 3's task-complete predicate no longer treats the task as
-   done and the batch loop dispatches it again. Either way the branch
+   task must be re-implemented against the restored clause: untick that
+   task's checkboxes in the plan and include the plan file in the same
+   resume commit; also remove its completed line from
+   `.superpowers/sdd/progress.md` (the ledger), but on disk only — never
+   stage the ledger. `.superpowers/` is an ignored path (Phase 0 step 3),
+   so naming it would make `git add` refuse and the commit fail, the same
+   reason `state.md` is never staged (Major-Error Stop Policy, below).
+   Unticking the checkboxes alone already makes Phase 3's task-complete
+   predicate (all-boxes-checked) stop treating the task as done, so the
+   batch loop dispatches it again. Either way the branch
    never silently keeps a change
    the user's decision rejected. **Finding that commit, and reading it:**
    `git log -F --format="%H %s" --grep "<slug> ruling <n>"` prints one
@@ -1225,12 +1231,23 @@ appended, never rewritten, in the shape below:
 ## Ruling <n> — YYYY-MM-DD — phase <p> — [<id>] <short title>
 
 - **Class:** forced | design | escalated (<spec wrong|scope|irreversible|secret|chain>)
-- **Item:** [<id>] <severity> <file:line> — <finding summary, verbatim>   (Phase 3: `[task <n>/<k>]` n/a n/a — <the question or conflict, one line>)
+- **Item:** [<id> inv <i>] <severity> <file:line> — <finding summary, verbatim>   (Phase 3: `[task <n>/<k>]` n/a n/a — <the question or conflict, one line>)
 - **Contract clause:** "<verbatim quote>" — <path of the spec, plan or skill that holds it>
 - **Defensible answers:** <one line each; `n/a` for forced>
 - **Forks:** <k> of <planned> — <lens>: <VERDICT line> (one per fork; `none` for forced); contradiction: none | <what and how it was settled, or `unsettled`>
 - **Resolution:** <the answer as written into [RESUME_ANSWER]> — <reason; for forced, the one-sentence fact>
 ```
+
+For a Phase 4 entry, `<i>` in the `**Item:**` field is the review-log
+`_Invocation` number the ruling was made against — this field is the
+qualifier's only durable record, since the review log itself is never
+read past its LATEST `_Invocation` entry (the classification read
+exception, above). Both the live stop path and Resume step 3's rebuild
+("Handling a return as a whole" and Resume step 3, below) read `<i>` from
+this field when a `Ruled:` line carries forward a ruling made against an
+earlier invocation. A Phase 3 entry carries no `<i>`: its
+`[task <n>/<k>]` id already names the task and needs no invocation
+qualifier.
 
 **Never reproduce a secret.** For an item classified `escalated (secret)`,
 and for any item whose text carries a credential, every line written about
@@ -1280,13 +1297,26 @@ reference text —
 the clause it stands on carries no decided-wording authority and the
 finding against it is triaged by the ordinary rules. **An entry for `<n>`
 is not enough on its own — it must have been granted for this clause**:
-the reader also normalizes the marked plan clause and the entry's
-`**Contract clause:**` text under the same rule stated below in "The
-quoted clause, and how it is compared", and treats the marker as backed
-only when one is a prefix of the other. A marker whose clause does not
-match that entry's recorded target is reference text, exactly as a
-marker with no entry behind it at all. The code-review loop
-is handed `TOPIC_DIR` and applies the same test against
+the entry backs the marker only when its `**Resolution:**` line begins
+`amend plan` — no other resolution ever places a marker — and, for such
+an entry, the grant is confirmed by plan location, never by comparing
+quoted text: the amendment procedure ("Plan amendment", below) inserts
+the block quote `**Amendment <n> (orchestrator ruling):**` immediately
+after the block holding the edited clause, so the marker is backed
+exactly when that same-numbered audit note stands at that location in
+the plan, next to the clause carrying the marker. The entry's `**Contract
+clause:**` text is never compared for this check: the fixed write order
+(above) writes the ruling-record entry before the plan amendment, so it
+holds the clause's pre-amendment wording, and a text-prefix test against
+the post-amendment clause would fail for the very entries this guard
+exists to pass. (An entry whose `**Resolution:**` does not begin `amend
+plan` never legitimately backs a marker; if one is nonetheless found on a
+clause, its `**Contract clause:**` text is compared to that clause under
+the prefix rule stated below in "The quoted clause, and how it is
+compared" — a mismatch, the expected outcome, confirms the marker is
+unbacked.) A marker whose backing entry fails this test is reference
+text, exactly as a marker with no entry behind it at all. The code-review
+loop is handed `TOPIC_DIR` and applies the same test against
 `<TOPIC_DIR>/plans/<slug>-open-decisions.md`; the rule is written for it
 in `../multi-code-review/SKILL.md` under "Decided wording in a
 verification cycle", so that the two actors apply one rule.
@@ -1584,7 +1614,9 @@ no ruling, and never an entry that already carries a `**Follow-up:**`
 line, which the user answered at an earlier stop — with its answer. In
 Phase 4 each `Ruled:` line writes its id in the qualified form
 `[<id> inv <i>]`, `<i>` being the review-log `_Invocation` number the
-ruling was made against, so that a line carried forward from an earlier
+ruling was made against — read from that ruling's own ruling-record
+entry `**Item:**` field (`### The ruling record`, above), the qualifier's
+only durable record — so that a line carried forward from an earlier
 return can never attach to a later entry's finding that re-uses the id.
 The user answers
 only the `Open:` ids; Resume step 3 carries the `Ruled:` lines forward as
