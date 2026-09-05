@@ -1219,7 +1219,7 @@ git commit -m "feat(multi-code-review): dispatch reviewers and fix subagents by 
 - Whole-branch verification (procedural; see Step 2 and Step 3)
   - Invariant: `reviewer-prompt.md` is byte-identical to the merge base, per the Global Constraints.
 
-- [ ] **Step 1: Add the suite to the Testing block**
+- [x] **Step 1: Add the suite to the Testing block**
 
 In `CLAUDE.md`, after the line `bash tests/in-run-rulings/run-tests.sh      # orchestrator in-run rulings wording contracts` add:
 
@@ -1227,7 +1227,7 @@ In `CLAUDE.md`, after the line `bash tests/in-run-rulings/run-tests.sh      # or
 bash tests/fill-prompt/run-tests.sh         # multi-code-review prompt fill script (fill-prompt.js) unit tests
 ```
 
-- [ ] **Step 2: Run every fast suite**
+- [x] **Step 2: Run every fast suite**
 
 Run:
 
@@ -1237,12 +1237,12 @@ bash tests/codex/run-unit-tests.sh && bash tests/smart-compress/run-tests.sh && 
 
 Expected: every suite prints its results line with 0 failed, and the last line printed is `ALL-GREEN`.
 
-- [ ] **Step 3: Verify the reviewer template is unchanged**
+- [x] **Step 3: Verify the reviewer template is unchanged**
 
 Run: `git diff --quiet "$(git merge-base main HEAD)" -- skills/multi-code-review/reviewer-prompt.md && echo UNCHANGED`
 Expected: prints `UNCHANGED` (exit 0). A non-zero exit means the template was edited — revert that edit; the Global Constraints forbid it.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add CLAUDE.md
