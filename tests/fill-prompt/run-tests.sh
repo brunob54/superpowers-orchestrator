@@ -237,6 +237,22 @@ case "$UNAME_S" in
     ;;
 esac
 
+bold "7. The real fix template"
+printf '%s\n' '- [C1] Critical — src/a.py:10 — off-by-one in the range end' '- [I1] Important — src/b.py:3 — missing null check' > "$WORK/findings.txt"
+fill --template "$FIX_TEMPLATE" --out "$WORK/fix.md" ROUND=2 SLUG=my-branch REPO_ROOT=/repo FIX_REPORT_FILE=/repo/docs/x/implementation/my-branch-fix-reports.md "FINDINGS=@$WORK/findings.txt" FAILURE_BLOCK=
+assert_eq "fix template: first dispatch (empty FAILURE_BLOCK) exits 0" "$STATUS" "0"
+assert_file_contains "fix template: generic commit subject filled" "$WORK/fix.md" 'review fixes (my-branch, round 2)'
+assert_file_contains "fix template: findings inserted verbatim" "$WORK/fix.md" '- [C1] Critical — src/a.py:10 — off-by-one in the range end'
+assert_file_contains "fix template: fix-report path filled" "$WORK/fix.md" '/repo/docs/x/implementation/my-branch-fix-reports.md'
+assert_file_not_contains "fix template: no failure heading on the first dispatch" "$WORK/fix.md" "$FAILURE_HEADING"
+assert_file_not_matches "fix template: no residual placeholder" "$WORK/fix.md" "$PLACEHOLDER_ERE"
+printf '%s\n' "$FAILURE_HEADING" 'covering tests failed: 2 errors in tests/test_a.py' > "$WORK/failure.txt"
+fill --template "$FIX_TEMPLATE" --out "$WORK/fix-retry.md" ROUND=2 SLUG=my-branch REPO_ROOT=/repo FIX_REPORT_FILE=/repo/docs/x/implementation/my-branch-fix-reports.md "FINDINGS=@$WORK/findings.txt" "FAILURE_BLOCK=@$WORK/failure.txt"
+assert_eq "fix template: re-dispatch (FAILURE_BLOCK from file) exits 0" "$STATUS" "0"
+assert_file_contains "fix template: failure heading present on the re-dispatch" "$WORK/fix-retry.md" "$FAILURE_HEADING"
+assert_file_contains "fix template: failure text present on the re-dispatch" "$WORK/fix-retry.md" 'covering tests failed: 2 errors in tests/test_a.py'
+assert_file_not_matches "fix template: no residual placeholder on the re-dispatch" "$WORK/fix-retry.md" "$PLACEHOLDER_ERE"
+
 echo
 bold "Results: $PASS passed, $FAIL failed"
 if [ "$FAIL" -gt 0 ]; then
