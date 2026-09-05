@@ -4462,3 +4462,152 @@ the next mutation.
   the new assertion failed. Restored → green.
 
 No finding was left unfixed.
+
+## Round 14 fixes
+
+- **I1** — `skills/orchestrating-development/SKILL.md`, "Lost returns"
+  paragraph (fork-review subsection): added, right after the existing
+  lost-return/re-dispatch rule, that a completion notice arriving from a
+  dispatch already declared lost is discarded — never a usable return of
+  the round, never a replacement for the re-dispatch's return — and that a
+  lens contributes at most one usable return, so the two-usable-returns
+  threshold and `forks: <k> of <planned>` are counted over lenses that
+  produced a usable return, never over the number of completion notices
+  received. The pinned sentences ("two usable reviewer returns", `forks:
+  <k> of <planned>`) are unchanged.
+
+- **I2** — `skills/multi-code-review/SKILL.md`, the "Which text is
+  binding" test: made the unsure-reading fallback depend on the answer's
+  tag. For an `(orchestrator)` line, kept "treat as reference text and
+  apply the fix". For a `(user)` or untagged line, the fallback now takes
+  the binding-case path instead (`unresolved: fix contradicts binding
+  text`), since only the orchestrator's answers pass through the
+  pre-commit self-check the old justification relied on.
+
+- **I4** — `skills/orchestrating-development/SKILL.md`, fork prompt
+  template: added a per-dispatch nonce to the item-text fence
+  (`-----BEGIN ITEM TEXT <nonce>-----` / `-----END ITEM TEXT <nonce>-----`,
+  same nonce both lines) and a rule before the template: generate a new
+  nonce and check again if the item text itself contains the delimiter.
+  Updated the two matching pins in `tests/in-run-rulings/run-tests.sh`
+  (the old bytes were the defect the finding names).
+
+- **I5** — `skills/orchestrating-development/SKILL.md` (two sites, lines
+  ~289 and ~1372) and `skills/orchestrating-development/batch-controller-prompt.md`
+  (`[RESUME_ANSWER]` placeholder doc): restricted the "a pre-flight
+  conflict ruled during an earlier batch reaches the later batch that
+  implements another task it touches" claim to `amend plan` rulings only
+  (which reach other tasks through the amended plan text every implementer
+  reads); added that a `plan governs` ruling is handed only to the task
+  named by its `[task <n>/<k>]` line and has no effect on any other task.
+
+- **I6** — `skills/orchestrating-development/SKILL.md` (Resume step 3,
+  Phase 3 revert path) unchanged in substance; fixed at the actual
+  discovery point instead: `skills/orchestrating-development/batch-controller-prompt.md`
+  Deviation 4 (mid-task crash recovery) now states that a checkbox-tick
+  commit found by `git log --grep "task <n> complete"` while the checkbox
+  is currently unticked is stale (either a first attempt with no tick
+  commit, or — after a Phase 3 ruling revert — an earlier, already-ticked
+  attempt whose checkboxes were unticked again), so it must never be used
+  as `REVIEW_BASE`; treat that case as "no ledger line and no tick commit"
+  and fall through to the merge-base rule.
+
+- **I8** — `skills/orchestrating-development/SKILL.md`: (a) added the
+  `chore(orchestration): <slug> ruling <n>` commit and Resume step 3's
+  ruling-commit recovery commit to the Major-Error Stop Policy's
+  enumeration of commits that must name their staged paths on the command
+  line; (b) stated the `git commit -m "…" -- <the staged paths>` form
+  explicitly at both the ruling-commit definition ("The RULING log entry,
+  the commit and the re-dispatch") and at Resume step 3's recovery branch
+  ("the session died between the writes and the commit"); (c) added a new
+  wording assertion in `tests/in-run-rulings/run-tests.sh` pinning the
+  commit-path half at the ruling-commit definition (the suite previously
+  pinned only the staging half there).
+
+- **I9** — `skills/orchestrating-development/SKILL.md`, the "carried
+  Phase 4 id" section: split the old single rule ("matching an id against
+  another line … compares the bare id, ignoring the qualifier") in two.
+  The cap counting `Items:` lines and Phase 3's `[task <n>]` token
+  comparison still compare the bare id (both count occurrences within one
+  unit, never across invocations). A resume-prompt answer that replaces a
+  `Ruled:` line now matches on the qualified id instead: an unqualified
+  answer matches only a `Ruled:` line whose `inv <i>` is the current
+  entry, and when two `Ruled:` lines share a bare id from different
+  invocations the ambiguity is presented back to the user rather than
+  resolved silently.
+
+- **I10** and **I11** — `skills/orchestrating-development/SKILL.md`,
+  Resume step 0: fixed together with one edit, since both defects are the
+  same clean-tree gate blocking before step 3 can run. Step 0 now peeks at
+  the orchestration log's last entry (a lightweight tail read, not step
+  1's full read) before requiring the clean-tree check; when that entry is
+  a `## STOPPED` or a `## RULING <n>` entry, the clean-tree check is
+  skipped entirely and the resume goes straight to step 1 — the tree may
+  legitimately hold the blocked task's uncommitted work (STOPPED) or an
+  uncommitted ruling's writes (RULING) in either case, and step 3
+  reconciles that state on its own terms.
+
+- **M1** — `skills/orchestrating-development/SKILL.md`, guard 4: removed
+  the reference to a nonexistent "recorded answer tagged `(user)`" field
+  by clarifying, in place, that the `**Follow-up:**` line is the only
+  place a `(user)`-tagged answer is written into the ruling record. Kept
+  the pinned fragment "recorded answer tagged `(user)`" intact on one
+  physical line.
+
+- **M2** — `skills/multi-code-review/SKILL.md`: added the multi-item
+  shape of the `Secrets found:` list to the Review Log Format example
+  (header line with no item on it, one `- [<id>] <file> — (round <i>)`
+  item per line below it, terminated by a mandatory blank line — even at
+  end of file) and cross-referenced it from the "## After the Loop" prose,
+  so a reader can tell where the list ends before a later post-loop
+  addendum's own `- [<id>] …` lines begin.
+
+- **M4** — `skills/orchestrating-development/SKILL.md`, Resume step 3's
+  commit-landed lookup: replaced "POSIX extended regular expression" with
+  "a regular expression (basic by default, or whatever `grep.patternType`
+  selects)" and dropped `+` and `(` from the metacharacter list (both are
+  literal in a basic regular expression). Updated the matching pin in
+  `tests/in-run-rulings/run-tests.sh` (the old bytes were the defect the
+  finding names).
+
+- **M6** — `skills/orchestrating-development/SKILL.md`, the `secret`
+  escalation class: replaced "so that the whole disposition line reads"
+  with "so that the disposition line begins", matching the loop's own
+  Deviation 3 wording (a mandatory `— at <file:line> — clause: …` suffix,
+  and possibly a source annotation, still follow the fixed leading text).
+
+- **M9** — `skills/orchestrating-development/SKILL.md`, the revert-cleanup
+  path: added the re-added-path case right after the existing
+  `git reset -- <path>` / `git checkout -- <path>` cleanup instruction —
+  for a path the fix commit deleted (re-created as a staged addition by
+  `git revert --no-commit`, then left untracked by `git reset`), remove it
+  explicitly with `rm -- <path>` instead of `git checkout -- <path>` (which
+  would fail with "pathspec did not match any file known to git"), or use
+  `git checkout HEAD -- <path>` when the path exists at HEAD.
+
+- **M10** — `skills/orchestrating-development/SKILL.md`, fork prompt
+  template: annotated the `subagent_type: "fork"` line with an inline
+  comment stating it applies to the first `design` item's round only, and
+  that every later round and every tie-break reviewer use
+  `"general-purpose"` instead, per the inheritance rule above the
+  template. The literal bytes `subagent_type: "fork"` are unchanged and
+  still present, satisfying the pinned test.
+
+### Commands run
+
+```
+bash tests/in-run-rulings/run-tests.sh
+```
+Result: `Results: 423 passed, 0 failed`
+
+```
+bash tests/reviewer-templates/run-tests.sh
+```
+Result: `Results: 24 passed, 0 failed`
+
+```
+bash tests/writing-plans/run-tests.sh
+```
+Result: `Results: 15 passed, 0 failed`
+
+No finding from this round's list was rejected as a false positive.
