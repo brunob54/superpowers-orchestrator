@@ -182,6 +182,61 @@ fill --template "$REVIEWER_TEMPLATE" --out "$WORK/reviewer3.md" ROUND=1 REPO_ROO
 assert_eq "reviewer template: PLAN_PATH (legend only) exits 4" "$STATUS" "4"
 assert_file_contains "reviewer template: PLAN_PATH message names it" "$ERRF" 'PLAN_PATH'
 
+bold "6b. Hardening: line endings, trailing blank body line, output file mode"
+# S5: a template whose lines are mostly LF but the fence-open line ends
+# CRLF. Splitting on the detected end-of-line string (instead of on either
+# line ending) would leave the plain-LF lines merged into one line holding
+# an embedded bare newline; locks that this never happens and that, once
+# CRLF is the detected end-of-line, every output line ends with CR.
+MIXED_EOL_TEMPLATE="$WORK/mixed-eol-template.md"
+printf '```\r\n' > "$MIXED_EOL_TEMPLATE"
+printf 'Agent tool (general-purpose):\n' >> "$MIXED_EOL_TEMPLATE"
+printf '  prompt: |\n' >> "$MIXED_EOL_TEMPLATE"
+printf '    First line [ROUND].\n' >> "$MIXED_EOL_TEMPLATE"
+printf '    Second line.\n' >> "$MIXED_EOL_TEMPLATE"
+printf '```\n' >> "$MIXED_EOL_TEMPLATE"
+fill --template "$MIXED_EOL_TEMPLATE" --out "$WORK/mixed-eol.md" ROUND=3
+assert_eq "mixed line endings: exits 0" "$STATUS" "0"
+MIXED_EOL_LINE_COUNT="$(line_count "$WORK/mixed-eol.md")"
+MIXED_EOL_CR_COUNT="$(grep -c $'\r$' "$WORK/mixed-eol.md" | tr -d ' ')"
+assert_eq "mixed line endings: no output line holds an embedded bare newline (every line ends with CR)" "$MIXED_EOL_CR_COUNT" "$MIXED_EOL_LINE_COUNT"
+printf 'First line 3.\nSecond line.\n' > "$WORK/mixed-eol-expected.txt"
+tr -d '\r' < "$WORK/mixed-eol.md" > "$WORK/mixed-eol-normalized.txt"
+assert_same "mixed line endings: LF-normalized output matches the expected text" "$WORK/mixed-eol-normalized.txt" "$WORK/mixed-eol-expected.txt"
+
+# S7: a template whose body's last line before the closing fence is blank
+# (whitespace only). Skipping the trailing-blank-line drop would leave that
+# blank line in the dedented body, so the written output would end with two
+# newlines instead of exactly one; locks the single-trailing-newline
+# invariant byte for byte.
+TRAILING_BLANK_TEMPLATE="$WORK/trailing-blank-template.md"
+printf '```\n' > "$TRAILING_BLANK_TEMPLATE"
+printf 'Agent tool (general-purpose):\n' >> "$TRAILING_BLANK_TEMPLATE"
+printf '  prompt: |\n' >> "$TRAILING_BLANK_TEMPLATE"
+printf '    First line [ROUND].\n' >> "$TRAILING_BLANK_TEMPLATE"
+printf '    Second line.\n' >> "$TRAILING_BLANK_TEMPLATE"
+printf '    \n' >> "$TRAILING_BLANK_TEMPLATE"
+printf '```\n' >> "$TRAILING_BLANK_TEMPLATE"
+fill --template "$TRAILING_BLANK_TEMPLATE" --out "$WORK/trailing-blank.md" ROUND=3
+assert_eq "trailing blank body line: exits 0" "$STATUS" "0"
+printf 'First line 3.\nSecond line.\n' > "$WORK/trailing-blank-expected.txt"
+assert_same "trailing blank body line: output matches expected byte for byte (exactly one trailing newline)" "$WORK/trailing-blank.md" "$WORK/trailing-blank-expected.txt"
+
+# S3: the output file's permissions are owner read/write only.
+OUTPUT_MODE_FILE="$WORK/mode-check.md"
+fill --template "$SMALL" --out "$OUTPUT_MODE_FILE" ROUND=3 LENS_NAME=Security OPTIONAL_LINE= INLINE_VALUE=plain BODY_VALUE=x SHARED=y
+assert_eq "output file mode: fill exits 0" "$STATUS" "0"
+UNAME_S="$(uname -s)"
+case "$UNAME_S" in
+  MINGW*|MSYS*)
+    ok "output file mode: owner read/write only (skipped on Git Bash — Windows emulates POSIX permissions)"
+    ;;
+  *)
+    OUTPUT_MODE="$(ls -ld "$OUTPUT_MODE_FILE" | cut -c1-10)"
+    assert_eq "output file mode: owner read/write only" "$OUTPUT_MODE" "-rw-------"
+    ;;
+esac
+
 echo
 bold "Results: $PASS passed, $FAIL failed"
 if [ "$FAIL" -gt 0 ]; then
