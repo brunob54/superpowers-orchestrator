@@ -17,3 +17,6 @@ Items: [task 4/1] forced — option (a) local edit only, no commit; Step 4 satis
 Detail: docs/superpowers-orchestrator/2026-09-05-prompt-pointer-dispatch/plans/prompt-pointer-dispatch-open-decisions.md
 Forks: none
 Re-dispatch: phase 3, in-run resume 1 of 3
+
+## Phase 3 — Batch 2 (tasks 4–4) — COMPLETE — commits bbb8f38..bf17503
+- Task 4: complete — no code commit (CLAUDE.md is local-only per ruling 1); plan tick bf17503; all seven fast suites green, reviewer-prompt.md UNCHANGED
