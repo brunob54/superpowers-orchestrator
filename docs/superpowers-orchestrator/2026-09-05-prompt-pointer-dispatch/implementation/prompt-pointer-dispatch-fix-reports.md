@@ -85,3 +85,39 @@ Result: `Results: 87 passed / 0 failed`
 
 All seven covering test suites passed after the fixes. Commit SHA:
 `f93e9e6a191e3d5638b730ea8e1cce93be0c6aee`.
+
+## Round 2
+
+Findings addressed: I1, M1, M2.
+
+- [I1] `skills/multi-code-review/SKILL.md`, Procedure step 2 sub-step 2: replaced the ambiguous "on every other round" sentence after the shown fill command with the three explicit cases — round 1 WITH a carried list uses `'CARRIED_BLOCK=@<PROMPT_DIR>/round-1-carried.txt'`; round 1 WITHOUT a carried list, and every later round, use the empty value `'CARRIED_BLOCK='`, because step 1 only writes `round-1-carried.txt` when there is a carried list, and passing the `@<file>` form otherwise makes the script exit 5.
+- [M1] `skills/multi-code-review/scripts/fill-prompt.js`, `writeAtomic`: now exits 5 (message on stderr naming the path) before any write when `--out` already exists, so a prompt file already written is never silently replaced; updated the function's comment and the top-of-file exit-code comment accordingly.
+- [M2] `skills/multi-code-review/scripts/fill-prompt.js`, `main`/`dropTrailingBlank`: moved the trailing-blank-line drop to run on the filled output instead of the pre-fill dedented body, so a template whose last body line is a whole-line placeholder given the empty value no longer leaves two trailing newlines; updated `dropTrailingBlank`'s comment to describe the new ordering requirement.
+
+Tests added to `tests/fill-prompt/run-tests.sh` (new section "8. Round 2 fixes: refuse to overwrite --out, and trailing blank after fill"): filling onto an existing `--out` exits 5 and leaves the existing file's content unchanged (M1); a template whose last body line is a whole-line placeholder given the empty value produces output ending in exactly one newline (M2).
+
+Covering tests:
+
+Command: `bash tests/fill-prompt/run-tests.sh`
+Result: `Results: 86 passed, 0 failed`
+
+Command: `bash tests/reviewer-templates/run-tests.sh`
+Result: `Results: 55 passed, 0 failed`
+
+Command: `bash tests/in-run-rulings/run-tests.sh`
+Result: `Results: 496 passed, 0 failed`
+
+Command: `bash tests/writing-plans/run-tests.sh`
+Result: `Results: 15 passed, 0 failed`
+
+Command: `bash tests/sdd-scripts/run-tests.sh`
+Result: `Results: 193 passed, 0 failed`
+
+Command: `bash tests/codex/run-unit-tests.sh`
+Result: `Results: 10 suites passed, 0 suites failed. All unit tests passed.`
+
+Command: `bash tests/smart-compress/run-tests.sh`
+Result: `Results: 87 passed, 0 failed`
+
+All seven covering test suites passed after the fixes. Commit SHA:
+`32ecce86b51b9f578c1b96a7b75c3936734ee189`.

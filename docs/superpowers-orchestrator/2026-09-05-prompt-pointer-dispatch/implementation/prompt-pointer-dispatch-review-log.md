@@ -45,3 +45,19 @@ _Invocation 1 — 2026-09-05 — N=2 M=2 — BASE..HEAD b9b9ffb..a9d5039 — bra
 - [M2] fixed — the step 2 fill command showed the carried block as an inline single-quoted value although the rule requires the @file form; an apostrophe in carried text would break the command → f93e9e6 ← 1/2: r1:M1
 - [M3] fixed — the verification-cycle table row did not say whether a round-1 cycle re-sends the carried block; now always the empty value → f93e9e6 ← 1/2: r2:M2
 
+## Round 2 verification 1 — Adversarial red-team — fable
+**Reviewers:** M=2, usable 2/2
+**Reviewer verdicts:** r1: 0 Critical, 2 Important, 3 Minor | r2: 0 Critical, 1 Important, 3 Minor
+**Sources mapped:** 9/9
+**Reviewer verdict:** 0 Critical, 3 Important, 6 Minor
+### Dispositions
+- [I1] fixed — the round-2 fill command hard-coded the carried file, so round 1 without a carried list (direct mode) would exit 5 and fall back to inline dispatch; the three CARRIED_BLOCK cases are now stated → 32ecce8 ← 1/2: r1:I1
+- [I2] rejected: harness probe not runnable here — in a session with permission mode `acceptEdits` (not bypass), Write one small file under a fresh `mktemp -d` directory and observe whether a permission prompt appears before the write lands — (ambiguous observation) — a value-file Write outside the working directories may wait on a permission prompt in a non-bypass session; this session runs in bypass mode, so no observation here can match or contradict the claim ← 1/2: r1:I2
+- [I3] rejected: duplicate of round 2 [I1], an open user-decision item (no reader-side fallback for the pointer mechanism; a fix adds a failure class the Task 3 Contract forbids) ← 1/2: r2:I1
+- [M1] fixed — fill-prompt.js renamed over an existing --out silently; now exits 5 before any write when the file exists, with a test → 32ecce8 ← 1/2: r1:M1
+- [M2] carried — fill-prompt.js: a whitespace-only @file value is not empty, and a CRLF value inside an LF template keeps its CR bytes (cosmetic in a rendered prompt) ← 1/2: r1:M2
+- [M3] rejected: decided by orchestrator ruling 1 (CLAUDE.md is local-only, git-ignored) and the loop never edits plan text — Task 4 marks a CLAUDE.md edit complete that a fresh clone never receives ← 1/2: r1:M3
+- [M4] carried — the lost-path rule (inline dispatch after a context compaction, no second mktemp -d) may be read as a resume by one controller and as mid-invocation by another; allowing a second directory contradicts Global Constraints 'created once per controller' and needs a plan amendment ← 1/2: r2:M1
+- [M5] fixed — fill-prompt.js dropped trailing blank lines before the fill, so a last-line whole-line placeholder with an empty value left two trailing newlines; now dropped after the fill, with a test → 32ecce8 ← 1/2: r2:M2
+- [M6] rejected: duplicate of round 1 [M19], an open user-decision item (all dispatches share one flat prompt directory) ← 1/2: r2:M3
+
