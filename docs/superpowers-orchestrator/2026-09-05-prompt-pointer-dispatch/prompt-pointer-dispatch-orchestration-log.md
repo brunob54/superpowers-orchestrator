@@ -4,3 +4,5 @@ _Invocation 1 — 2026-09-05 — spec docs/superpowers-orchestrator/2026-09-05-p
 
 ## Phase 1 — Plan — DONE — 2026-09-05
 plan: docs/superpowers-orchestrator/2026-09-05-prompt-pointer-dispatch/plans/prompt-pointer-dispatch.md — 4 tasks
+
+## Phase 2 — Plan review — rounds 2 — cap — unresolved 0
