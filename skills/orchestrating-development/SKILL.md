@@ -984,15 +984,6 @@ you and your forks may read exactly:
    and scans its `## Ruling` entries. You alone — never a reviewer — may
    read this entry: a reviewer's `## What you may read` block never lists
    the ruling-record path.
-6. For guard 4 below only (`## In-run rulings`, "The predicate, forced or
-   forked"): in `<topic folder>/implementation/<slug>-review-log.md`, any
-   `_Invocation` entry's `decided (user): <answer>` line, whatever id it
-   stands under, read only to compare its quoted clause against the item
-   being classified, under the normalization rule — never its surrounding
-   context, and never a disposition line other than `decided (user): …`.
-   This covers the item's earlier answer when entry 5 above holds no
-   `**Follow-up:**` line for it — the stop that answer resolved made no
-   ruling.
 
 Nothing else. Phase 5 step 3's report-gathering scans of the code-review
 log and the plan-review log are named by Phase 5 itself and are outside
@@ -1380,6 +1371,33 @@ only when the item names no plan text at all. The quote is the key guard
 4 (below) matches a later item against, so a follow-up written without it
 leaves the user's decision unprotected.
 
+**An item escalated by an environment stop of the Major-Error Stop
+Policy — never by classification — has no entry until the user answers
+it.** `fork review unavailable`, a controller malformed or failed twice,
+and a checkbox cross-check mismatch each can put an item on a `## STOPPED`
+entry's `Open:` line (`## Phase 4 — Final Code Review Loop`, and the
+Major-Error Stop Policy's stop list) without "Handling a return as a
+whole" ever running for it — there was no verdict to classify, so no
+ruling-record entry was written when it stopped. Resume step 3 creates
+that entry now, before appending the `**Follow-up:**` line above, so
+that entry exists for guard 4 to find the same way as any other: the
+same six fields, `<n>` the next ruling number of the run, **Class:** the
+item's own class where one is known (a `fork review unavailable` item is
+always `design`, since only a `design` item takes the fork round) or
+`n/a` when none was ever determined; **Item:**, **Contract clause:** (or
+`n/a` when the item names no plan text) and **Forks:** as the item's own
+facts state them (a `fork review unavailable` item's `Forks:` reads
+`<k> of <planned>` from the fork round that stopped it; `n/a` for the
+other two stop kinds); **Defensible answers:** `n/a` (never computed,
+because classification never ran); **Resolution:** `escalated —
+<the stop's own reason>`. Write the matching `## RULING <n>` log entry
+with `Re-dispatch: none — escalated`, in the fixed write order and the
+one commit "The ruling record" states above, then append the
+`**Follow-up:**` line to the entry just created in that same commit. From
+that point the entry is ordinary: guard 4 reads it exactly as it reads
+any other entry's `**Follow-up:**` line, with no read of the review log
+and no exception to its own rule.
+
 ### The answers, and how a ruling reaches the plan
 
 Answers travel in the controller's `[RESUME_ANSWER]` placeholder, one line
@@ -1752,17 +1770,10 @@ rules apply everywhere a ruling is made:
    never reconstructed after the run.
 4. **A user's decision is never overturned by a ruling.** Before you decide
    an item, read your ruling record for an entry of this run whose
-   `**Follow-up:**` line — the place a recorded answer tagged `(user)`
-   is written into the record when the item it answered had a
-   ruling-record entry of its own — quotes
+   `**Follow-up:**` line — the only place a recorded answer tagged `(user)`
+   is written into the record — quotes
    the same clause as this item — compared under the normalization rule
-   above. When the item it answered had no ruling-record entry of its own
-   — the stop that answer resolved made no ruling
-   (`fork review unavailable`, a controller malformed or failed twice, a
-   checkbox cross-check mismatch, or any other ruling-less stop) — read
-   instead, under read exception 6 above, this run's `decided (user):
-   <answer>` lines in the review log for one quoting the same clause. When
-   either read finds such an answer, the user has already decided
+   above. When such an answer stands there, the user has already decided
    that clause, and you do not decide the item at all: it is **escalated**,
    under the class that first sent it to the user — and under
    `spec wrong` when the entry carrying that answer is a `forced` or a

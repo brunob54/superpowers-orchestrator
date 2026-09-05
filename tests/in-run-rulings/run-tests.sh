@@ -617,13 +617,13 @@ assert_in_range_folded "read-exception entry 3 names the plan clause, Global Con
 # A bare 'nothing else' needle is short enough that ordinary prose could
 # satisfy it even with the closing declaration deleted. Pin the closing
 # clause's own distinguishing bytes: the exhaustiveness statement that ends
-# the six-item list.
+# the five-item list.
 assert_in_range_folded "read exception's closing clause declares the list exhaustive" \
   "$ORCH_SKILL" "Nothing else. Phase 5 step 3's report-gathering scans of the code-review" \
   "$READ_EXCEPTION_LINE" "$READ_EXCEPTION_END"
 # The Phase 5 carve-out immediately after "Nothing else.": the report's
 # harness-probe and Secrets-found scans of the two review logs are named by
-# Phase 5 itself and are outside this six-entry list, matching only fixed
+# Phase 5 itself and are outside this five-entry list, matching only fixed
 # line shapes and never entering a ruling.
 assert_in_range_folded "the Nothing-else clause carves out Phase 5's own report-gathering scans" \
   "$ORCH_SKILL" 'are named by Phase 5 itself and are outside this list' \
@@ -1413,26 +1413,42 @@ done
 assert_in_range_folded "guard 4 escalates when the clause match is unsure" \
   "$ORCH_SKILL" 'an unsure match never becomes a ruling' \
   "$GUARDS_LINE" "$GUARDS_END"
-# F7: guard 4 also catches a user decision made at a stop that produced no
-# ruling-record entry (fork review unavailable, a controller malformed or
-# failed twice, a checkbox cross-check mismatch) by reading this run's
-# `decided (user):` lines in the review log for the same clause, permitted
-# under read exception 6.
-assert_in_range_folded "guard 4 falls back to the review log when the item had no ruling-record entry" \
-  "$ORCH_SKILL" 'the item it answered had no ruling-record entry of its own' \
+# F7: guard 4 keeps reading only the ruling record (unchanged). The hole —
+# a user decision made at a stop that produced no ruling-record entry (fork
+# review unavailable, a controller malformed or failed twice, a checkbox
+# cross-check mismatch) — is closed on the resume path instead: Resume
+# step 3 creates the missing entry before appending the Follow-up line, so
+# guard 4's existing lookup always finds one.
+assert_in_range_folded "guard 4's Follow-up lookup is the only place a recorded (user) answer is written into the record" \
+  "$ORCH_SKILL" 'the only place a recorded answer tagged `(user)` is written into the record' \
   "$GUARDS_LINE" "$GUARDS_END"
-assert_in_range_folded "guard 4's review-log fallback names the ruling-less stop kinds" \
-  "$ORCH_SKILL" 'fork review unavailable`, a controller malformed or failed twice, a checkbox cross-check mismatch, or any other ruling-less stop' \
-  "$GUARDS_LINE" "$GUARDS_END"
-assert_in_range_folded "guard 4's review-log fallback reads decided (user) lines under read exception 6" \
-  "$ORCH_SKILL" "read instead, under read exception 6 above, this run's \`decided (user): <answer>\` lines in the review log" \
-  "$GUARDS_LINE" "$GUARDS_END"
-assert_in_range_folded "read exception 6 is scoped to guard 4 and reads decided (user) lines for their quoted clause" \
-  "$ORCH_SKILL" "For guard 4 below only" \
-  "$READ_EXCEPTION_LINE" "$READ_EXCEPTION_END"
-assert_in_range_folded "read exception 6 covers the item's earlier answer when entry 5 holds no Follow-up" \
-  "$ORCH_SKILL" "This covers the item's earlier answer when entry 5 above holds no" \
-  "$READ_EXCEPTION_LINE" "$READ_EXCEPTION_END"
+assert_in_range_folded "resume creates a missing ruling-record entry for an environment-stop item before appending its Follow-up" \
+  "$ORCH_SKILL" 'Resume step 3 creates that entry now, before appending the `**Follow-up:**` line above' \
+  "$RECORD_LINE" "$ANSWERS_LINE"
+assert_in_range_folded "resume names the three ruling-less environment stops needing a created entry" \
+  "$ORCH_SKILL" 'fork review unavailable`, a controller malformed or failed twice, and a checkbox cross-check mismatch' \
+  "$RECORD_LINE" "$ANSWERS_LINE"
+assert_in_range_folded "the created entry keeps the same six fields, n/a where one does not apply" \
+  "$ORCH_SKILL" 'the same six fields' \
+  "$RECORD_LINE" "$ANSWERS_LINE"
+assert_in_range_folded "the created entry gets its own RULING log entry and ruling commit before the Follow-up" \
+  "$ORCH_SKILL" 'Write the matching `## RULING <n>` log entry with `Re-dispatch: none — escalated`' \
+  "$RECORD_LINE" "$ANSWERS_LINE"
+# The read-exception list is unchanged: still exactly five numbered entries,
+# ending "Nothing else." immediately after entry 5, with no guard-4-only
+# sixth entry.
+assert_in_range "read-exception list still ends with entry 5's ruling-record path, then Nothing else" \
+  "$ORCH_SKILL" '<topic folder>/plans/<slug>-open-decisions.md' \
+  "$READ_EXCEPTION_LINE" "$READ_EXCEPTION_END" exact
+assert_absent_in_range_folded_nobacktick "the read-exception list has no sixth, guard-4-only entry" \
+  "$ORCH_SKILL" 'For guard 4 below only' \
+  "$READ_EXCEPTION_LINE" "$READ_EXCEPTION_END" fragment
+if awk -v a="$READ_EXCEPTION_LINE" -v b="$READ_EXCEPTION_END" \
+    'NR >= a && NR < b && $0 ~ /^6\. /' "$ORCH_SKILL" | grep -q .; then
+  bad "the read-exception list has no numbered entry 6 (a line starting '6. ' was found in range $READ_EXCEPTION_LINE..$READ_EXCEPTION_END)"
+else
+  ok "the read-exception list has no numbered entry 6 (range $READ_EXCEPTION_LINE..$READ_EXCEPTION_END)"
+fi
 # F5: guard 4's `(user)` lookup and its escalate-when-unsure branch, inverted.
 # `(orchestrator)` never appears in the guards section on its own (only the
 # `(user)` follow-up guard 4 reads), so this is a safe, specific negative:
