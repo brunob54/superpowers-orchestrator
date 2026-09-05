@@ -58,8 +58,13 @@ Agent tool (general-purpose):
        change that resolves it.
     2. Then re-run the covering tests — the tests that exercise the
        files you changed — and keep the exact command and its output.
-       If the covering tests fail, do not stage or commit; report the
-       failure in your final message and stop.
+       If the covering tests fail, do not stage or commit; restore
+       every file you changed to its committed content, each by
+       explicit path (`git checkout -- <path>` or
+       `git restore <path>`), never `git checkout .` and never the
+       fix-report file, so the working tree is clean when you stop;
+       then report the failure and list those restored files in your
+       final message and stop.
     3. Open the fix-report file `[FIX_REPORT_FILE]` (create it if it
        does not exist) and append command and output under a NEW
        `## Round [ROUND]` heading at the end of the file, together with

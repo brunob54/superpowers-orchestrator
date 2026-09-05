@@ -799,7 +799,12 @@ code has been revised since, so a re-pass is meaningful):
      way before it is logged `user-decision`. Log each under the round's
      dispositions, without a source annotation.
    - **Fix subagent fails or its covering tests fail:** re-dispatch once
-     with the failure appended. Write `<PROMPT_DIR>/round-<i>-failure.txt`
+     with the failure appended. Before that re-dispatch — and before
+     continuing after a second failure — check `git status --porcelain`
+     is empty and, if the failed fix subagent left files modified,
+     restore those files to their committed content by explicit path
+     (`git checkout -- <path>`) first, so the next attempt starts from a
+     clean tree. Write `<PROMPT_DIR>/round-<i>-failure.txt`
      under the value-file rule — its first line is the heading
      `## Previous attempt failed`, the remaining lines are the failure
      text — then repeat the fill of the Critical/Important bullet with

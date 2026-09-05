@@ -46,6 +46,11 @@ const PLACEHOLDER_RE = new RegExp('\\[(' + NAME_PATTERN + ')\\]', 'g');
 const WHOLE_LINE_RE = new RegExp('^\\s*\\[(' + NAME_PATTERN + ')\\]\\s*$');
 const PROMPT_OPEN_RE = /^\s*prompt: \|\s*$/;
 const FENCE_RE = /^```/;
+// The CLOSING fence must be exactly three backticks, optionally followed by
+// whitespace only. A fence line that carries anything after the three
+// backticks — a language tag such as ```bash — opens a fenced example and is
+// never taken as the close of the first block.
+const CLOSE_FENCE_RE = /^```[ \t]*$/;
 const LINE_SPLIT_RE = /\r?\n/;
 const OPTION_PREFIX = '--';
 const OPTION_TEMPLATE = 'template';
@@ -102,14 +107,22 @@ function extract(lines) {
   if (open < 0) fail(EXIT_TEMPLATE, MALFORMED + 'no fenced code block');
   let close = -1;
   for (let i = open + 1; i < lines.length; i++) {
-    if (FENCE_RE.test(lines[i])) { close = i; break; }
+    if (CLOSE_FENCE_RE.test(lines[i])) { close = i; break; }
   }
   if (close < 0) fail(EXIT_TEMPLATE, MALFORMED + 'the first fenced block is not closed');
   // A fenced example written at column 0 inside the prompt body would be
-  // taken as the closing fence and would silently truncate the body. After a
-  // real closing fence the template continues with prose at column 0, so an
-  // indented first non-blank line after the chosen fence means the fence was
-  // inside the body.
+  // taken as the closing fence and would silently truncate the body. Two
+  // rules narrow that. First, only a bare three-backtick line can be chosen
+  // as the close (CLOSE_FENCE_RE), so a tagged example fence such as ```bash
+  // is skipped. Second, after a real closing fence the template continues
+  // with prose at column 0, so an indented first non-blank line after the
+  // chosen fence means the fence was inside the body.
+  //
+  // What these two rules do NOT catch: an UNTAGGED column-0 example fence
+  // whose own content is also at column 0. It is chosen as the close and the
+  // line after it is not indented, so the body is truncated with exit 0. The
+  // tests that fill the two real templates cover that residue — they assert
+  // that the last output line is the template's last body line.
   for (let i = close + 1; i < lines.length; i++) {
     if (isBlank(lines[i])) continue;
     if (/^[ \t]/.test(lines[i])) {

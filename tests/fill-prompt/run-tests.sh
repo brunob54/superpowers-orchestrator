@@ -65,6 +65,15 @@ assert_absent() { # desc path
   if [ -e "$2" ]; then bad "$1 (exists: $2)"; else ok "$1"; fi
 }
 line_count() { grep -c '' "$1" | tr -d ' '; }
+# The dedented LAST line of a template's prompt body: the line just above the
+# closing fence of the template's first fenced block — the first line that is
+# exactly three backticks after the `prompt: |` line — with its leading
+# whitespace removed. Used to check that no fenced example inside a body was
+# taken as the closing fence, which would truncate the filled output.
+last_body_line() { # template
+  awk '/^```$/ && seen { print prev; exit } /^[[:space:]]*prompt: \|$/ { seen = 1 } { prev = $0 }' "$1" \
+    | sed 's/^[[:space:]]*//'
+}
 
 # Run the script; exit status in $STATUS, stderr in $ERRF, stdout in $OUTF.
 fill() {
@@ -174,6 +183,10 @@ assert_file_contains "reviewer template: plan line filled" "$WORK/reviewer.md" "
 assert_file_contains "reviewer template: carried block filled" "$WORK/reviewer.md" '## Carried Findings'
 assert_file_contains "reviewer template: lens name filled into the lens heading" "$WORK/reviewer.md" '**Correctness & spec alignment.** Lens text with $ signs'
 assert_file_not_matches "reviewer template: no residual placeholder" "$WORK/reviewer.md" "$PLACEHOLDER_ERE"
+# Round 4 [M1]: the whole body reached the output — a fenced example inside
+# the body taken as the closing fence would cut everything below it.
+REVIEWER_LAST_BODY_LINE="$(last_body_line "$REVIEWER_TEMPLATE")"
+assert_eq "reviewer template: last output line is the dedented last body line" "$(tail -n 1 "$WORK/reviewer.md")" "$REVIEWER_LAST_BODY_LINE"
 fill --template "$REVIEWER_TEMPLATE" --out "$WORK/reviewer2.md" ROUND=2 REPO_ROOT=/repo BASE_SHA=aaa111 HEAD_SHA=bbb222 PACKAGE_FILE=/repo/.superpowers/sdd/review-2.md 'LENS_NAME=Adversarial red-team' "LENS_INSTRUCTIONS=@$WORK/lens.txt" PLAN_LINE= CARRIED_BLOCK=
 assert_eq "reviewer template: empty PLAN_LINE and CARRIED_BLOCK exit 0" "$STATUS" "0"
 assert_file_not_contains "reviewer template: empty plan line omitted" "$WORK/reviewer2.md" 'Plan/requirements'
@@ -251,6 +264,9 @@ assert_file_contains "fix template: findings inserted verbatim" "$WORK/fix.md" '
 assert_file_contains "fix template: fix-report path filled" "$WORK/fix.md" '/repo/docs/x/implementation/my-branch-fix-reports.md'
 assert_file_not_contains "fix template: no failure heading on the first dispatch" "$WORK/fix.md" "$FAILURE_HEADING"
 assert_file_not_matches "fix template: no residual placeholder" "$WORK/fix.md" "$PLACEHOLDER_ERE"
+# Round 4 [M1]: same whole-body check as for the reviewer template above.
+FIX_LAST_BODY_LINE="$(last_body_line "$FIX_TEMPLATE")"
+assert_eq "fix template: last output line is the dedented last body line" "$(tail -n 1 "$WORK/fix.md")" "$FIX_LAST_BODY_LINE"
 printf '%s\n' "$FAILURE_HEADING" 'covering tests failed: 2 errors in tests/test_a.py' > "$WORK/failure.txt"
 fill --template "$FIX_TEMPLATE" --out "$WORK/fix-retry.md" ROUND=2 SLUG=my-branch REPO_ROOT=/repo FIX_REPORT_FILE=/repo/docs/x/implementation/my-branch-fix-reports.md "FINDINGS=@$WORK/findings.txt" "FAILURE_BLOCK=@$WORK/failure.txt"
 assert_eq "fix template: re-dispatch (FAILURE_BLOCK from file) exits 0" "$STATUS" "0"
@@ -314,6 +330,16 @@ assert_eq "fenced example inside the body exits 2" "$STATUS" "2"
 assert_file_contains "inner fence: message says the template is malformed" "$ERRF" 'malformed template'
 assert_file_contains "inner fence: message gives the reason" "$ERRF" 'the first fenced block closes inside the prompt body'
 assert_absent "inner fence: nothing written" "$INNER_FENCE_OUT"
+
+# M1: the same example written with a language tag on its opening fence and
+# its content at column 0. The tagged fence can never be the closing fence,
+# so the example's own bare fence is the candidate close and the indented
+# marker line below it rejects the template.
+INNER_FENCE_C0_OUT="$WORK/inner-fence-column0.md"
+fill --template "$FIXTURES/inner-fence-column0-template.md" --out "$INNER_FENCE_C0_OUT" ROUND=1
+assert_eq "tagged fenced example with column-0 content exits 2" "$STATUS" "2"
+assert_file_contains "inner fence, column-0 content: message gives the reason" "$ERRF" 'the first fenced block closes inside the prompt body'
+assert_absent "inner fence, column-0 content: nothing written" "$INNER_FENCE_C0_OUT"
 
 echo
 bold "Results: $PASS passed, $FAIL failed"
