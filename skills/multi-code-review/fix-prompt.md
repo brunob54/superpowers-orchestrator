@@ -3,8 +3,7 @@
 Use this template when dispatching the ONE fix subagent of a round
 (SKILL.md, Procedure step 4, the Critical/Important bullet), and for the fix
 re-dispatch, verification-cycle fixes and post-loop-addendum fixes, which
-reuse the originating round's number. The controller never pastes this text
-except on the inline-dispatch fallback of SKILL.md Error Handling:
+reuse the originating round's number. The controller never pastes this text:
 `scripts/fill-prompt.js` fills it into a file under the prompt directory and
 the controller dispatches a pointer to that file (SKILL.md, Procedure,
 "Before round 1"). The body carries every rule the fix subagent works under;

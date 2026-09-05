@@ -54,6 +54,7 @@ POINTER_ONLY='Nothing else in that directory is for you; do not read any other f
 RETRY_IDENTICAL='retry the identical dispatch once'
 PROMPT_DIR_VARIABLE='$PROMPT_DIR'
 INLINE_DISPATCH='inline dispatch'
+INLINE_DISPATCH_HYPHEN='inline-dispatch'
 NEVER_POINTER_TO_FAILED='never dispatch a pointer to a file that failed'
 BLOCKED_PREFIX='BLOCKED:'
 
@@ -289,6 +290,8 @@ assert_file_contains "Error Handling: every failure of the mechanism returns BLO
 assert_file_contains "Error Handling: never a pointer to a file that failed the check" "$ERR_RANGE" "$NEVER_POINTER_TO_FAILED"
 assert_file_not_contains "Procedure: no inline-dispatch fallback" "$PROC_RANGE" "$INLINE_DISPATCH"
 assert_file_not_contains "Error Handling: no inline-dispatch fallback" "$ERR_RANGE" "$INLINE_DISPATCH"
+assert_file_not_contains "fix-prompt.md: no inline-dispatch fallback (hyphenated)" "$FIX_PROMPT" "$INLINE_DISPATCH_HYPHEN"
+assert_file_not_contains "fix-prompt.md: no inline-dispatch fallback (spaced)" "$FIX_PROMPT" "$INLINE_DISPATCH"
 
 echo
 bold "Results: $PASS passed, $FAIL failed"

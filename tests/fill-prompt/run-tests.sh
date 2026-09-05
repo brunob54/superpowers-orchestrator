@@ -113,6 +113,9 @@ assert_same "newline-only @file counts as empty and removes the whole line" "$WO
 fill --template "$FIXTURES/bad-indent-template.md" --out "$WORK/bad.md" ROUND=1
 assert_eq "body line indented less than the first exits 2" "$STATUS" "2"
 assert_file_contains "bad indent: message says the template is malformed" "$ERRF" 'malformed template'
+# The number must be the line of the template FILE (line 7 of the fixture),
+# not an offset counted from the first body line.
+assert_file_contains "bad indent: message names the template file line" "$ERRF" 'template line 7 is not indented at least as far as the first body line'
 assert_absent "bad indent: nothing written" "$WORK/bad.md"
 
 bold "5. Strictness and exit codes"
@@ -264,6 +267,9 @@ fill --template "$SMALL" --out "$EXISTING_OUT" ROUND=3 LENS_NAME=Security OPTION
 assert_eq "existing --out: exits 5" "$STATUS" "5"
 assert_file_contains "existing --out: message names the path" "$ERRF" "$EXISTING_OUT"
 assert_eq "existing --out: content unchanged" "$(cat "$EXISTING_OUT")" "pre-existing content"
+# The atomic write names its temporary file `.<out basename>.<pid>.<hex>.tmp`
+# in the output directory; none may survive the refusal.
+assert_eq "existing --out: no temporary file left behind" "$(find "$WORK" -maxdepth 1 -name '.existing.md.*' | wc -l | tr -d ' ')" "0"
 
 # M2: a template whose last body line is a whole-line placeholder given the
 # empty value. Dropping trailing blanks BEFORE fill would miss the blank

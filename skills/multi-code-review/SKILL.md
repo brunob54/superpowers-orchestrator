@@ -328,7 +328,7 @@ file is never moved aside — its history is committed.
 
 ## Procedure
 
-**Before the first round this controller runs — the prompt directory.**
+**Before round 1 — the prompt directory.**
 Run `mktemp -d` as its own command, once per invocation, before round 1
 or before the round a resumed invocation continues at, and copy the
 literal path it prints — written `<PROMPT_DIR>` in this section — into
@@ -352,10 +352,11 @@ does not exist in the next: the path is always spelled out in full,
 never held in a variable of any name. It never appears in a log entry.
 If the printed path is no longer in the controller's context partway
 through the invocation — after a context compaction, for example — the
-controller does not guess it and does not search for it: it runs
-`mktemp -d` again, uses that new directory for every remaining dispatch
-of the invocation — writing again there any value file a later dispatch
-reuses — and states this in the completion report. Every reviewer and fix-subagent prompt this
+controller does not guess it, does not search for it and does not create
+a second directory: this is a failure of the mechanism like any other. It
+writes the round entry it owes (per Error Handling) and returns
+`BLOCKED: prompt directory path lost from the controller's context — a
+resumed invocation creates a fresh directory`. Every reviewer and fix-subagent prompt this
 skill dispatches — in rounds, verification cycles and post-loop addenda
 alike; the throwaway probe subagent of Triage is neither and is dispatched
 as today — is filled by `scripts/fill-prompt.js` (relative to this
@@ -407,8 +408,11 @@ Every failure of this mechanism is fatal and nothing falls back:
 `test -s` failing, Node missing (treated as the script failing), a
 value-file write refused by a hook or failing, and a round in which no
 reviewer returned a usable report after the pointer dispatch and the one
-identical retry of step 3. In each case the controller writes the round
-entry it owes — if a round is in progress — and then returns
+identical retry of step 3. A failure that happens before any reviewer
+report of the round was received owes no round entry: nothing is written
+for that round. The one case that owes an entry is the u = 0 case — no
+usable report in the round at all — which writes the round entry in the
+`inconclusive` form. In every case the controller then returns
 `BLOCKED: <cause>`, naming the failure in the wording of Error Handling.
 If `mktemp -d` fails, that means: stop and return
 `BLOCKED: prompt directory could not be created — <error text>`, with
@@ -438,7 +442,8 @@ code has been revised since, so a re-pass is meaningful):
       `<PROMPT_DIR>/round-1-carried.txt`.
    2. Fill the template, as one command (values on one line each are
       shown wrapped here; every value except `LENS_INSTRUCTIONS` and a
-      non-empty `CARRIED_BLOCK` is inline; every `NAME=` argument is
+      non-empty `CARRIED_BLOCK` is inline by default; every `NAME=`
+      argument is
       single-quoted, because single quotes stop the shell from splitting
       a value on spaces — the sanctioned no-package `PACKAGE_FILE` value
       and a root anchor may contain spaces, and an unquoted value with a
@@ -798,14 +803,17 @@ code has been revised since, so a re-pass is meaningful):
    enumerates zero Critical and zero Important (never the count lines;
    never post-triage — rejections and user-decision findings never make a
    round clean) **and** all M reviewers returned a usable report (u = M).
-   A partial round is never clean and breaks the streak, like an
-   `inconclusive` round. When a report's count line disagrees with its
+   A partial round is never clean and breaks the streak. An
+   `inconclusive` round — no usable report at all — is not a round the
+   loop continues past: its entry is written and the controller returns
+   `BLOCKED` (Error Handling), so a streak can never contain one. When a
+   report's count line disagrees with its
    enumerated findings, recompute the counts from the enumeration: with
    M = 1 log the recomputed counts on the round's verdict line; with M ≥ 2
    the per-reviewer counts already come from the enumeration, and the
    disagreement is recorded as `, counts recomputed` on that reviewer's
    entry of the `**Reviewer verdicts:**` line. Exit early only after **two
-   consecutive clean rounds**; `inconclusive` breaks the streak. With
+   consecutive clean rounds**. With
    N ≤ 2 no mid-loop exit, but still report "converged" if the final two
    rounds were clean; N = 1 always reports "cap reached". Because the
    union keeps every reviewer's findings, two consecutive clean rounds are
@@ -1464,11 +1472,15 @@ completed invocation only on explicit user request.
   invocation always comes from its parameters, never from the log.
 - Platform without parallel dispatch → reviewers run one after another;
   the procedure is unchanged.
-- Every failure of the pointer mechanism — the five rows below — is
-  fatal and nothing falls back: the controller writes the round entry it
-  owes, if a round is in progress, then returns `BLOCKED: <cause>` naming
-  the failure. The controller never reads a template and never pastes a
-  prompt inline: there is no inline fallback of any kind.
+- Every failure of the pointer mechanism — the four rows below — is
+  fatal and nothing falls back. A failure that happens before any reviewer
+  report of the round was received owes no round entry: nothing is written
+  for that round. The one case that owes an entry is the u = 0 case — no
+  usable report in the round at all — which writes the round entry in the
+  `inconclusive` form. In every case the controller then returns
+  `BLOCKED: <cause>` naming the failure. The controller never reads a
+  template and never pastes a prompt inline: there is no inline fallback
+  of any kind.
 - `mktemp -d` fails at Procedure start, or `cygpath` fails where the path
   must be converted → `BLOCKED: prompt directory could not be created —
   <error text>`; nothing is dispatched.

@@ -110,7 +110,14 @@ function extract(lines) {
     if (PROMPT_OPEN_RE.test(lines[i])) { promptLine = i; break; }
   }
   if (promptLine < 0) fail(EXIT_TEMPLATE, MALFORMED + 'no `prompt: |` line inside the first fenced block');
-  return { wrapper: lines.slice(open + 1, promptLine + 1), body: lines.slice(promptLine + 1, close) };
+  // `bodyStart` is the 1-based line number, in the template file, of the
+  // first body line — so an error message can name a line of the file the
+  // controller can open, not an offset inside the body.
+  return {
+    wrapper: lines.slice(open + 1, promptLine + 1),
+    body: lines.slice(promptLine + 1, close),
+    bodyStart: promptLine + 2,
+  };
 }
 
 function isBlank(line) {
@@ -118,16 +125,18 @@ function isBlank(line) {
 }
 
 // Remove the indentation of the first non-empty body line from every body
-// line. A whitespace-only line becomes an empty line. A non-empty line
-// indented less than the first is a malformed template.
-function dedent(body) {
+// line. A whitespace-only line becomes an empty line. A non-empty line that
+// does not start with that exact indentation is a malformed template.
+// `bodyStart` is the 1-based template-file line number of the first body
+// line, used only to report the failing line by its number in the file.
+function dedent(body, bodyStart) {
   const first = body.find((line) => !isBlank(line));
   if (first === undefined) fail(EXIT_TEMPLATE, MALFORMED + 'the prompt body is empty');
   const indent = first.match(/^[ \t]*/)[0];
   return body.map((line, index) => {
     if (isBlank(line)) return '';
     if (!line.startsWith(indent)) {
-      fail(EXIT_TEMPLATE, MALFORMED + `body line ${index + 1} is indented less than the first body line`);
+      fail(EXIT_TEMPLATE, MALFORMED + `template line ${bodyStart + index} is not indented at least as far as the first body line`);
     }
     return line.slice(indent.length);
   });
@@ -235,8 +244,8 @@ function main() {
   // yields a line that still contains a newline character; the end-of-line
   // detected here is used only when joining the output back together.
   const eol = text.includes(CRLF) ? CRLF : LF;
-  const { wrapper, body } = extract(text.split(LINE_SPLIT_RE));
-  const dedented = dedent(body);
+  const { wrapper, body, bodyStart } = extract(text.split(LINE_SPLIT_RE));
+  const dedented = dedent(body, bodyStart);
   const values = resolveValues(opts.values);
   checkCoverage(dedented, wrapper, values);
   const filled = dropTrailingBlank(fill(dedented, values));
