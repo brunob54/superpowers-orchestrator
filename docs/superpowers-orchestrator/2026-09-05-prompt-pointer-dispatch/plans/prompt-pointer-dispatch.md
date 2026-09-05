@@ -874,7 +874,7 @@ git commit -m "feat(multi-code-review): add fix-prompt.md template with wording 
   - Invariants: the Procedure assertions run on the extracted Procedure range, not the whole file; the `$PROMPT_DIR` assertion runs on the whole file; no `/dev/stdin`, no process substitution.
   - Verification: the section fails before Step 3 and passes after it.
 
-- [ ] **Step 1: Add the failing wording contracts (section 10)**
+- [x] **Step 1: Add the failing wording contracts (section 10)**
 
 In `tests/reviewer-templates/run-tests.sh`, after the `NOTHING_ELSE=…` line add:
 
@@ -930,12 +930,12 @@ assert_file_contains "Error Handling: defines the inline-dispatch fallback" "$ER
 assert_file_contains "Error Handling: never a pointer to a file that failed the check" "$ERR_RANGE" "$NEVER_POINTER_TO_FAILED"
 ```
 
-- [ ] **Step 2: Run the suite to verify section 10 fails**
+- [x] **Step 2: Run the suite to verify section 10 fails**
 
 Run: `bash tests/reviewer-templates/run-tests.sh`
 Expected: FAIL — section 10 reports `mktemp -d`, `fill-prompt.js`, the two `test -s "<PROMPT_DIR>/…"` needles, the three pointer strings, `./fix-prompt.md`, the no-plan sentence, the carried-block line, `inline dispatch` and the never-a-pointer clause missing; `retry the identical dispatch once`, `review fixes (<slug>, round <i>)` and the `$PROMPT_DIR` absence already pass (a bare `test -s` would also already pass — the Triage harness sub-bullet contains one — which is why the needles name the prompt files); sections 1 to 9 pass.
 
-- [ ] **Step 3: Amend the Procedure intro**
+- [x] **Step 3: Amend the Procedure intro**
 
 In `skills/multi-code-review/SKILL.md`, between the `## Procedure` heading and the paragraph beginning `For each round \`i\` in 1..N`, insert:
 
@@ -995,7 +995,7 @@ If `mktemp -d` fails, use inline dispatch for the whole invocation (Error
 Handling).
 ````
 
-- [ ] **Step 4: Replace step 2**
+- [x] **Step 4: Replace step 2**
 
 Replace the whole of step 2 — from `2. **Dispatch M reviewers in one message**` up to, but not including, `3. **Validate each report and consolidate:**` — with:
 
@@ -1077,7 +1077,7 @@ Replace the whole of step 2 — from `2. **Dispatch M reviewers in one message**
       to the prompt" rule.
 ````
 
-- [ ] **Step 5: Replace the Critical/Important bullet and the fix-failure bullet**
+- [x] **Step 5: Replace the Critical/Important bullet and the fix-failure bullet**
 
 Replace the bullet beginning `   - **Critical/Important:** dispatch ONE fix subagent per round with the` up to, but not including, `   - **Plan-mandated findings**` with:
 
@@ -1149,7 +1149,7 @@ Replace the bullet beginning `   - **Fix subagent fails or its covering tests fa
      rounds review the branch as-is.
 ```
 
-- [ ] **Step 6: Add the Error Handling rows**
+- [x] **Step 6: Add the Error Handling rows**
 
 In the `## Error Handling` list, after the bullet beginning `- Platform without parallel dispatch → reviewers run one after another;`, insert:
 
@@ -1189,12 +1189,12 @@ In the `## Error Handling` list, after the bullet beginning `- Platform without 
   prohibition already carries.
 ```
 
-- [ ] **Step 7: Run the wording suites to verify they pass**
+- [x] **Step 7: Run the wording suites to verify they pass**
 
 Run: `bash tests/reviewer-templates/run-tests.sh && bash tests/in-run-rulings/run-tests.sh && bash tests/sdd-scripts/run-tests.sh`
 Expected: PASS for all three — reviewer-templates section 10 green; in-run-rulings and sdd-scripts unchanged and green (their pins on SKILL.md sit outside the edited blocks; the nine pathspec entries are untouched).
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add skills/multi-code-review/SKILL.md tests/reviewer-templates/run-tests.sh
