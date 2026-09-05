@@ -4900,3 +4900,216 @@ Result: `Results: 24 passed, 0 failed`
 bash tests/writing-plans/run-tests.sh
 ```
 Result: `Results: 15 passed, 0 failed`
+
+## Round 16 verification 1 fixes
+
+All findings ([I2], [M3], [M4], [M7], [M10], [M11], [M13], [M14], [M15],
+[M16]) were confirmed defects and fixed in
+`tests/in-run-rulings/run-tests.sh`. No SKILL.md file was touched — every
+mutation used to prove an assertion was applied temporarily to
+`skills/orchestrating-development/SKILL.md` or
+`skills/multi-code-review/SKILL.md`, then reverted with a diff-clean check
+before moving to the next finding.
+
+### [I2] Resume step 0's clean-tree skip has no assertion
+
+Added two folded pins in the Resume range (`$RESUME_LINE..$RULINGS_LINE`):
+the skip rule itself ("skip the clean-tree check below entirely and go
+straight to step 1") and its stated reason ("the tree may legitimately hold
+the blocked task's uncommitted work in either case").
+
+Mutation evidence: rewrote the skip clause to "run the clean-tree check
+below and then step 1" — new FAIL: `Resume step 0 skips the clean-tree
+check on a STOPPED or RULING last entry`. Restored, then rewrote the reason
+clause to "the tree is expected to be clean in either case" — new FAIL:
+`Resume step 0's skip reason: the tree may legitimately hold the blocked
+task's uncommitted work`. Restored (verified via `diff` against a
+pre-edit backup).
+
+### [M3] Secrets-found checks: whole-range bare match, and no terminator check
+
+Two fixes in `tests/in-run-rulings/run-tests.sh`:
+
+1. Replaced the bare `assert_in_range ... 'Secrets found: none' ... exact`
+   check (searched the whole `## Review Log Format` range) with
+   `assert_in_range_folded_exact` pinning the completion-marker line and the
+   bare `Secrets found: none` line together as one adjacent pair.
+2. Added an unfolded raw-file check: locates the multi-item
+   example's last item line (`- [I5] path/to/other.py:9 — (round 3)`) by
+   exact whole-line match, then asserts the physical line right after it
+   (`sed -n "<n+1>p"`) is empty.
+
+Mutation evidence (part 1): deleted the `Secrets found: none` example line
+and inserted an unrelated prose sentence elsewhere in the same range that
+also contains the literal substring `Secrets found: none`
+(`(For an invocation with nothing to report, the example writes the phrase
+"Secrets found: none" as its own line.)`). Confirmed by direct `awk` scan
+that the OLD bare-string check would still match this stray prose line
+(would have silently PASSED). The NEW pair pin correctly FAILed:
+`Review Log Format example pairs the completion marker with a bare Secrets
+found: none line (not inside range ...)`. Restored, diff-clean.
+
+Mutation evidence (part 2): replaced the blank line after the multi-item
+example's last item line with `- [extra] not-a-blank-line`. New check
+FAILed: `Secrets found multi-item example's last item line is followed by
+non-blank text (line 821 ...): '- [extra] not-a-blank-line'`. Restored,
+diff-clean.
+
+### [M4] Four short `fragment` needles survive a reword to the opposite meaning
+
+Replaced each bare fragment with a folded owning-sentence pin:
+
+- `resume step 3` (classification read-exception range) → pinned "You
+  alone — never a fork — may also" (the sentence restricting Resume step
+  3's own `## RULING` entry checks to the orchestrator, never a fork).
+  Mutation: changed to "A fork may also" → FAIL: `only the orchestrator,
+  never a fork, makes Resume step 3's RULING entry checks`.
+- `in parallel, in one message` (fork range) → pinned "For every `design`
+  item, dispatch forks **in parallel, in one message**, each under one
+  distinct". Mutation: reworded to "never dispatch the forks in parallel,
+  in one message" (the review's own example) → FAIL: `every design item's
+  forks are dispatched in parallel, in one message`.
+- `previous invocation left` (log-entry range) → pinned the full sentence
+  "A controller that answers an in-run resume with `BLOCKED: previous
+  invocation left <n> open items …` did not receive the answers — a
+  malformed dispatch: retry the identical dispatch once, then stop under
+  the Major-Error Stop Policy". Mutation: "did not" → "did" → FAIL: `a
+  controller echoing 'previous invocation left' did not receive the
+  answers and is retried once`.
+- `durable marker` (log-entry idempotence paragraph) → pinned "every actor
+  keys on a durable marker: the `decided (…)` line, the ticked checkbox,
+  the amendment label, the `## RULING` entry". Mutation: "every actor keys
+  on" → "no actor needs any" → FAIL: `log-entry (idempotence paragraph)
+  every actor keys on a durable marker`.
+
+All four mutations restored; `diff` against the pre-edit backup reported
+no differences after each restore.
+
+### [M7] Follow-up commit subject only tail-pinned
+
+Added an exact, non-folded pin on the full subject
+`chore(orchestration): <slug> ruling <n> follow-up` scoped to the Resume
+range (`$RESUME_LINE..$RULINGS_LINE`), where the full string stands
+(SKILL.md line 695), matching the standard the sibling ruling-subject pin
+(section 5, log-entry range) already applies.
+
+Mutation evidence: changed `chore(orchestration):` to `chore(orchestrator):`
+on that one line. New FAIL: `resume states the follow-up commit's full
+subject`. Restored, diff-clean.
+
+### [M10] Two new Phase 3 step 5 rules are unpinned
+
+Added two folded pins in the Phase 3 range (`$PHASE3_LINE..$PHASE4_LINE`):
+
+- The re-dispatch identity rule: "the same batch — same task list, same
+  `First batch:` value — is re-dispatched".
+- The controller-failure path: "a controller failure (no such section) →
+  retry the identical dispatch once → major error → stop".
+
+Mutation evidence: reworded the first to "only the blocked task is
+re-dispatched" → FAIL: `an open-item return re-dispatches the same batch,
+same task list, same First batch value`. Restored, then reworded the
+second to "a controller failure (no such section) is ignored and the
+batch continues." → FAIL: `a controller failure BLOCKED return retries the
+identical dispatch once, then major error, then stop`. Restored,
+diff-clean.
+
+### [M11] Cap-sentence emphasis scan misses a sentence nested in a wider span
+
+Extended the `CAP_EMPHASIS` awk scan: for each match position `s`, in
+addition to the existing adjacent-character checks, it now counts `**` and
+`__` runs in the haystack before `s` (via `gsub` on a throwaway copy) and
+flags emphasis when either count is odd — an unclosed opening run before
+the sentence with no closing run yet before it.
+
+Mutation evidence: rewrote `**The cap.** In-run resumes...task in Phase
+3.` to `**The cap. In-run resumes...task in Phase 3.**` — i.e. widened the
+existing `**The cap.**` span to enclose the whole cap sentence, exactly
+the scenario the finding describes (both adjacent characters are spaces,
+so the old adjacency-only check would report clean). New scan correctly
+FAILed: `log-entry sentence is wrapped in a '*' or '_' emphasis marker`.
+Restored, diff-clean.
+
+### [M13] `assert_absent_unless_qualified_in_range_folded` fails OPEN
+
+Added a guard immediately after the pair-removal loop: if `remainder` is
+empty while the original folded haystack (`folded_nb`) was not, the check
+now fails closed with an explicit message, instead of silently running the
+final absence test against an empty string (which always reports "not
+found" → PASS).
+
+Mutation evidence: built a standalone harness sourcing the helper
+functions and called the function directly with a one-line fixture file
+whose entire folded content is exactly the phrase+qualifier pair plus the
+trailing space `fold_range` appends per line (qualifier text engineered to
+end in a space so the pair match consumes that space too). Before the fix
+this reduces `remainder` to a true empty string; confirmed the new guard
+fires: `FAIL: ... (the pair-removal step emptied a non-empty haystack in
+range 1..2 ...; failing closed instead of testing absence against
+nothing)`. Confirmed the guard does NOT spuriously fire on the suite's own
+real call site (full suite still 442 passed, 0 failed) and does not fire
+on a legitimate near-empty remainder (a single residual space from
+`fold_range`'s per-line trailing space, tested separately) — it only
+triggers on a genuinely empty remainder.
+
+### [M14] Producer's mandatory-output sentence for `Secrets found:` is unpinned
+
+Added a folded pin in the multi-code-review after-the-loop range
+(`$MCR_AFTER_LOOP_LINE..$MCR_ERROR_HANDLING_LINE`) on: "Also report the
+`Secrets found:` line — the same items just written to the log above, in
+the same shape as the `Harness probes owed:` line above. The line is
+always written; a report without it is defective."
+
+Mutation evidence: changed "The line is always written; a report without
+it is defective." (the `Secrets found:` copy, line 1019) to "Reporting the
+line is optional when there is nothing to report." New FAIL: `the Secrets
+found line is always written; a report without it is defective`.
+Restored, diff-clean.
+
+### [M15] `assert_absent_in_range_folded` unused; `_nobacktick` duplicates it
+
+Rewrote `assert_absent_in_range_folded_nobacktick` to strip backticks from
+a whole-file copy (`tr -d '`' < "$file" > "$tmp_file"`, written under
+`$ROOT/.tmp-nobacktick-$$` and removed after the call), strip backticks
+from the needle, and delegate to `assert_absent_in_range_folded` on that
+temp file — so the shared body now runs on every negative check in the
+suite, and `assert_absent_in_range_folded` is no longer dead code.
+Backtick removal never touches newlines, so line numbers (and the caller's
+range) are unaffected, and stripping before folding vs. after (the
+previous order) produces the same folded text either way, because a
+backtick is not whitespace that `fold_range`'s per-line trim reacts to.
+
+Mutation evidence (equivalence proof, as the finding required): captured
+the full suite's pass/fail count with the fix in place — `442 passed, 0
+failed`. Then temporarily replaced the delegating body with the original
+duplicated body (byte-for-byte the pre-fix implementation) and re-ran the
+full suite: `442 passed, 0 failed` — identical counts. Restored the
+delegating version; final run again `442 passed, 0 failed`.
+
+### [M16] `fork review unavailable` is a bare presence check only
+
+Added a folded pin on the owning sentence's trigger clause: "`fork review
+unavailable` (fewer than two usable reviewer returns for a design item)",
+matching the treatment already given to the sibling `escalated` fragment
+immediately above it.
+
+Mutation evidence: changed "fewer than" to "more than" in that clause. New
+FAIL: `fork review unavailable stop triggers on fewer than two usable
+reviewer returns`. Restored, diff-clean.
+
+### Commands run
+
+```
+bash tests/in-run-rulings/run-tests.sh
+```
+Result: `Results: 442 passed, 0 failed`
+
+```
+bash tests/reviewer-templates/run-tests.sh
+```
+Result: `Results: 24 passed, 0 failed`
+
+```
+bash tests/writing-plans/run-tests.sh
+```
+Result: `Results: 15 passed, 0 failed`
