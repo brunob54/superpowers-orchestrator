@@ -5327,3 +5327,97 @@ Result: `Results: 24 passed, 0 failed`
 bash tests/writing-plans/run-tests.sh
 ```
 Result: `Results: 15 passed, 0 failed`
+
+## Fix round 16 (findings F1–F5)
+
+Commands run and their output:
+
+```
+$ bash tests/in-run-rulings/run-tests.sh; echo "exit=$?"
+... (468 checks)
+Results: 468 passed, 0 failed
+exit=0
+
+$ bash tests/reviewer-templates/run-tests.sh; echo "exit=$?"
+... (24 checks)
+Results: 24 passed, 0 failed
+exit=0
+
+$ bash tests/writing-plans/run-tests.sh; echo "exit=$?"
+... (15 checks)
+Results: 15 passed, 0 failed
+exit=0
+```
+
+### F1 — "Which text is binding" now reads the plan's Body authority note
+
+- `skills/multi-code-review/SKILL.md`: rewrote "Which text is binding — one
+  test" to stop enumerating locations and instead read the plan header's
+  `**Body authority:**` note and apply what it says; states the
+  consequence that a finding against a stated `**Contract:**` is a plan
+  conflict (the note already says so); keeps the pre-note fallback (any
+  mandated `Task <n>` text is binding when no note exists).
+- `skills/orchestrating-development/SKILL.md`: changed the matching
+  "Plan amendment" definition the same way. Bounded the decided-wording
+  marker: `(amended by ruling <n>)` is now appended ONLY when the edited
+  clause is a Global Constraints entry or an Exact-content block, so an
+  amended `**Contract:**` (or a pre-note plan's amended mandated sentence)
+  never becomes decided wording and stays open to a later finding.
+- Neither file restates the old location enumeration; the plan's own note
+  is the single source. Added positive pins for the new wording and
+  negative (`assert_absent_in_range_folded_nobacktick`) guards against the
+  old enumeration reappearing, in both files, in
+  `tests/in-run-rulings/run-tests.sh`.
+
+### F2 — In-run resume cap anchor ignores a resumed invocation line
+
+- `skills/orchestrating-development/SKILL.md`: the cap's reset anchor now
+  explicitly ignores an `_Invocation` line ending `— resumed_` (Resume
+  step 5's per-parameter override, which answers no open item); only a
+  first invocation line and a `## STOPPED` entry move the anchor.
+- Added three assertions pinning the exclusion, its reason, and the
+  "only these two move it" closing clause.
+
+### F3 — `Secrets found:` sentence fully pinned (test-suite only)
+
+- No SKILL wording changed (a needle could be written against the text as
+  it stands). Added assertions in `tests/in-run-rulings/run-tests.sh`
+  pinning the rest of the sentence on both sides: the `Secrets found: none`
+  alternative and "the item never reproduces the secret value" on the
+  multi-code-review side; the "naming the file and the round, or `Secrets
+  found: none`" fragment on the Phase 5 side.
+
+### F4 — Sixth negative assertion for the Phase 3 removal
+
+- Added `assert_absent_in_range_folded_nobacktick` guarding against the
+  base revision's unconditional ``` `BLOCKED` → major error → stop ``` in
+  Phase 3 step 5 reappearing, folded/backtick-insensitive like its five
+  siblings (the two Phase 4 removals and the three stop-policy removals).
+
+### F5 — Fork consolidation
+
+1. `assert_in_range`'s `fragment` mode now delegates to
+   `assert_in_range_folded`, so every free-text fragment folds by
+   construction; the `exact` byte-pin path is untouched.
+2. Added inversion-negative assertions for the named design properties:
+   the answer-tag default (`untagged`/`new invocation` needles strengthened
+   to their owning sentences, plus inverted-sentence-absent checks in
+   `orchestrating-development/SKILL.md`, `multi-code-review/SKILL.md` and
+   `code-review-loop-prompt.md`), guard 4's `(user)` lookup and its
+   escalate-when-unsure branch, the closed label set (guard 4's "one of the
+   five" cross-reference), and the fork independence rules. Recorded the
+   residual "needle strength beyond this named set is a reviewer judgement"
+   limitation in the suite's header comment.
+3. Carried Minor: the `decided (user)`/`decided (orchestrator)` check in
+   Resume step 3 was a whole-range co-occurrence test that passed
+   vacuously (the literal `decided (user)` string no longer occurs in that
+   range at all after this branch's own rewrite to `tagged `(user)``/
+   `tagged `(orchestrator)``). Replaced it with a per-occurrence count-parity
+   check (`(user)` and `(orchestrator)` tag counts must be equal and
+   non-zero in the range), which fails if a regression drops one member of
+   a pair even while the other member of a different pair still exists
+   elsewhere in the range.
+
+Files changed: `skills/multi-code-review/SKILL.md`,
+`skills/orchestrating-development/SKILL.md`,
+`tests/in-run-rulings/run-tests.sh`.
