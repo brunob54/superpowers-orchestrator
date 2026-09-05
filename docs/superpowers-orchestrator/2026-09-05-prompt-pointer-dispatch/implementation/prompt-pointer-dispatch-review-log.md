@@ -156,3 +156,17 @@ _Invocation 2 — 2026-09-05 — N=2 M=2 — BASE..HEAD b9b9ffb..f534fea — bra
 - [M3] fixed — 'copy the full text verbatim' left open whether the lens's bold heading line is part of the LENS_INSTRUCTIONS value; both places now name the paragraph under the heading, without the heading line → dbcbaa1 ← 1/2: r1:M3
 - [M4] rejected: duplicate of round 4 [M3] (carried; an empty findings file is unreachable by the procedure) ← 1/2: r2:M1
 - [M5] fixed — fix-prompt.md never said what the fix subagent does when the covering tests fail; step 2 now says do not stage or commit, report and stop → dbcbaa1 ← 1/2: r2:M2
+
+## Round 4 verification 2 — Adversarial red-team — fable
+**Reviewers:** M=2, usable 2/2
+**Reviewer verdicts:** r1: 0 Critical, 2 Important, 1 Minor | r2: 0 Critical, 2 Important, 4 Minor
+**Sources mapped:** 9/9
+**Reviewer verdict:** 0 Critical, 4 Important, 3 Minor
+### Dispositions
+- [I1] fixed — fix-prompt.md step 2 told a fix subagent whose covering tests fail to stop without committing but not to undo its edits, leaving partial writes in the shared tree for the re-dispatch or a later commit; it now restores every changed file by explicit path before stopping, and the controller checks and restores leftovers before a re-dispatch → 93b9456 ← 2/2: r1:I2, r2:M2
+- [I2] rejected: duplicate of round 4 [I1], an open user-decision item (the verification-cycle row reuses round-<i>-lens.txt, which a resumed invocation's fresh directory does not hold) ← 1/2: r1:I1
+- [I3] rejected: duplicate of round 4 [I3], an open user-decision item (a findings-file Write denied by hooks/safety/protect-secrets.js for a credential-shaped string is fatal and repeats on resume) ← 1/2: r2:I1
+- [I4] rejected: plan governs (loop decision) — "[I1] decided (user): amend plan: every failure of the pointer mechanism, writer side and reader side, is fatal the controller writes the round entry it owes, th" — the u = 0 fatal rule (a round with no usable report after the pointer dispatch and its retry is written inconclusive, then BLOCKED) was decided by the user in Invocation 1's addendum and its BLOCKED text is pinned by the Task 3 Contract; the cause-attribution wording is round 4 [M2] ← 1/2: r2:I2
+- [M1] fixed — the inner-fence guard passed a column-0 fenced example whose content is also at column 0, truncating the body with exit 0; a closing fence must now be exactly three backticks (a tagged fence never closes the block), with a fixture, and sections 6 and 7 assert the last output line of each real template → 93b9456 ← 2/2: r1:M1, r2:M1
+- [M2] carried — a prompt-directory path lost from the controller's context ends the loop with BLOCKED (round 3 [M1], per the once-per-invocation constraint); recording the path in an untracked workspace file for a compacted controller to re-read is a spec-level change ← 1/2: r2:M3
+- [M3] carried — the four lens paragraphs written by quoted heredoc match no pattern of block-dangerous-commands.js or protect-secrets.js today, but no test guards a future lens edit against the hooks; a hook-regression test is a follow-up ← 1/2: r2:M4

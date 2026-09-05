@@ -315,3 +315,52 @@ $ git commit -m "review fixes (prompt-pointer-dispatch, round 4)" -- <the five p
  tests/fill-prompt/run-tests.sh                     | 12 ++++++++++++
  5 files changed, 49 insertions(+), 3 deletions(-)
 ```
+
+## Round 4 verification 2
+
+### Findings addressed
+- [I1] fix-prompt.md step 2 now tells the fix subagent to restore every file it changed by explicit path before stopping on a covering-test failure, and to list those files; multi-code-review/SKILL.md's "Fix subagent fails or its covering tests fail" bullet now requires the controller to check `git status --porcelain` and restore any file the failed attempt left modified before the re-dispatch and before continuing after a second failure.
+- [M1] fill-prompt.js now requires the CLOSING fence to be exactly three backticks (new `CLOSE_FENCE_RE`; `FENCE_RE` still finds the opening fence), so a tagged example fence such as ```bash inside the prompt body can never close the block; the guard comment now states what the two rules do and do not catch. New fixture `tests/fill-prompt/fixtures/inner-fence-column0-template.md` plus a test asserting exit 2 with the existing reason text and no output file; sections 6 and 7 now assert that the last output line of each filled real template equals the template's dedented last body line (derived from the template by a new `last_body_line` helper).
+
+### Commands and output
+
+```
+$ bash tests/fill-prompt/run-tests.sh
+  PASS: fenced example inside the body exits 2
+  PASS: inner fence: message says the template is malformed
+  PASS: inner fence: message gives the reason
+  PASS: inner fence: nothing written
+  PASS: tagged fenced example with column-0 content exits 2
+  PASS: inner fence, column-0 content: message gives the reason
+  PASS: inner fence, column-0 content: nothing written
+
+Results: 101 passed, 0 failed
+```
+
+```
+$ bash tests/reviewer-templates/run-tests.sh
+  PASS: Error Handling: never a pointer to a file that failed the check
+  PASS: Procedure: no inline-dispatch fallback
+  PASS: Error Handling: no inline-dispatch fallback
+  PASS: fix-prompt.md: no inline-dispatch fallback (hyphenated)
+  PASS: fix-prompt.md: no inline-dispatch fallback (spaced)
+
+Results: 59 passed, 0 failed
+```
+
+```
+$ bash tests/in-run-rulings/run-tests.sh
+  PASS: every batch dispatch carries the run-wide answer set so an earlier pre-flight ruling reaches a later batch (range 246..305, line wraps folded)
+  PASS: only an escalated item stops the run on the strength of its content (range 305..334, line wraps folded)
+  PASS: Phase 5 report counts the rulings made in the run (range 334..362, line wraps folded)
+  PASS: decided wording is quoted on a decided line or a rejected: plan governs line of the same run (range 843..943, line wraps folded)
+
+Results: 496 passed, 0 failed
+```
+
+```
+$ git commit -m "review fixes (prompt-pointer-dispatch, round 4)" -- skills/multi-code-review/fix-prompt.md skills/multi-code-review/SKILL.md skills/multi-code-review/scripts/fill-prompt.js tests/fill-prompt/run-tests.sh tests/fill-prompt/fixtures/inner-fence-column0-template.md
+[feature/prompt-pointer-dispatch 93b9456] review fixes (prompt-pointer-dispatch, round 4)
+ 5 files changed, 77 insertions(+), 8 deletions(-)
+ create mode 100644 tests/fill-prompt/fixtures/inner-fence-column0-template.md
+```
