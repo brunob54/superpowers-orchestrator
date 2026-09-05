@@ -1,5 +1,99 @@
 # Superpowers Orchestrator Release Notes
 
+## v7.8.0 — the orchestrator rules on in-run decisions
+
+Field report: in the recorded orchestrated runs (Cases 001, 007, 008 and
+010 in the orchestration issues log), most stops of the autonomous pipeline
+were not the user's decisions. In Phase 4 the code-review loop returned an
+item as `user-decision` or `unresolved` because the correct fix
+contradicted the plan's text; in Phase 3 a batch controller returned
+`BLOCKED task=<n>` because the implementation had found a defect in the
+plan, not in the code. In both cases the orchestrator — which holds the
+spec, the plan and the run's history, and whose own artifact the plan is —
+was better placed to decide than the user. Case 007 shows the cost of
+stopping instead: one stop became a chain of four, because each decided
+fix got a verification re-review that raised new items against the
+decided wording.
+
+`orchestrating-development` now settles those items inside the run. When a
+Phase 4 return carries open items, or a Phase 3 return is a `BLOCKED
+task=<n>` whose report holds a `### Conflict <k>` or `### Question <k>`
+section, the orchestrator classifies each item with a **closed escalation
+predicate**: `escalated` when its correct resolution changes the spec,
+grows the scope, needs an irreversible or outward-facing action, concerns
+an exposed secret, or hits the in-run resume cap (`chain`); `forced` when
+one sentence names the fact that makes every other outcome indefensible;
+`design` otherwise. A `design` item is reviewed by two or three **forked
+subagents** under distinct lenses — design consistency, implementation
+practicality, adversarial — dispatched in parallel and blind to each
+other. The orchestrator consolidates their verdicts and rules; one
+`evidence consistency` round follows when they contradict, and a fixed
+tie-break applies when the contradiction stays unsettled. Every ruling is
+recorded, with its class, answer and reason, in a new per-topic file
+`plans/<slug>-open-decisions.md`, journaled as a `## RULING <n>` entry in
+the orchestration log, and committed **before** the phase is re-dispatched
+with the answers in `[RESUME_ANSWER]`. Only the escalated items reach you,
+on the `Open:` lines of a `## STOPPED` entry; the items already decided
+are listed as `Ruled:` and need no answer.
+
+Four guards keep the judgement honest: a `plan governs` rejection quotes
+the clause that makes the finding non-binding, verbatim with its source
+path; a Critical is never rejected by a ruling; every ruling is recorded
+when it is made, never reconstructed after the run; and a user's earlier
+decision is never overturned — the same clause raised again is escalated.
+In-run resumes are capped at three per phase (per task in Phase 3); the
+fourth open return of the same unit stops the run with every item
+`escalated (chain)`. A ruling that amends the plan edits the binding
+clause in place, marks it `(amended by ruling <n>)` and inserts an audit
+note; in Phase 4 that starts a new review invocation over the amended
+plan.
+
+### What changed
+
+- **`orchestrating-development`** — new `## In-run rulings` section: the
+  escalation predicate; a second documented exception to the
+  thin-sequencer rule (to classify an item the orchestrator may read the
+  review log's latest disposition line, the blocked task's report, the
+  cited plan clause and spec section, the code at the cited `file:line`,
+  and the ruling record — nothing else, and all of it as data); the fork
+  review for a `design` item (forks for the first `design` item of a
+  return, fresh `general-purpose` reviewers for later items and
+  tie-breaks, so no reviewer inherits an earlier consolidation); the
+  ruling record; the `## RULING` log entry; the resume cap;
+  `Open:`/`Ruled:` lines on `## STOPPED`; a `Rulings:` line in
+  `state.md`; Resume step 3 cases for a crash after a ruling commit and
+  for a user answer that replaces a `Ruled:` line, which reverts the
+  ruling and the change made under it. The Phase 5 report counts the
+  rulings of the run and lists the review loop's `Secrets found:` items.
+- **`multi-code-review`** — decisions are journaled as
+  `decided (orchestrator)` or `decided (user)`; a ruling's rejection is
+  written `rejected: plan governs (orchestrator decision) — "<clause>"`;
+  every open-item disposition line is self-sufficient (id, summary,
+  `file:line`, plan location and quoted clause), so the orchestrator can
+  classify it from the log alone; inside a verification cycle a finding
+  against decided wording is the loop's to reject, never `user-decision`,
+  a Critical excepted; the completion report carries a `Secrets found:`
+  line. The binding-text test now reads the plan's `**Body authority:**`
+  note instead of restating it, so a stated `**Contract:**` is binding as
+  the note says.
+- **Templates** — `code-review-loop-prompt.md` and
+  `batch-controller-prompt.md` carry the `(orchestrator)` / `(user)` tag
+  on every `[RESUME_ANSWER]` line; a `BLOCKED task=<n>` for an open item
+  writes its detail to `.superpowers/sdd/task-<n>-report.md` as
+  `### Conflict <k>` / `### Question <k>` sections, which is how the
+  orchestrator tells an open item from a controller failure.
+- **Tests** — new `tests/in-run-rulings/run-tests.sh` (496 checks), a
+  wording-contract suite that pins every clause above and carries negative
+  assertions for the stop rules this release removes.
+
+### Upgrading
+
+Reinstall the plugin: a run started before the reinstall executes the old
+stop rule. Phase 1 `BLOCKED` questions, Phase 2 `unresolved` items and
+Phase 5 are unchanged and stay yours. A resume prompt answers only the
+`Open:` ids of a `## STOPPED` entry; answering a `Ruled:` id overrides that
+ruling.
+
 ## v7.7.0 — plans state contracts, not literal bodies
 
 Field report: across four earlier runs, eleven interruptions of the
