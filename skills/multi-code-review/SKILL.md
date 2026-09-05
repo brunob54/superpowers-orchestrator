@@ -441,9 +441,14 @@ code has been revised since, so a re-pass is meaningful):
         'PLAN_LINE=<plan line>' 'CARRIED_BLOCK=@<PROMPT_DIR>/round-1-carried.txt'
       ```
 
-      Shown above is round 1 with a carried list; on every other round the
-      last argument is the empty value `'CARRIED_BLOCK='`. Every `NAME=`
-      argument stays single-quoted either way.
+      Shown above is round 1 WITH a carried list, so the last argument is
+      `'CARRIED_BLOCK=@<PROMPT_DIR>/round-1-carried.txt'`. Round 1 WITHOUT a
+      carried list, and every later round, instead use the empty value
+      `'CARRIED_BLOCK='` — step 1 writes `round-1-carried.txt` only when
+      there is a carried list, so passing the `@<file>` form when that file
+      was never written makes the script exit 5 and the round fall back to
+      inline dispatch. Every `NAME=` argument stays single-quoted either
+      way.
 
       Two rules hold for this fill and for the fix fill of step 4 alike.
       First, text that comes from reviewer output — findings, carried

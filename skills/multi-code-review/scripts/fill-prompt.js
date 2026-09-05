@@ -25,7 +25,8 @@
 // Exit codes: 0 written; 1 usage error; 2 malformed template; 3 a body
 // placeholder has no value; 4 a NAME= names no placeholder in the body or
 // the wrapper (the fenced block's lines above and including `prompt: |`);
-// 5 a file could not be read or written. Nothing is printed on success.
+// 5 a file could not be read or written, including when `--out` already
+// exists. Nothing is printed on success.
 
 const fs = require('fs');
 const path = require('path');
@@ -132,9 +133,12 @@ function dedent(body) {
   });
 }
 
-// Drop trailing blank lines from the dedented body, so the written output
+// Drop trailing blank lines from the filled body, so the written output
 // always ends with exactly one newline even when a blank line precedes the
-// closing fence.
+// closing fence, or when the last body line is a whole-line placeholder
+// that `fill` removed because its value is empty (which leaves a blank
+// line, that preceded the placeholder, as the new last line). This must run
+// AFTER `fill`, not before it, so it sees the line removal `fill` performs.
 function dropTrailingBlank(lines) {
   const out = lines.slice();
   while (out.length > 0 && out[out.length - 1] === '') out.pop();
@@ -196,11 +200,16 @@ function fill(body, values) {
 }
 
 // Write to a temporary name in the output's directory, then rename, so a
-// partial file never passes `test -s`. The name carries a random component
-// in addition to the process id so it cannot be predicted, and 'wx' opens
-// with O_EXCL: a pre-existing file or symlink at that name makes the write
-// fail instead of writing through it.
+// partial file never passes `test -s`. Exits 5 before any write when
+// `outPath` already exists, so a prompt file is written once and never
+// silently replaced by a later fill. The temporary name carries a random
+// component in addition to the process id so it cannot be predicted, and
+// 'wx' opens with O_EXCL: a pre-existing file or symlink at that name makes
+// the write fail instead of writing through it.
 function writeAtomic(outPath, text) {
+  if (fs.existsSync(outPath)) {
+    fail(EXIT_IO, `cannot write ${outPath}: file already exists`);
+  }
   const random = crypto.randomBytes(6).toString('hex');
   const tmp = path.join(path.dirname(outPath), `.${path.basename(outPath)}.${process.pid}.${random}.tmp`);
   // Set only once the 'wx' open below has actually created the temporary
@@ -227,10 +236,11 @@ function main() {
   // detected here is used only when joining the output back together.
   const eol = text.includes(CRLF) ? CRLF : LF;
   const { wrapper, body } = extract(text.split(LINE_SPLIT_RE));
-  const dedented = dropTrailingBlank(dedent(body));
+  const dedented = dedent(body);
   const values = resolveValues(opts.values);
   checkCoverage(dedented, wrapper, values);
-  writeAtomic(opts[OPTION_OUT], fill(dedented, values).join(eol) + eol);
+  const filled = dropTrailingBlank(fill(dedented, values));
+  writeAtomic(opts[OPTION_OUT], filled.join(eol) + eol);
 }
 
 main();

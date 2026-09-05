@@ -255,6 +255,34 @@ assert_file_contains "fix template: failure heading present on the re-dispatch" 
 assert_file_contains "fix template: failure text present on the re-dispatch" "$WORK/fix-retry.md" 'covering tests failed: 2 errors in tests/test_a.py'
 assert_file_not_matches "fix template: no residual placeholder on the re-dispatch" "$WORK/fix-retry.md" "$PLACEHOLDER_ERE"
 
+bold "8. Round 2 fixes: refuse to overwrite --out, and trailing blank after fill"
+# M1: filling onto an existing --out exits 5 and leaves the existing file's
+# content unchanged; no temporary file is left behind either.
+EXISTING_OUT="$WORK/existing.md"
+printf 'pre-existing content\n' > "$EXISTING_OUT"
+fill --template "$SMALL" --out "$EXISTING_OUT" ROUND=3 LENS_NAME=Security OPTIONAL_LINE= INLINE_VALUE=plain BODY_VALUE=x SHARED=y
+assert_eq "existing --out: exits 5" "$STATUS" "5"
+assert_file_contains "existing --out: message names the path" "$ERRF" "$EXISTING_OUT"
+assert_eq "existing --out: content unchanged" "$(cat "$EXISTING_OUT")" "pre-existing content"
+
+# M2: a template whose last body line is a whole-line placeholder given the
+# empty value. Dropping trailing blanks BEFORE fill would miss the blank
+# line that fill's removal of the placeholder line exposes as the new last
+# line, leaving two trailing newlines; locks the single-trailing-newline
+# invariant for this case too.
+TRAILING_PLACEHOLDER_TEMPLATE="$WORK/trailing-placeholder-template.md"
+printf '```\n' > "$TRAILING_PLACEHOLDER_TEMPLATE"
+printf 'Agent tool (general-purpose):\n' >> "$TRAILING_PLACEHOLDER_TEMPLATE"
+printf '  prompt: |\n' >> "$TRAILING_PLACEHOLDER_TEMPLATE"
+printf '    First line [ROUND].\n' >> "$TRAILING_PLACEHOLDER_TEMPLATE"
+printf '    Second line.\n' >> "$TRAILING_PLACEHOLDER_TEMPLATE"
+printf '    [OPT]\n' >> "$TRAILING_PLACEHOLDER_TEMPLATE"
+printf '```\n' >> "$TRAILING_PLACEHOLDER_TEMPLATE"
+fill --template "$TRAILING_PLACEHOLDER_TEMPLATE" --out "$WORK/trailing-placeholder.md" ROUND=3 OPT=
+assert_eq "trailing whole-line placeholder given the empty value: exits 0" "$STATUS" "0"
+printf 'First line 3.\nSecond line.\n' > "$WORK/trailing-placeholder-expected.txt"
+assert_same "trailing whole-line placeholder given the empty value: output matches expected byte for byte (exactly one trailing newline)" "$WORK/trailing-placeholder.md" "$WORK/trailing-placeholder-expected.txt"
+
 echo
 bold "Results: $PASS passed, $FAIL failed"
 if [ "$FAIL" -gt 0 ]; then
