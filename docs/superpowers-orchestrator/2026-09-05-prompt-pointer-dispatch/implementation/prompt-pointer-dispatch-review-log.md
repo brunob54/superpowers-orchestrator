@@ -170,3 +170,19 @@ _Invocation 2 — 2026-09-05 — N=2 M=2 — BASE..HEAD b9b9ffb..f534fea — bra
 - [M1] fixed — the inner-fence guard passed a column-0 fenced example whose content is also at column 0, truncating the body with exit 0; a closing fence must now be exactly three backticks (a tagged fence never closes the block), with a fixture, and sections 6 and 7 assert the last output line of each real template → 93b9456 ← 2/2: r1:M1, r2:M1
 - [M2] carried — a prompt-directory path lost from the controller's context ends the loop with BLOCKED (round 3 [M1], per the once-per-invocation constraint); recording the path in an untracked workspace file for a compacted controller to re-read is a spec-level change ← 1/2: r2:M3
 - [M3] carried — the four lens paragraphs written by quoted heredoc match no pattern of block-dangerous-commands.js or protect-secrets.js today, but no test guards a future lens edit against the hooks; a hook-regression test is a follow-up ← 1/2: r2:M4
+
+## Round 4 verification 3 — Adversarial red-team — fable
+**Reviewers:** M=2, usable 2/2
+**Reviewer verdicts:** r1: 0 Critical, 2 Important, 2 Minor | r2: 0 Critical, 2 Important, 1 Minor
+**Sources mapped:** 7/7
+**Reviewer verdict:** 0 Critical, 4 Important, 2 Minor
+### Dispositions
+- [I1] unresolved: verification cap — the restore rule added in verification 2 (fix-prompt.md step 2 and the SKILL.md failure bullet) uses `git checkout -- <path>` for every file a failed fix attempt changed, which fails for a file the attempt CREATED (an untracked test file), so the leftover stays as `??` in `git status --porcelain` and the re-dispatch starts on a dirty tree; both places need 'a file the attempt created and git does not track is removed by explicit path (rm -- <path>), never git clean' — at skills/multi-code-review/fix-prompt.md:63 — clause: none ← 2/2: r1:M1, r2:I2
+- [I2] rejected: duplicate of round 4 verification 2 [I4] (plan governs, loop decision: the u = 0 fatal rule was decided by the user in Invocation 1's addendum; its cause-attribution wording is round 4 [M2], pinned by the Task 3 Contract) ← 1/2: r1:I1
+- [I3] rejected: harness probe not runnable here — run one N=4, M=3 invocation past an automatic compaction and check whether the compaction summary still contains the `mktemp -d` path verbatim — (not settled by one probe) — a prompt-directory path lost to a context compaction ends the loop with BLOCKED under the once-per-invocation constraint (round 3 [M1]); recording the path in an untracked workspace file is a spec-level change (round 4 verification 2 [M2]) ← 1/2: r1:I2
+- [I4] rejected: duplicate of round 4 [I1], an open user-decision item (the verification-cycle row reuses round-<i>-lens.txt, which a resumed invocation's fresh directory does not hold; this report adds the case of a post-loop addendum run by a later controller, which has no prompt directory at all, so the answer to round 4 [I1] should cover both) ← 1/2: r2:I1
+- [M1] carried — only the filled prompt file gets test -s; an empty round-<i>-lens.txt (a failed heredoc) yields a round with a lens heading and no instructions that passes every check, and an empty findings file is round 4 [M3]; a test -s on each value file after its write would close it ← 1/2: r1:M2
+- [M2] carried — fill-prompt.js normalizes only the final CRLF of an @file value, so inner CRLFs enter an LF template verbatim (also Invocation 1 round 2 verification 1 [M2]) ← 1/2: r2:M1
+
+_Completed — 2026-09-05 — cap reached — HEAD 
+Secrets found: none
