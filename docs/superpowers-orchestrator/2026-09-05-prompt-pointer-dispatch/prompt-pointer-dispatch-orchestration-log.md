@@ -20,3 +20,11 @@ Re-dispatch: phase 3, in-run resume 1 of 3
 
 ## Phase 3 — Batch 2 (tasks 4–4) — COMPLETE — commits bbb8f38..bf17503
 - Task 4: complete — no code commit (CLAUDE.md is local-only per ruling 1); plan tick bf17503; all seven fast suites green, reviewer-prompt.md UNCHANGED
+
+## RULING 2 — 2026-09-05 — phase 4 — three plan conflicts from code review invocation 1: two ruled, one escalated
+Items: [M19] forced — plan governs: "The prompt directory is created once per invocation with `mktemp -d`, outside the checkout, before round 1 (a controller that runs a second invocation, or resum" — docs/superpowers-orchestrator/2026-09-05-prompt-pointer-dispatch/plans/prompt-pointer-dispatch.md
+Items: [I2] forced — amend plan: prompt directory created once per invocation, not per controller (amended by ruling 3); fix it: Procedure preamble says once per invocation
+Items: [I1] escalated (spec wrong) — a systematic reader-side pointer failure never reaches the inline fallback; every fix contradicts the spec's Error handling row and the Task 3 Contract
+Detail: docs/superpowers-orchestrator/2026-09-05-prompt-pointer-dispatch/plans/prompt-pointer-dispatch-open-decisions.md
+Forks: none
+Re-dispatch: none — escalated
