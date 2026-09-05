@@ -172,3 +172,61 @@ $ git commit -m "review fixes (prompt-pointer-dispatch, round 2)" -- skills/mult
 [feature/prompt-pointer-dispatch f534fea] review fixes (prompt-pointer-dispatch, round 2)
  2 files changed, 77 insertions(+), 48 deletions(-)
 ```
+
+## Round 3
+
+### Findings addressed
+- [I1] fix-prompt.md preamble: dropped the "except on the inline-dispatch fallback of SKILL.md Error Handling" clause; added two `assert_file_not_contains` assertions on `fix-prompt.md` (`inline-dispatch`, `inline dispatch`) to section 10 of `tests/reviewer-templates/run-tests.sh`.
+- [M1] SKILL.md prompt-directory paragraph: a printed path lost from the controller's context is now fatal — the controller writes the round entry it owes and returns `BLOCKED: prompt directory path lost from the controller's context — a resumed invocation creates a fresh directory`; the second `mktemp -d` sentence is gone.
+- [M2] SKILL.md (Procedure preamble and Error Handling): a failure before any reviewer report of the round owes no round entry; the only case that owes one is u = 0, which writes the `inconclusive` entry. Same wording in both places.
+- [M3] SKILL.md: restored the bold label `**Before round 1 — the prompt directory.**`, so the three cross-references resolve again. No section-10 test needle depends on the label text (checked first).
+- [M4] fill-prompt.js: `extract` now returns `bodyStart` (1-based template-file line of the first body line) and `dedent` uses it; the exit-2 message reads `template line <n> is not indented at least as far as the first body line`. New assertion in `tests/fill-prompt/run-tests.sh` pins `template line 7` for the fixture; the exit-code assertion is unchanged.
+- [M5] SKILL.md Error Handling: "the five rows below" → "the four rows below" (matches the four bullets).
+- [M6] SKILL.md convergence check: a partial round breaks the streak; an `inconclusive` round ends the loop with `BLOCKED`, so a streak can never contain one. Removed "; `inconclusive` breaks the streak" from the early-exit sentence. Review Log Format untouched.
+- [M8] tests/fill-prompt/run-tests.sh section 8: added the missing assertion that no `.existing.md.*` temporary file survives the refused `--out`.
+- [M24] SKILL.md step 2 sub-step 2: "is inline" → "is inline by default".
+
+### Commands and output
+
+```
+$ bash tests/reviewer-templates/run-tests.sh
+  PASS: Procedure: contains 'Nothing else in that directory is for you; do not read any other file there.'
+  PASS: Procedure: contains 'retry the identical dispatch once'
+  PASS: Procedure: contains './fix-prompt.md'
+  PASS: Procedure: contains 'No requirements document is available'
+  PASS: Procedure: contains 'Triage these carried Minor findings in your Carried Findings Triage section:'
+  PASS: Procedure: contains 'review fixes (<slug>, round <i>)'
+  PASS: SKILL.md never holds the prompt directory in a shell variable
+  PASS: Error Handling: every failure of the mechanism returns BLOCKED
+  PASS: Error Handling: never a pointer to a file that failed the check
+  PASS: Procedure: no inline-dispatch fallback
+  PASS: Error Handling: no inline-dispatch fallback
+  PASS: fix-prompt.md: no inline-dispatch fallback (hyphenated)
+  PASS: fix-prompt.md: no inline-dispatch fallback (spaced)
+
+Results: 59 passed, 0 failed
+
+$ bash tests/fill-prompt/run-tests.sh
+  PASS: fix template: no failure heading on the first dispatch
+  PASS: fix template: no residual placeholder
+  PASS: fix template: re-dispatch (FAILURE_BLOCK from file) exits 0
+  PASS: fix template: failure heading present on the re-dispatch
+  PASS: fix template: failure text present on the re-dispatch
+  PASS: fix template: no residual placeholder on the re-dispatch
+8. Round 2 fixes: refuse to overwrite --out, and trailing blank after fill
+  PASS: existing --out: exits 5
+  PASS: existing --out: message names the path
+  PASS: existing --out: content unchanged
+  PASS: existing --out: no temporary file left behind
+  PASS: trailing whole-line placeholder given the empty value: exits 0
+  PASS: trailing whole-line placeholder given the empty value: output matches expected byte for byte (exactly one trailing newline)
+
+Results: 88 passed, 0 failed
+```
+
+```
+$ git add -- <the five files above>
+$ git commit -m "review fixes (prompt-pointer-dispatch, round 3)" -- <the same five files>
+[feature/prompt-pointer-dispatch 15efd82] review fixes (prompt-pointer-dispatch, round 3)
+ 5 files changed, 54 insertions(+), 25 deletions(-)
+```

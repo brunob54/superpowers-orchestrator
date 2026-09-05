@@ -88,3 +88,39 @@ Effective HEAD had moved (marker 32ecce8, effective HEAD a283aad at answer time:
 - [I1] fixed — every failure of the pointer mechanism is fatal: the preamble, step 2, step 3, the fix-dispatch bullet and Error Handling state the exact `BLOCKED:` outcomes (directory, prompt file, value file, Node missing, no usable report in a round) and every inline-fallback sentence is removed; tests/reviewer-templates/run-tests.sh section 10 asserts `BLOCKED:` in the Error Handling range and the absence of `inline dispatch` from the Procedure and Error Handling ranges → f534fea
 
 _Invocation 2 — 2026-09-05 — N=2 M=2 — BASE..HEAD b9b9ffb..f534fea — branch feature/prompt-pointer-dispatch — gate: orchestration_
+
+## Round 3 — Correctness & spec alignment — fable
+**Reviewers:** M=2, usable 2/2
+**Reviewer verdicts:** r1: 0 Critical, 1 Important, 4 Minor | r2: 0 Critical, 1 Important, 5 Minor
+**Sources mapped:** 11/11
+**Reviewer verdict:** 0 Critical, 1 Important, 8 Minor
+**Converged:** no
+### Dispositions
+- [I1] fixed — fix-prompt.md preamble still said the controller pastes the text on the inline-dispatch fallback of Error Handling, a fallback the amended constraints removed; clause dropped, and section 10 now asserts fix-prompt.md carries neither `inline dispatch` nor `inline-dispatch` → 15efd82 ← 2/2: r1:I1, r2:I1
+- [M1] fixed — the prompt-directory paragraph had the controller run `mktemp -d` again after a context compaction lost the path, contradicting 'created once per invocation'; a lost path is now fatal (BLOCKED; a resumed invocation creates a fresh directory) → 15efd82 ← 2/2: r1:M1, r2:M2
+- [M2] fixed — 'writes the round entry it owes if a round is in progress' had no entry shape for a failure before any reviewer ran; now a failure before any report owes no entry and only the u = 0 case writes the inconclusive entry → 15efd82 ← 1/2: r1:M2
+- [M3] fixed — three cross-references named a 'Before round 1' label that had been renamed; the bold label is restored → 15efd82 ← 1/2: r1:M3
+- [M4] fixed — fill-prompt.js exit-2 message counted body lines from `prompt: |` and said 'indented less' for a tab/space mismatch; it now reports the template file line and 'not indented at least as far as', with a test → 15efd82 ← 1/2: r1:M4
+- [M5] fixed — Error Handling said 'the five rows below' above four rows → 15efd82 ← 1/2: r2:M1
+- [M6] fixed — the convergence check still described an inconclusive round as one the streak continues past; it now states such a round ends the loop with BLOCKED → 15efd82 ← 1/2: r2:M3
+- [M7] carried — plan header text (Architecture paragraph, Assumption 5, File Structure row for SKILL.md) still describes the removed inline fallback; reference text superseded by Amendment 4, and the loop never edits plan text (for the orchestrator) ← 1/2: r2:M4
+- [M8] fixed — tests/fill-prompt section 8 comment claimed 'no temporary file is left behind' but no assertion checked it; assertion added → 15efd82 ← 1/2: r2:M5
+- Carried findings from `.superpowers/sdd/progress.md` (18 `Minor:` lines, the same ledger as Invocation 1 round 1), decided from the two reviewers' recommendations:
+- [M9] carried — fill-prompt.js writeAtomic: a body of only whole-line placeholders with empty values writes a 1-byte file and exits 0 (unreachable with the real templates)
+- [M10] carried — fill-prompt.js writeAtomic catch unlinked a temporary path this process may not have created (already fixed in Invocation 1, 2ade665)
+- [M11] carried — fill-prompt.js end-of-line detection is whole-file; the comment does not say so
+- [M12] carried — tests/fill-prompt section 5: the 'missing @file exits 5' case lacked the assert_absent check (already fixed in Invocation 1, 2ade665)
+- [M13] carried — tests/fill-prompt section 6b: the CR-count assertion passed vacuously on a missing file (already fixed in Invocation 1, 2ade665)
+- [M14] carried — fill-prompt.js writeAtomic: flag 'wx' and the random temp-name component are pinned by no test
+- [M15] carried — tests/fill-prompt section 6b: the two hardening templates are built by duplicated printf lines
+- [M16] carried — fix-prompt.md model field: the corrected fix-subagent model wording is pinned by no assertion in reviewer-templates section 9
+- [M17] carried — tests/reviewer-templates: assert_file_not_contains is defined in Task 2 and first used in Task 3 section 10
+- [M18] carried — tests/reviewer-templates section 9: no direct assertion for 'no three-backtick line in the body' or 'no bracketed uppercase token other than the six placeholders'
+- [M19] carried — tests/reviewer-templates section 9: the nothing-else sentence assertion is file-scoped, not legend-scoped
+- [M20] carried — tests/reviewer-templates first_line_of: grep stderr leaks when the template is missing
+- [M21] carried — fix-prompt.md: an empty FAILURE_BLOCK leaves two consecutive blank lines before '## Procedure' (cosmetic)
+- [M22] carried — tests/reviewer-templates section 10: the Procedure range also spans Lens Rotation (plan-mandated end marker)
+- [M23] carried — SKILL.md Critical/Important bullet: the fix-dispatch description and 'the fix-subagent model of Parameters' are pinned by no section-10 needle
+- [M24] fixed — SKILL.md step 2 sub-step 2: 'every value except LENS_INSTRUCTIONS and a non-empty CARRIED_BLOCK is inline' read as a rule before the two rules that override it; now 'is inline by default' → 15efd82
+- [M25] rejected: plan governs (orchestrator decision) — "The prompt directory is created once per invocation with `mktemp -d`, outside the checkout, before round 1 (a controller that runs a second invocation, or resum" — Task 3 security review residual M3 (verification-cycle reviewer prompt beside its round's fix prompt in one flat directory), decided as [M19] of Invocation 1 (ruling 2); one reviewer recommended user-decision, one ship-as-is, and a layout change would contradict the once-per-invocation, never-cleaned-up directory
+- [M26] carried — Task 4 produced no commit: CLAUDE.md is gitignored (.gitignore:7), so the branch history holds no record of the Testing-block edit beyond the plan tick and ruling 1 (traceability note only)
