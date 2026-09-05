@@ -32,3 +32,16 @@ _Invocation 1 — 2026-09-05 — N=2 M=2 — BASE..HEAD b9b9ffb..a9d5039 — bra
 - [M19] user-decision — Task 3 security review residual M3: a verification-cycle reviewer prompt sits beside its round's fix prompt in one flat prompt directory, so a reviewer that ignores the pointer sentence could read finding text; one reviewer recommended user-decision, one ship-as-is, and every fix (per-dispatch sub-directories, deleting the fix prompt after use) contradicts the once-per-controller, never-cleaned-up directory the plan fixes (plan-mandated) — at skills/multi-code-review/SKILL.md:331 — clause: Global Constraints "The prompt directory is created once per controller with `mktemp -d`, outside the checkout, before round 1; the skill text never shows `$PROMPT_DIR` or any othe"
 - [M20] carried — Task 4 produced no commit: CLAUDE.md is gitignored (.gitignore:7), so the branch history holds no record of the Testing-block edit beyond the plan tick and ruling 1 (traceability note only)
 
+## Round 2 — Adversarial red-team — fable
+**Reviewers:** M=2, usable 2/2
+**Reviewer verdicts:** r1: 0 Critical, 2 Important, 2 Minor | r2: 0 Critical, 0 Important, 2 Minor
+**Sources mapped:** 6/6
+**Reviewer verdict:** 0 Critical, 2 Important, 3 Minor
+**Converged:** no
+### Dispositions
+- [I1] user-decision — a systematic reader-side failure of the pointer (every reviewer unable to read its prompt file) never reaches the inline-dispatch fallback: each round retries the identical pointer once and ends inconclusive, so all N rounds pass with zero findings; the suggested fix adds a reader-side failure class, which the Task 3 Contract forbids with 'no new failure class' (plan-mandated) — at skills/multi-code-review/SKILL.md:1446 — clause: Task 3 "Must convey the four fallback rows of the spec and the one row this plan adds: `mktemp -d` failure → inline dispatch for the whole invocation, stated in the com" ← 1/2: r1:I1
+- [I2] rejected: harness probe not runnable here — in the session's normal permission mode (not bypass), write one file under a fresh `mktemp -d` directory and dispatch one throwaway subagent with the three-sentence pointer; observe whether a permission prompt appears before the subagent reports the file's content — (ambiguous observation) — a Read of the prompt file outside the working directories may raise a permission prompt in default permission mode; this session runs in bypass mode, so no observation here can match or contradict the claim ← 1/2: r1:I2
+- [M1] fixed — no rule for a controller that holds no prompt-directory path: a resumed invocation starts in a new controller, and a context compaction loses the literal path mid-invocation; now a controller creates its own directory before its first round, and a lost path takes inline dispatch for the rest of the invocation → f93e9e6 ← 2/2: r1:M2, r2:M1
+- [M2] fixed — the step 2 fill command showed the carried block as an inline single-quoted value although the rule requires the @file form; an apostrophe in carried text would break the command → f93e9e6 ← 1/2: r1:M1
+- [M3] fixed — the verification-cycle table row did not say whether a round-1 cycle re-sends the carried block; now always the empty value → f93e9e6 ← 1/2: r2:M2
+

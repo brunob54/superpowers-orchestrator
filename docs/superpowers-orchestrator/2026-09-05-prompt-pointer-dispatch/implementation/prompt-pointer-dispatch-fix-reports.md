@@ -34,3 +34,54 @@ Command: `bash tests/smart-compress/run-tests.sh`
 Result: `Results: 87 passed / 0 failed`
 
 All seven covering test suites passed after the fixes. Commit SHA: `2ade665f1356714a3d292f5a3210f78127667c0d`.
+
+## Round 2
+
+Findings addressed: M1, M2, M3 (all in `skills/multi-code-review/SKILL.md`).
+
+- [M1] Reworded the "Before round 1 — the prompt directory" heading and
+  paragraph to "Before the first round this controller runs": `mktemp -d`
+  runs once per controller, before round 1 or before the round a resumed
+  invocation continues at; stated that a resumed controller always creates
+  its own fresh directory because the path is never logged, so file names
+  stay unique by construction; added a rule for the path going missing from
+  context mid-invocation — the controller never guesses it, never searches
+  for it, never runs `mktemp -d` a second time, and falls back to inline
+  dispatch for the rest of the invocation (as for a `mktemp -d` failure),
+  stating this in the completion report.
+- [M2] Changed the shown fill-command template's `CARRIED_BLOCK` argument
+  from the inline placeholder `'CARRIED_BLOCK=<carried block>'` to the real
+  `@<file>` form `'CARRIED_BLOCK=@<PROMPT_DIR>/round-1-carried.txt'`, and
+  added a note underneath that every other round passes the empty value
+  `'CARRIED_BLOCK='`, with every `NAME=` argument staying single-quoted.
+- [M3] Added words to the "Round `i`, verification cycle `c`, reviewers"
+  row's Value files cell stating that a verification cycle never reuses
+  `round-1-carried.txt` and always passes the empty `CARRIED_BLOCK=`,
+  because carried-findings triage happens on round 1 only. File names in
+  the table were not changed.
+
+Covering tests re-run:
+
+Command: `bash tests/reviewer-templates/run-tests.sh`
+Result: `Results: 55 passed, 0 failed`
+
+Command: `bash tests/in-run-rulings/run-tests.sh`
+Result: `Results: 496 passed, 0 failed`
+
+Command: `bash tests/fill-prompt/run-tests.sh`
+Result: `Results: 81 passed, 0 failed`
+
+Command: `bash tests/writing-plans/run-tests.sh`
+Result: `Results: 15 passed, 0 failed`
+
+Command: `bash tests/sdd-scripts/run-tests.sh`
+Result: `Results: 193 passed, 0 failed`
+
+Command: `bash tests/codex/run-unit-tests.sh`
+Result: `Results: 10 suites passed, 0 suites failed. All unit tests passed.`
+
+Command: `bash tests/smart-compress/run-tests.sh`
+Result: `Results: 87 passed / 0 failed`
+
+All seven covering test suites passed after the fixes. Commit SHA:
+`f93e9e6a191e3d5638b730ea8e1cce93be0c6aee`.
