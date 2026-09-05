@@ -443,8 +443,9 @@ code has been revised since, so a re-pass is meaningful):
 2. **Fill the round's reviewer prompt once, then dispatch M pointers in
    one message.**
    1. Write the round's values into `<PROMPT_DIR>` under the value-file
-      rule above: the lens's full instruction text from Lens Rotation
-      below, copied verbatim, to `<PROMPT_DIR>/round-<i>-lens.txt`; on
+      rule above: the lens's instruction text from Lens Rotation below —
+      the paragraph under the lens's bold heading, without the heading
+      line — copied verbatim, to `<PROMPT_DIR>/round-<i>-lens.txt`; on
       round 1 with a carried Minor-findings list, the carried block — the
       heading line `## Carried Findings`, then the line
       `Triage these carried Minor findings in your Carried Findings Triage section:`,
@@ -943,7 +944,8 @@ code has been revised since, so a re-pass is meaningful):
 | 3 | Security |
 | 4 | Test & coverage quality |
 
-Copy the full text below verbatim into `[LENS_INSTRUCTIONS]`. Every lens
+Copy the paragraph under the lens's bold heading below, without the
+heading line, verbatim into `[LENS_INSTRUCTIONS]`. Every lens
 carries a prose adaptation: for files that are instructions to an agent
 (skills, prompts, configs) rather than executable code, runtime-input
 attacks are vacuous — attack *agent misexecution* instead.

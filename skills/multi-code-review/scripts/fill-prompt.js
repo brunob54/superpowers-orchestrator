@@ -105,6 +105,18 @@ function extract(lines) {
     if (FENCE_RE.test(lines[i])) { close = i; break; }
   }
   if (close < 0) fail(EXIT_TEMPLATE, MALFORMED + 'the first fenced block is not closed');
+  // A fenced example written at column 0 inside the prompt body would be
+  // taken as the closing fence and would silently truncate the body. After a
+  // real closing fence the template continues with prose at column 0, so an
+  // indented first non-blank line after the chosen fence means the fence was
+  // inside the body.
+  for (let i = close + 1; i < lines.length; i++) {
+    if (isBlank(lines[i])) continue;
+    if (/^[ \t]/.test(lines[i])) {
+      fail(EXIT_TEMPLATE, MALFORMED + 'the first fenced block closes inside the prompt body');
+    }
+    break;
+  }
   let promptLine = -1;
   for (let i = open + 1; i < close; i++) {
     if (PROMPT_OPEN_RE.test(lines[i])) { promptLine = i; break; }

@@ -303,6 +303,18 @@ assert_eq "trailing whole-line placeholder given the empty value: exits 0" "$STA
 printf 'First line 3.\nSecond line.\n' > "$WORK/trailing-placeholder-expected.txt"
 assert_same "trailing whole-line placeholder given the empty value: output matches expected byte for byte (exactly one trailing newline)" "$WORK/trailing-placeholder.md" "$WORK/trailing-placeholder-expected.txt"
 
+bold "9. Round 4 fix: a fenced example inside the prompt body"
+# I3: the body of this template holds a fenced example whose opening fence is
+# at column 0. Taking that fence as the closing fence would truncate the body
+# (the marker line after the example would be lost) and still exit 0; the
+# template must be rejected instead.
+INNER_FENCE_OUT="$WORK/inner-fence.md"
+fill --template "$FIXTURES/inner-fence-template.md" --out "$INNER_FENCE_OUT" ROUND=1
+assert_eq "fenced example inside the body exits 2" "$STATUS" "2"
+assert_file_contains "inner fence: message says the template is malformed" "$ERRF" 'malformed template'
+assert_file_contains "inner fence: message gives the reason" "$ERRF" 'the first fenced block closes inside the prompt body'
+assert_absent "inner fence: nothing written" "$INNER_FENCE_OUT"
+
 echo
 bold "Results: $PASS passed, $FAIL failed"
 if [ "$FAIL" -gt 0 ]; then
