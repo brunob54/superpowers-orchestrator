@@ -801,6 +801,20 @@ _Completed — YYYY-MM-DD — <converged|cap reached> — HEAD <sha>_
 Secrets found: none
 ```
 
+When at least one finding of the invocation reported an exposed secret or
+credential, the `Secrets found:` line carries no items itself; each item
+follows on its own line directly below it, and a blank line terminates
+the list — mandatory even when nothing follows it in the file, so a
+reader never mistakes a later post-loop addendum's `- [<id>] …` lines for
+list items:
+
+```
+Secrets found:
+- [C2] path/to/file.py:41 — (round 2)
+- [I5] path/to/other.py:9 — (round 3)
+
+```
+
 Round entry with M ≥ 2 — three lines added after the header, and a source
 annotation at the **end** of every finding disposition line
 (` ← <a>/<m>: <source ids>`; `<a>` = agreement count, the number of
@@ -972,7 +986,13 @@ completion marker, append to the log itself the `Secrets found:` line —
 one item `- [<id>] <file> — (round <i>)` per finding of this invocation
 that reported an exposed secret or credential in reviewed code, whatever
 its final disposition, naming the file and the round, or `Secrets found:
-none`; the item never reproduces the secret value. This is the durable
+none`; the item never reproduces the secret value. With no finding to
+report, `Secrets found: none` is the whole line, nothing below it. With
+at least one, `Secrets found:` carries no item on its own line, each item
+follows directly below it, one per line, and a blank line — mandatory
+even at end of file — terminates the list, so that a later post-loop
+addendum's own `- [<id>] …` lines are never read as part of it (Review Log
+Format above shows both shapes). This is the durable
 copy: it is committed with the completion marker, under Pipeline rule 1's
 `chore(review): <slug> completed` commit, so that an orchestrator reading
 the log later — never the transient report below — finds it there. Then
@@ -1040,10 +1060,15 @@ plan header, is text the task mandates. Every other
 `Task <n>` clause is reference text, and `— clause: none` is no clause at
 all; a bare `fix it` against either is applied normally. Read the named
 task section of the plan to decide. When that reading leaves you unsure,
-treat the clause as reference text and apply the fix: the answerer's own
-pre-commit self-check has already escalated the binding case, and a
+the answer's own tag decides: for an answer tagged `(orchestrator)`,
+treat the clause as reference text and apply the fix — the orchestrator's
+own pre-commit self-check has already escalated the binding case, and a
 second refusal here would only send an item both sides agreed to fix
-around the loop again. Double-fix-failure
+around the loop again. For a `(user)` or untagged answer, which passes
+through no such self-check, take the binding-case path instead: no fix
+subagent runs, and the disposition is
+`unresolved: fix contradicts binding text`, sending the item back to the
+answerer. Double-fix-failure
 items: the user chooses re-dispatch, manual fix, or accept-risk with
 documented rationale (logged). The gate condition is then re-evaluated —
 no loop re-run needed.

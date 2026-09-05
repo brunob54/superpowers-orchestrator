@@ -158,7 +158,15 @@ Agent tool (general-purpose):
        `chore(plan): <slug> task <n> complete`; find it with
        `git log --grep "task <n> complete"`, which also matches ticks
        from before the slug was added); with neither, the branch's merge-base with the
-       default branch. Never fall back to your own starting HEAD — on a
+       default branch. **A tick commit found while the checkbox is
+       unticked is stale, never REVIEW_BASE**: the checkbox is unticked
+       only when the run has never completed the task, or a Phase 3
+       ruling revert unticked it again after completion (`SKILL.md`,
+       Resume step 3) — the found tick commit is that earlier attempt's,
+       sitting after all of the task's original work, so using it as
+       REVIEW_BASE would leave that work out of the review package;
+       treat this as "no ledger line and no tick commit" and fall
+       through to the merge-base rule instead. Never fall back to your own starting HEAD — on a
        retried controller it already contains the crashed attempt's
        commits, so `git log REVIEW_BASE..HEAD` comes back empty and
        those orphans silently bypass the task-review gate. Then check
@@ -208,7 +216,12 @@ Agent tool (general-purpose):
   `### Conflict <k>` section it answers; a bare `[task <n>]` line from
   the user means `[task <n>/1]`), tagged `(orchestrator)` or
   `(user)`; authoritative either way — the controller hands each to
-  the task's implementer as authoritative instead of re-deriving it.
+  the task's implementer as authoritative instead of re-deriving it. A
+  `[task <n>/<k>]` line reaches only task `<n>`'s implementer, never a
+  different task the same conflict touched: a `plan governs` answer for
+  a conflict between tasks has no effect on the other task; only an
+  `amend plan: …` answer reaches it, and only through the amended plan
+  text below, which every task's implementer reads directly.
   An `amend plan: …` answer is the record of an amendment the
   orchestrator has already made and committed: the plan file already
   reads the amended way, so the implementer follows the amended plan
