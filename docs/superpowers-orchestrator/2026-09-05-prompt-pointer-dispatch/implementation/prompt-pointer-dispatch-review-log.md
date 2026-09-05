@@ -61,3 +61,20 @@ _Invocation 1 — 2026-09-05 — N=2 M=2 — BASE..HEAD b9b9ffb..a9d5039 — bra
 - [M5] fixed — fill-prompt.js dropped trailing blank lines before the fill, so a last-line whole-line placeholder with an empty value left two trailing newlines; now dropped after the fill, with a test → 32ecce8 ← 1/2: r2:M2
 - [M6] rejected: duplicate of round 1 [M19], an open user-decision item (all dispatches share one flat prompt directory) ← 1/2: r2:M3
 
+## Round 2 verification 2 — Adversarial red-team — fable
+**Reviewers:** M=2, usable 2/2
+**Reviewer verdicts:** r1: 0 Critical, 1 Important, 3 Minor | r2: 0 Critical, 2 Important, 3 Minor
+**Sources mapped:** 9/9
+**Reviewer verdict:** 0 Critical, 2 Important, 6 Minor
+### Dispositions
+- [I1] rejected: harness probe not runnable here — from the controller's session in the permission mode an orchestrated run uses (not bypass), Write one line to `<fresh mktemp -d dir>/probe.txt` with the Write tool and observe whether a permission prompt appears (then a throwaway subagent's Read of that file is the second probe) — (not settled by one probe) — value-file Writes and prompt-file Reads outside the working directories may raise permission prompts or be auto-denied in a non-bypass session, stalling the loop or making every round inconclusive; this session runs in bypass mode ← 2/2: r1:I1, r2:I2
+- [I2] user-decision — 'once per controller' is read literally by a controller that runs a second direct-mode invocation in the same session: the second invocation reuses the directory, every fill hits an existing file name, exits 5 and falls back to inline dispatch; the suggested wording 'once per invocation' contradicts the Global Constraint (plan-mandated) — at skills/multi-code-review/SKILL.md:332 — clause: Global Constraints "The prompt directory is created once per controller with `mktemp -d`, outside the checkout, before round 1; the skill text never shows `$PROMPT_DIR` or any othe" ← 1/2: r2:I1
+- [M1] carried — the verification-cycle table row reuses round-<i>-lens.txt, which a resumed controller never wrote for an earlier round's post-loop re-review; the fill exits 5 and that re-review goes inline ← 1/2: r1:M1
+- [M2] carried — fill-prompt.js: the existing-file check followed by rename is not atomic against a concurrent fill of the same --out; the comment claims a guarantee that holds for sequential fills only ← 1/2: r1:M2
+- [M3] carried — the pointer sentence names 'the Read tool'; a platform whose file-reading tool has another name has no fallback stated (the skill already refuses platforms without the Agent tool) ← 1/2: r1:M3
+- [M4] carried — a harmless re-run of an already successful fill now exits 5 'file already exists', and step 2.3 sends the dispatch inline although the existing file is complete; the step could run test -s and dispatch the pointer instead ← 1/2: r2:M1
+- [M5] carried — the file-name table has no row for the single after-loop verification re-review, so its cycle index <c> is unstated and may collide with an in-loop cycle file ← 1/2: r2:M2
+- [M6] carried — the lens text is written with a Bash heredoc that the dangerous-command hook scans; the security lens text is one character away from a pattern match, and the no-retry rule would then send every security round inline ← 1/2: r2:M3
+
+_Completed — 2026-09-05 — cap reached — HEAD 32ecce86b51b9f578c1b96a7b75c3936734ee189_
+Secrets found: none
