@@ -16,6 +16,20 @@
 # Contract source: docs/superpowers-orchestrator/
 # 2026-09-02-autonomous-in-run-decisions/specs/
 # autonomous-in-run-decisions-design.md, section R11.
+#
+# Needle strength (F5, review round 16): a handful of named design
+# properties — the answer-tag default, guard 4's `(user)` lookup and its
+# escalate-when-unsure branch, the closed escalation-label set, and the
+# fork independence rules — carry an explicit negative assertion that the
+# INVERTED sentence does not satisfy the needle, on top of the ordinary
+# positive pin, because a short bare-word needle can survive an inversion
+# of the sentence it was meant to guard (a `plan governs` -> `escalated`
+# inversion or similar keeps a bare `escalated` needle satisfied). Beyond
+# this named set, judging whether a given needle is strong enough to catch
+# every plausible inversion of its sentence is a reviewer's call, not
+# something a further mechanical sweep of this file can close on its own:
+# that residue is a stated limitation of this suite, not a gap left to fix
+# here.
 
 set -u
 
@@ -85,10 +99,20 @@ line_starting_with_after() {
 
 # Assert that the fixed string $3 occurs in file $2 on a line at or after
 # line $4 (inclusive) and before line $5 (exclusive). $6 is the match mode:
-# "exact" (case-sensitive byte pin) or "fragment" (case-insensitive).
+# "exact" (case-sensitive byte pin, unfolded — matched on one physical line)
+# or "fragment" (case-insensitive, folded — delegates to
+# assert_in_range_folded below, so every free-text fragment folds across a
+# line wrap by construction and a caller of either name gets the same
+# wrap-tolerant match; forward-referencing that function here is safe
+# because both are defined, in this same block, before either is ever
+# called).
 assert_in_range() { # desc file needle start end mode
   local desc="$1" file="$2" needle="$3" start="$4" end="$5" mode="$6"
   local hit
+  if [ "$mode" = "fragment" ]; then
+    assert_in_range_folded "$desc" "$file" "$needle" "$start" "$end"
+    return
+  fi
   if [ -z "$start" ] || [ -z "$end" ]; then
     bad "$desc (could not locate the range to search in ${file#$ROOT/})"
     return
@@ -103,10 +127,6 @@ assert_in_range() { # desc file needle start end mode
     hit="$(needle="$needle" awk -v a="$start" -v b="$end" \
       'BEGIN { n = ENVIRON["needle"] }
        NR >= a && NR < b && index($0, n) > 0 { print NR; exit }' "$file")"
-  elif [ "$mode" = "fragment" ]; then
-    hit="$(needle="$needle" awk -v a="$start" -v b="$end" \
-      'BEGIN { n = ENVIRON["needle"] }
-       NR >= a && NR < b && index(tolower($0), tolower(n)) > 0 { print NR; exit }' "$file")"
   else
     bad "$desc (unknown match mode '$mode', expected 'exact' or 'fragment')"
     return
@@ -873,6 +893,18 @@ assert_in_range_folded "only the first design item uses the fork path" \
 assert_in_range_folded "consolidation reasoning waits for the item's round" \
   "$ORCH_SKILL" "only after that item's round has fully returned" \
   "$FORK_LINE" "$FORK_END"
+# F5: the fork independence rules, inverted. A later item's forks — or the
+# tie-break reviewer — inheriting the earlier consolidation reasoning is
+# exactly the contamination this design avoids, so a regression back to
+# dispatching them AS forks (rather than fresh, non-inheriting subagents)
+# must fail here even though the positive pins above still name the
+# correct rule elsewhere in the same range.
+assert_absent_in_range_folded_nobacktick "later design items are never dispatched as forks instead of fresh subagents" \
+  "$ORCH_SKILL" 'dispatched instead as forks' \
+  "$FORK_LINE" "$FORK_END" fragment
+assert_absent_in_range_folded_nobacktick "the tie-break reviewer is never said to inherit the consolidation reasoning it exists to check" \
+  "$ORCH_SKILL" 'so that it inherits the consolidation reasoning it exists to check' \
+  "$FORK_LINE" "$FORK_END" fragment
 
 bold "4. Ruling record, answers and plan amendment (R4, R5)"
 for pin in '-open-decisions.md' '**Follow-up:**' '## Ruling <n>'; do
@@ -988,12 +1020,32 @@ assert_in_range_folded "the Phase 3 answer set carries every ruled line of the r
   "$ORCH_SKILL" 'every ruled `[task <n>/<k>]` line recorded for this run, for every task, whatever batch the task belongs to' \
   "$ANSWERS_LINE" "$ANSWERS_END"
 for frag in '(amended by ruling' 'never apply the amendment twice' \
-            'new invocation' 'untagged' 'sides against binding plan text' \
+            'sides against binding plan text' \
             '**The quoted clause, and how it is compared.**' \
             'test whether the quote is a prefix of it'; do
   assert_in_range "answer fragment '$frag'" \
     "$ORCH_SKILL" "$frag" "$ANSWERS_LINE" "$ANSWERS_END" fragment
 done
+# F5: 'untagged' and 'new invocation' used to be bare-word fragments above —
+# short enough that inverting their owning sentence's meaning still contains
+# the bare word and the check stays green. Strengthened to the owning
+# sentence, with an explicit negative assertion that the inverted wording is
+# absent. Worked example this guards: inverting "A line without a
+# `(<who>)` tag is a user line" to "...is an orchestrator line" used to keep
+# the bare `untagged` needle satisfied, after which guard 4 finds no
+# `(user)` answer and never fires.
+assert_in_range_folded "answer-tag default: a line without a tag is a user line" \
+  "$ORCH_SKILL" 'A line without a `(<who>)` tag is a user line' \
+  "$ANSWERS_LINE" "$ANSWERS_END"
+assert_absent_in_range_folded_nobacktick "answer-tag default is never inverted to an orchestrator line" \
+  "$ORCH_SKILL" 'tag is an orchestrator line' \
+  "$ANSWERS_LINE" "$ANSWERS_END" fragment
+assert_in_range_folded "an amend-plan ruling in Phase 4 always starts a new invocation over the amended plan" \
+  "$ORCH_SKILL" 'ALWAYS starts a new invocation over the amended plan' \
+  "$ANSWERS_LINE" "$ANSWERS_END"
+assert_absent_in_range_folded_nobacktick "the amend-plan re-dispatch is never inverted to a fix-only path with no new invocation" \
+  "$ORCH_SKILL" 'starts a fix commit over the amended plan' \
+  "$ANSWERS_LINE" "$ANSWERS_END" fragment
 
 # The writes of one ruling have a fixed order, so a crash cannot leave an
 # amendment marker with no ruling record behind it.
@@ -1060,14 +1112,45 @@ assert_in_range_folded "a re-derived conflict keeps its answered number" \
 # suite already pins the loop's copy of this rule (section 7); without this
 # pin, only that side is protected, and the two copies could drift apart with
 # the suite green.
-assert_in_range_folded "orchestrator's binding-text definition names Global Constraints, Exact content, and pre-7.7.0 mandated text" \
-  "$ORCH_SKILL" "a \`**Global Constraints:**\` entry or an \`**Exact content:**\` block; in a plan written before that note, any mandated text" \
+# Amendment 21 (R14): the definition no longer enumerates locations itself —
+# it reads the plan's own `**Body authority:**` note and applies what that
+# note says, so a finding against a stated `**Contract:**` is a plan
+# conflict too; a plan with no such note keeps the pre-note default (any
+# mandated text is binding). Pinned on the note-reading and the two
+# consequences, never on a restated location list — the enumeration itself
+# now lives in exactly one place, the plan header's own note.
+assert_in_range_folded "orchestrator's binding-text definition reads the plan's Body authority note" \
+  "$ORCH_SKILL" 'A plan conflict is a collision with text the plan'"'"'s `**Body authority:**` note' \
   "$ANSWERS_LINE" "$ANSWERS_END"
+assert_in_range_folded "orchestrator's binding-text definition: a Contract-contradicting finding is a plan conflict, on the note's own authority" \
+  "$ORCH_SKILL" 'the note already treats a finding against a stated `**Contract:**` as such a collision' \
+  "$ANSWERS_LINE" "$ANSWERS_END"
+assert_in_range_folded "orchestrator's binding-text definition: a plan with no such note keeps the pre-note default" \
+  "$ORCH_SKILL" 'A plan whose header carries no such note has none of this: there, any mandated text is binding instead, as before' \
+  "$ANSWERS_LINE" "$ANSWERS_END"
+# The old enumeration this amendment replaced must be GONE, not merely
+# superseded: a positive pin on the note-reading sentence alone would stay
+# green even if the base revision's own list were re-added beside it, and
+# the two skills would carry the binding set as two separately-editable
+# copies again — the drift R14 exists to prevent.
+assert_absent_in_range_folded_nobacktick "orchestrator's binding-text definition no longer restates the location list itself (R14 — single source is the plan's own note)" \
+  "$ORCH_SKILL" 'binding text — under the 7.7.0 Body-authority note, a' \
+  "$ANSWERS_LINE" "$ANSWERS_END" fragment
 # Plan amendment step 1: the binding clause is REPLACED in place, never
 # merely annotated — an annotation would leave the binding clause in force
 # and the next review would raise the same finding again.
 assert_in_range_folded "plan amendment step 1 replaces the binding clause in place" \
-  "$ORCH_SKILL" '**Edit the binding clause in place** — replace the Global Constraints entry, the Exact-content block, or the mandated sentence with the amended text' \
+  "$ORCH_SKILL" '**Edit the binding clause in place** — replace the Global Constraints entry, the Exact-content block, the contradicted `**Contract:**` text, or a pre-note plan'"'"'s mandated sentence, with the amended text' \
+  "$ANSWERS_LINE" "$ANSWERS_END"
+# Amendment 21 (R14): the decided-wording marker is bounded to match — it is
+# written ONLY onto a Global Constraints entry or an Exact-content block, so
+# an amended Contract (or a pre-note plan's amended mandated sentence) never
+# becomes decided wording and stays open to a later finding.
+assert_in_range_folded "amended-clause marker is bounded to Global Constraints or Exact-content only" \
+  "$ORCH_SKILL" 'The `(amended by ruling <n>)` marker is then appended ONLY when the edited clause is a Global Constraints entry or an Exact-content block' \
+  "$ANSWERS_LINE" "$ANSWERS_END"
+assert_in_range_folded "an amended Contract gets no marker and never becomes decided wording" \
+  "$ORCH_SKILL" 'an amended `**Contract:**`, and a pre-note plan'"'"'s amended mandated sentence, get no marker and so never become decided wording' \
   "$ANSWERS_LINE" "$ANSWERS_END"
 # Plan amendment step 2: the audit note's placement — immediately after the
 # block that holds the edited clause — is what lets the resume path's revert
@@ -1280,11 +1363,36 @@ done
 assert_in_range_folded "guard 4 escalates when the clause match is unsure" \
   "$ORCH_SKILL" 'an unsure match never becomes a ruling' \
   "$GUARDS_LINE" "$GUARDS_END"
+# F5: guard 4's `(user)` lookup and its escalate-when-unsure branch, inverted.
+# `(orchestrator)` never appears in the guards section on its own (only the
+# `(user)` follow-up guard 4 reads), so this is a safe, specific negative:
+# it would only fire if guard 4's lookup were flipped to the tag a ruling's
+# own answer already carries, which would make guard 4 compare a ruling
+# against itself instead of against an earlier user decision.
+assert_absent_in_range_folded_nobacktick "guard 4's (user) lookup is never inverted to (orchestrator)" \
+  "$ORCH_SKILL" 'recorded answer tagged (orchestrator)' \
+  "$GUARDS_LINE" "$GUARDS_END" fragment
+# Dropping the word "never" turns "an unsure match never becomes a ruling"
+# into its own opposite while keeping most of the same bytes; check the
+# opposite phrasing directly rather than only the positive form above.
+assert_absent_in_range_folded_nobacktick "guard 4's escalate-when-unsure branch is never inverted to always ruling" \
+  "$ORCH_SKILL" 'unsure match becomes a ruling' \
+  "$GUARDS_LINE" "$GUARDS_END" fragment
 # A follow-up recorded on a `forced` or `design` entry has no escalation class
 # of its own, so guard 4 names the fallback label from the same closed list.
 assert_in_range_folded "guard 4 names a fallback class for a forced or design entry" \
   "$ORCH_SKILL" 'which has no escalation class of its own' \
   "$GUARDS_LINE" "$GUARDS_END"
+# F5: the closed label set, strengthened and inverted. The predicate's own
+# five-bullet list (section 1) is already checked structurally; this is
+# guard 4's separate cross-reference to that same closed set, for its
+# forced/design fallback label.
+assert_in_range_folded "guard 4's fallback label is always one of the five of the closed list" \
+  "$ORCH_SKILL" 'the label is always one of the five of the closed list' \
+  "$GUARDS_LINE" "$GUARDS_END"
+assert_absent_in_range_folded_nobacktick "the closed label set is never widened to six in guard 4's cross-reference" \
+  "$ORCH_SKILL" 'one of the six of the closed list' \
+  "$GUARDS_LINE" "$GUARDS_END" fragment
 # Guard 1's operative clause: a `plan governs` answer for which no clause can
 # be quoted is not a rejection at all. Without it, the fragment loop's short
 # 'a Critical is never rejected' pin above leaves this sentence unprotected.
@@ -1317,6 +1425,20 @@ assert_in_range_folded "cap tests the Re-dispatch value, not the line's first wo
 # happened.
 assert_in_range_folded "cap counts from the later of the invocation line and the last stop" \
   "$ORCH_SKILL" "the orchestration log's latest \`_Invocation\` line and its latest \`## STOPPED\` entry, so that a resume after a stop starts from zero" \
+  "$LOG_ENTRY_LINE" "$LOG_ENTRY_END"
+# F2: a resumed override line (Resume step 5's per-parameter override,
+# `_Invocation <k> — … — resumed_`) answers no open item, so it must not
+# reset the cap's anchor: without this, a unit that had already exhausted
+# the cap gets a fresh 3 rulings after a param-only resume, and the
+# `escalated (chain)` stop never fires.
+assert_in_range_folded "the cap anchor ignores a resumed invocation line" \
+  "$ORCH_SKILL" 'The latest `_Invocation` line for this purpose is never one that ends `— resumed_`' \
+  "$LOG_ENTRY_LINE" "$LOG_ENTRY_END"
+assert_in_range_folded "a resumed line answers no open item, so it must not move the anchor" \
+  "$ORCH_SKILL" "Resume step 5's per-parameter override answers no open item, so it must not move the anchor" \
+  "$LOG_ENTRY_LINE" "$LOG_ENTRY_END"
+assert_in_range_folded "only a first invocation line and a STOPPED entry move the cap anchor" \
+  "$ORCH_SKILL" 'only a first invocation line and a `## STOPPED` entry do' \
   "$LOG_ENTRY_LINE" "$LOG_ENTRY_END"
 # A stop drops no ruling, and skips an entry the user already answered — the
 # same Follow-up exclusion the rebuild path in Resume step 3 states.
@@ -1384,6 +1506,17 @@ RESUME_LINE="$(first_line_of "$ORCH_SKILL" '## Resume')"
 assert_in_range_folded "Phase 3 routes BLOCKED task=<n> to the predicate" \
   "$ORCH_SKILL" 'return goes through the Phase 3 discriminator of `## In-run rulings`' \
   "$PHASE3_LINE" "$PHASE4_LINE"
+# F4: the sixth negative assertion this branch's removals need — the base
+# revision's unconditional ``BLOCKED` -> major error -> stop` in Phase 3
+# step 5 must be GONE, not merely superseded, the same way the two Phase 4
+# removals and the three stop-policy removals above and below are checked:
+# a positive pin on the new routing sentence alone would stay green even if
+# the old unconditional stop were re-added beside it. Folded and
+# backtick-insensitive like its five siblings, because the file's own style
+# wraps `BLOCKED` in backticks.
+assert_absent_in_range_folded_nobacktick "Phase 3 no longer stops directly and unconditionally on a BLOCKED return (old wording absent)" \
+  "$ORCH_SKILL" 'BLOCKED → major error → stop' \
+  "$PHASE3_LINE" "$PHASE4_LINE" fragment
 assert_in_range_folded "Phase 4 routes open items to the predicate" \
   "$ORCH_SKILL" '`## In-run rulings`: classify each open item by its review-log id' \
   "$PHASE4_LINE" "$PHASE5_LINE"
@@ -1433,6 +1566,12 @@ assert_in_range_folded "Phase 5 report carries the Secrets found list under the 
 # entries, never the transient completion report.
 assert_in_range_folded "Phase 5 gathers Secrets found from the log's own Secrets found line, not the transient report" \
   "$ORCH_SKILL" "gathered from that \`Secrets found:\` line of the code review log's invocation entries" \
+  "$PHASE5_LINE" "$LOG_FORMAT_LINE"
+# F3: the rest of the same Phase 5 sentence — naming the file and the round,
+# or its `Secrets found: none` form — was left unpinned; a needle can be
+# written against the text as it stands, so no SKILL wording changes here.
+assert_in_range_folded "Phase 5 report's Secrets found item naming, and its none form" \
+  "$ORCH_SKILL" 'naming the file and the round, or `Secrets found: none`' \
   "$PHASE5_LINE" "$LOG_FORMAT_LINE"
 # A `BLOCKED task=<n>` return writes no batch entry, so the ruling's own
 # `## RULING` entry is the boundary entry Resume step 3 finds the log ending
@@ -1538,25 +1677,45 @@ assert_in_range_folded "resume states -F is mandatory in both spellings of the l
 assert_in_range_folded "resume gives the metacharacter reason for -F" \
   "$ORCH_SKILL" 'a slug holding `.`, `*` or `[` either matches unintended subjects' \
   "$RESUME_LINE" "$RULINGS_LINE"
-# What is forbidden is the BARE `decided (user)`, not the label itself: the
-# correct wording enumerates both tags, and the sibling files are required to
-# carry that enumeration. So a `decided (user)` occurrence fails this check
-# only when it is not also accompanied by `decided (orchestrator)`. The range
-# is folded first, the way every other positive check in this suite folds its
-# range: a per-physical-line scan would false-fail a compliant sentence whose
-# `decided (user)` half and `decided (orchestrator)` half land on different
-# lines after reflow.
+# What is forbidden is a `(user)` tag with no paired `(orchestrator)` tag
+# beside it: the correct wording enumerates both tags together (pinned
+# exactly above), and the sibling files are required to carry that
+# enumeration. The range is folded first, the way every other positive
+# check in this suite folds its range: a per-physical-line scan would
+# false-fail a compliant sentence whose `(user)` half and `(orchestrator)`
+# half land on different lines after reflow.
+# F5 (carried Minor): PER OCCURRENCE, not whole-range co-occurrence. The
+# previous version tested only whether the two tags occur ANYWHERE in the
+# whole range (`index(h, "decided (user)") > 0 && index(h, "decided
+# (orchestrator)") == 0`), which — besides pinning a `decided (user)` needle
+# that this branch's own rewrite no longer writes in this range at all (it
+# writes `tagged \`(user)\`` and `tagged \`(orchestrator)\`` instead, so the
+# old check passed vacuously on zero matches either way) — could never fail
+# again once a single `(orchestrator)` tag stood ANYWHERE in the range, even
+# if a DIFFERENT occurrence's `(user)` tag had lost its own paired
+# `(orchestrator)` tag. The two tags are written in matched pairs in this
+# range (Resume step 3's rebuilt `[RESUME_ANSWER]`), so counting each
+# tag's occurrences and requiring equal, non-zero counts catches a
+# regression that drops one member of a pair, which a whole-range existence
+# test cannot.
+count_occurrences() { # haystack needle
+  hay="$1" needle="$2" awk 'BEGIN {
+    h = ENVIRON["hay"]; n = ENVIRON["needle"]; c = 0; i = 1
+    while ((p = index(substr(h, i), n)) > 0) { c++; i += p + length(n) - 1 }
+    print c
+  }'
+}
 if [ -n "$RESUME_LINE" ] && [ -n "$RULINGS_LINE" ] && [ "$RESUME_LINE" -lt "$RULINGS_LINE" ]; then
   DECIDED_FOLDED="$(fold_range "$ORCH_SKILL" "$RESUME_LINE" "$RULINGS_LINE")"
-  if hay="$DECIDED_FOLDED" awk \
-       'BEGIN { h = ENVIRON["hay"]
-                exit (index(h, "decided (user)") > 0 && index(h, "decided (orchestrator)") == 0) ? 1 : 0 }'; then
-    ok "Resume step 3 never names decided (user) without decided (orchestrator) beside it"
+  USER_TAG_COUNT="$(count_occurrences "$DECIDED_FOLDED" '(user)')"
+  ORCH_TAG_COUNT="$(count_occurrences "$DECIDED_FOLDED" '(orchestrator)')"
+  if [ "$USER_TAG_COUNT" -gt 0 ] && [ "$USER_TAG_COUNT" = "$ORCH_TAG_COUNT" ]; then
+    ok "Resume step 3 pairs (user) and (orchestrator) tags in equal counts, checked per occurrence ($USER_TAG_COUNT each)"
   else
-    bad "Resume step 3 names a bare decided (user), line wraps folded"
+    bad "Resume step 3's (user)/(orchestrator) tag counts differ or are zero ($USER_TAG_COUNT vs $ORCH_TAG_COUNT) in range $RESUME_LINE..$RULINGS_LINE of ${ORCH_SKILL#$ROOT/} — a per-occurrence pairing failure"
   fi
 else
-  bad "Resume step 3 never names decided (user) without decided (orchestrator) beside it (the range $RESUME_LINE..$RULINGS_LINE is missing, empty or inverted)"
+  bad "Resume step 3 never names a (user) tag without an (orchestrator) tag beside it (the range $RESUME_LINE..$RULINGS_LINE is missing, empty or inverted)"
 fi
 # The revert step produces the commit hash itself, under the same
 # exact-subject filter as the landed-check, and copies only the clause out of
@@ -1886,6 +2045,17 @@ assert_in_range_folded "an Exact-content marker stands at the end of the introdu
 assert_in_range_folded "completion report carries a Secrets found line, one item per exposed-secret finding (R13)" \
   "$MCR_SKILL" 'one item `- [<id>] <file> — (round <i>)` per finding of this invocation that reported an exposed secret or credential in reviewed code' \
   "$MCR_AFTER_LOOP_LINE" "$MCR_ERROR_HANDLING_LINE"
+# F3: the rest of that same sentence was left unpinned — the `Secrets
+# found: none` alternative and, critically, that the item never reproduces
+# the secret value. Pinned in the same scope as the sentence above, so a
+# rewrite that dropped either half would still fail here even if it kept
+# the "reported an exposed secret" half the pin above locates.
+assert_in_range_folded "the Secrets found log line names the none alternative" \
+  "$MCR_SKILL" 'naming the file and the round, or `Secrets found: none`' \
+  "$MCR_AFTER_LOOP_LINE" "$MCR_ERROR_HANDLING_LINE"
+assert_in_range_folded "the Secrets found log item never reproduces the secret value" \
+  "$MCR_SKILL" 'the item never reproduces the secret value' \
+  "$MCR_AFTER_LOOP_LINE" "$MCR_ERROR_HANDLING_LINE"
 # I2: the `Secrets found:` line gets a durable home in the log itself — not
 # only the transient completion report — committed with the completion
 # marker under Pipeline rule 1's completed commit, so that "gathered from
@@ -1948,16 +2118,33 @@ assert_in_range "addendum shapes include an unresolved line" \
 assert_in_range_folded "the binding-text test is stated where the refusal rule lives" \
   "$MCR_SKILL" 'Which text is binding — one test' \
   "$MCR_AFTER_LOOP_LINE" "$MCR_ERROR_HANDLING_LINE"
-assert_in_range "binding-text test names the Exact content block" \
-  "$MCR_SKILL" '`**Exact content:**` block' \
-  "$MCR_AFTER_LOOP_LINE" "$MCR_ERROR_HANDLING_LINE" exact
-# The test's own operative clauses: the two pins above only locate the test's
-# heading and one of its terms; nothing yet pins what the test actually
+# Amendment 21 (R14): the test no longer enumerates locations itself — it
+# reads the plan's own `**Body authority:**` note and applies what that note
+# says, so a finding against a stated `**Contract:**` is a plan conflict
+# too; a plan with no such note keeps the pre-note default (any mandated
+# text is binding). Pinned on the note-reading and its two consequences,
+# never on a restated location list.
+assert_in_range_folded "binding-text test reads the plan's Body authority note" \
+  "$MCR_SKILL" "Read the plan header's \`**Body authority:**\` note" \
+  "$MCR_AFTER_LOOP_LINE" "$MCR_ERROR_HANDLING_LINE"
+assert_in_range_folded "binding-text test: a Contract-contradicting finding is a plan conflict, on the note's own authority" \
+  "$MCR_SKILL" "the note already treats a finding against a stated \`**Contract:**\` as a plan conflict" \
+  "$MCR_AFTER_LOOP_LINE" "$MCR_ERROR_HANDLING_LINE"
+assert_in_range_folded "binding-text test: a plan with no such note keeps the pre-note default" \
+  "$MCR_SKILL" 'A plan whose header carries no such note keeps today'"'"'s behaviour instead: any mandated `Task <n>` text is binding there' \
+  "$MCR_AFTER_LOOP_LINE" "$MCR_ERROR_HANDLING_LINE"
+# The old enumeration this amendment replaced must be GONE, not merely
+# superseded: a positive pin on the note-reading sentence alone would stay
+# green even if the base revision's own list were re-added beside it, and
+# the two skills would carry the binding set as two separately-editable
+# copies again — the drift R14 exists to prevent.
+assert_absent_in_range_folded_nobacktick "binding-text test no longer restates the location list itself (R14 — single source is the plan's own note)" \
+  "$MCR_SKILL" 'clause: Global Constraints` location is binding on its face' \
+  "$MCR_AFTER_LOOP_LINE" "$MCR_ERROR_HANDLING_LINE" fragment
+# The test's own operative clauses: the pins above only locate the test's
+# heading and its note-reading; nothing yet pins what the test actually
 # decides — whether a `fix it` answer is applied or refused with
 # `unresolved: fix contradicts binding text`.
-assert_in_range_folded "binding-text test: a Global Constraints clause is binding on its face" \
-  "$MCR_SKILL" '`— clause: Global Constraints` location is binding on its face' \
-  "$MCR_AFTER_LOOP_LINE" "$MCR_ERROR_HANDLING_LINE"
 assert_in_range_folded "binding-text test: every other Task <n> clause is reference text, and a bare clause is none at all" \
   "$MCR_SKILL" 'Every other `Task <n>` clause is reference text, and `— clause: none` is no clause at all; a bare `fix it` against either is applied normally.' \
   "$MCR_AFTER_LOOP_LINE" "$MCR_ERROR_HANDLING_LINE"
@@ -1981,6 +2168,11 @@ assert_in_range_folded "plan governs clause is written under the full normalizat
 assert_in_range_folded "loop reads the answer line's tag, and treats an untagged line as a user line" \
   "$MCR_SKILL" 'tagged `(orchestrator)` or `(user)`; an untagged line is a user line' \
   "$MCR_AFTER_LOOP_LINE" "$MCR_ERROR_HANDLING_LINE"
+# F5: the same inversion guard as the orchestrator's copy above, on the
+# loop's own copy of the tag-default rule.
+assert_absent_in_range_folded_nobacktick "loop's tag default is never inverted to an orchestrator line" \
+  "$MCR_SKILL" 'untagged line is an orchestrator line' \
+  "$MCR_AFTER_LOOP_LINE" "$MCR_ERROR_HANDLING_LINE" fragment
 assert_in_range_folded "loop takes <who> from that tag" \
   "$MCR_SKILL" 'or `decided (user): <answer>`, `<who>` taken from the tag' \
   "$MCR_AFTER_LOOP_LINE" "$MCR_ERROR_HANDLING_LINE"
@@ -2095,6 +2287,11 @@ done
 assert_in_range_folded "code-review-loop Deviation 5 treats an untagged line as a user line" \
   "$LOOP_PROMPT" 'an untagged line is a user line' \
   "$LOOP_DEV5_LINE" "$LOOP_RETURN_LINE"
+# F5: the same inversion guard as the two skill-side copies above, on the
+# template's own copy of the tag-default rule.
+assert_absent_in_range_folded_nobacktick "code-review-loop Deviation 5's tag default is never inverted to an orchestrator line" \
+  "$LOOP_PROMPT" 'untagged line is an orchestrator line' \
+  "$LOOP_DEV5_LINE" "$LOOP_RETURN_LINE" fragment
 # The consuming side of the qualified Phase 4 id: review-log ids are re-used
 # per invocation, so a carried line naming another entry must be dropped, not
 # applied to whatever finding now holds that id.

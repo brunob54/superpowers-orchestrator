@@ -1055,17 +1055,19 @@ suffix every `unresolved:` line carries ("Self-sufficient open-item
 lines") holds the clause, so the disposition text never repeats it. That
 item counts as unresolved in the return and is sent back to the
 answerer. **Which text is binding — one test, so that the answerer and
-this loop apply the same one.** A `— clause: Global Constraints`
-location is binding on its face. A `— clause: Task <n>` location is
-binding only when the quoted clause sits in that task's
-`**Exact content:**` block — its introducing `**Exact content:**
-<reason>` paragraph line together with the fenced block or block quote it
-introduces — or, in a plan written before the `**Body authority:**` note
-that the plan-writing skill (`../writing-plans/SKILL.md`) puts in every
-plan header, is text the task mandates. Every other
-`Task <n>` clause is reference text, and `— clause: none` is no clause at
-all; a bare `fix it` against either is applied normally. Read the named
-task section of the plan to decide. When that reading leaves you unsure,
+this loop apply the same one.** Read the plan header's
+`**Body authority:**` note (the plan-writing skill,
+`../writing-plans/SKILL.md`, puts one in every plan it writes) and apply
+what it says: whichever text that note calls binding is binding — the
+note already treats a finding against a stated `**Contract:**` as a plan
+conflict, on the same footing as one against its other binding text, so a
+`— clause: Task <n>` location naming a Contract-contradicting finding is
+binding too. A plan whose header carries no such note keeps today's
+behaviour instead: any mandated `Task <n>` text is binding there. Every
+other `Task <n>` clause is reference text, and `— clause: none` is no
+clause at all; a bare `fix it` against either is applied normally. Read
+the note and the named task section of the plan to decide. When that
+reading leaves you unsure,
 the answer's own tag decides: for an answer tagged `(orchestrator)`,
 treat the clause as reference text and apply the fix — the orchestrator's
 own pre-commit self-check has already escalated the binding case, and a

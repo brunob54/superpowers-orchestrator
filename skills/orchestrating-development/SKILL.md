@@ -1455,10 +1455,13 @@ conflict no answered line matches. Without this, one settled conflict
 would come back under a new number on every re-dispatch and burn the
 per-task cap.
 
-**Plan amendment.** A plan conflict is a collision with the plan's
-**binding** text — under the 7.7.0 Body-authority note, a
-`**Global Constraints:**` entry or an `**Exact content:**` block; in a
-plan written before that note, any mandated text. An amendment that only
+**Plan amendment.** A plan conflict is a collision with text the plan's
+`**Body authority:**` note — a block the plan-writing skill,
+`../writing-plans/SKILL.md`, puts in every plan header — calls binding:
+the note already treats a finding against a stated `**Contract:**` as
+such a collision, on the same footing as one against its other binding
+text. A plan whose header carries no such note has none of this: there,
+any mandated text is binding instead, as before. An amendment that only
 annotates the plan would leave the binding clause in force, and the next
 review would raise the same finding. So, using the plan location the
 disposition line names (`— clause: Global Constraints` or
@@ -1467,16 +1470,22 @@ inside it by the prefix rule above, never by a byte-equal match — do two
 things:
 
 1. **Edit the binding clause in place** — replace the Global Constraints
-   entry, the Exact-content block, or the mandated sentence with the
-   amended text — and append to the edited clause the marker
-   `(amended by ruling <n>)`. When the clause is a fenced code block or a
-   block quote — an `**Exact content:**` block — the marker goes at the
-   end of the introducing `**Exact content:** <reason>` paragraph line,
-   never inside the fence and never inside the quote: an implementer
-   copies the text inside them verbatim into a produced file, and a marker
-   placed there would land in that file. The amended clause is then that
-   paragraph line together with its block, and the loop's decided-wording
-   rule matches the marker on the paragraph line.
+   entry, the Exact-content block, the contradicted `**Contract:**` text,
+   or a pre-note plan's mandated sentence, with the amended text. **The
+   `(amended by ruling <n>)` marker is then appended ONLY when the edited
+   clause is a Global Constraints entry or an Exact-content block** — an
+   amended `**Contract:**`, and a pre-note plan's amended mandated
+   sentence, get no marker and so never become decided wording
+   (multi-code-review, "Decided wording in a verification cycle"): a
+   later finding against that same text is triaged by the ordinary rules,
+   exactly as against reference text. When the clause is a fenced code
+   block or a block quote — an `**Exact content:**` block — the marker
+   goes at the end of the introducing `**Exact content:** <reason>`
+   paragraph line, never inside the fence and never inside the quote: an
+   implementer copies the text inside them verbatim into a produced file,
+   and a marker placed there would land in that file. The amended clause
+   is then that paragraph line together with its block, and the loop's
+   decided-wording rule matches the marker on the paragraph line.
 2. **Insert the audit note**, one block quote, immediately after the
    block that holds the edited clause — after the `**Global Constraints:**`
    block for a constraint, after the `### Task <n>` heading line for a
@@ -1599,7 +1608,11 @@ that an escalated entry, whose line is written
 `Re-dispatch: none — escalated`, is not counted: its value starts with
 `none` exactly as a bare `none` does — written after the
 **later** of the orchestration log's latest `_Invocation` line and its
-latest `## STOPPED` entry, so that a resume after a stop starts from zero. Phase 3
+latest `## STOPPED` entry, so that a resume after a stop starts from
+zero. The latest `_Invocation` line for this purpose is never one that
+ends `— resumed_`: Resume step 5's per-parameter override answers no
+open item, so it must not move the anchor — only a first invocation line
+and a `## STOPPED` entry do. Phase 3
 counts per task because one long plan legitimately produces several
 unrelated blocked tasks; only a chain on the same task is the pathology.
 The fourth open return of the same unit is a stop: every open item is
