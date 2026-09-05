@@ -92,3 +92,23 @@ Detail: docs/superpowers-orchestrator/2026-09-02-autonomous-in-run-decisions/pla
 Forks: none — the author decided the escalated items
 Re-dispatch: phase 4, in-run resume 3 of 3
 note: the author also chose the branch outcome — merge to main once these fixes land and pass review.
+
+## RULING 16 — 2026-09-05 — phase 4 — four ruled, one escalated
+Items: [I3 r14] forced — fix it (the cap's anchor ignores a `— resumed_` invocation line)
+       [I2 v3] forced — fix it (pin the rest of the Secrets found: sentence)
+       [I3 v3] forced — fix it (add the sixth negative assertion, for the Phase 3 removal)
+       [I1 v3] design — fix it (fold-by-default in the fragment branch; inversion assertions over the named safety properties)
+       [I7] escalated (spec wrong) — a stated `**Contract:**` is not in the binding set
+Detail: docs/superpowers-orchestrator/2026-09-02-autonomous-in-run-decisions/plans/autonomous-in-run-decisions-open-decisions.md
+Forks: 4 (design consistency, adversarial for [I7]; implementation practicality, adversarial for [I1 v3]) — contradiction: none; each pair tabled the same fourth option from opposite directions
+Re-dispatch: none — escalated
+
+## STOPPED — 2026-09-05 — phase 4 — the binding-set definition is the spec author's decision
+Detail: docs/superpowers-orchestrator/2026-09-02-autonomous-in-run-decisions/implementation/autonomous-in-run-decisions-review-log.md
+Open: [I7] user-decision — a stated `**Contract:**` is outside the binding set, so contract-governed behaviour can change under a bare `fix it`; on this plan that includes the invariant forbidding the rejection of a Critical
+Ruled: [I3 r14] forced — fix it (cap anchor ignores a resumed invocation line)
+Ruled: [I2 v3] forced — fix it (pin the rest of the Secrets found: sentence)
+Ruled: [I3 v3] forced — fix it (sixth negative assertion for the Phase 3 removal)
+Ruled: [I1 v3] design — fix it (fold-by-default plus inversion assertions)
+Owed probe: - [I7] dispatch two agents in one session with the identical name value and observe whether the second dispatch is rejected, silently renamed, or accepted as a duplicate — (would break a constraint) (round 14)
+Resume: Resume orchestration for docs/superpowers-orchestrator/2026-09-02-autonomous-in-run-decisions/plans/autonomous-in-run-decisions.md
