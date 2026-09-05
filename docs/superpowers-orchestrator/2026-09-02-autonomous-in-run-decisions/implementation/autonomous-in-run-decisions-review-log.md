@@ -711,3 +711,7 @@ Carried Minor findings supplied to round 13 from `.superpowers/sdd/progress.md`.
 - [M7] rejected: the sentence is pinned by `tests/reviewer-templates/run-tests.sh`, which a binding Global Constraint of this workstream requires to stay green after every task, so the byte-identical guard is covered — two other reviewers of this same cycle confirmed that pin ← 1/4: r3:M2
 - [M8] carried — the closed-escalation-list check collects its bullets over the whole classification subsection and assumes the five reason labels keep one bullet shape and the three class labels never take it, so a cosmetic reformat would report a wording regression that did not happen (tests/in-run-rulings/run-tests.sh ~425-432) ← 1/4: r3:M5
 - [M9] carried — none of the six custom matchers, nor the hand-written emphasis scanner, is exercised against a known-good and a known-bad fixture, so a silent-pass bug in one matcher disables every assertion routed through it; three fail-closed guards were retrofitted over these cycles after exactly that shape was found by review rather than by the suite. This repeats verification 1's [M8] (tests/in-run-rulings/run-tests.sh ~89) ← 1/4: r4:M3
+
+_Completed — 2026-09-05 — cap reached — HEAD 1f065958ca3eeaf140277eb48fb48c02ae4686d3_
+
+Secrets found: none
