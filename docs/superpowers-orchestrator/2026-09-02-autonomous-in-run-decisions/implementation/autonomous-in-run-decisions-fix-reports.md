@@ -5481,3 +5481,158 @@ Test-suite wording assertions updated in tests/in-run-rulings/run-tests.sh
 to match the new wording for F1-F4 (old pins for the removed/changed
 sentences replaced; new pins added for the new location-based marker
 check and the `inv <i>` sourcing), never weakened.
+
+## Round 18 fixes
+
+Commands run and their output.
+
+### bash tests/in-run-rulings/run-tests.sh
+```
+Results: 493 passed, 0 failed
+```
+
+### bash tests/reviewer-templates/run-tests.sh
+```
+Results: 24 passed, 0 failed
+```
+
+### bash tests/writing-plans/run-tests.sh
+```
+Results: 15 passed, 0 failed
+```
+
+### Findings addressed
+
+- F1: skills/orchestrating-development/batch-controller-prompt.md,
+  Deviation 4 (~lines 154-171) — made the "no ledger line" fallback
+  task-scoped and revert-aware: REVIEW_BASE falls to the branch's
+  merge-base only when no ledger line precedes task `<n>`'s own
+  position, which now explicitly includes the case where task `<n>`'s
+  own line was removed by a Phase 3 ruling revert while a later task's
+  line still stands (so a later task's HEAD is never mistaken for "the
+  last completed ledger line").
+- F2: skills/orchestrating-development/SKILL.md, Resume step 0's
+  clean-tree check (~line 474) and step 1 (~line 500), plus the
+  incomplete-ruling paragraph under step 3 (~line 547) — added a
+  `*-open-decisions.md` exclusion to the clean-tree pathspec, moved the
+  incomplete-ruling scan to run unconditionally in step 1 (whatever the
+  log's last entry is), and left a forward/back reference so it is not
+  run twice.
+- F3: skills/orchestrating-development/SKILL.md, the fork-round partial
+  case (~line 1229) — added a stated minimum wait (10 minutes since the
+  round's last notice or since the prior status read) before a status
+  read is permitted; a read reporting a lens still running now leaves it
+  outstanding instead of finishing the round; exactly one further read is
+  permitted after the same wait, and only that second read finishes the
+  round unconditionally.
+- F4: skills/multi-code-review/SKILL.md, "Normalization is one rule"
+  (~line 974) — added a fourth replacement collapsing whitespace and
+  newlines (with leading indentation) to one space, applied on both sides
+  before the prefix test; updated the two "all three/THREE replacements"
+  cross-references to "all four/FOUR".
+- F5: skills/orchestrating-development/SKILL.md, the Phase 3 `plan
+  governs` answer form (~line 1436) and
+  skills/orchestrating-development/batch-controller-prompt.md's data
+  guard (~line 224) — the Phase 3 clause is now put through the same
+  normalization and 160-character cut as Phase 4's before being written
+  into the resume answer, and the answer is required to occupy one
+  physical line; renamed the placeholder from `<verbatim clause>` to
+  `<clause>` in both files for consistency.
+- F6: skills/multi-code-review/SKILL.md — interactive resolve (~line
+  1046) and pipeline-mode disposition (~line 1103): a user's `plan
+  governs` answer (bare `[I2]: plan governs`, or `rejected: plan governs
+  (user decision)`) is no longer recorded without a clause. The
+  interactive `rejected: plan governs (user decision)` line now carries
+  `— "<clause>"` too, taken from the item's own known clause when the
+  answer itself supplies none; the pipeline `decided (user): <answer>`
+  disposition backfills `plan governs: "<clause>" — <path>` the same way
+  before writing it. The `decided (<who>): <answer>` shape is unchanged.
+- F7: skills/orchestrating-development/SKILL.md — guard 4 (~line 1753)
+  and the classification read exception (~line 944, new item 6): guard 4
+  now also reads this run's `decided (user): <answer>` lines in the
+  review log (permitted by new read exception 6) when the item's earlier
+  answer has no ruling-record entry of its own — the ruling-less stops
+  (`fork review unavailable`, a controller malformed/failed twice, a
+  checkbox cross-check mismatch). The pre-existing ruling-record
+  `**Follow-up:**` lookup is unchanged and still tried first.
+- F8: skills/orchestrating-development/SKILL.md, the revert path
+  (~lines 668-679) — bound the `git status --porcelain` pre-revert-state
+  check explicitly to the non-zero-exit (failed revert) path, and added
+  the missing success-path statement: a zero exit stages the reverted
+  paths (already true) and continues straight to the follow-up commit,
+  skipping the status check (a successful revert never matches the
+  pre-revert state, by design).
+- F9: tests/in-run-rulings/run-tests.sh,
+  `assert_absent_unless_qualified_in_range_folded` (~line 319) — the
+  pair-removal loop's awk call now reports via a leading `1|`/`0|` marker
+  whether it actually removed a pair on each iteration; the fail-closed
+  guard now fires only when the haystack emptied AND no pair was ever
+  removed, so the compliant case (the whole range is the qualified phrase
+  plus its qualifier) no longer reports a false failure.
+
+Test-suite wording assertions updated in tests/in-run-rulings/run-tests.sh
+to match the new wording for F1, F3, F4 and F7 (old pins for
+changed/removed sentences replaced; new pins added for the minimum-wait
+fork-round rule, the fourth normalization replacement, the task-scoped
+Deviation 4 fallback, and guard 4's review-log fallback under new read
+exception 6), never weakened. Two purely descriptive comments
+("five-item list" / "five-entry list") were updated to "six" to match the
+new read-exception item count; no assertion logic depended on the count.
+
+## Round 18 rework — F7 (per orch-code-review-16)
+
+F7's first fix (a sixth classification-read-list entry letting guard 4 read
+`decided (user):` lines in the review log) was reworked: it added a numbered
+entry 6 to `### What may be read — the classification read exception`,
+which conflicts with the plan's Task 2 Contract for that section ("the
+five-entry read list of spec R2 (…); 'nothing else'"). Reworked using the
+finding's OTHER alternative only.
+
+### bash tests/in-run-rulings/run-tests.sh
+```
+Results: 496 passed, 0 failed
+```
+
+### bash tests/reviewer-templates/run-tests.sh
+```
+Results: 24 passed, 0 failed
+```
+
+### bash tests/writing-plans/run-tests.sh
+```
+Results: 15 passed, 0 failed
+```
+
+### What changed
+
+- skills/orchestrating-development/SKILL.md:
+  - Removed the sixth read-list entry entirely (`### What may be read —
+    the classification read exception` is back to exactly five numbered
+    entries, unchanged, followed directly by "Nothing else.").
+  - Restored guard 4 (`### Guards against motivated judgement`, item 4) to
+    its original wording, reading only the ruling record's `**Follow-up:**`
+    lines — no review-log read added.
+  - Closed the hole on the resume path instead, in `### The ruling record`:
+    added a paragraph stating that when a user's answer at resume names an
+    item escalated by an environment stop of the Major-Error Stop Policy
+    (`fork review unavailable`, a controller malformed or failed twice, a
+    checkbox cross-check mismatch) that never went through "Handling a
+    return as a whole" and so has no ruling-record entry, Resume step 3
+    creates that entry now — same six fields (Class, Item, Contract
+    clause, Defensible answers, Forks, Resolution), `n/a` where a field
+    does not apply, `**Resolution:** escalated — <the stop's own
+    reason>` — and writes the matching `## RULING <n>` log entry
+    (`Re-dispatch: none — escalated`) in the existing fixed write order
+    and one commit, before appending the `**Follow-up:**` line. From then
+    on the entry is ordinary and guard 4's unchanged lookup finds it.
+- tests/in-run-rulings/run-tests.sh: removed the assertions pinning the
+  sixth read-list entry and guard 4's review-log fallback; added
+  assertions for guard 4's restored original wording, for the new
+  resume-path entry-creation rule (`### The ruling record` range), for the
+  read-exception list still ending at entry 5 with no sixth entry (a
+  direct absence check for a `6. ` list line, plus the existing entry-5
+  and "Nothing else." pins, unmodified). Reverted the two "six-item" /
+  "six-entry" comment edits back to "five-item" / "five-entry" now that
+  the list is five entries again.
+
+F1-F6, F8 and F9 are unchanged from commit c78b468.
