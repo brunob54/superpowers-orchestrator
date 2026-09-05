@@ -86,7 +86,7 @@ Slug for commit trailers: `prompt-pointer-dispatch`. Total tasks: 4.
   - Invariants: pure bash plus `node`, temp files only, no `/dev/stdin`, no process substitution; exits 1 when any case fails and prints `Results: <p> passed, <f> failed`; the synthetic template holds one wrapper-only placeholder, whole-line placeholders, a shared-line placeholder and `[C1]`/`[I1]` tokens so every rule of the script contract has a case; the byte-for-byte case uses `cmp`.
   - Verification: the suite fails (script missing) before Step 3 and passes after it; deleting the function replacer's `$`-safety (a string replacement) fails the `$& $1` case.
 
-- [ ] **Step 1: Write the fixtures**
+- [x] **Step 1: Write the fixtures**
 
 `tests/fill-prompt/fixtures/small-template.md` (note the one empty line inside the body and the two-space indentation of the wrapper):
 
@@ -176,7 +176,7 @@ Agent tool (general-purpose):
 Prose after the block.
 ````
 
-- [ ] **Step 2: Write the failing test suite**
+- [x] **Step 2: Write the failing test suite**
 
 `tests/fill-prompt/run-tests.sh`:
 
@@ -374,12 +374,12 @@ fi
 exit 0
 ```
 
-- [ ] **Step 3: Run the suite to verify it fails**
+- [x] **Step 3: Run the suite to verify it fails**
 
 Run: `bash tests/fill-prompt/run-tests.sh`
 Expected: FAIL — every `fill` call exits with Node's "Cannot find module" status (1), so the byte-for-byte case, the exit-code cases other than exit 1, and the real-template cases all fail; the `Results:` line shows a non-zero failed count and the script exits 1.
 
-- [ ] **Step 4: Write the script**
+- [x] **Step 4: Write the script**
 
 `skills/multi-code-review/scripts/fill-prompt.js`:
 
@@ -588,12 +588,12 @@ function main() {
 main();
 ```
 
-- [ ] **Step 5: Run the suite to verify it passes**
+- [x] **Step 5: Run the suite to verify it passes**
 
 Run: `bash tests/fill-prompt/run-tests.sh`
 Expected: PASS — `Results: <p> passed, 0 failed`, exit 0.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add skills/multi-code-review/scripts/fill-prompt.js tests/fill-prompt/run-tests.sh tests/fill-prompt/fixtures/small-template.md tests/fill-prompt/fixtures/body-value.md tests/fill-prompt/fixtures/expected-full.md tests/fill-prompt/fixtures/special-value.md tests/fill-prompt/fixtures/bracket-value.md tests/fill-prompt/fixtures/newline-only.md tests/fill-prompt/fixtures/bad-indent-template.md tests/fill-prompt/fixtures/no-prompt-template.md
