@@ -355,23 +355,27 @@ fill with `FAILURE_BLOCK=@<PROMPT_DIR>/round-<i>-failure.txt` into
 
 ## Error handling
 
+Every failure of the pointer mechanism is **fatal**: the controller writes
+the round entry it owes (if any), then ends the loop with a `BLOCKED: <cause>`
+return that names the failure. There is no inline fallback on either side.
+(Author decision of 2026-09-05, Amendment 1 below: a fallback that pastes the
+prompt inline would hide the defect and silently bring the old cost back; a
+stop makes the defect visible at the moment it appears, and the orchestrator's
+Major-Error Stop Policy already treats a controller `BLOCKED` as a fatal
+environment failure with a resume path.)
+
 | Condition | Handling |
 |---|---|
-| `mktemp -d` fails at Procedure start | Fall back for the whole invocation to today's inline dispatch (the template pasted as before). State the fallback and the reason in the controller's final report. The loop never stalls on the pointer mechanism. |
-| `fill-prompt.js` exits non-zero, or `test -s` fails, for one prompt file | Fall back to inline dispatch for every dispatch that file serves — all M reviewers of that round, or the one fix dispatch; state it in the final report with the script's message. Never dispatch a pointer to a file that failed the check. |
-| A reviewer returns no usable report (did not read the file, read it and produced no marker) | Existing rule: retry the identical pointer once; then the reviewer is unusable under `usable <u>/<m>`. No new failure class. |
+| `mktemp -d` fails at Procedure start, or `cygpath` fails where the path must be converted | `BLOCKED: prompt directory could not be created — <error text>`. Nothing is dispatched. |
+| `fill-prompt.js` exits non-zero, or `test -s` fails, for a prompt file | `BLOCKED: prompt file <name> not produced — <the script's message, or "empty">`. Never dispatch a pointer to a file that failed the check. |
+| A value-file write is refused by a hook, or fails | `BLOCKED: value file <name> could not be written — <the hook's reason, or the error>`. The text is never altered to pass a hook. |
+| Node is missing | Treated as the script failing (row above). |
+| No reviewer of a round returns a usable report after the pointer dispatch and the one identical retry of step 3 (reader side: the file could not be read, or the pointer was not followed) | Write the round entry in the existing `inconclusive` form, then `BLOCKED: no reviewer of round <i> could use its prompt file — <each reviewer's final message, one line each>`. An all-unusable round under this mechanism never lets the loop continue. A round with at least one usable report proceeds under the existing `usable <u>/<m>` rule. |
 | A reviewer reads another file in the directory | Cannot be prevented by wording alone; the directory is outside every search the reviewer is allowed to run, and the pointer forbids it. The remaining exposure is a reviewer that disobeys a direct instruction, which is the same exposure the `.superpowers/reviews/` prohibition already carries. Accepted. |
-| Node is missing | Impossible on a platform that runs this plugin's hooks; treated as the script failing (row above). |
 
-"Inline dispatch" on a fallback means: the controller reads the relevant
-template file (`reviewer-prompt.md` or `fix-prompt.md`), fills its body by
-hand under the legend's rules, and pastes the result as the Agent prompt. This
-is the only case in which the controller reads a template.
-
-The fallbacks reintroduce the old cost for the affected dispatches and nothing
-else; they exist so that a defect in the new mechanism can never turn into a
-`stall` class case. The final-report sentence is what makes such a fallback
-visible in the next measurement.
+The controller never reads a template and never pastes a prompt inline: the
+only delivery of a reviewer or fix prompt is the pointer to a file the fill
+script produced.
 
 ## Testing strategy
 
@@ -470,28 +474,29 @@ measure is taken and is not part of this branch.
 ## Failure-mode check
 
 1. **A reviewer ignores the pointer and reviews without instructions.** It
-   then has no marker line and no Verdict block; the report is unusable, the
-   identical retry runs once, and a second failure counts the reviewer as
-   unusable. A round where all M do this is `inconclusive`, exactly as a
-   round of M crashed reviewers is today. Severity: minor; the behavioural
-   suite after reinstall is the check that the pointer wording works on the
-   current harness.
+   then has no marker line and no Verdict block; the report is unusable and
+   the identical retry runs once. A round where every reviewer does this is
+   written `inconclusive` and the loop stops with `BLOCKED` naming the round
+   (Error handling). Severity: minor for one reviewer; a whole round is a
+   visible stop, never a silent one. The behavioural suite after reinstall is
+   the check that the pointer wording works on the current harness.
 2. **The template's fenced structure changes and the extraction rule breaks.**
-   The script exits 2 and the controller falls back to inline dispatch, which
-   is visible in the final report; the wording test on `reviewer-prompt.md`'s
-   marker line and the fill test on the real template both fail in the fast
-   suite. Severity: minor, caught before install.
+   The script exits 2 and the loop stops with `BLOCKED` naming the file; the
+   wording test on `reviewer-prompt.md`'s marker line and the fill test on the
+   real template both fail in the fast suite first. Severity: minor, caught
+   before install.
 3. **A future placeholder name that the regex does not match** (a digit in the
    name, lowercase) would be left in the output silently. Non-goal, recorded
    here: placeholder names are uppercase letters and underscores; the fill
    test on the real templates asserts no residue.
-4. **The fallback hides a persistent defect.** If `fill-prompt.js` fails on
-   every dispatch, every round falls back and the cost returns. The
-   final-report sentence and the acceptance measure surface it; the fast
-   suite's fill test on the real templates catches the likely causes before
-   install. A systematic cause — a shell variable used across tool calls, a
-   malformed template — is what the `$PROMPT_DIR` wording test and the fill
-   test on the real templates exist to catch. Severity: minor.
+4. **A systematic defect stops every run.** With no fallback, a defect in the
+   mechanism (a shell variable used across tool calls, a malformed template, a
+   permission prompt on a Read outside the working directory) stops the first
+   run that meets it, with the cause in the `BLOCKED` return. That is the
+   intended trade: one visible stop instead of a silent return to the old cost
+   or a silent loop of inconclusive rounds. The `$PROMPT_DIR` wording test and
+   the fill test on the real templates catch the first two before install; the
+   third is the owed harness probe of the first run.
 
 ## Rollout
 
@@ -501,3 +506,18 @@ measure is taken and is not part of this branch.
 - `docs/orchestration-issues.md` row 14 fix 1 text is updated at merge to
   match this design ("outside the checkout" holds; "pointer plus the lens"
   becomes "pointer only, the lens is in the file").
+
+## Amendments
+
+**Amendment 1 — 2026-09-05 — author decision on code review item [I1].**
+The first version of this spec fell back to inline dispatch on every
+writer-side failure of the pointer mechanism and treated a reader-side
+failure (no reviewer could read its prompt file) as an ordinary unusable
+report, so a whole round of such failures was logged `inconclusive` and the
+loop went on. The adversarial reviewer showed that this makes a systematic
+reader-side failure silent: every round inconclusive, zero findings, a return
+the orchestrator reads as success. The author ruled that every failure of the
+mechanism, writer side and reader side, is fatal: the controller returns
+`BLOCKED` naming the cause and nothing falls back to inline dispatch. The
+Error handling and Failure-mode check sections were rewritten accordingly;
+the fallback rows and the "inline dispatch" definition were removed.
