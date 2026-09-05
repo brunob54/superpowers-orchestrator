@@ -1501,6 +1501,15 @@ git commit -m "feat(multi-code-review): decided (<who>) attribution and self-suf
 
 ### Task 8: multi-code-review loop-side rule for verification cycles
 
+> **Amendment 21 (orchestrator ruling, confirmed by the spec's author):**
+> the binding test stops enumerating locations and reads the plan's
+> `**Body authority:**` note instead, so a finding contradicting a stated
+> `**Contract:**` is a plan conflict, as that note already says. The
+> decided-wording rule is bounded to match: the `(amended by ruling <n>)`
+> marker is written only onto a Global Constraints entry or an
+> Exact-content block, so an amended Contract stays open to later review.
+> Spec R14; author-confirmed 2026-09-05.
+
 **Files:**
 - Modify: `skills/multi-code-review/SKILL.md` (new paragraph under "No fix ships unreviewed")
 - Modify: `tests/in-run-rulings/run-tests.sh` (section 8 checks)

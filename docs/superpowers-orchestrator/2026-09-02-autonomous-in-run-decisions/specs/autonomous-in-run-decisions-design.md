@@ -397,10 +397,28 @@ where `<answer>` is the answer to the blocking question in plain text, or
 batch controller hands the answer to the task's implementer as authoritative,
 exactly as it hands a user's answer today.
 
-**Plan amendment.** A plan conflict is a collision with the plan's
-**binding** text — under the 7.7.0 Body-authority note, a `**Global
-Constraints:**` entry or an `**Exact content:**` block; in a plan written
-before that note, any mandated text. An amendment that only annotates the
+**Plan amendment.** A plan conflict is a collision with text the plan's
+own `**Body authority:**` note governs. **The note is the authority, and
+this spec never restates it** (amended by ruling 21): read the note from
+the plan's header and apply what it says. Under the 7.7.0 note that is a
+`**Global Constraints:**` entry, an `**Exact content:**` block, and any
+text whose contradiction the note names a plan conflict — which includes
+a task's stated `**Contract:**`. In a plan written before that note, any
+mandated text. Restating the set here is what let the two drift: the
+earlier wording quoted the note and dropped the Contract half of the
+sentence it quoted, so a finding contradicting a stated Contract was
+classed reference text and could be settled by a bare `fix it`, with no
+ruling, no marker and no audit note. A plan whose binding set is one
+Global Constraints block and nine Contracts — this plan — had its whole
+task specification outside the test, including the invariant forbidding
+the rejection of a Critical.
+
+**The amendment target stays narrow.** Only a `**Global Constraints:**`
+entry or an `**Exact content:**` block is edited in place with the
+`(amended by ruling <n>)` marker. A ruling that resolves a contradiction
+with a stated `**Contract:**` records itself in the ruling record and
+edits the Contract without the marker, so an amended Contract does not
+become decided wording and stays open to later review. An amendment that only annotates the
 plan would leave the binding clause in force, and the next review would
 raise the same finding. So the orchestrator, using the plan location the
 disposition line names (R8.2) or the task report names, does two things:
@@ -769,6 +787,20 @@ list to the Phase 5 report. Guard 4 had barred the orchestrator from
 ruling it, because the item cited the clause the author decided the day
 before.
 
+**Ruling 21 — 2026-09-05 — the binding test defers to the plan's note,
+confirmed by the author.** Round 13 finding `[I7]` showed that the branch
+carried a second copy of the binding-set definition which dropped the
+Contract half of the note it cited, so contract-governed behaviour could
+change under a bare `fix it`. Two forked reviews, design consistency and
+adversarial, independently tabled the same fix from opposite directions:
+one called it a miscitation of the note, the other called it a
+duplication that should defer to the note. The adversarial review
+measured the cost on this plan — nine Contracts, zero Exact-content
+blocks, so the binding set had one member and guard 2's own invariant sat
+outside it. The author confirmed the fix on 2026-09-05: delete the copy,
+read the note, and bound the decided-wording rule so an amended Contract
+stays reviewable. R14 carries it.
+
 **Known limitation, recorded not closed (2).** The `secret` class is
 defined over a Phase 4 disposition line, so a credential an implementer
 raises in a Phase 3 `### Question <k>` or `### Conflict <k>` section
@@ -777,6 +809,22 @@ Round 10 finding `[I8]` found this. Closing it would widen one of the five
 definitions, and the author decided on 2026-09-04 to leave it open and
 record it here. A run whose implementers may meet real credentials should
 treat this as the gap it is.
+
+### R14 — The binding test reads the plan's note (amended by ruling 21)
+
+`multi-code-review`'s "Which text is binding — one test" and the
+orchestrator's matching definition both stop enumerating locations. Each
+reads the plan's `**Body authority:**` note and applies it: binding text
+is what that note governs, and a finding whose contradiction the note
+calls a plan conflict is a plan conflict, a stated `**Contract:**`
+included. A plan with no such note keeps today's behaviour, where any
+mandated text is binding. Neither file carries a second copy of the set,
+so neither can drift from the note again.
+
+The decided-wording rule is bounded to match: a clause carrying
+`(amended by ruling <n>)` is decided wording, and since the marker is
+written only onto a Global Constraints entry or an Exact-content block,
+an amended `**Contract:**` is never immune to a later finding.
 
 ## Rollout
 

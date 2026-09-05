@@ -112,3 +112,10 @@ Ruled: [I3 v3] forced — fix it (sixth negative assertion for the Phase 3 remov
 Ruled: [I1 v3] design — fix it (fold-by-default plus inversion assertions)
 Owed probe: - [I7] dispatch two agents in one session with the identical name value and observe whether the second dispatch is rejected, silently renamed, or accepted as a duplicate — (would break a constraint) (round 14)
 Resume: Resume orchestration for docs/superpowers-orchestrator/2026-09-02-autonomous-in-run-decisions/plans/autonomous-in-run-decisions.md
+
+## RULING 21 — 2026-09-05 — phase 4 — author's answer applied; binding test defers to the plan's note
+Items: [I7] (user) — fix it: read the plan's Body-authority note, drop the enumerated copy, bound the decided-wording rule (spec R14)
+       [I3 r14] [I2 v3] [I3 v3] [I1 v3] — fix it, carried from RULING 16's Ruled: lines
+Detail: docs/superpowers-orchestrator/2026-09-02-autonomous-in-run-decisions/plans/autonomous-in-run-decisions-open-decisions.md
+Forks: none — the author decided the escalated item
+Re-dispatch: phase 4, in-run resume 1 of 3 (counted after the latest STOPPED entry)

@@ -185,3 +185,21 @@ remaining fixes land and pass review.
 - **Defensible answers:** (a) leave it; (b) widen the binding set to include a stated `**Contract:**`; (c) record a bare `fix it` against a `Task <n>` clause in the ruling record without calling it an amendment; (d) stop restating the set and defer to the plan's own Body-authority note, which already carries the Contract carve-out
 - **Forks:** design consistency: VERDICT (d) — the plan's Body-authority note keeps two sets apart on purpose, and the spec quotes that note and drops half of the sentence it is quoting, so the disagreement is a miscitation in the spec rather than a defect in the note; correcting a miscitation is a different act from widening a definition the author chose. adversarial: VERDICT (b), with (d) strictly better, and it measured what the shipped rule costs on this very plan: nine `**Contract:**` fields and zero `**Exact content:**` blocks, so the binding set here has exactly one member, and guard 2's own invariant "a Critical is never rejected" lives in Task 5's Contract, outside it — a bare `fix it` could rewrite the guard protecting Criticals with no amendment, no marker and no audit note. It also found that the loop's unsure tie-break leans on the orchestrator's pre-commit self-check, which tests the same two locations, so the two checks share one omission. Contradiction: none — both tabled the same fourth option, one framing it as a miscitation and the other as a duplication that should defer to the note. Both said the fix touches spec text.
 - **Resolution:** escalated — the spec's own Amendments section now records the author's rule that an orchestrator ruling does not amend this spec on its own authority, and the fix edits the spec's definition of binding text. The orchestrator's recommendation, offered not applied: option (d) — delete the branch's second copy of the binding set and defer to the plan's `**Body authority:**` note, which every plan already carries and which reads "unless it contradicts a stated `**Contract:**` or a global constraint"; pair it with a bound on the decided-wording rule so an amended Contract does not become unreviewable. Both lenses noted the safety consequence: on this plan the invariant forbidding the rejection of a Critical is currently changeable by a bare `fix it`.
+
+**Follow-up (Ruling 20) — 2026-09-05, the spec's author decided.** Option (d),
+which both forks tabled: the branch's second copy of the binding-set
+definition is deleted and the binding test reads the plan's own
+`**Body authority:**` note, which already names a contradiction of a stated
+`**Contract:**` a plan conflict. The decided-wording rule is bounded at the
+same time, so an amended Contract does not become immune to later findings.
+Spec R14 and the Amendments entry for ruling 21 carry it, with the plan's
+Task 8 amendment. The author's merge decision stands.
+
+## Ruling 21 — 2026-09-05 — phase 4 — the binding test defers to the plan's note
+
+- **Class:** design (decided by the spec's author, applied by the orchestrator)
+- **Item:** round 13 `[I7]`, escalated as Ruling 20
+- **Contract clause:** none — the author's decision authorises the change
+- **Defensible answers:** as tabled in Ruling 20
+- **Forks:** the four of Ruling 20; both pairs tabled this option
+- **Resolution:** `amend plan: spec R14 and the Task 8 amendment, committed with this ruling. ; fix it: in skills/multi-code-review/SKILL.md and skills/orchestrating-development/SKILL.md, replace the enumerated binding set with a read of the plan's Body-authority note, keep the amendment marker restricted to a Global Constraints entry or an Exact-content block, and bound the decided-wording rule to match, with assertions in tests/in-run-rulings/run-tests.sh.`
