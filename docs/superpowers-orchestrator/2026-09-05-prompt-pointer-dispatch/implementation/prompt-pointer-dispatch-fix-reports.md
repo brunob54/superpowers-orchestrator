@@ -1300,3 +1300,115 @@ $ git commit -m "review fixes (prompt-pointer-dispatch, round 8)" -- skills/mult
 [feature/prompt-pointer-dispatch 5daf802] review fixes (prompt-pointer-dispatch, round 8)
  2 files changed, 39 insertions(+), 16 deletions(-)
 ```
+
+## Invocation 4 post-loop addendum fix (round 8)
+
+- [A1] `skills/multi-code-review/SKILL.md` — the per-line secrets probe was
+  rewritten in both places (the Critical/Important fix bullet and the
+  Error Handling value-file row). The `node hooks/safety/protect-secrets.js`
+  command, the JSON-payload construction, the `node -e` heredoc delivery and
+  the "a Bash hook denied the probe command" outcome are gone. The probe is
+  now ONE Write tool call of a throwaway one-line file,
+  `<PROMPT_DIR>/secrets-probe-<n>.txt` (`<n>` counts the probe Writes of the
+  controller from 1, so no probe overwrites an earlier one), with three
+  outcomes: the Write succeeds (line allowed), the Write is refused by
+  `hooks/safety/protect-secrets.js` (line withheld), the Write is refused for
+  any other reason — a permission denial, a tool error — which is a mechanism
+  failure returning `BLOCKED: secrets probe could not run — …`. Both places
+  state that no other hook can decide a probe (the hardcoded-secret content
+  scan runs for Write and Edit only;
+  `hooks/safety/block-dangerous-commands.js` inspects Bash command strings,
+  which a Write tool call is not) and that no hook path is named, because such
+  a path resolves only inside this plugin's own checkout. The
+  consecutive-line pair probe is kept, as a Write of a two-line throwaway
+  file. A row for `secrets-probe-<n>.txt` was added to the file-name table.
+  The Error Handling sentence that justified the fix subagent's conditional
+  instruction by "outcome (c)" now justifies it by a hook pattern matching a
+  line that holds no credential.
+- [A2] `skills/multi-code-review/SKILL.md` — Procedure step 3 (the u = 0
+  decision) and the Error Handling row for a round with no usable report both
+  now say the round is fatal only when at least one reviewer's final message
+  shows NO sign of the prompt file's content, with the observable test: a
+  message that names files or hunks of the diff, or carries a Findings or
+  Verdict section, shows that content. A report unusable on format alone (a
+  preamble line before the marker, a missing Verdict block) whose text shows
+  the diff was reviewed is therefore logged `inconclusive` and the loop
+  continues, exactly as an environment-death round.
+- [A3] `skills/multi-code-review/SKILL.md` — the write-once rule of Procedure
+  step 2 now reads "written once and never rewritten once a pointer to it has
+  been dispatched", and states that before that first dispatch a wrong fill is
+  removed with `rm -- "<file>"` as its own command and filled again under the
+  same name. The removal must precede the corrected fill. The exit-5 rules of
+  step 2 sub-step 3 and of Error Handling each gained one sentence saying the
+  same thing, so neither contradicts it: an exit 5 on a file the controller did
+  write stays fatal at once. The file-name table is unchanged apart from the
+  [A1] row.
+- [A4] `skills/multi-code-review/fix-prompt.md` — the template body was
+  reordered: `## Procedure` and `## Final message` now precede
+  `## Findings to fix` / `[FINDINGS]` and the failure paragraph /
+  `[FAILURE_BLOCK]`, which end the body. Both placeholders stay alone on their
+  own lines with their four-space indentation. The Procedure's reference to the
+  `pre-existing uncommitted changes at loop start:` line now says "of the
+  findings below" (was "above"); the findings paragraph now says "step 2 of the
+  Procedure above". The intro says every rule comes before the findings. The
+  legend's `[FAILURE_BLOCK]` entry and the body's failure paragraph state the
+  150-line cap. In `skills/multi-code-review/SKILL.md`, the fix-failure bullet
+  that writes `round-<i>-failure.txt` now caps the failure text at its LAST 150
+  lines with the single line `(<n> earlier lines omitted)` directly after the
+  heading when lines were cut, and gives the reason (the Read tool returns at
+  most 2000 lines by default).
+- Test change (allowed only because the [A4] reorder replaces the pinned
+  ordering): `tests/fill-prompt/run-tests.sh` asserted that the fix template's
+  filled output ends with the template's last body line. `[FAILURE_BLOCK]` is
+  now that last body line, and the empty whole-line value removes it, so the
+  assertion was replaced by two: `[FAILURE_BLOCK]` is the last body line, and
+  the first dispatch's output ends with the body line before it. Nothing else
+  in the test file changed. No assertion in
+  `tests/reviewer-templates/run-tests.sh` needed a change.
+
+### Tests
+
+```
+$ bash tests/reviewer-templates/run-tests.sh
+  PASS: fix-prompt.md: no inline-dispatch fallback (hyphenated)
+  PASS: fix-prompt.md: no inline-dispatch fallback (spaced)
+
+Results: 60 passed, 0 failed
+(exit 0)
+
+$ bash tests/fill-prompt/run-tests.sh
+  PASS: inner fence, column-0 content: message gives the reason
+  PASS: inner fence, column-0 content: nothing written
+
+Results: 102 passed, 0 failed
+(exit 0)
+
+$ bash tests/in-run-rulings/run-tests.sh
+  PASS: Phase 5 report counts the rulings made in the run (range 334..362, line wraps folded)
+  PASS: decided wording is quoted on a decided line or a rejected: plan governs line of the same run (range 1028..1128, line wraps folded)
+
+Results: 496 passed, 0 failed
+(exit 0)
+
+$ bash tests/codex/run-unit-tests.sh
+==================================================
+ Results: 10 suites passed, 0 suites failed
+ All unit tests passed.
+==================================================
+(exit 0)
+```
+
+(Only the tail of each suite's output is reproduced above: the four suites
+print 658 PASS lines in total. Every suite exited 0 with zero failures.)
+
+### Commit
+
+Commit `ed633d8429d36b7ad3a1536a0077942cef13f2fe` —
+`review fixes (prompt-pointer-dispatch, round 8)`.
+
+Staged paths (each by explicit path):
+- `skills/multi-code-review/SKILL.md`
+- `skills/multi-code-review/fix-prompt.md`
+- `tests/fill-prompt/run-tests.sh`
+
+This fix-report file is not staged.
