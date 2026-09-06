@@ -257,8 +257,11 @@ probe observations — exactly the content SKILL.md already prescribes),
 `[FAILURE_BLOCK]` (whole-line, alone on its line in the template; empty on
 the first dispatch; on the one re-dispatch, the controller's failure file,
 whose first line is the heading `## Previous attempt failed` and whose
-remaining lines are the failure text — the heading is in the value, never in
-the template). The legend ends with the same
+remaining lines are the failure text, at most its last 150 lines with one
+line `(<n> earlier lines omitted)` when cut — the heading is in the value,
+never in the template). The body places every rule before the `[FINDINGS]`
+and `[FAILURE_BLOCK]` placeholders, so a long value never pushes the rules
+past a reader's default Read window (Amendment 4). The legend ends with the same
 sentence as the reviewer template: nothing else may be added to the prompt.
 
 The SKILL.md bullet keeps a one-line summary of what the fix subagent does and
@@ -297,7 +300,10 @@ points at `./fix-prompt.md` for the text. Any string in that bullet that
   `addendum-<k>-findings.txt`, and the matching `-failure.txt` for a
   re-dispatch.
 
-- A prompt file is written once and never rewritten. The identical-retry
+- A prompt file is written once and never rewritten once a pointer to it has
+  been dispatched; before that first dispatch the controller may remove it
+  (`rm -- <file>`) and fill it again under the same name when it finds the
+  fill's values were wrong (Amendment 4). The identical-retry
   rule of step 3 resends the same pointer to the same file. The fix
   re-dispatch is a different prompt (the failure appended), so it has its own
   file. Value files are written once for their dispatch, except the lens file
@@ -370,9 +376,9 @@ environment failure with a resume path.)
 | `fill-prompt.js` exits 1, 3 or 4, or exits 5 naming an `@<file>` the controller never wrote (a slip in the controller's own command) | The controller corrects its command once and runs it again; a second non-zero exit is fatal as the row below (Amendment 3). |
 | `fill-prompt.js` exits 2, or exits 5 on a file the controller did write, or a second non-zero exit after a corrected command, or `test -s` fails, for a prompt file | `BLOCKED: prompt file <name> not produced — <the script's message, or "empty">`. Never dispatch a pointer to a file that failed the check. |
 | A value-file write fails | `BLOCKED: value file <name> could not be written — <the error>`. |
-| A value-file Write is refused by `hooks/safety/protect-secrets.js` (a finding or a failure line quotes a credential-shaped string) | The hook names only a credential kind, never a line, so the controller runs `node hooks/safety/protect-secrets.js` itself on each line of the refused file, with a synthetic Write payload in the form the hook reads, and every line the hook refuses is replaced by its `file:line` plus the fixed text `secret-bearing finding, value withheld` (Amendment 3); the Write is retried once. The withheld finding keeps its id and severity, so the fix subagent still removes the secret at that location. A second refusal is `BLOCKED: value file <name> refused twice by protect-secrets — <the hook's reason>`. This is the one sanctioned alteration of value text: it is the location-only form the orchestrator's "Never reproduce a secret" rule already imposes on every committed file (Amendment 2). |
+| A value-file Write is refused by `hooks/safety/protect-secrets.js` (a finding or a failure line quotes a credential-shaped string) | The hook names only a credential kind, never a line, so the controller probes each line of the refused file with one Write tool call of a one-line throwaway file in the prompt directory — never a Bash command, which `block-dangerous-commands.js` would also scan, and never a hook path, which resolves only in this plugin's own checkout (Amendment 4) — and every line whose Write the secrets hook refuses is replaced by its `file:line` plus the fixed text `secret-bearing finding, value withheld` (Amendment 3); the Write is retried once. The withheld finding keeps its id and severity, so the fix subagent still removes the secret at that location. A second refusal is `BLOCKED: value file <name> refused twice by protect-secrets — <the hook's reason>`. This is the one sanctioned alteration of value text: it is the location-only form the orchestrator's "Never reproduce a secret" rule already imposes on every committed file (Amendment 2). |
 | Node is missing | Treated as the script failing (row above). |
-| No reviewer of a round returns a usable report after the pointer dispatch and the one identical retry of step 3, and at least one reviewer's final message shows it could not read or did not follow its prompt file | Write the round entry in the existing `inconclusive` form, then `BLOCKED: no reviewer of round <i> could use its prompt file — <each reviewer's final message, one line each>`. A round with at least one usable report proceeds under the existing `usable <u>/<m>` rule. |
+| No reviewer of a round returns a usable report after the pointer dispatch and the one identical retry of step 3, and at least one reviewer's final message shows no sign of the prompt file's content (a report unusable on format alone, whose text shows the diff was reviewed, is not such a sign: that round is logged `inconclusive` as today — Amendment 4) | Write the round entry in the existing `inconclusive` form, then `BLOCKED: no reviewer of round <i> could use its prompt file — <each reviewer's final message, one line each>`. A round with at least one usable report proceeds under the existing `usable <u>/<m>` rule. |
 | No reviewer of a round returns a usable report, and every final message shows an environment death (usage limit, tool error, no message at all) | Not a failure of the pointer mechanism: the round is logged `inconclusive` and the loop continues, as today (Amendment 3). |
 | A reviewer reads another file in the directory | Cannot be prevented by wording alone; the directory is outside every search the reviewer is allowed to run, and the pointer forbids it. The remaining exposure is a reviewer that disobeys a direct instruction, which is the same exposure the `.superpowers/reviews/` prohibition already carries. Accepted. |
 
@@ -544,3 +550,13 @@ whose reviewers all died of the environment (usage limit, tool error, no
 message) is not a pointer failure and stays `inconclusive`; a slip in the
 controller's own fill command (exit 1, 3, 4, or 5 on a file it never wrote)
 is corrected once before a second non-zero exit is fatal.
+
+**Amendment 4 — 2026-09-06 — orchestrator rulings 11-15 under the author's
+delegation.** On 2026-09-06 the author delegated every remaining decision
+before Phase 5 to the orchestrator ("choose the recommended option; no
+questions until Phase 5"). Four refinements: the per-line secrets probe is
+a Write tool call, so only the secrets hook decides and no hook path is
+needed; a report unusable on format alone is not a pointer failure; a prompt
+file may be re-filled under its name until a pointer to it is dispatched;
+the failure text is capped and the fix template's rules precede its
+variable blocks.
