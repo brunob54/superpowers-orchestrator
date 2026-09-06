@@ -9,3 +9,5 @@ under the user's standing delegation of every decision before Phase 5.
 
 ## Phase 1 — Plan — DONE — 2026-09-06
 plan: docs/superpowers-orchestrator/2026-09-06-marker-position-tolerance/plans/marker-position-tolerance.md — 4 tasks
+
+## Phase 2 — Plan review — rounds 2 — cap — unresolved 0
