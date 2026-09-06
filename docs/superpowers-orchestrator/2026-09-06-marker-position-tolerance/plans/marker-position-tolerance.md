@@ -87,7 +87,7 @@ Task 1 owns the hook and its unit tests. Task 2 owns the orchestrator's receiver
    - Verification: inside this task, the test `The hook comments state the window rule` in `tests/codex/test-subagent-guard.js` (Step 1 below) asserts that the hook source contains no `opens with` and does contain `MARKER_SEARCH_LINES non-blank lines`, so the comment rewrite is verified by the same commit that makes it. Task 4's acceptance grep — `grep -rn "opening with\|opens with" skills/ hooks/ docs/FORK-IMPROVEMENTS.md` returning no hit that describes `hooks/subagent-guard.js` — is the second, whole-repository check.
    - Sentence wording is free; the properties above bind.
 
-- [ ] **Step 1: Write failing tests**
+- [x] **Step 1: Write failing tests**
 
 In `tests/codex/test-subagent-guard.js`, first add the marker constants and the message builder just below the existing `runGuard` helper (they are added first because the three replacement tests below already use `VERB_SKILL_BODY`; in the file they sit above every test, so the order inside the file is unambiguous):
 
@@ -259,12 +259,12 @@ Finally, extend the file's header comment `Verifies:` list with one line:
  *     non-blank lines exempts; the 11th does not
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `node tests/codex/test-subagent-guard.js`
 Expected: FAIL — the runner prints `✗` for `multi-review marker on the second non-blank line exempts`, `orchestration marker on the second non-blank line exempts`, `research marker on the second non-blank line exempts`, `The marker search window is a single named constant`, `The hook comments state the window rule`, the three `… on the 10th non-blank line exempts` cases, `Leading whitespace before a marker on the third non-blank line still exempts`, `Two marker lines inside the window exempt`, `Twelve CRLF blank lines before the marker still exempt` and `A CRLF message with the marker on the second non-blank line exempts`, then exits non-zero with `subagent-guard: <p> passed, <f> failed`.
 
-- [ ] **Step 3: Implement minimal change**
+- [x] **Step 3: Implement minimal change**
 
 Replace the file's opening block comment (lines 2–17) with:
 
@@ -363,12 +363,12 @@ Replace the exemption test inside `main` (lines 119–127) with:
 
 Nothing else in the hook changes: the violation patterns, `logViolation`, the block reason and the parse-failure fallback that allows the stop all stay as they are.
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `node tests/codex/test-subagent-guard.js`
 Expected: PASS — `subagent-guard: <n> passed, 0 failed`, exit 0.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add hooks/subagent-guard.js tests/codex/test-subagent-guard.js
