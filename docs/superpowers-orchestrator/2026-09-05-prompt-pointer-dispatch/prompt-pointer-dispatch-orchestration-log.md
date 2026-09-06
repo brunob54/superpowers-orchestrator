@@ -55,3 +55,11 @@ Ruled: [I1 inv 2] forced — fix it: (this answers the round 4 verification 3 un
 Owed probe: - [I2] rejected: harness probe not runnable here — in a session running in acceptEdits mode, Write a one-line file into a fresh `mktemp -d` directory and observe whether a permission prompt appears — (ambiguous observation) — a value-file Write outside the working directories may raise a permission prompt in a non-bypass session, which none of the fatal rows names; this session runs in bypass mode, so no observation here can match or contradict the claim ← 1/2: r1:I2
 Owed probe: - [I3] rejected: harness probe not runnable here — run one N=4, M=3 invocation past an automatic compaction and check whether the compaction summary still contains the `mktemp -d` path verbatim — (not settled by one probe) — a prompt-directory path lost to a context compaction ends the loop with BLOCKED under the once-per-invocation constraint (round 3 [M1]); recording the path in an untracked workspace file is a spec-level change (round 4 verification 2 [M2]) ← 1/2: r1:I2
 Resume: Resume orchestration for docs/superpowers-orchestrator/2026-09-05-prompt-pointer-dispatch/plans/prompt-pointer-dispatch.md
+
+## RULING 8 — 2026-09-06 — phase 4 — invocation 3: three items against the user's decided wording, all escalated
+Items: [I2] escalated (spec wrong) — round 5: the secrets hook names a credential kind, never a line, so the withhold rule cannot select a line
+Items: [I2] escalated (spec wrong) — round 6: the u = 0 fatal rule also stops on transient reviewer failures unrelated to the prompt file
+Items: [I4] escalated (spec wrong) — round 6: a controller's own fill-command slip is fatal by the letter although nothing was written
+Detail: docs/superpowers-orchestrator/2026-09-05-prompt-pointer-dispatch/plans/prompt-pointer-dispatch-open-decisions.md
+Forks: none
+Re-dispatch: none — escalated
