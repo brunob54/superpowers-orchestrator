@@ -87,7 +87,9 @@ const RESEARCH_REPORT_MARKER = '<!-- research report -->';
 // stays bounded because the exemption must remain a property of a message's
 // opening: without a bound, a marker reproduced at the start of a line
 // further down the message — for example an indented or fenced quotation of
-// a controller return — would exempt that message too.
+// a controller return — would exempt that message too. The same quotation
+// landing inside the window still exempts the message; that residual case
+// is the accepted cost of the wider window.
 const MARKER_SEARCH_LINES = 10;
 
 const REPORT_MARKERS = [
