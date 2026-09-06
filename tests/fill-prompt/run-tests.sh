@@ -431,16 +431,17 @@ plan_writer_fill() { # out RESUME_ANSWER-argument
 }
 # Assertions shared by the templates that carry the section: $1 label,
 # $2 the output of a fill with the empty value, $3 the output of a fill with
-# the two-line value file, $4 the template (for the last-body-line check).
-check_resume_section() { # label empty-out two-out template
+# the two-line value file, $4 the template (for the last-body-line check),
+# $5 the expected first answer line, $6 the expected second answer line.
+check_resume_section() { # label empty-out two-out template first-answer second-answer
   assert_file_has_line "$1: empty value keeps the Resume Answer heading" "$2" "$RESUME_HEADING"
   assert_file_not_contains "$1: empty value leaves no omit parenthetical" "$2" '## Resume Answer (omit'
   assert_file_has_line "$1: empty value keeps the fixed sentence" "$2" "$FIXED_SENTENCE"
   assert_eq "$1: empty value leaves no answer line below the fixed sentence" "$(line_below_fixed_sentence "$2")" ""
   assert_file_not_matches "$1: no residual placeholder with the empty value" "$2" "$PLACEHOLDER_ERE"
   assert_eq "$1: last output line is the dedented last body line" "$(tail -n 1 "$2")" "$(last_body_line "$4")"
-  assert_eq "$1: the first answer line sits directly below the fixed sentence" "$(line_below_fixed_sentence "$3")" "$FIRST_ANSWER"
-  assert_file_has_line "$1: the second answer line is inserted" "$3" "$SECOND_ANSWER"
+  assert_eq "$1: the first answer line sits directly below the fixed sentence" "$(line_below_fixed_sentence "$3")" "$5"
+  assert_file_has_line "$1: the second answer line is inserted" "$3" "$6"
   assert_file_not_matches "$1: no residual placeholder with the value file" "$3" "$PLACEHOLDER_ERE"
 }
 plan_writer_fill "$WORK/pw-empty.md" 'RESUME_ANSWER='
@@ -448,12 +449,12 @@ assert_eq "plan-writer template: empty RESUME_ANSWER exits 0" "$STATUS" "0"
 assert_eq "plan-writer template: first output line is the dedented first body line" "$(head -n 1 "$WORK/pw-empty.md")" 'You are an autonomous plan-writing controller. You write ONE'
 plan_writer_fill "$WORK/pw-two.md" "RESUME_ANSWER=@$WORK/two-answers.txt"
 assert_eq "plan-writer template: two-line answer file exits 0" "$STATUS" "0"
-check_resume_section "plan-writer template" "$WORK/pw-empty.md" "$WORK/pw-two.md" "$PLAN_WRITER_TEMPLATE"
+check_resume_section "plan-writer template" "$WORK/pw-empty.md" "$WORK/pw-two.md" "$PLAN_WRITER_TEMPLATE" "$FIRST_ANSWER" "$SECOND_ANSWER"
 code_loop_fill "$WORK/cl-empty.md" 'M_REVIEWERS=1' 'RESUME_ANSWER='
 assert_eq "code-review-loop template: empty RESUME_ANSWER exits 0" "$STATUS" "0"
 code_loop_fill "$WORK/cl-two.md" 'M_REVIEWERS=1' "RESUME_ANSWER=@$WORK/two-answers.txt"
 assert_eq "code-review-loop template: two-line answer file exits 0" "$STATUS" "0"
-check_resume_section "code-review-loop template" "$WORK/cl-empty.md" "$WORK/cl-two.md" "$CODE_LOOP_TEMPLATE"
+check_resume_section "code-review-loop template" "$WORK/cl-empty.md" "$WORK/cl-two.md" "$CODE_LOOP_TEMPLATE" "$FIRST_ANSWER" "$SECOND_ANSWER"
 assert_file_contains "code-review-loop template: Deviation 2 keys BLOCKED on the absence of an answer line" "$WORK/cl-empty.md" '`## Resume Answer` holds no'
 
 bold "12. The batch-controller template: no BATCH_NUMBER, the Resume Answer section, the never-rewrite guard"
@@ -478,17 +479,10 @@ assert_eq "batch template: fills without BATCH_NUMBER and exits 0" "$STATUS" "0"
 assert_file_contains "batch template: quoted task list inserted verbatim" "$WORK/batch-empty.md" 'Tasks to implement, in order: 4, 5, 6'
 assert_file_contains "batch template: the task list is substituted inside the pre-flight sentence too" "$WORK/batch-empty.md" 'never best-guess a number inside `4, 5, 6`'
 assert_file_contains "batch template: task range filled into the return line" "$WORK/batch-empty.md" 'BATCH_COMPLETE tasks=4..6'
-assert_file_has_line "batch template: empty value keeps the Resume Answer heading" "$WORK/batch-empty.md" "$RESUME_HEADING"
-assert_file_not_contains "batch template: empty value leaves no omit parenthetical" "$WORK/batch-empty.md" '## Resume Answer (omit'
 assert_file_has_line "batch template: empty value keeps the amend-plan paragraph" "$WORK/batch-empty.md" "$AMEND_FIRST_LINE"
-assert_file_has_line "batch template: empty value keeps the fixed sentence" "$WORK/batch-empty.md" "$FIXED_SENTENCE"
-assert_eq "batch template: empty value leaves no answer line below the fixed sentence" "$(line_below_fixed_sentence "$WORK/batch-empty.md")" ""
-assert_file_not_matches "batch template: no residual placeholder" "$WORK/batch-empty.md" "$PLACEHOLDER_ERE"
-assert_eq "batch template: last output line is the dedented last body line" "$(tail -n 1 "$WORK/batch-empty.md")" "$(last_body_line "$BATCH_TEMPLATE")"
 batch_fill "$WORK/batch-two.md" '4, 5, 6' "RESUME_ANSWER=@$WORK/task-answers.txt"
 assert_eq "batch template: two-line answer file exits 0" "$STATUS" "0"
-assert_eq "batch template: the first answer line sits directly below the fixed sentence" "$(line_below_fixed_sentence "$WORK/batch-two.md")" "$TASK_FIRST_ANSWER"
-assert_file_has_line "batch template: the second answer line is inserted" "$WORK/batch-two.md" "$TASK_SECOND_ANSWER"
+check_resume_section "batch template" "$WORK/batch-empty.md" "$WORK/batch-two.md" "$BATCH_TEMPLATE" "$TASK_FIRST_ANSWER" "$TASK_SECOND_ANSWER"
 # The never-rewrite guard: a dispatched name reused with different content
 # exits 5 and leaves the file as it was.
 batch_fill "$WORK/batch-empty.md" '7, 8' 'RESUME_ANSWER='
