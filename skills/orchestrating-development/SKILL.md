@@ -1426,8 +1426,10 @@ or, under the inheritance rule above, as a fresh `general-purpose`
 subagent, and the bounds read the same for both. A **reviewer's return**
 is **lost** when no line of the reviewer's final message, with its
 surrounding whitespace removed, starts with `<!-- multi-review report -->`
-among the first 10 non-blank lines, or when the notice reports that the
-reviewer failed. A lost return is
+— this rule keys on the marker's presence, not on its position, and
+unlike the controller Return contract above it is a prefix test, not a
+whole-line equality test — or when the notice reports that the reviewer
+failed. A lost return is
 re-dispatched once under the same lens; a second loss leaves that lens out
 and the ruling records `forks: <k> of <planned>`. A completion notice
 that arrives from a dispatch already declared lost is discarded: it is
