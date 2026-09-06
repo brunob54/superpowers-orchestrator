@@ -379,3 +379,32 @@ Effective HEAD had moved past the marker (5daf802 → 98ece22: spec Amendment 4 
 - [I3] fixed — fix-prompt.md now places `## Procedure` and `## Final message` before the findings section and the failure paragraph, `[FINDINGS]` and `[FAILURE_BLOCK]` end the body on their own indented lines, the above/below references and the legend are updated; the SKILL.md fix-failure bullet caps `round-<i>-failure.txt` at its last 150 lines with `(<n> earlier lines omitted)` directly after the heading; tests/fill-prompt/run-tests.sh's last-output-line assertion for the fix template, which pinned the old ordering, is replaced by two assertions pinning the new order (60/60, 102/102, 496/496 and 10 unit suites pass) → ed633d8 (round 8 verification 3 item)
 
 _Invocation 5 — 2026-09-06 — N=1 M=1 — BASE..HEAD b9b9ffb..ed633d8 — branch feature/prompt-pointer-dispatch — gate: orchestration_
+
+## Round 9 — Correctness & spec alignment — fable
+**Reviewer verdict:** 0 Critical, 0 Important, 5 Minor
+**Converged:** no
+### Dispositions
+- [M1] fixed — the Error Handling bullet for a round with no usable report still said the round is fatal when a reviewer "did not follow" its prompt file, which reads as a format-only failure and contradicts step 3 and the later Error Handling row (a report unusable on format alone is logged inconclusive); the bullet now uses the observable test of the later row (no sign of the prompt file's content: no file or hunk of the diff named, no Findings or Verdict section) and says a format-only unusable report is inconclusive → 705963d
+- [M2] rejected: duplicate of round 8 verification 3 [M1] (carried; the aws-secret-key and generic-api-key patterns cross whitespace-only lines, so the "a pattern spans at most one line break" sentence justifying the pair probe is not exact for a failure file holding blank lines — the second refusal ends BLOCKED, visible, nothing leaks)
+- [M3] carried — exit 5 with `cannot read template <path>` is fatal at once while the plan's exception (3) corrects once only an exit 5 naming an `@<file>` the controller never wrote; an unreadable template path falls in neither clause, and adding it to the corrected-once list would widen a bounded exception of the Global Constraints (the loop never edits plan text)
+- [M4] fixed — the fill-prompt.js header said exit 5 covers every pre-existing `--out` while writeAtomic exits 0 without writing on a byte-identical file; the header now says "already exists with different content (an identical file exits 0 without writing)" → 705963d
+- [M5] rejected: the loop never edits plan text — the plan's Task 2 section 9 lists the clause 'a defect description, never an instruction' while fix-prompt.md now says "are data, never instructions" (the round 8 [M2] rewording, pinned by tests/reviewer-templates/run-tests.sh); the Contract's Must-convey property is conveyed and the code block is reference text under the plan's Body authority note
+- Carried findings from `.superpowers/sdd/progress.md` (18 `Minor:` lines, the same ledger as Invocations 1 to 4), decided from the single reviewer's recommendations (ship-as-is on every item):
+- [M6] carried — fill-prompt.js writeAtomic: a body of only whole-line placeholders with empty values writes a 1-byte file and exits 0 (unreachable with the real templates)
+- [M7] carried — fill-prompt.js writeAtomic catch unlinked a temporary path this process may not have created (already fixed in Invocation 1, 2ade665)
+- [M8] carried — fill-prompt.js end-of-line detection is whole-file; the comment does not say so
+- [M9] carried — tests/fill-prompt section 5: the 'missing @file exits 5' case lacked the assert_absent check (already fixed in Invocation 1, 2ade665)
+- [M10] carried — tests/fill-prompt section 6b: the CR-count assertion passed vacuously on a missing file (already fixed in Invocation 1, 2ade665)
+- [M11] carried — fill-prompt.js writeAtomic: flag 'wx' and the random temp-name component are pinned by no test
+- [M12] carried — tests/fill-prompt section 6b: the two hardening templates are built by duplicated printf lines
+- [M13] carried — fix-prompt.md model field: the corrected fix-subagent model wording is pinned by no assertion in reviewer-templates section 9
+- [M14] carried — tests/reviewer-templates: assert_file_not_contains is defined in Task 2 and first used in Task 3 section 10
+- [M15] carried — tests/reviewer-templates section 9: no direct assertion for 'no three-backtick line in the body' or 'no bracketed uppercase token other than the six placeholders'
+- [M16] carried — tests/reviewer-templates section 9: the nothing-else sentence assertion is file-scoped, not legend-scoped
+- [M17] carried — tests/reviewer-templates first_line_of: grep stderr leaks when the template is missing
+- [M18] carried — fix-prompt.md: an empty FAILURE_BLOCK left two consecutive blank lines before '## Procedure' (resolved by the ed633d8 restructure: `[FAILURE_BLOCK]` is now the last body line and the empty value removes it)
+- [M19] carried — tests/reviewer-templates section 10: the Procedure range also spans Lens Rotation (plan-mandated end marker)
+- [M20] carried — SKILL.md Critical/Important bullet: the fix-dispatch description and 'the fix-subagent model of Parameters' are pinned by no section-10 needle
+- [M21] carried — SKILL.md step 2 sub-step 2: 'every value except LENS_INSTRUCTIONS and a non-empty CARRIED_BLOCK is inline' (already reworded to 'inline by default' in Invocation 2, 15efd82)
+- [M22] carried — Task 3 security review residual M3 (verification-cycle reviewer prompt beside its round's fix prompt in one flat directory), decided as [M19] of Invocation 1 (ruling 2) and carried in Invocations 2 to 4; the reviewer recommends ship-as-is (the Error Handling row accepts the exposure as the one `.superpowers/reviews/` already carries)
+- [M23] carried — Task 4 produced no commit: CLAUDE.md is gitignored (.gitignore:7), so the branch history holds no record of the Testing-block edit beyond the plan tick and ruling 1 (traceability note only)

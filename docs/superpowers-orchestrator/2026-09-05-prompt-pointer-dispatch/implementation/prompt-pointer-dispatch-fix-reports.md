@@ -1412,3 +1412,27 @@ Staged paths (each by explicit path):
 - `tests/fill-prompt/run-tests.sh`
 
 This fix-report file is not staged.
+
+## Round 9 fix
+
+- [M1] skills/multi-code-review/SKILL.md (Error Handling bullet, u = 0 fatal case): replaced "or did not follow it" with the observable test from Procedure step 3 and the pointer-mechanism row below it — the bullet now says the round is fatal only when a final message shows no sign of the prompt file's content (names no file or hunk of the diff, carries no Findings or Verdict section), and adds that a report unusable on format alone shows the prompt file's content and is logged inconclusive, not fatal.
+- [M2] skills/multi-code-review/scripts/fill-prompt.js (header comment, exit code 5 line): changed "including when `--out` already exists" to "including when `--out` already exists with different content (an identical file exits 0 without writing)". No code changed.
+
+### Tests
+
+```
+bash tests/reviewer-templates/run-tests.sh
+```
+Result: 60 passed, 0 failed.
+
+```
+bash tests/fill-prompt/run-tests.sh
+```
+Result: 102 passed, 0 failed.
+
+No assertion in either suite pinned the wording [M1] replaced, so no test file was changed.
+
+### Commit
+
+- sha: 705963dd4a3f9545b69bc15e9fa41ec9affa6a3c
+- staged paths: skills/multi-code-review/SKILL.md, skills/multi-code-review/scripts/fill-prompt.js
