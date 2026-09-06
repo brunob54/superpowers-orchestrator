@@ -245,7 +245,7 @@ git commit -m "feat(orchestrator): rename the [M] placeholder to [M_REVIEWERS] s
   - Invariant: they fail on the current templates (old heading with parenthetical; Deviation 2 keyed on presence) and pass after Step 3.
   - Verification: the runs before and after Step 3.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 In `tests/fill-prompt/run-tests.sh`, insert immediately before the final `echo` / `bold "Results: …"` pair (after section 10):
 
@@ -324,12 +324,12 @@ assert_in_range_folded "code-review-loop Deviation 5 defines an answer line as a
   "$LOOP_DEV5_LINE" "$LOOP_RETURN_LINE"
 ```
 
-- [ ] **Step 2: Run the tests to verify they fail**
+- [x] **Step 2: Run the tests to verify they fail**
 
 Run: `bash tests/fill-prompt/run-tests.sh 2>&1 | grep -E 'FAIL|Results'; bash tests/in-run-rulings/run-tests.sh 2>&1 | grep -E 'FAIL|Results'`
 Expected: FAIL — fill-prompt reports, for both templates, `… empty value keeps the Resume Answer heading (no line exactly: ## Resume Answer)`, `… empty value leaves no omit parenthetical …`, `… empty value keeps the fixed sentence …` and `… the first answer line sits directly below the fixed sentence …`, plus `code-review-loop template: Deviation 2 keys BLOCKED on the absence of an answer line …`, and `Results: 131 passed, 9 failed` (116 + 24 assertions; the fifteen others pass on the old templates: an empty `RESUME_ANSWER=` already exits 0, the placeholder is already a whole-line one, and the line-below helper returns empty when the fixed sentence is absent); in-run-rulings reports the three positive Deviation 2/5 checks as FAIL (`not inside range …`) and `code-review-loop Deviation 2 no longer keys on the section being present (still present in range …)`, `Results: 496 passed, 4 failed`.
 
-- [ ] **Step 3: Rewrite the two templates**
+- [x] **Step 3: Rewrite the two templates**
 
 `skills/orchestrating-development/plan-writer-prompt.md` — replace the body section
 
@@ -483,12 +483,12 @@ with
 
 The line `       layout): ignore the `## Resume Answer` section and start` (Deviation 5, the pre-7.3.0 case) stays: ignoring the section ignores its lines. Nothing else in the two files changes.
 
-- [ ] **Step 4: Run the tests to verify they pass**
+- [x] **Step 4: Run the tests to verify they pass**
 
 Run: `bash tests/fill-prompt/run-tests.sh 2>&1 | tail -1 && bash tests/in-run-rulings/run-tests.sh 2>&1 | tail -1 && bash tests/sdd-scripts/run-tests.sh 2>&1 | tail -1 && grep -n 'Resume Answer' skills/orchestrating-development/plan-writer-prompt.md skills/orchestrating-development/code-review-loop-prompt.md`
 Expected: `Results: 140 passed, 0 failed` for fill-prompt (116 + 24); `Results: 500 passed, 0 failed` for in-run-rulings (496 + 4); sdd-scripts `Results: 193 passed, 0 failed` (its drift check on the loop template still finds Deviation 5's "always starts a new invocation" sentence); the grep shows no line containing `section is present`, `section present` or `(omit`.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add skills/orchestrating-development/plan-writer-prompt.md skills/orchestrating-development/code-review-loop-prompt.md tests/fill-prompt/run-tests.sh tests/in-run-rulings/run-tests.sh
