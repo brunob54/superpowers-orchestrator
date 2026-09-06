@@ -383,10 +383,19 @@ invocation by construction):
 | Verification cycle `c` fixes (`<c>` = the cycle whose re-review produced the findings being fixed) | `round-<i>-cycle-<c>-fix.md`, `round-<i>-cycle-<c>-fix-retry.md` | `round-<i>-cycle-<c>-findings.txt` (reused by the re-dispatch when the current prompt directory holds it, written first when it does not), `round-<i>-cycle-<c>-failure.txt` |
 | Post-loop addendum fixes, `<k>` = the 1-based index of the addendum fix dispatch within this controller, counting first dispatches only — a re-dispatch keeps the `k` of the dispatch it repeats | `addendum-<k>-fix.md`, `addendum-<k>-fix-retry.md` | `addendum-<k>-findings.txt` (reused by the re-dispatch when the current prompt directory holds it, written first when it does not), `addendum-<k>-failure.txt` |
 | Any dispatch, an inline value moved to a value file (the two rules of step 2 below: the value contains a single quote, or it begins with `@`) | — (the dispatch's own prompt file) | `round-<i>-<name>.txt`, with `<name>` the placeholder name in lower case — `round-<i>-cycle-<c>-<name>.txt` for a verification-cycle dispatch, `addendum-<k>-<name>.txt` for a post-loop addendum dispatch |
+| Any dispatch, the per-line secrets probe of the Critical/Important bullet | — (no dispatch of its own) | `secrets-probe-<n>.txt`, throwaway, `<n>` counting the probe Writes of this controller from 1 |
 
-A prompt file is written once and never rewritten: the identical retry of
-step 3 resends the same pointer to the same file; a fix re-dispatch is a
-different prompt (the failure appended) and has its own file. Repeating a
+A prompt file is written once and never rewritten once a pointer to it
+has been dispatched: the identical retry of step 3 resends the same
+pointer to the same file; a fix re-dispatch is a different prompt (the
+failure appended) and has its own file. Before that first dispatch the
+same name may be filled again: when you find that a fill's values were
+wrong — the wrong lens file, a stale round number — remove the file with
+`rm -- "<file>"` as its own command and then run the corrected fill.
+Remove it BEFORE the corrected fill: the script never overwrites, so a
+corrected fill onto a file that is still there exits 5 on a file you did
+write, which is fatal at once (step 2 sub-step 3 and Error Handling).
+Repeating a
 fill command whose first run already completed — its tool result was lost,
 say — is not a failure: the script exits 0 without writing when the
 existing file's content is byte-identical to what the repeat would write,
@@ -544,7 +553,12 @@ code has been revised since, so a re-pass is meaningful):
       Exit 2 is fatal at once. Exit 5 has several causes, and among them
       only an `@<file>` you never wrote is corrected once; every other
       exit-5 cause is fatal at once, because the plan's rule makes every
-      failure it does not list fatal. The script reports exit 5 as
+      failure it does not list fatal. `cannot write <out>: file already
+      exists` on a file you did write is one of them: a wrong fill is
+      redone by removing that file with `rm -- "<file>"` BEFORE the
+      corrected fill, and only while no pointer to it has been dispatched
+      ("Before round 1"). Once the script has exited 5 on such a file, the
+      failure is fatal at once. The script reports exit 5 as
       `cannot read template <path>: <error>`; `cannot read value file
       <path>: <error>` (a value file you did write but that cannot be
       read belongs here); `cannot write <out>: file already exists` (an
@@ -591,18 +605,26 @@ code has been revised since, so a re-pass is meaningful):
    together in one message. After the retries, *u* = the number of usable
    reports. u = 0 → write the round entry in the `inconclusive` form
    (never clean; nothing is triaged), then read the M final messages and
-   decide which of the two u = 0 cases this is. When at least one final
-   message shows that its reviewer could not read its prompt file — a tool
-   error on the Read of the prompt file itself, the file missing or
-   permission refused — or read it and did not follow it, the pointer
-   mechanism failed: stop and
+   decide which of the two u = 0 cases this is. The round is fatal only
+   when at least one final message shows NO sign of the prompt file's
+   content — a tool error on the Read of the prompt file itself, the file
+   missing, permission refused, or a message that never touches the diff
+   at all. Test that observably: a message that names files or hunks of
+   the diff, or that carries a Findings or Verdict section, shows the
+   prompt file's content and is NOT such a sign. A report unusable on
+   format alone therefore never makes the round fatal — a preamble line
+   before the `<!-- multi-review report -->` marker, or a missing Verdict
+   block, means the reviewer read its prompt file and reviewed the diff
+   and only the format failed. When at least one message shows no sign of
+   the prompt file's content, the pointer mechanism failed: stop and
    return `BLOCKED: no reviewer of round <i> could use its prompt file —
    <each reviewer's final message, one line each>`; a round in which a
    reviewer could not use its prompt file never lets the loop continue.
-   When every final message instead shows an environment death — a usage
-   limit, a tool error anywhere other than on that Read, or no final
-   message at all — nothing about the
-   prompt file failed: the round stays `inconclusive` and the loop
+   Otherwise nothing about the prompt file failed — every final message
+   shows an environment death (a usage limit, a tool error anywhere other
+   than on that Read, or no final message at all) or shows the diff was
+   reviewed and only the format failed: the round stays `inconclusive`
+   and the loop
    continues to the next round, as it did before pointer dispatch.
    u ≥ 1 → build one
    **consolidated finding set** from the usable reports by the rules
@@ -803,55 +825,45 @@ code has been revised since, so a re-pass is meaningful):
      refuses that Write, find the offending lines yourself: the hook's
      refusal names a credential kind — the kind of the first pattern that
      matched the whole content — and never a line, so nothing in it says
-     what to withhold. Run `node hooks/safety/protect-secrets.js` once
-     per line of the file you tried to write, giving it on standard input
-     the JSON object the hook reads:
-     `{"tool_name":"Write","tool_input":{"file_path":"<PROMPT_DIR>/round-<i>-findings.txt","content":"<that one line>"}}`.
-     In that object `<that one line>` is a JSON **string literal** —
-     every backslash and every double quote of the finding line escaped.
-     Finding lines routinely carry both (quoted code, Windows paths), so
-     build the payload with a program and never by hand: put the one line
-     in a quoted heredoc (`<<'EOF'`, which passes the line through
-     unchanged) and pipe it through `node -e`, which reads standard input
-     and prints the encoded object, and pipe that into the hook:
-
-     ```bash
-     node -e 'let s="";process.stdin.on("data",c=>s+=c).on("end",()=>{const line=s.replace(/\n$/,"");process.stdout.write(JSON.stringify({tool_name:"Write",tool_input:{file_path:"<PROMPT_DIR>/round-<i>-findings.txt",content:line}}))})' <<'EOF' | node hooks/safety/protect-secrets.js
-     <that one line>
-     EOF
-     ```
-
-     Never pass the line as an `echo` or `printf` argument: the shell and
-     this plugin's Bash hooks both act on it there.
-     The hook parses that object from standard input, inspects
-     `tool_input.file_path` and `tool_input.content`, and exits 0 whenever
-     it runs at all. Read each probe result as exactly one of four
-     outcomes:
-     (a) the hook printed a JSON object carrying no deny decision — the
-     line is allowed and stays as it is;
-     (b) the hook printed a JSON object carrying
-     `"permissionDecision":"deny"` (its `permissionDecisionReason` names
-     the credential kind) — the line is refused, and is withheld;
-     (c) a Bash hook denied the probe command before the secrets hook
-     ran — the secrets hook could not be consulted, so the line is
-     withheld (the conditional instruction the fix subagent works under
-     keeps that safe when the location holds no credential);
-     (d) Node exited non-zero without printing a JSON object, or printed
-     nothing at all — the hook could not start (a module it requires is
-     missing, or it crashed). This is a failure of the mechanism and not
-     a refused line: stop and return `BLOCKED: secrets probe could not
-     run — <the command's stderr, first line>` (Error Handling). Never
-     withhold a line on this outcome.
-     (A malformed payload would make the hook print `{}`, which reads as
-     outcome (a); that is why the payload is program-built.)
+     what to withhold. Probe the lines with the Write tool and nothing
+     else. Never probe with a Bash command:
+     `hooks/safety/block-dangerous-commands.js` scans the whole command
+     string and would refuse a command that merely quotes a
+     secret-shaped string, so a finding that holds no credential could be
+     withheld on the strength of its own wording. Never name a hook file
+     either: a path such as `hooks/safety/protect-secrets.js` resolves
+     only inside this plugin's own checkout, so in any other project the
+     probe could not run at all.
+     For each line of the file you tried to write, make ONE Write tool
+     call of a throwaway file that holds that one line:
+     `<PROMPT_DIR>/secrets-probe-<n>.txt`, where `<n>` is 1 for the first
+     probe of this controller and one more for each later probe, so that
+     no probe overwrites an earlier one. The Write content is the line
+     itself, copied verbatim — nothing is escaped and no payload is
+     built. Read each probe as exactly one of three outcomes:
+     (a) the Write succeeds — the line is allowed and stays as it is;
+     (b) the Write is refused by `hooks/safety/protect-secrets.js`, whose
+     refusal names the credential kind — the line is refused, and is
+     withheld;
+     (c) the Write is refused for any other reason — a permission denial,
+     a tool error, any refusal whose text does not come from
+     `hooks/safety/protect-secrets.js`. This is a failure of the
+     mechanism and not a refused line: stop and return
+     `BLOCKED: secrets probe could not run — <the refusal or error text,
+     first line>` (Error Handling). Never withhold a line on this
+     outcome.
+     No other hook can decide a probe: the content scan for hardcoded
+     secrets runs for Write and Edit only, and
+     `hooks/safety/block-dangerous-commands.js` inspects Bash command
+     strings, which a Write tool call is not.
      When no single line is refused, probe each pair of consecutive lines
-     the same way, the two lines joined by one newline and passed as one
-     `content` string. Two of the hook's patterns allow whitespace on both
-     sides of the `:` or `=`, and a newline is whitespace, so a key at the
-     end of one line and its value at the start of the next matches the
-     whole content while neither line matches on its own. Withhold both
-     lines of a refused pair. A pattern spans at most one line break, so
-     pairs are enough.
+     the same way — one Write of a throwaway file holding the two lines,
+     joined by one newline, under the next `<n>`. Two of the hook's
+     patterns allow whitespace on both sides of the `:` or `=`, and a
+     newline is whitespace, so a key at the end of one line and its value
+     at the start of the next matches the whole content while neither
+     line matches on its own. Withhold both lines of a refused pair. A
+     pattern spans at most one line break, so pairs are enough.
      Replace every withheld line by a line of exactly this form, which
      keeps the finding's id and severity:
      `- [<id>] <Severity> — <file:line, or the words no location when the finding carries none> — secret-bearing finding, value withheld`
@@ -964,7 +976,16 @@ code has been revised since, so a re-pass is meaningful):
      Write `<PROMPT_DIR>/round-<i>-failure.txt`
      under the value-file rule — its first line is the heading
      `## Previous attempt failed`, the remaining lines are the failure
-     text. A failing test can quote a credential, so this Write can be
+     text, capped at its LAST 150 lines. When earlier lines were cut, the
+     single line `(<n> earlier lines omitted)`, with `<n>` the number of
+     lines cut, goes directly after the heading and before those last 150
+     lines; when nothing was cut the file carries no such line. The cap
+     bounds the prompt file: the Read tool returns at most 2000 lines by
+     default, and an uncapped failure text — a full test log — could push
+     part of the prompt past what the fix subagent's single Read returns.
+     `./fix-prompt.md` places every rule before its `[FINDINGS]` and
+     `[FAILURE_BLOCK]` blocks for the same reason.
+     A failing test can quote a credential, so this Write can be
      refused too; in this file a withheld line carries no id and no
      location, so it is replaced by the fixed text
      `secret-bearing finding, value withheld` alone, and never by the
@@ -1711,68 +1732,63 @@ completed invocation only on explicit user request.
   `cannot write <out>: <error>` (the `--out` path's directory missing or
   unwritable) — only an `@<file>` the controller never wrote is corrected
   once by the row above; every other one is fatal at once, because the
-  plan's rule makes every failure it does not list fatal.
+  plan's rule makes every failure it does not list fatal. A wrong fill is
+  redone the other way round: while no pointer to the prompt file has been
+  dispatched, the controller removes the file with `rm -- "<file>"` and
+  then runs the corrected fill, which avoids exit 5 instead of recovering
+  from it ("Before round 1").
 - A value-file write is denied by a hook or fails → `BLOCKED: value file
   <name> could not be written — <the hook's reason, or the error>`. This
   plugin's `hooks/safety/protect-secrets.js` scans the path of every
   Read, Edit, Write and the content of every Edit and Write for
-  hardcoded secrets. On Bash it applies only its file-access patterns —
-  commands that read, copy, move, delete or send a secret file, and
-  commands that print a secret-shaped variable — and never the
-  hardcoded-secret content scan, which runs for Write and Edit alone;
-  that is what lets the heredoc probe below carry a finding line to the
-  hook. `hooks/safety/block-dangerous-commands.js` scans the whole Bash
-  command string, a heredoc body included, and so do the file-access
-  patterns above; a Security-lens finding may quote
-  exactly such text. One exception, and only this one: when
+  hardcoded secrets; that content scan for hardcoded secrets runs for
+  Write and Edit alone. `hooks/safety/block-dangerous-commands.js` scans
+  the whole Bash command string, a heredoc body included, and so do the
+  secrets hook's own file-access patterns — commands that read, copy,
+  move, delete or send a secret file, and commands that print a
+  secret-shaped variable; a Security-lens finding may quote exactly such
+  text, which is one reason the probe below is never a Bash command.
+  One exception, and only this one: when
   `hooks/safety/protect-secrets.js` refuses a value-file Write, the
   controller finds the offending lines itself, because the hook's refusal
   names only a credential kind — the kind of the first pattern that
-  matched the whole content — and never a line. It runs
-  `node hooks/safety/protect-secrets.js` once per line of the refused
-  file, giving the hook on standard input the JSON object the hook reads:
-  `{"tool_name":"Write","tool_input":{"file_path":"<the value file>","content":"<that one line>"}}`.
-  In that object `<that one line>` is a JSON **string literal**, with every
-  backslash and every double quote of the finding line escaped, and the
-  payload is built by a program, never by hand: the one line goes into a
-  quoted heredoc (`<<'EOF'`) piped through a `node -e` program that reads
-  standard input and prints
-  `JSON.stringify({tool_name:"Write",tool_input:{file_path:"<the value file>",content:<the line>}})`,
-  itself piped into the hook — the command of the Critical/Important
-  bullet. The line is never an `echo` or `printf` argument.
-  The hook parses that object from standard input, inspects
-  `tool_input.file_path` and `tool_input.content`, and exits 0 whenever it
-  runs at all. Each probe result is exactly one of four outcomes:
-  (a) the hook printed a JSON object carrying no deny decision — the line
-  is allowed and stays as it is;
-  (b) the hook printed a JSON object carrying
-  `"permissionDecision":"deny"` (its `permissionDecisionReason` names the
-  credential kind) — the line is refused, and is withheld;
-  (c) a Bash hook denied the probe command before the secrets hook ran —
-  the secrets hook could not be consulted, so the line is withheld;
-  (d) Node exited non-zero without printing a JSON object, or printed
-  nothing at all — the hook could not start (a module it requires is
-  missing, or it crashed). That is a failure of the mechanism and not a
-  refused line: the controller stops and returns `BLOCKED: secrets probe
-  could not run — <the command's stderr, first line>`, and never withholds
-  a line on this outcome.
-  (An unescaped line would make the payload
-  invalid JSON, on which the hook prints `{}` — outcome (a) for a
-  secret-bearing line; the program-built payload is what prevents it.)
+  matched the whole content — and never a line. It probes each line of
+  the refused file with ONE Write tool call of a throwaway file holding
+  that one line, `<PROMPT_DIR>/secrets-probe-<n>.txt`, where `<n>` counts
+  the probe Writes of this controller from 1 so that no probe overwrites
+  an earlier one. The probe is a Write tool call and nothing else: never
+  a Bash command, because `hooks/safety/block-dangerous-commands.js`
+  scans a command string and would refuse one that merely quotes a
+  secret-shaped string, and never a hook path, because a path such as
+  `hooks/safety/protect-secrets.js` resolves only inside this plugin's
+  own checkout and would leave the probe unrunnable in every other
+  project. Only the secrets hook decides a probe; no other hook can.
+  Each probe is exactly one of three outcomes:
+  (a) the Write succeeds — the line is allowed and stays as it is;
+  (b) the Write is refused by `hooks/safety/protect-secrets.js`, whose
+  refusal names the credential kind — the line is refused, and is
+  withheld;
+  (c) the Write is refused for any other reason — a permission denial, a
+  tool error, any refusal whose text does not come from
+  `hooks/safety/protect-secrets.js`. That is a failure of the mechanism
+  and not a refused line: the controller stops and returns
+  `BLOCKED: secrets probe could not run — <the refusal or error text,
+  first line>`, and never withholds a line on this outcome.
   When no single line is refused, the controller probes each pair of
-  consecutive lines the same way, the two lines joined by one newline and
-  passed as one `content` string. Two of the hook's patterns allow
-  whitespace on both sides of the `:` or `=`, and a newline is whitespace,
-  so a key at the end of one line and its value at the start of the next
-  matches the whole content while neither line matches on its own. Both
-  lines of a refused pair are withheld. A pattern spans at most one line
-  break, so pairs are enough.
+  consecutive lines the same way — one Write of a throwaway file holding
+  the two lines joined by one newline, under the next `<n>`. Two of the
+  hook's patterns allow whitespace on both sides of the `:` or `=`, and a
+  newline is whitespace, so a key at the end of one line and its value at
+  the start of the next matches the whole content while neither line
+  matches on its own. Both lines of a refused pair are withheld. A
+  pattern spans at most one line break, so pairs are enough.
   Every withheld line is replaced by a line of exactly this form, which
   keeps the finding's id and severity:
   `- [<id>] <Severity> — <file:line, or the words no location when the finding carries none> — secret-bearing finding, value withheld`
   and the Write is retried
-  once. Because outcome (c) withholds a line at which no credential need
-  exist, the fix subagent's instruction for such a finding is
+  once. Because a pattern of the hook can match a line that holds no
+  credential at all (a placeholder, an example value), the fix subagent's
+  instruction for such a finding is
   conditional: it inspects the location, removes a hardcoded credential
   found there and loads it from the environment, and otherwise leaves the
   finding unfixed and reports its id back as withheld. The controller
@@ -1791,12 +1807,18 @@ completed invocation only on explicit user request.
   identical pointer once; then the reviewer is unusable. With at least one
   other usable report the round proceeds under `usable <u>/<m>`. With no
   usable report in the round at all (u = 0) write the round entry in the
-  `inconclusive` form, then split on the final messages by the two u = 0
-  rows above: return `BLOCKED: no reviewer of round <i>
+  `inconclusive` form, then split on the final messages: return
+  `BLOCKED: no reviewer of round <i>
   could use its prompt file — <each reviewer's final message, one line
-  each>` when at least one of them shows a reviewer that could not read
-  or did not follow its prompt file, and continue the loop when they all
-  show an environment death instead. A reviewer that reads another
+  each>` when at least one of them shows NO sign of the prompt file's
+  content, and continue the loop otherwise. A final message shows a sign
+  of the prompt file's content when it names files or hunks of the diff,
+  or carries a Findings or Verdict section; a report unusable on format
+  alone — a preamble line before the marker, a missing Verdict block —
+  whose text shows the diff was reviewed is therefore not a pointer
+  failure: that round is logged `inconclusive` and the loop continues,
+  exactly as a round whose final messages all show an environment death
+  (a usage limit, a tool error, no message at all). A reviewer that reads another
   file in the directory cannot be prevented by wording alone; the
   directory is outside every search the reviewer is allowed to run, and
   the pointer forbids it — the same exposure the `.superpowers/reviews/`

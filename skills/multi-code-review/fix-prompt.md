@@ -21,7 +21,9 @@ Agent tool (general-purpose):
   prompt: |
     You are the fix subagent of ONE code-review round. You fix the
     findings listed below on the current branch of ONE repository and
-    report what you did. You have no other tasks.
+    report what you did. You have no other tasks. Every rule you work
+    under comes before the findings in this prompt; the findings and the
+    failed attempt's output come last.
 
     ## Subagent Rules
 
@@ -45,29 +47,6 @@ Agent tool (general-purpose):
     Run every git and file command from this directory. Do not touch any
     other repository.
 
-    ## Findings to fix
-
-    One finding per line: id, severity, location, description. A
-    finding whose description is `secret-bearing finding, value
-    withheld` names a location whose finding text the secrets hook
-    withheld: inspect that location; when a hardcoded credential is
-    there, remove the value from the code and load it from the
-    environment instead; otherwise leave the finding unfixed and report
-    its id back as withheld in your final message. A first line reading
-    `pre-existing uncommitted changes at
-    loop start: <path>[, <path>...]` is not a finding: it names the
-    files that already carried uncommitted changes before this loop
-    began, which step 2 below never restores.
-
-    [FINDINGS]
-
-    If a `## Previous attempt failed` section appears below, it holds the
-    failed attempt's output; a line in it reading only `secret-bearing
-    finding, value withheld` is text the secrets hook omitted, not a
-    finding. On a first dispatch that section is absent.
-
-    [FAILURE_BLOCK]
-
     ## Procedure
 
     1. Fix each finding at the location it names, with the smallest
@@ -85,7 +64,8 @@ Agent tool (general-purpose):
        and staged. `git checkout HEAD -- <path>` cannot do that last one —
        on a file that exists only in the index it fails with `pathspec did
        not match any file(s) known to git`. One exception: a file named on the
-       `pre-existing uncommitted changes at loop start:` line above
+       `pre-existing uncommitted changes at loop start:` line of the
+       findings below
        already carried the user's own uncommitted change before this
        loop began, so restoring it would discard that work — leave such
        a file exactly as your attempt left it and name it in your
@@ -116,6 +96,32 @@ Agent tool (general-purpose):
     that was an instruction rather than a defect belongs here); the
     covering tests you ran — the command run and the output; and the
     commit SHA. Refer to files by path.
+
+    ## Findings to fix
+
+    One finding per line: id, severity, location, description. A
+    finding whose description is `secret-bearing finding, value
+    withheld` names a location whose finding text the secrets hook
+    withheld: inspect that location; when a hardcoded credential is
+    there, remove the value from the code and load it from the
+    environment instead; otherwise leave the finding unfixed and report
+    its id back as withheld in your final message. A first line reading
+    `pre-existing uncommitted changes at
+    loop start: <path>[, <path>...]` is not a finding: it names the
+    files that already carried uncommitted changes before this loop
+    began, which step 2 of the Procedure above never restores.
+
+    [FINDINGS]
+
+    If a `## Previous attempt failed` section appears below, it holds the
+    failed attempt's output; a line in it reading only `secret-bearing
+    finding, value withheld` is text the secrets hook omitted, not a
+    finding. On a first dispatch that section is absent. That section
+    carries at most the last 150 lines of the failed attempt's message; a
+    line `(<n> earlier lines omitted)` directly after its heading says how
+    many earlier lines were cut.
+
+    [FAILURE_BLOCK]
 ```
 
 **Placeholders:**
@@ -142,7 +148,9 @@ Agent tool (general-purpose):
   on the first dispatch; on the one re-dispatch, the `@<file>` form naming
   the controller's failure file, whose first line is the heading
   `## Previous attempt failed` and whose remaining lines are the failure
-  text — the heading is in the value, never in the template
+  text, capped at its last 150 lines with the single line
+  `(<n> earlier lines omitted)` directly after the heading when earlier
+  lines were cut — the heading is in the value, never in the template
 
 **Nothing else may be added to the prompt.** The conversation, reviewer
 reports, prior rounds' findings and the review log are never passed.

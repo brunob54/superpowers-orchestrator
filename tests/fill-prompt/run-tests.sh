@@ -274,8 +274,14 @@ assert_file_contains "fix template: fix-report path filled" "$WORK/fix.md" '/rep
 assert_file_not_matches "fix template: no failure heading on the first dispatch" "$WORK/fix.md" "$FAILURE_HEADING_LINE_ERE"
 assert_file_not_matches "fix template: no residual placeholder" "$WORK/fix.md" "$PLACEHOLDER_ERE"
 # Round 4 [M1]: same whole-body check as for the reviewer template above.
+# Amendment 4 put every rule of the fix template before its variable blocks,
+# so `[FAILURE_BLOCK]` is now the last body line. An empty whole-line value
+# removes that line, so the first dispatch's output must end with the body
+# line before it — the fill must still not drop the template's tail.
 FIX_LAST_BODY_LINE="$(last_body_line "$FIX_TEMPLATE")"
-assert_eq "fix template: last output line is the dedented last body line" "$(tail -n 1 "$WORK/fix.md")" "$FIX_LAST_BODY_LINE"
+assert_eq "fix template: [FAILURE_BLOCK] is the last body line" "$FIX_LAST_BODY_LINE" "[FAILURE_BLOCK]"
+FIX_PREV_BODY_LINE="$(grep -B 2 '^    \[FAILURE_BLOCK\]$' "$FIX_TEMPLATE" | head -n 1 | sed 's/^[[:space:]]*//')"
+assert_eq "fix template: last output line is the body line before [FAILURE_BLOCK]" "$(tail -n 1 "$WORK/fix.md")" "$FIX_PREV_BODY_LINE"
 printf '%s\n' "$FAILURE_HEADING" 'covering tests failed: 2 errors in tests/test_a.py' > "$WORK/failure.txt"
 fill --template "$FIX_TEMPLATE" --out "$WORK/fix-retry.md" ROUND=2 SLUG=my-branch REPO_ROOT=/repo FIX_REPORT_FILE=/repo/docs/x/implementation/my-branch-fix-reports.md "FINDINGS=@$WORK/findings.txt" "FAILURE_BLOCK=@$WORK/failure.txt"
 assert_eq "fix template: re-dispatch (FAILURE_BLOCK from file) exits 0" "$STATUS" "0"
