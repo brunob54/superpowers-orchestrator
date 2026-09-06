@@ -367,11 +367,13 @@ environment failure with a resume path.)
 | Condition | Handling |
 |---|---|
 | `mktemp -d` fails at Procedure start, or `cygpath` fails where the path must be converted | `BLOCKED: prompt directory could not be created — <error text>`. Nothing is dispatched. |
-| `fill-prompt.js` exits non-zero, or `test -s` fails, for a prompt file | `BLOCKED: prompt file <name> not produced — <the script's message, or "empty">`. Never dispatch a pointer to a file that failed the check. |
+| `fill-prompt.js` exits 1, 3 or 4, or exits 5 naming an `@<file>` the controller never wrote (a slip in the controller's own command) | The controller corrects its command once and runs it again; a second non-zero exit is fatal as the row below (Amendment 3). |
+| `fill-prompt.js` exits 2, or exits 5 on a file the controller did write, or a second non-zero exit after a corrected command, or `test -s` fails, for a prompt file | `BLOCKED: prompt file <name> not produced — <the script's message, or "empty">`. Never dispatch a pointer to a file that failed the check. |
 | A value-file write fails | `BLOCKED: value file <name> could not be written — <the error>`. |
-| A value-file Write is refused by `hooks/safety/protect-secrets.js` (a finding or a failure line quotes a credential-shaped string) | Each line the hook's message names is replaced by its `file:line` plus the fixed text `secret-bearing finding, value withheld`; the Write is retried once. The withheld finding keeps its id and severity, so the fix subagent still removes the secret at that location. A second refusal is `BLOCKED: value file <name> refused twice by protect-secrets — <the hook's reason>`. This is the one sanctioned alteration of value text: it is the location-only form the orchestrator's "Never reproduce a secret" rule already imposes on every committed file (Amendment 2). |
+| A value-file Write is refused by `hooks/safety/protect-secrets.js` (a finding or a failure line quotes a credential-shaped string) | The hook names only a credential kind, never a line, so the controller runs `node hooks/safety/protect-secrets.js` itself on each line of the refused file, with a synthetic Write payload in the form the hook reads, and every line the hook refuses is replaced by its `file:line` plus the fixed text `secret-bearing finding, value withheld` (Amendment 3); the Write is retried once. The withheld finding keeps its id and severity, so the fix subagent still removes the secret at that location. A second refusal is `BLOCKED: value file <name> refused twice by protect-secrets — <the hook's reason>`. This is the one sanctioned alteration of value text: it is the location-only form the orchestrator's "Never reproduce a secret" rule already imposes on every committed file (Amendment 2). |
 | Node is missing | Treated as the script failing (row above). |
-| No reviewer of a round returns a usable report after the pointer dispatch and the one identical retry of step 3 (reader side: the file could not be read, or the pointer was not followed) | Write the round entry in the existing `inconclusive` form, then `BLOCKED: no reviewer of round <i> could use its prompt file — <each reviewer's final message, one line each>`. An all-unusable round under this mechanism never lets the loop continue. A round with at least one usable report proceeds under the existing `usable <u>/<m>` rule. |
+| No reviewer of a round returns a usable report after the pointer dispatch and the one identical retry of step 3, and at least one reviewer's final message shows it could not read or did not follow its prompt file | Write the round entry in the existing `inconclusive` form, then `BLOCKED: no reviewer of round <i> could use its prompt file — <each reviewer's final message, one line each>`. A round with at least one usable report proceeds under the existing `usable <u>/<m>` rule. |
+| No reviewer of a round returns a usable report, and every final message shows an environment death (usage limit, tool error, no message at all) | Not a failure of the pointer mechanism: the round is logged `inconclusive` and the loop continues, as today (Amendment 3). |
 | A reviewer reads another file in the directory | Cannot be prevented by wording alone; the directory is outside every search the reviewer is allowed to run, and the pointer forbids it. The remaining exposure is a reviewer that disobeys a direct instruction, which is the same exposure the `.superpowers/reviews/` prohibition already carries. Accepted. |
 
 The controller never reads a template and never pastes a prompt inline: the
@@ -532,3 +534,13 @@ refuses is replaced by its `file:line` plus "secret-bearing finding, value
 withheld" and the Write retried once, a second refusal staying fatal. No
 credential reaches disk, the finding stays a Critical the fix removes, and
 every other failure of the mechanism stays fatal as Amendment 1 states.
+
+**Amendment 3 — 2026-09-06 — author decisions on code review invocation 3
+items [I2] (round 5), [I2] (round 6) and [I4] (round 6).** Three refinements
+of Amendments 1 and 2, each keeping the fatal rule where the mechanism
+itself failed: the secrets hook names a credential kind and never a line,
+so the controller runs the hook per line to find what to withhold; a round
+whose reviewers all died of the environment (usage limit, tool error, no
+message) is not a pointer failure and stays `inconclusive`; a slip in the
+controller's own fill command (exit 1, 3, 4, or 5 on a file it never wrote)
+is corrected once before a second non-zero exit is fatal.
