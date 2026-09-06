@@ -1239,7 +1239,7 @@ git commit -m "feat(orchestrator): prompt files and the pointer in the dispatch 
   - Invariant: fails when a fill command and its template's body placeholders differ, when a block names no existing template, or when the block count is not four.
   - Verification: the runs of Steps 2 and 4.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 In `tests/fill-prompt/run-tests.sh`, insert immediately before the final `echo` / `bold "Results: …"` pair (after section 12):
 
@@ -1314,12 +1314,12 @@ else
 fi
 ```
 
-- [ ] **Step 2: Run the tests to verify they fail**
+- [x] **Step 2: Run the tests to verify they fail**
 
 Run: `bash tests/fill-prompt/run-tests.sh 2>&1 | grep -E 'FAIL|Results'; bash tests/orchestrating-development/run-tests.sh 2>&1 | grep -E 'FAIL|Results'`
 Expected: FAIL — fill-prompt reports `the orchestrator holds one fill block per template (four) (expected '4', got '0')` and `each template is filled by exactly one block (expected '4', got '0')`, `Results: 159 passed, 2 failed`; the wording suite reports `phase 0: mktemp -d step (missing: mktemp -d)`, `phase 0: names the creation-failure cause …`, the four `--template` needles, the four `test -s` needles, `phases: no template is filled by hand … (must not contain: Fill `./)`, `phases: BATCH_NUMBER is not passed …` and the pointer count as FAIL.
 
-- [ ] **Step 3: Write the phase text**
+- [x] **Step 3: Write the phase text**
 
 In `skills/orchestrating-development/SKILL.md`, Phase 0, after step 8
 
@@ -1503,12 +1503,12 @@ Expected return:
 
 The paragraph that begins `The filled `code-review-loop-prompt.md` passes `TOPIC_DIR`` stays as it is. Nothing else in Phases 1–5 changes.
 
-- [ ] **Step 4: Run the tests to verify they pass**
+- [x] **Step 4: Run the tests to verify they pass**
 
 Run: `bash tests/fill-prompt/run-tests.sh 2>&1 | grep -E 'fill command|FAIL|Results'; bash tests/orchestrating-development/run-tests.sh 2>&1 | grep -E 'FAIL|Results'; bash tests/in-run-rulings/run-tests.sh 2>&1 | tail -1`
 Expected: fill-prompt prints four `PASS: fill command for <template> names exactly its body placeholders (…)` lines and `Results: 165 passed, 0 failed` (159 + 6); the wording suite prints only `Results: <p> passed, 0 failed`; in-run-rulings `Results: 502 passed, 0 failed` (the Phase 3 step 5 pins are proven intact).
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add skills/orchestrating-development/SKILL.md tests/fill-prompt/run-tests.sh tests/orchestrating-development/run-tests.sh
