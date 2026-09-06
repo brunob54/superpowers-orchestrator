@@ -626,7 +626,7 @@ git commit -m "docs(orchestrating-development): state the widened guard exemptio
    - Verification: the two acceptance greps of Step 7 — the spec's own `grep -rn "opening with\|opens with" skills/ hooks/ docs/FORK-IMPROVEMENTS.md` leaves no hit that describes `hooks/subagent-guard.js`, and the supplementary `grep -rn "OPEN with\|open with" skills/ hooks/ docs/FORK-IMPROVEMENTS.md` leaves no hit that describes the hook's exemption.
    - Sentence wording is free; the properties above bind.
 
-- [ ] **Step 1: Rewrite `skills/multi-doc-review/SKILL.md` `## Guard Interaction`**
+- [x] **Step 1: Rewrite `skills/multi-doc-review/SKILL.md` `## Guard Interaction`**
 
 Replace the section body — the heading line `## Guard Interaction` itself stays untouched — with:
 
@@ -639,7 +639,7 @@ marker instruction from `reviewer-prompt.md`; without it, reports about
 skill-discussing documents get blocked and rounds degrade to retries.
 ```
 
-- [ ] **Step 2: Rewrite `skills/multi-code-review/SKILL.md` `## Guard Interaction`**
+- [x] **Step 2: Rewrite `skills/multi-code-review/SKILL.md` `## Guard Interaction`**
 
 Replace the section body with the text below. The heading line `## Guard Interaction` itself stays untouched: `tests/reviewer-templates/run-tests.sh:262` uses that whole line as the end of its Error Handling range, so renaming or moving it breaks that suite.
 
@@ -652,7 +652,7 @@ above its marker line is still exempt. Never remove the marker instruction
 from `reviewer-prompt.md`.
 ```
 
-- [ ] **Step 3: Rewrite the accepted-residual-risk paragraph of `skills/researching-prior-art/SKILL.md`**
+- [x] **Step 3: Rewrite the accepted-residual-risk paragraph of `skills/researching-prior-art/SKILL.md`**
 
 Replace the first sentence of that paragraph — from "Accepted residual risk:" through "first line of their returns." — with the text below, keeping the paragraph's list indentation and leaving the rest of the paragraph ("This means the guard never inspects …") unchanged. The replacement deliberately avoids the phrases "opens with" and "opening with", so that the Step 7 acceptance grep stays an all-or-nothing check with no new expected hit.
 
@@ -665,7 +665,7 @@ Replace the first sentence of that paragraph — from "Accepted residual risk:" 
    their returns.
 ```
 
-- [ ] **Step 4: Rewrite `skills/researching-prior-art/SKILL.md` `## Guard interaction`**
+- [x] **Step 4: Rewrite `skills/researching-prior-art/SKILL.md` `## Guard interaction`**
 
 Replace the section body — the heading line `## Guard interaction` itself stays untouched — with:
 
@@ -678,7 +678,7 @@ or `controller-prompt.md`; without it, reports get blocked and assignments
 degrade to evidence gaps.
 ```
 
-- [ ] **Step 5: Rewrite the two `reviewer-prompt.md` load-bearing-marker notes**
+- [x] **Step 5: Rewrite the two `reviewer-prompt.md` load-bearing-marker notes**
 
 These two notes are the reason the spec's own grep is not sufficient: they spell the rule `OPEN with`, in capitals, so `grep -rn "opening with\|opens with"` never sees them, and without this step the Step 7 check would report success while two files still stated the pre-change rule.
 
@@ -694,7 +694,7 @@ it as the report's first line.
 
 In `skills/multi-code-review/reviewer-prompt.md`, replace the paragraph that begins "The marker line in the output format is load-bearing" with the same text, re-wrapped to that file's narrower column width if needed. Both files keep every other sentence, and both keep instructing the reviewer to make the marker the report's first line (Does NOT cover, above).
 
-- [ ] **Step 6: Rewrite the two guard bullets of `docs/FORK-IMPROVEMENTS.md`**
+- [x] **Step 6: Rewrite the two guard bullets of `docs/FORK-IMPROVEMENTS.md`**
 
 Replace the bullet that begins "- Reviewer reports open with the marker" with:
 
@@ -708,7 +708,7 @@ Replace the bullet that begins "- Controllers dispatch their own nested workers"
 - Controllers dispatch their own nested workers (implementers, reviewers, fix subagents). `hooks/subagent-guard.js` records this sanctioned nesting and exempts a return from skill-leakage blocking when one of its first 10 non-blank lines starts with the `<!-- orchestration report -->` marker — free-text `BLOCKED` reasons may legitimately name skills, and a controller that writes a sentence above its marker still returns cleanly.
 ```
 
-- [ ] **Step 7: Run the three acceptance greps**
+- [x] **Step 7: Run the three acceptance greps**
 
 The first two are negative (nothing may still state the old rule); the third is positive (every rewritten file must state the new one). A negative check alone would pass a rewrite that deleted the exemption sentence altogether, which is why the third exists.
 
@@ -737,12 +737,12 @@ done
 
 Expected: no output. Any `MISSING:` line names a file that no longer states the widened rule — fix that file before continuing. The list is the six files of this task plus `skills/orchestrating-development/SKILL.md` from Task 3, so this one command re-checks every prose passage of the change. `hooks/subagent-guard.js` is deliberately absent: its comments state the window as `first MARKER_SEARCH_LINES non-blank lines`, and Task 1's own test `The hook comments state the window rule` is the check for it.
 
-- [ ] **Step 8: Run every fast suite**
+- [x] **Step 8: Run every fast suite**
 
 Run: `bash tests/codex/run-unit-tests.sh && bash tests/smart-compress/run-tests.sh && bash tests/reviewer-templates/run-tests.sh && bash tests/writing-plans/run-tests.sh && bash tests/in-run-rulings/run-tests.sh && bash tests/fill-prompt/run-tests.sh && bash tests/orchestrating-development/run-tests.sh && bash tests/measure-context/run-tests.sh`
 Expected: PASS — every suite exits 0; `tests/codex/run-unit-tests.sh` ends with `All unit tests passed.` and `tests/orchestrating-development/run-tests.sh` and `tests/in-run-rulings/run-tests.sh` each end with `Results: <n> passed, 0 failed`.
 
-- [ ] **Step 9: Commit**
+- [x] **Step 9: Commit**
 
 ```bash
 git add skills/multi-doc-review/SKILL.md skills/multi-code-review/SKILL.md skills/researching-prior-art/SKILL.md skills/multi-doc-review/reviewer-prompt.md skills/multi-code-review/reviewer-prompt.md docs/FORK-IMPROVEMENTS.md
