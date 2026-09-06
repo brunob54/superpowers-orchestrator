@@ -248,3 +248,6 @@ _Invocation 3 — 2026-09-06 — N=2 M=2 — BASE..HEAD b9b9ffb..9de4fbe — bra
 - [M4] carried — fix-prompt.md step 2 has the fix subagent restore every file it changed with git checkout, which in direct mode with consented pre-existing edits discards those edits together with the fix; the controller bullet's 'never a change that existed when the loop started' rule (round 5 [I1]) is not in the template ← 1/2: r2:M1
 - [M5] carried — the last-output-line checks on both real templates derive the expected line with the script's own closing-fence rule and pass vacuously on the untagged column-0 residue (round 5 [M1] reworded the comment); a wording pin of each template's last body line is a test-design choice ← 1/2: r2:M2
 - [M6] rejected: harness probe not runnable here — from a subagent running in the orchestrator's normal permission mode, Write one file under a fresh `mktemp -d` path and observe whether a permission prompt appears — (ambiguous observation) — a value-file Write outside the working directories may raise a permission prompt in a non-bypass session; this session runs in bypass mode, so no observation here can match or contradict the claim ← 1/2: r2:M3
+
+_Completed — 2026-09-06 — cap reached — HEAD 9aac7f6e1a3d855b0f710f4307d64c0e52a4afa5_
+Secrets found: none
