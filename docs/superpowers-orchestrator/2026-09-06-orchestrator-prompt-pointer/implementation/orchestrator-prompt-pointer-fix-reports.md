@@ -58,3 +58,18 @@ Results: 166 passed, 0 failed
 $ bash tests/sdd-scripts/run-tests.sh
 Results: 193 passed, 0 failed
 ```
+
+## Round 2
+
+Findings addressed: I4.
+Files: `skills/orchestrating-development/SKILL.md`, `tests/orchestrating-development/run-tests.sh`.
+
+Covering tests:
+
+```
+$ bash tests/orchestrating-development/run-tests.sh
+Results: 140 passed, 0 failed
+
+$ bash tests/in-run-rulings/run-tests.sh
+Results: 502 passed, 0 failed
+```

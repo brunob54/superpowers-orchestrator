@@ -66,3 +66,9 @@ _Invocation 1 — 2026-09-06 — N=2 M=2 — BASE..HEAD 582763a..33437c6 — bra
 _Completed — 2026-09-06 — cap reached — HEAD 49297390bdce0c820e76eceb8f7fb5dd1e1e5358_
 Secrets found: none
 
+
+### Post-loop addendum — 2026-09-06 — decisions (invocation 1)
+- [I4] decided (orchestrator): amend plan: Task 4 Contract "Must convey" bullet now reads "the withheld-line form keeps the answer's id, tag and ruling verb and replaces only the quoted value: `[<id>] (<tag>): <verb and its text up to the quoted value> — <file:line> — secret-bearing finding, value withheld`"; fix it: the withheld replacement in skills/orchestrating-development/SKILL.md (Major-Error Stop Policy, secrets-hook probe paragraph) keeps the ruling verb (fix it / plan governs / amend plan …; fix it / accept) and the non-secret answer text before the location, so the controller receives an actionable decision; update the wording-suite assertion that pins the withheld-line form
+- [I4] fixed — the withheld replacement rule now keeps the ruling verb and the non-secret answer text up to the quoted value and states the amended Task 4 form verbatim; the wording suite pins the amended form and rejects the location-only form (verification re-review skipped: the effective HEAD had moved past the completion marker, so invocation 2 below reviews the fix) → a54f2b2
+
+_Invocation 2 — 2026-09-06 — N=2 M=2 — BASE..HEAD 582763a..a54f2b2 — branch feature/orchestrator-prompt-pointer — gate: orchestration_
