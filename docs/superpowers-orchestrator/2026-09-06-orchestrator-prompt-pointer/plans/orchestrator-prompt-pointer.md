@@ -699,7 +699,7 @@ git commit -m "feat(orchestrator): Resume Answer section present on every dispat
   - Verification: the runs of Steps 2 and 4.
 - Test-block entry in `CLAUDE.md`: on-disk only; verification `git status --porcelain CLAUDE.md` prints nothing (the file is ignored) and `git ls-files --error-unmatch CLAUDE.md` fails.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Create `tests/orchestrating-development/run-tests.sh` with this content and make it executable (`chmod +x`):
 
@@ -959,12 +959,12 @@ fi
 exit 0
 ```
 
-- [ ] **Step 2: Run the test to verify it fails**
+- [x] **Step 2: Run the test to verify it fails**
 
 Run: `bash tests/orchestrating-development/run-tests.sh 2>&1 | grep -E 'FAIL|Results'`
 Expected: FAIL — every section 1 needle (`dispatch rules: contains 'mktemp -d' (missing: …)` and the others), every section 3 cause and row, section 4's `prompt templates: names the fill script`; sections 5 and 6 pass (Tasks 1–3 shipped them); `Results: <p> passed, <n> failed` with `<n>` ≥ 40.
 
-- [ ] **Step 3: Write the orchestrator text**
+- [x] **Step 3: Write the orchestrator text**
 
 In `skills/orchestrating-development/SKILL.md`, under `## Controller Dispatch Rules (apply to every phase)`, replace the bullet
 
@@ -1201,12 +1201,12 @@ Then, in `CLAUDE.md` (on disk only; this file is gitignored — never `git add` 
 bash tests/orchestrating-development/run-tests.sh  # orchestrator prompt-pointer dispatch and controller-template wording contracts
 ```
 
-- [ ] **Step 4: Run the tests to verify they pass**
+- [x] **Step 4: Run the tests to verify they pass**
 
 Run: `bash tests/orchestrating-development/run-tests.sh 2>&1 | grep -E 'FAIL|Results'; bash tests/in-run-rulings/run-tests.sh 2>&1 | tail -1; bash tests/writing-plans/run-tests.sh 2>&1 | tail -1; git status --porcelain CLAUDE.md; git ls-files --error-unmatch CLAUDE.md; echo "ls-files exit $?"`
 Expected: the wording suite prints only `Results: <p> passed, 0 failed`; in-run-rulings `Results: 502 passed, 0 failed`; writing-plans `Results: 15 passed, 0 failed`; `git status --porcelain CLAUDE.md` prints nothing; `git ls-files` prints an error and `ls-files exit 1`.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add skills/orchestrating-development/SKILL.md tests/orchestrating-development/run-tests.sh
