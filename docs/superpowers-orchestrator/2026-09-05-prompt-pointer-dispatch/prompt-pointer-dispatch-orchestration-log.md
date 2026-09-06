@@ -87,3 +87,5 @@ Re-dispatch: phase 4, in-run resume 1 of 3
 
 
 ## Phase 4 — Code review — rounds 9 (5 invocations, N_code=2 M=2 then N_code=1 M=1) — cap — fixes 17 — unresolved 0
+
+_Completed — 2026-09-06 — HEAD 0b81785_
