@@ -79,7 +79,7 @@ Commit slug for every task: `orchestrator-prompt-pointer` (the plan basename). C
   - Invariant: the section fails on the unchanged templates (exit 4 on `M_REVIEWERS=`) and passes after the rename.
   - Verification: the run before and after Step 3.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Add helper `assert_file_has_line` next to the other helpers of `tests/fill-prompt/run-tests.sh` (after the `assert_absent` function):
 
@@ -141,12 +141,12 @@ assert_eq "code-review-loop template: M=1 is a usage error (exit 1)" "$STATUS" "
 assert_absent "code-review-loop template: M=1 writes nothing" "$WORK/code-loop-m.md"
 ```
 
-- [ ] **Step 2: Run the test to verify it fails**
+- [x] **Step 2: Run the test to verify it fails**
 
 Run: `bash tests/fill-prompt/run-tests.sh 2>&1 | tail -20`
 Expected: FAIL — `doc-review-loop template: M_REVIEWERS=2 exits 0 (expected '0', got '4')` and `code-review-loop template: M_REVIEWERS=1 exits 0 (expected '0', got '4')` among the failures (the script exits 4 because `M_REVIEWERS` names no placeholder yet); `Results: 111 passed, 5 failed` (102 + 14 assertions; the five that fail are the two `exits 0`, the two `M filled into the parameter line` and the checklist-line assertion, because no file was written; the nine others pass: `M=<n>` is already a usage error today, since the script's name pattern needs two letters, and the no-residual-placeholder and no-`[M]` checks pass on the missing file, since `grep` finds nothing in it).
 
-- [ ] **Step 3: Rename the placeholder**
+- [x] **Step 3: Rename the placeholder**
 
 In `skills/orchestrating-development/doc-review-loop-prompt.md`, body line 45, replace:
 
@@ -210,12 +210,12 @@ with:
 
 Nothing else in the three files changes.
 
-- [ ] **Step 4: Run the tests to verify they pass**
+- [x] **Step 4: Run the tests to verify they pass**
 
 Run: `bash tests/fill-prompt/run-tests.sh 2>&1 | tail -3 && bash tests/in-run-rulings/run-tests.sh 2>&1 | tail -1 && grep -rn '\[M\]' skills/orchestrating-development/ ; echo "grep exit $?"`
 Expected: `Results: 116 passed, 0 failed` (102 + 14) for fill-prompt; `Results: 496 passed, 0 failed` for in-run-rulings; the grep prints nothing and `grep exit 1`.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add skills/orchestrating-development/doc-review-loop-prompt.md skills/orchestrating-development/code-review-loop-prompt.md skills/orchestrating-development/SKILL.md tests/fill-prompt/run-tests.sh
