@@ -103,7 +103,7 @@ this platform lacks` — and stop.
   batch's task numbers, comma-separated — you fill both yourself.
 
   Keep `<k>` in your context; when unsure of the next value, run
-  `ls <PROMPT_DIR>` (one short Bash result) and take the numerically
+  `ls "<PROMPT_DIR>"` (one short Bash result) and take the numerically
   largest number after `dispatch-` plus one — the numerically largest
   number, not the last line `ls` prints, which sorts `dispatch-10-…`
   before `dispatch-2-…`. A prompt file is written once and never
@@ -326,7 +326,11 @@ the same question batch below).
    with `cygpath -m` on Git Bash. A failure here — the command fails,
    prints a path under the repository root, or `cygpath` fails where it
    must run — is a major error: stop with the `## STOPPED` cause
-   `prompt directory could not be created — <error text>`, nothing
+   `prompt directory could not be created — <error text>` (for the
+   printed-under-the-repository-root case, where `mktemp -d` prints
+   nothing else, `<error text>` is `mktemp -d printed a path under the
+   repository root`; that printed path is not the prompt directory and
+   may be named, since it was never used), nothing
    dispatched (Major-Error Stop Policy). The fill counter `<k>` of the
    prompt-file names starts at 1.
 
@@ -945,7 +949,9 @@ Trigger: `Resume orchestration for <plan-or-spec path>`.
    directory is abandoned, never continued, and no counter carries over
    from it: run `mktemp -d` again under the Controller
    Dispatch Rules ("Prompt files and the pointer"), before the first
-   fill, the counter `<k>` starting at 1 in the new directory — write the answer lines with
+   fill, the counter `<k>` starting at 1 in the new directory — this is
+   the fill counter of the file names, not the `<k>` of a
+   `[task <n>/<k>]` line or of `_Invocation <k>` — write the answer lines with
    the Write tool to `<PROMPT_DIR>/dispatch-1-answers.txt`, fill the
    stopped phase's prompt under `<k>` = 1 with that phase's fill command
    and `'RESUME_ANSWER=@<PROMPT_DIR>/dispatch-1-answers.txt'` — when the
@@ -2102,8 +2108,8 @@ Failures OF the mechanism (fatal):
 
 | Condition | `## STOPPED` cause |
 |---|---|
-| `mktemp -d` fails, prints a path under the repository root, or `cygpath` fails where the path must be converted | `prompt directory could not be created — <error text>`. Nothing is dispatched. |
-| The fill script exits 2 (malformed template); or exits 5 with `cannot read` on an `@<file>` you did write, with `cannot write <out>: existing path could not be read`, or with `cannot write <out>: file already exists` (a dispatched name reused with different content); or exits non-zero a second time after a corrected command; or `test -s` fails on the prompt file | `prompt file <name> not produced — <the script's message, or "empty">`; never dispatch a pointer to a file that failed the check. |
+| `mktemp -d` fails, prints a path under the repository root, or `cygpath` fails where the path must be converted | `prompt directory could not be created — <error text>` (for the printed-under-the-repository-root case, `<error text>` is `mktemp -d printed a path under the repository root`, naming that printed path — it is not the prompt directory and was never used). Nothing is dispatched. |
+| The fill script exits 2 (malformed template); or exits 5 with `cannot read value file <path>: <error>` after `test -s "<PROMPT_DIR>/<the named value file>"` (or `ls "<PROMPT_DIR>"`) reports the named file present in the prompt directory (permission denied, unreadable), with `cannot write <out>: existing path could not be read`, or with `cannot write <out>: file already exists` (a dispatched name reused with different content); or exits non-zero a second time after a corrected command; or `test -s` fails on the prompt file | `prompt file <name> not produced — <the script's message, or "empty">`; never dispatch a pointer to a file that failed the check. |
 | Node is missing | Treated as the script failing (row above). |
 | A value-file Write fails for a reason other than the secrets hook — a permission denial, a tool error, a refusal by another hook — or a probe Write of the rule below is refused for such a reason. A Write refused only because the file already exists is NOT this row: that is the corrected-once slip of the not-mechanism table below, where the file is removed and written again | `value file <name> could not be written — <the error>` (`<name>` is always the value file's name, `dispatch-<k>-answers.txt`; for a probe, the error text is the refusal or error text, first line, and names the probe file). |
 | A value-file Write is refused by `hooks/safety/protect-secrets.js` twice | `value file <name> refused twice by protect-secrets — <the hook's reason>`. The secrets-hook probe below runs between the two attempts. |
@@ -2122,11 +2128,11 @@ NOT failures of the mechanism (today's paths, unchanged):
 | Condition | Handling |
 |---|---|
 | A controller dies of the environment (usage limit, rate limit, tool error, no final message at all) | The identical retry once, then the major-error stop above (`inconclusive controller: <phase/batch>`), as the Controller Dispatch Rules say. The retry is the same pointer to the same file. |
-| A slip in your own fill command: the script exits 1 (usage), 3 (a placeholder without a value), 4 (a value naming no placeholder), 5 with `cannot read template` (a wrong `--template` path), or 5 naming an `@<file>` you never wrote | Correct the command once and run it again; a second non-zero exit is fatal (table above). |
-| The fill script exits 5 with `cannot write <out>: file already exists` on a name whose pointer has NOT been dispatched — a value found wrong and corrected before the first dispatch | Remove the file (`rm -- "<file>"` as its own command, the path always inside double quotes) and fill it once more under the same name (Controller Dispatch Rules). A second `file already exists` on that same name is fatal (table above), as is the first on a name whose pointer was already dispatched. |
-| A value-file Write is refused only because `<PROMPT_DIR>/dispatch-<k>-answers.txt` already exists, on a fill whose pointer has NOT been dispatched — a value found wrong and corrected before the first dispatch | Remove the file (`rm -- "<PROMPT_DIR>/dispatch-<k>-answers.txt"` as its own command, the path inside double quotes) and write it once more with the Write tool (Controller Dispatch Rules). A second refusal of that same name for that same reason is fatal (table above). |
+| A slip in your own fill command: the script exits 1 (usage), 3 (a placeholder without a value), 4 (a value naming no placeholder), 5 with `cannot read template` (a wrong `--template` path), 5 naming an `@<file>` you never wrote, or 5 with `cannot read value file <path>: <error>` when the check above (`test -s "<PROMPT_DIR>/<the named value file>"` or `ls "<PROMPT_DIR>"`) reports the prompt directory present but the named file absent | Correct the command once and run it again; a second non-zero exit is fatal (table above). |
+| The fill script exits 5 with `cannot write <out>: file already exists` on a name whose pointer has NOT been dispatched — a value found wrong and corrected before the first dispatch | Before any `rm`, run `ls "<PROMPT_DIR>"` as its own command: a file this orchestrator did not fill in the current step is a counter slip, not the value-found-wrong case — take the numerically largest number in the listing plus one and fill under that name instead. Otherwise, remove the file (`rm -- "<file>"` as its own command, the path always inside double quotes) and fill it once more under the same name (Controller Dispatch Rules); `rm` only a file whose fill you ran in the current step. A second `file already exists` on that same name is fatal (table above), as is the first on a name whose pointer was already dispatched. |
+| A value-file Write is refused only because `<PROMPT_DIR>/dispatch-<k>-answers.txt` already exists, on a fill whose pointer has NOT been dispatched — a value found wrong and corrected before the first dispatch | Before any `rm`, run `ls "<PROMPT_DIR>"` as its own command: a `dispatch-<k>-answers.txt` this orchestrator did not write in the current step is a counter slip, not the value-found-wrong case — take the numerically largest number in the listing plus one and write the value file under that new `<k>` instead. Otherwise, remove the file (`rm -- "<PROMPT_DIR>/dispatch-<k>-answers.txt"` as its own command, the path inside double quotes) and write it once more with the Write tool (Controller Dispatch Rules); `rm` only a file whose write you ran in the current step. A second refusal of that same name for that same reason is fatal (table above). |
 | A Bash `rm` of a file in the prompt directory is denied by a hook | The path was written without quotes: `hooks/safety/block-dangerous-commands.js` denies an `rm` whose path begins `/var` unquoted, and `mktemp -d` prints its directory under `/var` on macOS. Re-issue the same command once with the path inside double quotes. A hook denial of an `rm` is never a failure of the mechanism. |
-| The fill script exits 5 with `cannot write <out>: <error>` for any error text other than `file already exists` and `existing path could not be read` | The prompt directory is gone, unwritable, or the path in the command is wrong: treat it as a path lost from context — `mktemp -d` again and re-fill under `<k>` = 1 in the fresh directory, writing the value file again there first when the fill takes one. A second such exit in the fresh directory is fatal (table above): the temporary location itself is not writable. |
+| The fill script exits 5 with `cannot write <out>: <error>` for any error text other than `file already exists` and `existing path could not be read`; or 5 with `cannot read value file <path>: <error>` when the check above (`test -s "<PROMPT_DIR>/<the named value file>"` or `ls "<PROMPT_DIR>"`) reports the whole prompt directory absent | The prompt directory is gone, unwritable, or the path in the command is wrong: treat it as a path lost from context — `mktemp -d` again and re-fill under `<k>` = 1 in the fresh directory, writing the value file again there first when the fill takes one. A second such exit in the fresh directory is fatal (table above): the temporary location itself is not writable. |
 | A return unusable on format alone (the marker or a consumed field missing) whose text shows the controller worked on the run | Malformed return: the identical retry once, then the major-error stop above. Not a pointer failure. |
 | The prompt directory's path is lost from your context | `mktemp -d` again and continue (Controller Dispatch Rules). |
 | A controller reads another file in the directory | Cannot be prevented by wording alone; the directory holds only this session's prompt and value files, and the pointer forbids it. Accepted. |
