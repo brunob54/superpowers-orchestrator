@@ -1424,10 +1424,10 @@ Every bound below is stated over the **reviewer returns of the round**,
 never over the dispatch type: a lens of a round is dispatched as a fork
 or, under the inheritance rule above, as a fresh `general-purpose`
 subagent, and the bounds read the same for both. A **reviewer's return**
-is **lost** when no line of its completion notice, with its surrounding
-whitespace removed, starts with `<!-- multi-review report -->` among the
-first 10 non-blank lines, or when the notice reports that the reviewer
-failed. A lost return is
+is **lost** when no line of the reviewer's final message, with its
+surrounding whitespace removed, starts with `<!-- multi-review report -->`
+among the first 10 non-blank lines, or when the notice reports that the
+reviewer failed. A lost return is
 re-dispatched once under the same lens; a second loss leaves that lens out
 and the ruling records `forks: <k> of <planned>`. A completion notice
 that arrives from a dispatch already declared lost is discarded: it is
