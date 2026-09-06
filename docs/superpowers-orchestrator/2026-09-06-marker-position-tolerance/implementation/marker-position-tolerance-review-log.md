@@ -20,3 +20,17 @@ _Invocation 1 — 2026-09-06 — N=2 M=2 — BASE..HEAD f112faa..c41d44c — bra
 - [CF5] fixed — the colloquial clause "and keep saying so" in the Return contract bullet replaced with "and that instruction does not change"; both reviewers recommended fix-before-merge → a79242e
 - [CF6] fixed — the long measurement sentence in `skills/orchestrating-development/SKILL.md` `## Guard Interaction` split into short literal sentences; one reviewer recommended fix-before-merge, the other ship-as-is, so the corroborated caution rule selects fix-before-merge → a79242e
 - [CF7] carried — the six rewritten passages copy the plan's reference wording nearly verbatim; both reviewers recommend ship-as-is, the plan's Body-authority note permits it
+
+## Round 2 — Adversarial red-team — opus
+**Reviewers:** M=2, usable 2/2
+**Reviewer verdicts:** r1: 0 Critical, 2 Important, 2 Minor | r2: 0 Critical, 2 Important, 3 Minor
+**Sources mapped:** 9/9
+**Reviewer verdict:** 0 Critical, 2 Important, 4 Minor
+**Converged:** no
+### Dispositions
+- [I1] fixed — the `**Lost returns.**` passage stated the hook's 10-non-blank-line window but its loss test still read "arrives without the marker line" with no position rule, so two orchestrators could accept or lose the same fork return; the loss sentence now names the window explicitly → 33d38b0 ← 2/2: r1:I1, r2:I1
+- [I2] user-decision — taking the FIRST qualifying marker line in the window as the report start silently ignores everything above it, so a controller that quotes a marker line or corrects a draft return has its wrong block parsed; both reviewers propose taking the last qualifying line or requiring a recognised leading token (plan-mandated) — at skills/orchestrating-development/SKILL.md:170 — clause: Global Constraints "With more than one such line, the first begins the report; everything above it is ignored." ← 2/2: r1:I2, r2:I2
+- [M1] fixed — the `MARKER_SEARCH_LINES` comment read as if the bounded window closed the indented or fenced quotation case, while such a quotation inside the window still exempts; the comment now records that accepted residual → 33d38b0 ← 2/2: r1:M1, r2:M1
+- [M2] carried — the two negative wording assertions ban the bare phrases `opens with` and `hang the dispatch` over whole files, so an unrelated future comment fails the suite with a message pointing at the wrong sentence. Not fixed: the `tests/codex/test-subagent-guard.js` form is plan-mandated (Task 1, Contract item 3) ← 1/2: r1:M2
+- [M3] carried — the 15-line return cap now has no receiver-side effect, so an oversized controller return enters the orchestrator context with no trace; reviewer proposes recording the return's line count in the orchestration log. Not fixed: the acceptance behaviour is plan-mandated (Global Constraint 4) and the new logging is beyond this branch ← 1/2: r2:M2
+- [M4] carried — the "Measured on 2026-09-06" sentence in `## Guard Interaction` carries no pointer to where the measurement is recorded and does not name the dispatch shape measured. Not fixed: the probe run, its method and its observation are recorded in this run's own spec at `docs/superpowers-orchestrator/2026-09-06-marker-position-tolerance/specs/marker-position-tolerance-design.md:67-79`, and a citation of a repository-local topic folder inside a shipped skill file would not resolve in any other installation (harness field dropped: repository-readable) ← 1/2: r2:M3

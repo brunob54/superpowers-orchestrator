@@ -46,3 +46,43 @@ Results: 60 passed, 0 failed
 ```
 
 All four covering test suites passed with zero failures.
+
+## Round 2
+
+Findings addressed: I1, M1.
+
+Fixes:
+- I1 — `skills/orchestrating-development/SKILL.md` (`## In-run rulings`,
+  the loss sentence following "A **reviewer's return**", around line
+  1427): replaced "is **lost** when its completion notice arrives without
+  the marker line, or reports that the reviewer failed" with an explicit
+  position rule mirroring the Return contract bullet: a reviewer's return
+  is lost when no line of its completion notice, with its surrounding
+  whitespace removed, starts with `<!-- multi-review report -->` among
+  the first 10 non-blank lines, or when the notice reports that the
+  reviewer failed. The `**Lost returns.**` opening sentence and the two
+  `## Guard Interaction` fragments the tests assert byte-identical were
+  left untouched.
+- M1 — `hooks/subagent-guard.js` (the `MARKER_SEARCH_LINES` comment,
+  around lines 84-90): added one sentence recording the accepted
+  residual — a quotation of that shape landing inside the window still
+  exempts the message, and that is the accepted cost of the wider
+  window. No executable line changed; the comment does not contain
+  "opens with", "opening with" or "open with".
+
+Covering tests:
+
+```
+$ bash tests/codex/run-unit-tests.sh
+Results: 10 suites passed, 0 suites failed
+All unit tests passed.
+
+$ bash tests/orchestrating-development/run-tests.sh
+Results: 162 passed, 0 failed
+
+$ bash tests/in-run-rulings/run-tests.sh
+Results: 512 passed, 0 failed
+
+$ bash tests/reviewer-templates/run-tests.sh
+Results: 60 passed, 0 failed
+```
