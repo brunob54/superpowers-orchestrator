@@ -1537,7 +1537,7 @@ git commit -m "feat(orchestrator): Phase 0 creates the prompt directory and Phas
   - Invariants: `re-dispatch the phase's controller with the answers in `[RESUME_ANSWER]` — the only channel`, `a retry rebuilds the identical `[RESUME_ANSWER]` from the ruling-record entry` and `A controller that answers an in-run resume with `BLOCKED: previous invocation left <n> open items …` did not receive the answers — a malformed dispatch: retry the identical dispatch once, then stop under the Major-Error Stop Policy` each stay verbatim as one unbroken sentence (the in-run-rulings suite pins each as one folded fragment); other text may stand between them, and Step 3 places its new sentences between the first and the third.
   - Verification: wording suite section 8; `bash tests/in-run-rulings/run-tests.sh`.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 In `tests/orchestrating-development/run-tests.sh`, insert immediately before the final `echo` / `bold "Results: …"` pair (after section 7):
 
@@ -1551,12 +1551,12 @@ for needle in 'dispatch-<k>-answers.txt' "$NO_HEREDOC" 'the only channel' 'a new
 done
 ```
 
-- [ ] **Step 2: Run the test to verify it fails**
+- [x] **Step 2: Run the test to verify it fails**
 
 Run: `bash tests/orchestrating-development/run-tests.sh 2>&1 | grep -E 'FAIL|Results'`
 Expected: FAIL — `resume: contains 'mktemp -d' (missing: mktemp -d)`, `resume: contains 'a resumed session has none' …`, `resume: contains 'dispatch-1-answers.txt' …`, `resume: contains '`<k>` = 1' …`, `resume: contains 'no answer line' …`, `in-run rulings: contains 'dispatch-<k>-answers.txt' …`, `in-run rulings: contains 'never with a heredoc' …`, `in-run rulings: contains 'a new fill under the next `<k>`' …`, `in-run rulings: contains 'test -s' …`; `Results: <p> passed, 9 failed`.
 
-- [ ] **Step 3: Write the Resume and In-run rulings text**
+- [x] **Step 3: Write the Resume and In-run rulings text**
 
 In `skills/orchestrating-development/SKILL.md`, Resume step 3, replace
 
@@ -1657,12 +1657,12 @@ committed before the re-dispatch, so a retry rebuilds the identical
 `<k>` from the same entry, which produces the same content; the batch controller's
 ```
 
-- [ ] **Step 4: Run every suite to verify they pass**
+- [x] **Step 4: Run every suite to verify they pass**
 
 Run: `for s in orchestrating-development in-run-rulings fill-prompt reviewer-templates writing-plans smart-compress sdd-scripts; do printf '%s: ' "$s"; bash tests/$s/run-tests.sh 2>&1 | grep -E 'Results|passed' | tail -1; done; bash tests/codex/run-unit-tests.sh 2>&1 | tail -3; git status --porcelain`
 Expected: `orchestrating-development: Results: <p> passed, 0 failed`; `in-run-rulings: Results: 502 passed, 0 failed`; `fill-prompt: Results: 165 passed, 0 failed`; `reviewer-templates: Results: 60 passed, 0 failed`; `writing-plans: Results: 15 passed, 0 failed`; `smart-compress: … 87 passed … 0 failed`; `sdd-scripts: Results: 193 passed, 0 failed`; codex `Results: 10 suites passed, 0 suites failed` / `All unit tests passed.`; `git status --porcelain` lists only `skills/orchestrating-development/SKILL.md` and `tests/orchestrating-development/run-tests.sh` as modified (never `CLAUDE.md`, which is ignored).
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add skills/orchestrating-development/SKILL.md tests/orchestrating-development/run-tests.sh
