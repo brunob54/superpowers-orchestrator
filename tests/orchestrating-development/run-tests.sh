@@ -283,6 +283,26 @@ for t in "${TEMPLATES[@]}"; do
   fi
 done
 
+bold "5b. Controllers that run commands read a background result through tail, never whole"
+# Case 018 (Follow-up of 2026-09-05) measured Read results at 38-39% of a
+# controller's window, and in one controller that class was a single 125 KB
+# whole read of a background test-suite log — larger than every prompt the
+# controller was given. Only the two templates that run commands carry the
+# rule; the plan-writer and doc-review controllers run none.
+for t in batch-controller-prompt.md code-review-loop-prompt.md; do
+  f="$ORCH_DIR/$t"
+  assert_file_contains "$t: never reads a background command's output file whole" \
+    "$f" 'Never read the output file of a background command whole.'
+  assert_file_contains "$t: names tail as the way to read it" \
+    "$f" '`tail -n 50 <path>`'
+  assert_file_contains "$t: names grep for the detail" \
+    "$f" "grep -n 'FAIL"
+done
+for t in plan-writer-prompt.md doc-review-loop-prompt.md; do
+  assert_file_not_contains "$t: carries no background-read rule (it runs no commands)" \
+    "$ORCH_DIR/$t" 'Never read the output file of a background command whole.'
+done
+
 bold "6. The Resume Answer section: heading without a parenthetical, the fixed sentence, the placeholder below it"
 for t in "${RESUME_TEMPLATES[@]}"; do
   f="$ORCH_DIR/$t"

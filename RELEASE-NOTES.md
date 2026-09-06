@@ -1,5 +1,59 @@
 # Superpowers Orchestrator Release Notes
 
+## v7.11.0 — a user's own plan amendment now backs its marker
+
+**Problem.** When the user answered an escalated item with `amend plan`,
+the answer was appended to the ruling record as a `**Follow-up:**` line,
+because that record is appended and never rewritten. The test that decides
+whether an `(amended by ruling <n>)` marker carries authority read only the
+entry's `**Resolution:**` line, which still said `escalated`. A clause the
+user had personally decided was therefore treated as ordinary reference
+text, and a review finding against it could be dropped with no escalation
+and no visible sign — the exact case that test exists to prevent.
+
+**Change.** The backing test now accepts either line: a `**Resolution:**`
+beginning `amend plan`, or a `**Follow-up:**` answer beginning `amend
+plan`. Two smaller rules ship with it. An answer to an item that shares a
+bare finding id with another open item of the same invocation must name its
+round in prose, so the controller matches it by that sentence and not by
+the id alone. And the two controllers that run commands must read a
+background command's output file through `tail`, never whole.
+
+**Effect.** A finding against a user-amended clause is triaged as decided
+wording again, and cannot be silently discarded. Nothing to migrate —
+reinstall the plugin to pick the rules up.
+
+Details:
+
+- **The backing test reads both lines.** The rule lives in
+  `skills/orchestrating-development/SKILL.md` under "The ruling record"
+  and is mirrored in `skills/multi-code-review/SKILL.md`, so the
+  orchestrator and the review loop apply one rule. The alternative fix —
+  having Resume step 3 rewrite the Resolution line when it applies a
+  user's amendment — was rejected: the ruling record is appended and
+  never rewritten, and rewriting one line would break that property for
+  every reader of the record.
+- **An answer names its round when ids collide.** The `inv <i>` qualifier
+  separates invocations, not rounds, and finding ids restart at `[C1]`,
+  `[I1]` in every round and every verification cycle. One invocation can
+  therefore hold two open `[I1]` items. Each answer for such an item now
+  opens with a parenthesis naming its round. This is what already kept the
+  two `[I1 inv 2]` rulings of the `prompt-pointer-dispatch` run on their
+  correct findings; it is now a rule rather than a habit, and it costs
+  nothing, since it changes only the answer text.
+- **A background result is read through `tail`.** The
+  `batch-controller` and `code-review-loop` templates forbid a whole read
+  of a background command's output file and name `tail -n 50` plus a
+  `grep` for the detail. One measured controller spent a single 125 KB
+  read on a test-suite log — more of its window than every prompt it was
+  given. The plan-writer and doc-review templates do not carry the rule,
+  because those controllers run no commands.
+- **Tests.** `tests/in-run-rulings/run-tests.sh` goes from 502 to 512
+  assertions; two older pins that asserted the Resolution-only wording
+  were rewritten, because they encoded the defect.
+  `tests/orchestrating-development/run-tests.sh` goes from 147 to 155,
+  including the two absences. All six fast suites pass.
+
 ## v7.10.0 — the orchestrator dispatches its controllers by pointer
 
 **Problem.** The orchestrator (the session that drives the whole

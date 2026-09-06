@@ -1025,6 +1025,20 @@ assert_in_range "the qualified Phase 4 answer-line form" \
 assert_in_range_folded "the controller drops a qualified line of another invocation" \
   "$ORCH_SKILL" 'The controller drops a qualified line whose `<i>` is not its current entry'"'"'s invocation number' \
   "$ANSWERS_LINE" "$ANSWERS_END"
+# Row 15's cheap half: `inv <i>` separates invocations, not rounds, so two open
+# items of ONE invocation can both be `[I1]`. The answer text names the round in
+# prose — the thing that in fact kept the two `[I1 inv 2]` rulings of the
+# `prompt-pointer-dispatch` run on their correct findings. Without this pin the
+# rule is unwritten and the next run relies on a habit.
+assert_in_range_folded "two open items of one invocation can carry one id, so the answer names its round" \
+  "$ORCH_SKILL" '**Two open items of ONE invocation can carry one id: the answer names its' \
+  "$ANSWERS_LINE" "$ANSWERS_END"
+assert_in_range_folded "the qualifier separates invocations, not rounds" \
+  "$ORCH_SKILL" 'The `inv <i>` qualifier separates invocations, not rounds' \
+  "$ANSWERS_LINE" "$ANSWERS_END"
+assert_in_range_folded "the round-naming parenthesis is written on the Ruled line and the answer line alike" \
+  "$ORCH_SKILL" 'Every `Ruled:` line and every answer line for such an item opens its' \
+  "$ANSWERS_LINE" "$ANSWERS_END"
 # A Phase 3 `amend plan` answer is a record, never an instruction to the
 # implementer to edit the plan a second time.
 assert_in_range_folded "a Phase 3 amend plan answer records an already-committed amendment" \
@@ -1112,6 +1126,22 @@ assert_in_range_folded "the marker's ruling number is compared as a whole number
 # this, a reader satisfies every other pinned rule while accepting any
 # marker as soon as some ruling with that number exists anywhere, which is
 # the attack this paragraph names.
+# Row 16: a user's `amend plan` answer lands on the entry's `**Follow-up:**`
+# line, because the ruling record is appended and never rewritten. A backing
+# test that reads only `**Resolution:**` therefore reads a clause the USER
+# decided as reference text — the exact case the guard exists to protect.
+assert_in_range_folded "the backing test accepts a Follow-up line's amend plan answer, not only a Resolution line" \
+  "$ORCH_SKILL" 'or when the answer on its `**Follow-up:**` line begins' \
+  "$RECORD_LINE" "$RECORD_END"
+assert_in_range_folded "the reason both forms are needed: the record is appended, never rewritten" \
+  "$ORCH_SKILL" 'Both forms are needed because the ruling record is' \
+  "$RECORD_LINE" "$RECORD_END"
+assert_in_range_folded "an entry the user amended keeps escalated on its Resolution line" \
+  "$ORCH_SKILL" 'an entry the USER amended keeps `escalated — <reason>` on its' \
+  "$RECORD_LINE" "$RECORD_END"
+assert_in_range_folded "the unbacked-marker parenthetical also excludes the Follow-up form" \
+  "$ORCH_SKILL" 'and which carries no `**Follow-up:**` line whose answer begins' \
+  "$RECORD_LINE" "$RECORD_END"
 assert_in_range_folded "an entry for <n> is not enough on its own — it must have been granted for this clause" \
   "$ORCH_SKILL" 'An entry for `<n>` is not enough on its own — it must have been granted for this clause' \
   "$RECORD_LINE" "$RECORD_END"
@@ -1120,8 +1150,8 @@ assert_in_range_folded "an entry for <n> is not enough on its own — it must ha
 # comparing quoted text, because the Contract clause field holds the
 # clause's PRE-amendment wording (written before the plan amendment) and so
 # can never prefix-match the POST-amendment marked clause.
-assert_in_range_folded "only an amend-plan resolution ever backs a marker" \
-  "$ORCH_SKILL" 'the entry backs the marker only when its `**Resolution:**` line begins `amend plan`' \
+assert_in_range_folded "only an amend-plan answer ever backs a marker, on either line" \
+  "$ORCH_SKILL" 'the entry backs the marker when its `**Resolution:**` line begins' \
   "$RECORD_LINE" "$RECORD_END"
 assert_in_range_folded "the marker is backed by the audit note's plan location, not by quoted text" \
   "$ORCH_SKILL" 'the marker is backed exactly when that same-numbered audit note stands at that location in the plan' \
@@ -2329,6 +2359,18 @@ assert_in_range "loop names the ruling-record path it checks the marker against"
   "$NO_FIX_LINE" "$NO_FIX_END" exact
 assert_in_range_folded "loop treats an unbacked marker as reference text" \
   "$MCR_SKILL" 'the marker is **reference text**' "$NO_FIX_LINE" "$NO_FIX_END"
+# Row 16, the loop's own copy: the loop is the actor that reads the marker on
+# behalf of a reviewer, so it must accept the Follow-up form too or a clause the
+# USER amended is triaged as ordinary reference text.
+assert_in_range_folded "loop accepts a Follow-up line's amend plan answer as backing" \
+  "$MCR_SKILL" 'or when the answer on its `**Follow-up:**` line begins `amend plan`' \
+  "$NO_FIX_LINE" "$NO_FIX_END"
+assert_in_range_folded "loop states why both forms are needed" \
+  "$MCR_SKILL" 'Both forms are needed because the ruling record is appended, never rewritten' \
+  "$NO_FIX_LINE" "$NO_FIX_END"
+assert_in_range_folded "loop's unbacked-marker parenthetical also excludes the Follow-up form" \
+  "$MCR_SKILL" 'and which carries no `**Follow-up:**` line whose answer begins `amend plan` either' \
+  "$NO_FIX_LINE" "$NO_FIX_END"
 # The same whole-number comparison the orchestrator states (section 4): a
 # prefix match would let ruling 10's entry back an `(amended by ruling 1)`
 # marker.
@@ -2345,8 +2387,8 @@ assert_in_range_folded "loop requires an entry for <n> to have been granted for 
 # F3 (round 17): the loop's own copy of the location-based grant check, so
 # that it never re-raises a legitimate amendment as `user-decision` on a
 # stale Contract-clause quote.
-assert_in_range_folded "loop backs a marker only for an amend-plan resolution" \
-  "$MCR_SKILL" 'the entry backs the marker only when its `**Resolution:**` line begins `amend plan`' \
+assert_in_range_folded "loop backs a marker only for an amend-plan answer, on either line" \
+  "$MCR_SKILL" 'the entry backs' \
   "$NO_FIX_LINE" "$NO_FIX_END"
 assert_in_range_folded "loop confirms the grant by plan location, never by comparing quoted text" \
   "$MCR_SKILL" 'the grant is confirmed by plan location, never by comparing' \
