@@ -51,6 +51,14 @@ NO_FALLBACK='no inline fallback'
 VALUE_WITHHELD='`[<id>] (<tag>): <verb and its text up to the quoted value> — <file:line> — secret-bearing finding, value withheld`'
 # The withheld-line form before the verb-keeping amendment; must be absent.
 VALUE_WITHHELD_OLD_FORM='`[<id>] (<tag>): <file:line> — secret-bearing finding, value withheld`'
+# The Return contract's marker tolerance, pinned in halves so that no later
+# edit can restore any of the extremes: the window (with the words
+# "non-blank", so that a bare `10` cannot satisfy it), the marker's exact
+# spelling, and the 15-line cap's new status as an instruction rather than a
+# malformed condition.
+RETURN_WINDOW='among the **first 10 non-blank lines**'
+RETURN_MARKER='<!-- orchestration report -->'
+RETURN_CAP_NOT_MALFORMED='a longer report is **not** malformed'
 NO_HEREDOC='never with a heredoc'
 PASTE='paste'
 FILL_DOT='Fill `./'
@@ -225,6 +233,14 @@ for t in "${TEMPLATES[@]}"; do
     assert_folded_contains "dispatch rules: the table gives $t's description '$desc'" "$DISPATCH_RANGE" "$desc"
   fi
 done
+
+bold "1b. Return contract: the marker may start any of the first 10 non-blank lines"
+assert_folded_contains "dispatch rules: the return contract states the 10-non-blank-line window" \
+  "$DISPATCH_RANGE" "$RETURN_WINDOW"
+assert_folded_contains "dispatch rules: the return contract spells the orchestration marker exactly" \
+  "$DISPATCH_RANGE" "$RETURN_MARKER"
+assert_folded_contains "dispatch rules: the return contract says exceeding the 15-line cap is not malformed" \
+  "$DISPATCH_RANGE" "$RETURN_CAP_NOT_MALFORMED"
 
 bold "2. Negative needles over the whole orchestrator text"
 assert_file_not_contains "orchestrator never holds the prompt directory in a shell variable" "$ORCH_SKILL" "$PROMPT_DIR_VARIABLE"

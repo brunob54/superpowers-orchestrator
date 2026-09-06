@@ -159,15 +159,27 @@ this platform lacks` — and stop.
   `../subagent-driven-development/SKILL.md`, `../multi-code-review/SKILL.md`.
   Controllers read these files as their procedure; they never use the Skill
   tool. Controllers never write `state.md` — you are its only writer.
-- **Return contract:** first line exactly `<!-- orchestration report -->`
-  (guard exemption); leading token on the next line; hard cap 15 lines;
-  detail goes to files. A return is **malformed** when the marker line or
-  the leading token is absent OR any field you consume (`tasks=`, per-task
-  numbers, `rounds=`, `outcome=`, `unresolved=`, `user_decision=`,
-  `fixes=`) is absent or unparseable. An unparseable stop-rule field never
-  defaults to 0. Malformed return or controller error → retry the identical
-  dispatch once — the same pointer to the same file, no fill and no new
-  file; second failure → major error → stop, logging
+- **Return contract:** the four templates tell the controller to make
+  `<!-- orchestration report -->` its first line and keep saying so. You
+  accept a return when a line whose surrounding whitespace is removed
+  **equals** `<!-- orchestration report -->` and is among the **first 10
+  non-blank lines** of the final message; blank lines are skipped and do not
+  consume that budget. Only this marker is searched for: a line equal to
+  another skill's marker is ordinary preamble. When more than one such line
+  is present, the **first** begins the report; everything above it is
+  ignored and is never a reason to retry. The leading token is on the first
+  non-blank line below that marker line — "non-blank" throughout this bullet,
+  so a line holding only spaces is skipped here exactly as it is skipped in
+  the window. The 15-line cap counts from the
+  marker line, which is line 1 of the 15; it is an instruction to the
+  controller, not a test you run — a longer report is **not** malformed.
+  Detail goes to files. A return is **malformed** when no such marker line
+  is in the window, OR the leading token is absent, OR any field you consume
+  (`tasks=`, per-task numbers, `rounds=`, `outcome=`, `unresolved=`,
+  `user_decision=`, `fixes=`) is absent or unparseable. An unparseable
+  stop-rule field never defaults to 0. Malformed return or controller error
+  → retry the identical dispatch once — the same pointer to the same file,
+  no fill and no new file; second failure → major error → stop, logging
   `inconclusive controller: <phase/batch>`.
 
 ## Phase 0 — Setup (the only interactive moment)
