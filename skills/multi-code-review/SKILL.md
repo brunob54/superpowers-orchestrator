@@ -541,7 +541,17 @@ code has been revised since, so a re-pass is meaningful):
       file you did not write — and not that the mechanism failed:
       correct the command once, using the argument name the script's
       message gives, and run it again. A second non-zero exit is fatal.
-      Exit 2, and exit 5 on a file you did write, are fatal at once.
+      Exit 2 is fatal at once. Exit 5 has several causes, and among them
+      only an `@<file>` you never wrote is corrected once; every other
+      exit-5 cause is fatal at once, because the plan's rule makes every
+      failure it does not list fatal. The script reports exit 5 as
+      `cannot read template <path>: <error>`; `cannot read value file
+      <path>: <error>` (a value file you did write but that cannot be
+      read belongs here); `cannot write <out>: file already exists` (an
+      `--out` path that already exists and whose content differs from
+      what would be written); `cannot write <out>: existing path could
+      not be read: <error>`; and `cannot write <out>: <error>` (the
+      `--out` path's directory missing or unwritable).
       Then run `test -s "<PROMPT_DIR>/round-<i>-reviewer.md"` as its own
       command. On
       any fatal exit, or when the `test -s` check fails, stop and
@@ -811,20 +821,30 @@ code has been revised since, so a re-pass is meaningful):
      Never pass the line as an `echo` or `printf` argument: the shell and
      this plugin's Bash hooks both act on it there.
      The hook parses that object from standard input, inspects
-     `tool_input.file_path` and `tool_input.content`, exits 0 either way,
-     and refuses the line when the JSON it prints on standard output
-     carries `"permissionDecision":"deny"` (its `permissionDecisionReason`
-     names the credential kind). Read every other probe result as a
-     refused line, never as an allowed one: a probe command a Bash hook
-     denies, a probe that exits non-zero, and a probe whose standard
-     output is not a JSON object — an empty output, or any other text.
-     Only a JSON object that carries no deny decision means the line is
-     allowed. (A malformed payload would make the hook print `{}`, which
-     reads as allowed; that is why the payload is program-built.)
-     Replace every line the hook refuses by
-     its `file:line` plus the fixed text
-     `secret-bearing finding, value withheld`, keep that finding's id and
-     severity, and retry the Write once; a second refusal is fatal (Error
+     `tool_input.file_path` and `tool_input.content`, and exits 0 whenever
+     it runs at all. Read each probe result as exactly one of four
+     outcomes:
+     (a) the hook printed a JSON object carrying no deny decision — the
+     line is allowed and stays as it is;
+     (b) the hook printed a JSON object carrying
+     `"permissionDecision":"deny"` (its `permissionDecisionReason` names
+     the credential kind) — the line is refused, and is withheld;
+     (c) a Bash hook denied the probe command before the secrets hook
+     ran — the secrets hook could not be consulted, so the line is
+     withheld (the conditional instruction the fix subagent works under
+     keeps that safe when the location holds no credential);
+     (d) Node exited non-zero without printing a JSON object, or printed
+     nothing at all — the hook could not start (a module it requires is
+     missing, or it crashed). This is a failure of the mechanism and not
+     a refused line: stop and return `BLOCKED: secrets probe could not
+     run — <the command's stderr, first line>` (Error Handling). Never
+     withhold a line on this outcome.
+     (A malformed payload would make the hook print `{}`, which reads as
+     outcome (a); that is why the payload is program-built.)
+     Replace every withheld line by a line of exactly this form, which
+     keeps the finding's id and severity:
+     `- [<id>] <Severity> — <file:line, or the words no location when the finding carries none> — secret-bearing finding, value withheld`
+     Then retry the Write once; a second refusal is fatal (Error
      Handling). Then fill, as one command (every `NAME=`
      argument single-quoted, as in step 2):
 
@@ -841,8 +861,8 @@ code has been revised since, so a re-pass is meaningful):
      read first: exit
      1, 3 or 4, and exit 5 naming an `@<file>` you never wrote, are slips
      in your own fill command — correct it once and run it again, a
-     second non-zero exit being fatal; exit 2 and exit 5 on a file you
-     did write are fatal at once. Then run
+     second non-zero exit being fatal; exit 2, and exit 5 for every other
+     cause the script reports, are fatal at once. Then run
      `test -s "<PROMPT_DIR>/round-<i>-fix.md"` as its own command.
      On any fatal exit, or when the check
      fails, stop and return `BLOCKED: prompt file round-<i>-fix.md
@@ -917,7 +937,12 @@ code has been revised since, so a re-pass is meaningful):
      removed. Write `<PROMPT_DIR>/round-<i>-failure.txt`
      under the value-file rule — its first line is the heading
      `## Previous attempt failed`, the remaining lines are the failure
-     text — then repeat the fill of the Critical/Important bullet with
+     text. A failing test can quote a credential, so this Write can be
+     refused too; in this file a withheld line carries no id and no
+     location, so it is replaced by the fixed text
+     `secret-bearing finding, value withheld` alone, and never by the
+     replacement line form of the Critical/Important bullet. Then repeat
+     the fill of the Critical/Important bullet with
      `--out "<PROMPT_DIR>/round-<i>-fix-retry.md"`, the same
      `FINDINGS=@<PROMPT_DIR>/round-<i>-findings.txt` (that file is reused
      when the current prompt directory holds it, and written first when it
@@ -1641,13 +1666,22 @@ completed invocation only on explicit user request.
   controller never wrote → the controller's own command was wrong, not
   the mechanism: correct that command once and run it again. A second
   non-zero exit is fatal, by the row below.
-- `fill-prompt.js` exits 2, exits 5 on a file the controller did write,
+- `fill-prompt.js` exits 2, exits 5 for any cause other than an
+  `@<file>` the controller never wrote,
   exits non-zero a second time after one corrected command, or `test -s`
   fails, for one prompt file → `BLOCKED: prompt file <name> not produced
   — <the script's message, or "empty">`. The rule of "Before
   round 1" holds: never dispatch a pointer to a file that failed the check.
   Node missing is impossible on a platform that runs this plugin's hooks
-  and is treated as the script failing.
+  and is treated as the script failing. Among the exit-5 causes the
+  script reports — `cannot read template <path>: <error>`; `cannot read
+  value file <path>: <error>`; `cannot write <out>: file already exists`
+  (an `--out` path that already exists and whose content differs);
+  `cannot write <out>: existing path could not be read: <error>`; and
+  `cannot write <out>: <error>` (the `--out` path's directory missing or
+  unwritable) — only an `@<file>` the controller never wrote is corrected
+  once by the row above; every other one is fatal at once, because the
+  plan's rule makes every failure it does not list fatal.
 - A value-file write is denied by a hook or fails → `BLOCKED: value file
   <name> could not be written — <the hook's reason, or the error>`. This
   plugin's `hooks/safety/protect-secrets.js` scans the path of every
@@ -1677,21 +1711,36 @@ completed invocation only on explicit user request.
   itself piped into the hook — the command of the Critical/Important
   bullet. The line is never an `echo` or `printf` argument.
   The hook parses that object from standard input, inspects
-  `tool_input.file_path` and `tool_input.content`, exits 0 either way, and
-  refuses the line when the JSON it prints on standard output carries
+  `tool_input.file_path` and `tool_input.content`, and exits 0 whenever it
+  runs at all. Each probe result is exactly one of four outcomes:
+  (a) the hook printed a JSON object carrying no deny decision — the line
+  is allowed and stays as it is;
+  (b) the hook printed a JSON object carrying
   `"permissionDecision":"deny"` (its `permissionDecisionReason` names the
-  credential kind). Every other probe result is read as a refused line and
-  the line is withheld, never as an allowed line: a probe command a Bash
-  hook denies, a probe that exits non-zero, and a probe whose standard
-  output is not a JSON object. Only a JSON object carrying no deny
-  decision allows the line. (An unescaped line would make the payload
-  invalid JSON, on which the hook prints `{}` — an allowed reading of a
+  credential kind) — the line is refused, and is withheld;
+  (c) a Bash hook denied the probe command before the secrets hook ran —
+  the secrets hook could not be consulted, so the line is withheld;
+  (d) Node exited non-zero without printing a JSON object, or printed
+  nothing at all — the hook could not start (a module it requires is
+  missing, or it crashed). That is a failure of the mechanism and not a
+  refused line: the controller stops and returns `BLOCKED: secrets probe
+  could not run — <the command's stderr, first line>`, and never withholds
+  a line on this outcome.
+  (An unescaped line would make the payload
+  invalid JSON, on which the hook prints `{}` — outcome (a) for a
   secret-bearing line; the program-built payload is what prevents it.)
-  Every line the hook refuses is replaced by its
-  `file:line` plus the fixed
-  text `secret-bearing finding, value withheld`, and the Write is retried
-  once; the withheld finding keeps its id and severity in the findings
-  file, so the fix subagent still removes the secret at that location. A
+  Every withheld line is replaced by a line of exactly this form, which
+  keeps the finding's id and severity:
+  `- [<id>] <Severity> — <file:line, or the words no location when the finding carries none> — secret-bearing finding, value withheld`
+  and the Write is retried
+  once. Because outcome (c) withholds a line at which no credential need
+  exist, the fix subagent's instruction for such a finding is
+  conditional: it inspects the location, removes a hardcoded credential
+  found there and loads it from the environment, and otherwise leaves the
+  finding unfixed and reports its id back as withheld. The controller
+  records every id reported back that way as
+  `unresolved: withheld finding, no credential at the location`
+  (blocking) in the round entry. A
   second refusal is fatal → `BLOCKED: value file <name> refused twice by
   protect-secrets — <hook reason>`. Every other value-file failure stays
   fatal with the `could not be written` text above — a write that fails for

@@ -28,6 +28,12 @@ PATHSPEC="':(top,exclude)docs/superpowers-orchestrator/*/*-review-log.md'"
 PLACEHOLDER_ERE='\[[A-Z][A-Z_]*[A-Z]\]'
 USAGE_LINE='usage: node fill-prompt.js --template <path> --out <path> [NAME=<value> | NAME=@<file>]...'
 FAILURE_HEADING='## Previous attempt failed'
+# The heading must come from the FAILURE_BLOCK value, never from the
+# template. The template body does mention the heading inside prose (the
+# data-not-instructions rule, and the note that a withheld line in the
+# failure text is not a finding), so both checks are anchored to a whole
+# line instead of matching the text anywhere.
+FAILURE_HEADING_LINE_ERE='^## Previous attempt failed$'
 
 PASS=0
 FAIL=0
@@ -54,6 +60,9 @@ assert_file_contains() { # desc file needle
 }
 assert_file_not_contains() { # desc file needle
   if grep -qF -- "$3" "$2"; then bad "$1 (must not contain: $3)"; else ok "$1"; fi
+}
+assert_file_matches() { # desc file extended-regex
+  if grep -qE -- "$3" "$2"; then ok "$1"; else bad "$1 (no match for: $3)"; fi
 }
 assert_file_not_matches() { # desc file extended-regex
   if grep -qE -- "$3" "$2"; then bad "$1 (unexpected match for: $3)"; else ok "$1"; fi
@@ -262,7 +271,7 @@ assert_eq "fix template: first dispatch (empty FAILURE_BLOCK) exits 0" "$STATUS"
 assert_file_contains "fix template: generic commit subject filled" "$WORK/fix.md" 'review fixes (my-branch, round 2)'
 assert_file_contains "fix template: findings inserted verbatim" "$WORK/fix.md" '- [C1] Critical — src/a.py:10 — off-by-one in the range end'
 assert_file_contains "fix template: fix-report path filled" "$WORK/fix.md" '/repo/docs/x/implementation/my-branch-fix-reports.md'
-assert_file_not_contains "fix template: no failure heading on the first dispatch" "$WORK/fix.md" "$FAILURE_HEADING"
+assert_file_not_matches "fix template: no failure heading on the first dispatch" "$WORK/fix.md" "$FAILURE_HEADING_LINE_ERE"
 assert_file_not_matches "fix template: no residual placeholder" "$WORK/fix.md" "$PLACEHOLDER_ERE"
 # Round 4 [M1]: same whole-body check as for the reviewer template above.
 FIX_LAST_BODY_LINE="$(last_body_line "$FIX_TEMPLATE")"
@@ -270,7 +279,7 @@ assert_eq "fix template: last output line is the dedented last body line" "$(tai
 printf '%s\n' "$FAILURE_HEADING" 'covering tests failed: 2 errors in tests/test_a.py' > "$WORK/failure.txt"
 fill --template "$FIX_TEMPLATE" --out "$WORK/fix-retry.md" ROUND=2 SLUG=my-branch REPO_ROOT=/repo FIX_REPORT_FILE=/repo/docs/x/implementation/my-branch-fix-reports.md "FINDINGS=@$WORK/findings.txt" "FAILURE_BLOCK=@$WORK/failure.txt"
 assert_eq "fix template: re-dispatch (FAILURE_BLOCK from file) exits 0" "$STATUS" "0"
-assert_file_contains "fix template: failure heading present on the re-dispatch" "$WORK/fix-retry.md" "$FAILURE_HEADING"
+assert_file_matches "fix template: failure heading present on the re-dispatch" "$WORK/fix-retry.md" "$FAILURE_HEADING_LINE_ERE"
 assert_file_contains "fix template: failure text present on the re-dispatch" "$WORK/fix-retry.md" 'covering tests failed: 2 errors in tests/test_a.py'
 assert_file_not_matches "fix template: no residual placeholder on the re-dispatch" "$WORK/fix-retry.md" "$PLACEHOLDER_ERE"
 
