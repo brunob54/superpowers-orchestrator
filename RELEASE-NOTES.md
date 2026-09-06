@@ -2,6 +2,21 @@
 
 ## v7.10.0 — the orchestrator dispatches its controllers by pointer
 
+**Problem.** The orchestrator (the session that drives the whole
+pipeline) pasted a full controller template, 94 to 249 lines, into
+every dispatch and every retry. Those copies accumulate in one context
+window that must last the whole run, so the percentage of that window
+spent on re-sent prompts grew steadily as the orchestration went on —
+about a quarter of it on one measured run.
+
+**Change.** The orchestrator now fills each template into a file in a
+temporary directory and dispatches a three-sentence pointer to it. Any
+failure of the mechanism stops the run.
+
+**Effect.** The orchestrator keeps its window for the whole pipeline.
+Reinstall the plugin: a run started before the reinstall uses the old
+inline dispatch.
+
 Field report: the orchestrator (the `orchestrating-development` session
 that drives plan writing, plan review, batched implementation and the code
 review loop) runs four kinds of controller subagent, one per phase, and it
@@ -159,6 +174,19 @@ the stopped session's directory is reused.
 
 ## v7.9.0 — reviewers and fixers receive their prompt by pointer
 
+**Problem.** A code-review loop controller (the subagent that runs one
+review loop) pasted the reviewer prompt and a hand-written fix prompt
+into every dispatch. That text was 35 to 42 percent of the
+controller's context window.
+
+**Change.** The controller now fills the reviewer template into a file
+with a script and dispatches a three-sentence pointer to it; the fix
+subagent is dispatched the same way from a new template. Any failure
+returns BLOCKED.
+
+**Effect.** Reviewers read the same text as before, and the controller
+keeps more of its window. Reinstall the plugin.
+
 Field report: a `multi-code-review` controller is the subagent that runs
 one code-review loop, and its context window (the working memory the model
 holds for the whole loop) grows with every round. Measured on the three
@@ -274,6 +302,19 @@ prompt directory, so nothing from the stopped invocation is reused.
 
 ## v7.8.0 — the orchestrator rules on in-run decisions
 
+**Problem.** Most stops of the autonomous pipeline were not the user's
+decisions: a review finding or a blocked task contradicted the plan.
+In Case 007 one stop became a chain of four.
+
+**Change.** The orchestrator (the session that drives the pipeline)
+now classifies each open item as escalated, forced or design. It rules
+on design items after two or three forked subagents review them under
+different lenses. It records and commits every ruling before it
+re-dispatches the phase.
+
+**Effect.** Only escalated items reach you, and Phase 5 stays yours.
+Reinstall the plugin.
+
 Field report: in the recorded orchestrated runs (Cases 001, 007, 008 and
 010 in the orchestration issues log), most stops of the autonomous pipeline
 were not the user's decisions. In Phase 4 the code-review loop returned an
@@ -368,6 +409,19 @@ ruling.
 
 ## v7.7.0 — plans state contracts, not literal bodies
 
+**Problem.** A plan could fix a helper body, a command, or wording
+exactly. Review loops may never overrule an approved plan, so a review
+finding about that text stopped the run for a user decision — eleven
+interruptions across four runs.
+
+**Change.** A task now states a contract: what its artifact must
+guarantee. The code block beside it is one reference implementation.
+Only the `**Global Constraints:**` block and a block marked
+`**Exact content:**` bind as written.
+
+**Effect.** A review finding against a body is now an ordinary fix, not
+a stop. Nothing to migrate: older plans keep their old authority.
+
 Field report: across four earlier runs, eleven interruptions of the
 autonomous pipeline traced to one cause. A plan had fixed a helper's body,
 a command, or a piece of wording **verbatim**, and the review loops may
@@ -421,6 +475,18 @@ triage time, and are reviewed under the previous lens text.
 
 ## v7.6.0 — reviewers test harness claims instead of asserting them
 
+**Problem.** A reviewer could assert a property of the harness (the
+agent runtime that runs the review) without testing it. One false
+claim stopped an unattended run.
+
+**Change.** Both reviewer templates now require a harness finding to
+carry a probe the reviewer ran and its observation, or to name one
+probe for the controller to run once and dispose on.
+
+**Effect.** An untestable harness claim is rejected and reported as an
+owed probe, never as a user decision, so the run continues. Nothing to
+migrate.
+
 Field report: a code reviewer asserted that the Agent tool's `description`
 field reaches the reviewer's context, so a `(reviewer j/m)` suffix would
 leak the reviewer count. The review loop escalated the finding to the user,
@@ -470,6 +536,18 @@ dispatches, zero stalls.
 
 ## v7.5.0 — blocking controller dispatch
 
+**Problem.** In every orchestrated run since v7.0.0, at least one
+controller (the subagent that runs a pipeline phase) ended its turn
+waiting for a subagent and never resumed. A human had to nudge it.
+
+**Change.** Each of the four controller templates now carries a fixed
+dispatch name. A named subagent is a teammate, and a teammate's own
+Agent calls block until the child finishes and return its result.
+
+**Effect.** The controller receives each child's result directly, so
+the run continues without a human. Nothing to migrate; no path or log
+format changes.
+
 Field report: in every orchestrated run since v7.0.0, at least one
 controller (the subagent that runs a phase of `orchestrating-development`)
 ended its turn with a line such as `Waiting for the round 1 reviewer to
@@ -509,6 +587,20 @@ later also lets a child reply to an unnamed parent (fixed upstream in that
 release).
 
 ## v7.4.0 — M reviewers per lens
+
+**Problem.** Each review round dispatched exactly one reviewer.
+Language models are not deterministic, so a round took one sample of
+judgment and could miss what another run would report.
+
+**Change.** A new parameter M (1–5, default 1) dispatches M reviewers
+in parallel with the identical prompt. Their reports merge into one
+finding set — every finding kept, duplicates merged at the highest
+severity.
+
+**Effect.** More findings per round; running time stays near one
+review, token cost grows about M times. Nothing to migrate — at M=1
+logs are unchanged. State `M=<m>`, or set
+`SUPERPOWERS_REVIEWERS_PER_LENS`.
 
 Field report: LLMs (large language models) are not deterministic — the same
 reviewer prompt reports different findings on different runs, and one run can
@@ -565,6 +657,20 @@ sample of the reviewer's judgment under its lens.
   `docs/REVIEW-PROCESS-COMPARISON.md` updated for M.
 
 ## v7.3.0 — one folder per topic, committed code reviews
+
+**Problem.** The documents of one feature were spread over three flat
+directories, linked only by a shared file-name prefix, and the code
+review history was never committed.
+
+**Change.** Every document of a topic now lives in one folder,
+`docs/superpowers-orchestrator/<date>-<slug>/`, with a sub-folder per
+pipeline stage. Pipeline code reviews are committed there; reviewer
+diffs hide those committed review files.
+
+**Effect.** One folder now holds everything about a feature. Other
+projects are not migrated automatically: old files stay readable, and a
+run stopped mid-pipeline must be moved by hand. Git 2.32 or later is
+required.
 
 Field report: the documents of one feature were spread over three flat
 directories, linked only by a shared `YYYY-MM-DD-<slug>` file-name prefix, and
@@ -712,6 +818,20 @@ git mv docs/plans/2026-08-25-artifact-layout-orchestration-log.md \
 
 ## v7.2.0 — prior-art research grounds technology decisions
 
+**Problem.** Design sessions picked libraries, hosted services, and API
+versions from model memory. That memory is old and does not know
+versions, so specs carried technology claims nobody had checked.
+
+**Change.** A new skill, `researching-prior-art`, adds a research gate
+to brainstorming. One controller subagent runs N read-only researchers
+in parallel and merges one evidence report; results are cached under
+`docs/research/` for 90 days. Specs must carry a "Prior art and
+alternatives" section.
+
+**Effect.** Dependency decisions rest on verified sources, and
+contradictions are listed instead of being resolved silently. Nothing
+to migrate.
+
 Field report: design sessions picked libraries, hosted services, and
 API versions from model memory. Memory is stale and version-blind, so
 the resulting specs carried unverifiable technology claims. Decisions
@@ -759,6 +879,18 @@ before approaches are compared.
 
 ## v7.1.0 — commit messages carry the workstream slug and stage
 
+**Problem.** A pipeline run produced commits whose messages carried no
+context. `chore(plan): task 3 complete` does not say which plan, and
+`git log` could not separate two workstreams on one branch.
+
+**Change.** Every skill derives the same *slug* from the plan file
+name. Content commits add two git trailers, `Session: <slug>` and
+`Stage: task <N>/<total>`; process commits put the slug in the subject.
+
+**Effect.** `git log --grep "^Session: <slug>"` lists one whole
+workstream. Nothing to migrate: `executing-plans` adds the trailers to
+plans written before this convention.
+
 Field report: a pipeline run produces many commits whose messages carry
 no context — `chore(plan): task 3 complete` does not say which plan, and
 a month later `git log` cannot separate two workstreams on one branch.
@@ -789,6 +921,19 @@ a month later `git log` cannot separate two workstreams on one branch.
 
 ## v7.0.1 — spec gate offers the fresh-session orchestration route
 
+**Problem.** After the spec review rounds, the model could reword the
+gate message and drop the orchestration option. The user then had to
+search the guide for the phrase that starts the orchestrator (the
+session that drives the whole pipeline).
+
+**Change.** Brainstorming's User Review Gate message is now
+verbatim-required and placed after the review loop. It offers two
+paths: continue in-session to `writing-plans`, or run `/clear` and
+paste `orchestrate the development of <path>`.
+
+**Effect.** The prompt arrives ready to paste, with the real spec path.
+Nothing to migrate.
+
 Field report: after the spec review rounds, the gate message could be
 paraphrased by the model and the orchestration option silently dropped —
 the user had to find the orchestrator's trigger phrase in the guide.
@@ -814,6 +959,18 @@ the user had to find the orchestrator's trigger phrase in the guide.
   the gate supplies the same prompt pre-filled.
 
 ## v7.0.0 — project renamed: superpowers-optimized → superpowers-orchestrator
+
+**Problem.** The old name, `superpowers-optimized`, described the
+fork's first change: token efficiency. The fork's main feature today is
+the autonomous orchestration pipeline, so the name no longer matched.
+
+**Change.** The plugin, the marketplace, and the GitHub repository are
+renamed to `superpowers-orchestrator`. The skill prefix used in hints
+and cross-skill references changes with them.
+
+**Effect.** You must reinstall the plugin: an in-place update cannot
+cross a rename. The entry lists the migration commands for Claude Code,
+Codex, and OpenCode. GitHub redirects the old URLs and git remotes.
 
 **Breaking change: the plugin and marketplace are renamed.** The installed
 plugin id changes from `superpowers-optimized@superpowers-optimized` to
@@ -852,6 +1009,19 @@ reinstalled — an in-place update cannot cross the rename.
 
 ## v6.15.1 — statusline bridge installer + configurable gate threshold
 
+**Problem.** Wiring the statusline bridge by pointing settings.json at
+the plugin cache path broke on every release, because that path
+contains the version number. The start gate's block threshold was also
+fixed at 60 percent and could not be changed.
+
+**Change.** A new script, `tools/install-statusline-bridge.sh`, copies
+the bridge to `~/.claude/statusline/` and prints the settings snippet.
+The `SUPERPOWERS_PRESSURE_THRESHOLD` variable (10-90, default 60)
+overrides the threshold.
+
+**Effect.** The wiring survives plugin updates. Run the installer once,
+and re-run it after each update.
+
 - New `tools/install-statusline-bridge.sh` copies the statusline bridge to
   the version-independent `~/.claude/statusline/` and prints the
   settings.json snippet to wire it — pointing settings at the plugin cache
@@ -866,6 +1036,18 @@ reinstalled — an in-place update cannot cross the rename.
   plugin updates. Invalid or out-of-range values fall back to 60.
 
 ## v6.15.0 — batched mode: fixed task cap replaces the measured batch boundary
+
+**Problem.** Batched mode ended each batch using a context-pressure
+measurement whose hardcoded 200K window overstated pressure about five
+times on 1M-context models. Batches therefore ended near 13 percent of
+real occupancy.
+
+**Change.** A batch now ends at a fixed task cap: the count the user
+gives, otherwise 3. An opt-in statusline bridge caches the true window
+size, so the start gate reports the real number.
+
+**Effect.** Batches run to their intended length. The 60 percent start
+gate is unchanged. The bridge is optional and wired in settings.json.
 
 - **subagent-driven-development** Batched Autonomous Mode now ends batches
   at a fixed task cap — the user's explicit count, otherwise 3 — instead of
@@ -897,6 +1079,20 @@ reinstalled — an in-place update cannot cross the rename.
 
 ## v6.14.0 — orchestrating-development: autonomous spec→merge-gate pipeline
 
+**Problem.** Turning an approved spec into reviewed code required the
+user to start each stage by hand: plan writing, plan reviews,
+implementation batches, then code reviews.
+
+**Change.** A new skill, `orchestrating-development`, runs that whole
+sequence from the spec: plan writing, N plan-review rounds, batched
+implementation with a fresh controller subagent per batch, and N
+code-review rounds. It stops only on major errors and ends before
+merge or pull request.
+
+**Effect.** One interactive Phase 0, then an autonomous run with a
+committed log, plus resume and abandon procedures. Existing manual
+workflows are unchanged.
+
 - New skill **orchestrating-development**: from an approved spec, runs
   plan writing, N plan-review rounds, batched implementation (fresh
   controller subagent per ≤cap tasks, nested implementer/reviewer
@@ -917,6 +1113,19 @@ reinstalled — an in-place update cannot cross the rename.
   workflows are unchanged.
 
 ## v6.13.0 — plan handoff starts a fresh session; batch phrasing routes correctly
+
+**Problem.** Plan execution continued inside the planning session, so
+planning context spent the batch budget before Task 1. A leftover
+`state.md` could resume the wrong plan. The advertised phrase "execute
+the plan in batches" routed to the wrong skill, and the trigger test
+used `.some()`, so it never failed.
+
+**Change.** `writing-plans` recommends `/clear` and seeds `state.md`
+for the new plan. Batched mode checks `state.md` against the prompt and
+ignores a stale one. Both routing patterns are fixed.
+
+**Effect.** Execution starts clean and reaches the intended skill.
+Nothing to migrate.
 
 - `writing-plans` now recommends starting execution in a **fresh session**
   (`/clear`) rather than continuing in the planning session. Planning
@@ -957,6 +1166,19 @@ reinstalled — an in-place update cannot cross the rename.
 
 ## v6.12.0 — SDD workspace is plan-scoped
 
+**Problem.** A leftover `progress.md` from a finished plan read like a
+completed record of the current plan, so the controller (the subagent
+that executes the plan) could skip all work.
+
+**Change.** `sdd-workspace` now takes the plan path and records it in
+`.superpowers/sdd/plan.ref`; a workspace belonging to another plan, or
+one without `plan.ref`, is archived first.
+
+**Effect.** Each plan gets its own ledger. The first scoped run
+archives any pre-6.12 workspace once; carried Minor findings then sit
+in `archive/unknown-*/progress.md` — read them during final-review
+triage.
+
 - `scripts/sdd-workspace` now takes the plan path (`sdd-workspace PLAN_FILE`)
   and records it in `.superpowers/sdd/plan.ref`. A workspace belonging to a
   different plan — or a pre-6.12 workspace with no `plan.ref` — is archived
@@ -980,6 +1202,19 @@ reinstalled — an in-place update cannot cross the rename.
   triage.
 
 ## v6.11.0 — multi-review renamed to multi-doc-review
+
+**Problem.** Two loops had confusable names: `multi-review` reviewed
+spec and plan documents, `multi-code-review` reviewed a branch diff. A
+secret-protection rule also blocked writes whose text merely contained
+`.env`.
+
+**Change.** The document loop becomes `multi-doc-review`
+(`/multi-doc-review <doc> [N]`); the old name no longer routes.
+Behavior, lenses, and the report marker are unchanged. The `cat-env`
+rule now stops at redirects, newlines, and `&`.
+
+**Effect.** Rename the command in any script or note you keep; nothing
+else to migrate. A 21-case unit suite covers the secret rule.
 
 - **Breaking (invocation name):** the `multi-review` skill is now
   `multi-doc-review`; the slash form is `/multi-doc-review <doc> [N]`.
@@ -1006,6 +1241,18 @@ reinstalled — an in-place update cannot cross the rename.
 
 ## v6.10.0 — multi-code-review: N-round independent whole-branch code review
 
+**Problem.** A branch received a single final code-review pass. One
+reviewer under one lens can miss defects.
+
+**Change.** The new `multi-code-review` skill runs up to N rounds
+(default 3, cap 10). Each round uses a fresh reviewer subagent under a
+rotating lens plus one fix subagent, records a sidecar audit log, and
+the loop exits early after two clean rounds.
+
+**Effect.** subagent-driven-development now ends with this loop; direct
+use is `/multi-code-review [BASE] [N]`. It needs Claude Code; other
+platforms keep the single-pass review. Nothing to migrate.
+
 - New `multi-code-review` skill: runs up to N (default 3, cap 10)
   independent review rounds on a branch diff — one clean-context reviewer
   subagent per round under a rotating lens (correctness/spec alignment,
@@ -1022,6 +1269,18 @@ reinstalled — an in-place update cannot cross the rename.
   platforms without the Agent tool keep the single-pass final review.
 
 ## v6.9.0 — multi-review: N-round independent document review
+
+**Problem.** A spec or plan reached its approval gate after a single
+review pass. One reader under one lens misses issues.
+
+**Change.** The new `multi-review` skill runs up to N document review
+rounds (default 3, cap 10), each with a fresh reviewer subagent under a
+rotating lens, merges Critical and Important findings between rounds,
+and exits early after two clean rounds.
+
+**Effect.** brainstorming and writing-plans run the loop automatically
+before their approval gates; direct use is `/multi-review <doc> [N]`.
+Plan headers now carry a `**Spec:**` line. Nothing to migrate.
 
 - New `multi-review` skill: runs up to N (default 3, cap 10) independent
   review rounds on a spec or plan — one clean-context reviewer subagent per
@@ -1040,6 +1299,18 @@ reinstalled — an in-place update cannot cross the rename.
 
 ## v6.8.0 (2026-07-18)
 
+**Problem.** Each task was reviewed by two subagents — one for spec
+compliance, one for quality — and dispatch prompts carried pasted
+handoff text. That cost extra turns and tokens.
+
+**Change.** One reviewer now returns both verdicts, and new scripts
+(`sdd-workspace`, `task-brief`, `review-package`) write briefs,
+reports, and review diffs to files that dispatch prompts reference by
+path. Every dispatch must name its model.
+
+**Effect.** Upstream measured about 2x faster runs and 50-60% fewer
+tokens. Nothing to migrate.
+
 ### Subagent-Driven Development: token-optimized review flow (port of upstream v6.0.0)
 
 Ports obra/superpowers v6.0.0's measured cost rework (~2x faster, ~50-60% fewer tokens in upstream evals), adapted to this fork's Parallel Waves and Batched Autonomous Mode.
@@ -1054,6 +1325,18 @@ Ports obra/superpowers v6.0.0's measured cost rework (~2x faster, ~50-60% fewer 
 
 ## v6.7.1 (2026-07-18)
 
+**Problem.** The systematic-debugging routing rule in
+`hooks/skill-rules.json` contained neither "debug" nor "root cause", so
+a prompt such as "debug this stack trace and identify the root cause"
+scored below the confidence threshold and received no skill hint.
+
+**Change.** Both words were added to that rule.
+
+**Effect.** Canonical debugging prompts now route to
+systematic-debugging. Three new matcher tests cover the change,
+including a negative case for the `--debug` build flag. Nothing to
+migrate.
+
 Debug-prompt routing fix.
 
 ### Fixes
@@ -1061,6 +1344,19 @@ Debug-prompt routing fix.
 **systematic-debugging trigger keywords** — Added "debug" and "root cause" to the systematic-debugging rule in `hooks/skill-rules.json`. Canonical debugging prompts such as "debug this stack trace and identify the root cause" scored below the routing confidence threshold because the rule contained neither word, so no skill hint was injected. Surfaced by the Codex post-push validation smoke checks; covered by three new matcher tests (including a `--debug`-build-flag negative).
 
 ## v6.7.0 (2026-07-07)
+
+**Problem.** A long plan had to finish inside one session. Nothing
+ended execution at a safe point or carried the position forward.
+
+**Change.** Batched Autonomous Mode executes up to N plan tasks per
+session, ends the batch when context pressure reaches 60% (measured by
+the new `--pressure` CLI, with a 3-task fallback), writes a handoff
+into `state.md`, and resumes after `/clear` from plan.md checkboxes and
+git.
+
+**Effect.** Say "resume the plan" to start the next batch. A
+path-encoding fix restores pressure measurement for project paths
+containing underscores or dots. Nothing to migrate.
 
 Batched Autonomous Mode: resumable, context-bounded plan execution.
 
