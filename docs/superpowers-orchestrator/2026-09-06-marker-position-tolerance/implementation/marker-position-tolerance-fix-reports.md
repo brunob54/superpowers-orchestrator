@@ -86,3 +86,40 @@ Results: 512 passed, 0 failed
 $ bash tests/reviewer-templates/run-tests.sh
 Results: 60 passed, 0 failed
 ```
+
+## Round 2
+
+Findings addressed: M1, M2
+
+- M1: skills/orchestrating-development/SKILL.md — reworded the
+  "A **reviewer's return** is **lost**" sentence in `## In-run rulings`
+  so the 10-non-blank-line window is counted over "the reviewer's final
+  message" instead of "its completion notice", matching the Return
+  contract bullet and the hook. Kept the literal phrase "first 10
+  non-blank lines" and the marker spelling
+  `<!-- multi-review report -->`. Did not touch the `**Lost returns.**`
+  opening sentence, the two named fragments, or the `## Guard
+  Interaction` / `## Prompt Templates` heading lines.
+- M2: skills/researching-prior-art/SKILL.md — added one sentence to
+  `## Guard interaction` stating that the widened hook-exemption rule
+  governs hook blocking only, and that `controller-prompt.md`'s report
+  verification still discards a report whose `<!-- research report -->`
+  marker is not its first line. Heading line and all pre-existing
+  sentences in the section kept byte-identical.
+
+Covering tests:
+
+```
+$ bash tests/codex/run-unit-tests.sh
+Results: 10 suites passed, 0 suites failed
+All unit tests passed.
+
+$ bash tests/orchestrating-development/run-tests.sh
+Results: 162 passed, 0 failed
+
+$ bash tests/in-run-rulings/run-tests.sh
+Results: 512 passed, 0 failed
+
+$ bash tests/reviewer-templates/run-tests.sh
+Results: 60 passed, 0 failed
+```
