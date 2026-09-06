@@ -22,3 +22,5 @@ Items: [I4] forced — [I4] (orchestrator): amend plan: Task 4 Contract "Must co
 Detail: docs/superpowers-orchestrator/2026-09-06-orchestrator-prompt-pointer/plans/orchestrator-prompt-pointer-open-decisions.md
 Forks: none — contradiction: none
 Re-dispatch: phase 4, in-run resume 1 of 3
+
+## Phase 4 — Code review — rounds 4 (2 invocations) — cap — fixes 6 — unresolved 0
