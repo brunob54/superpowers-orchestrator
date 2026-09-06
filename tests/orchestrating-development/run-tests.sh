@@ -244,6 +244,24 @@ for t in "${RESUME_TEMPLATES[@]}"; do
 done
 assert_file_not_contains "doc-review-loop-prompt.md: has no Resume Answer section" "$ORCH_DIR/doc-review-loop-prompt.md" 'Resume Answer'
 
+bold "7. Phase 0 creates the prompt directory; Phases 1 to 4 fill, check and dispatch the pointer"
+assert_folded_contains "phase 0: mktemp -d step" "$PHASE0_RANGE" "$MKTEMP"
+assert_folded_contains "phase 0: names the creation-failure cause" "$PHASE0_RANGE" 'prompt directory could not be created'
+for t in "${TEMPLATES[@]}"; do
+  assert_folded_contains "phases: fill command names --template \"<base>/$t\"" "$PHASES_RANGE" "--template \"<base>/$t\""
+done
+for name in 'dispatch-<k>-plan-writer.md' 'dispatch-<k>-plan-review.md' 'dispatch-<k>-batch-<n>.md' 'dispatch-<k>-code-review.md'; do
+  assert_folded_contains "phases: test -s on $name" "$PHASES_RANGE" "test -s \"<PROMPT_DIR>/$name\""
+done
+assert_file_not_contains "phases: no template is filled by hand (no 'Fill \`./' line)" "$PHASES_RANGE" "$FILL_DOT"
+assert_folded_contains "phases: BATCH_NUMBER is not passed to the script" "$PHASES_RANGE" 'is not passed'
+POINTER_DISPATCHES="$(grep -cF -- 'dispatch the pointer' "$PHASES_RANGE" | tr -d ' ')"
+if [ "$POINTER_DISPATCHES" -ge 4 ]; then
+  ok "phases: 'dispatch the pointer' appears $POINTER_DISPATCHES times (at least once per phase)"
+else
+  bad "phases: 'dispatch the pointer' appears $POINTER_DISPATCHES times, fewer than 4"
+fi
+
 echo
 bold "Results: $PASS passed, $FAIL failed"
 if [ "$FAIL" -gt 0 ]; then

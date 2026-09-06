@@ -295,6 +295,16 @@ the same question batch below).
    their new form. Commit it (`chore(orchestration): <slug> log started`).
 8. **Seed `state.md`:** the sections writing-plans seeds, plus
    `## Orchestration` (format below).
+9. **Prompt directory:** run `mktemp -d` as its own command, under the
+   Controller Dispatch Rules ("Prompt files and the pointer"): no
+   argument, the printed path copied literally into every later command,
+   Write call and pointer and never held in a variable, converted once
+   with `cygpath -m` on Git Bash. A failure here — the command fails,
+   prints a path under the repository root, or `cygpath` fails where it
+   must run — is a major error: stop with the `## STOPPED` cause
+   `prompt directory could not be created — <error text>`, nothing
+   dispatched (Major-Error Stop Policy). The fill counter `<k>` of the
+   prompt-file names starts at 1.
 
 Any failure in steps 1–6 is a **pre-log stop**: report and stop; nothing
 further written, no resume line; if the branch was already created (step
@@ -303,16 +313,53 @@ never ask the user anything.
 
 ## Phase 1 — Plan Writing
 
-Fill `./plan-writer-prompt.md` (spec path; output plan path
-`<topic folder>/plans/<slug>.md`) and dispatch. Expected return: `PLAN_READY <path> tasks=<T>` or
+Fill the plan-writer prompt into the session's prompt directory, as one
+command (every `NAME=` argument single-quoted):
+
+```bash
+node "<base>/../multi-code-review/scripts/fill-prompt.js" \
+  --template "<base>/plan-writer-prompt.md" \
+  --out "<PROMPT_DIR>/dispatch-<k>-plan-writer.md" \
+  'WRITING_PLANS_SKILL_PATH=<base>/../writing-plans/SKILL.md' \
+  'SPEC_PATH=<spec path>' 'PLAN_PATH=<topic folder>/plans/<slug>.md' \
+  'RESUME_ANSWER='
+```
+
+`<base>` is this skill's base directory, from which the Controller
+Dispatch Rules resolve the procedure-source paths; every path value is
+absolute. `RESUME_ANSWER=` is empty on a first dispatch. A re-dispatch
+after an answered `BLOCKED` question (Resume step 3) writes the answer —
+one line, without an id or a tag — with the Write tool to
+`<PROMPT_DIR>/dispatch-<k>-answers.txt` and passes
+`'RESUME_ANSWER=@<PROMPT_DIR>/dispatch-<k>-answers.txt'` instead. Then run
+`test -s "<PROMPT_DIR>/dispatch-<k>-plan-writer.md"` as its own command
+and dispatch the pointer to that file (`name: "orch-plan-writer"`, the
+template's `description`, the session model with the sonnet floor).
+Expected return: `PLAN_READY <path> tasks=<T>` or
 `BLOCKED: <question>` (spec ambiguity → major error → stop). On success:
 commit the plan (`docs(plan): <slug> implementation plan`), append and
 commit the Phase 1 log entry.
 
 ## Phase 2 — Plan Review Loop
 
-If N_plan = 0, log the skip and go to Phase 3. Otherwise fill
-`./doc-review-loop-prompt.md` (plan path, spec path, N_plan, M) and dispatch.
+If N_plan = 0, log the skip and go to Phase 3. Otherwise fill the
+plan-review prompt into the session's prompt directory, as one command
+(every `NAME=` argument single-quoted):
+
+```bash
+node "<base>/../multi-code-review/scripts/fill-prompt.js" \
+  --template "<base>/doc-review-loop-prompt.md" \
+  --out "<PROMPT_DIR>/dispatch-<k>-plan-review.md" \
+  'MULTI_DOC_REVIEW_SKILL_PATH=<base>/../multi-doc-review/SKILL.md' \
+  'REVIEWER_PROMPT_PATH=<base>/../multi-doc-review/reviewer-prompt.md' \
+  'WRITING_PLANS_SKILL_PATH=<base>/../writing-plans/SKILL.md' \
+  'PLAN_PATH=<plan path>' 'SPEC_PATH=<spec path>' 'N_PLAN=<N_plan>' \
+  'M_REVIEWERS=<M>'
+```
+
+This template has no `[RESUME_ANSWER]` and no value file. Then run
+`test -s "<PROMPT_DIR>/dispatch-<k>-plan-review.md"` as its own command
+and dispatch the pointer to that file (`name: "orch-plan-review"`).
 Expected return: `REVIEW_DONE rounds=<r> outcome=<converged|cap>
 unresolved=<n>` or `BLOCKED: <reason>`. `unresolved > 0` → major error →
 stop. On success: commit the revised plan + its review log
@@ -330,11 +377,36 @@ Loop until every task is complete:
    plan → major error → stop (the predicate would otherwise pass it
    vacuously and silently skip the task). Select the next ≤ cap unchecked
    tasks in plan order.
-2. Fill `./batch-controller-prompt.md` (plan path, task numbers,
-   first-batch flag for SDD's Pre-Flight Plan Review, and
-   `[RESUME_ANSWER]` — the run-wide answer set that step 5 states, filled
-   on every dispatch, first or repeat, whenever this run has recorded any
-   answer) and dispatch.
+2. Fill the batch prompt into the session's prompt directory, as one
+   command (every `NAME=` argument single-quoted — an unquoted
+   `TASK_LIST=4, 5, 6` splits into three arguments and exits 1):
+
+   ```bash
+   node "<base>/../multi-code-review/scripts/fill-prompt.js" \
+     --template "<base>/batch-controller-prompt.md" \
+     --out "<PROMPT_DIR>/dispatch-<k>-batch-<n>.md" \
+     'SDD_SKILL_PATH=<sdd>/SKILL.md' 'SDD_SCRIPTS_DIR=<sdd>/scripts' \
+     'IMPLEMENTER_PROMPT_PATH=<sdd>/implementer-prompt.md' \
+     'TASK_REVIEWER_PROMPT_PATH=<sdd>/task-reviewer-prompt.md' \
+     'PLAN_PATH=<plan path>' 'TASK_LIST=<i>, <i+1>, <j>' 'TASK_RANGE=<i>..<j>' \
+     'FIRST_BATCH=<yes|no>' \
+     'RESUME_ANSWER=@<PROMPT_DIR>/dispatch-<k>-answers.txt'
+   ```
+
+   `<sdd>` is `<base>/../subagent-driven-development`; `<n>` is the
+   1-based batch index; `FIRST_BATCH` is `yes` for the first batch of the
+   run (SDD's Pre-Flight Plan Review) and `no` otherwise; `TASK_LIST` is
+   the selected task numbers, comma-separated. `[RESUME_ANSWER]` is the
+   run-wide answer set that step 5 states, filled on every dispatch,
+   first or repeat, whenever this run has recorded any answer: write its
+   lines with the Write tool to `<PROMPT_DIR>/dispatch-<k>-answers.txt`
+   first (`## In-run rulings`, "The answers, and how a ruling reaches the
+   plan"); when the run has recorded no answer, write no value file and
+   pass `'RESUME_ANSWER='` (empty) instead. `[BATCH_NUMBER]` stands only
+   in the template's wrapper and is not passed to the script: fill the
+   Agent call's `name` (`orch-batch-<n>`) and `description` yourself, as
+   before. Then run `test -s "<PROMPT_DIR>/dispatch-<k>-batch-<n>.md"` as
+   its own command and dispatch the pointer to that file.
 3. Expected return: `BATCH_COMPLETE tasks=<i>..<j>` + one
    `Task <n>: complete commits <base7>..<head7>` line per task, or
    `BLOCKED task=<n>: <one-line reason>` (detail in the task's report
@@ -384,9 +456,29 @@ If N_code = 0, log the skip and go to Phase 5. Preconditions: all
 orchestration-log edits are committed (they are, if you committed at each
 boundary), and `git merge-base --is-ancestor <BASE> HEAD` succeeds —
 failure means the branch was rebased or reset mid-run → major error →
-stop. Fill `./code-review-loop-prompt.md` (BASE = the Phase 0
-recorded branch point, N_code, M, plan path, ledger path
-`.superpowers/sdd/progress.md`) and dispatch. Expected return:
+stop. Fill the code-review prompt into the session's prompt directory,
+as one command (every `NAME=` argument single-quoted):
+
+```bash
+node "<base>/../multi-code-review/scripts/fill-prompt.js" \
+  --template "<base>/code-review-loop-prompt.md" \
+  --out "<PROMPT_DIR>/dispatch-<k>-code-review.md" \
+  'MULTI_CODE_REVIEW_SKILL_PATH=<base>/../multi-code-review/SKILL.md' \
+  'REVIEWER_PROMPT_PATH=<base>/../multi-code-review/reviewer-prompt.md' \
+  'TOPIC_DIR=<topic folder, absolute>' 'BASE_SHA=<BASE>' 'N_CODE=<N_code>' \
+  'M_REVIEWERS=<M>' 'PLAN_PATH=<plan path>' \
+  'LEDGER_PATH=<repository root, absolute>/.superpowers/sdd/progress.md' \
+  'RESUME_ANSWER='
+```
+
+`<BASE>` is the Phase 0 recorded branch point. `RESUME_ANSWER=` is empty
+on a first dispatch; a re-dispatch with answers — after in-run rulings,
+or at Resume step 3 — writes them with the Write tool to
+`<PROMPT_DIR>/dispatch-<k>-answers.txt` and passes
+`'RESUME_ANSWER=@<PROMPT_DIR>/dispatch-<k>-answers.txt'` instead. Then run
+`test -s "<PROMPT_DIR>/dispatch-<k>-code-review.md"` as its own command
+and dispatch the pointer to that file (`name: "orch-code-review"`).
+Expected return:
 `REVIEW_DONE rounds=<r> outcome=<converged|cap> fixes=<n> unresolved=<n>
 user_decision=<n>` or `BLOCKED: <reason>`. `unresolved > 0` or
 `user_decision > 0` → `## In-run rulings`: classify each open item by its

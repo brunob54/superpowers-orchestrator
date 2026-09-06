@@ -495,6 +495,53 @@ fill --template "$BATCH_TEMPLATE" --out "$WORK/batch-unquoted.md" TASK_LIST=4, 5
 assert_eq "batch template: an unquoted task list is a usage error (exit 1)" "$STATUS" "1"
 assert_absent "batch template: unquoted task list writes nothing" "$WORK/batch-unquoted.md"
 
+bold "13. The orchestrator's fill commands name exactly the body placeholders of their templates"
+# The spec's drift guard ("Testing strategy" item 1): every 'NAME= token of
+# each fenced block of the orchestrator's text that holds fill-prompt.js,
+# keyed by the template on that block's --template line, must equal the
+# template body's placeholder set. Wrapper-only names (BATCH_NUMBER) are not
+# passed, so the body set is the comparison target.
+ORCH_SKILL="$ROOT/skills/orchestrating-development/SKILL.md"
+BLOCKS_DIR="$WORK/orch-blocks"
+mkdir -p "$BLOCKS_DIR"
+# One file per fenced block of the orchestrator's text (a fence may be
+# indented inside a list item).
+awk -v dir="$BLOCKS_DIR" '
+  /^[ \t]*```/ { if (inblk) { close(out); inblk = 0 } else { inblk = 1; n++; out = dir "/block-" n ".txt" }; next }
+  inblk { print > out }
+' "$ORCH_SKILL"
+# The `[NAME]` placeholders of the prompt body of template $1 — the lines
+# after its `prompt: |` line up to the closing fence — one name per line,
+# sorted, unique.
+template_body_names() { # template
+  awk '/^```[ \t]*$/ && seen { exit } seen { print } /^[[:space:]]*prompt: \|[[:space:]]*$/ { seen = 1 }' "$1" \
+    | grep -oE '\[[A-Z][A-Z_]*[A-Z]\]' | tr -d '[]' | sort -u
+}
+FILL_BLOCKS=0
+SEEN_TEMPLATES="$WORK/seen-templates.txt"
+: > "$SEEN_TEMPLATES"
+for blk in "$BLOCKS_DIR"/block-*.txt; do
+  [ -e "$blk" ] || continue
+  grep -qF 'fill-prompt.js' "$blk" || continue
+  FILL_BLOCKS=$((FILL_BLOCKS+1))
+  tmpl="$(sed -n 's/.*--template "[^"]*\/\([^"/]*\)".*/\1/p' "$blk" | head -n 1)"
+  if [ -z "$tmpl" ] || [ ! -f "$ORCH_DIR/$tmpl" ]; then
+    bad "fill block $(basename "$blk"): names no existing template ('$tmpl')"
+    continue
+  fi
+  printf '%s\n' "$tmpl" >> "$SEEN_TEMPLATES"
+  grep -oE "'[A-Z][A-Z_]*[A-Z]=" "$blk" | sed -e "s/^'//" -e 's/=$//' | sort -u > "$WORK/cmd-names.txt"
+  template_body_names "$ORCH_DIR/$tmpl" > "$WORK/body-names.txt"
+  if cmp -s "$WORK/cmd-names.txt" "$WORK/body-names.txt"; then
+    ok "fill command for $tmpl names exactly its body placeholders ($(tr '\n' ' ' < "$WORK/cmd-names.txt" | sed 's/ *$//'))"
+  else
+    bad "fill command for $tmpl and its body placeholders differ"
+    diff "$WORK/body-names.txt" "$WORK/cmd-names.txt" || true
+  fi
+done
+assert_eq "the orchestrator holds one fill block per template (four)" "$FILL_BLOCKS" "4"
+assert_eq "each template is filled by exactly one block" "$(sort "$SEEN_TEMPLATES" | uniq | wc -l | tr -d ' ')" "4"
+
 echo
 bold "Results: $PASS passed, $FAIL failed"
 if [ "$FAIL" -gt 0 ]; then
