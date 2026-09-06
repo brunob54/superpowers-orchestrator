@@ -917,3 +917,106 @@ $ git commit -m "review fixes (prompt-pointer-dispatch, round 6)" -- skills/mult
 [feature/prompt-pointer-dispatch b52a9f2] review fixes (prompt-pointer-dispatch, round 6)
  1 file changed, 93 insertions(+), 28 deletions(-)
 ```
+
+## Round 7 fix
+
+Findings addressed:
+
+- [I2] `skills/multi-code-review/SKILL.md` — Critical/Important fix bullet and
+  the Error Handling value-file row: the probe payload's `<that one line>` is
+  now stated to be a JSON string literal (backslash and double quote escaped),
+  built by a program (quoted heredoc piped through `node -e` that prints
+  `JSON.stringify(...)`, piped into the hook) and never by hand; both places now
+  state the outcome rule — allowed only on a JSON object carrying no deny
+  decision, and every other result (a Bash hook denying the probe command, a
+  non-zero exit, standard output that is not a JSON object) is read as a refused
+  line and withheld.
+- [I3] `skills/multi-code-review/SKILL.md` — the "Before round 1" fatal list now
+  names the three bounded exceptions of Error Handling, qualifies the
+  `fill-prompt.js` entry with the one corrected re-run and the u = 0 entry with
+  the environment-death case, and replaces the unconditional "In every case"
+  clause. Step 6 now says an `inconclusive` round is never clean and breaks the
+  streak, and that step 3 decides whether the loop continues past it.
+- [I4] `skills/multi-code-review/fix-prompt.md` step 2 and
+  `skills/multi-code-review/SKILL.md` fix-failure bullet: `git checkout --`
+  restore applies only to files that were clean when the loop started. The
+  controller prepends a `pre-existing uncommitted changes at loop start: <path>`
+  line to the findings value file (documented in the template's "Findings to
+  fix" section and in the `[FINDINGS]` legend entry, no new placeholder); the
+  fix subagent leaves such a file as its attempt left it and names it in the
+  failure report; the re-dispatch failure text says those files still hold the
+  failed attempt's edits.
+- [M1] `skills/multi-code-review/SKILL.md` — fixed together with [I2]: the probe
+  line is fed through a quoted heredoc (`<<'EOF'`), never as an `echo` or
+  `printf` argument, and a probe command a Bash hook denies counts as a refused
+  line.
+- [M2] `skills/multi-code-review/fix-prompt.md` "Findings to fix": one sentence
+  explains the withheld form — a finding described as
+  `secret-bearing finding, value withheld` reports a hardcoded credential at
+  that location; remove the value there and load it from the environment.
+- [M5] `skills/multi-code-review/scripts/fill-prompt.js` `writeAtomic`: when the
+  existing `--out` path cannot be read, the exit-5 message reports the read
+  error instead of "file already exists"; the "already exists" text is kept only
+  when the read succeeded with different content. No existing assertion pinned
+  the changed message, so no test change was needed.
+- [M6] `skills/multi-code-review/SKILL.md` step 2 sub-step 3 and the
+  Critical/Important bullet: the exit-code paragraph (with the one corrected
+  re-run) now precedes the `test -s` sentence in both places.
+- [M7] `skills/multi-code-review/SKILL.md` prompt-directory creation: `mktemp -d`
+  is run with no argument, outside the checkout; a printed path under the root
+  anchor is treated as a `mktemp -d` failure.
+- [M8] `skills/multi-code-review/SKILL.md` Error Handling: on Bash
+  `protect-secrets.js` applies only its file-access patterns; the
+  hardcoded-secret content scan runs for Write and Edit alone, which is what
+  lets the heredoc probe deliver a finding line to the hook.
+
+Covering tests:
+
+```
+$ bash tests/reviewer-templates/run-tests.sh
+...
+10. multi-code-review SKILL.md dispatches prompts by pointer
+  PASS: multi-code-review SKILL.md: Procedure range located (329..1129)
+  PASS: multi-code-review SKILL.md: Error Handling range located (1561..1734)
+  PASS: Procedure: contains 'mktemp -d'
+  PASS: Procedure: contains 'fill-prompt.js'
+  PASS: Procedure: contains 'test -s "<PROMPT_DIR>/round-<i>-reviewer.md"'
+  PASS: Procedure: contains 'test -s "<PROMPT_DIR>/round-<i>-fix.md"'
+  PASS: Error Handling: every failure of the mechanism returns BLOCKED
+  PASS: Error Handling: a refused findings line is withheld, not fatal
+  PASS: Error Handling: never a pointer to a file that failed the check
+
+Results: 60 passed, 0 failed
+```
+
+```
+$ bash tests/fill-prompt/run-tests.sh
+...
+8. Round 2 fixes: refuse to overwrite --out, and trailing blank after fill
+  PASS: existing --out: exits 5
+  PASS: existing --out: message names the path
+  PASS: existing --out: content unchanged
+  PASS: existing --out: no temporary file left behind
+  PASS: identical repeat: exits 0
+9. Round 4 fix: a fenced example inside the prompt body
+  PASS: fenced example inside the body exits 2
+
+Results: 101 passed, 0 failed
+```
+
+```
+$ bash tests/codex/run-unit-tests.sh
+...
+protect-secrets: 43 passed, 0 failed
+
+ Results: 10 suites passed, 0 suites failed
+ All unit tests passed.
+```
+
+Manual check of the [M5] change (an `--out` that names a directory):
+
+```
+$ node skills/multi-code-review/scripts/fill-prompt.js --template skills/multi-code-review/fix-prompt.md --out /tmp/m5test/outdir ROUND=1 SLUG=s REPO_ROOT=/r FIX_REPORT_FILE=/f FINDINGS=x FAILURE_BLOCK=
+cannot write /tmp/m5test/outdir: existing path could not be read: EISDIR: illegal operation on a directory, read
+exit=5
+```
