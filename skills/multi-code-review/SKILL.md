@@ -332,7 +332,12 @@ file is never moved aside — its history is committed.
 Run `mktemp -d` as its own command, once per invocation, before round 1
 or before the round a resumed invocation continues at, and copy the
 literal path it prints — written `<PROMPT_DIR>` in this section — into
-every later command, Write call and pointer. Once per invocation, never
+every later command, Write call and pointer. Run `mktemp -d` with no
+argument, so the directory is created in the platform's temporary
+location, outside the checkout; never give it a template or a path
+inside the repository. If the path it prints is under the root anchor,
+treat that as a `mktemp -d` failure and stop with the `BLOCKED: prompt
+directory could not be created` text below. Once per invocation, never
 once per controller: a controller that runs a second invocation in the
 same session, or that resumes one, creates a fresh directory first, so
 no file name of the later invocation collides with a file the earlier
@@ -411,14 +416,22 @@ Read that file once, with the Read tool, before doing anything else, and follow 
 Nothing else in that directory is for you; do not read any other file there.
 ```
 
-Every failure of this mechanism is fatal and nothing falls back:
-`mktemp -d` or `cygpath` failing, `fill-prompt.js` exiting non-zero,
+Every failure of this mechanism is fatal and nothing falls back, apart
+from the three bounded exceptions of Error Handling: a slip in the
+controller's own fill command, corrected once; a value-file line the
+secrets hook refuses, withheld once; and a u = 0 round whose reviewers
+all died of their environment. The fatal failures are:
+`mktemp -d` or `cygpath` failing, `fill-prompt.js` exiting non-zero —
+except for the one corrected re-run of step 2 sub-step 3, which covers
+exit 1, 3 or 4 and exit 5 naming an `@<file>` never written —
 `test -s` failing, Node missing (treated as the script failing), a
 value-file write that fails, or that a hook refuses — a
 `hooks/safety/protect-secrets.js` refusal only when it refuses a second
 time, per Error Handling — and a round in which no
 reviewer returned a usable report after the pointer dispatch and the one
-identical retry of step 3. A failure that happens before any reviewer
+identical retry of step 3, except when every final message of that round
+shows an environment death, in which case the round stays `inconclusive`
+and the loop continues (step 3). A failure that happens before any reviewer
 report of the round was received owes no round entry: nothing is written
 for that round. The u = 0 case — no usable report in the round at all —
 owes an entry, and writes the round entry in the `inconclusive` form. A
@@ -429,9 +442,10 @@ the round entry with the round's consolidated set and the normal lines
 (the M >= 2 header lines, the source annotations), gives every Critical
 or Important finding that was not fixed the disposition
 `unresolved: <the BLOCKED cause> — at <file:line> — clause: none`, and
-gives every Minor finding `carried`. In every case the controller then
-returns `BLOCKED: <cause>`, naming the failure in the wording of Error
-Handling.
+gives every Minor finding `carried`. In each of the fatal cases the
+controller then returns `BLOCKED: <cause>`, naming the failure in the
+wording of Error Handling; a bounded exception above returns nothing and
+the run goes on.
 If `mktemp -d` fails, that means: stop and return
 `BLOCKED: prompt directory could not be created — <error text>`, with
 nothing dispatched (Error Handling).
@@ -521,14 +535,15 @@ code has been revised since, so a re-pass is meaningful):
       template placeholders. Never pass the conversation, prior rounds'
       findings, fix reports, or the log — neither in a value nor beside
       the pointer.
-   3. Run `test -s "<PROMPT_DIR>/round-<i>-reviewer.md"` as its own
-      command. Read the script's exit code first. Exit 1, 3 or 4, and
+   3. Read the script's exit code first. Exit 1, 3 or 4, and
       exit 5 naming an `@<file>` you never wrote, mean your own fill
       command was wrong — a mistyped argument, a missing value, a value
       file you did not write — and not that the mechanism failed:
       correct the command once, using the argument name the script's
       message gives, and run it again. A second non-zero exit is fatal.
-      Exit 2, and exit 5 on a file you did write, are fatal at once. On
+      Exit 2, and exit 5 on a file you did write, are fatal at once.
+      Then run `test -s "<PROMPT_DIR>/round-<i>-reviewer.md"` as its own
+      command. On
       any fatal exit, or when the `test -s` check fails, stop and
       return `BLOCKED: prompt file round-<i>-reviewer.md not produced —
       <the script's message, or "empty">` (Error Handling); never dispatch
@@ -765,7 +780,13 @@ code has been revised since, so a re-pass is meaningful):
      blocks a subagent's final message that names a roster skill without
      the report marker, and only reviewers emit that marker. Dispatch it
      by pointer: write the list to `<PROMPT_DIR>/round-<i>-findings.txt`
-     under the value-file rule. If `hooks/safety/protect-secrets.js`
+     under the value-file rule. When the loop started over pre-existing
+     uncommitted changes the user consented to (Working-tree
+     precondition), the first line of that file is instead
+     `pre-existing uncommitted changes at loop start: <path>[, <path>...]`,
+     naming every path `git status --porcelain` showed then; the findings
+     follow it. Without those changes the file holds findings only.
+     If `hooks/safety/protect-secrets.js`
      refuses that Write, find the offending lines yourself: the hook's
      refusal names a credential kind — the kind of the first pattern that
      matched the whole content — and never a line, so nothing in it says
@@ -773,11 +794,34 @@ code has been revised since, so a re-pass is meaningful):
      per line of the file you tried to write, giving it on standard input
      the JSON object the hook reads:
      `{"tool_name":"Write","tool_input":{"file_path":"<PROMPT_DIR>/round-<i>-findings.txt","content":"<that one line>"}}`.
+     In that object `<that one line>` is a JSON **string literal** —
+     every backslash and every double quote of the finding line escaped.
+     Finding lines routinely carry both (quoted code, Windows paths), so
+     build the payload with a program and never by hand: put the one line
+     in a quoted heredoc (`<<'EOF'`, which passes the line through
+     unchanged) and pipe it through `node -e`, which reads standard input
+     and prints the encoded object, and pipe that into the hook:
+
+     ```bash
+     node -e 'let s="";process.stdin.on("data",c=>s+=c).on("end",()=>{const line=s.replace(/\n$/,"");process.stdout.write(JSON.stringify({tool_name:"Write",tool_input:{file_path:"<PROMPT_DIR>/round-<i>-findings.txt",content:line}}))})' <<'EOF' | node hooks/safety/protect-secrets.js
+     <that one line>
+     EOF
+     ```
+
+     Never pass the line as an `echo` or `printf` argument: the shell and
+     this plugin's Bash hooks both act on it there.
      The hook parses that object from standard input, inspects
      `tool_input.file_path` and `tool_input.content`, exits 0 either way,
      and refuses the line when the JSON it prints on standard output
      carries `"permissionDecision":"deny"` (its `permissionDecisionReason`
-     names the credential kind). Replace every line the hook refuses by
+     names the credential kind). Read every other probe result as a
+     refused line, never as an allowed one: a probe command a Bash hook
+     denies, a probe that exits non-zero, and a probe whose standard
+     output is not a JSON object — an empty output, or any other text.
+     Only a JSON object that carries no deny decision means the line is
+     allowed. (A malformed payload would make the hook print `{}`, which
+     reads as allowed; that is why the payload is program-built.)
+     Replace every line the hook refuses by
      its `file:line` plus the fixed text
      `secret-bearing finding, value withheld`, keep that finding's id and
      severity, and retry the Write once; a second refusal is fatal (Error
@@ -793,12 +837,14 @@ code has been revised since, so a re-pass is meaningful):
        'FINDINGS=@<PROMPT_DIR>/round-<i>-findings.txt' 'FAILURE_BLOCK='
      ```
 
-     Run `test -s "<PROMPT_DIR>/round-<i>-fix.md"` as its own command.
-     The exit-code rule of step 2 sub-step 3 holds here unchanged: exit
+     The exit-code rule of step 2 sub-step 3 holds here unchanged, and is
+     read first: exit
      1, 3 or 4, and exit 5 naming an `@<file>` you never wrote, are slips
      in your own fill command — correct it once and run it again, a
      second non-zero exit being fatal; exit 2 and exit 5 on a file you
-     did write are fatal at once. On any fatal exit, or when the check
+     did write are fatal at once. Then run
+     `test -s "<PROMPT_DIR>/round-<i>-fix.md"` as its own command.
+     On any fatal exit, or when the check
      fails, stop and return `BLOCKED: prompt file round-<i>-fix.md
      not produced — <the script's message, or "empty">` (Error Handling),
      and never dispatch a pointer to a file that failed the check.
@@ -855,7 +901,15 @@ code has been revised since, so a re-pass is meaningful):
      changed — the files its final message lists as changed, or, when it
      listed none, the files the findings name — to their committed content by
      explicit path (`git checkout -- <path>`, or `git restore <path>`) first,
-     so the next attempt starts from the tree the loop started on. Those
+     so the next attempt starts from the tree the loop started on. That
+     restore applies only to files that were clean when the loop started:
+     a file that already carried an uncommitted change then — a path of
+     the `pre-existing uncommitted changes at loop start:` line the fix
+     dispatch carries — is never restored, because `git checkout --` would
+     discard the user's own work along with the attempt's. Such a file is
+     left as the attempt left it, and the failure text of the
+     re-dispatch says so: `these files still hold the failed attempt's
+     edits: <path>[, <path>...]`. Those
      commands restore only files git tracks: a file the attempt created that
      git does not track is removed by explicit path (`rm -- <path>`), never
      with `git clean`. The review log, the fix-report file, and any change
@@ -882,9 +936,10 @@ code has been revised since, so a re-pass is meaningful):
    never post-triage — rejections and user-decision findings never make a
    round clean) **and** all M reviewers returned a usable report (u = M).
    A partial round is never clean and breaks the streak. An
-   `inconclusive` round — no usable report at all — is not a round the
-   loop continues past: its entry is written and the controller returns
-   `BLOCKED` (Error Handling), so a streak can never contain one. When a
+   `inconclusive` round — no usable report at all — is never clean either
+   and breaks the streak, so a streak can never contain one; whether the
+   loop continues past it is decided in step 3, and it continues only in
+   the environment-death case. When a
    report's count line disagrees with its
    enumerated findings, recompute the counts from the enumeration: with
    M = 1 log the recomputed counts on the round's verdict line; with M ≥ 2
@@ -1595,10 +1650,16 @@ completed invocation only on explicit user request.
   and is treated as the script failing.
 - A value-file write is denied by a hook or fails → `BLOCKED: value file
   <name> could not be written — <the hook's reason, or the error>`. This
-  plugin's `hooks/safety/protect-secrets.js` scans the
-  content and the path of every Write, and — together with
-  `hooks/safety/block-dangerous-commands.js` — the whole Bash command
-  string, a heredoc body included; a Security-lens finding may quote
+  plugin's `hooks/safety/protect-secrets.js` scans the path of every
+  Read, Edit, Write and the content of every Edit and Write for
+  hardcoded secrets. On Bash it applies only its file-access patterns —
+  commands that read, copy, move, delete or send a secret file, and
+  commands that print a secret-shaped variable — and never the
+  hardcoded-secret content scan, which runs for Write and Edit alone;
+  that is what lets the heredoc probe below carry a finding line to the
+  hook. `hooks/safety/block-dangerous-commands.js` scans the whole Bash
+  command string, a heredoc body included, and so do the file-access
+  patterns above; a Security-lens finding may quote
   exactly such text. One exception, and only this one: when
   `hooks/safety/protect-secrets.js` refuses a value-file Write, the
   controller finds the offending lines itself, because the hook's refusal
@@ -1607,11 +1668,26 @@ completed invocation only on explicit user request.
   `node hooks/safety/protect-secrets.js` once per line of the refused
   file, giving the hook on standard input the JSON object the hook reads:
   `{"tool_name":"Write","tool_input":{"file_path":"<the value file>","content":"<that one line>"}}`.
+  In that object `<that one line>` is a JSON **string literal**, with every
+  backslash and every double quote of the finding line escaped, and the
+  payload is built by a program, never by hand: the one line goes into a
+  quoted heredoc (`<<'EOF'`) piped through a `node -e` program that reads
+  standard input and prints
+  `JSON.stringify({tool_name:"Write",tool_input:{file_path:"<the value file>",content:<the line>}})`,
+  itself piped into the hook — the command of the Critical/Important
+  bullet. The line is never an `echo` or `printf` argument.
   The hook parses that object from standard input, inspects
   `tool_input.file_path` and `tool_input.content`, exits 0 either way, and
   refuses the line when the JSON it prints on standard output carries
   `"permissionDecision":"deny"` (its `permissionDecisionReason` names the
-  credential kind). Every line the hook refuses is replaced by its
+  credential kind). Every other probe result is read as a refused line and
+  the line is withheld, never as an allowed line: a probe command a Bash
+  hook denies, a probe that exits non-zero, and a probe whose standard
+  output is not a JSON object. Only a JSON object carrying no deny
+  decision allows the line. (An unescaped line would make the payload
+  invalid JSON, on which the hook prints `{}` — an allowed reading of a
+  secret-bearing line; the program-built payload is what prevents it.)
+  Every line the hook refuses is replaced by its
   `file:line` plus the fixed
   text `secret-bearing finding, value withheld`, and the Write is retried
   once; the withheld finding keeps its id and severity in the findings

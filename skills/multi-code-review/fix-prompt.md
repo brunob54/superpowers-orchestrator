@@ -46,7 +46,14 @@ Agent tool (general-purpose):
 
     ## Findings to fix
 
-    One finding per line: id, severity, location, description.
+    One finding per line: id, severity, location, description. A
+    finding whose description is `secret-bearing finding, value
+    withheld` reports a hardcoded credential at that location: remove
+    the value from the code there and load it from the environment
+    instead. A first line reading `pre-existing uncommitted changes at
+    loop start: <path>[, <path>...]` is not a finding: it names the
+    files that already carried uncommitted changes before this loop
+    began, which step 2 below never restores.
 
     [FINDINGS]
 
@@ -62,12 +69,17 @@ Agent tool (general-purpose):
        every file you changed to its committed content, each by
        explicit path (`git checkout -- <path>` or
        `git restore <path>`), never `git checkout .` and never the
-       fix-report file. Those commands restore only files git
+       fix-report file. One exception: a file named on the
+       `pre-existing uncommitted changes at loop start:` line above
+       already carried the user's own uncommitted change before this
+       loop began, so restoring it would discard that work — leave such
+       a file exactly as your attempt left it and name it in your
+       failure report. Those commands restore only files git
        tracks: a file you created that git does not track is
        removed by explicit path (`rm -- <path>`), never with
-       `git clean`, so the working tree is clean when you stop;
-       then report the failure and list those restored files in your
-       final message and stop.
+       `git clean`;
+       then report the failure, list the files you restored and the
+       files you left with your edits, in your final message, and stop.
     3. Open the fix-report file `[FIX_REPORT_FILE]` (create it if it
        does not exist) and append command and output under a NEW
        `## Round [ROUND]` heading at the end of the file, together with
@@ -106,7 +118,11 @@ Agent tool (general-purpose):
   "Workspace and Log" for the current mode
 - `[FINDINGS]` — REQUIRED, always the `@<file>` form: the consolidated list,
   one finding per line — id, severity, location, description; no source
-  ids, agreement counts, `harness:` fields or probe observations
+  ids, agreement counts, `harness:` fields or probe observations. When the
+  loop started over pre-existing uncommitted changes the user consented to,
+  the file's first line is
+  `pre-existing uncommitted changes at loop start: <path>[, <path>...]`
+  and the findings follow it
 - `[FAILURE_BLOCK]` — whole-line, alone on its line: empty (`FAILURE_BLOCK=`)
   on the first dispatch; on the one re-dispatch, the `@<file>` form naming
   the controller's failure file, whose first line is the heading

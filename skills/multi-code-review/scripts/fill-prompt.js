@@ -248,14 +248,22 @@ function fill(body, values) {
 function writeAtomic(outPath, text) {
   if (fs.existsSync(outPath)) {
     let existing = null;
+    let readError = null;
     try {
       existing = fs.readFileSync(outPath);
     } catch (err) {
-      // Unreadable, or not a regular file: treat it as different content.
+      // A directory, or a file that cannot be read: the content cannot be
+      // compared, so the write is refused — but the reported cause must be
+      // the read error, not "already exists", which would send the caller
+      // looking for a prompt file it wrote.
       existing = null;
+      readError = err.message;
     }
     if (existing !== null && existing.equals(Buffer.from(text, 'utf8'))) {
       return;
+    }
+    if (readError !== null) {
+      fail(EXIT_IO, `cannot write ${outPath}: existing path could not be read: ${readError}`);
     }
     fail(EXIT_IO, `cannot write ${outPath}: file already exists`);
   }
