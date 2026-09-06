@@ -73,6 +73,9 @@ assert_same() { # desc actual-file expected-file
 assert_absent() { # desc path
   if [ -e "$2" ]; then bad "$1 (exists: $2)"; else ok "$1"; fi
 }
+assert_file_has_line() { # desc file exact-line (whole-line match, fixed string)
+  if grep -qxF -- "$3" "$2"; then ok "$1"; else bad "$1 (no line exactly: $3)"; fi
+}
 line_count() { grep -c '' "$1" | tr -d ' '; }
 # The dedented LAST line of a template's prompt body: the line just above the
 # closing fence of the template's first fenced block — the first line that is
@@ -355,6 +358,196 @@ fill --template "$FIXTURES/inner-fence-column0-template.md" --out "$INNER_FENCE_
 assert_eq "tagged fenced example with column-0 content exits 2" "$STATUS" "2"
 assert_file_contains "inner fence, column-0 content: message gives the reason" "$ERRF" 'the first fenced block closes inside the prompt body'
 assert_absent "inner fence, column-0 content: nothing written" "$INNER_FENCE_C0_OUT"
+
+bold "10. The orchestrating-development review-loop templates take M_REVIEWERS"
+# Contract source: docs/superpowers-orchestrator/2026-09-06-orchestrator-prompt-pointer/
+# specs/orchestrator-prompt-pointer-design.md, "Template changes" item 1 and
+# "Testing strategy" item 1.
+ORCH_DIR="$ROOT/skills/orchestrating-development"
+DOC_LOOP_TEMPLATE="$ORCH_DIR/doc-review-loop-prompt.md"
+CODE_LOOP_TEMPLATE="$ORCH_DIR/code-review-loop-prompt.md"
+# The doc-review-loop body holds one bracketed single capital letter that is
+# not a placeholder: the checklist marker of its Deviation 3. It must reach
+# the output unchanged (dedented by the body's four-space indentation).
+CHECKLIST_LINE='   `- [X] unresolved: <reason> — <finding summary>`.'
+# Every value of the doc-review-loop template except the M argument.
+doc_loop_fill() { # out M-argument
+  fill --template "$DOC_LOOP_TEMPLATE" --out "$1" \
+    'MULTI_DOC_REVIEW_SKILL_PATH=/plug/multi-doc-review/SKILL.md' \
+    'REVIEWER_PROMPT_PATH=/plug/multi-doc-review/reviewer-prompt.md' \
+    'WRITING_PLANS_SKILL_PATH=/plug/writing-plans/SKILL.md' \
+    'PLAN_PATH=/repo/docs/plan.md' 'SPEC_PATH=/repo/docs/spec.md' 'N_PLAN=3' "$2"
+}
+# Every value of the code-review-loop template except the M argument and the
+# RESUME_ANSWER argument.
+code_loop_fill() { # out M-argument RESUME_ANSWER-argument
+  fill --template "$CODE_LOOP_TEMPLATE" --out "$1" \
+    'MULTI_CODE_REVIEW_SKILL_PATH=/plug/multi-code-review/SKILL.md' \
+    'REVIEWER_PROMPT_PATH=/plug/multi-code-review/reviewer-prompt.md' \
+    'TOPIC_DIR=/repo/docs/superpowers-orchestrator/2026-09-06-topic' 'BASE_SHA=abc1234' \
+    'N_CODE=3' 'PLAN_PATH=/repo/docs/plan.md' 'LEDGER_PATH=/repo/.superpowers/sdd/progress.md' \
+    "$2" "$3"
+}
+doc_loop_fill "$WORK/doc-loop.md" 'M_REVIEWERS=2'
+assert_eq "doc-review-loop template: M_REVIEWERS=2 exits 0" "$STATUS" "0"
+assert_file_contains "doc-review-loop template: M filled into the parameter line" "$WORK/doc-loop.md" '- M (reviewers per lens): 2   (fill the review log'"'"'s invocation'
+assert_file_not_matches "doc-review-loop template: no residual placeholder" "$WORK/doc-loop.md" "$PLACEHOLDER_ERE"
+assert_file_not_contains "doc-review-loop template: no [M] token left" "$WORK/doc-loop.md" '[M]'
+assert_file_has_line "doc-review-loop template: the checklist marker line stays byte-identical" "$WORK/doc-loop.md" "$CHECKLIST_LINE"
+doc_loop_fill "$WORK/doc-loop-m.md" 'M=2'
+assert_eq "doc-review-loop template: M=2 is a usage error (exit 1)" "$STATUS" "1"
+assert_eq "doc-review-loop template: M=2 prints the usage line" "$(cat "$ERRF")" "$USAGE_LINE"
+assert_absent "doc-review-loop template: M=2 writes nothing" "$WORK/doc-loop-m.md"
+code_loop_fill "$WORK/code-loop.md" 'M_REVIEWERS=1' 'RESUME_ANSWER='
+assert_eq "code-review-loop template: M_REVIEWERS=1 exits 0" "$STATUS" "0"
+assert_file_contains "code-review-loop template: M filled into the parameter line" "$WORK/code-loop.md" '- M (reviewers per lens): 1   (fill the review log'"'"'s invocation'
+assert_file_not_matches "code-review-loop template: no residual placeholder" "$WORK/code-loop.md" "$PLACEHOLDER_ERE"
+assert_file_not_contains "code-review-loop template: no [M] token left" "$WORK/code-loop.md" '[M]'
+code_loop_fill "$WORK/code-loop-m.md" 'M=1' 'RESUME_ANSWER='
+assert_eq "code-review-loop template: M=1 is a usage error (exit 1)" "$STATUS" "1"
+assert_absent "code-review-loop template: M=1 writes nothing" "$WORK/code-loop-m.md"
+
+bold "11. The Resume Answer section: plan-writer and code-review-loop templates"
+# Contract source: the spec's "Template changes" item 2 and "Testing
+# strategy" item 1: an empty RESUME_ANSWER removes the placeholder line and
+# keeps the heading and the fixed sentence; a two-line value file inserts
+# both lines directly below the fixed sentence.
+PLAN_WRITER_TEMPLATE="$ORCH_DIR/plan-writer-prompt.md"
+RESUME_HEADING='## Resume Answer'
+FIXED_SENTENCE='A section with no line below this sentence means the run has recorded no answer.'
+# The line right below the fixed sentence in file $1; empty when the sentence
+# is absent or is the last line. The sentence reaches awk through the
+# environment so that no character of it is reinterpreted.
+line_below_fixed_sentence() { # file
+  s="$FIXED_SENTENCE" awk 'BEGIN { s = ENVIRON["s"] } found { print; exit } index($0, s) > 0 { found = 1 }' "$1"
+}
+FIRST_ANSWER='[I2] (orchestrator): plan governs: "clause" — docs/plan.md'
+SECOND_ANSWER='[C3] (user): fix it'
+printf '%s\n' "$FIRST_ANSWER" "$SECOND_ANSWER" > "$WORK/two-answers.txt"
+plan_writer_fill() { # out RESUME_ANSWER-argument
+  fill --template "$PLAN_WRITER_TEMPLATE" --out "$1" \
+    'WRITING_PLANS_SKILL_PATH=/plug/writing-plans/SKILL.md' \
+    'SPEC_PATH=/repo/docs/spec.md' 'PLAN_PATH=/repo/docs/plan.md' "$2"
+}
+# Assertions shared by the templates that carry the section: $1 label,
+# $2 the output of a fill with the empty value, $3 the output of a fill with
+# the two-line value file, $4 the template (for the last-body-line check),
+# $5 the expected first answer line, $6 the expected second answer line.
+check_resume_section() { # label empty-out two-out template first-answer second-answer
+  assert_file_has_line "$1: empty value keeps the Resume Answer heading" "$2" "$RESUME_HEADING"
+  assert_file_not_contains "$1: empty value leaves no omit parenthetical" "$2" '## Resume Answer (omit'
+  assert_file_has_line "$1: empty value keeps the fixed sentence" "$2" "$FIXED_SENTENCE"
+  assert_eq "$1: empty value leaves no answer line below the fixed sentence" "$(line_below_fixed_sentence "$2")" ""
+  assert_file_not_matches "$1: no residual placeholder with the empty value" "$2" "$PLACEHOLDER_ERE"
+  assert_eq "$1: last output line is the dedented last body line" "$(tail -n 1 "$2")" "$(last_body_line "$4")"
+  assert_eq "$1: the first answer line sits directly below the fixed sentence" "$(line_below_fixed_sentence "$3")" "$5"
+  assert_file_has_line "$1: the second answer line is inserted" "$3" "$6"
+  assert_file_not_matches "$1: no residual placeholder with the value file" "$3" "$PLACEHOLDER_ERE"
+}
+plan_writer_fill "$WORK/pw-empty.md" 'RESUME_ANSWER='
+assert_eq "plan-writer template: empty RESUME_ANSWER exits 0" "$STATUS" "0"
+assert_eq "plan-writer template: first output line is the dedented first body line" "$(head -n 1 "$WORK/pw-empty.md")" 'You are an autonomous plan-writing controller. You write ONE'
+plan_writer_fill "$WORK/pw-two.md" "RESUME_ANSWER=@$WORK/two-answers.txt"
+assert_eq "plan-writer template: two-line answer file exits 0" "$STATUS" "0"
+check_resume_section "plan-writer template" "$WORK/pw-empty.md" "$WORK/pw-two.md" "$PLAN_WRITER_TEMPLATE" "$FIRST_ANSWER" "$SECOND_ANSWER"
+code_loop_fill "$WORK/cl-empty.md" 'M_REVIEWERS=1' 'RESUME_ANSWER='
+assert_eq "code-review-loop template: empty RESUME_ANSWER exits 0" "$STATUS" "0"
+code_loop_fill "$WORK/cl-two.md" 'M_REVIEWERS=1' "RESUME_ANSWER=@$WORK/two-answers.txt"
+assert_eq "code-review-loop template: two-line answer file exits 0" "$STATUS" "0"
+check_resume_section "code-review-loop template" "$WORK/cl-empty.md" "$WORK/cl-two.md" "$CODE_LOOP_TEMPLATE" "$FIRST_ANSWER" "$SECOND_ANSWER"
+assert_file_contains "code-review-loop template: Deviation 2 keys BLOCKED on the absence of an answer line" "$WORK/cl-empty.md" '`## Resume Answer` holds no'
+
+bold "12. The batch-controller template: no BATCH_NUMBER, the Resume Answer section, the never-rewrite guard"
+BATCH_TEMPLATE="$ORCH_DIR/batch-controller-prompt.md"
+AMEND_FIRST_LINE='An `amend plan: …` answer in this section is the record of an'
+TASK_FIRST_ANSWER='[task 2/1] (orchestrator): plan governs: "clause" — docs/plan.md'
+TASK_SECOND_ANSWER='[task 3] (user): amend plan: use the constant'
+printf '%s\n' "$TASK_FIRST_ANSWER" "$TASK_SECOND_ANSWER" > "$WORK/task-answers.txt"
+# Every value of the batch template except the task list and the
+# RESUME_ANSWER argument. BATCH_NUMBER is never passed: it stands only in the
+# wrapper, which the script does not write.
+batch_fill() { # out TASK_LIST-value RESUME_ANSWER-argument
+  fill --template "$BATCH_TEMPLATE" --out "$1" \
+    'SDD_SKILL_PATH=/plug/subagent-driven-development/SKILL.md' \
+    'SDD_SCRIPTS_DIR=/plug/subagent-driven-development/scripts' \
+    'IMPLEMENTER_PROMPT_PATH=/plug/subagent-driven-development/implementer-prompt.md' \
+    'TASK_REVIEWER_PROMPT_PATH=/plug/subagent-driven-development/task-reviewer-prompt.md' \
+    'PLAN_PATH=/repo/docs/plan.md' "TASK_LIST=$2" 'TASK_RANGE=4..6' 'FIRST_BATCH=yes' "$3"
+}
+batch_fill "$WORK/batch-empty.md" '4, 5, 6' 'RESUME_ANSWER='
+assert_eq "batch template: fills without BATCH_NUMBER and exits 0" "$STATUS" "0"
+assert_file_contains "batch template: quoted task list inserted verbatim" "$WORK/batch-empty.md" 'Tasks to implement, in order: 4, 5, 6'
+assert_file_contains "batch template: the task list is substituted inside the pre-flight sentence too" "$WORK/batch-empty.md" 'never best-guess a number inside `4, 5, 6`'
+assert_file_contains "batch template: task range filled into the return line" "$WORK/batch-empty.md" 'BATCH_COMPLETE tasks=4..6'
+assert_file_has_line "batch template: empty value keeps the amend-plan paragraph" "$WORK/batch-empty.md" "$AMEND_FIRST_LINE"
+batch_fill "$WORK/batch-two.md" '4, 5, 6' "RESUME_ANSWER=@$WORK/task-answers.txt"
+assert_eq "batch template: two-line answer file exits 0" "$STATUS" "0"
+check_resume_section "batch template" "$WORK/batch-empty.md" "$WORK/batch-two.md" "$BATCH_TEMPLATE" "$TASK_FIRST_ANSWER" "$TASK_SECOND_ANSWER"
+# The never-rewrite guard: a dispatched name reused with different content
+# exits 5 and leaves the file as it was.
+batch_fill "$WORK/batch-empty.md" '7, 8' 'RESUME_ANSWER='
+assert_eq "batch template: re-filling a dispatched name with different content exits 5" "$STATUS" "5"
+assert_file_contains "batch template: the refusal says the file already exists" "$ERRF" 'file already exists'
+assert_file_contains "batch template: the existing file is unchanged" "$WORK/batch-empty.md" 'Tasks to implement, in order: 4, 5, 6'
+# An unquoted task list splits into three arguments; the second is not
+# NAME=<value>, so the script exits 1 before reading anything.
+fill --template "$BATCH_TEMPLATE" --out "$WORK/batch-unquoted.md" TASK_LIST=4, 5, 6
+assert_eq "batch template: an unquoted task list is a usage error (exit 1)" "$STATUS" "1"
+assert_absent "batch template: unquoted task list writes nothing" "$WORK/batch-unquoted.md"
+
+bold "13. The orchestrator's fill commands name exactly the body placeholders of their templates"
+# The spec's drift guard ("Testing strategy" item 1): every 'NAME= token of
+# each fenced block of the orchestrator's text that holds fill-prompt.js,
+# keyed by the template on that block's --template line, must equal the
+# template body's placeholder set. Wrapper-only names (BATCH_NUMBER) are not
+# passed, so the body set is the comparison target.
+ORCH_SKILL="$ROOT/skills/orchestrating-development/SKILL.md"
+BLOCKS_DIR="$WORK/orch-blocks"
+mkdir -p "$BLOCKS_DIR"
+# One file per fenced block of the orchestrator's text (a fence may be
+# indented inside a list item).
+awk -v dir="$BLOCKS_DIR" '
+  /^[ \t]*```/ { if (inblk) { close(out); inblk = 0 } else { inblk = 1; n++; out = dir "/block-" n ".txt" }; next }
+  inblk { print > out }
+' "$ORCH_SKILL"
+# The `[NAME]` placeholders of the prompt body of template $1 — the lines
+# after its `prompt: |` line up to the closing fence — one name per line,
+# sorted, unique.
+template_body_names() { # template
+  awk '/^```[ \t]*$/ && seen { exit } seen { print } /^[[:space:]]*prompt: \|[[:space:]]*$/ { seen = 1 }' "$1" \
+    | grep -oE "$PLACEHOLDER_ERE" | tr -d '[]' | sort -u
+}
+FILL_BLOCKS=0
+SEEN_TEMPLATES="$WORK/seen-templates.txt"
+: > "$SEEN_TEMPLATES"
+for blk in "$BLOCKS_DIR"/block-*.txt; do
+  [ -e "$blk" ] || continue
+  grep -qF 'fill-prompt.js' "$blk" || continue
+  FILL_BLOCKS=$((FILL_BLOCKS+1))
+  tmpl="$(sed -n 's/.*--template "[^"]*\/\([^"/]*\)".*/\1/p' "$blk" | head -n 1)"
+  if [ -z "$tmpl" ] || [ ! -f "$ORCH_DIR/$tmpl" ]; then
+    bad "fill block $(basename "$blk"): names no existing template ('$tmpl')"
+    continue
+  fi
+  printf '%s\n' "$tmpl" >> "$SEEN_TEMPLATES"
+  grep -oE "'[A-Z][A-Z_]*[A-Z]=" "$blk" | sed -e "s/^'//" -e 's/=$//' | sort -u > "$WORK/cmd-names.txt"
+  template_body_names "$ORCH_DIR/$tmpl" > "$WORK/body-names.txt"
+  if cmp -s "$WORK/cmd-names.txt" "$WORK/body-names.txt"; then
+    ok "fill command for $tmpl names exactly its body placeholders ($(tr '\n' ' ' < "$WORK/cmd-names.txt" | sed 's/ *$//'))"
+  else
+    bad "fill command for $tmpl and its body placeholders differ"
+    diff "$WORK/body-names.txt" "$WORK/cmd-names.txt" || true
+  fi
+done
+assert_eq "the orchestrator holds one fill block per template (four)" "$FILL_BLOCKS" "4"
+sort -u "$SEEN_TEMPLATES" > "$WORK/seen-templates-sorted.txt"
+cat > "$WORK/expected-templates.txt" <<'EOF'
+batch-controller-prompt.md
+code-review-loop-prompt.md
+doc-review-loop-prompt.md
+plan-writer-prompt.md
+EOF
+assert_same "the filled templates are exactly the four expected ones" "$WORK/seen-templates-sorted.txt" "$WORK/expected-templates.txt"
 
 echo
 bold "Results: $PASS passed, $FAIL failed"

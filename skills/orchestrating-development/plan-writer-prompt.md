@@ -52,8 +52,9 @@ Agent tool (general-purpose):
     Plan output path (exact, already reserved): [PLAN_PATH]
     The plan header's **Spec:** line must name [SPEC_PATH].
 
-    ## Resume Answer (omit this whole section on a first dispatch)
+    ## Resume Answer
 
+    A section with no line below this sentence means the run has recorded no answer.
     [RESUME_ANSWER]
 
     ## Return (final message, 15 lines max)
@@ -81,11 +82,15 @@ Agent tool (general-purpose):
 - `[PLAN_PATH]` — REQUIRED: absolute output path
   `<topic folder>/plans/<slug>.md` computed by the orchestrator, where
   `<topic folder>` is `docs/superpowers-orchestrator/<YYYY-MM-DD>-<slug>/`
-- `[RESUME_ANSWER]` — OPTIONAL: omitted, together with its `## Resume
-  Answer` heading, on a first dispatch; filled only when re-dispatching
-  after a `BLOCKED` stop, with the user's answer to the question that
-  could not be derived. Authoritative — the controller uses it instead of
-  deriving that answer again
+- `[RESUME_ANSWER]` — OPTIONAL content, always passed: `RESUME_ANSWER=`
+  (empty) on a first dispatch, which removes the placeholder line and
+  leaves the `## Resume Answer` section with no answer line — the fixed
+  sentence above the placeholder tells the controller what that means;
+  filled from the value file (`RESUME_ANSWER=@<file>`) only when
+  re-dispatching after a `BLOCKED` stop, with the user's answer to the
+  question that could not be derived, as one answer line without an id or
+  a tag. Authoritative — the controller uses it instead of deriving that
+  answer again
 
 **Nothing else may be added to the prompt.** No conversation history, no
 design rationale.

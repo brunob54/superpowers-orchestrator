@@ -38,10 +38,11 @@ this platform lacks` — and stop.
   session model with a **sonnet floor** (a haiku-tier or unrecognized
   session model dispatches on `sonnet`). Nested workers inside a batch
   follow SDD's Model Selection table, chosen by the batch controller.
-- **Blocking dispatch:** pass the `name` given in the template's header
-  (`name: "orch-…"`). A named controller's own subagent calls block and
-  return each child's final message inline; an unnamed controller's
-  return at once, and the child's completion notice is delivered to the
+- **Blocking dispatch:** pass the `name` stated by the phase's dispatch
+  text (Phases 1–4) (`name: "orch-…"`). A named controller's own
+  subagent calls block and return each child's final message inline;
+  an unnamed controller's return at once, and the child's completion
+  notice is delivered to the
   main session, not to the controller — which then ends its turn
   "waiting" and stalls the run (claude-code #75043; measured 2026-08-30).
   The property is what matters, not the parameter: on a platform whose
@@ -50,8 +51,109 @@ this platform lacks` — and stop.
   prompt — foreground dispatch, never a background mode. Controllers
   cannot name their own children (the roster is flat); nested workers
   stay unnamed.
-- Build the prompt ONLY from the filled template — never pass conversation
-  history, prior phases' returns, or your own reasoning.
+- **Prompt files and the pointer.** A controller's instructions are a
+  file, not the `prompt` field. Once per session, read as once per
+  orchestration invocation — a fresh run, or a Resume, including a
+  Resume inside the session that stopped — before that invocation's
+  first fill — Phase 0 step 9 in a fresh run; on a resume, the Resume
+  step that first fills a prompt — run `mktemp -d` as its own Bash
+  command, with no argument (never a template and never a path inside
+  the repository), and copy the literal path it prints — written
+  `<PROMPT_DIR>` in this file — into every later command, Write call and
+  pointer. A printed path under the repository root is treated as a
+  `mktemp -d` failure. On Git Bash (Windows) — when `uname -s` prints a
+  name beginning with `MINGW` or `MSYS` — first convert that path once
+  with `cygpath -m "<printed path>"` as its own command and use the
+  converted path as `<PROMPT_DIR>`; on every other platform the printed
+  path is used as is. A shell variable set in one tool call does not
+  exist in the next: the path is always spelled out in full, never held
+  in a variable of any name. The path never appears in `state.md`, the
+  orchestration log, a ruling record, a Case or a commit message. When
+  the literal path is no longer in your context — after a context
+  compaction, typically — do not guess it, do not search the temporary
+  location for it and do not reuse a path from any file: run `mktemp -d`
+  again and continue in the new directory, where the counter `<k>` below
+  restarts at 1. That is not a failure of the mechanism: every file is
+  named by the counter, and a re-fill from the same values produces the
+  same content, so an identical retry issued after the path was lost
+  re-fills the prompt under `<k>` = 1 there — writing the value file
+  again there first when the fill takes one — and is still the identical
+  dispatch of the retry rule. Every prompt is written once into
+  `<PROMPT_DIR>` by the fill script,
+  `<base>/../multi-code-review/scripts/fill-prompt.js` (`<base>` is this
+  skill's base directory), from the phase's template and the values the
+  phase's fill command lists; you never read a template and never copy a
+  prompt body into an Agent call. File names, all in `<PROMPT_DIR>`,
+  where `<k>` counts the fills run into the current prompt directory
+  from 1 and is never reused inside it once a pointer to a file of that
+  fill has been dispatched, and `<label>` names the dispatch:
+
+  | Dispatch | Prompt file | Value file (only when the run has recorded answers) | Agent `description` |
+  |---|---|---|---|
+  | Phase 1 plan writer | `dispatch-<k>-plan-writer.md` | `dispatch-<k>-answers.txt` | `orchestration phase 1: plan writer` |
+  | Phase 2 plan-review loop | `dispatch-<k>-plan-review.md` | — (the template has no `[RESUME_ANSWER]`) | `orchestration phase 2: plan review loop` |
+  | Phase 3 batch `<n>` | `dispatch-<k>-batch-<n>.md` | `dispatch-<k>-answers.txt` | `orchestration phase 3: batch [BATCH_NUMBER] (tasks [TASK_LIST])` |
+  | Phase 4 code-review loop | `dispatch-<k>-code-review.md` | `dispatch-<k>-answers.txt` | `orchestration phase 4: code review loop` |
+  | Secrets-hook probe of value file `<k>`, line `<n>` (Major-Error Stop Policy) | — | `dispatch-<k>-probe-<n>.txt`, one line, removed after the probe | — (not a dispatch) |
+
+  The `description` column is the whole of the Agent call's
+  `description`, written as the column gives it; this table is its only
+  source, and you never read a template to obtain it. In the Phase 3 row
+  `[BATCH_NUMBER]` is the 1-based batch index `<n>` and `[TASK_LIST]` the
+  batch's task numbers, comma-separated — you fill both yourself.
+
+  Keep `<k>` in your context; when unsure of the next value, run
+  `ls -1 "<PROMPT_DIR>" | sort -t- -k2,2n | tail -n 1` (one short Bash
+  result, the path inside double quotes, the listing sorted numerically
+  on the number after `dispatch-`) and read the largest number from
+  that one line, plus one — never a plain `ls "<PROMPT_DIR>"`, which
+  sorts `dispatch-10-…` before `dispatch-2-…` and, over about 39 fills
+  with value files, can drop the largest name from a compressed
+  listing entirely. A prompt file is written once and never
+  rewritten once a pointer to it has been dispatched; before that first
+  dispatch you may remove it (`rm -- "<file>"` as its own command) and
+  fill it again under the same name when you find the fill's values were
+  wrong. The value file follows the same rule: when a value in
+  `dispatch-<k>-answers.txt` is found wrong before that fill's pointer
+  has been dispatched, remove the file with
+  `rm -- "<PROMPT_DIR>/dispatch-<k>-answers.txt"` as its own command and
+  then write it again — the Write tool refuses to overwrite a file it has
+  not read, and a refusal for that reason alone is not a failure of the
+  mechanism (Major-Error Stop Policy). In every `rm` this file
+  prescribes, the path is written inside double quotes, and the quotes
+  are what keep the command alive:
+  `hooks/safety/block-dangerous-commands.js` denies an `rm` whose path
+  begins `/var` unquoted, and `/var` is where `mktemp -d` prints its
+  directory on macOS. A re-dispatch with a different `[RESUME_ANSWER]` — Phase 3 and
+  Phase 4 after in-run rulings, Phase 1 after a `BLOCKED` question is
+  answered, and any Resume re-dispatch — is a new fill under the next
+  `<k>` with its own value file, never a rewrite: the script refuses to
+  write `--out` over an existing file with different content (exit 5),
+  so a counter slip cannot silently replace a dispatched prompt. The
+  value file holds the `[RESUME_ANSWER]` lines and is written with the
+  Write tool, never with a heredoc of any kind (Major-Error Stop Policy,
+  "The secrets-hook probe"); every other value is short and is passed
+  inline, single-quoted, as `'NAME=<value>'`, and never begins with `@`.
+  After every fill, and before every dispatch of that file, retries
+  included, run `test -s "<PROMPT_DIR>/dispatch-<k>-<label>.md"` as its
+  own command; never dispatch a pointer to a file that failed the check.
+  The `prompt` field of every controller dispatch is the pointer below
+  and nothing else — no answer, no phase name, no path of the run:
+
+  ```
+  Your complete instructions are in the file <ABSOLUTE PATH>.
+  Read that file once, with the Read tool, before doing anything else, and follow it as your only instructions.
+  Nothing else in that directory is for you; do not read any other file there.
+  ```
+
+  `<ABSOLUTE PATH>` is the prompt file's absolute path. The Agent call
+  keeps its `name` (blocking dispatch, above), its `description` (the
+  table above) and its `model` (the session model with the sonnet floor,
+  the first rule of this section).
+- Build the prompt file ONLY from the filled template — the fill command
+  lists every value — and keep the `prompt` field the pointer only: never
+  pass conversation history, prior phases' returns, or your own
+  reasoning, in the file or in the field.
 - Resolve procedure-source paths from this skill's base directory:
   `../writing-plans/SKILL.md`, `../multi-doc-review/SKILL.md`,
   `../subagent-driven-development/SKILL.md`, `../multi-code-review/SKILL.md`.
@@ -64,7 +166,8 @@ this platform lacks` — and stop.
   numbers, `rounds=`, `outcome=`, `unresolved=`, `user_decision=`,
   `fixes=`) is absent or unparseable. An unparseable stop-rule field never
   defaults to 0. Malformed return or controller error → retry the identical
-  dispatch once; second failure → major error → stop, logging
+  dispatch once — the same pointer to the same file, no fill and no new
+  file; second failure → major error → stop, logging
   `inconclusive controller: <phase/batch>`.
 
 ## Phase 0 — Setup (the only interactive moment)
@@ -219,6 +322,20 @@ the same question batch below).
    their new form. Commit it (`chore(orchestration): <slug> log started`).
 8. **Seed `state.md`:** the sections writing-plans seeds, plus
    `## Orchestration` (format below).
+9. **Prompt directory:** run `mktemp -d` as its own command, under the
+   Controller Dispatch Rules ("Prompt files and the pointer"): no
+   argument, the printed path copied literally into every later command,
+   Write call and pointer and never held in a variable, converted once
+   with `cygpath -m` on Git Bash. A failure here — the command fails,
+   prints a path under the repository root, or `cygpath` fails where it
+   must run — is a major error: stop with the `## STOPPED` cause
+   `prompt directory could not be created — <error text>` (for the
+   printed-under-the-repository-root case, where `mktemp -d` prints
+   nothing else, `<error text>` is `mktemp -d printed a path under the
+   repository root`; that printed path is not the prompt directory and
+   may be named, since it was never used), nothing
+   dispatched (Major-Error Stop Policy). The fill counter `<k>` of the
+   prompt-file names starts at 1.
 
 Any failure in steps 1–6 is a **pre-log stop**: report and stop; nothing
 further written, no resume line; if the branch was already created (step
@@ -227,16 +344,54 @@ never ask the user anything.
 
 ## Phase 1 — Plan Writing
 
-Fill `./plan-writer-prompt.md` (spec path; output plan path
-`<topic folder>/plans/<slug>.md`) and dispatch. Expected return: `PLAN_READY <path> tasks=<T>` or
+Fill the plan-writer prompt into the session's prompt directory, as one
+command (every `NAME=` argument single-quoted):
+
+```bash
+node "<base>/../multi-code-review/scripts/fill-prompt.js" \
+  --template "<base>/plan-writer-prompt.md" \
+  --out "<PROMPT_DIR>/dispatch-<k>-plan-writer.md" \
+  'WRITING_PLANS_SKILL_PATH=<base>/../writing-plans/SKILL.md' \
+  'SPEC_PATH=<spec path>' 'PLAN_PATH=<topic folder>/plans/<slug>.md' \
+  'RESUME_ANSWER='
+```
+
+`<base>` is this skill's base directory, from which the Controller
+Dispatch Rules resolve the procedure-source paths; every path value is
+absolute. `RESUME_ANSWER=` is empty on a first dispatch. A re-dispatch
+after an answered `BLOCKED` question (Resume step 3) writes the answer —
+one line, without an id or a tag — with the Write tool to
+`<PROMPT_DIR>/dispatch-<k>-answers.txt` and passes
+`'RESUME_ANSWER=@<PROMPT_DIR>/dispatch-<k>-answers.txt'` instead. Then run
+`test -s "<PROMPT_DIR>/dispatch-<k>-plan-writer.md"` as its own command
+and dispatch the pointer to that file (`name: "orch-plan-writer"`, the
+`description` of the Controller Dispatch Rules' file-name table, the
+session model with the sonnet floor).
+Expected return: `PLAN_READY <path> tasks=<T>` or
 `BLOCKED: <question>` (spec ambiguity → major error → stop). On success:
 commit the plan (`docs(plan): <slug> implementation plan`), append and
 commit the Phase 1 log entry.
 
 ## Phase 2 — Plan Review Loop
 
-If N_plan = 0, log the skip and go to Phase 3. Otherwise fill
-`./doc-review-loop-prompt.md` (plan path, spec path, N_plan, M) and dispatch.
+If N_plan = 0, log the skip and go to Phase 3. Otherwise fill the
+plan-review prompt into the session's prompt directory, as one command
+(every `NAME=` argument single-quoted):
+
+```bash
+node "<base>/../multi-code-review/scripts/fill-prompt.js" \
+  --template "<base>/doc-review-loop-prompt.md" \
+  --out "<PROMPT_DIR>/dispatch-<k>-plan-review.md" \
+  'MULTI_DOC_REVIEW_SKILL_PATH=<base>/../multi-doc-review/SKILL.md' \
+  'REVIEWER_PROMPT_PATH=<base>/../multi-doc-review/reviewer-prompt.md' \
+  'WRITING_PLANS_SKILL_PATH=<base>/../writing-plans/SKILL.md' \
+  'PLAN_PATH=<plan path>' 'SPEC_PATH=<spec path>' 'N_PLAN=<N_plan>' \
+  'M_REVIEWERS=<M>'
+```
+
+This template has no `[RESUME_ANSWER]` and no value file. Then run
+`test -s "<PROMPT_DIR>/dispatch-<k>-plan-review.md"` as its own command
+and dispatch the pointer to that file (`name: "orch-plan-review"`).
 Expected return: `REVIEW_DONE rounds=<r> outcome=<converged|cap>
 unresolved=<n>` or `BLOCKED: <reason>`. `unresolved > 0` → major error →
 stop. On success: commit the revised plan + its review log
@@ -254,11 +409,42 @@ Loop until every task is complete:
    plan → major error → stop (the predicate would otherwise pass it
    vacuously and silently skip the task). Select the next ≤ cap unchecked
    tasks in plan order.
-2. Fill `./batch-controller-prompt.md` (plan path, task numbers,
-   first-batch flag for SDD's Pre-Flight Plan Review, and
-   `[RESUME_ANSWER]` — the run-wide answer set that step 5 states, filled
-   on every dispatch, first or repeat, whenever this run has recorded any
-   answer) and dispatch.
+2. Fill the batch prompt into the session's prompt directory, as one
+   command (every `NAME=` argument single-quoted — an unquoted
+   `TASK_LIST=4, 5, 6` splits into three arguments and exits 1):
+
+   ```bash
+   node "<base>/../multi-code-review/scripts/fill-prompt.js" \
+     --template "<base>/batch-controller-prompt.md" \
+     --out "<PROMPT_DIR>/dispatch-<k>-batch-<n>.md" \
+     'SDD_SKILL_PATH=<sdd>/SKILL.md' 'SDD_SCRIPTS_DIR=<sdd>/scripts' \
+     'IMPLEMENTER_PROMPT_PATH=<sdd>/implementer-prompt.md' \
+     'TASK_REVIEWER_PROMPT_PATH=<sdd>/task-reviewer-prompt.md' \
+     'PLAN_PATH=<plan path>' 'TASK_LIST=<i>, <i+1>, <j>' 'TASK_RANGE=<i>..<j>' \
+     'FIRST_BATCH=<yes|no>' \
+     'RESUME_ANSWER='
+   ```
+
+   `<sdd>` is `<base>/../subagent-driven-development`; `<n>` is the
+   1-based batch index; `FIRST_BATCH` is `yes` for the first batch of the
+   run (SDD's Pre-Flight Plan Review) and `no` otherwise; `TASK_LIST` is
+   the selected task numbers, comma-separated. `RESUME_ANSWER=` is empty,
+   as the block above shows it, when the run has recorded no answer —
+   write no value file then, the case of a batch dispatched before any
+   answer is recorded. `[RESUME_ANSWER]` is the
+   run-wide answer set that step 5 states, filled on every dispatch,
+   first or repeat, whenever this run has recorded any answer: write its
+   lines with the Write tool to `<PROMPT_DIR>/dispatch-<k>-answers.txt`
+   first (`## In-run rulings`, "The answers, and how a ruling reaches the
+   plan") and pass
+   `'RESUME_ANSWER=@<PROMPT_DIR>/dispatch-<k>-answers.txt'` instead of the
+   empty form. `[BATCH_NUMBER]` stands only
+   in the template's wrapper and is not passed to the script: fill the
+   Agent call's `name` (`orch-batch-<n>`) and `description` yourself,
+   from the file-name table of the Controller Dispatch Rules ("Prompt
+   files and the pointer").
+   Then run `test -s "<PROMPT_DIR>/dispatch-<k>-batch-<n>.md"` as
+   its own command and dispatch the pointer to that file.
 3. Expected return: `BATCH_COMPLETE tasks=<i>..<j>` + one
    `Task <n>: complete commits <base7>..<head7>` line per task, or
    `BLOCKED task=<n>: <one-line reason>` (detail in the task's report
@@ -308,9 +494,29 @@ If N_code = 0, log the skip and go to Phase 5. Preconditions: all
 orchestration-log edits are committed (they are, if you committed at each
 boundary), and `git merge-base --is-ancestor <BASE> HEAD` succeeds —
 failure means the branch was rebased or reset mid-run → major error →
-stop. Fill `./code-review-loop-prompt.md` (BASE = the Phase 0
-recorded branch point, N_code, M, plan path, ledger path
-`.superpowers/sdd/progress.md`) and dispatch. Expected return:
+stop. Fill the code-review prompt into the session's prompt directory,
+as one command (every `NAME=` argument single-quoted):
+
+```bash
+node "<base>/../multi-code-review/scripts/fill-prompt.js" \
+  --template "<base>/code-review-loop-prompt.md" \
+  --out "<PROMPT_DIR>/dispatch-<k>-code-review.md" \
+  'MULTI_CODE_REVIEW_SKILL_PATH=<base>/../multi-code-review/SKILL.md' \
+  'REVIEWER_PROMPT_PATH=<base>/../multi-code-review/reviewer-prompt.md' \
+  'TOPIC_DIR=<topic folder, absolute>' 'BASE_SHA=<BASE>' 'N_CODE=<N_code>' \
+  'M_REVIEWERS=<M>' 'PLAN_PATH=<plan path>' \
+  'LEDGER_PATH=<repository root, absolute>/.superpowers/sdd/progress.md' \
+  'RESUME_ANSWER='
+```
+
+`<BASE>` is the Phase 0 recorded branch point. `RESUME_ANSWER=` is empty
+on a first dispatch; a re-dispatch with answers — after in-run rulings,
+or at Resume step 3 — writes them with the Write tool to
+`<PROMPT_DIR>/dispatch-<k>-answers.txt` and passes
+`'RESUME_ANSWER=@<PROMPT_DIR>/dispatch-<k>-answers.txt'` instead. Then run
+`test -s "<PROMPT_DIR>/dispatch-<k>-code-review.md"` as its own command
+and dispatch the pointer to that file (`name: "orch-code-review"`).
+Expected return:
 `REVIEW_DONE rounds=<r> outcome=<converged|cap> fixes=<n> unresolved=<n>
 user_decision=<n>` or `BLOCKED: <reason>`. `unresolved > 0` or
 `user_decision > 0` → `## In-run rulings`: classify each open item by its
@@ -738,7 +944,27 @@ Trigger: `Resume orchestration for <plan-or-spec path>`.
    re-dispatch path — the answer goes into `[RESUME_ANSWER]` and
    nothing else is written, no `**Follow-up:**` line and no
    `ruling <n> follow-up` commit — because `<n>` is undefined when the
-   resume touched no ruling. Then
+   resume touched no ruling. Then create this Resume's own prompt
+   directory
+   — a resumed session has none, and this step runs on every Resume,
+   including a Resume in the session that stopped, where a prompt
+   directory from before the stop may still be in your context: that
+   directory is abandoned, never continued, and no counter carries over
+   from it: run `mktemp -d` again under the Controller
+   Dispatch Rules ("Prompt files and the pointer"), before the first
+   fill, the counter `<k>` starting at 1 in the new directory — this is
+   the fill counter of the file names, not the `<k>` of a
+   `[task <n>/<k>]` line or of `_Invocation <k>` — write the answer lines with
+   the Write tool to `<PROMPT_DIR>/dispatch-1-answers.txt`, fill the
+   stopped phase's prompt under `<k>` = 1 with that phase's fill command
+   and `'RESUME_ANSWER=@<PROMPT_DIR>/dispatch-1-answers.txt'` — when the
+   re-dispatch carries no answer line (for example a Phase 4 re-dispatch
+   on a moved effective HEAD without answers, or one for a migrated run
+   whose old log is absent, below), write no value file and pass
+   `'RESUME_ANSWER='`, as Phases 1, 3 and 4 do (Phase 2's template has
+   no `[RESUME_ANSWER]` placeholder, so passing the value to it exits
+   4) — run its
+   `test -s`, and
    re-dispatch the stopped phase's controller with that `[RESUME_ANSWER]`
    in the template's placeholder — the only channel for it. Phases whose
    stop carries answerable items: Phase 1 (the plan-writer's BLOCKED
@@ -778,7 +1004,9 @@ Trigger: `Resume orchestration for <plan-or-spec path>`.
    journaled the answers and re-evaluated the counts — re-dispatch Phase 4
    without answers: the controller synthesizes the return from the log
    (template Deviation 2); already-decided ids are never re-presented.
-4. Otherwise continue at the first incomplete phase/batch. Your own log's
+4. Otherwise continue at the first incomplete phase/batch. This Resume's
+   own prompt directory is created before that phase's first fill,
+   exactly as step 3 creates it (`mktemp -d`, `<k>` from 1). Your own log's
    phase entries are the primary re-run guard; the sub-skills' logs are
    the backstop.
 5. Never re-ask Phase 0 questions — parameters come from the log's
@@ -793,7 +1021,7 @@ Trigger: `Resume orchestration for <plan-or-spec path>`.
    One explicit exception: a log written before 7.4.0 records `M=` on no
    line at all, so there is nothing to recover — M is 1 for such a log.
    `... with M=2` overrides M like any other parameter; the controller
-   dispatched after it carries the new value in its `[M]` placeholder, and
+   dispatched after it carries the new value in its `[M_REVIEWERS]` placeholder, and
    that value governs the review log it continues (the review log's own
    invocation line is never rewritten).
 6. Excluded state (`state.md`, `.superpowers/`) does not survive clone
@@ -1413,6 +1641,13 @@ per item, each tagged with its source; the controller records each as
 A line without a `(<who>)` tag is a user line — an untagged answer such as
 `[I2]: plan governs; [C3]: fix it` keeps working.
 
+These lines are the content of the value file
+`<PROMPT_DIR>/dispatch-<k>-answers.txt`, written with the Write tool —
+never with a heredoc of any kind, because answer text quotes plan clauses
+and finding text — and the placeholder is filled from that file by
+`'RESUME_ANSWER=@<PROMPT_DIR>/dispatch-<k>-answers.txt'` in the phase's
+fill command (Controller Dispatch Rules, "Prompt files and the pointer").
+
 **A carried Phase 4 id names its invocation.** Review-log ids are not
 stable across invocations: every `_Invocation` entry of the review log
 numbers its own findings from `[C1]`, `[I1]` upwards, so the same id
@@ -1661,7 +1896,12 @@ mid-task recovery (its Deviation 4) reviews the leftover work together
 with the task's completion. Then rewrite `state.md` (its `Rulings:` line)
 and re-dispatch the phase's controller with the answers in
 `[RESUME_ANSWER]` — the only channel. In Phase 3 the answers are the full
-set defined above, not only the newest return's. A controller that answers
+set defined above, not only the newest return's. The re-dispatch is a new
+fill under the next `<k>`: write the answer lines with the Write tool to
+`<PROMPT_DIR>/dispatch-<k>-answers.txt`, run the phase's fill command with
+`'RESUME_ANSWER=@<PROMPT_DIR>/dispatch-<k>-answers.txt'` (Phase 3 step 2,
+Phase 4), run its `test -s` and dispatch the pointer to the new file —
+never a rewrite of a dispatched prompt file. A controller that answers
 an in-run
 resume with `BLOCKED: previous invocation left <n> open items …` did not
 receive the answers — a malformed dispatch: retry the identical dispatch
@@ -1732,7 +1972,13 @@ by the loop's existing rule (an id already carrying a `decided (…)` line
 is skipped; a fix commit already in `git log` is not dispatched again).
 Phase 3 is idempotent by construction: the ruling and any amendment are
 committed before the re-dispatch, so a retry rebuilds the identical
-`[RESUME_ANSWER]` from the ruling-record entry; the batch controller's
+`[RESUME_ANSWER]` from the ruling-record entry — a new fill under the next
+`<k>` from the same entry, which produces the same content. The retry
+meant in that sentence is a resume after a crash: it starts in a fresh
+prompt directory, where the next `<k>` is 1. It is never the in-session
+identical retry of the Controller Dispatch Rules, which re-dispatches the
+same pointer to the same file and fills nothing — except after a lost
+directory path, where the dispatch rules re-fill under `<k>` = 1. The batch controller's
 existing rules skip every task whose checkboxes are ticked and recover a
 mid-task crash (its Deviation 4); the amendment block is found by its
 label and never inserted twice. What makes the resume safe to repeat is
@@ -1841,6 +2087,115 @@ recipe, otherwise suggest starting a fresh orchestration, rather
 than reconstructing state. Remaining failure modes surface inside the
 controllers and are handled there by the consumed skills' own rules.
 
+**Failures of the prompt-file mechanism** (Controller Dispatch Rules,
+"Prompt files and the pointer") join the list above. Every one of them
+is fatal for the run: write the log entry you owe (if any), append a
+`## STOPPED` entry whose heading's `<one-line reason>` is the cause in
+the fixed text below — the entry's first line, as today's causes — keep
+the `Open:` / `Ruled:` lines when the stop coincides with open items,
+rewrite `state.md`, and stop. There is no inline fallback anywhere: a
+fallback that copies the template into the `prompt` field would hide
+the defect and silently bring the old cost back. A resume after such a
+stop creates a fresh directory and re-fills; the resume prompt is the
+existing one. The boundary below — what is a failure of the mechanism
+and what is not — is the normative copy: a later review finding that
+refines a row inside it is a forced ruling for you, not an escalation.
+In every cause text below, a path under the prompt directory is written
+as `<PROMPT_DIR>/<file name>` — never the literal path — because the
+directory's own path appears in no log (Controller Dispatch Rules,
+"Prompt files and the pointer"): a cause text that interpolates the
+script's message, a tool's error text or a controller's first line
+carries that shortened form of every such path.
+
+Failures OF the mechanism (fatal):
+
+| Condition | `## STOPPED` cause |
+|---|---|
+| `mktemp -d` fails, prints a path under the repository root, or `cygpath` fails where the path must be converted | `prompt directory could not be created — <error text>` (for the printed-under-the-repository-root case, `<error text>` is `mktemp -d printed a path under the repository root`, naming that printed path — it is not the prompt directory and was never used). Nothing is dispatched. |
+| The fill script exits 2 (malformed template); or exits 5 with `cannot read value file <path>: <error>` after `test -s "<PROMPT_DIR>/<the named value file>"` (or `ls "<PROMPT_DIR>"`) reports the named file present in the prompt directory (permission denied, unreadable), with `cannot write <out>: existing path could not be read`, or with a second `cannot write <out>: file already exists` on the same name after the renumbering of the not-mechanism table below (a dispatched name reused with different content); or exits non-zero a second time after a corrected command; or `test -s` fails on the prompt file | `prompt file <name> not produced — <the script's message, or "empty">`; never dispatch a pointer to a file that failed the check. |
+| Node is missing | Treated as the script failing (row above). |
+| A value-file Write fails for a reason other than the secrets hook — a permission denial, a tool error, a refusal by another hook — or a probe Write of the rule below is refused for such a reason. A Write refused only because the file already exists is NOT this row: that is the corrected-once slip of the not-mechanism table below, where the file is removed and written again | `value file <name> could not be written — <the error>` (`<name>` is always the value file's name, `dispatch-<k>-answers.txt`; for a probe, the error text is the refusal or error text, first line, and names the probe file). |
+| A value-file Write is refused by `hooks/safety/protect-secrets.js` twice | `value file <name> refused twice by protect-secrets — <the hook's reason>`. The secrets-hook probe below runs between the two attempts. |
+| A controller's final message shows it could not read, or did not follow, its prompt file — after the one identical retry of the Controller Dispatch Rules | `prompt file <name> not read by <controller name> — <the first line of each of the two final messages>`. The sign: the final message says it could not read, find or open the file, or it carries neither the report marker nor any of these tokens: the plan path, the topic folder path, the orchestration or review log path, `tasks=`, `task=`, `rounds=` — no sign of the prompt file's content. A message carrying at least one of them, without the marker, is a malformed return (table below). |
+
+The script's exit-5 causes, in full: `cannot read template <path>:
+<error>`; `cannot read value file <path>: <error>`; `cannot write <out>:
+file already exists`; `cannot write <out>: existing path could not be
+read: <error>`; `cannot write <out>: <error>` (any other error text —
+a missing directory, a permission error, a full disk). The row above and
+the two rows below say which are fatal at once, which are corrected
+once, and which mean a lost directory.
+
+NOT failures of the mechanism (today's paths, unchanged):
+
+| Condition | Handling |
+|---|---|
+| A controller dies of the environment (usage limit, rate limit, tool error, no final message at all) | The identical retry once, then the major-error stop above (`inconclusive controller: <phase/batch>`), as the Controller Dispatch Rules say. The retry is the same pointer to the same file. |
+| A slip in your own fill command: the script exits 1 (usage), 3 (a placeholder without a value), 4 (a value naming no placeholder), 5 with `cannot read template` (a wrong `--template` path), 5 naming an `@<file>` you never wrote, or 5 with `cannot read value file <path>: <error>` when `ls "<PROMPT_DIR>"` reports the prompt directory present but the named file absent | Correct the command once and run it again; a second non-zero exit is fatal (table above). |
+| The fill script exits 5 with `cannot write <out>: file already exists`, on any name | Before any `rm`, run `ls -1 "<PROMPT_DIR>" | sort -t- -k2,2n | tail -n 1` as its own command (the path inside double quotes, the listing sorted numerically on the number after `dispatch-`) and read the largest number from that one line: a file this orchestrator did not fill in the current step is a counter slip, not the value-found-wrong case — take that largest number plus one and fill under that name instead. Otherwise, remove the file (`rm -- "<file>"` as its own command, the path always inside double quotes) and fill it once more under the same name (Controller Dispatch Rules); `rm` only a file whose fill you ran in the current step. A second `file already exists` on that same name is fatal (table above). |
+| A value-file Write is refused only because `<PROMPT_DIR>/dispatch-<k>-answers.txt` already exists, on a fill whose pointer has NOT been dispatched — a value found wrong and corrected before the first dispatch | Before any `rm`, run `ls -1 "<PROMPT_DIR>" | sort -t- -k2,2n | tail -n 1` as its own command (the path inside double quotes, the listing sorted numerically on the number after `dispatch-`) and read the largest number from that one line: a `dispatch-<k>-answers.txt` this orchestrator did not write in the current step is a counter slip, not the value-found-wrong case — take that largest number plus one and write the value file under that new `<k>` instead. Otherwise, remove the file (`rm -- "<PROMPT_DIR>/dispatch-<k>-answers.txt"` as its own command, the path inside double quotes) and write it once more with the Write tool (Controller Dispatch Rules); `rm` only a file whose write you ran in the current step. A second refusal of that same name for that same reason is fatal (table above). |
+| A Bash `rm` of a file in the prompt directory is denied by a hook | The path was written without quotes: `hooks/safety/block-dangerous-commands.js` denies an `rm` whose path begins `/var` unquoted, and `mktemp -d` prints its directory under `/var` on macOS. Re-issue the same command once with the path inside double quotes. A hook denial of an `rm` is never a failure of the mechanism. |
+| The fill script exits 5 with `cannot write <out>: <error>` for any error text other than `file already exists` and `existing path could not be read`; or 5 with `cannot read value file <path>: <error>` when `ls "<PROMPT_DIR>"` reports the whole prompt directory absent | The prompt directory is gone, unwritable, or the path in the command is wrong: treat it as a path lost from context — `mktemp -d` again and re-fill under `<k>` = 1 in the fresh directory, writing the value file again there first when the fill takes one. A second such exit in the fresh directory is fatal (table above): the temporary location itself is not writable. |
+| A return unusable on format alone (the marker or a consumed field missing) whose text shows the controller worked on the run | Malformed return: the identical retry once, then the major-error stop above. Not a pointer failure. |
+| The prompt directory's path is lost from your context | `mktemp -d` again and continue (Controller Dispatch Rules). |
+| A controller reads another file in the directory | Cannot be prevented by wording alone; the directory holds only this session's prompt and value files, and the pointer forbids it. Accepted. |
+| A stale directory from an earlier session is still on disk | Never reused (the path is recorded nowhere); the platform's temporary-directory cleaning removes it. Accepted. |
+
+**The secrets-hook probe.** This rule stands here in full so that this
+file needs no other skill's text. `hooks/safety/protect-secrets.js` scans
+the path of every Read, Edit and Write and the content of every Edit and
+Write for hardcoded secrets; `hooks/safety/block-dangerous-commands.js`
+and the secrets hook's own file-access patterns scan the whole Bash
+command string, a heredoc body included, and their refusals have no
+rewrite path. The value file is the one place answer text is written by
+a scanned tool — answer text quotes plan clauses and finding text, which
+may contain `$(...)`, backticks, or a line equal to a heredoc delimiter —
+so it is written with the Write tool and never with a heredoc of any
+kind; the fill command itself carries paths, integers and short tokens
+and matches no pattern. When `hooks/safety/protect-secrets.js` refuses a
+value-file Write, find the offending lines yourself: the hook's refusal
+names a credential kind — the kind of the first pattern that matched the
+whole content — and never a line. For each line of the file you tried to
+write, make ONE Write tool call of a throwaway file holding that one
+line, `<PROMPT_DIR>/dispatch-<k>-probe-<n>.txt`, `<n>` counting the probe
+Writes for value file `<k>` from 1, and remove it with `rm -- "<file>"`
+as its own command after the probe, when the Write succeeded — outcome
+(a) below; outcome (b) is a refused Write that left no file, so there is
+nothing to remove and no `rm` is run. The path in that `rm` is always
+inside double quotes:
+`hooks/safety/block-dangerous-commands.js` denies an `rm` whose path
+begins `/var` unquoted, and `mktemp -d` prints its directory under
+`/var` on macOS. The probe is a Write tool call and
+nothing else: never a Bash command, because
+`hooks/safety/block-dangerous-commands.js` would refuse a command that
+merely quotes a secret-shaped string, and never a hook path, because a
+path such as `hooks/safety/protect-secrets.js` resolves only inside this
+plugin's own checkout. Each probe is exactly one of three outcomes:
+(a) the Write succeeds — the line is allowed and stays as it is;
+(b) the Write is refused by `hooks/safety/protect-secrets.js`, whose
+refusal names the credential kind — the line is withheld;
+(c) the Write is refused for any other reason — a permission denial, a
+tool error, any refusal whose text does not come from
+`hooks/safety/protect-secrets.js`. That is a failure of the mechanism
+and not a refused line: stop with the `value file <name> could not be
+written` cause of the table above. Never withhold a line on this
+outcome. When no single line is refused, probe each pair of consecutive
+lines the same way — one Write holding the two lines joined by one
+newline, under the next `<n>` — and withhold both lines of a refused
+pair: a pattern spans at most one line break, so pairs are enough.
+Replace every withheld line by a line that keeps its id, its tag and
+the ruling verb and non-secret answer text up to the quoted value, and
+carries the location after it instead of the value, in exactly this
+form:
+`[<id>] (<tag>): <verb and its text up to the quoted value> — <file:line> — secret-bearing finding, value withheld`
+— your own "Never reproduce a secret" rule imposes the location-only
+treatment on the value, not on the decision, so the ruling verb (fix
+it / plan governs / amend plan / accept) stays in the line and the
+controller still receives an actionable decision — and retry the
+Write once; a second refusal is fatal (table above). Apart from that
+one replacement, never alter answer text to pass a hook, and never
+retry the Write through a Bash command to get around a refusal.
+
 ## Guard Interaction
 
 Controller returns open with `<!-- orchestration report -->`;
@@ -1857,6 +2212,13 @@ without it is a lost return under that section's rule, never a reason to
 remove the marker instruction from the fork prompt.
 
 ## Prompt Templates
+
+Filled by `<base>/../multi-code-review/scripts/fill-prompt.js` into the
+session's prompt directory, by the fill command each phase states; never
+read by the orchestrator, and never copied into a `prompt` field. Their
+placeholder legends are for the reader of this file: the script checks
+the fill command against the template (exit 3: a body placeholder
+without a value; exit 4: a value naming no placeholder).
 
 - `./plan-writer-prompt.md`
 - `./doc-review-loop-prompt.md`
