@@ -24,6 +24,9 @@ RESUME_TEMPLATES=(plan-writer-prompt.md batch-controller-prompt.md code-review-l
 H_DISPATCH='## Controller Dispatch Rules (apply to every phase)'
 H_PHASE0='## Phase 0 — Setup (the only interactive moment)'
 H_PHASE1='## Phase 1 — Plan Writing'
+H_PHASE2='## Phase 2 — Plan Review Loop'
+H_PHASE3='## Phase 3 — Implementation Batches'
+H_PHASE4='## Phase 4 — Final Code Review Loop'
 H_PHASE5='## Phase 5 — Completion'
 H_RESUME='## Resume'
 H_INRUN='## In-run rulings'
@@ -146,7 +149,7 @@ extract_range() { # label file start-heading end-heading out
   end="$(first_line_of "$2" "$4")"
   if [ -z "$start" ] || [ -z "$end" ] || [ "$start" -ge "$end" ]; then
     : > "$5"
-    bad "$1: could not locate the range '$3' .. '$4' in ${2#$ROOT/}"
+    bad "$1: could not locate the range '$3' .. '$4' in ${2#"$ROOT"/}"
     return
   fi
   awk -v s="$start" -v e="$end" 'NR >= s && NR < e' "$2" > "$5"
@@ -162,6 +165,10 @@ line_below() { # file exact-line
 DISPATCH_RANGE="$WORK/dispatch.txt"
 PHASE0_RANGE="$WORK/phase0.txt"
 PHASES_RANGE="$WORK/phases.txt"
+PHASE1_RANGE="$WORK/phase1.txt"
+PHASE2_RANGE="$WORK/phase2.txt"
+PHASE3_RANGE="$WORK/phase3.txt"
+PHASE4_RANGE="$WORK/phase4.txt"
 RESUME_RANGE="$WORK/resume.txt"
 INRUN_RANGE="$WORK/inrun.txt"
 MAJOR_RANGE="$WORK/major.txt"
@@ -171,6 +178,10 @@ bold "0. Section ranges of the orchestrator"
 extract_range "Controller Dispatch Rules" "$ORCH_SKILL" "$H_DISPATCH" "$H_PHASE0" "$DISPATCH_RANGE"
 extract_range "Phase 0" "$ORCH_SKILL" "$H_PHASE0" "$H_PHASE1" "$PHASE0_RANGE"
 extract_range "Phases 1 to 4" "$ORCH_SKILL" "$H_PHASE1" "$H_PHASE5" "$PHASES_RANGE"
+extract_range "Phase 1" "$ORCH_SKILL" "$H_PHASE1" "$H_PHASE2" "$PHASE1_RANGE"
+extract_range "Phase 2" "$ORCH_SKILL" "$H_PHASE2" "$H_PHASE3" "$PHASE2_RANGE"
+extract_range "Phase 3" "$ORCH_SKILL" "$H_PHASE3" "$H_PHASE4" "$PHASE3_RANGE"
+extract_range "Phase 4" "$ORCH_SKILL" "$H_PHASE4" "$H_PHASE5" "$PHASE4_RANGE"
 extract_range "Resume" "$ORCH_SKILL" "$H_RESUME" "$H_INRUN" "$RESUME_RANGE"
 extract_range "In-run rulings" "$ORCH_SKILL" "$H_INRUN" "$H_MAJOR" "$INRUN_RANGE"
 extract_range "Major-Error Stop Policy" "$ORCH_SKILL" "$H_MAJOR" "$H_GUARD" "$MAJOR_RANGE"
@@ -293,12 +304,11 @@ for name in 'dispatch-<k>-plan-writer.md' 'dispatch-<k>-plan-review.md' 'dispatc
 done
 assert_file_not_contains "phases: no template is filled by hand (no 'Fill \`./' line)" "$PHASES_RANGE" "$FILL_DOT"
 assert_folded_contains "phases: BATCH_NUMBER is not passed to the script" "$PHASES_RANGE" 'stands only in the template'"'"'s wrapper and is not passed to the script'
-POINTER_DISPATCHES="$(grep -cF -- 'dispatch the pointer' "$PHASES_RANGE" | tr -d ' ')"
-if [ "$POINTER_DISPATCHES" -ge 4 ]; then
-  ok "phases: 'dispatch the pointer' appears $POINTER_DISPATCHES times (at least once per phase)"
-else
-  bad "phases: 'dispatch the pointer' appears $POINTER_DISPATCHES times, fewer than 4"
-fi
+for phase_label in "Phase 1:$PHASE1_RANGE" "Phase 2:$PHASE2_RANGE" "Phase 3:$PHASE3_RANGE" "Phase 4:$PHASE4_RANGE"; do
+  phase_name="${phase_label%%:*}"
+  phase_range="${phase_label#*:}"
+  assert_folded_contains "phases: $phase_name dispatches the pointer" "$phase_range" 'dispatch the pointer'
+done
 
 bold "8. Resume and In-run rulings: the answer lines go into a value file"
 for needle in "$MKTEMP" 'a resumed session has none' 'dispatch-1-answers.txt' '`<k>` = 1' 'the only channel for it' 'no answer line' \

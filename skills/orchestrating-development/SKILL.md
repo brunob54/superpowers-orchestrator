@@ -38,10 +38,11 @@ this platform lacks` — and stop.
   session model with a **sonnet floor** (a haiku-tier or unrecognized
   session model dispatches on `sonnet`). Nested workers inside a batch
   follow SDD's Model Selection table, chosen by the batch controller.
-- **Blocking dispatch:** pass the `name` given in the template's header
-  (`name: "orch-…"`). A named controller's own subagent calls block and
-  return each child's final message inline; an unnamed controller's
-  return at once, and the child's completion notice is delivered to the
+- **Blocking dispatch:** pass the `name` stated by the phase's dispatch
+  text (Phases 1–4) (`name: "orch-…"`). A named controller's own
+  subagent calls block and return each child's final message inline;
+  an unnamed controller's return at once, and the child's completion
+  notice is delivered to the
   main session, not to the controller — which then ends its turn
   "waiting" and stalls the run (claude-code #75043; measured 2026-08-30).
   The property is what matters, not the parameter: on a platform whose
@@ -994,9 +995,9 @@ Trigger: `Resume orchestration for <plan-or-spec path>`.
    journaled the answers and re-evaluated the counts — re-dispatch Phase 4
    without answers: the controller synthesizes the return from the log
    (template Deviation 2); already-decided ids are never re-presented.
-4. Otherwise continue at the first incomplete phase/batch. The session's
-   prompt directory is created before that phase's first fill, exactly as
-   step 3 creates it (`mktemp -d`, `<k>` from 1). Your own log's
+4. Otherwise continue at the first incomplete phase/batch. This Resume's
+   own prompt directory is created before that phase's first fill,
+   exactly as step 3 creates it (`mktemp -d`, `<k>` from 1). Your own log's
    phase entries are the primary re-run guard; the sub-skills' logs are
    the backstop.
 5. Never re-ask Phase 0 questions — parameters come from the log's
@@ -1967,7 +1968,8 @@ committed before the re-dispatch, so a retry rebuilds the identical
 meant in that sentence is a resume after a crash: it starts in a fresh
 prompt directory, where the next `<k>` is 1. It is never the in-session
 identical retry of the Controller Dispatch Rules, which re-dispatches the
-same pointer to the same file and fills nothing. The batch controller's
+same pointer to the same file and fills nothing — except after a lost
+directory path, where the dispatch rules re-fill under `<k>` = 1. The batch controller's
 existing rules skip every task whose checkboxes are ticked and recover a
 mid-task crash (its Deviation 4); the amendment block is found by its
 label and never inserted twice. What makes the resume safe to repeat is
