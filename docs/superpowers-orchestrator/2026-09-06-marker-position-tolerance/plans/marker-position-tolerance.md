@@ -1,0 +1,624 @@
+# Marker Position Tolerance Implementation Plan
+
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers-orchestrator:subagent-driven-development (recommended) or superpowers-orchestrator:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+>
+> **Body authority:** Exactly two things in this plan bind: the `**Global Constraints:**` block, and a block whose immediately preceding paragraph reads `**Exact content:** <reason>` where that reason names a pin this plan does not itself write or edit. Everything else is reference: fenced code blocks and block-quoted wording in task steps are reference implementations, and so is every other code block, every quoted wording, every header field, and this note itself — a finding against any of them is an ordinary fix, not a plan conflict, unless it contradicts a stated `**Contract:**` or a global constraint. A finding whose subject is this note's own wording is never a plan conflict: record it against the plan-writing skill at `skills/writing-plans/SKILL.md` and continue. That disposition covers the note's own text alone; a finding that this note contradicts something specific to this plan — one of its global constraints, say — is about that interaction and is triaged as an ordinary finding.
+
+**Goal:** Let a controller return and a reviewer report be accepted when the report marker starts one of the message's first 10 non-blank lines, instead of only its very first line.
+
+**Spec:** /Users/bruno/Programming/AI/AI_Coding/My_tools/Superpowers/docs/superpowers-orchestrator/2026-09-06-marker-position-tolerance/specs/marker-position-tolerance-design.md
+
+**Architecture:** Today one boolean — `lastMessage.trimStart().startsWith(<marker>)` — answers both the hook's question ("may this subagent stop?") and the orchestrator's question ("is this return usable?"). The change gives each side its own predicate over the same window, the first 10 non-blank lines of the final message. The hook keeps a **prefix** test over **all three** markers, because its wrong answer costs a controller a redo turn. The orchestrator gets a **whole-line equality** test over **its own marker only**, because it must know exactly which line carries the leading token. Hook-exempt stays a superset of orchestrator-accepted, so nothing the orchestrator would parse can be blocked by the hook.
+
+**Tech Stack:** Node.js >= 16 (`hooks/subagent-guard.js`, `tests/codex/test-subagent-guard.js`), Bash + grep/awk wording-contract suites, Markdown skill files. No build step, no new dependency.
+
+**Assumptions:**
+
+- Assumes the hook receives the subagent's final message as `last_assistant_message` in a single JSON object on standard input — will NOT work if the harness ever splits the message across fields or delivers it pre-trimmed of blank lines.
+- Assumes line endings are `\n` or `\r\n` — will NOT work for a classic Mac `\r`-only message, which `split('\n')` would deliver as one long line; no such message has ever been observed and none is handled.
+- Assumes `tests/in-run-rulings/run-tests.sh` keeps ranging between the whole lines `## Guard Interaction` and `## Prompt Templates` of `skills/orchestrating-development/SKILL.md` — will NOT hold if either heading is renamed, and both must therefore survive every edit in this plan.
+- Assumes the four controller prompt templates keep instructing "First line exactly" — will NOT hold if a later change relaxes them too; the tolerance in this plan is receiver-side only and does not license a template edit.
+
+**Global Constraints:**
+
+1. **The window is the first 10 non-blank lines** of the final message, on both sides. Blank lines are skipped and do not consume the budget.
+2. **The hook predicate is a prefix match over all three markers**, in one predicate: exempt when one of the first 10 non-blank lines, with its surrounding whitespace removed, **starts with** `<!-- multi-review report -->`, `<!-- orchestration report -->` or `<!-- research report -->`. A line that contains a marker without starting with it does not exempt.
+3. **The orchestrator predicate is whole-line equality over its own marker only**: a line whose surrounding whitespace is removed **equals** `<!-- orchestration report -->`, among the first 10 non-blank lines. A line equal to another skill's marker is ordinary preamble. With more than one such line, the first begins the report; everything above it is ignored.
+4. **The 15-line cap counts from the marker line, which is line 1 of the 15, and exceeding it is not a malformed condition.** The malformed list stays closed: no marker line in the window, no leading token, or a consumed field (`tasks=`, per-task numbers, `rounds=`, `outcome=`, `unresolved=`, `user_decision=`, `fixes=`) absent or unparseable. An unparseable stop-rule field never defaults to 0.
+5. **The hook gains no second condition.** It never checks for a leading token, and its exemption only ever widens.
+6. **The four controller prompt templates are not modified** — `plan-writer-prompt.md`, `doc-review-loop-prompt.md`, `batch-controller-prompt.md`, `code-review-loop-prompt.md` each keep their "First line exactly: `<!-- orchestration report -->`" instruction and their `## Return (final message, 15 lines max)` heading.
+7. **No hook wiring file changes.** `hooks/hooks.json`, `plugin.universal.yaml`, `hooks/codex-hooks.json`, `hooks/hooks-cursor.json` and `hooks/codex/` are untouched: only the script body changes, not the command line.
+8. **No release work in this plan** — no `VERSION`, `.claude-plugin/plugin.json`, `.claude-plugin/marketplace.json`, `plugin.universal.yaml` meta version, `README.md`, `RELEASE-NOTES.md`, `docs/project-map.md` or `docs/orchestration-issues.md` edit. Those belong to the release step after the pipeline ends.
+9. **`tests/in-run-rulings/run-tests.sh` must keep passing unchanged.** It is not edited by this plan. It ranges between the whole lines `## Guard Interaction` and `## Prompt Templates` of `skills/orchestrating-development/SKILL.md` and asserts three fragments inside that range; both headings and all three fragments must survive.
+10. **Cross-platform:** Node >= 16, no `/dev/stdin`, and each examined line is trimmed before comparison so a CRLF message behaves the same as an LF one.
+11. **No behavioural suite may be run** against this clone (`docs/orchestration-issues.md` Case 004). Every verification in this plan is a fast unit or wording-contract suite.
+
+---
+
+## Scope Check
+
+The spec covers one subsystem — the report-marker exemption — on two sides of the same boundary (the `SubagentStop` hook and the orchestrator's return contract) plus the prose that documents it. It does not need splitting into separate plans.
+
+## File Structure
+
+| File | Change | Responsibility after the change |
+|---|---|---|
+| `hooks/subagent-guard.js` | Modify | Holds the single marker predicate `hasReportMarker`, the named window constant `MARKER_SEARCH_LINES`, and comments that state the window rule. |
+| `tests/codex/test-subagent-guard.js` | Modify | Replaces the three strictness assertions the change reverses; adds the window boundary cases for all three markers. |
+| `skills/orchestrating-development/SKILL.md` | Modify | Return contract bullet (receiver-side rule); `## Guard Interaction` and the `**Lost returns.**` paragraph (documentation of the hook's rule and of a blocked return's real cost). |
+| `tests/orchestrating-development/run-tests.sh` | Modify | Adds the wording assertion pinning both halves of the new Return contract rule. |
+| `skills/multi-doc-review/SKILL.md` | Modify | `## Guard Interaction` states the widened rule. |
+| `skills/multi-code-review/SKILL.md` | Modify | `## Guard Interaction` states the widened rule. |
+| `skills/researching-prior-art/SKILL.md` | Modify | The accepted-residual-risk paragraph and `## Guard interaction` state the widened rule. |
+| `docs/FORK-IMPROVEMENTS.md` | Modify | The orchestration bullet states the widened rule. |
+
+Task 1 owns the hook and its unit tests. Task 2 owns the orchestrator's receiver-side contract and its wording assertion. Task 3 owns the two documentation passages inside `skills/orchestrating-development/SKILL.md` that describe the hook. Task 4 owns the five remaining passages and runs the spec's full acceptance check. Tasks 2 and 3 touch the same file in different sections and are ordered to avoid overlapping edits.
+
+---
+
+### Task 1: Widen the guard exemption to the first 10 non-blank lines
+
+**Files:**
+- Modify: `hooks/subagent-guard.js`
+- Test: `tests/codex/test-subagent-guard.js`
+
+**Security flag:** `security` *(the hook is a leakage-detection boundary; this task changes the condition under which it stops inspecting a message)*
+
+**Does NOT cover:** The exemption still requires a marker at the **start of a line**, inside the window. These scenarios stay unexempt and are meant to: a marker that first appears on the 11th or later non-blank line; a marker preceded on its line by any other character (a finding line such as `- [C1] the <!-- orchestration report --> marker …`); a message with no marker at all. The hook also gains **no** second condition — it does not check that a known leading token (`PLAN_READY`, `BATCH_COMPLETE`, `REVIEW_DONE`, `BLOCKED`) follows the marker, because that would create a new way to block a genuine controller return. A leaking subagent that emits an exact marker at the start of one of its first 10 non-blank lines is exempt; that was already true at line 1 and the prompt instruction remains the first layer of defence.
+
+**Contract:**
+
+1. `hasReportMarker(message)` in `hooks/subagent-guard.js`
+   - Inputs: the raw `last_assistant_message` string (possibly empty).
+   - Output: boolean.
+   - Invariants: returns true exactly when one of the first `MARKER_SEARCH_LINES` non-blank lines of `message`, after its surrounding whitespace (a trailing `\r` included) is removed, **starts with** one of the three report markers. Blank lines are skipped and never consume the window, so any number of leading blank lines keeps today's `trimStart()` behaviour. The 10th non-blank line is examined; the 11th is not. A line that contains a marker without starting with it never returns true. An empty message returns false.
+   - Verification: `node tests/codex/test-subagent-guard.js` — the "Marker search window" section asserts the 10th-line pass and the 11th-line fail for each of the three markers, the blank-line case, the mid-line case, the prefix-plus-text case and the two-marker case.
+   - Interface not externally pinned — the function name and signature are descriptive and may change in a fix (rule 2).
+2. `MARKER_SEARCH_LINES` in `hooks/subagent-guard.js`
+   - Invariants: declared exactly once, with the value `10`, and carrying a comment that states why the window is bounded.
+   - Verification: the test `The marker search window is a single named constant` in `tests/codex/test-subagent-guard.js` counts the declarations in the hook source.
+   - This name is a self-pin: the same task writes both the constant and the test that asserts its name, so a later fix may rename both together as one ordinary fix (rule 5).
+3. The four rewritten block comments in `hooks/subagent-guard.js` (the file's opening comment and the three above the marker constants) — wording artifact
+   - Must convey: a report marker exempts a message when it starts one of the message's first `MARKER_SEARCH_LINES` non-blank lines, not only its very first line.
+   - Invariant: no comment in the file still says the marker counts only at the start of the message.
+   - Verification: Task 4's acceptance grep — `grep -rn "opening with\|opens with" skills/ hooks/ docs/FORK-IMPROVEMENTS.md` returns no hit that describes `hooks/subagent-guard.js`.
+   - Sentence wording is free; the properties above bind.
+
+- [ ] **Step 1: Write failing tests**
+
+In `tests/codex/test-subagent-guard.js`, first replace the three assertions that state the strictness this change reverses. Each keeps its input and flips its expectation, so the replacement is visible in the diff.
+
+Replace the test at the `multi-doc-review` section (currently `Marker mid-message does not exempt`):
+
+```javascript
+test('multi-review marker on the second non-blank line exempts', () => {
+  const out = runGuard('I was invoking brainstorming.\n<!-- multi-review report -->');
+  assert.deepStrictEqual(out, {});
+});
+```
+
+Replace the test at the `Orchestration report marker` section (currently `orchestration marker after the first line does not exempt`):
+
+```javascript
+test('orchestration marker on the second non-blank line exempts', () => {
+  const out = runGuard('I was using executing-plans.\n<!-- orchestration report -->');
+  assert.deepStrictEqual(out, {});
+});
+```
+
+Replace the test at the `researching-prior-art` section (currently `Research marker mid-message does not exempt`):
+
+```javascript
+test('research marker on the second non-blank line exempts', () => {
+  const out = runGuard('I was invoking brainstorming.\n<!-- research report -->');
+  assert.deepStrictEqual(out, {});
+});
+```
+
+Then add the marker constants and the message builder just below the existing `runGuard` helper:
+
+```javascript
+const REVIEW_MARKER = '<!-- multi-review report -->';
+const ORCHESTRATION_MARKER = '<!-- orchestration report -->';
+const RESEARCH_MARKER = '<!-- research report -->';
+// The window the guard searches, in non-blank lines. Kept in step with
+// MARKER_SEARCH_LINES in hooks/subagent-guard.js.
+const WINDOW = 10;
+// A body that pairs an action verb with a skill name. Every exemption test
+// carries one, so the test fails on the unmodified guard instead of passing
+// vacuously — the convention this file already states at its whitespace tests.
+const VERB_SKILL_BODY =
+  'BLOCKED task=3: plan says use executing-plans semantics but the spec forbids it.';
+
+/**
+ * A message whose Nth non-blank line is `marker`, with (n - 1) lines of
+ * narration above it and a verb+skill body below.
+ */
+function markerOnNonBlankLine(marker, n) {
+  const lines = [];
+  for (let i = 1; i < n; i++) {
+    lines.push(`Narration line ${i} of the controller's own summary.`);
+  }
+  lines.push(marker, VERB_SKILL_BODY);
+  return lines.join('\n');
+}
+```
+
+Then add a new section immediately before the `── Summary ──` block:
+
+```javascript
+// ── Marker search window ─────────────────────────────────────────────────────
+
+console.log('\nMarker search window');
+
+test('The marker search window is a single named constant', () => {
+  const declarations = source.match(/const\s+MARKER_SEARCH_LINES\b/g) || [];
+  assert.strictEqual(
+    declarations.length, 1,
+    `Expected exactly one MARKER_SEARCH_LINES declaration, found ${declarations.length}`
+  );
+  assert.ok(
+    /const\s+MARKER_SEARCH_LINES\s*=\s*10\s*;/.test(source),
+    'MARKER_SEARCH_LINES must be 10'
+  );
+});
+
+for (const [label, marker] of [
+  ['multi-review', REVIEW_MARKER],
+  ['orchestration', ORCHESTRATION_MARKER],
+  ['research', RESEARCH_MARKER],
+]) {
+  test(`${label} marker on the 10th non-blank line exempts`, () => {
+    const out = runGuard(markerOnNonBlankLine(marker, WINDOW));
+    assert.deepStrictEqual(out, {}, `Expected exempt, got: ${JSON.stringify(out)}`);
+  });
+
+  test(`${label} marker on the 11th non-blank line does not exempt`, () => {
+    const out = runGuard(markerOnNonBlankLine(marker, WINDOW + 1));
+    assert.strictEqual(out.decision, 'block', `Expected block, got: ${JSON.stringify(out)}`);
+  });
+}
+
+test('Twelve blank lines before the marker still exempt (blanks do not consume the window)', () => {
+  const message = new Array(12).fill('').concat([ORCHESTRATION_MARKER, VERB_SKILL_BODY]).join('\n');
+  const out = runGuard(message);
+  assert.deepStrictEqual(out, {}, `Expected exempt, got: ${JSON.stringify(out)}`);
+});
+
+test('Marker followed by text on the first line still exempts (prefix match)', () => {
+  const out = runGuard([
+    '<!-- orchestration report --> REVIEW_DONE rounds=2',
+    'The loop finished by using multi-code-review semantics.',
+  ].join('\n'));
+  assert.deepStrictEqual(out, {}, `Expected exempt, got: ${JSON.stringify(out)}`);
+});
+
+test('A marker quoted after other text on its line does not exempt', () => {
+  const out = runGuard([
+    'Round 1 findings:',
+    `- [C1] the ${ORCHESTRATION_MARKER} marker is described wrongly | reword`,
+    'I was using executing-plans to check that.',
+  ].join('\n'));
+  assert.strictEqual(out.decision, 'block', `Expected block, got: ${JSON.stringify(out)}`);
+});
+
+test('Leading whitespace before a marker on the third non-blank line still exempts', () => {
+  const out = runGuard([
+    'Self-Review complete.',
+    'No spec requirement is left without a task.',
+    `   ${ORCHESTRATION_MARKER}`,
+    VERB_SKILL_BODY,
+  ].join('\n'));
+  assert.deepStrictEqual(out, {}, `Expected exempt, got: ${JSON.stringify(out)}`);
+});
+
+test('Two marker lines inside the window exempt', () => {
+  const out = runGuard([
+    REVIEW_MARKER,
+    'Quoted above from the round 2 reviewer return.',
+    ORCHESTRATION_MARKER,
+    'REVIEW_DONE rounds=2 — the loop ran by using multi-code-review semantics.',
+  ].join('\n'));
+  assert.deepStrictEqual(out, {}, `Expected exempt, got: ${JSON.stringify(out)}`);
+});
+
+test('A CRLF message with the marker on the second non-blank line exempts', () => {
+  const out = runGuard(`Self-Review complete.\r\n${ORCHESTRATION_MARKER}\r\n${VERB_SKILL_BODY}\r\n`);
+  assert.deepStrictEqual(out, {}, `Expected exempt, got: ${JSON.stringify(out)}`);
+});
+```
+
+Finally, extend the file's header comment `Verifies:` list with one line:
+
+```javascript
+ *   - Marker search window: a marker at the start of any of the first 10
+ *     non-blank lines exempts; the 11th does not
+```
+
+- [ ] **Step 2: Run test to verify it fails**
+
+Run: `node tests/codex/test-subagent-guard.js`
+Expected: FAIL — the runner prints `✗` for `multi-review marker on the second non-blank line exempts`, `orchestration marker on the second non-blank line exempts`, `research marker on the second non-blank line exempts`, `The marker search window is a single named constant`, the three `… on the 10th non-blank line exempts` cases, `Leading whitespace before a marker on the third non-blank line still exempts`, `Two marker lines inside the window exempt` and `A CRLF message with the marker on the second non-blank line exempts`, then exits non-zero with `subagent-guard: <p> passed, <f> failed`.
+
+- [ ] **Step 3: Implement minimal change**
+
+Replace the file's opening block comment (lines 2–17) with:
+
+```javascript
+/**
+ * Subagent Guard — SubagentStop Hook
+ *
+ * Detects when subagents invoke superpowers-orchestrator skills or spawn
+ * recursive sub-subagents. When detected, blocks the subagent from
+ * stopping and instructs it to redo its work without skill invocations.
+ * Exception: orchestrating-development dispatches controller subagents that
+ * intentionally spawn nested workers — that is sanctioned design, not leakage;
+ * controller returns are exempted via the orchestration report marker below.
+ * A report marker exempts a message when it starts one of that message's
+ * first MARKER_SEARCH_LINES non-blank lines — not only the very first line —
+ * so a return that carries a sentence of narration above its marker is still
+ * exempt. See hasReportMarker below.
+ *
+ * This is the "locked door" layer of defense — prompt-based instructions
+ * ("do NOT invoke skills") are the first layer; this hook catches violations
+ * that slip through.
+ *
+ * Logs violations to: ~/.claude/hooks-logs/subagent-violations.jsonl
+ */
+```
+
+Replace the three marker declarations and their comments (lines 57–75) with:
+
+```javascript
+// Multi-doc-review reviewer reports legitimately quote skill names — they review
+// documents about skills. A genuine report carries this exact marker at the
+// start of one of its first MARKER_SEARCH_LINES non-blank lines
+// (reviewer-prompt.md still makes it the mandatory first line); a marker
+// further down the message does not count.
+const REVIEW_REPORT_MARKER = '<!-- multi-review report -->';
+
+// Orchestrating-development controller subagents return status contracts whose
+// free text (e.g. a BLOCKED reason quoting a plan conflict) may legitimately
+// pair action verbs with skill names. A genuine controller return carries this
+// exact marker at the start of one of its first MARKER_SEARCH_LINES non-blank
+// lines (the skill's prompt templates still make it the mandatory first line);
+// a marker further down the message does not count.
+const ORCHESTRATION_REPORT_MARKER = '<!-- orchestration report -->';
+
+// Researching-prior-art researchers and controllers report on external
+// projects whose documentation legitimately contains skill-like phrases. A
+// genuine research report or summary carries this exact marker at the start of
+// one of its first MARKER_SEARCH_LINES non-blank lines (research-prompt.md and
+// controller-prompt.md still make it the mandatory first line); a marker
+// further down the message does not count.
+const RESEARCH_REPORT_MARKER = '<!-- research report -->';
+
+// How far into a final message the marker search runs, counted in non-blank
+// lines. Controllers sometimes write a sentence or a short summary above the
+// marker, and every recorded case fits well inside this window. The window
+// stays bounded because the exemption must remain a property of a message's
+// opening: reports in this repository quote marker lines inside their
+// findings, and a whole-message search would exempt those too.
+const MARKER_SEARCH_LINES = 10;
+
+const REPORT_MARKERS = [
+  REVIEW_REPORT_MARKER,
+  ORCHESTRATION_REPORT_MARKER,
+  RESEARCH_REPORT_MARKER,
+];
+
+/**
+ * True when one of the first MARKER_SEARCH_LINES non-blank lines of the
+ * message starts with one of the three report markers, after that line's
+ * surrounding whitespace (a trailing "\r" of a CRLF message included) is
+ * removed. Blank lines are skipped and do not consume the window. A line that
+ * contains a marker without starting with it — a finding line quoting the
+ * marker — does not exempt.
+ */
+function hasReportMarker(message) {
+  let examined = 0;
+  for (const rawLine of message.split('\n')) {
+    const line = rawLine.trim();
+    if (line === '') continue;
+    if (REPORT_MARKERS.some(marker => line.startsWith(marker))) return true;
+    examined++;
+    if (examined >= MARKER_SEARCH_LINES) return false;
+  }
+  return false;
+}
+```
+
+Replace the exemption test inside `main` (lines 119–127) with:
+
+```javascript
+      if (hasReportMarker(lastMessage)) {
+        process.stdout.write('{}');
+        return;
+      }
+```
+
+Nothing else in the hook changes: the violation patterns, `logViolation`, the block reason and the parse-failure fallback that allows the stop all stay as they are.
+
+- [ ] **Step 4: Run test to verify it passes**
+
+Run: `node tests/codex/test-subagent-guard.js`
+Expected: PASS — `subagent-guard: <n> passed, 0 failed`, exit 0.
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add hooks/subagent-guard.js tests/codex/test-subagent-guard.js
+git commit -m "fix(hooks): exempt a report marker within the first 10 non-blank lines" --trailer "Session: marker-position-tolerance" --trailer "Stage: task 1/4"
+```
+
+---
+
+### Task 2: Widen the orchestrator's Return contract
+
+**Files:**
+- Modify: `skills/orchestrating-development/SKILL.md` (the `**Return contract:**` bullet of `## Controller Dispatch Rules (apply to every phase)`)
+- Test: `tests/orchestrating-development/run-tests.sh`
+
+**Security flag:** `none`
+
+**Does NOT cover:** The widened acceptance applies only to the **position** of the marker line. A return whose marker first appears below the 10th non-blank line, or which has no line equal to the marker at all, is still malformed, still gets one identical retry, and in Phase 4 can still meet `code-review-loop-prompt.md` Deviation 2 and stop the run — the spec states this residual risk rather than removing it. The change also does **not** relax the field rules: a missing leading token or an absent or unparseable consumed field is malformed exactly as today. The 15-line cap stops being a receiver-side test, so a longer report is accepted; it is not otherwise policed.
+
+**Contract:**
+
+1. The `**Return contract:**` bullet of `## Controller Dispatch Rules` — wording artifact
+   - Must convey, all of: the templates still tell the controller to put the marker on its first line; a return is accepted when a line whose surrounding whitespace is removed equals `<!-- orchestration report -->` and is among the first 10 non-blank lines; blank lines are skipped and do not consume that budget; only this marker is searched for, so a line equal to another skill's marker is ordinary preamble; with more than one such line the first begins the report and everything above it is ignored and is never a reason to retry; the leading token is on the first non-empty line below the marker line; the 15-line cap counts from the marker line, which is line 1 of the 15, and exceeding it is not malformed; the malformed list is otherwise unchanged, and a malformed return or controller error gets one identical retry before the major-error stop.
+   - Invariant: no sentence in the bullet still makes the marker's position on the first line a condition of acceptance.
+   - Verification: `bash tests/orchestrating-development/run-tests.sh` asserts, inside the Controller Dispatch Rules range, both the fragment `among the **first 10 non-blank lines**` and the fragment `<!-- orchestration report -->`.
+   - Sentence wording is free; the properties above bind.
+2. The two new assertions in `tests/orchestrating-development/run-tests.sh`
+   - Invariants: the suite fails if either fragment leaves the Controller Dispatch Rules range — an assertion on the window alone would pass a bullet that lost the marker's spelling, and an assertion on the marker alone would pass a bullet that returned to the first-line rule.
+   - Verification: run the suite against the unedited skill file and see both assertions fail (Step 2 below).
+   - These fragments are a self-pin: this task writes both the bullet and the assertions, so a later fix may amend them together as one ordinary fix (rule 5).
+
+- [ ] **Step 1: Write failing test**
+
+In `tests/orchestrating-development/run-tests.sh`, add the two fragment constants next to the other wording contracts, just below the `VALUE_WITHHELD_OLD_FORM` line:
+
+```bash
+# The Return contract's marker tolerance, pinned in two halves so that no
+# later edit can restore either extreme: the window (with the words
+# "non-blank", so that a bare `10` cannot satisfy it) and the marker's exact
+# spelling.
+RETURN_WINDOW='among the **first 10 non-blank lines**'
+RETURN_MARKER='<!-- orchestration report -->'
+```
+
+Then add a new block immediately after the `bold "1. Controller Dispatch Rules: ..."` block ends — that is, right before `bold "2. Negative needles over the whole orchestrator text"`:
+
+```bash
+bold "1b. Return contract: the marker may start any of the first 10 non-blank lines"
+assert_folded_contains "dispatch rules: the return contract states the 10-non-blank-line window" \
+  "$DISPATCH_RANGE" "$RETURN_WINDOW"
+assert_folded_contains "dispatch rules: the return contract spells the orchestration marker exactly" \
+  "$DISPATCH_RANGE" "$RETURN_MARKER"
+```
+
+- [ ] **Step 2: Run test to verify it fails**
+
+Run: `bash tests/orchestrating-development/run-tests.sh`
+Expected: FAIL — `FAIL: dispatch rules: the return contract states the 10-non-blank-line window (missing: among the **first 10 non-blank lines**)`, and a non-zero exit. The marker assertion passes already, because the current bullet spells the marker; only the window assertion fails until Step 3.
+
+- [ ] **Step 3: Implement minimal change**
+
+In `skills/orchestrating-development/SKILL.md`, replace the whole `**Return contract:**` bullet (the last bullet of `## Controller Dispatch Rules (apply to every phase)`, currently beginning "first line exactly `<!-- orchestration report -->` (guard exemption)") with:
+
+```markdown
+- **Return contract:** the four templates tell the controller to make
+  `<!-- orchestration report -->` its first line and keep saying so. You
+  accept a return when a line whose surrounding whitespace is removed
+  **equals** `<!-- orchestration report -->` and is among the **first 10
+  non-blank lines** of the final message; blank lines are skipped and do not
+  consume that budget. Only this marker is searched for: a line equal to
+  another skill's marker is ordinary preamble. When more than one such line
+  is present, the **first** begins the report; everything above it is
+  ignored and is never a reason to retry. The leading token is on the first
+  non-empty line below that marker line. The 15-line cap counts from the
+  marker line, which is line 1 of the 15; it is an instruction to the
+  controller, not a test you run — a longer report is **not** malformed.
+  Detail goes to files. A return is **malformed** when no such marker line
+  is in the window, OR the leading token is absent, OR any field you consume
+  (`tasks=`, per-task numbers, `rounds=`, `outcome=`, `unresolved=`,
+  `user_decision=`, `fixes=`) is absent or unparseable. An unparseable
+  stop-rule field never defaults to 0. Malformed return or controller error
+  → retry the identical dispatch once — the same pointer to the same file,
+  no fill and no new file; second failure → major error → stop, logging
+  `inconclusive controller: <phase/batch>`.
+```
+
+- [ ] **Step 4: Run test to verify it passes**
+
+Run: `bash tests/orchestrating-development/run-tests.sh`
+Expected: PASS — both `1b` assertions report `PASS`, and the run ends with `Results: <n> passed, 0 failed`, exit 0.
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add skills/orchestrating-development/SKILL.md tests/orchestrating-development/run-tests.sh
+git commit -m "feat(orchestrating-development): accept a marker within the first 10 non-blank lines" --trailer "Session: marker-position-tolerance" --trailer "Stage: task 2/4"
+```
+
+---
+
+### Task 3: Correct the orchestrator's two descriptions of the hook
+
+**Files:**
+- Modify: `skills/orchestrating-development/SKILL.md` (`## Guard Interaction`, and the `**Lost returns.**` paragraph inside `## In-run rulings`)
+
+**Security flag:** `none`
+
+**Does NOT cover:** Only the two passages that describe the *hook's* exemption change. The lost-return **rule** of `## In-run rulings` — a fork return whose completion notice arrives without the marker line is lost, re-dispatched once, and a second loss leaves that lens out — keys on the marker's *presence*, not its position, and is not touched. The four controller prompt templates are not touched either (Global Constraint 6).
+
+**Contract:**
+
+1. `## Guard Interaction` of `skills/orchestrating-development/SKILL.md` — wording artifact
+   - Must convey: the guard exempts a message when one of its first 10 non-blank lines starts with the marker, so a return with a sentence above its marker is still exempt; the marker instruction stays mandatory in the four templates because an unmarked return is answered with `decision: block` and a redo instruction, which costs an extra turn and can make a controller repeat work it has already committed.
+   - Invariants: the section no longer claims that an unmarked return would "hang the dispatch, and stall the unattended run"; the headings `## Guard Interaction` and `## Prompt Templates` both survive as whole lines; the two fork sentences and the exact spelling `<!-- multi-review report -->` survive inside the range.
+   - Verification: `bash tests/in-run-rulings/run-tests.sh` (its three ranged assertions between those two headings) and Task 4's acceptance grep.
+2. The `**Lost returns.**` paragraph inside `## In-run rulings` — wording artifact
+   - Must convey: the guard exempts a final message when one of its first 10 non-blank lines starts with the marker; a message without such a line that names a plugin skill is answered with `decision: block` and a redo instruction, so the fork spends another turn rewriting and the notice still arrives, later.
+   - Invariant: the sentences the same section pins further down — `A lost return is re-dispatched once under the same lens; a second loss leaves that lens out and the ruling records \`forks: <k> of <planned>\`` and `The bound is stated over the ROUND, never over one lens` — are untouched.
+   - Verification: `bash tests/in-run-rulings/run-tests.sh` and Task 4's acceptance grep.
+
+- [ ] **Step 1: Rewrite `## Guard Interaction`**
+
+Replace the first two sentences of the section — from "Controller returns open with" through "and stall the unattended run." — with the text below. The rest of the section (from "Nested workers dispatched by batch controllers" to the end) stays exactly as it is.
+
+```markdown
+Controller returns open with `<!-- orchestration report -->`;
+`hooks/subagent-guard.js` exempts a message when one of its first 10
+non-blank lines starts with that marker, so a return that carries a sentence
+above its marker line is still exempt. Never remove the marker instruction
+from the four templates — free-text `BLOCKED` reasons legitimately pair
+action verbs with skill names, and an unmarked return is answered with
+`decision: block` and a redo instruction: measured on 2026-09-06, the
+dispatch resumed after one extra turn rather than hanging, but a controller
+that obeys "redo your assigned task" can repeat review rounds and fix
+commits it has already written.
+```
+
+The two sentences below already stand in the section and must survive this edit byte-for-byte, between the `## Guard Interaction` and `## Prompt Templates` headings. They are quoted here for checking only — the `> ` prefix of the quotation is not part of the file's text, and the simplest way to keep them intact is not to retype them at all.
+
+**Exact content:** `tests/in-run-rulings/run-tests.sh:798-811` asserts these two fragments and the spelling `<!-- multi-review report -->` inside the range that runs from the whole line `## Guard Interaction` to the whole line `## Prompt Templates`; that test file is not written or edited by this plan.
+
+> Nested workers dispatched by batch controllers carry
+> SDD's leakage-prevention line; nested reviewers inside the two loop
+> controllers emit `<!-- multi-review report -->`, which the guard already
+> exempts. Forks dispatched under `## In-run rulings` open their return
+> with that same `<!-- multi-review report -->` marker; a fork return
+> without it is a lost return under that section's rule, never a reason to
+> remove the marker instruction from the fork prompt.
+
+- [ ] **Step 2: Rewrite the `**Lost returns.**` paragraph**
+
+Replace the paragraph that currently begins "**Lost returns.** `hooks/subagent-guard.js` exempts a final message that opens with the marker line" with:
+
+```markdown
+**Lost returns.** `hooks/subagent-guard.js` exempts a final message when one
+of its first 10 non-blank lines starts with the marker; a message with no
+such line that names a plugin skill is answered with `decision: block` and a
+redo instruction, so the fork spends another turn rewriting — the notice
+still arrives, later.
+```
+
+- [ ] **Step 3: Run the ranged suite to verify nothing pinned was lost**
+
+Run: `bash tests/in-run-rulings/run-tests.sh`
+Expected: PASS — in particular `Guard Interaction states that forks open with the reviewer marker`, `Guard Interaction makes a markerless fork return a lost return` and `Guard Interaction still spells the nested-reviewer marker exactly` all report PASS, and the run exits 0.
+
+- [ ] **Step 4: Run the orchestrator wording suite to verify the section headings still anchor its ranges**
+
+Run: `bash tests/orchestrating-development/run-tests.sh`
+Expected: PASS — `Major-Error Stop Policy: range located (...)` and `Prompt Templates: range located (...)` both report PASS, and the run exits 0.
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add skills/orchestrating-development/SKILL.md
+git commit -m "docs(orchestrating-development): state the widened guard exemption and a blocked return's real cost" --trailer "Session: marker-position-tolerance" --trailer "Stage: task 3/4"
+```
+
+---
+
+### Task 4: Correct the five remaining guard passages and run the acceptance check
+
+**Files:**
+- Modify: `skills/multi-doc-review/SKILL.md`
+- Modify: `skills/multi-code-review/SKILL.md`
+- Modify: `skills/researching-prior-art/SKILL.md`
+- Modify: `docs/FORK-IMPROVEMENTS.md`
+
+**Security flag:** `none`
+
+**Does NOT cover:** Only the passages that describe the *hook's* exemption change. The skill-side usability rules of the other two markers are untouched: `skills/multi-code-review/SKILL.md:602`, `skills/multi-doc-review/SKILL.md:114`, `skills/researching-prior-art/research-prompt.md:164` and `controller-prompt.md:126`/`:233` keep requiring the marker as a report's **first line**, and the unusable-report path (one identical retry, then `inconclusive` when no reviewer of the round returns a usable report) is unchanged. No release file is edited (Global Constraint 8).
+
+**Contract:**
+
+1. The `## Guard Interaction` section of `skills/multi-doc-review/SKILL.md`, the `## Guard Interaction` section of `skills/multi-code-review/SKILL.md`, the accepted-residual-risk paragraph and `## Guard interaction` section of `skills/researching-prior-art/SKILL.md`, and the orchestration bullet of `docs/FORK-IMPROVEMENTS.md` — wording artifacts, one entry each with the same properties
+   - Must convey: `hooks/subagent-guard.js` exempts a message from skill-leakage blocking when one of its first 10 non-blank lines starts with the relevant marker, not only when the message opens with it.
+   - Invariants: each passage keeps the instruction never to remove the marker from its own prompt template(s); `skills/researching-prior-art/SKILL.md`'s residual-risk paragraph states the widened scope of the accepted risk; no passage still describes the exemption as applying only to a message that opens with a marker.
+   - Verification: the acceptance grep of Step 6 — `grep -rn "opening with\|opens with" skills/ hooks/ docs/FORK-IMPROVEMENTS.md` leaves no hit that describes `hooks/subagent-guard.js`.
+   - Sentence wording is free; the properties above bind.
+
+- [ ] **Step 1: Rewrite `skills/multi-doc-review/SKILL.md` `## Guard Interaction`**
+
+Replace the section body with:
+
+```markdown
+`hooks/subagent-guard.js` exempts a message from skill-leakage blocking when
+one of its first 10 non-blank lines starts with `<!-- multi-review report -->`
+— reviewer reports legitimately quote skill names. A report that carries a
+sentence above its marker line is therefore still exempt. Never remove the
+marker instruction from `reviewer-prompt.md`; without it, reports about
+skill-discussing documents get blocked and rounds degrade to retries.
+```
+
+- [ ] **Step 2: Rewrite `skills/multi-code-review/SKILL.md` `## Guard Interaction`**
+
+Replace the section body with:
+
+```markdown
+Reviewer reports open with `<!-- multi-review report -->` —
+`hooks/subagent-guard.js` exempts a message from skill-leakage blocking when
+one of its first 10 non-blank lines starts with that marker (code reviews in
+this repository legitimately quote skill names), so a report with a sentence
+above its marker line is still exempt. Never remove the marker instruction
+from `reviewer-prompt.md`.
+```
+
+- [ ] **Step 3: Rewrite the accepted-residual-risk paragraph of `skills/researching-prior-art/SKILL.md`**
+
+Replace the first sentence of that paragraph — from "Accepted residual risk:" through "first line of their returns." — with the text below, keeping the paragraph's list indentation and leaving the rest of the paragraph ("This means the guard never inspects …") unchanged.
+
+```markdown
+   Accepted residual risk: `hooks/subagent-guard.js` exempts a message
+   from skill-leakage blocking when one of its first 10 non-blank lines
+   starts with the `<!-- research report -->` marker — the exemption is
+   not limited to a message that opens with it — and both the controller
+   and researcher prompt templates require that marker as the first line
+   of their returns.
+```
+
+- [ ] **Step 4: Rewrite `skills/researching-prior-art/SKILL.md` `## Guard interaction`**
+
+Replace the section body with:
+
+```markdown
+`hooks/subagent-guard.js` exempts a message from skill-leakage blocking when
+one of its first 10 non-blank lines starts with `<!-- research report -->` —
+research reports legitimately quote skill-like phrases found in external
+documentation. Never remove the marker instruction from `research-prompt.md`
+or `controller-prompt.md`; without it, reports get blocked and assignments
+degrade to evidence gaps.
+```
+
+- [ ] **Step 5: Rewrite the orchestration bullet of `docs/FORK-IMPROVEMENTS.md`**
+
+Replace the bullet that begins "- Controllers dispatch their own nested workers" with:
+
+```markdown
+- Controllers dispatch their own nested workers (implementers, reviewers, fix subagents). `hooks/subagent-guard.js` records this sanctioned nesting and exempts a return from skill-leakage blocking when one of its first 10 non-blank lines starts with the `<!-- orchestration report -->` marker — free-text `BLOCKED` reasons may legitimately name skills, and a controller that writes a sentence above its marker still returns cleanly.
+```
+
+- [ ] **Step 6: Run the acceptance grep**
+
+Run: `grep -rn "opening with\|opens with" skills/ hooks/ docs/FORK-IMPROVEMENTS.md`
+Expected: exactly one hit remains, and it is unrelated to the guard exemption —
+`skills/multi-code-review/scripts/fill-prompt.js:247:// 'wx' opens with O_EXCL: a pre-existing file or symlink at that name makes`.
+No hit may name or describe `hooks/subagent-guard.js`. If any of the seven rewritten passages still matches, fix that passage before continuing.
+
+- [ ] **Step 7: Run every fast suite**
+
+Run: `bash tests/codex/run-unit-tests.sh && bash tests/smart-compress/run-tests.sh && bash tests/reviewer-templates/run-tests.sh && bash tests/writing-plans/run-tests.sh && bash tests/in-run-rulings/run-tests.sh && bash tests/fill-prompt/run-tests.sh && bash tests/orchestrating-development/run-tests.sh && bash tests/measure-context/run-tests.sh`
+Expected: PASS — every suite exits 0; `tests/codex/run-unit-tests.sh` ends with `All unit tests passed.` and `tests/orchestrating-development/run-tests.sh` and `tests/in-run-rulings/run-tests.sh` each end with `Results: <n> passed, 0 failed`.
+
+- [ ] **Step 8: Commit**
+
+```bash
+git add skills/multi-doc-review/SKILL.md skills/multi-code-review/SKILL.md skills/researching-prior-art/SKILL.md docs/FORK-IMPROVEMENTS.md
+git commit -m "docs(skills): state the widened guard exemption in the five remaining passages" --trailer "Session: marker-position-tolerance" --trailer "Stage: task 4/4"
+```
