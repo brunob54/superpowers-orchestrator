@@ -399,7 +399,7 @@ git commit -m "fix(hooks): exempt a report marker within the first 10 non-blank 
    - Verification: run the suite against the unedited skill file and see the window assertion and the cap assertion fail (Step 2 below).
    - These fragments are a self-pin: this task writes both the bullet and the assertions, so a later fix may amend them together as one ordinary fix (`skills/writing-plans/SKILL.md`, Contracts and Literal Bodies, rule 5).
 
-- [ ] **Step 1: Write failing test**
+- [x] **Step 1: Write failing test**
 
 In `tests/orchestrating-development/run-tests.sh`, add the three fragment constants next to the other wording contracts, just below the `VALUE_WITHHELD_OLD_FORM` line:
 
@@ -426,12 +426,12 @@ assert_folded_contains "dispatch rules: the return contract says exceeding the 1
   "$DISPATCH_RANGE" "$RETURN_CAP_NOT_MALFORMED"
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `bash tests/orchestrating-development/run-tests.sh`
 Expected: FAIL — `FAIL: dispatch rules: the return contract states the 10-non-blank-line window (missing: among the **first 10 non-blank lines**)` and `FAIL: dispatch rules: the return contract says exceeding the 15-line cap is not malformed (missing: a longer report is **not** malformed)`, and a non-zero exit. The marker assertion passes already, because the current bullet spells the marker; the window and cap assertions fail until Step 3.
 
-- [ ] **Step 3: Implement minimal change**
+- [x] **Step 3: Implement minimal change**
 
 In `skills/orchestrating-development/SKILL.md`, replace the whole `**Return contract:**` bullet (the last bullet of `## Controller Dispatch Rules (apply to every phase)`, currently beginning "first line exactly `<!-- orchestration report -->` (guard exemption)") with:
 
@@ -460,12 +460,12 @@ In `skills/orchestrating-development/SKILL.md`, replace the whole `**Return cont
   `inconclusive controller: <phase/batch>`.
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `bash tests/orchestrating-development/run-tests.sh`
 Expected: PASS — all three `1b` assertions report `PASS`, and the run ends with `Results: <n> passed, 0 failed`, exit 0.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add skills/orchestrating-development/SKILL.md tests/orchestrating-development/run-tests.sh
