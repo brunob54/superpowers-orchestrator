@@ -197,3 +197,36 @@ Effective HEAD had moved (the `_Completed` line above was written without its HE
 - [I3] fixed — the Error Handling value-file row, the "four rows below" paragraph, the Procedure fatal-rule paragraph and the Critical/Important fix bullet state the one sanctioned alteration (each line protect-secrets names replaced by its file:line plus "secret-bearing finding, value withheld", Write retried once, id and severity kept; a second refusal is `BLOCKED: value file <name> refused twice by protect-secrets`); every other value-file failure stays fatal; tests/reviewer-templates section 10 asserts `value withheld` in the Error Handling range → 9de4fbe (round 4 item)
 
 _Invocation 3 — 2026-09-06 — N=2 M=2 — BASE..HEAD b9b9ffb..9de4fbe — branch feature/prompt-pointer-dispatch — gate: orchestration_
+
+## Round 5 — Correctness & spec alignment — fable
+**Reviewers:** M=2, usable 2/2
+**Reviewer verdicts:** r1: 0 Critical, 1 Important, 1 Minor | r2: 0 Critical, 2 Important, 4 Minor
+**Sources mapped:** 8/8
+**Reviewer verdict:** 0 Critical, 2 Important, 4 Minor
+**Converged:** no
+### Dispositions
+- [I1] fixed — the fix-failure bullet ran a bare `git status --porcelain` and restored every modified file, so in pipeline mode it would remove the untracked round-1 log or revert the log, the fix-report file or a pre-existing change; it now uses the Working-tree precondition's form (Pipeline rule 2 pathspec), restores only the files the failed attempt changed, and never the log, the fix-report file or a change that existed when the loop started → 9aac7f6 ← 2/2: r1:I1, r2:I2, r2:M1
+- [I2] user-decision — the secrets-refusal rule (Critical/Important bullet and Error Handling) replaces 'each line the hook's message names', but hooks/safety/protect-secrets.js names no line: its refusal reason is 'Hardcoded <kind> detected in content' for the first matching pattern only, so the rule withholds nothing as written and the retried Write is refused again; the same wording stands in the amended Global Constraints and in the spec (plan-mandated) — at skills/multi-code-review/SKILL.md:749 — clause: Global Constraints "One sanctioned alteration of value text: when `hooks/safety/protect-secrets.js` refuses a value-file Write, each line the hook's message names is replaced by it" ← 1/2: r2:I1
+- [M1] fixed — a fill-prompt.js comment claimed the real-template tests cover the untagged column-0 fence residue, but last_body_line() derives the expected line with the same rule the script uses; the comment now says the residue is not covered → 9aac7f6 ← 1/2: r1:M1
+- [M2] fixed — an inline value moved to a value file (a single quote, a leading @) had no name in the file-name table; a row round-<i>-<name>.txt with the cycle and addendum forms is added and the two rules point at it → 9aac7f6 ← 1/2: r2:M2
+- [M3] carried — the withheld-line replacement reads two ways (whole line, or description only) and the resulting line form is stated nowhere; tied to the open [I2] item ← 1/2: r2:M3
+- [M4] carried — the Procedure's 'Before round 1' paragraph repeats the mktemp -d failure rule and the owes-a-round-entry paragraph that Error Handling also carries; two copies to edit together ← 1/2: r2:M4
+- Carried findings from `.superpowers/sdd/progress.md` (18 `Minor:` lines, the same ledger as Invocations 1 and 2), decided from the two reviewers' recommendations:
+- [M5] carried — fill-prompt.js writeAtomic: a body of only whole-line placeholders with empty values writes a 1-byte file and exits 0 (unreachable with the real templates)
+- [M6] carried — fill-prompt.js writeAtomic catch unlinked a temporary path this process may not have created (already fixed in Invocation 1, 2ade665)
+- [M7] carried — fill-prompt.js end-of-line detection is whole-file; the comment does not say so
+- [M8] carried — tests/fill-prompt section 5: the 'missing @file exits 5' case lacked the assert_absent check (already fixed in Invocation 1, 2ade665)
+- [M9] carried — tests/fill-prompt section 6b: the CR-count assertion passed vacuously on a missing file (already fixed in Invocation 1, 2ade665)
+- [M10] carried — fill-prompt.js writeAtomic: flag 'wx' and the random temp-name component are pinned by no test
+- [M11] carried — tests/fill-prompt section 6b: the two hardening templates are built by duplicated printf lines
+- [M12] carried — fix-prompt.md model field: the corrected fix-subagent model wording is pinned by no assertion in reviewer-templates section 9
+- [M13] carried — tests/reviewer-templates: assert_file_not_contains is defined in Task 2 and first used in Task 3 section 10
+- [M14] carried — tests/reviewer-templates section 9: no direct assertion for 'no three-backtick line in the body' or 'no bracketed uppercase token other than the six placeholders'
+- [M15] carried — tests/reviewer-templates section 9: the nothing-else sentence assertion is file-scoped, not legend-scoped
+- [M16] carried — tests/reviewer-templates first_line_of: grep stderr leaks when the template is missing
+- [M17] carried — fix-prompt.md: an empty FAILURE_BLOCK leaves two consecutive blank lines before '## Procedure' (cosmetic)
+- [M18] carried — tests/reviewer-templates section 10: the Procedure range also spans Lens Rotation (plan-mandated end marker)
+- [M19] carried — SKILL.md Critical/Important bullet: the fix-dispatch description and 'the fix-subagent model of Parameters' are pinned by no section-10 needle
+- [M20] carried — SKILL.md step 2 sub-step 2: 'every value except LENS_INSTRUCTIONS and a non-empty CARRIED_BLOCK is inline' (already reworded to 'inline by default' in Invocation 2, 15efd82)
+- [M21] rejected: plan governs (orchestrator decision) — "The prompt directory is created once per invocation with `mktemp -d`, outside the checkout, before round 1 (a controller that runs a second invocation, or resum" — Task 3 security review residual M3 (verification-cycle reviewer prompt beside its round's fix prompt in one flat directory), decided as [M19] of Invocation 1 (ruling 2) and [M25] of Invocation 2; one reviewer recommended user-decision, one ship-as-is (a lone user-decision under M=2 would land at fix-before-merge), and a layout change would contradict the once-per-invocation, never-cleaned-up directory
+- [M22] carried — Task 4 produced no commit: CLAUDE.md is gitignored (.gitignore:7), so the branch history holds no record of the Testing-block edit beyond the plan tick and ruling 1 (traceability note only)

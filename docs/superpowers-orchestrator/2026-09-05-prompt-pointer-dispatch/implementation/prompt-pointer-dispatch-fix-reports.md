@@ -414,3 +414,52 @@ Results: 101 passed, 0 failed
 $ bash tests/sdd-scripts/run-tests.sh
 Results: 193 passed, 0 failed
 ```
+
+## Round 5
+
+### Findings addressed
+
+- **[I1]** `skills/multi-code-review/SKILL.md` — the "Fix subagent fails or
+  its covering tests fail" bullet no longer says the status output must be
+  empty. It now runs `git status --porcelain` in the same form as the
+  Working-tree precondition (in pipeline mode with the pathspec of Pipeline
+  rule 2, so the topic's implementation folder is excluded) and checks that it
+  shows nothing beyond the changes that existed when the loop started. The
+  restore is restricted to the files the failed attempt changed (the files its
+  final message lists as changed, or the files the findings name when it lists
+  none), and the bullet states that the review log, the fix-report file, and
+  any change that existed when the loop started are never restored and never
+  removed. "never `git clean`" and the tracked/untracked split
+  (`git checkout -- <path>` / `rm -- <path>`) are kept.
+- **[M1]** `skills/multi-code-review/scripts/fill-prompt.js` — the comment on
+  the uncovered residue no longer claims the real-template fill tests cover
+  it. It now says the tests do not cover it, because they derive the expected
+  last body line with the same rule the script uses, so both sides would agree
+  on a truncated body and the check would pass. Comment only; no behaviour
+  change and no test change.
+- **[M2]** `skills/multi-code-review/SKILL.md` — the file-name table gained a
+  row for an inline value moved to a value file, naming it
+  `round-<i>-<name>.txt` with `<name>` the placeholder name in lower case, and
+  `round-<i>-cycle-<c>-<name>.txt` / `addendum-<k>-<name>.txt` for a
+  verification-cycle or post-loop addendum dispatch. The two rules that move a
+  value to a file now point at that row.
+
+### Commands and output
+
+```
+$ bash tests/reviewer-templates/run-tests.sh
+Results: 60 passed, 0 failed
+
+$ bash tests/in-run-rulings/run-tests.sh
+Results: 496 passed, 0 failed
+
+$ bash tests/fill-prompt/run-tests.sh
+Results: 101 passed, 0 failed
+
+$ bash tests/sdd-scripts/run-tests.sh
+Results: 193 passed, 0 failed
+
+$ git commit -m "review fixes (prompt-pointer-dispatch, round 5)" -- skills/multi-code-review/SKILL.md skills/multi-code-review/scripts/fill-prompt.js
+[feature/prompt-pointer-dispatch 9aac7f6] review fixes (prompt-pointer-dispatch, round 5)
+ 2 files changed, 20 insertions(+), 11 deletions(-)
+```
