@@ -416,3 +416,6 @@ _Invocation 5 — 2026-09-06 — N=1 M=1 — BASE..HEAD b9b9ffb..ed633d8 — bra
 - [M2] carried — the Procedure's fatal cause `BLOCKED: prompt directory path lost from the controller's context` (decided behaviour: round 8 verification 2 [I3], plan governs) has no matching Error Handling row and is absent from the Procedure's own "The fatal failures are:" list, unlike every other BLOCKED cause
 - [M3] rejected: duplicate of round 8 verification 3 [M1] (carried; the aws-secret-key and generic-api-key patterns match `\s*` across several line breaks, so content refused as a whole but by no single line and no pair ends BLOCKED on the second refusal — visible, nothing leaks — and the "at most one line break" sentence is not exact)
 - [M4] carried — the Error Handling row shows `unresolved: withheld finding, no credential at the location` without the `— at <file:line> — clause: none` suffix that the "Self-sufficient open-item lines" rule makes mandatory on every `unresolved:` line, while the other new `unresolved:` form in the same section spells the suffix out
+
+_Completed — 2026-09-06 — cap reached — HEAD 705963dd4a3f9545b69bc15e9fa41ec9affa6a3c_
+Secrets found: none
