@@ -423,11 +423,12 @@ and 5 are conditional; each states its own condition.
    changes — no user review step stands between the write and the
    commit.
 
-   Accepted residual risk: `hooks/subagent-guard.js` exempts any
-   message opening with the `<!-- research report -->` marker from
-   skill-leakage blocking, and both the controller and researcher
-   prompt templates require that marker as the first line of their
-   returns. This means the guard never inspects the output of the
+   Accepted residual risk: `hooks/subagent-guard.js` exempts a message
+   from skill-leakage blocking when one of its first 10 non-blank lines
+   starts with the `<!-- research report -->` marker — the marker does
+   not have to be the message's first line — and both the controller and
+   researcher prompt templates require that marker as the first line of
+   their returns. This means the guard never inspects the output of the
    agents in this skill that consume the most untrusted external
    content (fetched pages, registry metadata, cloned repository
    files). Accepted as a trade-off: the marker is required precisely
@@ -608,9 +609,9 @@ and 5 are conditional; each states its own condition.
 
 ## Guard interaction
 
-`hooks/subagent-guard.js` exempts messages opening with
-`<!-- research report -->` from skill-leakage blocking — research
-reports legitimately quote skill-like phrases found in external
-documentation. Never remove the marker instruction from
-`research-prompt.md` or `controller-prompt.md`; without it, reports
-get blocked and assignments degrade to evidence gaps.
+`hooks/subagent-guard.js` exempts a message from skill-leakage blocking when
+one of its first 10 non-blank lines starts with `<!-- research report -->` —
+research reports legitimately quote skill-like phrases found in external
+documentation. Never remove the marker instruction from `research-prompt.md`
+or `controller-prompt.md`; without it, reports get blocked and assignments
+degrade to evidence gaps.

@@ -499,8 +499,9 @@ invocation note (which carries `M=` like every other); failed rounds get
 
 ## Guard Interaction
 
-`hooks/subagent-guard.js` exempts messages opening with
-`<!-- multi-review report -->` from skill-leakage blocking — reviewer reports
-legitimately quote skill names. Never remove the marker instruction from
-`reviewer-prompt.md`; without it, reports about skill-discussing documents
-get blocked and rounds degrade to retries.
+`hooks/subagent-guard.js` exempts a message from skill-leakage blocking when
+one of its first 10 non-blank lines starts with `<!-- multi-review report -->`
+— reviewer reports legitimately quote skill names. A report that carries a
+sentence above its marker line is therefore still exempt. Never remove the
+marker instruction from `reviewer-prompt.md`; without it, reports about
+skill-discussing documents get blocked and rounds degrade to retries.

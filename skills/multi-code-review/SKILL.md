@@ -1857,7 +1857,8 @@ completed invocation only on explicit user request.
 ## Guard Interaction
 
 Reviewer reports open with `<!-- multi-review report -->` —
-`hooks/subagent-guard.js` exempts messages opening with that marker from
-skill-leakage blocking (code reviews in this repository legitimately
-quote skill names). Never remove the marker instruction from
-`reviewer-prompt.md`.
+`hooks/subagent-guard.js` exempts a message from skill-leakage blocking when
+one of its first 10 non-blank lines starts with that marker (code reviews in
+this repository legitimately quote skill names), so a report with a sentence
+above its marker line is still exempt. Never remove the marker instruction
+from `reviewer-prompt.md`.
