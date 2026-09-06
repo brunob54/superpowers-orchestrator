@@ -592,13 +592,16 @@ code has been revised since, so a re-pass is meaningful):
    reports. u = 0 → write the round entry in the `inconclusive` form
    (never clean; nothing is triaged), then read the M final messages and
    decide which of the two u = 0 cases this is. When at least one final
-   message shows that its reviewer could not read its prompt file, or
-   read it and did not follow it, the pointer mechanism failed: stop and
+   message shows that its reviewer could not read its prompt file — a tool
+   error on the Read of the prompt file itself, the file missing or
+   permission refused — or read it and did not follow it, the pointer
+   mechanism failed: stop and
    return `BLOCKED: no reviewer of round <i> could use its prompt file —
    <each reviewer's final message, one line each>`; a round in which a
    reviewer could not use its prompt file never lets the loop continue.
    When every final message instead shows an environment death — a usage
-   limit, a tool error, or no final message at all — nothing about the
+   limit, a tool error anywhere other than on that Read, or no final
+   message at all — nothing about the
    prompt file failed: the round stays `inconclusive` and the loop
    continues to the next round, as it did before pointer dispatch.
    u ≥ 1 → build one
@@ -913,19 +916,20 @@ code has been revised since, so a re-pass is meaningful):
      dispositions, without a source annotation.
    - **Fix subagent fails or its covering tests fail:** re-dispatch once
      with the failure appended. Before that re-dispatch — and before
-     continuing after a second failure — run `git status --porcelain` in the
-     same form as the Working-tree precondition (in pipeline mode with the
-     pathspec of Pipeline rule 2, so the topic's implementation folder is
-     excluded) and check that it shows nothing beyond the changes that
-     existed when the loop started. Restore only the files the failed attempt
-     changed — the files its final message lists as changed, or, when it
-     listed none, the files the findings name — to their committed content by
-     explicit path (`git checkout -- <path>`, or `git restore <path>`) first,
-     so the next attempt starts from the tree the loop started on. That
+     continuing after a second failure — do two steps, in this order.
+     **First, restore**, so the next attempt starts from the tree the loop
+     started on: the files the failed attempt changed — the files its final
+     message lists as changed, or, when it listed none, the files the
+     findings name — are each unstaged and restored to the committed content
+     by explicit path (`git checkout HEAD -- <path>`, or
+     `git restore --source=HEAD --staged --worktree -- <path>`). The plain
+     `git checkout -- <path>` form restores from the index, not from the
+     committed content, so it would leave in place an edit the attempt had
+     already staged before it died. That
      restore applies only to files that were clean when the loop started:
      a file that already carried an uncommitted change then — a path of
      the `pre-existing uncommitted changes at loop start:` line the fix
-     dispatch carries — is never restored, because `git checkout --` would
+     dispatch carries — is never restored, because the restore would
      discard the user's own work along with the attempt's. Such a file is
      left as the attempt left it, and the failure text of the
      re-dispatch says so: `these files still hold the failed attempt's
@@ -934,7 +938,18 @@ code has been revised since, so a re-pass is meaningful):
      git does not track is removed by explicit path (`rm -- <path>`), never
      with `git clean`. The review log, the fix-report file, and any change
      that existed when the loop started are never restored and never
-     removed. Write `<PROMPT_DIR>/round-<i>-failure.txt`
+     removed. **Second, check:** run `git status --porcelain` in the
+     same form as the Working-tree precondition (in pipeline mode with the
+     pathspec of Pipeline rule 2, so the topic's implementation folder is
+     excluded) and check that it shows nothing beyond the changes that
+     existed when the loop started. A path the check still shows is disposed
+     of by what it was at loop start — a fix subagent that died without a
+     final message may have edited files the findings do not name: a tracked
+     path that was clean at loop start is unstaged and restored by explicit
+     path with the command above; an untracked path that did not exist at
+     loop start is removed by explicit `rm -- <path>`; never `git clean`.
+     Name each such path in the failure text of the re-dispatch.
+     Write `<PROMPT_DIR>/round-<i>-failure.txt`
      under the value-file rule — its first line is the heading
      `## Previous attempt failed`, the remaining lines are the failure
      text. A failing test can quote a credential, so this Write can be
@@ -1608,12 +1623,15 @@ completed invocation only on explicit user request.
   consolidate the usable reports, log `usable <u>/<m>` and `r<j>: unusable`,
   triage normally; the round is never clean.
 - All reviewers unusable after retries (u = 0), with at least one final
-  message showing that its reviewer could not read its prompt file or did
+  message showing that its reviewer could not read its prompt file — a tool
+  error on the Read of the prompt file itself, the file missing or
+  permission refused — or did
   not follow it → `inconclusive` round entry, then `BLOCKED: no reviewer
   of round <i> could use its prompt file — <each reviewer's final
   message, one line each>`; the loop does not continue.
 - All reviewers unusable after retries (u = 0), with every final message
-  showing an environment death instead — a usage limit, a tool error, or
+  showing an environment death instead — a usage limit, a tool error
+  anywhere other than on the Read of the prompt file, or
   no final message at all → not a failure of the pointer mechanism: the
   `inconclusive` round entry is written and the loop continues to the
   next round, as it did before pointer dispatch.

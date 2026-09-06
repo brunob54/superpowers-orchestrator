@@ -61,9 +61,10 @@ Agent tool (general-purpose):
 
     [FINDINGS]
 
-    A `## Previous attempt failed` section below holds the failed
-    attempt's output; a line in it reading only `secret-bearing finding,
-    value withheld` is text the secrets hook omitted, not a finding.
+    If a `## Previous attempt failed` section appears below, it holds the
+    failed attempt's output; a line in it reading only `secret-bearing
+    finding, value withheld` is text the secrets hook omitted, not a
+    finding. On a first dispatch that section is absent.
 
     [FAILURE_BLOCK]
 
@@ -73,11 +74,14 @@ Agent tool (general-purpose):
        change that resolves it.
     2. Then re-run the covering tests — the tests that exercise the
        files you changed — and keep the exact command and its output.
-       If the covering tests fail, do not stage or commit; restore
-       every file you changed to its committed content, each by
-       explicit path (`git checkout -- <path>` or
-       `git restore <path>`), never `git checkout .` and never the
-       fix-report file. One exception: a file named on the
+       If the covering tests fail, do not stage or commit; unstage and
+       restore every file you changed to the committed content, each by
+       explicit path (`git checkout HEAD -- <path>` or
+       `git restore --source=HEAD --staged --worktree -- <path>`), never
+       `git checkout .` and never the
+       fix-report file. The plain `git checkout -- <path>` form restores
+       from the index, not from the committed content, so it would leave
+       a staged edit in place. One exception: a file named on the
        `pre-existing uncommitted changes at loop start:` line above
        already carried the user's own uncommitted change before this
        loop began, so restoring it would discard that work — leave such
