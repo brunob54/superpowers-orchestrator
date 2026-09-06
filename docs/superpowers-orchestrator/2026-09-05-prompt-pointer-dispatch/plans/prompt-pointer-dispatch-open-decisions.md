@@ -75,6 +75,8 @@ Ruling record of orchestrating-development's in-run rulings for this run.
 - **Defensible answers:** (a) the controller runs the hook itself on each line of the value file (`node hooks/safety/protect-secrets.js` with a synthetic Write payload per line) and withholds the value of every line the hook refuses — precise, deterministic, one extra command per line of a refused file. (b) the controller withholds the description of every finding line in the refused file that came from the Security lens, keeping id, severity and file:line — cheap, no per-line probing, loses the descriptions of the other Security findings of that round. (c) withhold every description in the refused file — crudest.
 - **Forks:** none; contradiction: none
 - **Resolution:** escalated — spec wrong: the clause is the user's decided wording (ruling 6 Follow-up, spec Amendment 2); guard 4 sends the mechanics of the user's own decision back to the user.
+- **Follow-up:** amend plan: when protect-secrets.js refuses a value-file Write, the controller runs the hook itself on each line of that file with a synthetic Write payload and withholds the value of every line the hook refuses, then retries the Write once (Global Constraints amended by ruling 8; Task 3 Contract; spec Amendment 3); fix it: SKILL.md Error Handling and the fix bullet state the per-line probe — clause: Global Constraints "One sanctioned alteration of value text: when `hooks/safety/protect-secrets.js` refuses a value-file Write, each line the hook's message names is replaced by it"
+
 
 ## Ruling 9 — 2026-09-06 — phase 4 — [I2] (round 6) the u = 0 fatal rule also stops on transient reviewer failures
 
@@ -84,6 +86,8 @@ Ruling record of orchestrating-development's in-run rulings for this run.
 - **Defensible answers:** (a) plan governs — any all-unusable round stops; a rate-limit kill of both reviewers (Case 009: 21 of 187 reviewer transcripts ended that way in the previous run) becomes a BLOCKED stop instead of an inconclusive round. (b) amend — u = 0 is fatal only when at least one reviewer's final message shows it could not read or did not follow its prompt file; a round whose final messages show environment deaths (usage limit, tool error, no message) stays `inconclusive` as today, because the pointer mechanism did not fail.
 - **Forks:** none; contradiction: none
 - **Resolution:** escalated — spec wrong: the clause is the user's decided wording (ruling 4 Follow-up, spec Amendment 1).
+- **Follow-up:** amend plan: u = 0 is fatal only when at least one reviewer's final message shows it could not read or did not follow its prompt file; a round whose final messages all show an environment death (usage limit, tool error, no message) is logged inconclusive as today (Global Constraints amended by ruling 8; Task 3 Contract; spec Amendment 3); fix it: SKILL.md step 3 and Error Handling state the distinction — clause: Global Constraints "Every failure of the mechanism (`mktemp -d` or `cygpath`, the script, `test -s`, Node missing, a value-file write that fails or that `hooks/safety/protect-secre"
+
 
 ## Ruling 10 — 2026-09-06 — phase 4 — [I4] (round 6) a controller's own fill-command slip is fatal although nothing was written
 
@@ -93,3 +97,4 @@ Ruling record of orchestrating-development's in-run rulings for this run.
 - **Defensible answers:** (a) plan governs — a slip stops the run; the BLOCKED text carries the script's message, the human resumes. (b) amend — when the script exits 1, 3 or 4, or 5 naming an @file the controller never wrote, the controller corrects its own command once and runs it again; a second non-zero exit is fatal; exit 2 (malformed template) and exit 5 on a file it did write stay fatal at once.
 - **Forks:** none; contradiction: none
 - **Resolution:** escalated — spec wrong: same decided wording as ruling 9.
+- **Follow-up:** amend plan: when the script exits 1, 3 or 4, or exits 5 naming an @file the controller never wrote, the controller corrects its own command once and runs it again; a second non-zero exit is fatal; exit 2 and exit 5 on a written file are fatal at once (Global Constraints amended by ruling 8; Task 3 Contract; spec Amendment 3); fix it: SKILL.md step 2, the fix bullet and Error Handling state it — clause: Global Constraints "Every failure of the mechanism (`mktemp -d` or `cygpath`, the script, `test -s`, Node missing, a value-file write that fails or that `hooks/safety/protect-secre"
