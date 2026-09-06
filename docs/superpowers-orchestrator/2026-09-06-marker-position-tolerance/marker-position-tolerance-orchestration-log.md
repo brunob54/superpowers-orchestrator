@@ -26,3 +26,13 @@ confirmed the file state. This is a FOURTH recorded occurrence of worklist
 row 9 — produced by the very run that fixes it, and by a controller dispatched
 from the installed 7.11.0 plugin, whose templates still demand the strict
 first line.
+
+## Phase 3 — Batch 2 (task 4) — COMPLETE — commits bf7290f..bf36332
+- Task 4: complete — the five remaining guard passages and the acceptance run
+
+note: this controller's return also carried narration before the marker line
+(`Task 4 is complete: implemented, reviewed clean …`). Accepted on the same
+grounds as batch 1. A FIFTH recorded occurrence of worklist row 9, and the
+second inside this run: two of the two batch controllers dispatched here did
+it, which is a stronger base rate than the three earlier occurrences alone
+suggested.
