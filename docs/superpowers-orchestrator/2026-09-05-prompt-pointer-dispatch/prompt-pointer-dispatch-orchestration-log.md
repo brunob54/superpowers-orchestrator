@@ -72,3 +72,16 @@ Open: [I4] escalated (spec wrong) — round 6: a controller's own fill-command s
 Owed probe: - [I3] rejected: harness probe not runnable here — in a controller session holding a `mktemp -d` path, run `/compact` and check whether the summary still carries the literal path — (tool missing) — a prompt-directory path lost to a context compaction ends the loop with BLOCKED under the once-per-invocation constraint (round 3 [M1]); the suggested second `mktemp -d` contradicts that constraint, and no tool of this controller triggers a compaction ← 1/2: r1:I3
 Owed probe: - [M6] rejected: harness probe not runnable here — from a subagent running in the orchestrator's normal permission mode, Write one file under a fresh `mktemp -d` path and observe whether a permission prompt appears — (ambiguous observation) — a value-file Write outside the working directories may raise a permission prompt in a non-bypass session; this session runs in bypass mode, so no observation here can match or contradict the claim ← 1/2: r2:M3
 Resume: Resume orchestration for docs/superpowers-orchestrator/2026-09-05-prompt-pointer-dispatch/plans/prompt-pointer-dispatch.md
+
+_Invocation 2 — 2026-09-06 — N_code=1 M=1 — resumed_
+
+## RULING 11 — 2026-09-06 — phase 4 — invocation 4: five items ruled under the user's delegation (no questions until Phase 5)
+Items: [I1] forced — amend plan: per-line secrets probe is one Write tool call, no hook path (amended by ruling 11); fix it: Error Handling and fix bullet
+Items: [I2] forced — amend plan: format-only unusable report is not a pointer failure, round logged inconclusive (amended by ruling 11); fix it: step 3 and Error Handling
+Items: [I4] forced — amend plan: write-once applies from the first pointer dispatch; before it, rm -- <file> and re-fill (amended by ruling 11); fix it: step 2
+Items: [I6] forced — amend plan: same as [I1]; fix it: same as [I1]
+Items: [I3] forced — fix it: rules before the variable blocks in fix-prompt.md; failure text capped at the last 150 lines with an omitted-lines note
+Detail: docs/superpowers-orchestrator/2026-09-05-prompt-pointer-dispatch/plans/prompt-pointer-dispatch-open-decisions.md
+Forks: none
+Re-dispatch: phase 4, in-run resume 1 of 3
+
