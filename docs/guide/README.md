@@ -638,7 +638,13 @@ spec (`scope`), need an irreversible or outward-facing action
 (`irreversible`), concern an exposed credential (`secret`), or when the
 same phase has already been re-dispatched three times on rulings
 (`chain`). A Critical is never rejected by a ruling, and a decision you
-made earlier in the run is never overturned by one.
+made earlier in the run is never overturned by one. Since v7.11.0 that
+second guarantee holds whichever line of the ruling record carries your
+answer: an `amend plan` answer you gave to an escalated item is appended
+as a `**Follow-up:**` line, and the clause it amends keeps its
+decided-wording authority just as if it stood on the `**Resolution:**`
+line. Before v7.11.0 only the Resolution line was read, so a finding
+against a clause you had amended could be dropped as ordinary text.
 
 A Phase 3 or Phase 4 stop entry therefore lists two kinds of items: each
 escalated item on an `Open:` line with its reason — these are the ones
@@ -708,7 +714,11 @@ reviewed together with the task's completion, never blindly trusted.
 If a stop recorded a blocking question, answer it in the resume prompt;
 resume with an unanswered blocker just presents the question and stops again.
 A Phase 3 or Phase 4 stop lists the items to answer on its `Open:` lines,
-by id; answer those and only those. The `Ruled:` lines are decisions the
+by id; answer those and only those. Two open items of one review
+invocation can carry the same id (`[I1]`), because ids restart in every
+round: when that happens, begin your answer with a short parenthesis
+naming the round it is for — `(this answers the round 4 item on …)` — so
+it is applied to the right finding. The `Ruled:` lines are decisions the
 orchestrator already made and recorded — resume carries them forward as
 they are. If you disagree with one, answer that id yourself in the resume
 prompt: the run then reverts that ruling, and the change made under it,

@@ -1555,8 +1555,16 @@ reference text —
 the clause it stands on carries no decided-wording authority and the
 finding against it is triaged by the ordinary rules. **An entry for `<n>`
 is not enough on its own — it must have been granted for this clause**:
-the entry backs the marker only when its `**Resolution:**` line begins
-`amend plan` — no other resolution ever places a marker — and, for such
+the entry backs the marker when its `**Resolution:**` line begins
+`amend plan`, or when the answer on its `**Follow-up:**` line begins
+`amend plan`. Both forms are needed because the ruling record is
+appended, never rewritten: a user's own `amend plan` answer is appended
+as a `**Follow-up:**` line (above) and never written into the Resolution
+line, so an entry the USER amended keeps `escalated — <reason>` on its
+Resolution line and carries its authority on the Follow-up line. A test
+that reads the Resolution line alone therefore reads a clause the user
+decided as reference text — the exact case this guard exists to protect.
+No other resolution and no other follow-up ever places a marker. For such
 an entry, the grant is confirmed by plan location, never by comparing
 quoted text: the amendment procedure ("Plan amendment", below) inserts
 the block quote `**Amendment <n> (orchestrator ruling):**` immediately
@@ -1568,7 +1576,9 @@ clause:**` text is never compared for this check: the fixed write order
 holds the clause's pre-amendment wording, and a text-prefix test against
 the post-amendment clause would fail for the very entries this guard
 exists to pass. (An entry whose `**Resolution:**` does not begin `amend
-plan` never legitimately backs a marker; if one is nonetheless found on a
+plan`, and which carries no `**Follow-up:**` line whose answer begins
+`amend plan` either, never legitimately backs a marker; if one is
+nonetheless found on a
 clause, its `**Contract clause:**` text is compared to that clause under
 the prefix rule stated below in "The quoted clause, and how it is
 compared" — a mismatch, the expected outcome, confirms the marker is
@@ -1671,6 +1681,27 @@ current entry. When two `Ruled:` lines carry the same bare id from
 different invocations, an unqualified answer never resolves the
 ambiguity by picking one — it is presented back to the user instead, who
 names the invocation the answer is for.
+
+**Two open items of ONE invocation can carry one id: the answer names its
+round in prose.** The `inv <i>` qualifier separates invocations, not
+rounds, and inside a single `_Invocation` entry the ids restart at `[C1]`,
+`[I1]` in every round and in every verification cycle. One entry can
+therefore hold two open items with the same bare id — a round 4
+`user-decision` item and a verification-cycle `unresolved` item, both
+`[I1]` — and the qualified id `[I1 inv 2]` does not tell them apart.
+Every `Ruled:` line and every answer line for such an item opens its
+answer text with a parenthesis naming the round the item came from:
+
+```
+Ruled: [I1 inv 2] forced — fix it: (this answers the round 4 user-decision
+item on lens-file reuse) <the answer>
+```
+
+The controller then matches the answer to the finding by that sentence,
+not by the id alone. Write the parenthesis whenever the stop carries more
+than one item with the same bare id; writing it always is never wrong.
+This is a rule about the answer text, so it costs nothing and needs no
+change to how findings are numbered.
 
 Phase 4 answers:
 

@@ -37,6 +37,13 @@ Agent tool (general-purpose):
       was delivered nor that the recipient exists. Never take it as
       confirmation of anything; confirm through the file the subagent
       writes.
+    - Never read the output file of a background command whole. Read its
+      end instead — `tail -n 50 <path>`, raising the count only when 50
+      lines do not hold the verdict — and grep it when you need a detail:
+      `grep -n 'FAIL\|Error' <path> | head -n 20`. A test-suite log can
+      exceed 100 KB, and one whole read of it costs more of your context
+      than every prompt you were given (measured: a single 125 KB read
+      was the largest item in a controller's window).
 
     ## Procedure
 

@@ -1074,8 +1074,17 @@ code has been revised since, so a re-pass is meaningful):
    with that number, compared as a whole number, so ruling 1 is not
    matched by a `## Ruling 10` heading. An entry for `<n>` is not enough on
    its own — it must have been granted for this clause: the entry backs
-   the marker only when its `**Resolution:**` line begins `amend plan` —
-   no other resolution ever places a marker — and, for such an entry, the
+   the marker when its `**Resolution:**` line begins `amend plan`, or when
+   the answer on its `**Follow-up:**` line begins `amend plan`. Both forms
+   are needed because the ruling record is appended, never rewritten: a
+   user's own `amend plan` answer is appended to the entry as a
+   `**Follow-up:**` line and never written into the Resolution line, so an
+   entry the USER amended keeps `escalated — <reason>` on its Resolution
+   line and carries its authority on the Follow-up line. A test that reads
+   the Resolution line alone therefore reads a clause the user decided as
+   reference text — the exact case this guard exists to protect. No other
+   resolution and no other follow-up ever places a marker. For such an
+   entry, the
    grant is confirmed by plan location, never by comparing quoted text:
    the amendment procedure inserts the block quote `**Amendment <n>
    (orchestrator ruling):**` immediately after the block holding the
@@ -1086,7 +1095,9 @@ code has been revised since, so a re-pass is meaningful):
    amendment (fixed write order), so it holds the clause's pre-amendment
    wording, and a text-prefix test against the post-amendment clause would
    fail for the very entries this guard exists to pass. (An entry whose
-   `**Resolution:**` does not begin `amend plan` never legitimately backs
+   `**Resolution:**` does not begin `amend plan`, and which carries no
+   `**Follow-up:**` line whose answer begins `amend plan` either, never
+   legitimately backs
    a marker; if one is nonetheless found on a clause, its `**Contract
    clause:**` text is compared to that clause under the prefix rule the
    orchestrator states under "The quoted clause, and how it is compared"
