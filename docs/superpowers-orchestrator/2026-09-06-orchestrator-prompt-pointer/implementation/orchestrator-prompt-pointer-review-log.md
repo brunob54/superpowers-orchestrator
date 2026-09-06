@@ -122,3 +122,15 @@ _Invocation 2 — 2026-09-06 — N=2 M=2 — BASE..HEAD 582763a..a54f2b2 — bra
 - [M4] fixed — the counter-recovery ls was the one prescribed command with an unquoted path; now ls "<PROMPT_DIR>" → 245d1ba ← 1/2: r2:M1
 - [M5] fixed — the prompt-directory cause text had no error text for a path printed under the repository root; that case now names its text in Phase 0 and in the fatal row → 245d1ba ← 1/2: r2:M3
 - [M6] carried — the Phase 3 fill block shows 'RESUME_ANSWER=' while the steady state after a ruling is the @ form; the empty form was chosen in invocation 1 round 1 [CF13] to match Phases 1 and 4, and the prose under the block states when the @ form replaces it ← 1/2: r2:M4
+
+## Round 4 verification 1 — Adversarial red-team — fable
+**Reviewers:** M=2, usable 2/2
+**Reviewer verdicts:** r1: 0 Critical, 1 Important, 3 Minor | r2: 0 Critical, 0 Important, 3 Minor
+**Sources mapped:** 7/7
+**Reviewer verdict:** 0 Critical, 1 Important, 4 Minor
+### Dispositions
+- [I1] fixed — the round-4 rm-and-refill row still ended "as is the first on a name whose pointer was already dispatched" while its handling column recovered exactly that case by ls; the row now applies on any name and the ls result decides, and the fatal row keeps only a second file-already-exists on the same name after the renumbering → 634e7b7 ← 1/2: r1:I1
+- [M1] fixed — test -s cannot tell a missing value file from a missing directory; the two cannot-read rows now key on ls "<PROMPT_DIR>" alone, and test -s stays only in the fatal row's present-but-unreadable case → 634e7b7 ← 2/2: r1:M1, r2:M2
+- [M2] carried — an inline value holding a single quote breaks the single-quoted NAME= form, and bash's own exit 2 could be read as the script's exit 2; the Global Constraints fix the inline single-quoted form, so an escape, a value-file route or a shell-error slip row is a later decision (carried in invocation 1 round 2 [M4] and round 4 [M1]) ← 2/2: r1:M3, r2:M1
+- [M3] fixed — a plain ls listing over 50 entries is compressed alphabetically and can drop the largest dispatch-<k> name; the counter recovery and both counter-slip rows now use ls -1 | sort -t- -k2,2n | tail -n 1 → 634e7b7 ← 1/2: r1:M2
+- [M4] carried — "every non-blank line below its fixed sentence" in the code-review-loop and batch-controller templates has no upper bound at the next ## heading; a literal reader could take the Deviations heading as an answer line ← 1/2: r2:M3

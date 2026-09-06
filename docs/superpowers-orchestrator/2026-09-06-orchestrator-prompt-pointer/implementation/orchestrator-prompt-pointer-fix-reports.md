@@ -101,3 +101,18 @@ Output (tail):
 
 [1mResults: 147 passed, 0 failed[0m
 ```
+
+## Round 4
+
+Findings addressed: I1, M1, M3.
+File: `skills/orchestrating-development/SKILL.md`.
+
+Command: `bash tests/orchestrating-development/run-tests.sh`
+Output (tail):
+```
+[0;32m  PASS: in-run rulings: contains 'test -s'[0m
+[0;32m  PASS: in-run rulings: contains 'with the Write tool to `<PROMPT_DIR>/dispatch-<k>-answers.txt`'[0m
+[0;32m  PASS: in-run rulings: contains '`'RESUME_ANSWER=@<PROMPT_DIR>/dispatch-<k>-answers.txt'`'[0m
+
+[1mResults: 147 passed, 0 failed[0m
+```
