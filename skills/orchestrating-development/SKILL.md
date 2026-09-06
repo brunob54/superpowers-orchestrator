@@ -2172,14 +2172,18 @@ outcome. When no single line is refused, probe each pair of consecutive
 lines the same way — one Write holding the two lines joined by one
 newline, under the next `<n>` — and withhold both lines of a refused
 pair: a pattern spans at most one line break, so pairs are enough.
-Replace every withheld line by a line that keeps its id and its tag and
-carries the location instead of the value:
-`[<id>] (<tag>): <file:line> — secret-bearing finding, value withheld`
-— the location-only form your own "Never reproduce a secret" rule
-already imposes on every answer — and retry the Write once; a second
-refusal is fatal (table above). Apart from that one replacement, never
-alter answer text to pass a hook, and never retry the Write through a
-Bash command to get around a refusal.
+Replace every withheld line by a line that keeps its id, its tag and
+the ruling verb and non-secret answer text up to the quoted value, and
+carries the location after it instead of the value, in exactly this
+form:
+`[<id>] (<tag>): <verb and its text up to the quoted value> — <file:line> — secret-bearing finding, value withheld`
+— your own "Never reproduce a secret" rule imposes the location-only
+treatment on the value, not on the decision, so the ruling verb (fix
+it / plan governs / amend plan / accept) stays in the line and the
+controller still receives an actionable decision — and retry the
+Write once; a second refusal is fatal (table above). Apart from that
+one replacement, never alter answer text to pass a hook, and never
+retry the Write through a Bash command to get around a refusal.
 
 ## Guard Interaction
 

@@ -45,7 +45,9 @@ NEVER_REWRITTEN='written once and never rewritten'
 SAME_POINTER='the same pointer to the same file'
 NEVER_FAILED_FILE='never dispatch a pointer to a file that failed the check'
 NO_FALLBACK='no inline fallback'
-VALUE_WITHHELD='value withheld'
+VALUE_WITHHELD='`[<id>] (<tag>): <verb and its text up to the quoted value> — <file:line> — secret-bearing finding, value withheld`'
+# The withheld-line form before the verb-keeping amendment; must be absent.
+VALUE_WITHHELD_OLD_FORM='`[<id>] (<tag>): <file:line> — secret-bearing finding, value withheld`'
 NO_HEREDOC='never with a heredoc'
 PASTE='paste'
 FILL_DOT='Fill `./'
@@ -226,6 +228,7 @@ for needle in "${CAUSES[@]}" "${NOT_MECHANISM_ROWS[@]}" "$VALUE_WITHHELD" "$NEVE
               'dispatch-<k>-probe-<n>.txt' 'Never withhold a line on this outcome'; do
   assert_folded_contains "stop policy: contains '$needle'" "$MAJOR_RANGE" "$needle"
 done
+assert_file_not_contains "stop policy: withheld-line form keeps the ruling verb (no pre-amendment location-only form)" "$MAJOR_RANGE" "$VALUE_WITHHELD_OLD_FORM"
 # The mirrored secrets-hook rule stands alone: it must send the reader to no
 # other skill's file for the hook rule. Scoped to the probe rule's own
 # paragraphs — from its bold opening to the end of the section — so that a
