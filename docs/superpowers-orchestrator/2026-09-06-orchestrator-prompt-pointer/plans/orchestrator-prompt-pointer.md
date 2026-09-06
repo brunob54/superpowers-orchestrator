@@ -13,7 +13,7 @@
 **Tech Stack:** Markdown skill text; Bash test suites (pure bash, grep, awk, cmp; no `claude` invocation; Git Bash compatible: no `/dev/stdin`, no process substitution); Node >= 16 for the fill script (Node 24 is installed locally).
 
 **Assumptions:**
-- Assumes the fill-script cross-check (spec, Testing strategy item 1, "the two sets must be equal") compares each fill command's `NAME=` set with the placeholders of the template's **body** — will NOT hold as written for the batch template if the comparison includes the wrapper, because the spec itself says `BATCH_NUMBER` (wrapper-only) is not passed; the test therefore also fails when a command names a placeholder outside the body (the script would exit 4 or write nothing for it).
+- Assumes the fill-script cross-check (spec, Testing strategy item 1, "the two sets must be equal") compares each fill command's `NAME=` set with the placeholders of the template's **body** — will NOT hold as written for the batch template if the comparison includes the wrapper, because the spec itself says `BATCH_NUMBER` (wrapper-only) is not passed; the test therefore also fails when a command names a placeholder outside the body (the script accepts a wrapper-only name but writes nothing for it, so only the set comparison catches the drift). The spec's phrase "body and wrapper" (Testing strategy item 1) is superseded by this body-only comparison, which the spec's own batch fill command already implies; this is a spec amendment to record, not a silent deviation.
 - Assumes the orchestrator's new text must not contain the token "paste" in any case, because the spec's wording test forbids that token anywhere in the orchestrator's text; the property the spec words as "never pastes a prompt" is written as "never copy a prompt body into an Agent call" — will NOT satisfy a reviewer who reads the spec's phrase as literal prose to be inserted.
 - Assumes that on a resume the session's prompt directory is created at whichever Resume step first fills a prompt (step 3's re-dispatch, or step 4's "continue at the first incomplete phase"), because the spec's principle is one directory per session before the first fill — will NOT work if a resumed run that continues at step 4 has no directory, so step 4 must state it too.
 - Assumes the `## STOPPED` cause text is the heading's `<one-line reason>` (the entry's first line), as today's `inconclusive controller: <phase/batch>` is — will NOT match a reader who expects a separate `Cause:` line below the heading.
@@ -144,7 +144,7 @@ assert_absent "code-review-loop template: M=1 writes nothing" "$WORK/code-loop-m
 - [ ] **Step 2: Run the test to verify it fails**
 
 Run: `bash tests/fill-prompt/run-tests.sh 2>&1 | tail -20`
-Expected: FAIL — `doc-review-loop template: M_REVIEWERS=2 exits 0 (expected '0', got '4')` and `code-review-loop template: M_REVIEWERS=1 exits 0 (expected '0', got '4')` among the failures (the script exits 4 because `M_REVIEWERS` names no placeholder yet); `Results: 102 passed, <n> failed` with `<n>` ≥ 2 (the M filled, no-`[M]`, and checklist assertions fail too because no file was written).
+Expected: FAIL — `doc-review-loop template: M_REVIEWERS=2 exits 0 (expected '0', got '4')` and `code-review-loop template: M_REVIEWERS=1 exits 0 (expected '0', got '4')` among the failures (the script exits 4 because `M_REVIEWERS` names no placeholder yet); `Results: 111 passed, 5 failed` (102 + 14 assertions; the five that fail are the two `exits 0`, the two `M filled into the parameter line` and the checklist-line assertion, because no file was written; the nine others pass: `M=<n>` is already a usage error today, since the script's name pattern needs two letters, and the no-residual-placeholder and no-`[M]` checks pass on the missing file, since `grep` finds nothing in it).
 
 - [ ] **Step 3: Rename the placeholder**
 
@@ -297,7 +297,7 @@ assert_eq "code-review-loop template: empty RESUME_ANSWER exits 0" "$STATUS" "0"
 code_loop_fill "$WORK/cl-two.md" 'M_REVIEWERS=1' "RESUME_ANSWER=@$WORK/two-answers.txt"
 assert_eq "code-review-loop template: two-line answer file exits 0" "$STATUS" "0"
 check_resume_section "code-review-loop template" "$WORK/cl-empty.md" "$WORK/cl-two.md" "$CODE_LOOP_TEMPLATE"
-assert_file_contains "code-review-loop template: Deviation 2 keys BLOCKED on the absence of an answer line" "$WORK/cl-empty.md" 'holds no'
+assert_file_contains "code-review-loop template: Deviation 2 keys BLOCKED on the absence of an answer line" "$WORK/cl-empty.md" '`## Resume Answer` holds no'
 ```
 
 In `tests/in-run-rulings/run-tests.sh`, insert immediately before the line that begins `BATCH_RA_LINE="$(line_containing_after "$BATCH_PROMPT"` (it follows the code-review-loop Deviation 5 checks, whose `LOOP_DEV5_LINE` and `LOOP_RETURN_LINE` anchors the new checks reuse):
@@ -327,7 +327,7 @@ assert_in_range_folded "code-review-loop Deviation 5 defines an answer line as a
 - [ ] **Step 2: Run the tests to verify they fail**
 
 Run: `bash tests/fill-prompt/run-tests.sh 2>&1 | grep -E 'FAIL|Results'; bash tests/in-run-rulings/run-tests.sh 2>&1 | grep -E 'FAIL|Results'`
-Expected: FAIL — fill-prompt reports `plan-writer template: empty value keeps the Resume Answer heading (no line exactly: ## Resume Answer)`, `… keeps the fixed sentence …`, `… the first answer line sits directly below the fixed sentence …` for both templates, and `Results: 116 passed, <n> failed`; in-run-rulings reports the three positive Deviation 2/5 checks as FAIL (`not inside range …`) and `code-review-loop Deviation 2 no longer keys on the section being present (still present in range …)`, `Results: 496 passed, 4 failed`.
+Expected: FAIL — fill-prompt reports, for both templates, `… empty value keeps the Resume Answer heading (no line exactly: ## Resume Answer)`, `… empty value leaves no omit parenthetical …`, `… empty value keeps the fixed sentence …` and `… the first answer line sits directly below the fixed sentence …`, plus `code-review-loop template: Deviation 2 keys BLOCKED on the absence of an answer line …`, and `Results: 131 passed, 9 failed` (116 + 24 assertions; the fifteen others pass on the old templates: an empty `RESUME_ANSWER=` already exits 0, the placeholder is already a whole-line one, and the line-below helper returns empty when the fixed sentence is absent); in-run-rulings reports the three positive Deviation 2/5 checks as FAIL (`not inside range …`) and `code-review-loop Deviation 2 no longer keys on the section being present (still present in range …)`, `Results: 496 passed, 4 failed`.
 
 - [ ] **Step 3: Rewrite the two templates**
 
@@ -584,7 +584,10 @@ with
 # heading carries no omit condition, and one fixed sentence of the body says
 # what an empty section means (orchestrator-prompt-pointer design, "Template
 # changes" item 2).
-assert_in_range "batch-controller Resume Answer heading is present" \
+# `exact` mode is a per-line substring match in this suite, so this line
+# also matches the old parenthesized heading; the negative assertion below
+# it is the one that rejects the parenthetical.
+assert_in_range "batch-controller Resume Answer heading line exists" \
   "$BATCH_PROMPT" '    ## Resume Answer' 1 "$BATCH_RA_LINE" exact
 assert_absent_in_range_folded "batch-controller Resume Answer heading no longer states an omit condition" \
   "$BATCH_PROMPT" '## Resume Answer (omit' 1 "$BATCH_RA_LINE" exact
@@ -676,7 +679,7 @@ git commit -m "feat(orchestrator): Resume Answer section present on every dispat
 
 **Security flag:** `none`
 
-**Does NOT cover:** Phase 0 step 9 and the per-phase fill commands (Task 5); the Resume and In-run rulings value-file text (Task 6). The wording suite's sections 7 and 8 for those parts are added by those tasks.
+**Does NOT cover:** Phase 0 step 9 and the per-phase fill commands (Task 5); the Resume and In-run rulings value-file text (Task 6). The wording suite's sections 7 and 8 for those parts are added by those tasks. The dispatch-rules bullet written here cites "Phase 0 step 9"; that step exists only after Task 5 lands, which is accepted for the one commit in between.
 
 **Contract:**
 - Wording artifact: the "Prompt files and the pointer" bullet and the rewritten "Build the prompt" bullet of Controller Dispatch Rules
@@ -692,7 +695,7 @@ git commit -m "feat(orchestrator): Resume Answer section present on every dispat
   - Verification: section 4 of the suite.
 - Code artifact: `tests/orchestrating-development/run-tests.sh`
   - Inputs: the orchestrator's text and the four templates; output: PASS/FAIL lines, exit 0 only when every check passes.
-  - Invariants: pure bash + grep/awk, no `/dev/stdin`, no process substitution, temp files under `mktemp -d` removed on exit; ranges located by whole-line heading matches so that a prose mention of a heading cannot retarget a range; the suite fails on the pre-change orchestrator text.
+  - Invariants: pure bash + grep/awk, no `/dev/stdin`, no process substitution, temp files under `mktemp -d` removed on exit; ranges located by whole-line heading matches so that a prose mention of a heading cannot retarget a range; prose fragments are matched on a folded copy of their range (lines trimmed and joined with one space), so that wrapping the orchestrator's text across a line break never fails a check, while whole-line needles (list lines, template wrapper lines, the fixed sentence) are matched unfolded; the suite fails on the pre-change orchestrator text.
   - Verification: the runs of Steps 2 and 4.
 - Test-block entry in `CLAUDE.md`: on-disk only; verification `git status --porcelain CLAUDE.md` prints nothing (the file is ignored) and `git ls-files --error-unmatch CLAUDE.md` fails.
 
@@ -736,6 +739,7 @@ H_TEMPLATES='## Prompt Templates'
 
 # Wording contracts. Each is one fixed string.
 POINTER_PREFIX='Your complete instructions are in the file'
+POINTER_FIRST='Your complete instructions are in the file <ABSOLUTE PATH>.'
 POINTER_READ='Read that file once, with the Read tool, before doing anything else, and follow it as your only instructions.'
 POINTER_ONLY='Nothing else in that directory is for you; do not read any other file there.'
 PROMPT_DIR_VARIABLE='$PROMPT_DIR'
@@ -817,6 +821,17 @@ assert_file_not_contains_i() { # desc file needle (case-insensitive)
 assert_file_has_line() { # desc file exact-line (whole-line match, fixed string)
   if grep -qxF -- "$3" "$2"; then ok "$1"; else bad "$1 (no line exactly: $3)"; fi
 }
+# Join the lines of file $1 into one line — each line trimmed of leading and
+# trailing blanks, lines separated by one space — so that a prose fragment
+# that the text wraps across a line break still matches as one fixed
+# string. Whole-line needles never go through this; they use
+# assert_file_has_line on the unfolded file.
+fold_file() { # file
+  awk '{ line = $0; sub(/^[ \t]+/, "", line); sub(/[ \t]+$/, "", line); if (NR > 1) printf " "; printf "%s", line } END { print "" }' "$1"
+}
+assert_folded_contains() { # desc file needle (fixed string, matched across line breaks)
+  if fold_file "$2" | grep -qF -- "$3"; then ok "$1"; else bad "$1 (missing: $3)"; fi
+}
 assert_eq() { # desc actual expected
   if [ "$2" = "$3" ]; then ok "$1"; else bad "$1 (expected '$3', got '$2')"; fi
 }
@@ -875,7 +890,14 @@ bold "1. Controller Dispatch Rules: the prompt directory, the fill, the check, t
 for needle in "$MKTEMP" "$FILL_SCRIPT" "$TEST_S" "$POINTER_PREFIX" "$POINTER_READ" "$POINTER_ONLY" \
               "$NEVER_READS" "$NEVER_REWRITTEN" "$SAME_POINTER" "$NEVER_FAILED_FILE" \
               'cygpath -m' 'never held in a variable' 'the pointer only' "${FILE_NAMES[@]}"; do
-  assert_file_contains "dispatch rules: contains '$needle'" "$DISPATCH_RANGE" "$needle"
+  assert_folded_contains "dispatch rules: contains '$needle'" "$DISPATCH_RANGE" "$needle"
+done
+# Each pointer sentence stands on one physical line. The dispatch-rules
+# text indents them inside a list item, so the indentation is trimmed
+# before the whole-line match.
+sed 's/^[[:space:]]*//; s/[[:space:]]*$//' "$DISPATCH_RANGE" > "$WORK/dispatch-trimmed.txt"
+for s in "$POINTER_FIRST" "$POINTER_READ" "$POINTER_ONLY"; do
+  assert_file_has_line "dispatch rules: pointer sentence on one physical line: '$s'" "$WORK/dispatch-trimmed.txt" "$s"
 done
 
 bold "2. Negative needles over the whole orchestrator text"
@@ -889,12 +911,12 @@ bold "3. Major-Error Stop Policy: every failure of the mechanism is fatal, with 
 for needle in "${CAUSES[@]}" "${NOT_MECHANISM_ROWS[@]}" "$VALUE_WITHHELD" "$NEVER_FAILED_FILE" \
               "$NO_FALLBACK" "$SAME_POINTER" "$NO_HEREDOC" 'hooks/safety/protect-secrets.js' \
               'dispatch-<k>-probe-<n>.txt' 'Never withhold a line on this outcome'; do
-  assert_file_contains "stop policy: contains '$needle'" "$MAJOR_RANGE" "$needle"
+  assert_folded_contains "stop policy: contains '$needle'" "$MAJOR_RANGE" "$needle"
 done
 
 bold "4. Prompt Templates: filled by the script, never read"
-assert_file_contains "prompt templates: names the fill script" "$TEMPLATES_RANGE" "$FILL_SCRIPT"
-assert_file_contains "prompt templates: never read by the orchestrator" "$TEMPLATES_RANGE" 'never read by the orchestrator'
+assert_folded_contains "prompt templates: names the fill script" "$TEMPLATES_RANGE" "$FILL_SCRIPT"
+assert_folded_contains "prompt templates: never read by the orchestrator" "$TEMPLATES_RANGE" 'never read by the orchestrator'
 for t in "${TEMPLATES[@]}"; do
   assert_file_has_line "prompt templates: lists ./$t" "$TEMPLATES_RANGE" "- \`./$t\`"
 done
@@ -906,7 +928,9 @@ for t in "${TEMPLATES[@]}"; do
   assert_file_has_line "$t: Agent tool wrapper line" "$f" "$AGENT_LINE"
   assert_file_contains "$t: name line starts with orch-" "$f" "$NAME_PREFIX"
   assert_file_has_line "$t: prompt: | line" "$f" "$PROMPT_OPEN"
-  assert_file_has_line "$t: nothing-else line" "$f" "$NOTHING_ELSE"
+  # A substring check, not a whole line: plan-writer-prompt.md continues the
+  # sentence on the same line, and that line stays byte-identical.
+  assert_file_contains "$t: nothing-else line" "$f" "$NOTHING_ELSE"
   single="$(grep -cE -- "$SINGLE_LETTER_ERE" "$f" | tr -d ' ')"
   if [ "$t" = "doc-review-loop-prompt.md" ]; then
     assert_eq "$t: exactly one line with a single-letter bracket token (the checklist marker)" "$single" "1"
@@ -1072,7 +1096,7 @@ Failures OF the mechanism (fatal):
 | `mktemp -d` fails, prints a path under the repository root, or `cygpath` fails where the path must be converted | `prompt directory could not be created — <error text>`. Nothing is dispatched. |
 | The fill script exits 2 (malformed template); or exits 5 with `cannot read` on an `@<file>` you did write, with `cannot write <out>: existing path could not be read`, or with `cannot write <out>: file already exists` (a dispatched name reused with different content); or exits non-zero a second time after a corrected command; or `test -s` fails on the prompt file | `prompt file <name> not produced — <the script's message, or "empty">`; never dispatch a pointer to a file that failed the check. |
 | Node is missing | Treated as the script failing (row above). |
-| A value-file Write fails for a reason other than the secrets hook — a permission denial, a tool error, a refusal by another hook — or a probe Write of the rule below is refused for such a reason | `value file <name> could not be written — <the error>` (for a probe: the refusal or error text, first line). |
+| A value-file Write fails for a reason other than the secrets hook — a permission denial, a tool error, a refusal by another hook — or a probe Write of the rule below is refused for such a reason | `value file <name> could not be written — <the error>` (`<name>` is always the value file's name, `dispatch-<k>-answers.txt`; for a probe, the error text is the refusal or error text, first line, and names the probe file). |
 | A value-file Write is refused by `hooks/safety/protect-secrets.js` twice | `value file <name> refused twice by protect-secrets — <the hook's reason>`. The secrets-hook probe below runs between the two attempts. |
 | A controller's final message shows it could not read, or did not follow, its prompt file — after the one identical retry of the Controller Dispatch Rules | `prompt file <name> not read by <controller name> — <the first line of each of the two final messages>`. The sign: the final message says it could not read, find or open the file, or it carries neither the report marker nor any of these tokens: the plan path, the topic folder path, the orchestration or review log path, `tasks=`, `task=`, `rounds=` — no sign of the prompt file's content. A message carrying at least one of them, without the marker, is a malformed return (table below). |
 
@@ -1207,7 +1231,7 @@ git commit -m "feat(orchestrator): prompt files and the pointer in the dispatch 
   - Must convey: `mktemp -d` under the Controller Dispatch Rules after the parameters are settled and before the Phase 1 dispatch; a failure is a major error with the cause `prompt directory could not be created — <error text>`, nothing dispatched; `<k>` starts at 1.
   - Verification: wording suite section 7 (`mktemp -d` and the cause fragment in the Phase 0 range).
 - Wording artifact: the fill-and-dispatch text of Phases 1, 2, 3 (step 2) and 4
-  - Must convey: the fill command of the spec for that phase (as one command, every `NAME=` single-quoted, `<base>`, `<sdd>` and `<mcr>` explained, every path absolute); when the value file is written and when `RESUME_ANSWER=` is passed empty; `[BATCH_NUMBER]` not passed (the orchestrator fills `name` and `description` itself); `test -s` on the phase's file as its own command; "dispatch the pointer to that file"; the expected return unchanged.
+  - Must convey: the fill command of the spec for that phase (as one command, every `NAME=` single-quoted, `<base>` and `<sdd>` explained, the multi-code-review path spelled out as `<base>/../multi-code-review/...`, every path absolute); when the value file is written and when `RESUME_ANSWER=` is passed empty; `[BATCH_NUMBER]` not passed (the orchestrator fills `name` and `description` itself); `test -s` on the phase's file as its own command; "dispatch the pointer to that file"; the expected return unchanged.
   - Invariants: the four fenced blocks holding `fill-prompt.js` name `--template "<base>/<template>.md"` and exactly the `NAME=` set of that template's body placeholders (the cross-check); no line matching ``Fill `./`` between the Phase 1 and Phase 5 headings; the Phase 3 step 5 sentences `tests/in-run-rulings` pins stay verbatim ("the same batch — same task list, same `First batch:` value — is re-dispatched", "a controller failure (no such section) → retry the identical dispatch once → major error → stop", "Every batch dispatch, first or repeat, carries in `[RESUME_ANSWER]` the answer set"); step 2's phrase "the run-wide answer set that step 5 states, filled on every dispatch, first or repeat, whenever this run has recorded any answer" stays.
   - Verification: `bash tests/fill-prompt/run-tests.sh` section 13; wording suite section 7; `bash tests/in-run-rulings/run-tests.sh`.
 - Code artifact: section 13 of `tests/fill-prompt/run-tests.sh`
@@ -1272,16 +1296,16 @@ In `tests/orchestrating-development/run-tests.sh`, insert immediately before the
 
 ```bash
 bold "7. Phase 0 creates the prompt directory; Phases 1 to 4 fill, check and dispatch the pointer"
-assert_file_contains "phase 0: mktemp -d step" "$PHASE0_RANGE" "$MKTEMP"
-assert_file_contains "phase 0: names the creation-failure cause" "$PHASE0_RANGE" 'prompt directory could not be created'
+assert_folded_contains "phase 0: mktemp -d step" "$PHASE0_RANGE" "$MKTEMP"
+assert_folded_contains "phase 0: names the creation-failure cause" "$PHASE0_RANGE" 'prompt directory could not be created'
 for t in "${TEMPLATES[@]}"; do
-  assert_file_contains "phases: fill command names --template \"<base>/$t\"" "$PHASES_RANGE" "--template \"<base>/$t\""
+  assert_folded_contains "phases: fill command names --template \"<base>/$t\"" "$PHASES_RANGE" "--template \"<base>/$t\""
 done
 for name in 'dispatch-<k>-plan-writer.md' 'dispatch-<k>-plan-review.md' 'dispatch-<k>-batch-<n>.md' 'dispatch-<k>-code-review.md'; do
-  assert_file_contains "phases: test -s on $name" "$PHASES_RANGE" "test -s \"<PROMPT_DIR>/$name\""
+  assert_folded_contains "phases: test -s on $name" "$PHASES_RANGE" "test -s \"<PROMPT_DIR>/$name\""
 done
 assert_file_not_contains "phases: no template is filled by hand (no 'Fill \`./' line)" "$PHASES_RANGE" "$FILL_DOT"
-assert_file_contains "phases: BATCH_NUMBER is not passed to the script" "$PHASES_RANGE" 'is not passed'
+assert_folded_contains "phases: BATCH_NUMBER is not passed to the script" "$PHASES_RANGE" 'is not passed'
 POINTER_DISPATCHES="$(grep -cF -- 'dispatch the pointer' "$PHASES_RANGE" | tr -d ' ')"
 if [ "$POINTER_DISPATCHES" -ge 4 ]; then
   ok "phases: 'dispatch the pointer' appears $POINTER_DISPATCHES times (at least once per phase)"
@@ -1293,7 +1317,7 @@ fi
 - [ ] **Step 2: Run the tests to verify they fail**
 
 Run: `bash tests/fill-prompt/run-tests.sh 2>&1 | grep -E 'FAIL|Results'; bash tests/orchestrating-development/run-tests.sh 2>&1 | grep -E 'FAIL|Results'`
-Expected: FAIL — fill-prompt reports `the orchestrator holds one fill block per template (four) (expected '4', got '0')` and `each template is filled by exactly one block (expected '4', got '0')`, `Results: 159 passed, 2 failed`; the wording suite reports `phase 0: mktemp -d step (missing: mktemp -d)`, the four `--template` needles, the four `test -s` needles, `phases: no template is filled by hand … (must not contain: Fill `./)`, `phases: BATCH_NUMBER is not passed …` and the pointer count as FAIL.
+Expected: FAIL — fill-prompt reports `the orchestrator holds one fill block per template (four) (expected '4', got '0')` and `each template is filled by exactly one block (expected '4', got '0')`, `Results: 159 passed, 2 failed`; the wording suite reports `phase 0: mktemp -d step (missing: mktemp -d)`, `phase 0: names the creation-failure cause …`, the four `--template` needles, the four `test -s` needles, `phases: no template is filled by hand … (must not contain: Fill `./)`, `phases: BATCH_NUMBER is not passed …` and the pointer count as FAIL.
 
 - [ ] **Step 3: Write the phase text**
 
@@ -1505,12 +1529,12 @@ git commit -m "feat(orchestrator): Phase 0 creates the prompt directory and Phas
 
 **Contract:**
 - Wording artifact: Resume steps 3 and 4
-  - Must convey: a resumed session has no prompt directory, so the re-dispatch step creates it (`mktemp -d`) before its first fill and fills the stopped phase's prompt under `<k>` = 1 with the answer lines written to `<PROMPT_DIR>/dispatch-1-answers.txt`; step 4 creates it the same way before its first fill.
+  - Must convey: a resumed session has no prompt directory, so the re-dispatch step creates it (`mktemp -d`) before its first fill and fills the stopped phase's prompt under `<k>` = 1 with the answer lines written to `<PROMPT_DIR>/dispatch-1-answers.txt`; a re-dispatch that carries no answer line (the Phase 4 moved-HEAD and migrated-run paths) writes no value file and passes `RESUME_ANSWER=` empty, as the Global Constraints require of every phase; step 4 creates the directory the same way before its first fill.
   - Invariants: the sentence `re-dispatch the stopped phase's controller with that `[RESUME_ANSWER]` in the template's placeholder — the only channel for it` stays; the pinned tagging sentence `each tagged `(orchestrator)`, plus the resume prompt's answers, each tagged `(user)`` stays; no `### ` heading is added anywhere in `## Resume` or `## In-run rulings` (the in-run-rulings suite anchors sub-sections by the next `### ` line).
   - Verification: wording suite section 8; `bash tests/in-run-rulings/run-tests.sh`.
 - Wording artifact: the In-run rulings re-dispatch text
   - Must convey: the answer lines are the content of `<PROMPT_DIR>/dispatch-<k>-answers.txt`, written with the Write tool and never with a heredoc; the re-dispatch is a new fill under the next `<k>` with that file, `test -s`, then the pointer; a retry's "rebuilt" `[RESUME_ANSWER]` is a new fill from the same ruling-record entry, which produces the same content.
-  - Invariants: `re-dispatch the phase's controller with the answers in `[RESUME_ANSWER]` — the only channel`, `a retry rebuilds the identical `[RESUME_ANSWER]` from the ruling-record entry` and `A controller that answers an in-run resume with `BLOCKED: previous invocation left <n> open items …` did not receive the answers — a malformed dispatch: retry the identical dispatch once, then stop under the Major-Error Stop Policy` stay verbatim and contiguous.
+  - Invariants: `re-dispatch the phase's controller with the answers in `[RESUME_ANSWER]` — the only channel`, `a retry rebuilds the identical `[RESUME_ANSWER]` from the ruling-record entry` and `A controller that answers an in-run resume with `BLOCKED: previous invocation left <n> open items …` did not receive the answers — a malformed dispatch: retry the identical dispatch once, then stop under the Major-Error Stop Policy` each stay verbatim as one unbroken sentence (the in-run-rulings suite pins each as one folded fragment); other text may stand between them, and Step 3 places its new sentences between the first and the third.
   - Verification: wording suite section 8; `bash tests/in-run-rulings/run-tests.sh`.
 
 - [ ] **Step 1: Write the failing test**
@@ -1519,18 +1543,18 @@ In `tests/orchestrating-development/run-tests.sh`, insert immediately before the
 
 ```bash
 bold "8. Resume and In-run rulings: the answer lines go into a value file"
-for needle in "$MKTEMP" 'a resumed session has none' 'dispatch-1-answers.txt' '`<k>` = 1' 'the only channel for it'; do
-  assert_file_contains "resume: contains '$needle'" "$RESUME_RANGE" "$needle"
+for needle in "$MKTEMP" 'a resumed session has none' 'dispatch-1-answers.txt' '`<k>` = 1' 'the only channel for it' 'no answer line'; do
+  assert_folded_contains "resume: contains '$needle'" "$RESUME_RANGE" "$needle"
 done
 for needle in 'dispatch-<k>-answers.txt' "$NO_HEREDOC" 'the only channel' 'a new fill under the next `<k>`' "$TEST_S"; do
-  assert_file_contains "in-run rulings: contains '$needle'" "$INRUN_RANGE" "$needle"
+  assert_folded_contains "in-run rulings: contains '$needle'" "$INRUN_RANGE" "$needle"
 done
 ```
 
 - [ ] **Step 2: Run the test to verify it fails**
 
 Run: `bash tests/orchestrating-development/run-tests.sh 2>&1 | grep -E 'FAIL|Results'`
-Expected: FAIL — `resume: contains 'mktemp -d' (missing: mktemp -d)`, `resume: contains 'a resumed session has none' …`, `resume: contains 'dispatch-1-answers.txt' …`, `resume: contains '`<k>` = 1' …`, `in-run rulings: contains 'dispatch-<k>-answers.txt' …`, `in-run rulings: contains 'never with a heredoc' …`, `in-run rulings: contains 'a new fill under the next `<k>`' …`, `in-run rulings: contains 'test -s' …`; `Results: <p> passed, 8 failed`.
+Expected: FAIL — `resume: contains 'mktemp -d' (missing: mktemp -d)`, `resume: contains 'a resumed session has none' …`, `resume: contains 'dispatch-1-answers.txt' …`, `resume: contains '`<k>` = 1' …`, `resume: contains 'no answer line' …`, `in-run rulings: contains 'dispatch-<k>-answers.txt' …`, `in-run rulings: contains 'never with a heredoc' …`, `in-run rulings: contains 'a new fill under the next `<k>`' …`, `in-run rulings: contains 'test -s' …`; `Results: <p> passed, 9 failed`.
 
 - [ ] **Step 3: Write the Resume and In-run rulings text**
 
@@ -1551,7 +1575,11 @@ with
    fill, the counter `<k>` starting at 1 — write the answer lines with
    the Write tool to `<PROMPT_DIR>/dispatch-1-answers.txt`, fill the
    stopped phase's prompt under `<k>` = 1 with that phase's fill command
-   and `'RESUME_ANSWER=@<PROMPT_DIR>/dispatch-1-answers.txt'`, run its
+   and `'RESUME_ANSWER=@<PROMPT_DIR>/dispatch-1-answers.txt'` — when the
+   re-dispatch carries no answer line (for example a Phase 4 re-dispatch
+   on a moved effective HEAD without answers, or one for a migrated run
+   whose old log is absent, below), write no value file and pass
+   `'RESUME_ANSWER='`, as every phase does — run its
    `test -s`, and
    re-dispatch the stopped phase's controller with that `[RESUME_ANSWER]`
    in the template's placeholder — the only channel for it. Phases whose
