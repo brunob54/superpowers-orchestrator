@@ -73,7 +73,8 @@ this platform lacks` — and stop.
   restarts at 1. That is not a failure of the mechanism: every file is
   named by the counter, and a re-fill from the same values produces the
   same content, so an identical retry issued after the path was lost
-  re-fills the prompt under `<k>` = 1 there and is still the identical
+  re-fills the prompt under `<k>` = 1 there — writing the value file
+  again there first when the fill takes one — and is still the identical
   dispatch of the retry rule. Every prompt is written once into
   `<PROMPT_DIR>` by the fill script,
   `<base>/../multi-code-review/scripts/fill-prompt.js` (`<base>` is this
@@ -81,16 +82,22 @@ this platform lacks` — and stop.
   phase's fill command lists; you never read a template and never copy a
   prompt body into an Agent call. File names, all in `<PROMPT_DIR>`,
   where `<k>` counts the fills run into the current prompt directory
-  from 1 and is never reused inside it, and `<label>` names the
-  dispatch:
+  from 1 and is never reused inside it once a pointer to a file of that
+  fill has been dispatched, and `<label>` names the dispatch:
 
-  | Dispatch | Prompt file | Value file (only when the run has recorded answers) |
-  |---|---|---|
-  | Phase 1 plan writer | `dispatch-<k>-plan-writer.md` | `dispatch-<k>-answers.txt` |
-  | Phase 2 plan-review loop | `dispatch-<k>-plan-review.md` | — (the template has no `[RESUME_ANSWER]`) |
-  | Phase 3 batch `<n>` | `dispatch-<k>-batch-<n>.md` | `dispatch-<k>-answers.txt` |
-  | Phase 4 code-review loop | `dispatch-<k>-code-review.md` | `dispatch-<k>-answers.txt` |
-  | Secrets-hook probe of value file `<k>`, line `<n>` (Major-Error Stop Policy) | — | `dispatch-<k>-probe-<n>.txt`, one line, removed after the probe |
+  | Dispatch | Prompt file | Value file (only when the run has recorded answers) | Agent `description` |
+  |---|---|---|---|
+  | Phase 1 plan writer | `dispatch-<k>-plan-writer.md` | `dispatch-<k>-answers.txt` | `orchestration phase 1: plan writer` |
+  | Phase 2 plan-review loop | `dispatch-<k>-plan-review.md` | — (the template has no `[RESUME_ANSWER]`) | `orchestration phase 2: plan review loop` |
+  | Phase 3 batch `<n>` | `dispatch-<k>-batch-<n>.md` | `dispatch-<k>-answers.txt` | `orchestration phase 3: batch [BATCH_NUMBER] (tasks [TASK_LIST])` |
+  | Phase 4 code-review loop | `dispatch-<k>-code-review.md` | `dispatch-<k>-answers.txt` | `orchestration phase 4: code review loop` |
+  | Secrets-hook probe of value file `<k>`, line `<n>` (Major-Error Stop Policy) | — | `dispatch-<k>-probe-<n>.txt`, one line, removed after the probe | — (not a dispatch) |
+
+  The `description` column is the whole of the Agent call's
+  `description`, written as the column gives it; this table is its only
+  source, and you never read a template to obtain it. In the Phase 3 row
+  `[BATCH_NUMBER]` is the 1-based batch index `<n>` and `[TASK_LIST]` the
+  batch's task numbers, comma-separated — you fill both yourself.
 
   Keep `<k>` in your context; when unsure of the next value, run
   `ls <PROMPT_DIR>` (one short Bash result) and take the largest number
@@ -121,8 +128,9 @@ this platform lacks` — and stop.
   ```
 
   `<ABSOLUTE PATH>` is the prompt file's absolute path. The Agent call
-  keeps its `name` (blocking dispatch, above), its `description` and its
-  `model` as before.
+  keeps its `name` (blocking dispatch, above), its `description` (the
+  table above) and its `model` (the session model with the sonnet floor,
+  the first rule of this section).
 - Build the prompt file ONLY from the filled template — the fill command
   lists every value — and keep the `prompt` field the pointer only: never
   pass conversation history, prior phases' returns, or your own
@@ -334,7 +342,8 @@ one line, without an id or a tag — with the Write tool to
 `'RESUME_ANSWER=@<PROMPT_DIR>/dispatch-<k>-answers.txt'` instead. Then run
 `test -s "<PROMPT_DIR>/dispatch-<k>-plan-writer.md"` as its own command
 and dispatch the pointer to that file (`name: "orch-plan-writer"`, the
-template's `description`, the session model with the sonnet floor).
+`description` of the Controller Dispatch Rules' file-name table, the
+session model with the sonnet floor).
 Expected return: `PLAN_READY <path> tasks=<T>` or
 `BLOCKED: <question>` (spec ambiguity → major error → stop). On success:
 commit the plan (`docs(plan): <slug> implementation plan`), append and
@@ -390,22 +399,28 @@ Loop until every task is complete:
      'TASK_REVIEWER_PROMPT_PATH=<sdd>/task-reviewer-prompt.md' \
      'PLAN_PATH=<plan path>' 'TASK_LIST=<i>, <i+1>, <j>' 'TASK_RANGE=<i>..<j>' \
      'FIRST_BATCH=<yes|no>' \
-     'RESUME_ANSWER=@<PROMPT_DIR>/dispatch-<k>-answers.txt'
+     'RESUME_ANSWER='
    ```
 
    `<sdd>` is `<base>/../subagent-driven-development`; `<n>` is the
    1-based batch index; `FIRST_BATCH` is `yes` for the first batch of the
    run (SDD's Pre-Flight Plan Review) and `no` otherwise; `TASK_LIST` is
-   the selected task numbers, comma-separated. `[RESUME_ANSWER]` is the
+   the selected task numbers, comma-separated. `RESUME_ANSWER=` is empty,
+   as the block above shows it, when the run has recorded no answer —
+   write no value file then, the case of every first batch, where no
+   value file exists yet. `[RESUME_ANSWER]` is the
    run-wide answer set that step 5 states, filled on every dispatch,
    first or repeat, whenever this run has recorded any answer: write its
    lines with the Write tool to `<PROMPT_DIR>/dispatch-<k>-answers.txt`
    first (`## In-run rulings`, "The answers, and how a ruling reaches the
-   plan"); when the run has recorded no answer, write no value file and
-   pass `'RESUME_ANSWER='` (empty) instead. `[BATCH_NUMBER]` stands only
+   plan") and pass
+   `'RESUME_ANSWER=@<PROMPT_DIR>/dispatch-<k>-answers.txt'` instead of the
+   empty form. `[BATCH_NUMBER]` stands only
    in the template's wrapper and is not passed to the script: fill the
-   Agent call's `name` (`orch-batch-<n>`) and `description` yourself, as
-   before. Then run `test -s "<PROMPT_DIR>/dispatch-<k>-batch-<n>.md"` as
+   Agent call's `name` (`orch-batch-<n>`) and `description` yourself,
+   from the file-name table of the Controller Dispatch Rules ("Prompt
+   files and the pointer").
+   Then run `test -s "<PROMPT_DIR>/dispatch-<k>-batch-<n>.md"` as
    its own command and dispatch the pointer to that file.
 3. Expected return: `BATCH_COMPLETE tasks=<i>..<j>` + one
    `Task <n>: complete commits <base7>..<head7>` line per task, or
@@ -2048,6 +2063,12 @@ stop creates a fresh directory and re-fills; the resume prompt is the
 existing one. The boundary below — what is a failure of the mechanism
 and what is not — is the normative copy: a later review finding that
 refines a row inside it is a forced ruling for you, not an escalation.
+In every cause text below, a path under the prompt directory is written
+as `<PROMPT_DIR>/<file name>` — never the literal path — because the
+directory's own path appears in no log (Controller Dispatch Rules,
+"Prompt files and the pointer"): a cause text that interpolates the
+script's message, a tool's error text or a controller's first line
+carries that shortened form of every such path.
 
 Failures OF the mechanism (fatal):
 
@@ -2074,7 +2095,8 @@ NOT failures of the mechanism (today's paths, unchanged):
 |---|---|
 | A controller dies of the environment (usage limit, rate limit, tool error, no final message at all) | The identical retry once, then the major-error stop above (`inconclusive controller: <phase/batch>`), as the Controller Dispatch Rules say. The retry is the same pointer to the same file. |
 | A slip in your own fill command: the script exits 1 (usage), 3 (a placeholder without a value), 4 (a value naming no placeholder), 5 with `cannot read template` (a wrong `--template` path), or 5 naming an `@<file>` you never wrote | Correct the command once and run it again; a second non-zero exit is fatal (table above). |
-| The fill script exits 5 with `cannot write <out>: <error>` for any error text other than `file already exists` and `existing path could not be read` | The prompt directory is gone, unwritable, or the path in the command is wrong: treat it as a path lost from context — `mktemp -d` again and re-fill under `<k>` = 1 in the fresh directory. A second such exit in the fresh directory is fatal (table above): the temporary location itself is not writable. |
+| The fill script exits 5 with `cannot write <out>: file already exists` on a name whose pointer has NOT been dispatched — a value found wrong and corrected before the first dispatch | Remove the file (`rm -- "<file>"` as its own command) and fill it once more under the same name (Controller Dispatch Rules). A second `file already exists` on that same name is fatal (table above), as is the first on a name whose pointer was already dispatched. |
+| The fill script exits 5 with `cannot write <out>: <error>` for any error text other than `file already exists` and `existing path could not be read` | The prompt directory is gone, unwritable, or the path in the command is wrong: treat it as a path lost from context — `mktemp -d` again and re-fill under `<k>` = 1 in the fresh directory, writing the value file again there first when the fill takes one. A second such exit in the fresh directory is fatal (table above): the temporary location itself is not writable. |
 | A return unusable on format alone (the marker or a consumed field missing) whose text shows the controller worked on the run | Malformed return: the identical retry once, then the major-error stop above. Not a pointer failure. |
 | The prompt directory's path is lost from your context | `mktemp -d` again and continue (Controller Dispatch Rules). |
 | A controller reads another file in the directory | Cannot be prevented by wording alone; the directory holds only this session's prompt and value files, and the pointer forbids it. Accepted. |

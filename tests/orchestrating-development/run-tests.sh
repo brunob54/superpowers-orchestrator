@@ -89,6 +89,8 @@ PLACEHOLDER_LINE='    [RESUME_ANSWER]'
 M_TOKEN='[M]'
 SINGLE_LETTER_ERE='\[[A-Z]\]'
 CHECKLIST_LINE='       `- [X] unresolved: <reason> — <finding summary>`.'
+# The first line of the mirrored secrets-hook rule inside the stop policy.
+PROBE_OPENING='**The secrets-hook probe.**'
 
 PASS=0
 FAIL=0
@@ -193,6 +195,23 @@ sed 's/^[[:space:]]*//; s/[[:space:]]*$//' "$DISPATCH_RANGE" > "$WORK/dispatch-t
 for s in "$POINTER_FIRST" "$POINTER_READ" "$POINTER_ONLY"; do
   assert_file_has_line "dispatch rules: pointer sentence on one physical line: '$s'" "$WORK/dispatch-trimmed.txt" "$s"
 done
+# Contract 1 invariant: the Agent call keeps its `name`, its `description`
+# and its `model`.
+for needle in 'The Agent call keeps its `name`' 'its `description` (the table above)' \
+              'its `model` (the session model with the sonnet floor'; do
+  assert_folded_contains "dispatch rules: the Agent call keeps '$needle'" "$DISPATCH_RANGE" "$needle"
+done
+# The file-name table is the orchestrator's own source of the four
+# `description` strings — it never reads a template to obtain them — so each
+# string must match the template's wrapper line exactly.
+for t in "${TEMPLATES[@]}"; do
+  desc="$(sed -n 's/^[[:space:]]*description: "\(.*\)"[[:space:]]*$/\1/p' "$ORCH_DIR/$t" | head -n 1)"
+  if [ -z "$desc" ]; then
+    bad "dispatch rules: $t carries no description line to compare"
+  else
+    assert_folded_contains "dispatch rules: the table gives $t's description '$desc'" "$DISPATCH_RANGE" "$desc"
+  fi
+done
 
 bold "2. Negative needles over the whole orchestrator text"
 assert_file_not_contains "orchestrator never holds the prompt directory in a shell variable" "$ORCH_SKILL" "$PROMPT_DIR_VARIABLE"
@@ -207,6 +226,22 @@ for needle in "${CAUSES[@]}" "${NOT_MECHANISM_ROWS[@]}" "$VALUE_WITHHELD" "$NEVE
               'dispatch-<k>-probe-<n>.txt' 'Never withhold a line on this outcome'; do
   assert_folded_contains "stop policy: contains '$needle'" "$MAJOR_RANGE" "$needle"
 done
+# The mirrored secrets-hook rule stands alone: it must send the reader to no
+# other skill's file for the hook rule. Scoped to the probe rule's own
+# paragraphs — from its bold opening to the end of the section — so that a
+# legitimate mention of multi-code-review elsewhere in the section does not
+# fail the check.
+PROBE_RANGE="$WORK/probe.txt"
+PROBE_START="$(grep -nF -- "$PROBE_OPENING" "$MAJOR_RANGE" | head -n 1 | cut -d: -f1)"
+if [ -n "$PROBE_START" ]; then
+  awk -v s="$PROBE_START" 'NR >= s' "$MAJOR_RANGE" > "$PROBE_RANGE"
+  ok "stop policy: secrets-hook probe rule located ($PROBE_START..end of section)"
+else
+  : > "$PROBE_RANGE"
+  bad "stop policy: the secrets-hook probe rule opening '$PROBE_OPENING' was not found"
+fi
+assert_file_not_contains "stop policy: the secrets-hook rule names no multi-code-review skill file" "$PROBE_RANGE" 'multi-code-review/SKILL.md'
+assert_file_not_contains "stop policy: the secrets-hook rule holds no 'see multi-code-review' cross-reference" "$PROBE_RANGE" 'see multi-code-review'
 
 bold "4. Prompt Templates: filled by the script, never read"
 assert_folded_contains "prompt templates: names the fill script" "$TEMPLATES_RANGE" "$FILL_SCRIPT"
@@ -254,7 +289,7 @@ for name in 'dispatch-<k>-plan-writer.md' 'dispatch-<k>-plan-review.md' 'dispatc
   assert_folded_contains "phases: test -s on $name" "$PHASES_RANGE" "test -s \"<PROMPT_DIR>/$name\""
 done
 assert_file_not_contains "phases: no template is filled by hand (no 'Fill \`./' line)" "$PHASES_RANGE" "$FILL_DOT"
-assert_folded_contains "phases: BATCH_NUMBER is not passed to the script" "$PHASES_RANGE" 'is not passed'
+assert_folded_contains "phases: BATCH_NUMBER is not passed to the script" "$PHASES_RANGE" 'stands only in the template'"'"'s wrapper and is not passed to the script'
 POINTER_DISPATCHES="$(grep -cF -- 'dispatch the pointer' "$PHASES_RANGE" | tr -d ' ')"
 if [ "$POINTER_DISPATCHES" -ge 4 ]; then
   ok "phases: 'dispatch the pointer' appears $POINTER_DISPATCHES times (at least once per phase)"
@@ -263,10 +298,15 @@ else
 fi
 
 bold "8. Resume and In-run rulings: the answer lines go into a value file"
-for needle in "$MKTEMP" 'a resumed session has none' 'dispatch-1-answers.txt' '`<k>` = 1' 'the only channel for it' 'no answer line'; do
+for needle in "$MKTEMP" 'a resumed session has none' 'dispatch-1-answers.txt' '`<k>` = 1' 'the only channel for it' 'no answer line' \
+              'exactly as step 3 creates it' \
+              'with the Write tool to `<PROMPT_DIR>/dispatch-1-answers.txt`' \
+              "\`'RESUME_ANSWER='\`"; do
   assert_folded_contains "resume: contains '$needle'" "$RESUME_RANGE" "$needle"
 done
-for needle in 'dispatch-<k>-answers.txt' "$NO_HEREDOC" 'the only channel' 'a new fill under the next `<k>`' "$TEST_S"; do
+for needle in 'dispatch-<k>-answers.txt' "$NO_HEREDOC" 'the only channel' 'a new fill under the next `<k>`' "$TEST_S" \
+              'with the Write tool to `<PROMPT_DIR>/dispatch-<k>-answers.txt`' \
+              "\`'RESUME_ANSWER=@<PROMPT_DIR>/dispatch-<k>-answers.txt'\`"; do
   assert_folded_contains "in-run rulings: contains '$needle'" "$INRUN_RANGE" "$needle"
 done
 

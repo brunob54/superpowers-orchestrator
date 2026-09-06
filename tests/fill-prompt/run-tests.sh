@@ -515,7 +515,7 @@ awk -v dir="$BLOCKS_DIR" '
 # sorted, unique.
 template_body_names() { # template
   awk '/^```[ \t]*$/ && seen { exit } seen { print } /^[[:space:]]*prompt: \|[[:space:]]*$/ { seen = 1 }' "$1" \
-    | grep -oE '\[[A-Z][A-Z_]*[A-Z]\]' | tr -d '[]' | sort -u
+    | grep -oE "$PLACEHOLDER_ERE" | tr -d '[]' | sort -u
 }
 FILL_BLOCKS=0
 SEEN_TEMPLATES="$WORK/seen-templates.txt"
@@ -540,7 +540,14 @@ for blk in "$BLOCKS_DIR"/block-*.txt; do
   fi
 done
 assert_eq "the orchestrator holds one fill block per template (four)" "$FILL_BLOCKS" "4"
-assert_eq "each template is filled by exactly one block" "$(sort "$SEEN_TEMPLATES" | uniq | wc -l | tr -d ' ')" "4"
+sort -u "$SEEN_TEMPLATES" > "$WORK/seen-templates-sorted.txt"
+cat > "$WORK/expected-templates.txt" <<'EOF'
+batch-controller-prompt.md
+code-review-loop-prompt.md
+doc-review-loop-prompt.md
+plan-writer-prompt.md
+EOF
+assert_same "the filled templates are exactly the four expected ones" "$WORK/seen-templates-sorted.txt" "$WORK/expected-templates.txt"
 
 echo
 bold "Results: $PASS passed, $FAIL failed"
