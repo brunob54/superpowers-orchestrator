@@ -516,7 +516,7 @@ git commit -m "feat(orchestrator): Resume Answer section present on every dispat
 - Test artifacts: section 12 of `tests/fill-prompt/run-tests.sh` (fills without `BATCH_NUMBER`; the quoted task list; the section with an empty value and with a two-line value file; the never-rewrite guard; the unquoted task list) and the three assertions in `tests/in-run-rulings/run-tests.sh`.
   - Invariant: the section fails on the current template (old heading) and passes after Step 3.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 In `tests/fill-prompt/run-tests.sh`, insert immediately before the final `echo` / `bold "Results: …"` pair (after section 11):
 
@@ -596,12 +596,12 @@ assert_in_range "batch-controller Resume Answer section states what an empty sec
   1 "$BATCH_RA_LINE" exact
 ```
 
-- [ ] **Step 2: Run the tests to verify they fail**
+- [x] **Step 2: Run the tests to verify they fail**
 
 Run: `bash tests/fill-prompt/run-tests.sh 2>&1 | grep -E 'FAIL|Results'; bash tests/in-run-rulings/run-tests.sh 2>&1 | grep -E 'FAIL|Results'`
 Expected: FAIL — fill-prompt reports `batch template: empty value keeps the Resume Answer heading (no line exactly: ## Resume Answer)`, `batch template: empty value leaves no omit parenthetical …`, `batch template: empty value keeps the fixed sentence …`, `batch template: the first answer line sits directly below the fixed sentence …`; in-run-rulings reports `batch-controller Resume Answer heading no longer states an omit condition (still present …)` and `batch-controller Resume Answer section states what an empty section means (not inside range …)`, `Results: 500 passed, 2 failed`.
 
-- [ ] **Step 3: Rewrite the batch template**
+- [x] **Step 3: Rewrite the batch template**
 
 `skills/orchestrating-development/batch-controller-prompt.md` — replace the heading line
 
@@ -656,12 +656,12 @@ with
 
 The rest of the bullet (from `` `[task <n>/<k>]` line each `` to the end) and everything else in the file stay byte-identical.
 
-- [ ] **Step 4: Run the tests to verify they pass**
+- [x] **Step 4: Run the tests to verify they pass**
 
 Run: `bash tests/fill-prompt/run-tests.sh 2>&1 | tail -1 && bash tests/in-run-rulings/run-tests.sh 2>&1 | tail -1 && git diff --stat && grep -n 'Resume Answer' skills/orchestrating-development/batch-controller-prompt.md skills/orchestrating-development/SKILL.md | grep -i 'omit\|section is present\|section present\|when present'; echo "presence grep exit $?"`
 Expected: `Results: 159 passed, 0 failed` for fill-prompt (140 + 19); `Results: 502 passed, 0 failed` for in-run-rulings (500 − 1 + 3); the diff touches only the three files of this task; the presence grep prints nothing and `presence grep exit 1` (every remaining `Resume Answer` mention in the batch template and the orchestrator keys on a `[task <n>/<k>]` line standing in the section, never on the section's presence).
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add skills/orchestrating-development/batch-controller-prompt.md tests/fill-prompt/run-tests.sh tests/in-run-rulings/run-tests.sh
