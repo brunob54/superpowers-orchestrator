@@ -87,3 +87,17 @@ Output (tail):
 ```
 Results: 147 passed, 0 failed
 ```
+
+## Round 4
+
+Findings addressed: I1, M2, M3, M4, M5.
+
+Command: `bash tests/orchestrating-development/run-tests.sh`
+Output (tail):
+```
+[0;32m  PASS: in-run rulings: contains 'test -s'[0m
+[0;32m  PASS: in-run rulings: contains 'with the Write tool to `<PROMPT_DIR>/dispatch-<k>-answers.txt`'[0m
+[0;32m  PASS: in-run rulings: contains '`'RESUME_ANSWER=@<PROMPT_DIR>/dispatch-<k>-answers.txt'`'[0m
+
+[1mResults: 147 passed, 0 failed[0m
+```

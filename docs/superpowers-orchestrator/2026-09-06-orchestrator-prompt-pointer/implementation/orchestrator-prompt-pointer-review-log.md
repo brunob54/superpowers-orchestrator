@@ -107,3 +107,18 @@ _Invocation 2 — 2026-09-06 — N=2 M=2 — BASE..HEAD 582763a..a54f2b2 — bra
 - [CF17] rejected: already resolved — Write-tool and 'RESUME_ANSWER=' needles stand in section 8 since eb9293b (both reviewers)
 - [CF18] carried — ragged wrapping in Resume step 3; a re-flow changes no folded pin (ship-as-is, both reviewers; see [M7])
 - [CF19] carried — the directory-creation sentence now says "this step runs on every Resume"; a paragraph break would make the scope clearer (ship-as-is, both reviewers)
+
+## Round 4 — Adversarial red-team — fable
+**Reviewers:** M=2, usable 2/2
+**Reviewer verdicts:** r1: 0 Critical, 0 Important, 3 Minor | r2: 0 Critical, 1 Important, 4 Minor
+**Sources mapped:** 8/8
+**Reviewer verdict:** 0 Critical, 1 Important, 6 Minor
+**Converged:** no
+### Dispositions
+- [I1] fixed — a `cannot read value file` exit was classified fatal or recoverable by the orchestrator's memory of having written the file, so a vanished directory on a re-dispatch with answers ended the run while the same condition without a value file was recoverable; the fatal row and the two not-mechanism rows now run test -s or ls first (directory absent: lost-directory row; file absent: corrected-once slip; file present but unreadable: fatal) → 245d1ba ← 1/2: r2:I1
+- [M1] carried — an inline value holding a single quote breaks the single-quoted NAME= form at the first fill (a checkout path with an apostrophe); the Global Constraints fix the inline single-quoted form, so an escape or a value-file route is a later decision (carried in invocation 1, round 2 [M4]) ← 2/2: r1:M1, r2:M2
+- [M2] fixed — the fill counter <k> shares its symbol with [task <n>/<k>] and _Invocation <k>; Resume step 3 now says the file-name counter is the one that restarts at 1 → 245d1ba ← 1/2: r1:M2
+- [M3] fixed — the rm-and-refill rows were gated only by memory of a dispatched name; they now run ls "<PROMPT_DIR>" before any rm and treat a file not filled in the current step as a counter slip → 245d1ba ← 1/2: r1:M3
+- [M4] fixed — the counter-recovery ls was the one prescribed command with an unquoted path; now ls "<PROMPT_DIR>" → 245d1ba ← 1/2: r2:M1
+- [M5] fixed — the prompt-directory cause text had no error text for a path printed under the repository root; that case now names its text in Phase 0 and in the fatal row → 245d1ba ← 1/2: r2:M3
+- [M6] carried — the Phase 3 fill block shows 'RESUME_ANSWER=' while the steady state after a ruling is the @ form; the empty form was chosen in invocation 1 round 1 [CF13] to match Phases 1 and 4, and the prose under the block states when the @ form replaces it ← 1/2: r2:M4
