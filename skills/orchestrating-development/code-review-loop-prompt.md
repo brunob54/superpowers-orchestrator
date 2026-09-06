@@ -57,8 +57,9 @@ Agent tool (general-purpose):
       findings are journaled in the log and reported in your return,
       never presented interactively.
 
-    ## Resume Answer (omit this whole section on a first dispatch)
+    ## Resume Answer
 
+    A section with no line below this sentence means the run has recorded no answer.
     [RESUME_ANSWER]
 
     ## Deviations (binding)
@@ -82,15 +83,15 @@ Agent tool (general-purpose):
        REVIEW_DONE return from the review log's recorded rounds and
        dispositions — a retry dispatched after only the final message was
        lost must not run the loop twice. When the counts are non-zero,
-       the effective HEAD is unchanged, and no `## Resume Answer` section
-       is present, return
+       the effective HEAD is unchanged, and `## Resume Answer` holds no
+       answer line, return
        `BLOCKED: previous invocation left <n> open items and the effective
        HEAD is unchanged; resume with answers` — never re-run and never
-       synthesize. With a `## Resume Answer` section present, Deviation 5
-       applies. When the effective HEAD has moved past that entry's
-       completion marker, neither the skip nor the BLOCKED return applies:
-       a new invocation entry runs over the new content, with or without a
-       `## Resume Answer` section (Deviation 5).
+       synthesize. With at least one answer line in `## Resume Answer`,
+       Deviation 5 applies. When the effective HEAD has moved past that
+       entry's completion marker, neither the skip nor the BLOCKED return
+       applies: a new invocation entry runs over the new content, with or
+       without answer lines in `## Resume Answer` (Deviation 5).
     3. Triage rule: any reviewer finding whose subject file is an
        orchestration artifact — the plan file's checkbox ticks, a file
        under `docs/superpowers-orchestrator/*/` whose name matches
@@ -127,8 +128,9 @@ Agent tool (general-purpose):
        [MULTI_CODE_REVIEW_SKILL_PATH] under "Reviewer blinding —
        pathspecs". Never hand a reviewer a diff produced without them:
        the branch under review now contains its own review log.
-    5. Resume answer: the `## Resume Answer` section, when present, holds
-       the decisions on the open items — the `user-decision` and
+    5. Resume answer: the answer lines of the `## Resume Answer` section
+       (every non-blank line below its fixed sentence), when there is at
+       least one, hold the decisions on the open items — the `user-decision` and
        `unresolved` dispositions — of the review log's CURRENT invocation
        entry, named by their review-log ids, one line per item, each
        tagged `(orchestrator)` or `(user)`; an untagged line is a user
@@ -182,8 +184,8 @@ Agent tool (general-purpose):
        commit, so that a retry always finds either that new entry (no
        marker → resume it) or its completion; only in the unchanged case
        does the addendum update the marker.
-       Idempotence — a retry after a lost return carries the same
-       `## Resume Answer` again: for each answered id, skip the item when
+       Idempotence — a retry after a lost return carries the same answer
+       lines in `## Resume Answer` again: for each answered id, skip the item when
        the latest invocation entry already holds a `decided (user)` or `decided (orchestrator)`
        line for it (when the previous attempt had already started the
        new invocation, the latest entry is that new one and the
@@ -232,15 +234,18 @@ Agent tool (general-purpose):
   `docs/superpowers-orchestrator/<YYYY-MM-DD>-<slug>/` at the repository root
 - `[LEDGER_PATH]` — REQUIRED: absolute path of
   `.superpowers/sdd/progress.md` at the repo root
-- `[RESUME_ANSWER]` — OPTIONAL: omitted, together with its `## Resume
-  Answer` heading, on a first dispatch; filled when re-dispatching
-  after a return that left `unresolved` or `user_decision` items, with
-  the decisions on those items by review-log id, each line tagged
-  `(orchestrator)` or `(user)`. Authoritative either way — the
-  controller records them as `decided (<who>): <answer>` (Deviation 5).
-  An id decided against an earlier review-log invocation is written
-  qualified, `[<id> inv <i>]`; the controller drops a qualified line
-  whose `<i>` is not its current entry's (Deviation 5)
+- `[RESUME_ANSWER]` — OPTIONAL content, always passed: `RESUME_ANSWER=`
+  (empty) on a first dispatch, which removes the placeholder line and
+  leaves the `## Resume Answer` section with no answer line — the fixed
+  sentence above the placeholder tells the controller what that means;
+  filled from the value file (`RESUME_ANSWER=@<file>`) when
+  re-dispatching after a return that left `unresolved` or `user_decision`
+  items, with the decisions on those items by review-log id, one answer
+  line each, tagged `(orchestrator)` or `(user)`. Authoritative either
+  way — the controller records them as `decided (<who>): <answer>`
+  (Deviation 5). An id decided against an earlier review-log invocation
+  is written qualified, `[<id> inv <i>]`; the controller drops a
+  qualified line whose `<i>` is not its current entry's (Deviation 5)
 
 **Nothing else may be added to the prompt.**
 

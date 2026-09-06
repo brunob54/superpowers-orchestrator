@@ -407,6 +407,55 @@ code_loop_fill "$WORK/code-loop-m.md" 'M=1' 'RESUME_ANSWER='
 assert_eq "code-review-loop template: M=1 is a usage error (exit 1)" "$STATUS" "1"
 assert_absent "code-review-loop template: M=1 writes nothing" "$WORK/code-loop-m.md"
 
+bold "11. The Resume Answer section: plan-writer and code-review-loop templates"
+# Contract source: the spec's "Template changes" item 2 and "Testing
+# strategy" item 1: an empty RESUME_ANSWER removes the placeholder line and
+# keeps the heading and the fixed sentence; a two-line value file inserts
+# both lines directly below the fixed sentence.
+PLAN_WRITER_TEMPLATE="$ORCH_DIR/plan-writer-prompt.md"
+RESUME_HEADING='## Resume Answer'
+FIXED_SENTENCE='A section with no line below this sentence means the run has recorded no answer.'
+# The line right below the fixed sentence in file $1; empty when the sentence
+# is absent or is the last line. The sentence reaches awk through the
+# environment so that no character of it is reinterpreted.
+line_below_fixed_sentence() { # file
+  s="$FIXED_SENTENCE" awk 'BEGIN { s = ENVIRON["s"] } found { print; exit } index($0, s) > 0 { found = 1 }' "$1"
+}
+FIRST_ANSWER='[I2] (orchestrator): plan governs: "clause" — docs/plan.md'
+SECOND_ANSWER='[C3] (user): fix it'
+printf '%s\n' "$FIRST_ANSWER" "$SECOND_ANSWER" > "$WORK/two-answers.txt"
+plan_writer_fill() { # out RESUME_ANSWER-argument
+  fill --template "$PLAN_WRITER_TEMPLATE" --out "$1" \
+    'WRITING_PLANS_SKILL_PATH=/plug/writing-plans/SKILL.md' \
+    'SPEC_PATH=/repo/docs/spec.md' 'PLAN_PATH=/repo/docs/plan.md' "$2"
+}
+# Assertions shared by the templates that carry the section: $1 label,
+# $2 the output of a fill with the empty value, $3 the output of a fill with
+# the two-line value file, $4 the template (for the last-body-line check).
+check_resume_section() { # label empty-out two-out template
+  assert_file_has_line "$1: empty value keeps the Resume Answer heading" "$2" "$RESUME_HEADING"
+  assert_file_not_contains "$1: empty value leaves no omit parenthetical" "$2" '## Resume Answer (omit'
+  assert_file_has_line "$1: empty value keeps the fixed sentence" "$2" "$FIXED_SENTENCE"
+  assert_eq "$1: empty value leaves no answer line below the fixed sentence" "$(line_below_fixed_sentence "$2")" ""
+  assert_file_not_matches "$1: no residual placeholder with the empty value" "$2" "$PLACEHOLDER_ERE"
+  assert_eq "$1: last output line is the dedented last body line" "$(tail -n 1 "$2")" "$(last_body_line "$4")"
+  assert_eq "$1: the first answer line sits directly below the fixed sentence" "$(line_below_fixed_sentence "$3")" "$FIRST_ANSWER"
+  assert_file_has_line "$1: the second answer line is inserted" "$3" "$SECOND_ANSWER"
+  assert_file_not_matches "$1: no residual placeholder with the value file" "$3" "$PLACEHOLDER_ERE"
+}
+plan_writer_fill "$WORK/pw-empty.md" 'RESUME_ANSWER='
+assert_eq "plan-writer template: empty RESUME_ANSWER exits 0" "$STATUS" "0"
+assert_eq "plan-writer template: first output line is the dedented first body line" "$(head -n 1 "$WORK/pw-empty.md")" 'You are an autonomous plan-writing controller. You write ONE'
+plan_writer_fill "$WORK/pw-two.md" "RESUME_ANSWER=@$WORK/two-answers.txt"
+assert_eq "plan-writer template: two-line answer file exits 0" "$STATUS" "0"
+check_resume_section "plan-writer template" "$WORK/pw-empty.md" "$WORK/pw-two.md" "$PLAN_WRITER_TEMPLATE"
+code_loop_fill "$WORK/cl-empty.md" 'M_REVIEWERS=1' 'RESUME_ANSWER='
+assert_eq "code-review-loop template: empty RESUME_ANSWER exits 0" "$STATUS" "0"
+code_loop_fill "$WORK/cl-two.md" 'M_REVIEWERS=1' "RESUME_ANSWER=@$WORK/two-answers.txt"
+assert_eq "code-review-loop template: two-line answer file exits 0" "$STATUS" "0"
+check_resume_section "code-review-loop template" "$WORK/cl-empty.md" "$WORK/cl-two.md" "$CODE_LOOP_TEMPLATE"
+assert_file_contains "code-review-loop template: Deviation 2 keys BLOCKED on the absence of an answer line" "$WORK/cl-empty.md" '`## Resume Answer` holds no'
+
 echo
 bold "Results: $PASS passed, $FAIL failed"
 if [ "$FAIL" -gt 0 ]; then
