@@ -123,3 +123,48 @@ Results: 512 passed, 0 failed
 $ bash tests/reviewer-templates/run-tests.sh
 Results: 60 passed, 0 failed
 ```
+
+## Round 2
+
+Findings addressed: I1
+
+Command:
+```
+bash tests/codex/run-unit-tests.sh
+```
+Output (tail):
+```
+protect-secrets: 43 passed, 0 failed
+
+==================================================
+ Results: 10 suites passed, 0 suites failed
+ All unit tests passed.
+==================================================
+```
+
+Command:
+```
+bash tests/orchestrating-development/run-tests.sh
+```
+Output (tail):
+```
+Results: 162 passed, 0 failed
+```
+
+Command:
+```
+bash tests/in-run-rulings/run-tests.sh
+```
+Output (tail):
+```
+Results: 512 passed, 0 failed
+```
+
+Command:
+```
+bash tests/reviewer-templates/run-tests.sh
+```
+Output (tail):
+```
+Results: 60 passed, 0 failed
+```
