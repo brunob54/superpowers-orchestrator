@@ -37,3 +37,24 @@ Results: 15 passed, 0 failed
 $ bash tests/in-run-rulings/run-tests.sh
 Results: 502 passed, 0 failed
 ```
+
+## Round 2
+
+Findings addressed: I1, I2, I3, M1, M2, M3, M5, M6.
+All in `skills/orchestrating-development/SKILL.md`.
+
+Covering tests — the suites that read that file:
+
+```
+$ bash tests/orchestrating-development/run-tests.sh
+Results: 139 passed, 0 failed
+
+$ bash tests/in-run-rulings/run-tests.sh
+Results: 502 passed, 0 failed
+
+$ bash tests/fill-prompt/run-tests.sh
+Results: 166 passed, 0 failed
+
+$ bash tests/sdd-scripts/run-tests.sh
+Results: 193 passed, 0 failed
+```

@@ -34,3 +34,21 @@ _Invocation 1 — 2026-09-06 — N=2 M=2 — BASE..HEAD 582763a..33437c6 — bra
 - [CF18] carried — ragged wrapping from the reference blocks
 - [CF19] carried — directory-creation sentence sits in the "A stop that made no ruling" paragraph; scope unchanged per both reviewers
 
+## Round 2 — Adversarial red-team — fable
+**Reviewers:** M=2, usable 2/2
+**Reviewer verdicts:** r1: 0 Critical, 3 Important, 2 Minor | r2: 0 Critical, 2 Important, 4 Minor
+**Sources mapped:** 11/11
+**Reviewer verdict:** 0 Critical, 4 Important, 6 Minor
+**Converged:** no
+### Dispositions
+- [I1] fixed — a Resume inside the session that stopped conflicted with "mktemp -d once per session"; Resume step 3 now always creates a fresh directory and the Dispatch Rules read once per orchestration invocation → 4929739 ← 2/2: r1:I3, r2:I1
+- [I2] fixed — a value file found wrong before its first dispatch could not be written again (the Write tool refuses an existing file it has not read) and the fatal row classified that refusal as a mechanism failure; the file is now removed with rm before it is written again and a new not-mechanism row covers the case → 4929739 ← 1/2: r1:I1
+- [I3] fixed — every rm of a prompt-directory file must double-quote the path because block-dangerous-commands denies an unquoted rm of a path under /var; stated at both rm rules, and a new not-mechanism row re-issues a hook-denied rm once, quoted → 4929739 ← 1/2: r1:I2
+- [I4] user-decision — the withheld replacement for a secret-refused answer line keeps id, tag and location but drops the ruling verb, so a ruling that quotes a secret-shaped plan clause is recorded as decided with no decision (plan-mandated) — at skills/orchestrating-development/SKILL.md:2143 — clause: Task 4 "Must convey: every failure of the mechanism is fatal (log entry owed, `## STOPPED` with the fixed cause text as the heading's one-line reason, `state.md` rewrit" ← 1/2: r2:I2
+- [M1] fixed — "the case of every first batch" read as a rule for a re-dispatched first batch that carries answers; now "a batch dispatched before any answer is recorded" → 4929739 ← 1/2: r1:M1
+- [M2] fixed — "as every phase does" was wrong for Phase 2, whose template has no [RESUME_ANSWER] placeholder; now "as Phases 1, 3 and 4 do" → 4929739 ← 1/2: r1:M2
+- [M3] fixed — the ls recovery of <k> now takes the numerically largest number, not the last line ls prints → 4929739 ← 1/2: r2:M1
+- [M4] carried — a checkout path holding an apostrophe breaks the single-quoted NAME= values at the first fill; the Global Constraints fix the quoting form, so an escape or a Phase 0 precondition is a later decision ← 1/2: r2:M2
+- [M5] fixed — the probe file is removed only after outcome (a); a refused probe leaves no file to remove → 4929739 ← 1/2: r2:M3
+- [M6] fixed — the idempotence paragraph now says its retry is a resume after a crash in a fresh directory, never the in-session identical retry; both pinned phrases kept → 4929739 ← 1/2: r2:M4
+
