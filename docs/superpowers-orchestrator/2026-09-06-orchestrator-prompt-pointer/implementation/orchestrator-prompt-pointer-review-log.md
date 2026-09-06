@@ -134,3 +134,16 @@ _Invocation 2 — 2026-09-06 — N=2 M=2 — BASE..HEAD 582763a..a54f2b2 — bra
 - [M2] carried — an inline value holding a single quote breaks the single-quoted NAME= form, and bash's own exit 2 could be read as the script's exit 2; the Global Constraints fix the inline single-quoted form, so an escape, a value-file route or a shell-error slip row is a later decision (carried in invocation 1 round 2 [M4] and round 4 [M1]) ← 2/2: r1:M3, r2:M1
 - [M3] fixed — a plain ls listing over 50 entries is compressed alphabetically and can drop the largest dispatch-<k> name; the counter recovery and both counter-slip rows now use ls -1 | sort -t- -k2,2n | tail -n 1 → 634e7b7 ← 1/2: r1:M2
 - [M4] carried — "every non-blank line below its fixed sentence" in the code-review-loop and batch-controller templates has no upper bound at the next ## heading; a literal reader could take the Deviations heading as an answer line ← 1/2: r2:M3
+
+## Round 4 verification 2 — Adversarial red-team — fable
+**Reviewers:** M=2, usable 2/2
+**Reviewer verdicts:** r1: 0 Critical, 0 Important, 2 Minor | r2: 0 Critical, 0 Important, 2 Minor
+**Sources mapped:** 4/4
+**Reviewer verdict:** 0 Critical, 0 Important, 3 Minor
+### Dispositions
+- [M1] carried — an inline value holding a single quote breaks the single-quoted NAME= form and bash's own syntax error is neither a listed script exit nor a table row; the Global Constraints fix the inline single-quoted form, so an escape or a shell-error slip row is a later decision (carried in invocation 1 round 2 [M4], round 4 [M1], verification 1 [M2]) ← 2/2: r1:M2, r2:M1
+- [M2] carried — the Write tool overwrites without refusal a file this same session wrote earlier (reviewer probe on a scratchpad file: a second Write with different content succeeded), so the "value-file Write refused only because the file already exists" row cannot fire on a counter slip over a session-written value file; run the numeric ls recovery before writing a value file whenever <k> is uncertain, and qualify the refusal premise to files the session has neither read nor written ← 1/2: r1:M1
+- [M3] carried — the "rm denied by a hook" row prescribes one quoted re-issue and no disposition for a second denial; state that the file is then left in place and the counter-slip path is taken ← 1/2: r2:M2
+
+_Completed — 2026-09-06 — cap reached — HEAD 634e7b7eeeea80297de38a2197bf464fa521356b_
+Secrets found: none
