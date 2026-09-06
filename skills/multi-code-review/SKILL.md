@@ -372,11 +372,11 @@ invocation by construction):
 | Dispatch | Prompt file | Value files |
 |---|---|---|
 | Round `i`, reviewers | `round-<i>-reviewer.md` | `round-<i>-lens.txt`; round 1 with a carried list also `round-1-carried.txt` |
-| Round `i`, verification cycle `c`, reviewers | `round-<i>-cycle-<c>-reviewer.md` | reuses `round-<i>-lens.txt` (same lens by construction); never reuses `round-1-carried.txt` — `CARRIED_BLOCK` is always the empty value `CARRIED_BLOCK=` here, because the carried-findings triage happens on round 1 only |
+| Round `i`, verification cycle `c`, reviewers | `round-<i>-cycle-<c>-reviewer.md` | reuses `round-<i>-lens.txt` (same lens by construction) when the current prompt directory holds it, and writes it first when it does not; never reuses `round-1-carried.txt` — `CARRIED_BLOCK` is always the empty value `CARRIED_BLOCK=` here, because the carried-findings triage happens on round 1 only |
 | Round `i`, fix subagent | `round-<i>-fix.md` | `round-<i>-findings.txt` |
-| Round `i`, fix re-dispatch | `round-<i>-fix-retry.md` | `round-<i>-failure.txt`; reuses `round-<i>-findings.txt` |
-| Verification cycle `c` fixes (`<c>` = the cycle whose re-review produced the findings being fixed) | `round-<i>-cycle-<c>-fix.md`, `round-<i>-cycle-<c>-fix-retry.md` | `round-<i>-cycle-<c>-findings.txt` (reused by the re-dispatch), `round-<i>-cycle-<c>-failure.txt` |
-| Post-loop addendum fixes, `<k>` = the 1-based index of the addendum fix dispatch within this controller, counting first dispatches only — a re-dispatch keeps the `k` of the dispatch it repeats | `addendum-<k>-fix.md`, `addendum-<k>-fix-retry.md` | `addendum-<k>-findings.txt` (reused by the re-dispatch), `addendum-<k>-failure.txt` |
+| Round `i`, fix re-dispatch | `round-<i>-fix-retry.md` | `round-<i>-failure.txt`; reuses `round-<i>-findings.txt` when the current prompt directory holds it, and writes it first when it does not |
+| Verification cycle `c` fixes (`<c>` = the cycle whose re-review produced the findings being fixed) | `round-<i>-cycle-<c>-fix.md`, `round-<i>-cycle-<c>-fix-retry.md` | `round-<i>-cycle-<c>-findings.txt` (reused by the re-dispatch when the current prompt directory holds it, written first when it does not), `round-<i>-cycle-<c>-failure.txt` |
+| Post-loop addendum fixes, `<k>` = the 1-based index of the addendum fix dispatch within this controller, counting first dispatches only — a re-dispatch keeps the `k` of the dispatch it repeats | `addendum-<k>-fix.md`, `addendum-<k>-fix-retry.md` | `addendum-<k>-findings.txt` (reused by the re-dispatch when the current prompt directory holds it, written first when it does not), `addendum-<k>-failure.txt` |
 
 A prompt file is written once and never rewritten: the identical retry of
 step 3 resends the same pointer to the same file; a fix re-dispatch is a
@@ -386,7 +386,10 @@ say — is not a failure: the script exits 0 without writing when the
 existing file's content is byte-identical to what the repeat would write,
 and exits 5 only when the content differs. Value files
 are written once for their dispatch — a fix re-dispatch reuses its findings
-file and a verification cycle reuses its round's lens file — with the Write
+file and a verification cycle reuses its round's lens file when the current
+prompt directory holds that file, and writes it first when it does not,
+because a resumed controller and a post-loop-addendum controller start from
+a fresh directory that holds no earlier file — with the Write
 tool or a quoted heredoc (`<<'EOF'`), never an unquoted one — finding text
 comes from reviewer output over a diff this skill treats as untrusted and
 may contain `$(...)` or backticks, and the lens text contains `$` signs of
@@ -410,7 +413,9 @@ Nothing else in that directory is for you; do not read any other file there.
 Every failure of this mechanism is fatal and nothing falls back:
 `mktemp -d` or `cygpath` failing, `fill-prompt.js` exiting non-zero,
 `test -s` failing, Node missing (treated as the script failing), a
-value-file write refused by a hook or failing, and a round in which no
+value-file write that fails, or that a hook refuses — a
+`hooks/safety/protect-secrets.js` refusal only when it refuses a second
+time, per Error Handling — and a round in which no
 reviewer returned a usable report after the pointer dispatch and the one
 identical retry of step 3. A failure that happens before any reviewer
 report of the round was received owes no round entry: nothing is written
@@ -740,7 +745,12 @@ code has been revised since, so a re-pass is meaningful):
      blocks a subagent's final message that names a roster skill without
      the report marker, and only reviewers emit that marker. Dispatch it
      by pointer: write the list to `<PROMPT_DIR>/round-<i>-findings.txt`
-     under the value-file rule, then fill, as one command (every `NAME=`
+     under the value-file rule. If `hooks/safety/protect-secrets.js`
+     refuses that Write, replace each line the hook's message names by
+     its `file:line` plus the fixed text
+     `secret-bearing finding, value withheld`, keep that finding's id and
+     severity, and retry the Write once; a second refusal is fatal (Error
+     Handling). Then fill, as one command (every `NAME=`
      argument single-quoted, as in step 2):
 
      ```bash
@@ -803,14 +813,18 @@ code has been revised since, so a re-pass is meaningful):
      continuing after a second failure — check `git status --porcelain`
      is empty and, if the failed fix subagent left files modified,
      restore those files to their committed content by explicit path
-     (`git checkout -- <path>`) first, so the next attempt starts from a
-     clean tree. Write `<PROMPT_DIR>/round-<i>-failure.txt`
+     (`git checkout -- <path>`, or `git restore <path>`) first, so the next
+     attempt starts from a clean tree. Those commands restore only files git
+     tracks: a file the attempt created that git does not track is removed by
+     explicit path (`rm -- <path>`), never with `git clean`, so the
+     re-dispatch starts on a clean tree. Write `<PROMPT_DIR>/round-<i>-failure.txt`
      under the value-file rule — its first line is the heading
      `## Previous attempt failed`, the remaining lines are the failure
      text — then repeat the fill of the Critical/Important bullet with
      `--out "<PROMPT_DIR>/round-<i>-fix-retry.md"`, the same
-     `FINDINGS=@<PROMPT_DIR>/round-<i>-findings.txt` (the findings file is
-     not rewritten) and
+     `FINDINGS=@<PROMPT_DIR>/round-<i>-findings.txt` (that file is reused
+     when the current prompt directory holds it, and written first when it
+     does not) and
      `FAILURE_BLOCK=@<PROMPT_DIR>/round-<i>-failure.txt` in place of the
      empty value (or the matching `round-<i>-cycle-<c>-failure.txt` /
      `round-<i>-cycle-<c>-fix-retry.md` and addendum names of the table
@@ -1500,8 +1514,9 @@ completed invocation only on explicit user request.
   for that round. The u = 0 case — no usable report in the round at all —
   owes an entry, and writes the round entry in the `inconclusive` form. A
   failure that happens after the round's reviewer reports were received
-  owes an entry too — the `round-<i>-findings.txt` write denied by a hook
-  and the fix fill exiting non-zero are this case: the controller writes
+  owes an entry too — the `round-<i>-findings.txt` write refused a second
+  time by `hooks/safety/protect-secrets.js` or denied by another hook, and
+  the fix fill exiting non-zero, are this case: the controller writes
   the round entry with the round's consolidated set and the normal lines
   (the M >= 2 header lines, the source annotations), gives every Critical
   or Important finding that was not fixed the disposition
@@ -1525,7 +1540,17 @@ completed invocation only on explicit user request.
   content and the path of every Write, and — together with
   `hooks/safety/block-dangerous-commands.js` — the whole Bash command
   string, a heredoc body included; a Security-lens finding may quote
-  exactly such text. Never alter finding text to
+  exactly such text. One exception, and only this one: when
+  `hooks/safety/protect-secrets.js` refuses a value-file Write, each line
+  the hook's message names is replaced by its `file:line` plus the fixed
+  text `secret-bearing finding, value withheld`, and the Write is retried
+  once; the withheld finding keeps its id and severity in the findings
+  file, so the fix subagent still removes the secret at that location. A
+  second refusal is fatal → `BLOCKED: value file <name> refused twice by
+  protect-secrets — <hook reason>`. Every other value-file failure stays
+  fatal with the `could not be written` text above — a write that fails for
+  another reason, and a write another hook denies. Apart from that one
+  replacement, never alter finding text to
   pass a hook, and never retry the write through the other form to get
   around a denial.
 - A reviewer returns no usable report after a pointer (did not read the

@@ -62,7 +62,10 @@ Agent tool (general-purpose):
        every file you changed to its committed content, each by
        explicit path (`git checkout -- <path>` or
        `git restore <path>`), never `git checkout .` and never the
-       fix-report file, so the working tree is clean when you stop;
+       fix-report file. Those commands restore only files git
+       tracks: a file you created that git does not track is
+       removed by explicit path (`rm -- <path>`), never with
+       `git clean`, so the working tree is clean when you stop;
        then report the failure and list those restored files in your
        final message and stop.
     3. Open the fix-report file `[FIX_REPORT_FILE]` (create it if it

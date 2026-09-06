@@ -57,6 +57,7 @@ INLINE_DISPATCH='inline dispatch'
 INLINE_DISPATCH_HYPHEN='inline-dispatch'
 NEVER_POINTER_TO_FAILED='never dispatch a pointer to a file that failed'
 BLOCKED_PREFIX='BLOCKED:'
+VALUE_WITHHELD='value withheld'
 
 PASS=0
 FAIL=0
@@ -287,6 +288,7 @@ for needle in 'mktemp -d' 'fill-prompt.js' "$TEST_S_REVIEWER" "$TEST_S_FIX" "$PO
 done
 assert_file_not_contains "SKILL.md never holds the prompt directory in a shell variable" "$CODE_SKILL" "$PROMPT_DIR_VARIABLE"
 assert_file_contains "Error Handling: every failure of the mechanism returns BLOCKED" "$ERR_RANGE" "$BLOCKED_PREFIX"
+assert_file_contains "Error Handling: a refused findings line is withheld, not fatal" "$ERR_RANGE" "$VALUE_WITHHELD"
 assert_file_contains "Error Handling: never a pointer to a file that failed the check" "$ERR_RANGE" "$NEVER_POINTER_TO_FAILED"
 assert_file_not_contains "Procedure: no inline-dispatch fallback" "$PROC_RANGE" "$INLINE_DISPATCH"
 assert_file_not_contains "Error Handling: no inline-dispatch fallback" "$ERR_RANGE" "$INLINE_DISPATCH"
