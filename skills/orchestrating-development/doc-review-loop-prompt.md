@@ -42,7 +42,7 @@ Agent tool (general-purpose):
     - Target document: [PLAN_PATH]   (doc type: plan)
     - Spec path: [SPEC_PATH]
     - N (round cap): [N_PLAN]
-    - M (reviewers per lens): [M]   (fill the review log's invocation
+    - M (reviewers per lens): [M_REVIEWERS]   (fill the review log's invocation
       line from it; never read M from the session or the log)
     - Reviewer template: [REVIEWER_PROMPT_PATH] (fill ONLY its
       placeholders; reviewers inherit your model)
@@ -99,7 +99,7 @@ Agent tool (general-purpose):
 - `[PLAN_PATH]` — REQUIRED: absolute plan path
 - `[SPEC_PATH]` — REQUIRED: absolute spec path
 - `[N_PLAN]` — REQUIRED: integer 1–10
-- `[M]` — REQUIRED: integer 1–5, the Phase 0 M (reviewers per lens); the
+- `[M_REVIEWERS]` — REQUIRED: integer 1–5, the Phase 0 M (reviewers per lens); the
   controller passes it to multi-doc-review as its M
 
 **Nothing else may be added to the prompt.**

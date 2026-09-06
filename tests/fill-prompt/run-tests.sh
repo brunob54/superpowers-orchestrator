@@ -73,6 +73,9 @@ assert_same() { # desc actual-file expected-file
 assert_absent() { # desc path
   if [ -e "$2" ]; then bad "$1 (exists: $2)"; else ok "$1"; fi
 }
+assert_file_has_line() { # desc file exact-line (whole-line match, fixed string)
+  if grep -qxF -- "$3" "$2"; then ok "$1"; else bad "$1 (no line exactly: $3)"; fi
+}
 line_count() { grep -c '' "$1" | tr -d ' '; }
 # The dedented LAST line of a template's prompt body: the line just above the
 # closing fence of the template's first fenced block — the first line that is
@@ -355,6 +358,54 @@ fill --template "$FIXTURES/inner-fence-column0-template.md" --out "$INNER_FENCE_
 assert_eq "tagged fenced example with column-0 content exits 2" "$STATUS" "2"
 assert_file_contains "inner fence, column-0 content: message gives the reason" "$ERRF" 'the first fenced block closes inside the prompt body'
 assert_absent "inner fence, column-0 content: nothing written" "$INNER_FENCE_C0_OUT"
+
+bold "10. The orchestrating-development review-loop templates take M_REVIEWERS"
+# Contract source: docs/superpowers-orchestrator/2026-09-06-orchestrator-prompt-pointer/
+# specs/orchestrator-prompt-pointer-design.md, "Template changes" item 1 and
+# "Testing strategy" item 1.
+ORCH_DIR="$ROOT/skills/orchestrating-development"
+DOC_LOOP_TEMPLATE="$ORCH_DIR/doc-review-loop-prompt.md"
+CODE_LOOP_TEMPLATE="$ORCH_DIR/code-review-loop-prompt.md"
+# The doc-review-loop body holds one bracketed single capital letter that is
+# not a placeholder: the checklist marker of its Deviation 3. It must reach
+# the output unchanged (dedented by the body's four-space indentation).
+CHECKLIST_LINE='   `- [X] unresolved: <reason> — <finding summary>`.'
+# Every value of the doc-review-loop template except the M argument.
+doc_loop_fill() { # out M-argument
+  fill --template "$DOC_LOOP_TEMPLATE" --out "$1" \
+    'MULTI_DOC_REVIEW_SKILL_PATH=/plug/multi-doc-review/SKILL.md' \
+    'REVIEWER_PROMPT_PATH=/plug/multi-doc-review/reviewer-prompt.md' \
+    'WRITING_PLANS_SKILL_PATH=/plug/writing-plans/SKILL.md' \
+    'PLAN_PATH=/repo/docs/plan.md' 'SPEC_PATH=/repo/docs/spec.md' 'N_PLAN=3' "$2"
+}
+# Every value of the code-review-loop template except the M argument and the
+# RESUME_ANSWER argument.
+code_loop_fill() { # out M-argument RESUME_ANSWER-argument
+  fill --template "$CODE_LOOP_TEMPLATE" --out "$1" \
+    'MULTI_CODE_REVIEW_SKILL_PATH=/plug/multi-code-review/SKILL.md' \
+    'REVIEWER_PROMPT_PATH=/plug/multi-code-review/reviewer-prompt.md' \
+    'TOPIC_DIR=/repo/docs/superpowers-orchestrator/2026-09-06-topic' 'BASE_SHA=abc1234' \
+    'N_CODE=3' 'PLAN_PATH=/repo/docs/plan.md' 'LEDGER_PATH=/repo/.superpowers/sdd/progress.md' \
+    "$2" "$3"
+}
+doc_loop_fill "$WORK/doc-loop.md" 'M_REVIEWERS=2'
+assert_eq "doc-review-loop template: M_REVIEWERS=2 exits 0" "$STATUS" "0"
+assert_file_contains "doc-review-loop template: M filled into the parameter line" "$WORK/doc-loop.md" '- M (reviewers per lens): 2   (fill the review log'"'"'s invocation'
+assert_file_not_matches "doc-review-loop template: no residual placeholder" "$WORK/doc-loop.md" "$PLACEHOLDER_ERE"
+assert_file_not_contains "doc-review-loop template: no [M] token left" "$WORK/doc-loop.md" '[M]'
+assert_file_has_line "doc-review-loop template: the checklist marker line stays byte-identical" "$WORK/doc-loop.md" "$CHECKLIST_LINE"
+doc_loop_fill "$WORK/doc-loop-m.md" 'M=2'
+assert_eq "doc-review-loop template: M=2 is a usage error (exit 1)" "$STATUS" "1"
+assert_eq "doc-review-loop template: M=2 prints the usage line" "$(cat "$ERRF")" "$USAGE_LINE"
+assert_absent "doc-review-loop template: M=2 writes nothing" "$WORK/doc-loop-m.md"
+code_loop_fill "$WORK/code-loop.md" 'M_REVIEWERS=1' 'RESUME_ANSWER='
+assert_eq "code-review-loop template: M_REVIEWERS=1 exits 0" "$STATUS" "0"
+assert_file_contains "code-review-loop template: M filled into the parameter line" "$WORK/code-loop.md" '- M (reviewers per lens): 1   (fill the review log'"'"'s invocation'
+assert_file_not_matches "code-review-loop template: no residual placeholder" "$WORK/code-loop.md" "$PLACEHOLDER_ERE"
+assert_file_not_contains "code-review-loop template: no [M] token left" "$WORK/code-loop.md" '[M]'
+code_loop_fill "$WORK/code-loop-m.md" 'M=1' 'RESUME_ANSWER='
+assert_eq "code-review-loop template: M=1 is a usage error (exit 1)" "$STATUS" "1"
+assert_absent "code-review-loop template: M=1 writes nothing" "$WORK/code-loop-m.md"
 
 echo
 bold "Results: $PASS passed, $FAIL failed"

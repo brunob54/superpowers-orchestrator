@@ -793,7 +793,7 @@ Trigger: `Resume orchestration for <plan-or-spec path>`.
    One explicit exception: a log written before 7.4.0 records `M=` on no
    line at all, so there is nothing to recover — M is 1 for such a log.
    `... with M=2` overrides M like any other parameter; the controller
-   dispatched after it carries the new value in its `[M]` placeholder, and
+   dispatched after it carries the new value in its `[M_REVIEWERS]` placeholder, and
    that value governs the review log it continues (the review log's own
    invocation line is never rewritten).
 6. Excluded state (`state.md`, `.superpowers/`) does not survive clone

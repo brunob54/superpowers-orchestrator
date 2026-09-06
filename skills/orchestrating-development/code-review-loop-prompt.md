@@ -43,7 +43,7 @@ Agent tool (general-purpose):
     - BASE: [BASE_SHA]   (the orchestration branch point; already
       verified an ancestor of HEAD)
     - N (round cap): [N_CODE]
-    - M (reviewers per lens): [M]   (fill the review log's invocation
+    - M (reviewers per lens): [M_REVIEWERS]   (fill the review log's invocation
       line from it; never read M from the session or the log)
     - Plan/requirements path: [PLAN_PATH]
     - TOPIC_DIR: [TOPIC_DIR]   (absolute path of the topic folder; the
@@ -225,7 +225,7 @@ Agent tool (general-purpose):
   `../multi-code-review/reviewer-prompt.md`
 - `[BASE_SHA]` — REQUIRED: the Phase 0 recorded branch-point SHA
 - `[N_CODE]` — REQUIRED: integer 1–10
-- `[M]` — REQUIRED: integer 1–5, the Phase 0 M (reviewers per lens); the
+- `[M_REVIEWERS]` — REQUIRED: integer 1–5, the Phase 0 M (reviewers per lens); the
   controller passes it to multi-code-review as its M
 - `[PLAN_PATH]` — REQUIRED: absolute plan path
 - `[TOPIC_DIR]` — REQUIRED: absolute path of the topic folder
