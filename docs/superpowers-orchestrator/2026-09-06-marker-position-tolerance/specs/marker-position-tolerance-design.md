@@ -187,9 +187,9 @@ Four changes.
   `docs/guide/` needs no change: it contains no occurrence of the marker
   (verified 2026-09-06 by grep).
 
-No decision in this design matched the prior-art trigger predicate: no new
-dependency, no external library, no version claim. The one external-platform
-claim (Codex hook parity) is cited to `CLAUDE.md` above.
+No decision in this design matched the prior-art trigger predicate.
+There is no new dependency, no external library and no version claim; the one
+external-platform claim (Codex hook parity) is cited to `CLAUDE.md` above.
 
 ## Architecture
 
