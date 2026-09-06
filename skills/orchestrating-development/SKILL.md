@@ -51,7 +51,9 @@ this platform lacks` — and stop.
   cannot name their own children (the roster is flat); nested workers
   stay unnamed.
 - **Prompt files and the pointer.** A controller's instructions are a
-  file, not the `prompt` field. Once per session, before the session's
+  file, not the `prompt` field. Once per session, read as once per
+  orchestration invocation — a fresh run, or a Resume, including a
+  Resume inside the session that stopped — before that invocation's
   first fill — Phase 0 step 9 in a fresh run; on a resume, the Resume
   step that first fills a prompt — run `mktemp -d` as its own Bash
   command, with no argument (never a template and never a path inside
@@ -100,12 +102,25 @@ this platform lacks` — and stop.
   batch's task numbers, comma-separated — you fill both yourself.
 
   Keep `<k>` in your context; when unsure of the next value, run
-  `ls <PROMPT_DIR>` (one short Bash result) and take the largest number
-  after `dispatch-` plus one. A prompt file is written once and never
+  `ls <PROMPT_DIR>` (one short Bash result) and take the numerically
+  largest number after `dispatch-` plus one — the numerically largest
+  number, not the last line `ls` prints, which sorts `dispatch-10-…`
+  before `dispatch-2-…`. A prompt file is written once and never
   rewritten once a pointer to it has been dispatched; before that first
   dispatch you may remove it (`rm -- "<file>"` as its own command) and
   fill it again under the same name when you find the fill's values were
-  wrong. A re-dispatch with a different `[RESUME_ANSWER]` — Phase 3 and
+  wrong. The value file follows the same rule: when a value in
+  `dispatch-<k>-answers.txt` is found wrong before that fill's pointer
+  has been dispatched, remove the file with
+  `rm -- "<PROMPT_DIR>/dispatch-<k>-answers.txt"` as its own command and
+  then write it again — the Write tool refuses to overwrite a file it has
+  not read, and a refusal for that reason alone is not a failure of the
+  mechanism (Major-Error Stop Policy). In every `rm` this file
+  prescribes, the path is written inside double quotes, and the quotes
+  are what keep the command alive:
+  `hooks/safety/block-dangerous-commands.js` denies an `rm` whose path
+  begins `/var` unquoted, and `/var` is where `mktemp -d` prints its
+  directory on macOS. A re-dispatch with a different `[RESUME_ANSWER]` — Phase 3 and
   Phase 4 after in-run rulings, Phase 1 after a `BLOCKED` question is
   answered, and any Resume re-dispatch — is a new fill under the next
   `<k>` with its own value file, never a rewrite: the script refuses to
@@ -407,8 +422,8 @@ Loop until every task is complete:
    run (SDD's Pre-Flight Plan Review) and `no` otherwise; `TASK_LIST` is
    the selected task numbers, comma-separated. `RESUME_ANSWER=` is empty,
    as the block above shows it, when the run has recorded no answer —
-   write no value file then, the case of every first batch, where no
-   value file exists yet. `[RESUME_ANSWER]` is the
+   write no value file then, the case of a batch dispatched before any
+   answer is recorded. `[RESUME_ANSWER]` is the
    run-wide answer set that step 5 states, filled on every dispatch,
    first or repeat, whenever this run has recorded any answer: write its
    lines with the Write tool to `<PROMPT_DIR>/dispatch-<k>-answers.txt`
@@ -921,17 +936,24 @@ Trigger: `Resume orchestration for <plan-or-spec path>`.
    re-dispatch path — the answer goes into `[RESUME_ANSWER]` and
    nothing else is written, no `**Follow-up:**` line and no
    `ruling <n> follow-up` commit — because `<n>` is undefined when the
-   resume touched no ruling. Then create the session's prompt directory
-   — a resumed session has none: run `mktemp -d` under the Controller
+   resume touched no ruling. Then create this Resume's own prompt
+   directory
+   — a resumed session has none, and this step runs on every Resume,
+   including a Resume in the session that stopped, where a prompt
+   directory from before the stop may still be in your context: that
+   directory is abandoned, never continued, and no counter carries over
+   from it: run `mktemp -d` again under the Controller
    Dispatch Rules ("Prompt files and the pointer"), before the first
-   fill, the counter `<k>` starting at 1 — write the answer lines with
+   fill, the counter `<k>` starting at 1 in the new directory — write the answer lines with
    the Write tool to `<PROMPT_DIR>/dispatch-1-answers.txt`, fill the
    stopped phase's prompt under `<k>` = 1 with that phase's fill command
    and `'RESUME_ANSWER=@<PROMPT_DIR>/dispatch-1-answers.txt'` — when the
    re-dispatch carries no answer line (for example a Phase 4 re-dispatch
    on a moved effective HEAD without answers, or one for a migrated run
    whose old log is absent, below), write no value file and pass
-   `'RESUME_ANSWER='`, as every phase does — run its
+   `'RESUME_ANSWER='`, as Phases 1, 3 and 4 do (Phase 2's template has
+   no `[RESUME_ANSWER]` placeholder, so passing the value to it exits
+   4) — run its
    `test -s`, and
    re-dispatch the stopped phase's controller with that `[RESUME_ANSWER]`
    in the template's placeholder — the only channel for it. Phases whose
@@ -1941,7 +1963,11 @@ is skipped; a fix commit already in `git log` is not dispatched again).
 Phase 3 is idempotent by construction: the ruling and any amendment are
 committed before the re-dispatch, so a retry rebuilds the identical
 `[RESUME_ANSWER]` from the ruling-record entry — a new fill under the next
-`<k>` from the same entry, which produces the same content; the batch controller's
+`<k>` from the same entry, which produces the same content. The retry
+meant in that sentence is a resume after a crash: it starts in a fresh
+prompt directory, where the next `<k>` is 1. It is never the in-session
+identical retry of the Controller Dispatch Rules, which re-dispatches the
+same pointer to the same file and fills nothing. The batch controller's
 existing rules skip every task whose checkboxes are ticked and recover a
 mid-task crash (its Deviation 4); the amendment block is found by its
 label and never inserted twice. What makes the resume safe to repeat is
@@ -2077,7 +2103,7 @@ Failures OF the mechanism (fatal):
 | `mktemp -d` fails, prints a path under the repository root, or `cygpath` fails where the path must be converted | `prompt directory could not be created — <error text>`. Nothing is dispatched. |
 | The fill script exits 2 (malformed template); or exits 5 with `cannot read` on an `@<file>` you did write, with `cannot write <out>: existing path could not be read`, or with `cannot write <out>: file already exists` (a dispatched name reused with different content); or exits non-zero a second time after a corrected command; or `test -s` fails on the prompt file | `prompt file <name> not produced — <the script's message, or "empty">`; never dispatch a pointer to a file that failed the check. |
 | Node is missing | Treated as the script failing (row above). |
-| A value-file Write fails for a reason other than the secrets hook — a permission denial, a tool error, a refusal by another hook — or a probe Write of the rule below is refused for such a reason | `value file <name> could not be written — <the error>` (`<name>` is always the value file's name, `dispatch-<k>-answers.txt`; for a probe, the error text is the refusal or error text, first line, and names the probe file). |
+| A value-file Write fails for a reason other than the secrets hook — a permission denial, a tool error, a refusal by another hook — or a probe Write of the rule below is refused for such a reason. A Write refused only because the file already exists is NOT this row: that is the corrected-once slip of the not-mechanism table below, where the file is removed and written again | `value file <name> could not be written — <the error>` (`<name>` is always the value file's name, `dispatch-<k>-answers.txt`; for a probe, the error text is the refusal or error text, first line, and names the probe file). |
 | A value-file Write is refused by `hooks/safety/protect-secrets.js` twice | `value file <name> refused twice by protect-secrets — <the hook's reason>`. The secrets-hook probe below runs between the two attempts. |
 | A controller's final message shows it could not read, or did not follow, its prompt file — after the one identical retry of the Controller Dispatch Rules | `prompt file <name> not read by <controller name> — <the first line of each of the two final messages>`. The sign: the final message says it could not read, find or open the file, or it carries neither the report marker nor any of these tokens: the plan path, the topic folder path, the orchestration or review log path, `tasks=`, `task=`, `rounds=` — no sign of the prompt file's content. A message carrying at least one of them, without the marker, is a malformed return (table below). |
 
@@ -2095,7 +2121,9 @@ NOT failures of the mechanism (today's paths, unchanged):
 |---|---|
 | A controller dies of the environment (usage limit, rate limit, tool error, no final message at all) | The identical retry once, then the major-error stop above (`inconclusive controller: <phase/batch>`), as the Controller Dispatch Rules say. The retry is the same pointer to the same file. |
 | A slip in your own fill command: the script exits 1 (usage), 3 (a placeholder without a value), 4 (a value naming no placeholder), 5 with `cannot read template` (a wrong `--template` path), or 5 naming an `@<file>` you never wrote | Correct the command once and run it again; a second non-zero exit is fatal (table above). |
-| The fill script exits 5 with `cannot write <out>: file already exists` on a name whose pointer has NOT been dispatched — a value found wrong and corrected before the first dispatch | Remove the file (`rm -- "<file>"` as its own command) and fill it once more under the same name (Controller Dispatch Rules). A second `file already exists` on that same name is fatal (table above), as is the first on a name whose pointer was already dispatched. |
+| The fill script exits 5 with `cannot write <out>: file already exists` on a name whose pointer has NOT been dispatched — a value found wrong and corrected before the first dispatch | Remove the file (`rm -- "<file>"` as its own command, the path always inside double quotes) and fill it once more under the same name (Controller Dispatch Rules). A second `file already exists` on that same name is fatal (table above), as is the first on a name whose pointer was already dispatched. |
+| A value-file Write is refused only because `<PROMPT_DIR>/dispatch-<k>-answers.txt` already exists, on a fill whose pointer has NOT been dispatched — a value found wrong and corrected before the first dispatch | Remove the file (`rm -- "<PROMPT_DIR>/dispatch-<k>-answers.txt"` as its own command, the path inside double quotes) and write it once more with the Write tool (Controller Dispatch Rules). A second refusal of that same name for that same reason is fatal (table above). |
+| A Bash `rm` of a file in the prompt directory is denied by a hook | The path was written without quotes: `hooks/safety/block-dangerous-commands.js` denies an `rm` whose path begins `/var` unquoted, and `mktemp -d` prints its directory under `/var` on macOS. Re-issue the same command once with the path inside double quotes. A hook denial of an `rm` is never a failure of the mechanism. |
 | The fill script exits 5 with `cannot write <out>: <error>` for any error text other than `file already exists` and `existing path could not be read` | The prompt directory is gone, unwritable, or the path in the command is wrong: treat it as a path lost from context — `mktemp -d` again and re-fill under `<k>` = 1 in the fresh directory, writing the value file again there first when the fill takes one. A second such exit in the fresh directory is fatal (table above): the temporary location itself is not writable. |
 | A return unusable on format alone (the marker or a consumed field missing) whose text shows the controller worked on the run | Malformed return: the identical retry once, then the major-error stop above. Not a pointer failure. |
 | The prompt directory's path is lost from your context | `mktemp -d` again and continue (Controller Dispatch Rules). |
@@ -2120,7 +2148,13 @@ whole content — and never a line. For each line of the file you tried to
 write, make ONE Write tool call of a throwaway file holding that one
 line, `<PROMPT_DIR>/dispatch-<k>-probe-<n>.txt`, `<n>` counting the probe
 Writes for value file `<k>` from 1, and remove it with `rm -- "<file>"`
-as its own command after the probe. The probe is a Write tool call and
+as its own command after the probe, when the Write succeeded — outcome
+(a) below; outcome (b) is a refused Write that left no file, so there is
+nothing to remove and no `rm` is run. The path in that `rm` is always
+inside double quotes:
+`hooks/safety/block-dangerous-commands.js` denies an `rm` whose path
+begins `/var` unquoted, and `mktemp -d` prints its directory under
+`/var` on macOS. The probe is a Write tool call and
 nothing else: never a Bash command, because
 `hooks/safety/block-dangerous-commands.js` would refuse a command that
 merely quotes a secret-shaped string, and never a hook path, because a
