@@ -408,3 +408,11 @@ _Invocation 5 — 2026-09-06 — N=1 M=1 — BASE..HEAD b9b9ffb..ed633d8 — bra
 - [M21] carried — SKILL.md step 2 sub-step 2: 'every value except LENS_INSTRUCTIONS and a non-empty CARRIED_BLOCK is inline' (already reworded to 'inline by default' in Invocation 2, 15efd82)
 - [M22] carried — Task 3 security review residual M3 (verification-cycle reviewer prompt beside its round's fix prompt in one flat directory), decided as [M19] of Invocation 1 (ruling 2) and carried in Invocations 2 to 4; the reviewer recommends ship-as-is (the Error Handling row accepts the exposure as the one `.superpowers/reviews/` already carries)
 - [M23] carried — Task 4 produced no commit: CLAUDE.md is gitignored (.gitignore:7), so the branch history holds no record of the Testing-block edit beyond the plan tick and ruling 1 (traceability note only)
+
+## Round 9 verification 1 — Correctness & spec alignment — fable
+**Reviewer verdict:** 0 Critical, 0 Important, 4 Minor
+### Dispositions
+- [M1] rejected: orchestration artifact (documented) — the plan file's Task 4 checkbox tick claims a CLAUDE.md edit the branch cannot carry because CLAUDE.md is gitignored (.gitignore:7); the same traceability note is carried as round 9 [M23]
+- [M2] carried — the Procedure's fatal cause `BLOCKED: prompt directory path lost from the controller's context` (decided behaviour: round 8 verification 2 [I3], plan governs) has no matching Error Handling row and is absent from the Procedure's own "The fatal failures are:" list, unlike every other BLOCKED cause
+- [M3] rejected: duplicate of round 8 verification 3 [M1] (carried; the aws-secret-key and generic-api-key patterns match `\s*` across several line breaks, so content refused as a whole but by no single line and no pair ends BLOCKED on the second refusal — visible, nothing leaks — and the "at most one line break" sentence is not exact)
+- [M4] carried — the Error Handling row shows `unresolved: withheld finding, no credential at the location` without the `— at <file:line> — clause: none` suffix that the "Self-sufficient open-item lines" rule makes mandatory on every `unresolved:` line, while the other new `unresolved:` form in the same section spells the suffix out
