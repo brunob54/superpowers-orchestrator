@@ -463,3 +463,457 @@ $ git commit -m "review fixes (prompt-pointer-dispatch, round 5)" -- skills/mult
 [feature/prompt-pointer-dispatch 9aac7f6] review fixes (prompt-pointer-dispatch, round 5)
  2 files changed, 20 insertions(+), 11 deletions(-)
 ```
+
+## Post-loop fix — Invocation 3 decisions — round 6 subject
+
+### Findings addressed
+
+- **[I2-r5]** `skills/multi-code-review/SKILL.md` — the Critical/Important fix
+  bullet (Procedure step 4) and the value-file row of Error Handling no longer
+  say that the hook's message names the lines to withhold. Both now state that
+  `hooks/safety/protect-secrets.js` names only a credential kind — the kind of
+  the first pattern that matched the whole content — and never a line, so the
+  controller runs `node hooks/safety/protect-secrets.js` itself once per line
+  of the refused file, giving it on standard input the JSON object the hook
+  reads
+  (`{"tool_name":"Write","tool_input":{"file_path":"<the value file>","content":"<that one line>"}}`),
+  and treats a line as refused when the JSON the hook prints on standard
+  output carries `"permissionDecision":"deny"` (the hook exits 0 either way).
+  Every refused line is replaced by its `file:line` plus the fixed text
+  `secret-bearing finding, value withheld`, the finding keeps its id and
+  severity, the Write is retried once, and a second refusal stays fatal. The
+  invocation and payload form were read from `hooks/safety/protect-secrets.js`
+  (`main()` reads standard input and parses `tool_name` / `tool_input`;
+  `checkWriteContent` inspects `tool_input.file_path` and
+  `tool_input.content`; the refusal is
+  `hookSpecificOutput.permissionDecision = "deny"` with
+  `permissionDecisionReason`).
+- **[I2-r6]** `skills/multi-code-review/SKILL.md` — Procedure step 3 and the
+  u = 0 rows of Error Handling now split the u = 0 case in two. A round is
+  fatal (`BLOCKED: no reviewer of round <i> could use its prompt file — <each
+  reviewer's final message, one line each>`, the existing text) only when at
+  least one final message shows that its reviewer could not read its prompt
+  file or did not follow it. A round whose final messages all show an
+  environment death — a usage limit, a tool error, or no final message at all
+  — is not a failure of the pointer mechanism: the round entry stays
+  `inconclusive` and the loop continues. The first Error Handling bullet and
+  the reviewer row at the end of the section were aligned with that split.
+- **[I4-r6]** `skills/multi-code-review/SKILL.md` — Procedure step 2 (the
+  `CARRIED_BLOCK` exit-5 sentence and the `test -s` sub-step 3), the
+  Critical/Important fix bullet, and the `fill-prompt.js` rows of Error
+  Handling now state that exit 1, 3 or 4, and exit 5 naming an `@<file>` the
+  controller never wrote, are slips in the controller's own command: it
+  corrects that command once and runs it again, and a second non-zero exit is
+  fatal. Exit 2, and exit 5 on a file the controller did write, stay fatal at
+  once. `tests/reviewer-templates/run-tests.sh` needed no change: no section-10
+  assertion pins wording that these edits altered (all 60 assertions pass
+  unchanged).
+
+### Commands and output
+
+```
+$ bash tests/reviewer-templates/run-tests.sh
+1. Harness claims rule is inside the prompt block
+  PASS: doc-review template: Harness claims rule inside the prompt block (line 42, block 25..133)
+  PASS: code-review template: Harness claims rule inside the prompt block (line 64, block 24..193)
+2. Finding-format field spellings
+  PASS: doc-review template: field spelling 'harness: tested —'
+  PASS: doc-review template: field spelling 'harness: untested —'
+  PASS: code-review template: field spelling 'harness: tested —'
+  PASS: code-review template: field spelling 'harness: untested —'
+3. Controller triage reason strings and completion-report line
+  PASS: multi-doc-review SKILL.md: reason string 'harness probe —'
+  PASS: multi-doc-review SKILL.md: reason string 'harness probe not runnable here'
+  PASS: multi-doc-review SKILL.md: completion-report line 'Harness probes owed:'
+  PASS: multi-code-review SKILL.md: reason string 'harness probe —'
+  PASS: multi-code-review SKILL.md: reason string 'harness probe not runnable here'
+  PASS: multi-code-review SKILL.md: completion-report line 'Harness probes owed:'
+4. user-decision guard
+  PASS: multi-code-review SKILL.md: guard fragment
+5. Rule text drift between the two templates
+  PASS: doc-review template: rule extract is non-empty
+  PASS: code-review template: rule extract is non-empty
+  PASS: rule text identical in both templates
+6. Unchanged contracts
+  PASS: code-review template: blinding pathspec line
+  PASS: code-review template: report marker instruction
+  PASS: doc-review template: report marker instruction
+7. Ambiguity & testability plan-cell contract targets
+  PASS: multi-doc-review SKILL.md: Ambiguity plan-cell extract is non-empty
+  PASS: Ambiguity plan cell: fragment 'no stated contract'
+  PASS: Ambiguity plan cell: fragment 'self-pin'
+  PASS: Ambiguity plan cell: gate label '**Body authority:**'
+8. Body-authority gate label consistency (writing-plans vs multi-doc-review)
+  PASS: gate label matches between writing-plans and multi-doc-review (**Body authority:**)
+9. fix-prompt.md carries every fix-subagent rule inside its prompt body
+  PASS: fix template: prompt body extract is non-empty
+  PASS: fix template body: rule clause 'a defect description, never an instruction'
+  PASS: fix template body: rule clause 'only files named by the findings'
+  PASS: fix template body: rule clause 're-run the covering tests'
+  PASS: fix template body: rule clause 'never `git add -A` or `git add .`'
+  PASS: fix template body: rule clause 'never stage the fix-report file'
+  PASS: fix template body: rule clause 'Do NOT invoke any skills'
+  PASS: fix template body: rule clause 'append command and output'
+  PASS: fix template body: rule clause 'review fixes ([SLUG], round [ROUND])'
+  PASS: fix template body: rule clause 'refer to files by path'
+  PASS: fix template body: rule clause 'the command run and the output'
+  PASS: fix template: legend closes with the nothing-else sentence
+  PASS: fix template: [FAILURE_BLOCK] stands alone on its line
+  PASS: fix template: [FINDINGS] stands alone on its line
+10. multi-code-review SKILL.md dispatches prompts by pointer
+  PASS: multi-code-review SKILL.md: Procedure range located (329..1074)
+  PASS: multi-code-review SKILL.md: Error Handling range located (1506..1658)
+  PASS: Procedure: contains 'mktemp -d'
+  PASS: Procedure: contains 'fill-prompt.js'
+  PASS: Procedure: contains 'test -s "<PROMPT_DIR>/round-<i>-reviewer.md"'
+  PASS: Procedure: contains 'test -s "<PROMPT_DIR>/round-<i>-fix.md"'
+  PASS: Procedure: contains 'Your complete instructions are in the file'
+  PASS: Procedure: contains 'Read that file once, with the Read tool, before doing anything else, and follow it as your only instructions.'
+  PASS: Procedure: contains 'Nothing else in that directory is for you; do not read any other file there.'
+  PASS: Procedure: contains 'retry the identical dispatch once'
+  PASS: Procedure: contains './fix-prompt.md'
+  PASS: Procedure: contains 'No requirements document is available'
+  PASS: Procedure: contains 'Triage these carried Minor findings in your Carried Findings Triage section:'
+  PASS: Procedure: contains 'review fixes (<slug>, round <i>)'
+  PASS: SKILL.md never holds the prompt directory in a shell variable
+  PASS: Error Handling: every failure of the mechanism returns BLOCKED
+  PASS: Error Handling: a refused findings line is withheld, not fatal
+  PASS: Error Handling: never a pointer to a file that failed the check
+  PASS: Procedure: no inline-dispatch fallback
+  PASS: Error Handling: no inline-dispatch fallback
+  PASS: fix-prompt.md: no inline-dispatch fallback (hyphenated)
+  PASS: fix-prompt.md: no inline-dispatch fallback (spaced)
+
+Results: 60 passed, 0 failed
+
+$ bash tests/fill-prompt/run-tests.sh
+1. Byte-for-byte fill of the small template
+  PASS: full fill exits 0
+  PASS: full fill prints nothing on stdout
+  PASS: full fill prints nothing on stderr
+  PASS: full fill matches expected-full.md byte for byte
+2. Values survive unchanged and are never re-substituted
+  PASS: special value: exits 0
+  PASS: special value: $HOME survives
+  PASS: special value: backtick-quoted word survives
+  PASS: special value: pathspec survives
+  PASS: special value: $& and $1 survive (replace specials not interpreted)
+  PASS: special value: command substitution text survives as text
+  PASS: bracket value: exits 0
+  PASS: bracket value: inserted verbatim
+  PASS: bracket value: the body's own [ROUND] was filled, only the value's stays
+  PASS: bracket value: report-id tokens in the body are untouched
+3. Empty values: whole-line removal versus a shared line
+  PASS: empty values: exits 0
+  PASS: empty whole-line value removes its line
+  PASS: empty whole-line value: one line fewer than the full fill
+  PASS: empty shared-line value substitutes the empty string
+4. @file values, trailing newlines, malformed body
+  PASS: newline-only @file: exits 0
+  PASS: newline-only @file counts as empty and removes the whole line
+  PASS: body line indented less than the first exits 2
+  PASS: bad indent: message says the template is malformed
+  PASS: bad indent: message names the template file line
+  PASS: bad indent: nothing written
+5. Strictness and exit codes
+  PASS: uncovered placeholder exits 3
+  PASS: uncovered placeholder: message names it
+  PASS: uncovered placeholder: nothing written
+  PASS: unknown name exits 4
+  PASS: unknown name: message names it
+  PASS: unknown name: nothing written
+  PASS: name that appears only in the legend exits 4
+  PASS: legend-only name: message names it
+  PASS: name that appears only in the wrapper is accepted (exit 0)
+  PASS: unknown option exits 1
+  PASS: unknown option: usage line on stderr
+  PASS: missing --out exits 1
+  PASS: missing --template exits 1
+  PASS: repeated --template exits 1
+  PASS: repeated NAME exits 1
+  PASS: repeated NAME with an unreadable template still exits 1 (usage before file reads)
+  PASS: argument that is not NAME=<rest> exits 1
+  PASS: option without a value exits 1
+  PASS: missing @file exits 5
+  PASS: missing @file: message names the file
+  PASS: missing @file: nothing written
+  PASS: template without a prompt block exits 2
+  PASS: template without a prompt block: nothing written
+  PASS: unreadable --template exits 5
+  PASS: unwritable --out exits 5
+6. The real reviewer template
+  PASS: reviewer template: full value set exits 0
+  PASS: reviewer template: first output line is the dedented first body line
+  PASS: reviewer template: marker line present
+  PASS: reviewer template: blinding pathspec line present
+  PASS: reviewer template: plan line filled
+  PASS: reviewer template: carried block filled
+  PASS: reviewer template: lens name filled into the lens heading
+  PASS: reviewer template: no residual placeholder
+  PASS: reviewer template: last output line is the dedented last body line
+  PASS: reviewer template: empty PLAN_LINE and CARRIED_BLOCK exit 0
+  PASS: reviewer template: empty plan line omitted
+  PASS: reviewer template: no residual placeholder without plan or carried block
+  PASS: reviewer template: quoted no-package PACKAGE_FILE value (contains spaces) exits 0
+  PASS: reviewer template: no-package value inserted verbatim
+  PASS: reviewer template: PLAN_PATH (legend only) exits 4
+  PASS: reviewer template: PLAN_PATH message names it
+6b. Hardening: line endings, trailing blank body line, output file mode
+  PASS: mixed line endings: exits 0
+  PASS: mixed line endings: output has exactly 2 lines (fails if the file is missing)
+  PASS: mixed line endings: no output line holds an embedded bare newline (every line ends with CR)
+  PASS: mixed line endings: LF-normalized output matches the expected text
+  PASS: trailing blank body line: exits 0
+  PASS: trailing blank body line: output matches expected byte for byte (exactly one trailing newline)
+  PASS: output file mode: fill exits 0
+  PASS: output file mode: owner read/write only
+7. The real fix template
+  PASS: fix template: first dispatch (empty FAILURE_BLOCK) exits 0
+  PASS: fix template: generic commit subject filled
+  PASS: fix template: findings inserted verbatim
+  PASS: fix template: fix-report path filled
+  PASS: fix template: no failure heading on the first dispatch
+  PASS: fix template: no residual placeholder
+  PASS: fix template: last output line is the dedented last body line
+  PASS: fix template: re-dispatch (FAILURE_BLOCK from file) exits 0
+  PASS: fix template: failure heading present on the re-dispatch
+  PASS: fix template: failure text present on the re-dispatch
+  PASS: fix template: no residual placeholder on the re-dispatch
+8. Round 2 fixes: refuse to overwrite --out, and trailing blank after fill
+  PASS: existing --out: exits 5
+  PASS: existing --out: message names the path
+  PASS: existing --out: content unchanged
+  PASS: existing --out: no temporary file left behind
+  PASS: identical repeat: the first fill exits 0
+  PASS: identical repeat: exits 0
+  PASS: identical repeat: content unchanged byte for byte
+  PASS: identical repeat: no temporary file left behind
+  PASS: trailing whole-line placeholder given the empty value: exits 0
+  PASS: trailing whole-line placeholder given the empty value: output matches expected byte for byte (exactly one trailing newline)
+9. Round 4 fix: a fenced example inside the prompt body
+  PASS: fenced example inside the body exits 2
+  PASS: inner fence: message says the template is malformed
+  PASS: inner fence: message gives the reason
+  PASS: inner fence: nothing written
+  PASS: tagged fenced example with column-0 content exits 2
+  PASS: inner fence, column-0 content: message gives the reason
+  PASS: inner fence, column-0 content: nothing written
+
+Results: 101 passed, 0 failed
+
+$ bash tests/codex/run-unit-tests.sh
+(the 320 per-case checkmark lines are omitted; suite headings and every
+result line are kept verbatim)
+==================================================
+ superpowers-orchestrator — Codex Hook Unit Tests
+==================================================
+ Repo root: /Users/bruno/Programming/AI/AI_Coding/My_tools/Superpowers
+ Node:      v24.13.1
+
+── pretool-bash-adapter
+
+Non-Bash tool calls
+
+Safe commands
+
+Dangerous commands (block-dangerous-commands)
+
+Secret exposure (protect-secrets bash path)
+
+Case normalization
+
+Edge cases
+
+──────────────────────────────────────────────────
+pretool-bash-adapter: 28 passed, 0 failed
+
+── posttool-bash-compress-adapter
+
+Non-Bash / fail-open
+
+Tool-response parsing
+
+Compression behavior
+
+──────────────────────────────────────────────────
+posttool-bash-compress-adapter: 11 passed, 0 failed
+
+── stop-adapter
+
+Loop guard (stop_hook_active)
+
+Non-git directory
+
+Clean working tree
+
+TDD reminder
+
+Commit reminder
+
+Decision log reminder
+
+Output shape
+
+Reminder dedupe
+
+──────────────────────────────────────────────────
+stop-adapter: 16 passed, 0 failed
+
+── stop-reminders (Claude Stop shape)
+
+Stop reminders output contract (Claude)
+
+isSignificantSession pattern coverage
+
+checkSessionLogSize hard cap
+
+──────────────────────────────────────────────────
+stop-reminders: 15 passed, 0 failed
+
+── session-start-adapter
+
+Output shape (Codex SessionStart spec)
+
+Context content
+
+Resilience
+
+──────────────────────────────────────────────────
+session-start-adapter: 14 passed, 0 failed
+
+── session-start (reviewers-per-lens tag)
+session-start: <reviewers-per-lens> tag
+  ok   - SUPERPOWERS_REVIEWERS_PER_LENS=1 emits <reviewers-per-lens>1</reviewers-per-lens> at the end of the context
+  ok   - SUPERPOWERS_REVIEWERS_PER_LENS=3 emits <reviewers-per-lens>3</reviewers-per-lens> at the end of the context
+  ok   - SUPERPOWERS_REVIEWERS_PER_LENS=5 emits <reviewers-per-lens>5</reviewers-per-lens> at the end of the context
+  ok   - unset SUPERPOWERS_REVIEWERS_PER_LENS falls back to <reviewers-per-lens>1</reviewers-per-lens> at the end of the context
+  ok   - SUPERPOWERS_REVIEWERS_PER_LENS=0 falls back to <reviewers-per-lens>1</reviewers-per-lens> at the end of the context
+  ok   - SUPERPOWERS_REVIEWERS_PER_LENS=6 falls back to <reviewers-per-lens>1</reviewers-per-lens> at the end of the context
+  ok   - SUPERPOWERS_REVIEWERS_PER_LENS=10 falls back to <reviewers-per-lens>1</reviewers-per-lens> at the end of the context
+  ok   - SUPERPOWERS_REVIEWERS_PER_LENS=abc falls back to <reviewers-per-lens>1</reviewers-per-lens> at the end of the context
+  ok   - SUPERPOWERS_REVIEWERS_PER_LENS=3.0 falls back to <reviewers-per-lens>1</reviewers-per-lens> at the end of the context
+  ok   - SUPERPOWERS_REVIEWERS_PER_LENS=2.5 falls back to <reviewers-per-lens>1</reviewers-per-lens> at the end of the context
+  ok   - SUPERPOWERS_REVIEWERS_PER_LENS= (set but empty) falls back to <reviewers-per-lens>1</reviewers-per-lens> at the end of the context
+  ok   - SUPERPOWERS_REVIEWERS_PER_LENS=' 3' (leading space) falls back to <reviewers-per-lens>1</reviewers-per-lens> at the end of the context
+  ok   - workspace-embedded decoy tag precedes the real <reviewers-per-lens>3</reviewers-per-lens> at the end of the context
+  ok   - unset: workspace decoy is overridden by the fallback <reviewers-per-lens>1</reviewers-per-lens> at the end of the context
+  14 passed, 0 failed
+
+── skill-activator (UserPromptSubmit)
+
+Codex payload field: `prompt`
+
+Output shape (Codex UserPromptSubmit spec)
+
+Micro-task detection (skip routing)
+
+Skill routing accuracy
+
+Edge cases
+
+Memory recall — extractKeywords
+
+Memory recall — searchSessionLog
+
+Memory recall — buildMemoryContext
+
+Memory recall — evaluatePayload integration
+
+Known-issues recall — searchKnownIssues
+
+Known-issues recall — buildKnownIssuesContext
+
+Known-issues recall — evaluatePayload ordering
+
+Context pressure gate — isExecutionTrigger
+
+Context pressure gate — cwdToProjectDir
+
+Context pressure gate — getContextPressure
+
+Context pressure gate — statusline cache bridge
+
+Context pressure gate — SUPERPOWERS_PRESSURE_THRESHOLD override
+
+Context pressure gate — buildContextPressureBlock
+
+Context pressure gate — evaluatePayload integration
+
+Context pressure — findLatestSessionJsonl / getContextPressureAuto
+
+--pressure CLI
+
+Batched autonomous mode triggers
+
+Debug-prompt routing
+
+multi-code-review routing
+
+researching-prior-art
+
+──────────────────────────────────────────────────
+skill-activator (UserPromptSubmit): 139 passed, 0 failed
+
+── statusline-context-cache
+
+statusline-context-cache — writeCache
+
+statusline-context-cache — statusLine
+
+statusline-context-cache — end to end (stdin → cache + line)
+
+──────────────────────────────────────────────────
+statusline-context-cache: 10 passed, 0 failed
+
+── subagent-guard (SubagentStop)
+
+SKILL_NAMES completeness
+
+Action verb coverage
+
+Skill tool detection
+
+Violation detection (end-to-end)
+
+False positive avoidance
+
+Output shape
+
+multi-doc-review
+
+multi-code-review
+
+Orchestration report marker
+
+researching-prior-art
+
+──────────────────────────────────────────────────
+subagent-guard: 44 passed, 0 failed
+
+── protect-secrets (PreToolUse Bash)
+
+protect-secrets: cat-env blocks real reads
+
+protect-secrets: cat-env does not over-match writes and mentions
+
+protect-secrets: file-operation family blocks real operations
+
+protect-secrets: file-operation family ignores process.env and prose
+
+protect-secrets: known limitation — heredoc body quoting a real command
+
+protect-secrets: unrelated rules still fire
+
+──────────────────────────────────────────────────
+protect-secrets: 43 passed, 0 failed
+
+==================================================
+ Results: 10 suites passed, 0 suites failed
+ All unit tests passed.
+==================================================
+
+$ git add -- skills/multi-code-review/SKILL.md
+$ git commit -m "review fixes (prompt-pointer-dispatch, round 6)" -- skills/multi-code-review/SKILL.md
+[feature/prompt-pointer-dispatch b52a9f2] review fixes (prompt-pointer-dispatch, round 6)
+ 1 file changed, 93 insertions(+), 28 deletions(-)
+```
