@@ -52,3 +52,17 @@ _Invocation 1 — 2026-09-06 — N=2 M=2 — BASE..HEAD 582763a..33437c6 — bra
 - [M5] fixed — the probe file is removed only after outcome (a); a refused probe leaves no file to remove → 4929739 ← 1/2: r2:M3
 - [M6] fixed — the idempotence paragraph now says its retry is a resume after a crash in a fresh directory, never the in-session identical retry; both pinned phrases kept → 4929739 ← 1/2: r2:M4
 
+## Round 2 verification 1 — Adversarial red-team — fable
+**Reviewers:** M=2, usable 2/2
+**Reviewer verdicts:** r1: 0 Critical, 0 Important, 2 Minor | r2: 0 Critical, 0 Important, 3 Minor
+**Sources mapped:** 5/5
+**Reviewer verdict:** 0 Critical, 0 Important, 4 Minor
+### Dispositions
+- [M1] carried — the two not-mechanism rm-and-refill rows are gated only by the orchestrator's memory of whether a name was dispatched, which a compaction removes; condition them on an observable (a fill the orchestrator ran in this turn) and send any other refusal to the ls recovery, never rm ← 2/2: r1:M2, r2:M2
+- [M2] carried — the ls counter recovery is unquoted, order-dependent and subject to the 50-line ls compression; use a numeric pipeline (sed, sort -n, tail) with the path double-quoted ← 1/2: r1:M1
+- [M3] carried — the "not read by <controller name>" fatal row's token test also matches a marker-less BLOCKED question and a rate-limit message that other rows classify; add the four return keywords to the token list and let the environment row take precedence ← 1/2: r2:M1
+- [M4] carried — the value-file correction sequence does not say to remove the prompt file filled from the wrong value, so the re-fill consumes the single file-already-exists allowance on that name ← 1/2: r2:M3
+
+_Completed — 2026-09-06 — cap reached — HEAD 49297390bdce0c820e76eceb8f7fb5dd1e1e5358_
+Secrets found: none
+
