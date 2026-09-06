@@ -257,8 +257,11 @@ probe observations — exactly the content SKILL.md already prescribes),
 `[FAILURE_BLOCK]` (whole-line, alone on its line in the template; empty on
 the first dispatch; on the one re-dispatch, the controller's failure file,
 whose first line is the heading `## Previous attempt failed` and whose
-remaining lines are the failure text — the heading is in the value, never in
-the template). The legend ends with the same
+remaining lines are the failure text, at most its last 150 lines with one
+line `(<n> earlier lines omitted)` when cut — the heading is in the value,
+never in the template). The body places every rule before the `[FINDINGS]`
+and `[FAILURE_BLOCK]` placeholders, so a long value never pushes the rules
+past a reader's default Read window (Amendment 4). The legend ends with the same
 sentence as the reviewer template: nothing else may be added to the prompt.
 
 The SKILL.md bullet keeps a one-line summary of what the fix subagent does and
@@ -297,7 +300,10 @@ points at `./fix-prompt.md` for the text. Any string in that bullet that
   `addendum-<k>-findings.txt`, and the matching `-failure.txt` for a
   re-dispatch.
 
-- A prompt file is written once and never rewritten. The identical-retry
+- A prompt file is written once and never rewritten once a pointer to it has
+  been dispatched; before that first dispatch the controller may remove it
+  (`rm -- <file>`) and fill it again under the same name when it finds the
+  fill's values were wrong (Amendment 4). The identical-retry
   rule of step 3 resends the same pointer to the same file. The fix
   re-dispatch is a different prompt (the failure appended), so it has its own
   file. Value files are written once for their dispatch, except the lens file
@@ -355,23 +361,30 @@ fill with `FAILURE_BLOCK=@<PROMPT_DIR>/round-<i>-failure.txt` into
 
 ## Error handling
 
+Every failure of the pointer mechanism is **fatal**: the controller writes
+the round entry it owes (if any), then ends the loop with a `BLOCKED: <cause>`
+return that names the failure. There is no inline fallback on either side.
+(Author decision of 2026-09-05, Amendment 1 below: a fallback that pastes the
+prompt inline would hide the defect and silently bring the old cost back; a
+stop makes the defect visible at the moment it appears, and the orchestrator's
+Major-Error Stop Policy already treats a controller `BLOCKED` as a fatal
+environment failure with a resume path.)
+
 | Condition | Handling |
 |---|---|
-| `mktemp -d` fails at Procedure start | Fall back for the whole invocation to today's inline dispatch (the template pasted as before). State the fallback and the reason in the controller's final report. The loop never stalls on the pointer mechanism. |
-| `fill-prompt.js` exits non-zero, or `test -s` fails, for one prompt file | Fall back to inline dispatch for every dispatch that file serves — all M reviewers of that round, or the one fix dispatch; state it in the final report with the script's message. Never dispatch a pointer to a file that failed the check. |
-| A reviewer returns no usable report (did not read the file, read it and produced no marker) | Existing rule: retry the identical pointer once; then the reviewer is unusable under `usable <u>/<m>`. No new failure class. |
+| `mktemp -d` fails at Procedure start, or `cygpath` fails where the path must be converted | `BLOCKED: prompt directory could not be created — <error text>`. Nothing is dispatched. |
+| `fill-prompt.js` exits 1, 3 or 4, or exits 5 naming an `@<file>` the controller never wrote (a slip in the controller's own command) | The controller corrects its command once and runs it again; a second non-zero exit is fatal as the row below (Amendment 3). |
+| `fill-prompt.js` exits 2, or exits 5 on a file the controller did write, or a second non-zero exit after a corrected command, or `test -s` fails, for a prompt file | `BLOCKED: prompt file <name> not produced — <the script's message, or "empty">`. Never dispatch a pointer to a file that failed the check. |
+| A value-file write fails | `BLOCKED: value file <name> could not be written — <the error>`. |
+| A value-file Write is refused by `hooks/safety/protect-secrets.js` (a finding or a failure line quotes a credential-shaped string) | The hook names only a credential kind, never a line, so the controller probes each line of the refused file with one Write tool call of a one-line throwaway file in the prompt directory — never a Bash command, which `block-dangerous-commands.js` would also scan, and never a hook path, which resolves only in this plugin's own checkout (Amendment 4) — and every line whose Write the secrets hook refuses is replaced by its `file:line` plus the fixed text `secret-bearing finding, value withheld` (Amendment 3); the Write is retried once. The withheld finding keeps its id and severity, so the fix subagent still removes the secret at that location. A second refusal is `BLOCKED: value file <name> refused twice by protect-secrets — <the hook's reason>`. This is the one sanctioned alteration of value text: it is the location-only form the orchestrator's "Never reproduce a secret" rule already imposes on every committed file (Amendment 2). |
+| Node is missing | Treated as the script failing (row above). |
+| No reviewer of a round returns a usable report after the pointer dispatch and the one identical retry of step 3, and at least one reviewer's final message shows no sign of the prompt file's content (a report unusable on format alone, whose text shows the diff was reviewed, is not such a sign: that round is logged `inconclusive` as today — Amendment 4) | Write the round entry in the existing `inconclusive` form, then `BLOCKED: no reviewer of round <i> could use its prompt file — <each reviewer's final message, one line each>`. A round with at least one usable report proceeds under the existing `usable <u>/<m>` rule. |
+| No reviewer of a round returns a usable report, and every final message shows an environment death (usage limit, tool error, no message at all) | Not a failure of the pointer mechanism: the round is logged `inconclusive` and the loop continues, as today (Amendment 3). |
 | A reviewer reads another file in the directory | Cannot be prevented by wording alone; the directory is outside every search the reviewer is allowed to run, and the pointer forbids it. The remaining exposure is a reviewer that disobeys a direct instruction, which is the same exposure the `.superpowers/reviews/` prohibition already carries. Accepted. |
-| Node is missing | Impossible on a platform that runs this plugin's hooks; treated as the script failing (row above). |
 
-"Inline dispatch" on a fallback means: the controller reads the relevant
-template file (`reviewer-prompt.md` or `fix-prompt.md`), fills its body by
-hand under the legend's rules, and pastes the result as the Agent prompt. This
-is the only case in which the controller reads a template.
-
-The fallbacks reintroduce the old cost for the affected dispatches and nothing
-else; they exist so that a defect in the new mechanism can never turn into a
-`stall` class case. The final-report sentence is what makes such a fallback
-visible in the next measurement.
+The controller never reads a template and never pastes a prompt inline: the
+only delivery of a reviewer or fix prompt is the pointer to a file the fill
+script produced.
 
 ## Testing strategy
 
@@ -470,28 +483,29 @@ measure is taken and is not part of this branch.
 ## Failure-mode check
 
 1. **A reviewer ignores the pointer and reviews without instructions.** It
-   then has no marker line and no Verdict block; the report is unusable, the
-   identical retry runs once, and a second failure counts the reviewer as
-   unusable. A round where all M do this is `inconclusive`, exactly as a
-   round of M crashed reviewers is today. Severity: minor; the behavioural
-   suite after reinstall is the check that the pointer wording works on the
-   current harness.
+   then has no marker line and no Verdict block; the report is unusable and
+   the identical retry runs once. A round where every reviewer does this is
+   written `inconclusive` and the loop stops with `BLOCKED` naming the round
+   (Error handling). Severity: minor for one reviewer; a whole round is a
+   visible stop, never a silent one. The behavioural suite after reinstall is
+   the check that the pointer wording works on the current harness.
 2. **The template's fenced structure changes and the extraction rule breaks.**
-   The script exits 2 and the controller falls back to inline dispatch, which
-   is visible in the final report; the wording test on `reviewer-prompt.md`'s
-   marker line and the fill test on the real template both fail in the fast
-   suite. Severity: minor, caught before install.
+   The script exits 2 and the loop stops with `BLOCKED` naming the file; the
+   wording test on `reviewer-prompt.md`'s marker line and the fill test on the
+   real template both fail in the fast suite first. Severity: minor, caught
+   before install.
 3. **A future placeholder name that the regex does not match** (a digit in the
    name, lowercase) would be left in the output silently. Non-goal, recorded
    here: placeholder names are uppercase letters and underscores; the fill
    test on the real templates asserts no residue.
-4. **The fallback hides a persistent defect.** If `fill-prompt.js` fails on
-   every dispatch, every round falls back and the cost returns. The
-   final-report sentence and the acceptance measure surface it; the fast
-   suite's fill test on the real templates catches the likely causes before
-   install. A systematic cause — a shell variable used across tool calls, a
-   malformed template — is what the `$PROMPT_DIR` wording test and the fill
-   test on the real templates exist to catch. Severity: minor.
+4. **A systematic defect stops every run.** With no fallback, a defect in the
+   mechanism (a shell variable used across tool calls, a malformed template, a
+   permission prompt on a Read outside the working directory) stops the first
+   run that meets it, with the cause in the `BLOCKED` return. That is the
+   intended trade: one visible stop instead of a silent return to the old cost
+   or a silent loop of inconclusive rounds. The `$PROMPT_DIR` wording test and
+   the fill test on the real templates catch the first two before install; the
+   third is the owed harness probe of the first run.
 
 ## Rollout
 
@@ -501,3 +515,48 @@ measure is taken and is not part of this branch.
 - `docs/orchestration-issues.md` row 14 fix 1 text is updated at merge to
   match this design ("outside the checkout" holds; "pointer plus the lens"
   becomes "pointer only, the lens is in the file").
+
+## Amendments
+
+**Amendment 1 — 2026-09-05 — author decision on code review item [I1].**
+The first version of this spec fell back to inline dispatch on every
+writer-side failure of the pointer mechanism and treated a reader-side
+failure (no reviewer could read its prompt file) as an ordinary unusable
+report, so a whole round of such failures was logged `inconclusive` and the
+loop went on. The adversarial reviewer showed that this makes a systematic
+reader-side failure silent: every round inconclusive, zero findings, a return
+the orchestrator reads as success. The author ruled that every failure of the
+mechanism, writer side and reader side, is fatal: the controller returns
+`BLOCKED` naming the cause and nothing falls back to inline dispatch. The
+Error handling and Failure-mode check sections were rewritten accordingly;
+the fallback rows and the "inline dispatch" definition were removed.
+
+**Amendment 2 — 2026-09-05 — author decision on code review item [I3]
+(invocation 2, round 4).** Under Amendment 1 a value-file Write refused by
+the secrets hook was fatal and the text could never be altered, so a
+Security-lens finding that quoted a credential stopped the round and
+reproduced the stop on every resume. The author ruled that a line the hook
+refuses is replaced by its `file:line` plus "secret-bearing finding, value
+withheld" and the Write retried once, a second refusal staying fatal. No
+credential reaches disk, the finding stays a Critical the fix removes, and
+every other failure of the mechanism stays fatal as Amendment 1 states.
+
+**Amendment 3 — 2026-09-06 — author decisions on code review invocation 3
+items [I2] (round 5), [I2] (round 6) and [I4] (round 6).** Three refinements
+of Amendments 1 and 2, each keeping the fatal rule where the mechanism
+itself failed: the secrets hook names a credential kind and never a line,
+so the controller runs the hook per line to find what to withhold; a round
+whose reviewers all died of the environment (usage limit, tool error, no
+message) is not a pointer failure and stays `inconclusive`; a slip in the
+controller's own fill command (exit 1, 3, 4, or 5 on a file it never wrote)
+is corrected once before a second non-zero exit is fatal.
+
+**Amendment 4 — 2026-09-06 — orchestrator rulings 11-15 under the author's
+delegation.** On 2026-09-06 the author delegated every remaining decision
+before Phase 5 to the orchestrator ("choose the recommended option; no
+questions until Phase 5"). Four refinements: the per-line secrets probe is
+a Write tool call, so only the secrets hook decides and no hook path is
+needed; a report unusable on format alone is not a pointer failure; a prompt
+file may be re-filled under its name until a pointer to it is dispatched;
+the failure text is capped and the fix template's rules precede its
+variable blocks.

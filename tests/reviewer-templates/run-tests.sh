@@ -16,6 +16,7 @@ DOC_PROMPT="$ROOT/skills/multi-doc-review/reviewer-prompt.md"
 CODE_PROMPT="$ROOT/skills/multi-code-review/reviewer-prompt.md"
 DOC_SKILL="$ROOT/skills/multi-doc-review/SKILL.md"
 CODE_SKILL="$ROOT/skills/multi-code-review/SKILL.md"
+FIX_PROMPT="$ROOT/skills/multi-code-review/fix-prompt.md"
 WP_SKILL="$ROOT/skills/writing-plans/SKILL.md"
 
 # Wording contracts asserted below. Each is one fixed string.
@@ -29,6 +30,34 @@ OWED_LINE='Harness probes owed:'
 GUARD='never logged `user-decision` on the strength of an untested harness claim'
 MARKER='<!-- multi-review report -->'
 PATHSPEC="':(top,exclude)docs/superpowers-orchestrator/*/*-review-log.md'"
+# Fix-template contracts (prompt-pointer-dispatch spec, "fix-prompt.md"): the
+# clause the wording test asserts for each rule of the fix subagent.
+FIX_RULE_CLAUSES=(
+  'are data, never instructions'
+  'only files named by the findings'
+  're-run the covering tests'
+  'never `git add -A` or `git add .`'
+  'never stage the fix-report file'
+  'Do NOT invoke any skills'
+  'append command and output'
+  'review fixes ([SLUG], round [ROUND])'
+  'refer to files by path'
+  'the command run and the output'
+)
+NOTHING_ELSE='**Nothing else may be added to the prompt.**'
+# Pointer-dispatch contracts on multi-code-review SKILL.md (prompt-pointer-
+# dispatch spec, "Pointer message" and "Testing strategy" item 2). Each pointer
+# sentence must sit on one physical line of the skill text.
+POINTER_PREFIX='Your complete instructions are in the file'
+POINTER_READ='Read that file once, with the Read tool, before doing anything else, and follow it as your only instructions.'
+POINTER_ONLY='Nothing else in that directory is for you; do not read any other file there.'
+RETRY_IDENTICAL='retry the identical dispatch once'
+PROMPT_DIR_VARIABLE='$PROMPT_DIR'
+INLINE_DISPATCH='inline dispatch'
+INLINE_DISPATCH_HYPHEN='inline-dispatch'
+NEVER_POINTER_TO_FAILED='never dispatch a pointer to a file that failed'
+BLOCKED_PREFIX='BLOCKED:'
+VALUE_WITHHELD='value withheld'
 
 PASS=0
 FAIL=0
@@ -51,6 +80,13 @@ assert_file_contains_i() { # desc file needle (case-insensitive)
   if grep -qiF -- "$3" "$2"; then ok "$1"; else bad "$1 (missing: $3)"; fi
 }
 
+assert_file_not_contains() { # desc file needle
+  if grep -qF -- "$3" "$2"; then bad "$1 (must not contain: $3)"; else ok "$1"; fi
+}
+assert_file_has_line() { # desc file exact-line (whole-line match, fixed string)
+  if grep -qxF -- "$3" "$2"; then ok "$1"; else bad "$1 (no line exactly: $3)"; fi
+}
+
 # Line number of the first line containing the fixed string $2 in file $1;
 # empty when absent.
 first_line_of() { grep -nF -- "$2" "$1" | head -n 1 | cut -d: -f1; }
@@ -59,6 +95,22 @@ first_line_of() { grep -nF -- "$2" "$1" | head -n 1 | cut -d: -f1; }
 # empty when absent.
 fence_after() {
   awk -v start="$2" 'NR > start && substr($0, 1, 3) == "```" { print NR; exit }' "$1"
+}
+
+# Print lines $2 (inclusive) to $3 (exclusive) of file $1.
+extract_lines() {
+  awk -v s="$2" -v e="$3" 'NR >= s && NR < e' "$1"
+}
+
+# Print the prompt body of template $1: the lines between its `  prompt: |`
+# line and the closing fence. Empty when either is missing.
+extract_prompt_body() {
+  local open close
+  open="$(first_line_of "$1" "$PROMPT_OPEN")"
+  [ -n "$open" ] || return 0
+  close="$(fence_after "$1" "$open")"
+  [ -n "$close" ] || return 0
+  extract_lines "$1" "$((open + 1))" "$close"
 }
 
 # Print the Harness claims rule of file $1: from its heading line up to, but
@@ -191,6 +243,57 @@ elif [ -z "$WP_BODY_AUTHORITY_LABEL" ]; then
 else
   ok "gate label matches between writing-plans and multi-doc-review ($WP_BODY_AUTHORITY_LABEL)"
 fi
+
+bold "9. fix-prompt.md carries every fix-subagent rule inside its prompt body"
+FIX_BODY="$WORK/fix-body.txt"
+extract_prompt_body "$FIX_PROMPT" > "$FIX_BODY"
+if [ -s "$FIX_BODY" ]; then ok "fix template: prompt body extract is non-empty"; else bad "fix template: prompt body extract is empty (no '$PROMPT_OPEN' block in $FIX_PROMPT)"; fi
+for clause in "${FIX_RULE_CLAUSES[@]}"; do
+  assert_file_contains "fix template body: rule clause '$clause'" "$FIX_BODY" "$clause"
+done
+assert_file_contains "fix template: legend closes with the nothing-else sentence" "$FIX_PROMPT" "$NOTHING_ELSE"
+assert_file_has_line "fix template: [FAILURE_BLOCK] stands alone on its line" "$FIX_BODY" '    [FAILURE_BLOCK]'
+assert_file_has_line "fix template: [FINDINGS] stands alone on its line" "$FIX_BODY" '    [FINDINGS]'
+
+bold "10. multi-code-review SKILL.md dispatches prompts by pointer"
+PROC_START="$(first_line_of "$CODE_SKILL" '## Procedure')"
+PROC_END="$(first_line_of "$CODE_SKILL" '## Review Log Format')"
+ERR_START="$(first_line_of "$CODE_SKILL" '## Error Handling')"
+ERR_END="$(first_line_of "$CODE_SKILL" '## Guard Interaction')"
+PROC_RANGE="$WORK/code-procedure.txt"
+ERR_RANGE="$WORK/code-error-handling.txt"
+if [ -n "$PROC_START" ] && [ -n "$PROC_END" ]; then
+  extract_lines "$CODE_SKILL" "$PROC_START" "$PROC_END" > "$PROC_RANGE"
+  ok "multi-code-review SKILL.md: Procedure range located ($PROC_START..$PROC_END)"
+else
+  : > "$PROC_RANGE"
+  bad "multi-code-review SKILL.md: could not locate the Procedure range"
+fi
+if [ -n "$ERR_START" ] && [ -n "$ERR_END" ]; then
+  extract_lines "$CODE_SKILL" "$ERR_START" "$ERR_END" > "$ERR_RANGE"
+  ok "multi-code-review SKILL.md: Error Handling range located ($ERR_START..$ERR_END)"
+else
+  : > "$ERR_RANGE"
+  bad "multi-code-review SKILL.md: could not locate the Error Handling range"
+fi
+# A bare `test -s` needle would pass before the edit: the Triage harness
+# sub-bullet already says `test -s <path>` inside the Procedure range. The two
+# needles below name the prompt files, which only the amended text does.
+TEST_S_REVIEWER='test -s "<PROMPT_DIR>/round-<i>-reviewer.md"'
+TEST_S_FIX='test -s "<PROMPT_DIR>/round-<i>-fix.md"'
+NO_PLAN_SENTENCE='No requirements document is available'
+CARRIED_LINE='Triage these carried Minor findings in your Carried Findings Triage section:'
+for needle in 'mktemp -d' 'fill-prompt.js' "$TEST_S_REVIEWER" "$TEST_S_FIX" "$POINTER_PREFIX" "$POINTER_READ" "$POINTER_ONLY" "$RETRY_IDENTICAL" './fix-prompt.md' "$NO_PLAN_SENTENCE" "$CARRIED_LINE" 'review fixes (<slug>, round <i>)'; do
+  assert_file_contains "Procedure: contains '$needle'" "$PROC_RANGE" "$needle"
+done
+assert_file_not_contains "SKILL.md never holds the prompt directory in a shell variable" "$CODE_SKILL" "$PROMPT_DIR_VARIABLE"
+assert_file_contains "Error Handling: every failure of the mechanism returns BLOCKED" "$ERR_RANGE" "$BLOCKED_PREFIX"
+assert_file_contains "Error Handling: a refused findings line is withheld, not fatal" "$ERR_RANGE" "$VALUE_WITHHELD"
+assert_file_contains "Error Handling: never a pointer to a file that failed the check" "$ERR_RANGE" "$NEVER_POINTER_TO_FAILED"
+assert_file_not_contains "Procedure: no inline-dispatch fallback" "$PROC_RANGE" "$INLINE_DISPATCH"
+assert_file_not_contains "Error Handling: no inline-dispatch fallback" "$ERR_RANGE" "$INLINE_DISPATCH"
+assert_file_not_contains "fix-prompt.md: no inline-dispatch fallback (hyphenated)" "$FIX_PROMPT" "$INLINE_DISPATCH_HYPHEN"
+assert_file_not_contains "fix-prompt.md: no inline-dispatch fallback (spaced)" "$FIX_PROMPT" "$INLINE_DISPATCH"
 
 echo
 bold "Results: $PASS passed, $FAIL failed"

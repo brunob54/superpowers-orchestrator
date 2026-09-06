@@ -1,0 +1,145 @@
+# Open decisions — prompt-pointer-dispatch
+
+Ruling record of orchestrating-development's in-run rulings for this run.
+
+## Ruling 1 — 2026-09-05 — phase 3 — [task 4/1] Task 4 Step 4 cannot `git add` the gitignored CLAUDE.md
+
+- **Class:** forced
+- **Item:** [task 4/1] n/a n/a — Task 4 Step 4 tells the implementer to run `git add CLAUDE.md` and commit, but CLAUDE.md is untracked and gitignored (.gitignore:7), so the command fails; which option governs: (a) local edit only, (b) `git add -f`, (c) register the suite in a tracked file instead?
+- **Contract clause:** "git add CLAUDE.md / git commit -m 'docs(claude-md): list the fill-prompt unit suite among the fast tests' …" — docs/superpowers-orchestrator/2026-09-05-prompt-pointer-dispatch/plans/prompt-pointer-dispatch.md, Task 4 Step 4 (reference text under the plan's Body authority note; the Task 4 Contract binds only the line's content and position inside CLAUDE.md)
+- **Defensible answers:** n/a
+- **Forks:** none; contradiction: none
+- **Resolution:** option (a) — local edit only, no commit: keep the Step 1 edit on disk, treat Step 4 as satisfied with nothing to commit, never run `git add -f` on CLAUDE.md, record in the task report that CLAUDE.md is a local-only gitignored file, tick the task's checkboxes and commit the plan tick as usual — CLAUDE.md is untracked and gitignored by a deliberate `.gitignore` entry, the user's standing rule for this run states an edit to it is on-disk only and it must never be git-added, and the Task 4 Contract is already satisfied by the on-disk edit, so no other outcome is defensible.
+
+## Ruling 2 — 2026-09-05 — phase 4 — [M19] flat prompt directory: verification-cycle reviewer prompt beside the round's fix prompt
+
+- **Class:** forced
+- **Item:** [M19 inv 1] Minor skills/multi-code-review/SKILL.md:331 — a verification-cycle reviewer prompt sits beside its round's fix prompt in one flat prompt directory, so a reviewer that ignores the pointer sentence could read finding text; every fix (per-dispatch sub-directories, deleting the fix prompt after use) contradicts the once-per-controller, never-cleaned-up directory the plan fixes
+- **Contract clause:** "The prompt directory is created once per controller with `mktemp -d`, outside the checkout, before round 1; the skill text never shows `$PROMPT_DIR` or any othe" — docs/superpowers-orchestrator/2026-09-05-prompt-pointer-dispatch/plans/prompt-pointer-dispatch.md, Global Constraints (pre-amendment wording; ruling 3 amends "once per controller" to "once per invocation" in the same commit, and the plan-governs answer below quotes the clause as it reads after that amendment, because the controller compares the quote against the plan it is handed)
+- **Defensible answers:** n/a
+- **Forks:** none; contradiction: none
+- **Resolution:** plan governs: "The prompt directory is created once per invocation with `mktemp -d`, outside the checkout, before round 1 (a controller that runs a second invocation, or resum" — docs/superpowers-orchestrator/2026-09-05-prompt-pointer-dispatch/plans/prompt-pointer-dispatch.md — the spec's Error handling table (row "A reviewer reads another file in the directory") names exactly this exposure and accepts it as the same exposure the `.superpowers/reviews/` prohibition already carries, and the plan's Global Constraint fixes the directory as created once and never cleaned up, so a fix that adds sub-directories or deletes files re-opens an accepted design trade-off with no new fact; the finding is Minor and stays carried.
+
+## Ruling 3 — 2026-09-05 — phase 4 — [I2] "once per controller" breaks a second invocation in one session
+
+- **Class:** forced
+- **Item:** [I2 inv 1] Important skills/multi-code-review/SKILL.md:332 — 'once per controller' is read literally by a controller that runs a second direct-mode invocation in the same session: the second invocation reuses the directory, every fill hits an existing file name, exits 5 and falls back to inline dispatch; the suggested wording 'once per invocation' contradicts the Global Constraint
+- **Contract clause:** "The prompt directory is created once per controller with `mktemp -d`, outside the checkout, before round 1; the skill text never shows `$PROMPT_DIR` or any othe" — docs/superpowers-orchestrator/2026-09-05-prompt-pointer-dispatch/plans/prompt-pointer-dispatch.md, Global Constraints
+- **Defensible answers:** n/a
+- **Forks:** none; contradiction: none
+- **Resolution:** amend plan: the Global Constraints prompt-directory entry now reads "created once per invocation with `mktemp -d`, outside the checkout, before round 1 (a controller that runs a second invocation, or resumes one, creates a fresh directory first)" (amended by ruling 3); fix it: the Procedure preamble of skills/multi-code-review/SKILL.md says the directory is created once per invocation — before round 1, or before the round a resumed invocation continues at — never once per controller, so a second invocation in one session gets a fresh directory and no file-name collision — the spec's normative sentence "Created once, at the start of the Procedure, before round 1" is per invocation because the Procedure runs once per invocation, so the plan's "once per controller" contradicts the spec whenever one controller runs two invocations, and no other outcome is defensible.
+
+## Ruling 4 — 2026-09-05 — phase 4 — [I1] systematic reader-side pointer failure never reaches the inline fallback
+
+- **Class:** escalated (spec wrong)
+- **Item:** [I1 inv 1] Important skills/multi-code-review/SKILL.md:1446 — a systematic reader-side failure of the pointer (every reviewer unable to read its prompt file) never reaches the inline-dispatch fallback: each round retries the identical pointer once and ends inconclusive, so all N rounds pass with zero findings; the suggested fix adds a reader-side failure class, which the Task 3 Contract forbids with 'no new failure class'
+- **Contract clause:** "Must convey the four fallback rows of the spec and the one row this plan adds: `mktemp -d` failure → inline dispatch for the whole invocation, stated in the com" — docs/superpowers-orchestrator/2026-09-05-prompt-pointer-dispatch/plans/prompt-pointer-dispatch.md, Task 3 Contract (Error Handling section), which mirrors the spec's Error handling row "A reviewer returns no usable report … retry the identical pointer once; then the reviewer is unusable under usable <u>/<m>. No new failure class." (docs/superpowers-orchestrator/2026-09-05-prompt-pointer-dispatch/specs/prompt-pointer-dispatch-design.md)
+- **Defensible answers:** (a) plan governs — the spec chose the existing retry rule; an all-unusable round is logged inconclusive, never clean, and the fallback for reader-side failure is the human reading the log. (b) amend spec and plan — when no reviewer of a round returns a usable report after a pointer dispatch, the one retry of step 3 is dispatched inline (the controller reads the prompt file it wrote and pastes it), so a systematic reader-side failure costs one inline round instead of a silent inconclusive loop; the Task 3 Contract row changes accordingly. The three owed harness probes of this invocation (permission prompts on Write and Read outside the working directories in a non-bypass session) decide how likely the failure is.
+- **Forks:** none; contradiction: none
+- **Resolution:** escalated — spec wrong: every fix contradicts the spec's Error handling row and the Task 3 Contract that mirrors it; changing what the spec accepts is the author's decision, and the owed probes it depends on cannot run in this bypass-mode session.
+- **Follow-up:** amend plan: every failure of the pointer mechanism, writer side and reader side, is fatal — the controller writes the round entry it owes, then returns `BLOCKED: <cause>` naming the failure; there is no inline fallback (Global Constraints entry amended by ruling 4; Task 3 Contract amended; spec Amendment 1); fix it: SKILL.md Procedure and Error Handling state the fatal rule and no longer describe or perform inline dispatch; section 10 asserts `BLOCKED:` and the absence of `inline dispatch` — clause: Task 3 "Must convey the four fallback rows of the spec and the one row this plan adds: `mktemp -d` failure → inline dispatch for the whole invocation, stated in the com"
+
+## Ruling 5 — 2026-09-05 — phase 4 — [I1] (round 4) verification cycle reuses a lens file a fresh directory does not hold
+
+- **Class:** forced
+- **Item:** [I1 inv 2] Important skills/multi-code-review/SKILL.md:375 — the verification-cycle row has the re-review reuse round-<i>-lens.txt, but a resumed invocation starts from a fresh mktemp -d directory where that file does not exist, so a resume-then-verify path fills with a missing @file, exits 5 and ends BLOCKED; the suggested wording 'reuses it when this invocation wrote it, otherwise writes it first' changes Task 3 Contract text
+- **Contract clause:** "Value files are written once for their dispatch a fix re-dispatch reuses its findings file and a verification cycle reuses its round's lens file with the Write " — docs/superpowers-orchestrator/2026-09-05-prompt-pointer-dispatch/plans/prompt-pointer-dispatch.md, Task 3 Step 3, inside a fenced block (reference text under the Body authority note; the Task 3 Contract and the Global Constraints state no lens-file reuse rule, so the finding contradicts no binding text)
+- **Defensible answers:** n/a
+- **Forks:** none; contradiction: none
+- **Resolution:** fix it: (this answers the round 4 user-decision item on lens-file reuse) the verification-cycle row of the file-name table in skills/multi-code-review/SKILL.md, and the sentence after the table, say that a verification cycle reuses its round's lens file when the current prompt directory holds it and otherwise writes it first — a resumed or post-loop-addendum controller starts from a fresh directory (ruling 3) that holds no earlier file; the same rule for a fix re-dispatch's findings file — a file that does not exist cannot be reused, and under ruling 3 every resumed or addendum controller starts from a directory that holds no earlier file, so with a missing @file now fatal the reuse-only wording stops every resume-then-verify path; no other outcome is defensible, and the clause is reference text, so no amendment is needed.
+
+## Ruling 6 — 2026-09-05 — phase 4 — [I3] credential-shaped finding text makes the findings-file Write fatal
+
+- **Class:** escalated (spec wrong)
+- **Item:** [I3 inv 2] Important skills/multi-code-review/SKILL.md:1493 — a Security-lens finding that quotes the credential it reports makes the controller's Write of round-<i>-findings.txt be denied by hooks/safety/protect-secrets.js, so the round returns BLOCKED, the text may not be altered, and the same round reproduces the stop on every resume; both suggested fixes (log the item user-decision and dispatch the rest; redact with a visible marker) contradict the fatal rule and 'the text never altered to pass the hook'
+- **Contract clause:** "Every failure of the mechanism (`mktemp -d` or `cygpath`, the script, `test -s`, Node missing, a value-file write refused by a hook or failed, and a round in wh" — docs/superpowers-orchestrator/2026-09-05-prompt-pointer-dispatch/plans/prompt-pointer-dispatch.md, Global Constraints (amended by ruling 4 on the user's answer; decided wording backed by ruling 4's Follow-up)
+- **Defensible answers:** (a) plan governs — the hook did its job: a credential must never be written to disk, so a BLOCKED naming the hook's pattern and the finding's file:line is the right stop, and the human removes the secret from the branch (it is a Critical in the reviewed code) or from the reviewer's quote. (b) amend spec and plan — a findings line the secrets hook refuses is replaced by its file:line plus "secret-bearing finding, value withheld", which is the location-only form the orchestrator's own "Never reproduce a secret" rule already requires for every committed file; the round proceeds and the finding stays a Critical the fix removes. (c) amend spec and plan — that round's findings are journaled and the round logged BLOCKED-by-hook without stopping the loop, other rounds continue.
+- **Forks:** none; contradiction: none
+- **Resolution:** escalated — spec wrong: every fix softens the rule the user decided on 2026-09-05 (every failure fatal, text never altered to pass a hook — ruling 4 Follow-up, spec Amendment 1); guard 4 sends the same decision back to the same decider.
+
+## Ruling 7 — 2026-09-05 — phase 4 — [I1] (round 4 verification 3) restore rule cannot remove a file the failed attempt created
+
+- **Class:** forced
+- **Item:** [I1 inv 2] Important skills/multi-code-review/fix-prompt.md:63 — the restore rule added in verification 2 (fix-prompt.md step 2 and the SKILL.md failure bullet) uses `git checkout -- <path>` for every file a failed fix attempt changed, which fails for a file the attempt CREATED (an untracked test file), so the leftover stays as `??` in `git status --porcelain` and the re-dispatch starts on a dirty tree (unresolved: verification cap)
+- **Contract clause:** none — the item carries `clause: none`; fix-prompt.md step 2 is the branch's own text
+- **Defensible answers:** n/a
+- **Forks:** none; contradiction: none
+- **Resolution:** fix it: (this answers the round 4 verification 3 unresolved item on the restore rule) in fix-prompt.md step 2 and the SKILL.md fix-failure bullet, the restore after a failed fix attempt uses git checkout -- <path> only for files git tracks; a file the attempt created and git does not track is removed by explicit path (rm -- <path>), never git clean, so the re-dispatch starts on a clean tree — git cannot check out a path it does not track, so `git checkout -- <path>` can never restore the pre-attempt state for a created file and `rm -- <path>` is the only way that keeps the explicit-path discipline; no other outcome is defensible.
+- **Follow-up:** amend plan: when hooks/safety/protect-secrets.js refuses a value-file Write, each line the hook names is replaced by its file:line plus the fixed text "secret-bearing finding, value withheld" and the Write is retried once; a second refusal is fatal (Global Constraints amended by ruling 6; Task 3 Contract amended; spec Amendment 2); fix it: SKILL.md Error Handling and the Critical/Important fix bullet state the rule, the withheld finding keeps its id and severity, every other value-file failure stays fatal; section 10 asserts `value withheld` — clause: Global Constraints "Every failure of the mechanism (`mktemp -d` or `cygpath`, the script, `test -s`, Node missing, a value-file write refused by a hook or failed, and a round in wh"
+
+## Ruling 8 — 2026-09-06 — phase 4 — [I2] (round 5) the secrets hook names a credential kind, never a line
+
+- **Class:** escalated (spec wrong)
+- **Item:** [I2 inv 3] Important skills/multi-code-review/SKILL.md:749 — the secrets-refusal rule replaces 'each line the hook's message names', but hooks/safety/protect-secrets.js names no line: its refusal reason is 'Hardcoded <kind> detected in content' for the first matching pattern only, so the rule withholds nothing as written and the retried Write is refused again; the same wording stands in the amended Global Constraints and in the spec
+- **Contract clause:** "One sanctioned alteration of value text: when `hooks/safety/protect-secrets.js` refuses a value-file Write, each line the hook's message names is replaced by it" — plan Global Constraints (amended by ruling 6 on the user's answer; decided wording)
+- **Defensible answers:** (a) the controller runs the hook itself on each line of the value file (`node hooks/safety/protect-secrets.js` with a synthetic Write payload per line) and withholds the value of every line the hook refuses — precise, deterministic, one extra command per line of a refused file. (b) the controller withholds the description of every finding line in the refused file that came from the Security lens, keeping id, severity and file:line — cheap, no per-line probing, loses the descriptions of the other Security findings of that round. (c) withhold every description in the refused file — crudest.
+- **Forks:** none; contradiction: none
+- **Resolution:** escalated — spec wrong: the clause is the user's decided wording (ruling 6 Follow-up, spec Amendment 2); guard 4 sends the mechanics of the user's own decision back to the user.
+- **Follow-up:** amend plan: when protect-secrets.js refuses a value-file Write, the controller runs the hook itself on each line of that file with a synthetic Write payload and withholds the value of every line the hook refuses, then retries the Write once (Global Constraints amended by ruling 8; Task 3 Contract; spec Amendment 3); fix it: SKILL.md Error Handling and the fix bullet state the per-line probe — clause: Global Constraints "One sanctioned alteration of value text: when `hooks/safety/protect-secrets.js` refuses a value-file Write, each line the hook's message names is replaced by it"
+
+
+## Ruling 9 — 2026-09-06 — phase 4 — [I2] (round 6) the u = 0 fatal rule also stops on transient reviewer failures
+
+- **Class:** escalated (spec wrong)
+- **Item:** [I2 inv 3] Important skills/multi-code-review/SKILL.md:557 — the u = 0 rule makes a round whose reviewers both failed for a reason unrelated to the prompt file (rate limit, tool error, killed subagent) return 'BLOCKED: no reviewer of round <i> could use its prompt file'; the suggested carve-out (continue as inconclusive when the final messages show the file was read) contradicts the amended constraint
+- **Contract clause:** "Every failure of the mechanism (`mktemp -d` or `cygpath`, the script, `test -s`, Node missing, a value-file write that fails or that `hooks/safety/protect-secre" — plan Global Constraints (amended by ruling 4 on the user's answer; decided wording)
+- **Defensible answers:** (a) plan governs — any all-unusable round stops; a rate-limit kill of both reviewers (Case 009: 21 of 187 reviewer transcripts ended that way in the previous run) becomes a BLOCKED stop instead of an inconclusive round. (b) amend — u = 0 is fatal only when at least one reviewer's final message shows it could not read or did not follow its prompt file; a round whose final messages show environment deaths (usage limit, tool error, no message) stays `inconclusive` as today, because the pointer mechanism did not fail.
+- **Forks:** none; contradiction: none
+- **Resolution:** escalated — spec wrong: the clause is the user's decided wording (ruling 4 Follow-up, spec Amendment 1).
+- **Follow-up:** amend plan: u = 0 is fatal only when at least one reviewer's final message shows it could not read or did not follow its prompt file; a round whose final messages all show an environment death (usage limit, tool error, no message) is logged inconclusive as today (Global Constraints amended by ruling 8; Task 3 Contract; spec Amendment 3); fix it: SKILL.md step 3 and Error Handling state the distinction — clause: Global Constraints "Every failure of the mechanism (`mktemp -d` or `cygpath`, the script, `test -s`, Node missing, a value-file write that fails or that `hooks/safety/protect-secre"
+
+
+## Ruling 10 — 2026-09-06 — phase 4 — [I4] (round 6) a controller's own fill-command slip is fatal although nothing was written
+
+- **Class:** escalated (spec wrong)
+- **Item:** [I4 inv 3] Important skills/multi-code-review/SKILL.md:487 — a controller's own fill-command slip (exit 1, 3 or 4, or exit 5 naming an @file it never wrote, for example the round-1 CARRIED_BLOCK form copied into round 2) is a mechanism failure by the letter and returns BLOCKED although nothing was written; the suggested carve-out (correct the command and run it once more, a second non-zero exit fatal) contradicts 'every failure of the mechanism (the script included) is fatal'
+- **Contract clause:** "Every failure of the mechanism (`mktemp -d` or `cygpath`, the script, `test -s`, Node missing, a value-file write that fails or that `hooks/safety/protect-secre" — plan Global Constraints (amended by ruling 4; decided wording)
+- **Defensible answers:** (a) plan governs — a slip stops the run; the BLOCKED text carries the script's message, the human resumes. (b) amend — when the script exits 1, 3 or 4, or 5 naming an @file the controller never wrote, the controller corrects its own command once and runs it again; a second non-zero exit is fatal; exit 2 (malformed template) and exit 5 on a file it did write stay fatal at once.
+- **Forks:** none; contradiction: none
+- **Resolution:** escalated — spec wrong: same decided wording as ruling 9.
+- **Follow-up:** amend plan: when the script exits 1, 3 or 4, or exits 5 naming an @file the controller never wrote, the controller corrects its own command once and runs it again; a second non-zero exit is fatal; exit 2 and exit 5 on a written file are fatal at once (Global Constraints amended by ruling 8; Task 3 Contract; spec Amendment 3); fix it: SKILL.md step 2, the fix bullet and Error Handling state it — clause: Global Constraints "Every failure of the mechanism (`mktemp -d` or `cygpath`, the script, `test -s`, Node missing, a value-file write that fails or that `hooks/safety/protect-secre"
+
+## Ruling 11 — 2026-09-06 — phase 4 — [I1] (round 7) the per-line secrets probe's hook path resolves only in this plugin's checkout
+
+- **Class:** forced
+- **Item:** [I1 inv 4] Important skills/multi-code-review/SKILL.md:772 — the per-line secrets probe is written `node hooks/safety/protect-secrets.js`, a path relative to the repository root, while the hook lives in the plugin; in any other project Node exits 'Cannot find module', no line reads as refused, the unchanged Write is refused a second time and the run ends BLOCKED
+- **Contract clause:** "Three bounded exceptions: (1) when `hooks/safety/protect-secrets.js` refuses a value-file Write, the controller runs `node hooks/safety/protect-secrets.js` itse" — plan Global Constraints (decided wording of ruling 8; the user delegated its refinement on 2026-09-06)
+- **Defensible answers:** n/a
+- **Forks:** none — the user delegated the recommended option on 2026-09-06 ("no questions until Phase 5"); guard 4's escalation is satisfied by that standing answer
+- **Resolution:** amend plan: exception (1) probes each line with one Write tool call of a one-line throwaway file in the prompt directory, so only the secrets hook decides and no hook path is needed (amended by ruling 11); fix it: skills/multi-code-review/SKILL.md's Error Handling section and the Critical/Important fix bullet replace the node command by the Write-tool probe — a relative hook path cannot resolve outside this repository and a Write tool call is judged by the very hook whose refusal started the probe, so no other outcome is defensible; the user delegated the choice.
+
+## Ruling 12 — 2026-09-06 — phase 4 — [I2] (round 8) a report unusable on format alone fits neither u = 0 case
+
+- **Class:** forced
+- **Item:** [I2 inv 4] Important skills/multi-code-review/SKILL.md:586 — a reviewer that read the file, reviewed the diff and returned a report unusable on format alone fits neither the fatal case nor the environment-death case; a controller applying 'did not follow it' literally ends the run on a formatting slip
+- **Contract clause:** "Every failure of the mechanism (`mktemp -d` or `cygpath`, the script, `test -s`, Node missing, a value-file write that fails or that `hooks/safety/protect-secre" — plan Global Constraints (decided wording of ruling 9; the user delegated its refinement on 2026-09-06)
+- **Defensible answers:** n/a
+- **Forks:** none — the user delegated the recommended option on 2026-09-06 ("no questions until Phase 5"); guard 4's escalation is satisfied by that standing answer
+- **Resolution:** amend plan: u = 0 is fatal only when a final message shows no sign of the prompt file's content; a report unusable on format alone whose text shows the diff was reviewed is not such a sign and the round is logged inconclusive as today (amended by ruling 11); fix it: SKILL.md step 3 and Error Handling state it — a reviewer whose report shows the diff was reviewed demonstrably read its prompt file, so the mechanism did not fail, and the user's rule makes only mechanism failures fatal; the user delegated the choice.
+
+## Ruling 13 — 2026-09-06 — phase 4 — [I4] (round 8 verification 2) a fill that exits 0 with a wrong value has no correction path
+
+- **Class:** forced
+- **Item:** [I4 inv 4] Important skills/multi-code-review/SKILL.md:387 — a fill whose command was wrong but exited 0 has no correction path: the corrected re-fill to the same name exits 5 on a file the controller did write, fatal at once, so the controller returns BLOCKED or dispatches the wrong prompt
+- **Contract clause:** "A prompt file is written once and never rewritten; before every dispatch the controller runs `test -s '<file>'` as its own command; a pointer is never dispatche" — plan Global Constraints (decided wording; the user delegated its refinement on 2026-09-06)
+- **Defensible answers:** n/a
+- **Forks:** none — the user delegated the recommended option on 2026-09-06 ("no questions until Phase 5"); guard 4's escalation is satisfied by that standing answer
+- **Resolution:** amend plan: write-once applies from the first dispatch of a pointer to the file; before that the controller removes the file (`rm -- <file>`) and fills it again under the same name (amended by ruling 11); fix it: SKILL.md step 2 states it, the file-name table is unchanged — a file no pointer has been dispatched to has been read by nobody, so re-filling it breaks no invariant the write-once rule protects, while the alternatives (BLOCKED, or dispatching a wrong prompt) are indefensible; the user delegated the choice.
+
+## Ruling 14 — 2026-09-06 — phase 4 — [I6] (round 8 verification 3) a Bash-hook-denied probe withholds a non-credential Security finding
+
+- **Class:** forced
+- **Item:** [I6 inv 4] Important skills/multi-code-review/SKILL.md:835 — the per-line probe runs the finding line through a Bash heredoc that block-dangerous-commands.js scans, so a Security finding quoting a command that prints a secrets file is withheld, the fix subagent finds no credential at the location, and the item ends unresolved with the real leak unfixed in every later round
+- **Contract clause:** same clause as ruling 11
+- **Defensible answers:** n/a
+- **Forks:** none — the user delegated the recommended option on 2026-09-06 ("no questions until Phase 5"); guard 4's escalation is satisfied by that standing answer
+- **Resolution:** amend plan: same amendment as ruling 11 — the probe is one Write tool call of a one-line file, so only the secrets hook decides; fix it: same fix as ruling 11 — the withhold exists to keep a credential off disk, and a probe that lets an unrelated hook withhold a non-credential finding leaves a real leak unfixed and blocking; the Write-tool probe is the only outcome that satisfies both; the user delegated the choice.
+
+## Ruling 15 — 2026-09-06 — phase 4 — [I3] (round 8 verification 3) uncapped failure text versus the Read tool's default window
+
+- **Class:** forced
+- **Item:** [I3 inv 4] Important skills/multi-code-review/fix-prompt.md:69 — fix-prompt.md places [FINDINGS] and [FAILURE_BLOCK] before '## Procedure' and '## Final message', the failure text has no length cap, and the Read tool returns at most 2000 lines by default, so a long failure text hides the restore, staging and commit-subject rules from the fix subagent (unresolved: verification cap)
+- **Contract clause:** none — the item carries `clause: none`
+- **Defensible answers:** n/a
+- **Forks:** none — the user delegated the recommended option on 2026-09-06 ("no questions until Phase 5"); guard 4's escalation is satisfied by that standing answer
+- **Resolution:** fix it: fix-prompt.md places every rule (Procedure, Final message) before the [FINDINGS] and [FAILURE_BLOCK] placeholders, and the failure file holds the heading then at most the last 150 lines of the failure text with one line "(<n> earlier lines omitted)" when cut; SKILL.md's fix-failure bullet states the cap — a reader that never reaches the rules cannot follow them, and moving the rules first plus a cap is the only outcome that keeps every rule inside a default Read window; no plan text binds it.
