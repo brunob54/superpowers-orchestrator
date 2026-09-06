@@ -63,3 +63,12 @@ Items: [I4] escalated (spec wrong) — round 6: a controller's own fill-command 
 Detail: docs/superpowers-orchestrator/2026-09-05-prompt-pointer-dispatch/plans/prompt-pointer-dispatch-open-decisions.md
 Forks: none
 Re-dispatch: none — escalated
+
+## STOPPED — 2026-09-06 — phase 4 — three items against the user's decided wording (rulings 8-10), all escalated (spec wrong)
+Detail: docs/superpowers-orchestrator/2026-09-05-prompt-pointer-dispatch/implementation/prompt-pointer-dispatch-review-log.md
+Open: [I2] escalated (spec wrong) — round 5: hooks/safety/protect-secrets.js names a credential kind ("Hardcoded <kind> detected in content"), never a line, so "each line the hook's message names" withholds nothing and the retried Write is refused again
+Open: [I2] escalated (spec wrong) — round 6: the u = 0 fatal rule also returns BLOCKED for a round whose reviewers both died of a rate limit, tool error or kill, unrelated to the prompt file
+Open: [I4] escalated (spec wrong) — round 6: a controller's own fill-command slip (exit 1, 3, 4, or 5 on an @file it never wrote) is fatal by the letter although nothing was written
+Owed probe: - [I3] rejected: harness probe not runnable here — in a controller session holding a `mktemp -d` path, run `/compact` and check whether the summary still carries the literal path — (tool missing) — a prompt-directory path lost to a context compaction ends the loop with BLOCKED under the once-per-invocation constraint (round 3 [M1]); the suggested second `mktemp -d` contradicts that constraint, and no tool of this controller triggers a compaction ← 1/2: r1:I3
+Owed probe: - [M6] rejected: harness probe not runnable here — from a subagent running in the orchestrator's normal permission mode, Write one file under a fresh `mktemp -d` path and observe whether a permission prompt appears — (ambiguous observation) — a value-file Write outside the working directories may raise a permission prompt in a non-bypass session; this session runs in bypass mode, so no observation here can match or contradict the claim ← 1/2: r2:M3
+Resume: Resume orchestration for docs/superpowers-orchestrator/2026-09-05-prompt-pointer-dispatch/plans/prompt-pointer-dispatch.md
