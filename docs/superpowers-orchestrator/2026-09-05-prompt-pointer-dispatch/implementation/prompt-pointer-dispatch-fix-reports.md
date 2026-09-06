@@ -1216,3 +1216,87 @@ $ git commit -m "review fixes (prompt-pointer-dispatch, round 8)" -- skills/mult
 [feature/prompt-pointer-dispatch 665c18c] review fixes (prompt-pointer-dispatch, round 8)
  2 files changed, 46 insertions(+), 24 deletions(-)
 ```
+
+## Round 8 verification 2 fix
+
+- **[M3]** — `skills/multi-code-review/SKILL.md`, the fix-failure bullet of
+  the Procedure ("Fix subagent fails or its covering tests fail"), and
+  `skills/multi-code-review/fix-prompt.md`, step 2 of the Procedure. Both
+  places now name `git restore --source=HEAD --staged --worktree -- <path>`
+  as the single restore command for every path the index knows, explain that
+  it covers a modified, a deleted and a newly added staged file alike, and
+  state that `git checkout HEAD -- <path>` fails on a file that exists only
+  in the index with `pathspec did not match any file(s) known to git`. The
+  `git checkout HEAD -- <path>` form is no longer offered as an alternative.
+  `rm -- <path>` is now scoped to a file git does not track, one that was
+  never staged.
+- **[M1]** — `skills/multi-code-review/SKILL.md`, the per-line secrets probe
+  in the Critical/Important fix bullet of the Procedure, and the value-file
+  row of Error Handling. Both places gained one rule: when no single line is
+  refused, probe each pair of consecutive lines the same way, the two lines
+  joined by one newline and passed as one `content` string, and withhold
+  both lines of a refused pair. The rule states the reason — two of the
+  hook's patterns allow whitespace on both sides of the `:` or `=`, and a
+  newline is whitespace — and that a pattern spans at most one line break,
+  so pairs are enough.
+
+### Tests
+
+```
+$ bash tests/reviewer-templates/run-tests.sh
+1. Harness claims rule is inside the prompt block
+2. Finding-format field spellings
+3. Controller triage reason strings and completion-report line
+4. user-decision guard
+5. Rule text drift between the two templates
+6. Unchanged contracts
+7. Ambiguity & testability plan-cell contract targets
+8. Body-authority gate label consistency (writing-plans vs multi-doc-review)
+9. fix-prompt.md carries every fix-subagent rule inside its prompt body
+10. multi-code-review SKILL.md dispatches prompts by pointer
+Results: 60 passed, 0 failed
+(per-case PASS lines trimmed; every case passed)
+```
+
+```
+$ bash tests/fill-prompt/run-tests.sh
+1. Byte-for-byte fill of the small template
+2. Values survive unchanged and are never re-substituted
+3. Empty values: whole-line removal versus a shared line
+4. @file values, trailing newlines, malformed body
+5. Strictness and exit codes
+6. The real reviewer template
+7. The real fix template
+8. Round 2 fixes: refuse to overwrite --out, and trailing blank after fill
+9. Round 4 fix: a fenced example inside the prompt body
+Results: 101 passed, 0 failed
+(per-case PASS lines trimmed; every case passed)
+```
+
+```
+$ bash tests/codex/run-unit-tests.sh
+pretool-bash-adapter: 28 passed, 0 failed
+posttool-bash-compress-adapter: 11 passed, 0 failed
+stop-adapter: 16 passed, 0 failed
+stop-reminders: 15 passed, 0 failed
+session-start-adapter: 14 passed, 0 failed
+skill-activator (UserPromptSubmit): 139 passed, 0 failed
+statusline-context-cache: 10 passed, 0 failed
+subagent-guard: 44 passed, 0 failed
+protect-secrets: 43 passed, 0 failed
+ Results: 10 suites passed, 0 suites failed
+ All unit tests passed.
+(per-case check lines trimmed; every case passed)
+```
+
+No assertion pinned wording that these edits changed, so no test file was
+modified.
+
+### Commit
+
+```
+$ git add -- skills/multi-code-review/SKILL.md skills/multi-code-review/fix-prompt.md
+$ git commit -m "review fixes (prompt-pointer-dispatch, round 8)" -- skills/multi-code-review/SKILL.md skills/multi-code-review/fix-prompt.md
+[feature/prompt-pointer-dispatch 5daf802] review fixes (prompt-pointer-dispatch, round 8)
+ 2 files changed, 39 insertions(+), 16 deletions(-)
+```
