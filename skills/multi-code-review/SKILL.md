@@ -484,10 +484,13 @@ code has been revised since, so a re-pass is meaningful):
       carried list, and every later round, instead use the empty value
       `'CARRIED_BLOCK='` — step 1 writes `round-1-carried.txt` only when
       there is a carried list, so passing the `@<file>` form when that file
-      was never written makes the script exit 5, which is fatal and ends
-      the loop with `BLOCKED: prompt file round-<i>-reviewer.md not
-      produced — <the script's message>`. Every `NAME=` argument stays
-      single-quoted either way.
+      was never written makes the script exit 5 on a file you never wrote.
+      That is a slip in your own command, not a failure of the mechanism:
+      correct the argument to the empty value `'CARRIED_BLOCK='` and run
+      the command again once, as sub-step 3 states; a second non-zero exit
+      is fatal and ends the loop with `BLOCKED: prompt file
+      round-<i>-reviewer.md not produced — <the script's message>`. Every
+      `NAME=` argument stays single-quoted either way.
 
       Two rules hold for this fill and for the fix fill of step 4 alike.
       First, text that comes from reviewer output — findings, carried
@@ -519,7 +522,14 @@ code has been revised since, so a re-pass is meaningful):
       findings, fix reports, or the log — neither in a value nor beside
       the pointer.
    3. Run `test -s "<PROMPT_DIR>/round-<i>-reviewer.md"` as its own
-      command. If the script exited non-zero or the check fails, stop and
+      command. Read the script's exit code first. Exit 1, 3 or 4, and
+      exit 5 naming an `@<file>` you never wrote, mean your own fill
+      command was wrong — a mistyped argument, a missing value, a value
+      file you did not write — and not that the mechanism failed:
+      correct the command once, using the argument name the script's
+      message gives, and run it again. A second non-zero exit is fatal.
+      Exit 2, and exit 5 on a file you did write, are fatal at once. On
+      any fatal exit, or when the `test -s` check fails, stop and
       return `BLOCKED: prompt file round-<i>-reviewer.md not produced —
       <the script's message, or "empty">` (Error Handling); never dispatch
       a pointer to a file that failed the check.
@@ -555,10 +565,18 @@ code has been revised since, so a re-pass is meaningful):
    keeping the same reviewer number; the retries of one round may go out
    together in one message. After the retries, *u* = the number of usable
    reports. u = 0 → write the round entry in the `inconclusive` form
-   (never clean; nothing is triaged), then stop and return
-   `BLOCKED: no reviewer of round <i> could use its prompt file — <each
-   reviewer's final message, one line each>`: a round in which no reviewer
-   could use its prompt file never lets the loop continue. u ≥ 1 → build one
+   (never clean; nothing is triaged), then read the M final messages and
+   decide which of the two u = 0 cases this is. When at least one final
+   message shows that its reviewer could not read its prompt file, or
+   read it and did not follow it, the pointer mechanism failed: stop and
+   return `BLOCKED: no reviewer of round <i> could use its prompt file —
+   <each reviewer's final message, one line each>`; a round in which a
+   reviewer could not use its prompt file never lets the loop continue.
+   When every final message instead shows an environment death — a usage
+   limit, a tool error, or no final message at all — nothing about the
+   prompt file failed: the round stays `inconclusive` and the loop
+   continues to the next round, as it did before pointer dispatch.
+   u ≥ 1 → build one
    **consolidated finding set** from the usable reports by the rules
    below, then continue; a round with u < M is *partial* — it is logged
    with its counts and is never clean. With M = 1 the consolidated set is
@@ -748,7 +766,18 @@ code has been revised since, so a re-pass is meaningful):
      the report marker, and only reviewers emit that marker. Dispatch it
      by pointer: write the list to `<PROMPT_DIR>/round-<i>-findings.txt`
      under the value-file rule. If `hooks/safety/protect-secrets.js`
-     refuses that Write, replace each line the hook's message names by
+     refuses that Write, find the offending lines yourself: the hook's
+     refusal names a credential kind — the kind of the first pattern that
+     matched the whole content — and never a line, so nothing in it says
+     what to withhold. Run `node hooks/safety/protect-secrets.js` once
+     per line of the file you tried to write, giving it on standard input
+     the JSON object the hook reads:
+     `{"tool_name":"Write","tool_input":{"file_path":"<PROMPT_DIR>/round-<i>-findings.txt","content":"<that one line>"}}`.
+     The hook parses that object from standard input, inspects
+     `tool_input.file_path` and `tool_input.content`, exits 0 either way,
+     and refuses the line when the JSON it prints on standard output
+     carries `"permissionDecision":"deny"` (its `permissionDecisionReason`
+     names the credential kind). Replace every line the hook refuses by
      its `file:line` plus the fixed text
      `secret-bearing finding, value withheld`, keep that finding's id and
      severity, and retry the Write once; a second refusal is fatal (Error
@@ -764,10 +793,16 @@ code has been revised since, so a re-pass is meaningful):
        'FINDINGS=@<PROMPT_DIR>/round-<i>-findings.txt' 'FAILURE_BLOCK='
      ```
 
-     Run `test -s "<PROMPT_DIR>/round-<i>-fix.md"` as its own command
-     (failure → stop and return `BLOCKED: prompt file round-<i>-fix.md
-     not produced — <the script's message, or "empty">`, Error Handling),
-     then dispatch one `general-purpose` Agent call with the
+     Run `test -s "<PROMPT_DIR>/round-<i>-fix.md"` as its own command.
+     The exit-code rule of step 2 sub-step 3 holds here unchanged: exit
+     1, 3 or 4, and exit 5 naming an `@<file>` you never wrote, are slips
+     in your own fill command — correct it once and run it again, a
+     second non-zero exit being fatal; exit 2 and exit 5 on a file you
+     did write are fatal at once. On any fatal exit, or when the check
+     fails, stop and return `BLOCKED: prompt file round-<i>-fix.md
+     not produced — <the script's message, or "empty">` (Error Handling),
+     and never dispatch a pointer to a file that failed the check.
+     Otherwise dispatch one `general-purpose` Agent call with the
      `description` `multi-code-review round <i>: fix subagent` (the
      wording of `./fix-prompt.md`) and the fix-subagent model of
      Parameters, carrying the pointer prompt of "Before round 1" naming
@@ -1472,7 +1507,8 @@ completed invocation only on explicit user request.
 
 - Unusable report twice, with at least one other reviewer usable →
   partial round, continue (never clean); with none usable in the round,
-  the `inconclusive` entry is written and the loop returns `BLOCKED`
+  the `inconclusive` entry is written, and the loop returns `BLOCKED`
+  only when a reviewer's final message shows a prompt-file failure
   (pointer-mechanism rows below).
 - Empty or invalid range (BASE = HEAD, no merge-base, or BASE does not
   resolve to a commit) → stop and report; nothing dispatched.
@@ -1491,10 +1527,16 @@ completed invocation only on explicit user request.
 - One or more reviewers unusable after one retry, u ≥ 1 → partial round:
   consolidate the usable reports, log `usable <u>/<m>` and `r<j>: unusable`,
   triage normally; the round is never clean.
-- All reviewers unusable after retries (u = 0) → `inconclusive` round
-  entry, then `BLOCKED: no reviewer of round <i> could use its prompt
-  file — <each reviewer's final message, one line each>`; the loop does
-  not continue.
+- All reviewers unusable after retries (u = 0), with at least one final
+  message showing that its reviewer could not read its prompt file or did
+  not follow it → `inconclusive` round entry, then `BLOCKED: no reviewer
+  of round <i> could use its prompt file — <each reviewer's final
+  message, one line each>`; the loop does not continue.
+- All reviewers unusable after retries (u = 0), with every final message
+  showing an environment death instead — a usage limit, a tool error, or
+  no final message at all → not a failure of the pointer mechanism: the
+  `inconclusive` round entry is written and the loop continues to the
+  next round, as it did before pointer dispatch.
 - Sources-mapped mismatch (source ids mapped ≠ findings enumerated) →
   repair the consolidation before writing the entry; never write the line
   with unequal numbers.
@@ -1516,8 +1558,12 @@ completed invocation only on explicit user request.
   invocation always comes from its parameters, never from the log.
 - Platform without parallel dispatch → reviewers run one after another;
   the procedure is unchanged.
-- Every failure of the pointer mechanism — the four rows below — is
-  fatal and nothing falls back. A failure that happens before any reviewer
+- Every failure of the pointer mechanism — the rows below — is
+  fatal and nothing falls back, apart from the three bounded exceptions
+  those rows name: a slip in the controller's own fill command, corrected
+  once; a value-file line the secrets hook refuses, withheld once; and a
+  u = 0 round whose reviewers all died of their environment, which is not
+  a failure of the mechanism at all. A failure that happens before any reviewer
   report of the round was received owes no round entry: nothing is written
   for that round. The u = 0 case — no usable report in the round at all —
   owes an entry, and writes the round entry in the `inconclusive` form. A
@@ -1536,9 +1582,14 @@ completed invocation only on explicit user request.
 - `mktemp -d` fails at Procedure start, or `cygpath` fails where the path
   must be converted → `BLOCKED: prompt directory could not be created —
   <error text>`; nothing is dispatched.
-- `fill-prompt.js` exits non-zero, or `test -s` fails, for one prompt
-  file → `BLOCKED: prompt file <name> not produced — <the script's
-  message, or "empty">`. The rule of "Before
+- `fill-prompt.js` exits 1, 3 or 4, or exits 5 naming an `@<file>` the
+  controller never wrote → the controller's own command was wrong, not
+  the mechanism: correct that command once and run it again. A second
+  non-zero exit is fatal, by the row below.
+- `fill-prompt.js` exits 2, exits 5 on a file the controller did write,
+  exits non-zero a second time after one corrected command, or `test -s`
+  fails, for one prompt file → `BLOCKED: prompt file <name> not produced
+  — <the script's message, or "empty">`. The rule of "Before
   round 1" holds: never dispatch a pointer to a file that failed the check.
   Node missing is impossible on a platform that runs this plugin's hooks
   and is treated as the script failing.
@@ -1549,8 +1600,19 @@ completed invocation only on explicit user request.
   `hooks/safety/block-dangerous-commands.js` — the whole Bash command
   string, a heredoc body included; a Security-lens finding may quote
   exactly such text. One exception, and only this one: when
-  `hooks/safety/protect-secrets.js` refuses a value-file Write, each line
-  the hook's message names is replaced by its `file:line` plus the fixed
+  `hooks/safety/protect-secrets.js` refuses a value-file Write, the
+  controller finds the offending lines itself, because the hook's refusal
+  names only a credential kind — the kind of the first pattern that
+  matched the whole content — and never a line. It runs
+  `node hooks/safety/protect-secrets.js` once per line of the refused
+  file, giving the hook on standard input the JSON object the hook reads:
+  `{"tool_name":"Write","tool_input":{"file_path":"<the value file>","content":"<that one line>"}}`.
+  The hook parses that object from standard input, inspects
+  `tool_input.file_path` and `tool_input.content`, exits 0 either way, and
+  refuses the line when the JSON it prints on standard output carries
+  `"permissionDecision":"deny"` (its `permissionDecisionReason` names the
+  credential kind). Every line the hook refuses is replaced by its
+  `file:line` plus the fixed
   text `secret-bearing finding, value withheld`, and the Write is retried
   once; the withheld finding keeps its id and severity in the findings
   file, so the fix subagent still removes the secret at that location. A
@@ -1566,9 +1628,12 @@ completed invocation only on explicit user request.
   identical pointer once; then the reviewer is unusable. With at least one
   other usable report the round proceeds under `usable <u>/<m>`. With no
   usable report in the round at all (u = 0) write the round entry in the
-  `inconclusive` form, then return `BLOCKED: no reviewer of round <i>
+  `inconclusive` form, then split on the final messages by the two u = 0
+  rows above: return `BLOCKED: no reviewer of round <i>
   could use its prompt file — <each reviewer's final message, one line
-  each>`. A reviewer that reads another
+  each>` when at least one of them shows a reviewer that could not read
+  or did not follow its prompt file, and continue the loop when they all
+  show an environment death instead. A reviewer that reads another
   file in the directory cannot be prevented by wording alone; the
   directory is outside every search the reviewer is allowed to run, and
   the pointer forbids it — the same exposure the `.superpowers/reviews/`
