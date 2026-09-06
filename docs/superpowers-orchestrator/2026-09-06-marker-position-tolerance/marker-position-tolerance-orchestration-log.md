@@ -6,3 +6,6 @@ note: Phase 0 asked the user nothing. The parameters, the branch point (main,
 the default branch, at 47c4725, one input commit below the recorded BASE) and
 the unattended-permissions confirmation all come from the invoking brief,
 under the user's standing delegation of every decision before Phase 5.
+
+## Phase 1 — Plan — DONE — 2026-09-06
+plan: docs/superpowers-orchestrator/2026-09-06-marker-position-tolerance/plans/marker-position-tolerance.md — 4 tasks
