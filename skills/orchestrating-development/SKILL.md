@@ -1413,10 +1413,11 @@ the ruling records `contradiction: unsettled`. A contradiction, settled or
 not, is recorded in the ruling and surfaced in the Phase 5 report; it is
 never resolved silently.
 
-**Lost returns.** `hooks/subagent-guard.js` exempts a final message that
-opens with the marker line; a message without it that names a plugin
-skill is answered with `decision: block` and a redo instruction, so the
-fork spends another turn rewriting — the notice still arrives, later.
+**Lost returns.** `hooks/subagent-guard.js` exempts a final message when one
+of its first 10 non-blank lines starts with the marker; a message with no
+such line that names a plugin skill is answered with `decision: block` and a
+redo instruction, so the fork spends another turn rewriting — the notice
+still arrives, later.
 
 Every bound below is stated over the **reviewer returns of the round**,
 never over the dispatch type: a lens of a round is dispatched as a fork
@@ -2242,11 +2243,15 @@ retry the Write through a Bash command to get around a refusal.
 ## Guard Interaction
 
 Controller returns open with `<!-- orchestration report -->`;
-`hooks/subagent-guard.js` exempts messages opening with that marker.
-Never remove the marker instruction from the four templates — free-text
-`BLOCKED` reasons legitimately pair action verbs with skill names, and an
-unmarked return would be blocked, hang the dispatch, and stall the
-unattended run. Nested workers dispatched by batch controllers carry
+`hooks/subagent-guard.js` exempts a message when one of its first 10
+non-blank lines starts with that marker, so a return that carries a sentence
+above its marker line is still exempt. Never remove the marker instruction
+from the four templates — free-text `BLOCKED` reasons legitimately pair
+action verbs with skill names, and an unmarked return is answered with
+`decision: block` and a redo instruction: measured on 2026-09-06, the
+dispatch resumed after one extra turn rather than hanging, but a controller
+that obeys "redo your assigned task" can repeat review rounds and fix
+commits it has already written. Nested workers dispatched by batch controllers carry
 SDD's leakage-prevention line; nested reviewers inside the two loop
 controllers emit `<!-- multi-review report -->`, which the guard already
 exempts. Forks dispatched under `## In-run rulings` open their return

@@ -51,6 +51,14 @@ NO_FALLBACK='no inline fallback'
 VALUE_WITHHELD='`[<id>] (<tag>): <verb and its text up to the quoted value> — <file:line> — secret-bearing finding, value withheld`'
 # The withheld-line form before the verb-keeping amendment; must be absent.
 VALUE_WITHHELD_OLD_FORM='`[<id>] (<tag>): <file:line> — secret-bearing finding, value withheld`'
+# The widened guard rule, pinned positively in both passages that state it,
+# and the superseded "hang" claim pinned negatively. `$H_GUARD` and
+# `$H_TEMPLATES` already exist in this file (they bound the Major-Error Stop
+# Policy range and the Prompt Templates range). `assert_folded_contains`
+# joins the file's lines with single spaces before matching, so the window
+# fragment matches even where the prose wraps between "10" and "non-blank".
+GUARD_WINDOW='first 10 non-blank lines'
+GUARD_HANG_OLD_CLAIM='hang the dispatch'
 # The Return contract's marker tolerance, pinned in halves so that no later
 # edit can restore any of the extremes: the window (with the words
 # "non-blank", so that a bare `10` cannot satisfy it), the marker's exact
@@ -181,6 +189,7 @@ RESUME_RANGE="$WORK/resume.txt"
 INRUN_RANGE="$WORK/inrun.txt"
 MAJOR_RANGE="$WORK/major.txt"
 TEMPLATES_RANGE="$WORK/templates.txt"
+GUARD_RANGE="$WORK/guard.txt"
 
 bold "0. Section ranges of the orchestrator"
 extract_range "Controller Dispatch Rules" "$ORCH_SKILL" "$H_DISPATCH" "$H_PHASE0" "$DISPATCH_RANGE"
@@ -193,6 +202,7 @@ extract_range "Phase 4" "$ORCH_SKILL" "$H_PHASE4" "$H_PHASE5" "$PHASE4_RANGE"
 extract_range "Resume" "$ORCH_SKILL" "$H_RESUME" "$H_INRUN" "$RESUME_RANGE"
 extract_range "In-run rulings" "$ORCH_SKILL" "$H_INRUN" "$H_MAJOR" "$INRUN_RANGE"
 extract_range "Major-Error Stop Policy" "$ORCH_SKILL" "$H_MAJOR" "$H_GUARD" "$MAJOR_RANGE"
+extract_range "Guard Interaction" "$ORCH_SKILL" "$H_GUARD" "$H_TEMPLATES" "$GUARD_RANGE"
 # `## Prompt Templates` is the last section: its range runs to the end.
 TEMPLATES_START="$(first_line_of "$ORCH_SKILL" "$H_TEMPLATES")"
 if [ -n "$TEMPLATES_START" ]; then
@@ -272,6 +282,14 @@ else
 fi
 assert_file_not_contains "stop policy: the secrets-hook rule names no multi-code-review skill file" "$PROBE_RANGE" 'multi-code-review/SKILL.md'
 assert_file_not_contains "stop policy: the secrets-hook rule holds no 'see multi-code-review' cross-reference" "$PROBE_RANGE" 'see multi-code-review'
+
+bold "3b. Guard Interaction and Lost returns state the widened exemption"
+assert_folded_contains "guard interaction: states the 10-non-blank-line window" \
+  "$GUARD_RANGE" "$GUARD_WINDOW"
+assert_folded_contains "lost returns: states the 10-non-blank-line window" \
+  "$INRUN_RANGE" "$GUARD_WINDOW"
+assert_file_not_contains "orchestrator no longer claims an unmarked return hangs the dispatch" \
+  "$ORCH_SKILL" "$GUARD_HANG_OLD_CLAIM"
 
 bold "4. Prompt Templates: filled by the script, never read"
 assert_folded_contains "prompt templates: names the fill script" "$TEMPLATES_RANGE" "$FILL_SCRIPT"
