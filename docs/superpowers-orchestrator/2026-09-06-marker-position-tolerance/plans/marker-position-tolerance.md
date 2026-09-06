@@ -499,7 +499,7 @@ git commit -m "feat(orchestrating-development): accept a marker within the first
    - Verification: run the suite against the unedited skill file and see all three assertions fail (Step 2 below).
    - These fragments are a self-pin: this task writes both the passages and the assertions, so a later fix may amend them together as one ordinary fix (`skills/writing-plans/SKILL.md`, Contracts and Literal Bodies, rule 5).
 
-- [ ] **Step 1: Write failing assertions**
+- [x] **Step 1: Write failing assertions**
 
 In `tests/orchestrating-development/run-tests.sh`, add the two fragment constants next to the other wording contracts, below the `VALUE_WITHHELD_OLD_FORM` line:
 
@@ -538,12 +538,12 @@ assert_file_not_contains "orchestrator no longer claims an unmarked return hangs
   "$ORCH_SKILL" "$GUARD_HANG_OLD_CLAIM"
 ```
 
-- [ ] **Step 2: Run the suite to verify the three assertions fail**
+- [x] **Step 2: Run the suite to verify the three assertions fail**
 
 Run: `bash tests/orchestrating-development/run-tests.sh`
 Expected: FAIL — `FAIL: guard interaction: states the 10-non-blank-line window (missing: first 10 non-blank lines)`, `FAIL: lost returns: states the 10-non-blank-line window (missing: first 10 non-blank lines)` and `FAIL: orchestrator no longer claims an unmarked return hangs the dispatch`, and a non-zero exit. Task 2's `1b` assertions all pass at this point, because Task 2 already landed.
 
-- [ ] **Step 3: Rewrite `## Guard Interaction`**
+- [x] **Step 3: Rewrite `## Guard Interaction`**
 
 Replace the first two sentences of the section — from "Controller returns open with" through "and stall the unattended run." — with the text below. The rest of the section (from "Nested workers dispatched by batch controllers" to the end) stays exactly as it is.
 
@@ -572,7 +572,7 @@ The two sentences below already stand in the section and their character sequenc
 > without it is a lost return under that section's rule, never a reason to
 > remove the marker instruction from the fork prompt.
 
-- [ ] **Step 4: Rewrite the `**Lost returns.**` paragraph**
+- [x] **Step 4: Rewrite the `**Lost returns.**` paragraph**
 
 Replace the paragraph that currently begins "**Lost returns.** `hooks/subagent-guard.js` exempts a final message that opens with the marker line" with:
 
@@ -584,17 +584,17 @@ redo instruction, so the fork spends another turn rewriting — the notice
 still arrives, later.
 ```
 
-- [ ] **Step 5: Run the ranged suite to verify nothing pinned was lost**
+- [x] **Step 5: Run the ranged suite to verify nothing pinned was lost**
 
 Run: `bash tests/in-run-rulings/run-tests.sh`
 Expected: PASS — in particular `Guard Interaction states that forks open with the reviewer marker`, `Guard Interaction makes a markerless fork return a lost return` and `Guard Interaction still spells the nested-reviewer marker exactly` all report PASS, and the run exits 0.
 
-- [ ] **Step 6: Run the orchestrator wording suite to verify the three assertions now pass and the headings still anchor its ranges**
+- [x] **Step 6: Run the orchestrator wording suite to verify the three assertions now pass and the headings still anchor its ranges**
 
 Run: `bash tests/orchestrating-development/run-tests.sh`
 Expected: PASS — the three `3b` assertions report PASS, `Guard Interaction: range located (...)`, `Major-Error Stop Policy: range located (...)` and `Prompt Templates: range located (...)` all report PASS, and the run ends with `Results: <n> passed, 0 failed`, exit 0.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add skills/orchestrating-development/SKILL.md tests/orchestrating-development/run-tests.sh
