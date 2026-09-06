@@ -502,6 +502,8 @@ invocation note (which carries `M=` like every other); failed rounds get
 `hooks/subagent-guard.js` exempts a message from skill-leakage blocking when
 one of its first 10 non-blank lines starts with `<!-- multi-review report -->`
 — reviewer reports legitimately quote skill names. A report that carries a
-sentence above its marker line is therefore still exempt. Never remove the
+sentence above its marker line is therefore still exempt. This widened rule
+governs hook blocking only; the validation step above is unchanged, and a
+report is still usable only when the marker is its first line. Never remove the
 marker instruction from `reviewer-prompt.md`; without it, reports about
 skill-discussing documents get blocked and rounds degrade to retries.

@@ -160,7 +160,8 @@ this platform lacks` — and stop.
   Controllers read these files as their procedure; they never use the Skill
   tool. Controllers never write `state.md` — you are its only writer.
 - **Return contract:** the four templates tell the controller to make
-  `<!-- orchestration report -->` its first line and keep saying so. You
+  `<!-- orchestration report -->` its first line, and that instruction does
+  not change. You
   accept a return when a line whose surrounding whitespace is removed
   **equals** `<!-- orchestration report -->` and is among the **first 10
   non-blank lines** of the final message; blank lines are skipped and do not
@@ -2247,11 +2248,12 @@ Controller returns open with `<!-- orchestration report -->`;
 non-blank lines starts with that marker, so a return that carries a sentence
 above its marker line is still exempt. Never remove the marker instruction
 from the four templates — free-text `BLOCKED` reasons legitimately pair
-action verbs with skill names, and an unmarked return is answered with
-`decision: block` and a redo instruction: measured on 2026-09-06, the
-dispatch resumed after one extra turn rather than hanging, but a controller
+action verbs with skill names. Without the marker, the guard answers with
+`decision: block` and a redo instruction. Measured on 2026-09-06, the
+dispatch resumed after one extra turn instead of stalling. But a controller
 that obeys "redo your assigned task" can repeat review rounds and fix
-commits it has already written. Nested workers dispatched by batch controllers carry
+commits it has already written, so the marker instruction stays mandatory.
+Nested workers dispatched by batch controllers carry
 SDD's leakage-prevention line; nested reviewers inside the two loop
 controllers emit `<!-- multi-review report -->`, which the guard already
 exempts. Forks dispatched under `## In-run rulings` open their return

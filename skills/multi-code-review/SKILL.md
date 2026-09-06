@@ -1860,5 +1860,7 @@ Reviewer reports open with `<!-- multi-review report -->` —
 `hooks/subagent-guard.js` exempts a message from skill-leakage blocking when
 one of its first 10 non-blank lines starts with that marker (code reviews in
 this repository legitimately quote skill names), so a report with a sentence
-above its marker line is still exempt. Never remove the marker instruction
-from `reviewer-prompt.md`.
+above its marker line is still exempt. This widened rule governs hook
+blocking only; the validation step above is unchanged, and a report is
+still usable only when the marker is its first line. Never remove the
+marker instruction from `reviewer-prompt.md`.

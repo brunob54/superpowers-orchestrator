@@ -85,8 +85,9 @@ const RESEARCH_REPORT_MARKER = '<!-- research report -->';
 // lines. Controllers sometimes write a sentence or a short summary above the
 // marker, and every recorded case fits well inside this window. The window
 // stays bounded because the exemption must remain a property of a message's
-// opening: reports in this repository quote marker lines inside their
-// findings, and a whole-message search would exempt those too.
+// opening: without a bound, a marker reproduced at the start of a line
+// further down the message — for example an indented or fenced quotation of
+// a controller return — would exempt that message too.
 const MARKER_SEARCH_LINES = 10;
 
 const REPORT_MARKERS = [
