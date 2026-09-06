@@ -368,7 +368,8 @@ environment failure with a resume path.)
 |---|---|
 | `mktemp -d` fails at Procedure start, or `cygpath` fails where the path must be converted | `BLOCKED: prompt directory could not be created — <error text>`. Nothing is dispatched. |
 | `fill-prompt.js` exits non-zero, or `test -s` fails, for a prompt file | `BLOCKED: prompt file <name> not produced — <the script's message, or "empty">`. Never dispatch a pointer to a file that failed the check. |
-| A value-file write is refused by a hook, or fails | `BLOCKED: value file <name> could not be written — <the hook's reason, or the error>`. The text is never altered to pass a hook. |
+| A value-file write fails | `BLOCKED: value file <name> could not be written — <the error>`. |
+| A value-file Write is refused by `hooks/safety/protect-secrets.js` (a finding or a failure line quotes a credential-shaped string) | Each line the hook's message names is replaced by its `file:line` plus the fixed text `secret-bearing finding, value withheld`; the Write is retried once. The withheld finding keeps its id and severity, so the fix subagent still removes the secret at that location. A second refusal is `BLOCKED: value file <name> refused twice by protect-secrets — <the hook's reason>`. This is the one sanctioned alteration of value text: it is the location-only form the orchestrator's "Never reproduce a secret" rule already imposes on every committed file (Amendment 2). |
 | Node is missing | Treated as the script failing (row above). |
 | No reviewer of a round returns a usable report after the pointer dispatch and the one identical retry of step 3 (reader side: the file could not be read, or the pointer was not followed) | Write the round entry in the existing `inconclusive` form, then `BLOCKED: no reviewer of round <i> could use its prompt file — <each reviewer's final message, one line each>`. An all-unusable round under this mechanism never lets the loop continue. A round with at least one usable report proceeds under the existing `usable <u>/<m>` rule. |
 | A reviewer reads another file in the directory | Cannot be prevented by wording alone; the directory is outside every search the reviewer is allowed to run, and the pointer forbids it. The remaining exposure is a reviewer that disobeys a direct instruction, which is the same exposure the `.superpowers/reviews/` prohibition already carries. Accepted. |
@@ -521,3 +522,13 @@ mechanism, writer side and reader side, is fatal: the controller returns
 `BLOCKED` naming the cause and nothing falls back to inline dispatch. The
 Error handling and Failure-mode check sections were rewritten accordingly;
 the fallback rows and the "inline dispatch" definition were removed.
+
+**Amendment 2 — 2026-09-05 — author decision on code review item [I3]
+(invocation 2, round 4).** Under Amendment 1 a value-file Write refused by
+the secrets hook was fatal and the text could never be altered, so a
+Security-lens finding that quoted a credential stopped the round and
+reproduced the stop on every resume. The author ruled that a line the hook
+refuses is replaced by its `file:line` plus "secret-bearing finding, value
+withheld" and the Write retried once, a second refusal staying fatal. No
+credential reaches disk, the finding stays a Critical the fix removes, and
+every other failure of the mechanism stays fatal as Amendment 1 states.
