@@ -121,8 +121,9 @@ function extract(lines) {
   // What these two rules do NOT catch: an UNTAGGED column-0 example fence
   // whose own content is also at column 0. It is chosen as the close and the
   // line after it is not indented, so the body is truncated with exit 0. The
-  // tests that fill the two real templates cover that residue — they assert
-  // that the last output line is the template's last body line.
+  // tests do not cover that residue: they derive the expected last body line
+  // with the same rule this function uses, so on such a template both sides
+  // would agree on the truncated body and the check would pass.
   for (let i = close + 1; i < lines.length; i++) {
     if (isBlank(lines[i])) continue;
     if (/^[ \t]/.test(lines[i])) {

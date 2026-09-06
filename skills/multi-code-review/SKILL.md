@@ -377,6 +377,7 @@ invocation by construction):
 | Round `i`, fix re-dispatch | `round-<i>-fix-retry.md` | `round-<i>-failure.txt`; reuses `round-<i>-findings.txt` when the current prompt directory holds it, and writes it first when it does not |
 | Verification cycle `c` fixes (`<c>` = the cycle whose re-review produced the findings being fixed) | `round-<i>-cycle-<c>-fix.md`, `round-<i>-cycle-<c>-fix-retry.md` | `round-<i>-cycle-<c>-findings.txt` (reused by the re-dispatch when the current prompt directory holds it, written first when it does not), `round-<i>-cycle-<c>-failure.txt` |
 | Post-loop addendum fixes, `<k>` = the 1-based index of the addendum fix dispatch within this controller, counting first dispatches only — a re-dispatch keeps the `k` of the dispatch it repeats | `addendum-<k>-fix.md`, `addendum-<k>-fix-retry.md` | `addendum-<k>-findings.txt` (reused by the re-dispatch when the current prompt directory holds it, written first when it does not), `addendum-<k>-failure.txt` |
+| Any dispatch, an inline value moved to a value file (the two rules of step 2 below: the value contains a single quote, or it begins with `@`) | — (the dispatch's own prompt file) | `round-<i>-<name>.txt`, with `<name>` the placeholder name in lower case — `round-<i>-cycle-<c>-<name>.txt` for a verification-cycle dispatch, `addendum-<k>-<name>.txt` for a post-loop addendum dispatch |
 
 A prompt file is written once and never rewritten: the identical retry of
 step 3 resends the same pointer to the same file; a fix re-dispatch is a
@@ -497,7 +498,8 @@ code has been revised since, so a re-pass is meaningful):
       value as a file reference and there is no escape for it, so a
       computed value that begins with `@` — the slug in particular, when
       it comes from a branch name — is written to a value file and passed
-      as `@<file>` too.
+      as `@<file>` too. A value file written under either rule is named by
+      the file-name table's row for an inline value moved to a value file.
 
       `PLAN_LINE` is, on a lens-1 round with a plan path, the legend's
       `Plan/requirements the branch implements (read it first): <plan
@@ -810,14 +812,20 @@ code has been revised since, so a re-pass is meaningful):
      dispositions, without a source annotation.
    - **Fix subagent fails or its covering tests fail:** re-dispatch once
      with the failure appended. Before that re-dispatch — and before
-     continuing after a second failure — check `git status --porcelain`
-     is empty and, if the failed fix subagent left files modified,
-     restore those files to their committed content by explicit path
-     (`git checkout -- <path>`, or `git restore <path>`) first, so the next
-     attempt starts from a clean tree. Those commands restore only files git
-     tracks: a file the attempt created that git does not track is removed by
-     explicit path (`rm -- <path>`), never with `git clean`, so the
-     re-dispatch starts on a clean tree. Write `<PROMPT_DIR>/round-<i>-failure.txt`
+     continuing after a second failure — run `git status --porcelain` in the
+     same form as the Working-tree precondition (in pipeline mode with the
+     pathspec of Pipeline rule 2, so the topic's implementation folder is
+     excluded) and check that it shows nothing beyond the changes that
+     existed when the loop started. Restore only the files the failed attempt
+     changed — the files its final message lists as changed, or, when it
+     listed none, the files the findings name — to their committed content by
+     explicit path (`git checkout -- <path>`, or `git restore <path>`) first,
+     so the next attempt starts from the tree the loop started on. Those
+     commands restore only files git tracks: a file the attempt created that
+     git does not track is removed by explicit path (`rm -- <path>`), never
+     with `git clean`. The review log, the fix-report file, and any change
+     that existed when the loop started are never restored and never
+     removed. Write `<PROMPT_DIR>/round-<i>-failure.txt`
      under the value-file rule — its first line is the heading
      `## Previous attempt failed`, the remaining lines are the failure
      text — then repeat the fill of the Critical/Important bullet with
