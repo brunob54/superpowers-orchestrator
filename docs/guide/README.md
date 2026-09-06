@@ -1,6 +1,6 @@
 # Superpowers Orchestrator — User Guide
 
-_Guide last reviewed against plugin version **7.9.0**._
+_Guide last reviewed against plugin version **7.10.0**._
 
 This is the day-to-day operating manual for the plugin: which phrases trigger
 which workflow, what the pipelines look like end to end, and what to do when
@@ -281,7 +281,10 @@ is told to read nothing else in that directory. The text a reviewer reads is
 the same text it was sent inline before — the template did not change. The
 fix subagent is dispatched the same way from its own template. The point is
 the controller's context window (the working memory it holds for the whole
-loop): before this change, the pasted prompts were 35 to 42 percent of it.
+loop): before this change, the pasted prompts were 35 to 42 percent of it;
+measured on the first run after the change, 8.5 and 9.0 percent. Since
+v7.10.0 the orchestrator of an autonomous run (§4) sends its own
+controllers their instructions the same way.
 
 ### When the review loop's prompt delivery fails
 
@@ -318,10 +321,12 @@ Four bounded cases are handled inside the loop instead of stopping it:
   again until a pointer to it has been sent; after that it is never
   rewritten.
 
-Two things are not yet verified in v7.9.0 and are listed in the release
-notes: whether a session that is not in bypass mode asks for permission
-before the controller writes or reads files in that temporary directory
-(see the permissions note in §4), and the path form on Windows Git Bash.
+Two things were not verified in v7.9.0. The first — whether a session
+that is not in bypass mode asks for permission before the controller
+writes or reads files in that temporary directory — was probed once on
+2026-09-06 in auto permission mode, with no prompt (see the permissions
+note in §4); other permission modes are untested. The second, the path
+form on Windows Git Bash, is still untested.
 
 ### Stage 5 — Finish (`finishing-a-development-branch`)
 
@@ -515,10 +520,13 @@ The same batch asks for two confirmations:
   pipeline's edit/Bash/Agent calls without prompting (pre-approve in
   `.claude/settings.json`, or run with permissions accepted for the session).
   This is the most common cause of a "hung" run. Since v7.9.0 the code
-  review loop also writes and reads prompt files in a temporary directory
-  **outside** the repository (created with `mktemp -d`); whether a session
-  that is not in bypass mode prompts for those calls has not been verified
-  yet, so a pre-approval limited to the repository path may not be enough.
+  review loop, and since v7.10.0 the orchestrator itself, write and read
+  prompt files in a temporary directory **outside** the repository
+  (created with `mktemp -d`), so a pre-approval limited to the repository
+  path is not enough on its own. A Write and a Read under such a directory
+  must not prompt: this was probed once on 2026-09-06 in auto permission
+  mode, and no prompt appeared. Other permission modes are untested; if
+  your session prompts for those calls, pre-approve them before starting.
 
 ### What happens while you're away
 
@@ -533,6 +541,24 @@ The same batch asks for two confirmations:
 Each phase runs in a fresh controller subagent; the orchestrator itself stays
 lean and moves all state through files committed at every boundary — which is
 what makes interrupted runs recoverable (§5).
+
+Since v7.10.0 the orchestrator hands each controller its instructions **by
+pointer**, the same way the code review loop hands them to its reviewers
+(§3, Stage 4). At the start of the session it creates one temporary
+directory outside your repository with `mktemp -d`. Before each dispatch it
+fills the phase's controller template once, with the same small script the
+review loop uses, into a numbered file in that directory, checks that the
+file is not empty, and sends the controller a three-sentence message that
+names the file. The controller reads that file once and follows it; it is
+told to read nothing else in that directory. A retry of the same dispatch
+resends the same pointer to the same file. A re-dispatch that carries
+answers — after an in-run ruling, or on resume — is a new file, with the
+answers in a small value file next to it. Before v7.10.0 the whole template
+(94 to 249 lines) was pasted into every dispatch and every retry, which on
+one measured run took about a quarter of the orchestrator's context window.
+The directory's path is never written to the log or to `state.md`; if the
+orchestrator loses it (after a context compaction, typically) it creates a
+new directory and continues — that is not a failure.
 
 ### Watching progress
 
@@ -578,6 +604,24 @@ subagent is one such blocked controller (since v7.9.0; see "When the review
 loop's prompt delivery fails" in §3): its `BLOCKED` cause names the file or
 directory that failed, and the fix commits of the completed rounds are
 already on the branch.
+
+Since v7.10.0 the orchestrator's own prompt delivery to its controllers
+(see "What happens while you're away" above) follows the same fatal rule:
+every failure of that mechanism stops the run with a `## STOPPED` entry
+naming the cause, and the orchestrator never falls back to pasting the
+template inline. The causes you can see are: the temporary directory could
+not be created (or was created inside the repository); a prompt file was
+not produced (the fill script failed, Node is missing, or the file is
+empty); a value file could not be written, or was refused twice by the
+plugin's secrets hook; or a controller's final message shows it could not
+read or did not follow its prompt file, even after the one retry. Four
+things are deliberately *not* such failures and keep their existing
+handling: a controller that died of its environment (a usage limit, a tool
+error, no final message) gets one identical retry and then the usual stop;
+a slip in the orchestrator's own fill command is corrected once; a
+controller report the orchestrator cannot parse is a malformed return and
+gets one retry; and a temporary directory path lost from the orchestrator's
+context is replaced by a fresh directory without a stop.
 
 A review finding that merely differs from a code block the plan showed is
 *not* one of these stops: since v7.7.0 those bodies are reference
@@ -692,7 +736,11 @@ how much is redone differs:
   discard them and that round simply re-runs. A resumed Phase 4 controller
   creates its own fresh temporary directory for prompt files; nothing from
   the stopped controller's directory is reused, so a stale or missing
-  prompt file from the old run cannot affect the resumed loop.
+  prompt file from the old run cannot affect the resumed loop. Since
+  v7.10.0 the resumed orchestrator session does the same for its own
+  controller prompts: it creates a fresh directory before its first
+  re-dispatch and fills the stopped phase's prompt there, with your resume
+  answers in a value file next to it.
 
 To tear down a wedged or superseded run instead of resuming it:
 
@@ -944,6 +992,22 @@ delivery fails"). Check the cause text: a missing or unwritable temporary
 location, Node not runnable, or a permission dialog on a write or read
 outside the repository (§4, Prerequisites). Fix the environment, then
 resume (§5); the completed rounds and their fix commits are kept.
+
+**My orchestration log ends with `## STOPPED` and a cause that begins
+`prompt directory could not be created`, `prompt file ... not produced`,
+`value file ... could not be written`, `value file ... refused twice by
+protect-secrets` or `prompt file ... not read by ...`.** The orchestrator
+itself could not hand a controller its prompt through the temporary
+directory it uses since v7.10.0, and it stops instead of pasting the
+template inline by design (§4, "When it stops instead of finishing"). The
+likely causes are the same as in the item above: a missing or unwritable
+temporary location, Node not runnable, or a permission dialog on a write or
+read outside the repository. A `refused twice by protect-secrets` cause
+means the answer text still contained a credential-shaped string after the
+orchestrator withheld the refused lines once; rewrite that answer so it
+names the location of the secret only. Fix the cause, then resume (§5): the
+resumed session creates a fresh directory, and everything committed before
+the stop is kept.
 
 **The code doesn't match what the plan showed.** Expected, in most cases.
 Since v7.7.0 a plan's code blocks are reference implementations; what the

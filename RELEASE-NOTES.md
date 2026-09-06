@@ -1,5 +1,162 @@
 # Superpowers Orchestrator Release Notes
 
+## v7.10.0 — the orchestrator dispatches its controllers by pointer
+
+Field report: the orchestrator (the `orchestrating-development` session
+that drives plan writing, plan review, batched implementation and the code
+review loop) runs four kinds of controller subagent, one per phase, and it
+used to send each one its instructions as a copy of the whole controller
+template — `plan-writer-prompt.md`, `doc-review-loop-prompt.md`,
+`batch-controller-prompt.md` or `code-review-loop-prompt.md`, 94 to 249
+lines — pasted into the `prompt` field of the Agent call, on every
+dispatch and on every retry. Case 017 in the orchestration issues log
+measured the cost on the `autonomous-in-run-decisions` run: the Phase 4
+template was pasted on all 16 dispatches, 13 of them byte-identical
+retries after an environment kill, and those re-sends took about a
+quarter of the orchestrator's own context window (the working memory the
+model holds for the whole run). The orchestrator is the one session of a
+run that cannot be restarted cheaply: its window has to last from Phase 0
+to Phase 5. Worklist row 13 listed this as fix 1 of three.
+
+v7.10.0 applies the v7.9.0 mechanism one level up. The orchestrator runs
+`mktemp -d` once per session, which creates a temporary directory outside
+the checkout (the prompt directory), and never holds that path in a shell
+variable or writes it to any log. Before each dispatch it fills the
+phase's template once with `skills/multi-code-review/scripts/fill-prompt.js`
+— the v7.9.0 script, reused in place — into `dispatch-<k>-<label>.md` in
+that directory (`<k>` is a counter of fills, `<label>` names the dispatch:
+`plan-writer`, `plan-review`, `batch-<n>`, `code-review`), checks the file
+with `test -s`, and dispatches the same three-sentence pointer v7.9.0
+uses: the controller reads the file once with the Read tool, follows it as
+its only instructions, and reads nothing else in that directory. The
+orchestrator never opens a template and never holds a filled prompt. An
+identical retry resends the same pointer to the same file, with no new
+fill. A re-dispatch that carries answers — after an in-run ruling, after a
+plan writer's `BLOCKED` question is answered, or on resume — is a new fill
+under the next `<k>`; the answer lines go into a value file
+`dispatch-<k>-answers.txt`, written with the Write tool only (never with a
+heredoc, because answer text quotes plan clauses and findings that may
+contain shell characters), and the script refuses to overwrite a prompt
+file with different content. Design:
+`docs/superpowers-orchestrator/2026-09-06-orchestrator-prompt-pointer/specs/orchestrator-prompt-pointer-design.md`.
+
+Every failure of the mechanism is **fatal for the run**: the orchestrator
+writes the log entry it owes, if any, appends a `## STOPPED` entry whose
+first line names the cause, and stops. There is no inline fallback, for
+the reason Amendment 1 of the v7.9.0 spec gave: a fallback that pastes
+the template would hide the defect and silently bring the old cost back.
+The skill's `## Major-Error Stop Policy` states the boundary of that rule
+in two tables, so that the environment failures of today keep their
+existing handling:
+
+- **Failures OF the mechanism (fatal):** `mktemp -d` fails or prints a
+  path under the repository; the fill script fails (a malformed template,
+  a dispatched file name reused with different content, a second
+  non-zero exit after a corrected command) or `test -s` finds the prompt
+  file empty; Node is missing; a value file cannot be written; a value
+  file is refused twice by `hooks/safety/protect-secrets.js` (before the
+  second attempt the orchestrator applies the v7.9.0 rule — probe each
+  line with one Write of a throwaway file, replace every refused line by
+  its location plus `secret-bearing finding, value withheld`, retry once);
+  a controller's final message, after the one identical retry, shows it
+  could not read or did not follow its prompt file.
+- **NOT failures of the mechanism (handled as before):** a controller
+  that dies of its environment (usage limit, tool error, no final message)
+  gets the identical retry and then today's stop; a slip in the
+  orchestrator's own fill command (a wrong argument, a missing value) is
+  corrected once; a return unusable on format alone is a malformed return
+  and gets the identical retry; a prompt directory path lost from the
+  orchestrator's context (after a compaction, typically) is never guessed
+  or searched for — the orchestrator runs `mktemp -d` again and continues
+  in the new directory with the counter restarted at 1. That last rule
+  differs from `multi-code-review`, where a lost path ends the invocation:
+  the orchestrator's files are named by a counter, so nothing can collide.
+
+### What changed
+
+- **`skills/orchestrating-development/SKILL.md`** — Controller Dispatch
+  Rules gain "Prompt files and the pointer" (the prompt directory, the
+  no-variable rule, the file-name table, the value-file rule, `test -s`,
+  the pointer wording); Phase 0 creates the directory; Phases 1 to 4
+  replace "fill the template and dispatch" by the fill command, the check
+  and the pointer; `## Resume` creates a fresh directory before its
+  re-dispatch; `## In-run rulings` writes the answer lines into the value
+  file; the Major-Error Stop Policy carries the two tables above with the
+  fixed `## STOPPED` cause texts; `## Prompt Templates` says the templates
+  are filled by the script and never read by the orchestrator.
+- **The four controller templates** — two changes forced by the script.
+  `[M]` became `[M_REVIEWERS]` in `doc-review-loop-prompt.md` and
+  `code-review-loop-prompt.md` (the script's placeholder pattern needs at
+  least two characters; the controller-facing text is unchanged). The
+  `## Resume Answer` section is now present on every dispatch of
+  `plan-writer-prompt.md`, `batch-controller-prompt.md` and
+  `code-review-loop-prompt.md`: a fixed sentence precedes the placeholder,
+  and a section with no answer line below that sentence means the run has
+  recorded no answer. Every rule that used to key on the section's
+  presence keys on the presence of an answer line instead. Everything
+  else in the templates is byte-identical.
+- **Tests** — new `tests/orchestrating-development/run-tests.sh` (147
+  assertions on the skill text and the templates: the pointer wording,
+  the absence of any `$PROMPT_DIR` variable and of any inline fallback,
+  the fill commands, the two stop-policy tables, the `## Resume Answer`
+  shape); `tests/fill-prompt/run-tests.sh` grew from 102 to 166 tests and
+  now fills the four orchestrator templates as well;
+  `tests/in-run-rulings/run-tests.sh` pins the renamed placeholder and
+  the new section heading. The Testing block of `CLAUDE.md` lists the new
+  suite.
+
+### First measurement of v7.9.0
+
+The run that built this release was the first orchestrated run on the
+installed 7.9.0 copy, so the acceptance measure owed by v7.9.0 (worklist
+row 14 fix 1, Case 018) was taken on its two Phase 4 review-loop
+controllers, by the rules of that spec's Acceptance measure section:
+
+| Controller | Dispatches | Prompt material | Peak context |
+|---|---:|---:|---:|
+| invocation 1 (2 rounds, 1 fix) | 8 | 8.5% | 199K |
+| invocation 2 (2 rounds, 2 verification cycles, 4 fixes) | 12 | 9.0% | 218K |
+| largest pre-7.9.0 controller (Case 018 Follow-up) | 32 | 41.6% | 374K |
+
+Both are under the 10 percent target. The pointers themselves are 0.7
+percent; the rest is the fill commands and the value files the
+controller writes. Row 14 fix 1 is closed.
+
+### Not included
+
+- **The orchestrator's own acceptance measure is not taken.** The run
+  that built this release executed the installed 7.9.0 skill text and
+  dispatched its controllers by pointer by hand, which is a practice and
+  not this change. The target is all prompt material below 10 percent of
+  the orchestrator session's content (the spec's Acceptance measure
+  section defines the count); it is taken on the first orchestrated run
+  after reinstall, and its number selects the next fix of row 13 — the
+  scribe subagent when the target is met, a second measurement when it is
+  not.
+- **The compaction probe is still owed:** whether a compaction summary
+  keeps the literal prompt directory path. Until it is run, the
+  lost-path rule above is the designed answer either way.
+- **The permissions question of v7.9.0 was probed once**, on 2026-09-06,
+  in a session in auto permission mode (not bypass mode): a Write and a
+  Read under a `mktemp -d` directory outside the checkout did not prompt.
+  Other permission modes, and the Git Bash path form (`cygpath -m`),
+  remain untested.
+- **Not changed:** `multi-doc-review` still pastes its reviewer prompt
+  inline, and a batch controller still pastes the
+  `subagent-driven-development` prompts to its implementers and
+  reviewers.
+
+### Upgrading
+
+Reinstall the plugin: a run started before the reinstall executes the old
+inline dispatch. A `## STOPPED` entry whose cause begins `prompt directory
+could not be created`, `prompt file <name> not produced`, `value file
+<name> could not be written`, `value file <name> refused twice by
+protect-secrets` or `prompt file <name> not read by <controller name>` is a
+stop of this mechanism; the resume prompt is the existing one, and the
+resumed session creates its own fresh prompt directory, so nothing from
+the stopped session's directory is reused.
+
 ## v7.9.0 — reviewers and fixers receive their prompt by pointer
 
 Field report: a `multi-code-review` controller is the subagent that runs
