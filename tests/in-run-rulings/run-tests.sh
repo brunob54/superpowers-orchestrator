@@ -2463,10 +2463,19 @@ assert_in_range_folded "code-review-loop Deviation 5 defines an answer line as a
   "$LOOP_PROMPT" 'every non-blank line below its fixed sentence' \
   "$LOOP_DEV5_LINE" "$LOOP_RETURN_LINE"
 BATCH_RA_LINE="$(line_containing_after "$BATCH_PROMPT" '`[RESUME_ANSWER]` — OPTIONAL' 0)"
-# The section heading's condition for omitting the section must match the
-# placeholder documentation's: no answer recorded by the run at all.
-assert_in_range "batch-controller Resume Answer heading states the omit condition" \
-  "$BATCH_PROMPT" '## Resume Answer (omit only when the run has recorded no answer at all)' \
+# Prompt-pointer dispatch: the section is present on every dispatch, its
+# heading carries no omit condition, and one fixed sentence of the body says
+# what an empty section means (orchestrator-prompt-pointer design, "Template
+# changes" item 2).
+# `exact` mode is a per-line substring match in this suite, so this line
+# also matches the old parenthesized heading; the negative assertion below
+# it is the one that rejects the parenthetical.
+assert_in_range "batch-controller Resume Answer heading line exists" \
+  "$BATCH_PROMPT" '    ## Resume Answer' 1 "$BATCH_RA_LINE" exact
+assert_absent_in_range_folded "batch-controller Resume Answer heading no longer states an omit condition" \
+  "$BATCH_PROMPT" '## Resume Answer (omit' 1 "$BATCH_RA_LINE" exact
+assert_in_range "batch-controller Resume Answer section states what an empty section means" \
+  "$BATCH_PROMPT" 'A section with no line below this sentence means the run has recorded no answer.' \
   1 "$BATCH_RA_LINE" exact
 BATCH_RA_END="$(line_containing_after "$BATCH_PROMPT" '**Nothing else may be added to the prompt.**' "$BATCH_RA_LINE")"
 for pin in '(orchestrator)' '(user)' '[task <n>/<k>]'; do

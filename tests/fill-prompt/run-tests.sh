@@ -456,6 +456,51 @@ assert_eq "code-review-loop template: two-line answer file exits 0" "$STATUS" "0
 check_resume_section "code-review-loop template" "$WORK/cl-empty.md" "$WORK/cl-two.md" "$CODE_LOOP_TEMPLATE"
 assert_file_contains "code-review-loop template: Deviation 2 keys BLOCKED on the absence of an answer line" "$WORK/cl-empty.md" '`## Resume Answer` holds no'
 
+bold "12. The batch-controller template: no BATCH_NUMBER, the Resume Answer section, the never-rewrite guard"
+BATCH_TEMPLATE="$ORCH_DIR/batch-controller-prompt.md"
+AMEND_FIRST_LINE='An `amend plan: …` answer in this section is the record of an'
+TASK_FIRST_ANSWER='[task 2/1] (orchestrator): plan governs: "clause" — docs/plan.md'
+TASK_SECOND_ANSWER='[task 3] (user): amend plan: use the constant'
+printf '%s\n' "$TASK_FIRST_ANSWER" "$TASK_SECOND_ANSWER" > "$WORK/task-answers.txt"
+# Every value of the batch template except the task list and the
+# RESUME_ANSWER argument. BATCH_NUMBER is never passed: it stands only in the
+# wrapper, which the script does not write.
+batch_fill() { # out TASK_LIST-value RESUME_ANSWER-argument
+  fill --template "$BATCH_TEMPLATE" --out "$1" \
+    'SDD_SKILL_PATH=/plug/subagent-driven-development/SKILL.md' \
+    'SDD_SCRIPTS_DIR=/plug/subagent-driven-development/scripts' \
+    'IMPLEMENTER_PROMPT_PATH=/plug/subagent-driven-development/implementer-prompt.md' \
+    'TASK_REVIEWER_PROMPT_PATH=/plug/subagent-driven-development/task-reviewer-prompt.md' \
+    'PLAN_PATH=/repo/docs/plan.md' "TASK_LIST=$2" 'TASK_RANGE=4..6' 'FIRST_BATCH=yes' "$3"
+}
+batch_fill "$WORK/batch-empty.md" '4, 5, 6' 'RESUME_ANSWER='
+assert_eq "batch template: fills without BATCH_NUMBER and exits 0" "$STATUS" "0"
+assert_file_contains "batch template: quoted task list inserted verbatim" "$WORK/batch-empty.md" 'Tasks to implement, in order: 4, 5, 6'
+assert_file_contains "batch template: the task list is substituted inside the pre-flight sentence too" "$WORK/batch-empty.md" 'never best-guess a number inside `4, 5, 6`'
+assert_file_contains "batch template: task range filled into the return line" "$WORK/batch-empty.md" 'BATCH_COMPLETE tasks=4..6'
+assert_file_has_line "batch template: empty value keeps the Resume Answer heading" "$WORK/batch-empty.md" "$RESUME_HEADING"
+assert_file_not_contains "batch template: empty value leaves no omit parenthetical" "$WORK/batch-empty.md" '## Resume Answer (omit'
+assert_file_has_line "batch template: empty value keeps the amend-plan paragraph" "$WORK/batch-empty.md" "$AMEND_FIRST_LINE"
+assert_file_has_line "batch template: empty value keeps the fixed sentence" "$WORK/batch-empty.md" "$FIXED_SENTENCE"
+assert_eq "batch template: empty value leaves no answer line below the fixed sentence" "$(line_below_fixed_sentence "$WORK/batch-empty.md")" ""
+assert_file_not_matches "batch template: no residual placeholder" "$WORK/batch-empty.md" "$PLACEHOLDER_ERE"
+assert_eq "batch template: last output line is the dedented last body line" "$(tail -n 1 "$WORK/batch-empty.md")" "$(last_body_line "$BATCH_TEMPLATE")"
+batch_fill "$WORK/batch-two.md" '4, 5, 6' "RESUME_ANSWER=@$WORK/task-answers.txt"
+assert_eq "batch template: two-line answer file exits 0" "$STATUS" "0"
+assert_eq "batch template: the first answer line sits directly below the fixed sentence" "$(line_below_fixed_sentence "$WORK/batch-two.md")" "$TASK_FIRST_ANSWER"
+assert_file_has_line "batch template: the second answer line is inserted" "$WORK/batch-two.md" "$TASK_SECOND_ANSWER"
+# The never-rewrite guard: a dispatched name reused with different content
+# exits 5 and leaves the file as it was.
+batch_fill "$WORK/batch-empty.md" '7, 8' 'RESUME_ANSWER='
+assert_eq "batch template: re-filling a dispatched name with different content exits 5" "$STATUS" "5"
+assert_file_contains "batch template: the refusal says the file already exists" "$ERRF" 'file already exists'
+assert_file_contains "batch template: the existing file is unchanged" "$WORK/batch-empty.md" 'Tasks to implement, in order: 4, 5, 6'
+# An unquoted task list splits into three arguments; the second is not
+# NAME=<value>, so the script exits 1 before reading anything.
+fill --template "$BATCH_TEMPLATE" --out "$WORK/batch-unquoted.md" TASK_LIST=4, 5, 6
+assert_eq "batch template: an unquoted task list is a usage error (exit 1)" "$STATUS" "1"
+assert_absent "batch template: unquoted task list writes nothing" "$WORK/batch-unquoted.md"
+
 echo
 bold "Results: $PASS passed, $FAIL failed"
 if [ "$FAIL" -gt 0 ]; then

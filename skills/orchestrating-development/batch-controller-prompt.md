@@ -68,7 +68,7 @@ Agent tool (general-purpose):
     always means `[task <n>/1]`, whatever the number of sections the
     report file holds)
 
-    ## Resume Answer (omit only when the run has recorded no answer at all)
+    ## Resume Answer
 
     An `amend plan: …` answer in this section is the record of an
     amendment the orchestrator has already made and committed to the
@@ -77,6 +77,7 @@ Agent tool (general-purpose):
     implementer follows the amended plan text and never edits the plan
     itself, its only write to the plan file staying the checkbox tick.
 
+    A section with no line below this sentence means the run has recorded no answer.
     [RESUME_ANSWER]
 
     ## Deviations (binding)
@@ -212,10 +213,14 @@ Agent tool (general-purpose):
 - `[TASK_RANGE]` — REQUIRED: `<first>..<last>` of TASK_LIST
 - `[PLAN_PATH]` — REQUIRED: absolute plan path
 - `[FIRST_BATCH]` — REQUIRED: `yes` or `no`
-- `[RESUME_ANSWER]` — OPTIONAL: omitted, together with its `## Resume
-  Answer` heading, only when the run has recorded no answer at all;
-  filled otherwise, on every dispatch, first or repeat, with every answer
-  the run has recorded so far, whatever batch its task belongs to — one
+- `[RESUME_ANSWER]` — OPTIONAL content, always passed: `RESUME_ANSWER=`
+  (empty) only when the run has recorded no answer at all, which removes
+  the placeholder line and leaves the `## Resume Answer` section with no
+  answer line — the fixed sentence above the placeholder tells the
+  controller what that means; filled from the value file
+  (`RESUME_ANSWER=@<file>`) otherwise, on every dispatch, first or
+  repeat, with every answer the run has recorded so far, whatever batch
+  its task belongs to — one
   `[task <n>/<k>]` line each (`<k>` the `### Question <k>` or
   `### Conflict <k>` section it answers; a bare `[task <n>]` line from
   the user means `[task <n>/1]`), tagged `(orchestrator)` or
