@@ -844,6 +844,14 @@ code has been revised since, so a re-pass is meaningful):
      withhold a line on this outcome.
      (A malformed payload would make the hook print `{}`, which reads as
      outcome (a); that is why the payload is program-built.)
+     When no single line is refused, probe each pair of consecutive lines
+     the same way, the two lines joined by one newline and passed as one
+     `content` string. Two of the hook's patterns allow whitespace on both
+     sides of the `:` or `=`, and a newline is whitespace, so a key at the
+     end of one line and its value at the start of the next matches the
+     whole content while neither line matches on its own. Withhold both
+     lines of a refused pair. A pattern spans at most one line break, so
+     pairs are enough.
      Replace every withheld line by a line of exactly this form, which
      keeps the finding's id and severity:
      `- [<id>] <Severity> — <file:line, or the words no location when the finding carries none> — secret-bearing finding, value withheld`
@@ -921,11 +929,14 @@ code has been revised since, so a re-pass is meaningful):
      started on: the files the failed attempt changed — the files its final
      message lists as changed, or, when it listed none, the files the
      findings name — are each unstaged and restored to the committed content
-     by explicit path (`git checkout HEAD -- <path>`, or
-     `git restore --source=HEAD --staged --worktree -- <path>`). The plain
-     `git checkout -- <path>` form restores from the index, not from the
-     committed content, so it would leave in place an edit the attempt had
-     already staged before it died. That
+     by explicit path with one command:
+     `git restore --source=HEAD --staged --worktree -- <path>`. Use that
+     single form for every path the index knows: it restores a modified
+     file, brings back a deleted one, and removes from the index and from
+     the working tree a file the attempt created and staged before it
+     died. `git checkout HEAD -- <path>` cannot do that last one — on a
+     file that exists only in the index it fails with `pathspec did not
+     match any file(s) known to git`. That
      restore applies only to files that were clean when the loop started:
      a file that already carried an uncommitted change then — a path of
      the `pre-existing uncommitted changes at loop start:` line the fix
@@ -933,9 +944,10 @@ code has been revised since, so a re-pass is meaningful):
      discard the user's own work along with the attempt's. Such a file is
      left as the attempt left it, and the failure text of the
      re-dispatch says so: `these files still hold the failed attempt's
-     edits: <path>[, <path>...]`. Those
-     commands restore only files git tracks: a file the attempt created that
-     git does not track is removed by explicit path (`rm -- <path>`), never
+     edits: <path>[, <path>...]`. That
+     command restores only paths the index knows: a file the attempt created
+     that git does not track — one it never staged — is removed by explicit
+     path (`rm -- <path>`), never
      with `git clean`. The review log, the fix-report file, and any change
      that existed when the loop started are never restored and never
      removed. **Second, check:** run `git status --porcelain` in the
@@ -1747,6 +1759,14 @@ completed invocation only on explicit user request.
   (An unescaped line would make the payload
   invalid JSON, on which the hook prints `{}` — outcome (a) for a
   secret-bearing line; the program-built payload is what prevents it.)
+  When no single line is refused, the controller probes each pair of
+  consecutive lines the same way, the two lines joined by one newline and
+  passed as one `content` string. Two of the hook's patterns allow
+  whitespace on both sides of the `:` or `=`, and a newline is whitespace,
+  so a key at the end of one line and its value at the start of the next
+  matches the whole content while neither line matches on its own. Both
+  lines of a refused pair are withheld. A pattern spans at most one line
+  break, so pairs are enough.
   Every withheld line is replaced by a line of exactly this form, which
   keeps the finding's id and severity:
   `- [<id>] <Severity> — <file:line, or the words no location when the finding carries none> — secret-bearing finding, value withheld`

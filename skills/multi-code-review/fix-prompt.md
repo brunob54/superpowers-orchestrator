@@ -76,19 +76,22 @@ Agent tool (general-purpose):
        files you changed — and keep the exact command and its output.
        If the covering tests fail, do not stage or commit; unstage and
        restore every file you changed to the committed content, each by
-       explicit path (`git checkout HEAD -- <path>` or
-       `git restore --source=HEAD --staged --worktree -- <path>`), never
+       explicit path with one command:
+       `git restore --source=HEAD --staged --worktree -- <path>`, never
        `git checkout .` and never the
-       fix-report file. The plain `git checkout -- <path>` form restores
-       from the index, not from the committed content, so it would leave
-       a staged edit in place. One exception: a file named on the
+       fix-report file. Use that single form for every path the index
+       knows: it restores a modified file, brings back a deleted one, and
+       removes from the index and from the working tree a file you created
+       and staged. `git checkout HEAD -- <path>` cannot do that last one —
+       on a file that exists only in the index it fails with `pathspec did
+       not match any file(s) known to git`. One exception: a file named on the
        `pre-existing uncommitted changes at loop start:` line above
        already carried the user's own uncommitted change before this
        loop began, so restoring it would discard that work — leave such
        a file exactly as your attempt left it and name it in your
-       failure report. Those commands restore only files git
-       tracks: a file you created that git does not track is
-       removed by explicit path (`rm -- <path>`), never with
+       failure report. That command restores only paths the index
+       knows: a file you created that git does not track — one you never
+       staged — is removed by explicit path (`rm -- <path>`), never with
        `git clean`;
        then report the failure, list the files you restored and the
        files you left with your edits, in your final message, and stop.
