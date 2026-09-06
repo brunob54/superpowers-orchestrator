@@ -1656,12 +1656,15 @@ completed invocation only on explicit user request.
   consolidate the usable reports, log `usable <u>/<m>` and `r<j>: unusable`,
   triage normally; the round is never clean.
 - All reviewers unusable after retries (u = 0), with at least one final
-  message showing that its reviewer could not read its prompt file — a tool
-  error on the Read of the prompt file itself, the file missing or
-  permission refused — or did
-  not follow it → `inconclusive` round entry, then `BLOCKED: no reviewer
-  of round <i> could use its prompt file — <each reviewer's final
-  message, one line each>`; the loop does not continue.
+  message showing no sign of the prompt file's content — it names no file
+  or hunk of the diff and carries no Findings or Verdict section (a tool
+  error on the Read of the prompt file itself, the file missing,
+  permission refused, or a message that never touches the diff at all) →
+  `inconclusive` round entry, then `BLOCKED: no reviewer of round <i>
+  could use its prompt file — <each reviewer's final message, one line
+  each>`; the loop does not continue. A report unusable on format alone
+  shows the prompt file's content and is logged `inconclusive` without
+  being fatal.
 - All reviewers unusable after retries (u = 0), with every final message
   showing an environment death instead — a usage limit, a tool error
   anywhere other than on the Read of the prompt file, or

@@ -26,7 +26,8 @@
 // placeholder has no value; 4 a NAME= names no placeholder in the body or
 // the wrapper (the fenced block's lines above and including `prompt: |`);
 // 5 a file could not be read or written, including when `--out` already
-// exists. Nothing is printed on success.
+// exists with different content (an identical file exits 0 without
+// writing). Nothing is printed on success.
 
 const fs = require('fs');
 const path = require('path');
