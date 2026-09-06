@@ -1,5 +1,120 @@
 # Superpowers Orchestrator Release Notes
 
+## v7.9.0 — reviewers and fixers receive their prompt by pointer
+
+Field report: a `multi-code-review` controller is the subagent that runs
+one code-review loop, and its context window (the working memory the model
+holds for the whole loop) grows with every round. Measured on the three
+largest controllers of the previous orchestrated run (Case 018 Follow-up in
+the orchestration issues log; 374K, 373K and 333K tokens of context), the
+largest single source of that growth was text the controller itself pasted
+into its Agent dispatches: the filled reviewer prompt (about 9 KB, from
+`reviewer-prompt.md`) once per reviewer, and a fix prompt it composed by
+hand (about 11 KB) once per fix dispatch. Together they were 35 to 42
+percent of each controller's window — ahead of the reviewer reports it
+received (20 to 25 percent). The largest controller made 32 dispatches
+over 4 rounds; a controller can make up to 33. The text was also redundant:
+every placeholder of the reviewer template varies per round or per
+invocation, none per reviewer, so the M reviewers of a round were sent
+byte-identical prompts.
+
+`multi-code-review` now dispatches every reviewer and every fix subagent by
+**pointer**. Before round 1 the controller runs `mktemp -d` once, which
+creates a temporary directory outside the checkout (the prompt directory).
+Each round it writes the round's values — lens text, commit range, package
+path, carried findings — into small files there, and runs
+`scripts/fill-prompt.js`, a deterministic Node script, which fills the
+template into one prompt file in that directory. The controller never reads
+the template and never holds the filled text. It then dispatches a fixed
+three-sentence message that names the file: the reviewer reads the file
+once with the Read tool and follows it as its only instructions, and must
+read nothing else in that directory. The reviewer reads exactly the text it
+received inline before: `reviewer-prompt.md` is byte-identical, and the
+fill test asserts the file is the template body filled under the legend's
+rules. The fix subagent is dispatched the same way from a new template,
+`fix-prompt.md`, which carries the rules the controller used to compose by
+hand. Design:
+`docs/superpowers-orchestrator/2026-09-05-prompt-pointer-dispatch/specs/prompt-pointer-dispatch-design.md`.
+
+Every failure of the mechanism is **fatal**: the controller writes the
+round entry it owes, if any, and returns `BLOCKED: <cause>`. There is no
+inline fallback (author decision, Amendment 1 of the spec: a fallback that
+pastes the prompt inline would hide the defect and silently bring the old
+cost back; a stop makes the defect visible the moment it appears, and the
+orchestrator already treats a controller `BLOCKED` as a stop with a resume
+path). The run's review rounds bounded that rule with four refinements,
+recorded as Amendments 2 to 4:
+
+- A value-file Write refused by `hooks/safety/protect-secrets.js` (a
+  finding quotes a credential-shaped string) is not fatal at once. The
+  hook names only a credential kind, never a line, so the controller probes
+  each line with one Write tool call of a throwaway file, replaces every
+  refused line by its `file:line` plus the fixed text `secret-bearing
+  finding, value withheld`, and retries the Write once. The finding keeps
+  its id and severity, so the fix subagent still removes the credential at
+  that location. A second refusal is fatal.
+- A round in which every reviewer died of its environment (a usage limit,
+  a tool error, no final message), or returned a report unusable on format
+  alone, is not a failure of the mechanism: it is logged `inconclusive`
+  and the loop continues, as before. A round in which no reviewer could
+  read or follow its prompt file is fatal.
+- A slip in the controller's own fill command (a mistyped argument, a
+  missing value, a value file it never wrote) is corrected once; a second
+  non-zero exit is fatal.
+- A prompt file may be removed and filled again under the same name until
+  a pointer to it has been dispatched; after that it is never rewritten.
+
+### What changed
+
+- **`skills/multi-code-review/scripts/fill-prompt.js`** — new. Fills the
+  prompt body of a template into a file from `NAME=<value>` and
+  `NAME=@<file>` arguments; untrusted text (findings, lens text, failure
+  text) always goes through the `@<file>` form. Exit codes 1 to 5 name
+  the cause (usage, malformed template, uncovered placeholder, unknown
+  name, read or write failure); an `--out` file that already exists with
+  different content is refused.
+- **`skills/multi-code-review/fix-prompt.md`** — new template for the fix
+  subagent, re-dispatch (`FAILURE_BLOCK`), verification-cycle and
+  post-loop-addendum fixes. Every rule precedes the `[FINDINGS]` and
+  failure blocks, so a truncated Read cannot drop a rule.
+- **`skills/multi-code-review/SKILL.md`** — Procedure "Before round 1"
+  (the prompt directory, Git Bash path conversion, the value-file rule,
+  the file-name table, the pointer wording); step 2 (write values, fill,
+  `test -s`, dispatch M pointers to the same file); the
+  Critical/Important bullet (fix dispatch by pointer, the secrets probe);
+  Error Handling (the fatal rule, the per-cause `BLOCKED` texts and the
+  four refinements above). `reviewer-prompt.md` is unchanged.
+- **Tests** — new `tests/fill-prompt/run-tests.sh` (102 unit tests on the
+  script, including a fill of the real templates); section 10 of
+  `tests/reviewer-templates/run-tests.sh` pins the pointer wording, the
+  absence of any `$PROMPT_DIR` variable and of any inline fallback. The
+  Testing block of `CLAUDE.md` lists the new suite.
+
+### Not included
+
+- **The acceptance measure is not taken.** The target is all prompt
+  material below 10 percent of the controller's content (the spec's
+  Acceptance measure section defines the count). The run that built this
+  release executed the installed 7.8.0 copy and could not measure itself;
+  the measure is taken on the first orchestrated run after reinstall.
+- **Nine harness probes are owed.** All ask the same question: whether a
+  Write or Read under a `mktemp -d` directory prompts for permission in a
+  session that is not in bypass mode. Until one is run, treat the
+  Prerequisites note of the guide as the safe assumption.
+- The mechanism is specified for macOS and Linux; the Git Bash path form
+  (`cygpath -m`) is an owed probe, not a tested path.
+- The orchestrator's own dispatch of its controllers still pastes the
+  controller templates inline (worklist row 13 in the orchestration issues
+  log).
+
+### Upgrading
+
+Reinstall the plugin: a run started before the reinstall executes the old
+inline dispatch. A `BLOCKED: prompt …` return from the loop stops an
+orchestrated run with a `## STOPPED` entry and a resume prompt, like any
+other controller `BLOCKED`; a resumed controller creates its own fresh
+prompt directory, so nothing from the stopped invocation is reused.
+
 ## v7.8.0 — the orchestrator rules on in-run decisions
 
 Field report: in the recorded orchestrated runs (Cases 001, 007, 008 and

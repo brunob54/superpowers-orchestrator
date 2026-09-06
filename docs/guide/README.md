@@ -1,6 +1,6 @@
 # Superpowers Orchestrator — User Guide
 
-_Guide last reviewed against plugin version **7.7.0**._
+_Guide last reviewed against plugin version **7.9.0**._
 
 This is the day-to-day operating manual for the plugin: which phrases trigger
 which workflow, what the pipelines look like end to end, and what to do when
@@ -271,6 +271,58 @@ first, or lists it under `Harness probes owed:`. Throughout, any "done" claim
 must pass `verification-before-completion` — fresh command output as
 evidence, never memory of an earlier run.
 
+Since v7.9.0 the reviewers and the fix subagent receive their instructions
+**by pointer**, not as pasted text. The controller (the subagent that runs
+the loop) creates one temporary directory outside your repository at the
+start of the loop, fills the reviewer prompt into a file there once per
+round with a small script, and sends each reviewer a three-sentence message
+that names the file. The reviewer reads that file once and follows it; it
+is told to read nothing else in that directory. The text a reviewer reads is
+the same text it was sent inline before — the template did not change. The
+fix subagent is dispatched the same way from its own template. The point is
+the controller's context window (the working memory it holds for the whole
+loop): before this change, the pasted prompts were 35 to 42 percent of it.
+
+### When the review loop's prompt delivery fails
+
+Every failure of that delivery mechanism is **fatal to the loop**: the
+controller records the round it owes, if any, and returns
+`BLOCKED: <cause>` — the same kind of stop as any other blocked
+controller (in an orchestrated run, a `## STOPPED` entry with a resume
+prompt; see §4 and §5). It never falls back to pasting the prompt inline.
+This was a deliberate decision: a fallback would hide the defect and bring
+the old cost back without anyone noticing, while a stop makes it visible
+the moment it happens. The causes you can see are: the temporary directory
+could not be created; a prompt file was not produced (the script failed or
+the file is empty); a value file could not be written; or no reviewer of a
+round could read or follow its prompt file.
+
+Four bounded cases are handled inside the loop instead of stopping it:
+
+- **A finding that quotes a credential.** The plugin's secrets hook refuses
+  to write a file that contains a credential-shaped string, and its refusal
+  names only a kind of credential, never a line. The controller probes the
+  file line by line, replaces every refused line by the finding's location
+  plus the words `secret-bearing finding, value withheld`, and writes the
+  file again once. The finding keeps its id and severity, so the fix
+  subagent still removes the credential at that location. A second refusal
+  stops the loop.
+- **A round whose reviewers all failed for environmental reasons** — a
+  usage limit, a tool error, no final message — or all returned a report
+  the controller could not parse, is logged `inconclusive` and the loop
+  goes on, exactly as before. Only a round in which no reviewer could read
+  or follow its prompt file stops the loop.
+- **A mistake in the controller's own fill command** (a mistyped argument,
+  a missing value) is corrected once; a second failure stops the loop.
+- **A prompt file filled with wrong values** may be removed and filled
+  again until a pointer to it has been sent; after that it is never
+  rewritten.
+
+Two things are not yet verified in v7.9.0 and are listed in the release
+notes: whether a session that is not in bypass mode asks for permission
+before the controller writes or reads files in that temporary directory
+(see the permissions note in §4), and the path form on Windows Git Bash.
+
 ### Stage 5 — Finish (`finishing-a-development-branch`)
 
 The final gate is always interactive: merge locally, open a PR, keep the
@@ -462,7 +514,11 @@ The same batch asks for two confirmations:
   will answer. Before confirming, make sure the session can run the
   pipeline's edit/Bash/Agent calls without prompting (pre-approve in
   `.claude/settings.json`, or run with permissions accepted for the session).
-  This is the most common cause of a "hung" run.
+  This is the most common cause of a "hung" run. Since v7.9.0 the code
+  review loop also writes and reads prompt files in a temporary directory
+  **outside** the repository (created with `mktemp -d`); whether a session
+  that is not in bypass mode prompts for those calls has not been verified
+  yet, so a pre-approval limited to the repository path may not be enough.
 
 ### What happens while you're away
 
@@ -516,7 +572,12 @@ before the phase continues.
 Any major error — a blocked controller, unresolved review findings, a plan
 inconsistency, the branch changed under it — appends a `## STOPPED` entry to
 the log with the reason, a pointer to the detail file, and the exact resume
-prompt to use. Nothing is lost: everything up to the stop is committed.
+prompt to use. Nothing is lost: everything up to the stop is committed. A
+Phase 4 controller that could not deliver a prompt to its reviewers or fix
+subagent is one such blocked controller (since v7.9.0; see "When the review
+loop's prompt delivery fails" in §3): its `BLOCKED` cause names the file or
+directory that failed, and the fix commits of the completed rounds are
+already on the branch.
 
 A review finding that merely differs from a code block the plan showed is
 *not* one of these stops: since v7.7.0 those bodies are reference
@@ -628,7 +689,10 @@ how much is redone differs:
   round 1 (even a partially-used fix-verification cycle budget is recovered
   from the log). Only the round in flight is lost; if it died mid-edit,
   its uncommitted changes are again the dirty-tree case — typically you
-  discard them and that round simply re-runs.
+  discard them and that round simply re-runs. A resumed Phase 4 controller
+  creates its own fresh temporary directory for prompt files; nothing from
+  the stopped controller's directory is reused, so a stale or missing
+  prompt file from the old run cannot affect the resumed loop.
 
 To tear down a wedged or superseded run instead of resuming it:
 
@@ -869,6 +933,17 @@ reviewer made a claim about the agent runtime that nobody could test in that
 environment, so the finding was rejected instead of stopping the run (§3,
 Stage 1). Run the named probe yourself; if it confirms the claim, reopen the
 finding by hand — nothing in the run is waiting on it.
+
+**My run stopped with `BLOCKED: prompt file ... not produced` (or
+`prompt directory could not be created`, `value file ... could not be
+written`, `no reviewer of round <i> could use its prompt file`).** The
+code review loop could not hand a prompt to its reviewers or fix subagent
+through the temporary directory it uses since v7.9.0, and it stops instead
+of pasting the prompt inline by design (§3, "When the review loop's prompt
+delivery fails"). Check the cause text: a missing or unwritable temporary
+location, Node not runnable, or a permission dialog on a write or read
+outside the repository (§4, Prerequisites). Fix the environment, then
+resume (§5); the completed rounds and their fix commits are kept.
 
 **The code doesn't match what the plan showed.** Expected, in most cases.
 Since v7.7.0 a plan's code blocks are reference implementations; what the
