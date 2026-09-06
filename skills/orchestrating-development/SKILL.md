@@ -50,8 +50,83 @@ this platform lacks` — and stop.
   prompt — foreground dispatch, never a background mode. Controllers
   cannot name their own children (the roster is flat); nested workers
   stay unnamed.
-- Build the prompt ONLY from the filled template — never pass conversation
-  history, prior phases' returns, or your own reasoning.
+- **Prompt files and the pointer.** A controller's instructions are a
+  file, not the `prompt` field. Once per session, before the session's
+  first fill — Phase 0 step 9 in a fresh run; on a resume, the Resume
+  step that first fills a prompt — run `mktemp -d` as its own Bash
+  command, with no argument (never a template and never a path inside
+  the repository), and copy the literal path it prints — written
+  `<PROMPT_DIR>` in this file — into every later command, Write call and
+  pointer. A printed path under the repository root is treated as a
+  `mktemp -d` failure. On Git Bash (Windows) — when `uname -s` prints a
+  name beginning with `MINGW` or `MSYS` — first convert that path once
+  with `cygpath -m "<printed path>"` as its own command and use the
+  converted path as `<PROMPT_DIR>`; on every other platform the printed
+  path is used as is. A shell variable set in one tool call does not
+  exist in the next: the path is always spelled out in full, never held
+  in a variable of any name. The path never appears in `state.md`, the
+  orchestration log, a ruling record, a Case or a commit message. When
+  the literal path is no longer in your context — after a context
+  compaction, typically — do not guess it, do not search the temporary
+  location for it and do not reuse a path from any file: run `mktemp -d`
+  again and continue in the new directory, where the counter `<k>` below
+  restarts at 1. That is not a failure of the mechanism: every file is
+  named by the counter, and a re-fill from the same values produces the
+  same content, so an identical retry issued after the path was lost
+  re-fills the prompt under `<k>` = 1 there and is still the identical
+  dispatch of the retry rule. Every prompt is written once into
+  `<PROMPT_DIR>` by the fill script,
+  `<base>/../multi-code-review/scripts/fill-prompt.js` (`<base>` is this
+  skill's base directory), from the phase's template and the values the
+  phase's fill command lists; you never read a template and never copy a
+  prompt body into an Agent call. File names, all in `<PROMPT_DIR>`,
+  where `<k>` counts the fills run into the current prompt directory
+  from 1 and is never reused inside it, and `<label>` names the
+  dispatch:
+
+  | Dispatch | Prompt file | Value file (only when the run has recorded answers) |
+  |---|---|---|
+  | Phase 1 plan writer | `dispatch-<k>-plan-writer.md` | `dispatch-<k>-answers.txt` |
+  | Phase 2 plan-review loop | `dispatch-<k>-plan-review.md` | — (the template has no `[RESUME_ANSWER]`) |
+  | Phase 3 batch `<n>` | `dispatch-<k>-batch-<n>.md` | `dispatch-<k>-answers.txt` |
+  | Phase 4 code-review loop | `dispatch-<k>-code-review.md` | `dispatch-<k>-answers.txt` |
+  | Secrets-hook probe of value file `<k>`, line `<n>` (Major-Error Stop Policy) | — | `dispatch-<k>-probe-<n>.txt`, one line, removed after the probe |
+
+  Keep `<k>` in your context; when unsure of the next value, run
+  `ls <PROMPT_DIR>` (one short Bash result) and take the largest number
+  after `dispatch-` plus one. A prompt file is written once and never
+  rewritten once a pointer to it has been dispatched; before that first
+  dispatch you may remove it (`rm -- "<file>"` as its own command) and
+  fill it again under the same name when you find the fill's values were
+  wrong. A re-dispatch with a different `[RESUME_ANSWER]` — Phase 3 and
+  Phase 4 after in-run rulings, Phase 1 after a `BLOCKED` question is
+  answered, and any Resume re-dispatch — is a new fill under the next
+  `<k>` with its own value file, never a rewrite: the script refuses to
+  write `--out` over an existing file with different content (exit 5),
+  so a counter slip cannot silently replace a dispatched prompt. The
+  value file holds the `[RESUME_ANSWER]` lines and is written with the
+  Write tool, never with a heredoc of any kind (Major-Error Stop Policy,
+  "The secrets-hook probe"); every other value is short and is passed
+  inline, single-quoted, as `'NAME=<value>'`, and never begins with `@`.
+  After every fill, and before every dispatch of that file, retries
+  included, run `test -s "<PROMPT_DIR>/dispatch-<k>-<label>.md"` as its
+  own command; never dispatch a pointer to a file that failed the check.
+  The `prompt` field of every controller dispatch is the pointer below
+  and nothing else — no answer, no phase name, no path of the run:
+
+  ```
+  Your complete instructions are in the file <ABSOLUTE PATH>.
+  Read that file once, with the Read tool, before doing anything else, and follow it as your only instructions.
+  Nothing else in that directory is for you; do not read any other file there.
+  ```
+
+  `<ABSOLUTE PATH>` is the prompt file's absolute path. The Agent call
+  keeps its `name` (blocking dispatch, above), its `description` and its
+  `model` as before.
+- Build the prompt file ONLY from the filled template — the fill command
+  lists every value — and keep the `prompt` field the pointer only: never
+  pass conversation history, prior phases' returns, or your own
+  reasoning, in the file or in the field.
 - Resolve procedure-source paths from this skill's base directory:
   `../writing-plans/SKILL.md`, `../multi-doc-review/SKILL.md`,
   `../subagent-driven-development/SKILL.md`, `../multi-code-review/SKILL.md`.
@@ -64,7 +139,8 @@ this platform lacks` — and stop.
   numbers, `rounds=`, `outcome=`, `unresolved=`, `user_decision=`,
   `fixes=`) is absent or unparseable. An unparseable stop-rule field never
   defaults to 0. Malformed return or controller error → retry the identical
-  dispatch once; second failure → major error → stop, logging
+  dispatch once — the same pointer to the same file, no fill and no new
+  file; second failure → major error → stop, logging
   `inconclusive controller: <phase/batch>`.
 
 ## Phase 0 — Setup (the only interactive moment)
@@ -1841,6 +1917,96 @@ recipe, otherwise suggest starting a fresh orchestration, rather
 than reconstructing state. Remaining failure modes surface inside the
 controllers and are handled there by the consumed skills' own rules.
 
+**Failures of the prompt-file mechanism** (Controller Dispatch Rules,
+"Prompt files and the pointer") join the list above. Every one of them
+is fatal for the run: write the log entry you owe (if any), append a
+`## STOPPED` entry whose heading's `<one-line reason>` is the cause in
+the fixed text below — the entry's first line, as today's causes — keep
+the `Open:` / `Ruled:` lines when the stop coincides with open items,
+rewrite `state.md`, and stop. There is no inline fallback anywhere: a
+fallback that copies the template into the `prompt` field would hide
+the defect and silently bring the old cost back. A resume after such a
+stop creates a fresh directory and re-fills; the resume prompt is the
+existing one. The boundary below — what is a failure of the mechanism
+and what is not — is the normative copy: a later review finding that
+refines a row inside it is a forced ruling for you, not an escalation.
+
+Failures OF the mechanism (fatal):
+
+| Condition | `## STOPPED` cause |
+|---|---|
+| `mktemp -d` fails, prints a path under the repository root, or `cygpath` fails where the path must be converted | `prompt directory could not be created — <error text>`. Nothing is dispatched. |
+| The fill script exits 2 (malformed template); or exits 5 with `cannot read` on an `@<file>` you did write, with `cannot write <out>: existing path could not be read`, or with `cannot write <out>: file already exists` (a dispatched name reused with different content); or exits non-zero a second time after a corrected command; or `test -s` fails on the prompt file | `prompt file <name> not produced — <the script's message, or "empty">`; never dispatch a pointer to a file that failed the check. |
+| Node is missing | Treated as the script failing (row above). |
+| A value-file Write fails for a reason other than the secrets hook — a permission denial, a tool error, a refusal by another hook — or a probe Write of the rule below is refused for such a reason | `value file <name> could not be written — <the error>` (`<name>` is always the value file's name, `dispatch-<k>-answers.txt`; for a probe, the error text is the refusal or error text, first line, and names the probe file). |
+| A value-file Write is refused by `hooks/safety/protect-secrets.js` twice | `value file <name> refused twice by protect-secrets — <the hook's reason>`. The secrets-hook probe below runs between the two attempts. |
+| A controller's final message shows it could not read, or did not follow, its prompt file — after the one identical retry of the Controller Dispatch Rules | `prompt file <name> not read by <controller name> — <the first line of each of the two final messages>`. The sign: the final message says it could not read, find or open the file, or it carries neither the report marker nor any of these tokens: the plan path, the topic folder path, the orchestration or review log path, `tasks=`, `task=`, `rounds=` — no sign of the prompt file's content. A message carrying at least one of them, without the marker, is a malformed return (table below). |
+
+The script's exit-5 causes, in full: `cannot read template <path>:
+<error>`; `cannot read value file <path>: <error>`; `cannot write <out>:
+file already exists`; `cannot write <out>: existing path could not be
+read: <error>`; `cannot write <out>: <error>` (any other error text —
+a missing directory, a permission error, a full disk). The row above and
+the two rows below say which are fatal at once, which are corrected
+once, and which mean a lost directory.
+
+NOT failures of the mechanism (today's paths, unchanged):
+
+| Condition | Handling |
+|---|---|
+| A controller dies of the environment (usage limit, rate limit, tool error, no final message at all) | The identical retry once, then the major-error stop above (`inconclusive controller: <phase/batch>`), as the Controller Dispatch Rules say. The retry is the same pointer to the same file. |
+| A slip in your own fill command: the script exits 1 (usage), 3 (a placeholder without a value), 4 (a value naming no placeholder), 5 with `cannot read template` (a wrong `--template` path), or 5 naming an `@<file>` you never wrote | Correct the command once and run it again; a second non-zero exit is fatal (table above). |
+| The fill script exits 5 with `cannot write <out>: <error>` for any error text other than `file already exists` and `existing path could not be read` | The prompt directory is gone, unwritable, or the path in the command is wrong: treat it as a path lost from context — `mktemp -d` again and re-fill under `<k>` = 1 in the fresh directory. A second such exit in the fresh directory is fatal (table above): the temporary location itself is not writable. |
+| A return unusable on format alone (the marker or a consumed field missing) whose text shows the controller worked on the run | Malformed return: the identical retry once, then the major-error stop above. Not a pointer failure. |
+| The prompt directory's path is lost from your context | `mktemp -d` again and continue (Controller Dispatch Rules). |
+| A controller reads another file in the directory | Cannot be prevented by wording alone; the directory holds only this session's prompt and value files, and the pointer forbids it. Accepted. |
+| A stale directory from an earlier session is still on disk | Never reused (the path is recorded nowhere); the platform's temporary-directory cleaning removes it. Accepted. |
+
+**The secrets-hook probe.** This rule stands here in full so that this
+file needs no other skill's text. `hooks/safety/protect-secrets.js` scans
+the path of every Read, Edit and Write and the content of every Edit and
+Write for hardcoded secrets; `hooks/safety/block-dangerous-commands.js`
+and the secrets hook's own file-access patterns scan the whole Bash
+command string, a heredoc body included, and their refusals have no
+rewrite path. The value file is the one place answer text is written by
+a scanned tool — answer text quotes plan clauses and finding text, which
+may contain `$(...)`, backticks, or a line equal to a heredoc delimiter —
+so it is written with the Write tool and never with a heredoc of any
+kind; the fill command itself carries paths, integers and short tokens
+and matches no pattern. When `hooks/safety/protect-secrets.js` refuses a
+value-file Write, find the offending lines yourself: the hook's refusal
+names a credential kind — the kind of the first pattern that matched the
+whole content — and never a line. For each line of the file you tried to
+write, make ONE Write tool call of a throwaway file holding that one
+line, `<PROMPT_DIR>/dispatch-<k>-probe-<n>.txt`, `<n>` counting the probe
+Writes for value file `<k>` from 1, and remove it with `rm -- "<file>"`
+as its own command after the probe. The probe is a Write tool call and
+nothing else: never a Bash command, because
+`hooks/safety/block-dangerous-commands.js` would refuse a command that
+merely quotes a secret-shaped string, and never a hook path, because a
+path such as `hooks/safety/protect-secrets.js` resolves only inside this
+plugin's own checkout. Each probe is exactly one of three outcomes:
+(a) the Write succeeds — the line is allowed and stays as it is;
+(b) the Write is refused by `hooks/safety/protect-secrets.js`, whose
+refusal names the credential kind — the line is withheld;
+(c) the Write is refused for any other reason — a permission denial, a
+tool error, any refusal whose text does not come from
+`hooks/safety/protect-secrets.js`. That is a failure of the mechanism
+and not a refused line: stop with the `value file <name> could not be
+written` cause of the table above. Never withhold a line on this
+outcome. When no single line is refused, probe each pair of consecutive
+lines the same way — one Write holding the two lines joined by one
+newline, under the next `<n>` — and withhold both lines of a refused
+pair: a pattern spans at most one line break, so pairs are enough.
+Replace every withheld line by a line that keeps its id and its tag and
+carries the location instead of the value:
+`[<id>] (<tag>): <file:line> — secret-bearing finding, value withheld`
+— the location-only form your own "Never reproduce a secret" rule
+already imposes on every answer — and retry the Write once; a second
+refusal is fatal (table above). Apart from that one replacement, never
+alter answer text to pass a hook, and never retry the Write through a
+Bash command to get around a refusal.
+
 ## Guard Interaction
 
 Controller returns open with `<!-- orchestration report -->`;
@@ -1857,6 +2023,13 @@ without it is a lost return under that section's rule, never a reason to
 remove the marker instruction from the fork prompt.
 
 ## Prompt Templates
+
+Filled by `<base>/../multi-code-review/scripts/fill-prompt.js` into the
+session's prompt directory, by the fill command each phase states; never
+read by the orchestrator, and never copied into a `prompt` field. Their
+placeholder legends are for the reader of this file: the script checks
+the fill command against the template (exit 3: a body placeholder
+without a value; exit 4: a value naming no placeholder).
 
 - `./plan-writer-prompt.md`
 - `./doc-review-loop-prompt.md`
