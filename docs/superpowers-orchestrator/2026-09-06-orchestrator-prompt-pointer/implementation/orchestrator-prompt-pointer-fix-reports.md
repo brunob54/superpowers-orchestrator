@@ -73,3 +73,17 @@ Results: 140 passed, 0 failed
 $ bash tests/in-run-rulings/run-tests.sh
 Results: 502 passed, 0 failed
 ```
+
+## Round 3
+
+Findings addressed: M1, M2, M3, M4, M8.
+
+Command:
+```
+bash tests/orchestrating-development/run-tests.sh
+```
+
+Output (tail):
+```
+Results: 147 passed, 0 failed
+```

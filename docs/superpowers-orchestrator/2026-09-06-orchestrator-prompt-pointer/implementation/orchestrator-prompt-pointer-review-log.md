@@ -72,3 +72,38 @@ Secrets found: none
 - [I4] fixed — the withheld replacement rule now keeps the ruling verb and the non-secret answer text up to the quoted value and states the amended Task 4 form verbatim; the wording suite pins the amended form and rejects the location-only form (verification re-review skipped: the effective HEAD had moved past the completion marker, so invocation 2 below reviews the fix) → a54f2b2
 
 _Invocation 2 — 2026-09-06 — N=2 M=2 — BASE..HEAD 582763a..a54f2b2 — branch feature/orchestrator-prompt-pointer — gate: orchestration_
+
+## Round 3 — Correctness & spec alignment — fable
+**Reviewers:** M=2, usable 2/2
+**Reviewer verdicts:** r1: 0 Critical, 0 Important, 5 Minor | r2: 0 Critical, 0 Important, 5 Minor
+**Sources mapped:** 10/10
+**Reviewer verdict:** 0 Critical, 0 Important, 8 Minor
+**Converged:** no
+### Dispositions
+- [M1] fixed — `${2#$ROOT/}` stripped with an unquoted glob pattern; now `${2#"$ROOT"/}` → 900596b ← 2/2: r1:M4, r2:M1
+- [M2] fixed — `dispatch the pointer` was counted >= 4 over the whole Phase 1–5 range; now asserted once per phase sub-range → 900596b ← 2/2: r1:M5, r2:M2
+- [M3] fixed — the Blocking-dispatch bullet still sourced `name` from the template header, against the never-read-a-template rule; now from the phase's dispatch text (Phases 1–4) → 900596b ← 1/2: r1:M1
+- [M4] fixed — "the in-session identical retry … fills nothing" was absolute while the dispatch rules re-fill under <k> = 1 after a lost directory path; that exception is now stated → 900596b ← 1/2: r1:M2
+- [M5] carried — the opening sentence of "Prompt files and the pointer" is one ~70-word sentence with four nested dash clauses; split into when and what ← 1/2: r1:M3
+- [M6] carried — tests/fill-prompt/run-tests.sh:533 command-side name pattern is a second copy of the two-character rule with no comment saying the minimum is deliberate (CF12) ← 1/2: r2:M3
+- [M7] carried — Resume step 3 states the with-answers imperative before the no-answer exception inside one ragged sentence; an empty @file yields the same prompt, so the cost is one useless Write (CF18, CF19) ← 1/2: r2:M4
+- [M8] fixed — Resume step 4 said "The session's prompt directory", readable as the one already in context; now "This Resume's own prompt directory" → 900596b ← 1/2: r2:M5
+- [CF1] rejected: already resolved — cause texts write the path as <PROMPT_DIR>/<file name> since eb9293b (both reviewers)
+- [CF2] carried — mirrored secrets-hook rule, plan-mandated by the Global Constraint; section 3 checks it names no multi-code-review file (ship-as-is, both reviewers)
+- [CF3] carried — the plan's reference test counts are reference material (ship-as-is, both reviewers)
+- [CF4] rejected: already resolved — FILL_DOT is consumed by section 7 (both reviewers)
+- [CF5] rejected: already resolved — name, description and model needles stand in section 1 since eb9293b (both reviewers)
+- [CF6] rejected: already resolved — the probe-rule range is asserted free of multi-code-review/SKILL.md since eb9293b (both reviewers)
+- [CF7] fixed — same subject as [M1] (fix-before-merge, both reviewers) → 900596b
+- [CF8] carried — SKILL.md growth accepted by the spec; carry into the row 14 measurement (ship-as-is, both reviewers)
+- [CF9] rejected: already resolved — template_body_names uses $PLACEHOLDER_ERE since eb9293b (both reviewers)
+- [CF10] rejected: already resolved — the BATCH_NUMBER needle pins the full sentence since eb9293b (both reviewers)
+- [CF11] fixed — same subject as [M2] (fix-before-merge, r1; ship-as-is, r2) → 900596b
+- [CF12] carried — two-character name regex; the wording suite covers the [M] regression; a comment is polish (ship-as-is, both reviewers; see [M6])
+- [CF13] rejected: already resolved — the Phase 3 fill block shows 'RESUME_ANSWER=' since eb9293b (both reviewers)
+- [CF14] carried — the four-block and exact-set assertions already fail on a mis-paired fence; a parity assert is polish (ship-as-is, both reviewers)
+- [CF15] rejected: already resolved — assert_same against the expected four names since eb9293b (both reviewers)
+- [CF16] rejected: already resolved — needle "exactly as step 3 creates it" stands in section 8 since eb9293b (both reviewers)
+- [CF17] rejected: already resolved — Write-tool and 'RESUME_ANSWER=' needles stand in section 8 since eb9293b (both reviewers)
+- [CF18] carried — ragged wrapping in Resume step 3; a re-flow changes no folded pin (ship-as-is, both reviewers; see [M7])
+- [CF19] carried — the directory-creation sentence now says "this step runs on every Resume"; a paragraph break would make the scope clearer (ship-as-is, both reviewers)
