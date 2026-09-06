@@ -85,3 +85,5 @@ Detail: docs/superpowers-orchestrator/2026-09-05-prompt-pointer-dispatch/plans/p
 Forks: none
 Re-dispatch: phase 4, in-run resume 1 of 3
 
+
+## Phase 4 — Code review — rounds 9 (5 invocations, N_code=2 M=2 then N_code=1 M=1) — cap — fixes 17 — unresolved 0
