@@ -364,3 +364,53 @@ $ git commit -m "review fixes (prompt-pointer-dispatch, round 4)" -- skills/mult
  5 files changed, 77 insertions(+), 8 deletions(-)
  create mode 100644 tests/fill-prompt/fixtures/inner-fence-column0-template.md
 ```
+
+## Round 4 (post-loop decisions, invocation 2)
+
+### Findings addressed
+
+- [I1] `skills/multi-code-review/SKILL.md` — the file-name table's
+  verification-cycle row, fix re-dispatch row, verification-cycle fix row and
+  addendum fix row, the sentence after the table, and the fix-failure bullet's
+  `FINDINGS=@...` parenthesis now say a value file is reused when the current
+  prompt directory holds it and is written first when it does not, naming the
+  resumed and post-loop-addendum controllers that start from a fresh
+  directory. The "a prompt file is written once and never rewritten" rule was
+  left unchanged.
+- [I2] `skills/multi-code-review/fix-prompt.md` Procedure step 2 and
+  `skills/multi-code-review/SKILL.md` "Fix subagent fails or its covering tests
+  fail" bullet now state that `git checkout -- <path>` / `git restore <path>`
+  restores only files git tracks, and that a file the attempt created that git
+  does not track is removed by explicit path (`rm -- <path>`), never with
+  `git clean`. The existing "never `git checkout .`" and "never the fix-report
+  file" wording is unchanged.
+- [I3] `skills/multi-code-review/SKILL.md` Error Handling: the value-file row
+  now carries the single sanctioned exception — a Write that
+  `hooks/safety/protect-secrets.js` refuses has each named line replaced by its
+  `file:line` plus the fixed text `secret-bearing finding, value withheld` and
+  is retried once, the withheld finding keeping its id and severity; a second
+  refusal returns `BLOCKED: value file <name> refused twice by protect-secrets
+  — <hook reason>`; every other value-file failure stays fatal with the
+  existing text; the prohibition on retrying through the other form stays. The
+  "four rows below" paragraph now names the second refusal as the fatal
+  post-report case, the Procedure summary sentence was made consistent, and the
+  Critical/Important fix bullet states the rule where the findings file is
+  written. `tests/reviewer-templates/run-tests.sh` gained the constant
+  `VALUE_WITHHELD='value withheld'` and one assertion that the Error Handling
+  range contains it.
+
+### Commands and output
+
+```
+$ bash tests/reviewer-templates/run-tests.sh
+Results: 60 passed, 0 failed
+
+$ bash tests/in-run-rulings/run-tests.sh
+Results: 496 passed, 0 failed
+
+$ bash tests/fill-prompt/run-tests.sh
+Results: 101 passed, 0 failed
+
+$ bash tests/sdd-scripts/run-tests.sh
+Results: 193 passed, 0 failed
+```
