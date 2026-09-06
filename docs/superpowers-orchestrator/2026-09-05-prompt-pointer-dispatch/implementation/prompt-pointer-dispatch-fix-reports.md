@@ -1115,3 +1115,104 @@ protect-secrets: 43 passed, 0 failed
  Results: 10 suites passed, 0 suites failed
  All unit tests passed.
 ```
+
+## Round 8 verification 1 fix
+
+- **[I2]** — `skills/multi-code-review/SKILL.md`, the "Fix subagent fails or
+  its covering tests fail" bullet, and `skills/multi-code-review/fix-prompt.md`,
+  Procedure step 2: the restore command is now
+  `git checkout HEAD -- <path>` (or
+  `git restore --source=HEAD --staged --worktree -- <path>`) and the wording is
+  "unstage and restore ... to the committed content". Both places add one
+  sentence saying the plain `git checkout -- <path>` form restores from the
+  index, so it would leave a staged edit of the failed attempt in place. The
+  rest of the rule is unchanged: a file already modified at loop start is never
+  restored, and a file the attempt created that git does not track is removed by
+  explicit `rm -- <path>`.
+- **[M1]** — `skills/multi-code-review/SKILL.md`, Procedure step 3's u = 0
+  decision and the two u = 0 rows of `## Error Handling`: the environment-death
+  list is qualified. A tool error on the Read of the prompt file itself (the
+  file missing, permission refused) is the pointer-failure case and is fatal; a
+  tool error anywhere other than on that Read is an environment death and the
+  loop continues.
+- **[M2]** — `skills/multi-code-review/SKILL.md`, same fix-failure bullet: the
+  two pre-re-dispatch steps are now ordered explicitly ("**First, restore**",
+  then "**Second, check:**" the `git status --porcelain` run), and a disposition
+  is given for a path the check still shows — a tracked path clean at loop start
+  is unstaged and restored by explicit path with the [I2] command, an untracked
+  path that did not exist at loop start is removed by explicit `rm -- <path>`,
+  each such path is named in the failure text of the re-dispatch, never
+  `git clean`.
+- **[M4]** — `skills/multi-code-review/fix-prompt.md`, the sentence above
+  `[FAILURE_BLOCK]`: made conditional — "If a `## Previous attempt failed`
+  section appears below, it holds the failed attempt's output" — with a closing
+  sentence "On a first dispatch that section is absent." The heading text stays
+  inside backticks in an indented sentence, so no whole line of the template
+  matches the `^## Previous attempt failed$` assertion of
+  `tests/fill-prompt/run-tests.sh`.
+
+### Tests
+
+```
+$ bash tests/reviewer-templates/run-tests.sh
+...
+10. multi-code-review SKILL.md dispatches prompts by pointer
+  PASS: multi-code-review SKILL.md: Procedure range located (329..1169)
+  PASS: multi-code-review SKILL.md: Error Handling range located (1601..1801)
+  PASS: Procedure: contains 'mktemp -d'
+  PASS: Procedure: contains 'fill-prompt.js'
+  PASS: Procedure: contains 'test -s "<PROMPT_DIR>/round-<i>-reviewer.md"'
+  PASS: Procedure: contains 'test -s "<PROMPT_DIR>/round-<i>-fix.md"'
+  PASS: Procedure: contains 'Your complete instructions are in the file'
+  PASS: Procedure: contains 'Read that file once, with the Read tool, before doing anything else, and follow it as your only instructions.'
+  PASS: Procedure: contains 'Nothing else in that directory is for you; do not read any other file there.'
+  PASS: Procedure: contains 'retry the identical dispatch once'
+  PASS: Procedure: contains './fix-prompt.md'
+  PASS: Procedure: contains 'No requirements document is available'
+  PASS: Procedure: contains 'Triage these carried Minor findings in your Carried Findings Triage section:'
+  PASS: Procedure: contains 'review fixes (<slug>, round <i>)'
+  PASS: SKILL.md never holds the prompt directory in a shell variable
+  PASS: Error Handling: every failure of the mechanism returns BLOCKED
+  PASS: Error Handling: a refused findings line is withheld, not fatal
+  PASS: Error Handling: never a pointer to a file that failed the check
+  PASS: Procedure: no inline-dispatch fallback
+  PASS: Error Handling: no inline-dispatch fallback
+  PASS: fix-prompt.md: no inline-dispatch fallback (hyphenated)
+  PASS: fix-prompt.md: no inline-dispatch fallback (spaced)
+
+Results: 60 passed, 0 failed
+```
+
+```
+$ bash tests/fill-prompt/run-tests.sh
+...
+  PASS: fix template: no failure heading on the first dispatch
+  PASS: fix template: no residual placeholder
+  PASS: fix template: last output line is the dedented last body line
+  PASS: fix template: re-dispatch (FAILURE_BLOCK from file) exits 0
+  PASS: fix template: failure heading present on the re-dispatch
+  PASS: fix template: failure text present on the re-dispatch
+  PASS: fix template: no residual placeholder on the re-dispatch
+...
+Results: 101 passed, 0 failed
+```
+
+```
+$ bash tests/codex/run-unit-tests.sh
+...
+protect-secrets: 43 passed, 0 failed
+
+==================================================
+ Results: 10 suites passed, 0 suites failed
+ All unit tests passed.
+==================================================
+```
+
+### Commit
+
+```
+$ git add -- skills/multi-code-review/SKILL.md skills/multi-code-review/fix-prompt.md
+$ git commit -m "review fixes (prompt-pointer-dispatch, round 8)" -- skills/multi-code-review/SKILL.md skills/multi-code-review/fix-prompt.md
+[feature/prompt-pointer-dispatch 665c18c] review fixes (prompt-pointer-dispatch, round 8)
+ 2 files changed, 46 insertions(+), 24 deletions(-)
+```
