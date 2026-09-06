@@ -262,6 +262,14 @@ else
   bad "phases: 'dispatch the pointer' appears $POINTER_DISPATCHES times, fewer than 4"
 fi
 
+bold "8. Resume and In-run rulings: the answer lines go into a value file"
+for needle in "$MKTEMP" 'a resumed session has none' 'dispatch-1-answers.txt' '`<k>` = 1' 'the only channel for it' 'no answer line'; do
+  assert_folded_contains "resume: contains '$needle'" "$RESUME_RANGE" "$needle"
+done
+for needle in 'dispatch-<k>-answers.txt' "$NO_HEREDOC" 'the only channel' 'a new fill under the next `<k>`' "$TEST_S"; do
+  assert_folded_contains "in-run rulings: contains '$needle'" "$INRUN_RANGE" "$needle"
+done
+
 echo
 bold "Results: $PASS passed, $FAIL failed"
 if [ "$FAIL" -gt 0 ]; then

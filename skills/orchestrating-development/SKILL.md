@@ -906,7 +906,18 @@ Trigger: `Resume orchestration for <plan-or-spec path>`.
    re-dispatch path — the answer goes into `[RESUME_ANSWER]` and
    nothing else is written, no `**Follow-up:**` line and no
    `ruling <n> follow-up` commit — because `<n>` is undefined when the
-   resume touched no ruling. Then
+   resume touched no ruling. Then create the session's prompt directory
+   — a resumed session has none: run `mktemp -d` under the Controller
+   Dispatch Rules ("Prompt files and the pointer"), before the first
+   fill, the counter `<k>` starting at 1 — write the answer lines with
+   the Write tool to `<PROMPT_DIR>/dispatch-1-answers.txt`, fill the
+   stopped phase's prompt under `<k>` = 1 with that phase's fill command
+   and `'RESUME_ANSWER=@<PROMPT_DIR>/dispatch-1-answers.txt'` — when the
+   re-dispatch carries no answer line (for example a Phase 4 re-dispatch
+   on a moved effective HEAD without answers, or one for a migrated run
+   whose old log is absent, below), write no value file and pass
+   `'RESUME_ANSWER='`, as every phase does — run its
+   `test -s`, and
    re-dispatch the stopped phase's controller with that `[RESUME_ANSWER]`
    in the template's placeholder — the only channel for it. Phases whose
    stop carries answerable items: Phase 1 (the plan-writer's BLOCKED
@@ -946,7 +957,9 @@ Trigger: `Resume orchestration for <plan-or-spec path>`.
    journaled the answers and re-evaluated the counts — re-dispatch Phase 4
    without answers: the controller synthesizes the return from the log
    (template Deviation 2); already-decided ids are never re-presented.
-4. Otherwise continue at the first incomplete phase/batch. Your own log's
+4. Otherwise continue at the first incomplete phase/batch. The session's
+   prompt directory is created before that phase's first fill, exactly as
+   step 3 creates it (`mktemp -d`, `<k>` from 1). Your own log's
    phase entries are the primary re-run guard; the sub-skills' logs are
    the backstop.
 5. Never re-ask Phase 0 questions — parameters come from the log's
@@ -1581,6 +1594,13 @@ per item, each tagged with its source; the controller records each as
 A line without a `(<who>)` tag is a user line — an untagged answer such as
 `[I2]: plan governs; [C3]: fix it` keeps working.
 
+These lines are the content of the value file
+`<PROMPT_DIR>/dispatch-<k>-answers.txt`, written with the Write tool —
+never with a heredoc of any kind, because answer text quotes plan clauses
+and finding text — and the placeholder is filled from that file by
+`'RESUME_ANSWER=@<PROMPT_DIR>/dispatch-<k>-answers.txt'` in the phase's
+fill command (Controller Dispatch Rules, "Prompt files and the pointer").
+
 **A carried Phase 4 id names its invocation.** Review-log ids are not
 stable across invocations: every `_Invocation` entry of the review log
 numbers its own findings from `[C1]`, `[I1]` upwards, so the same id
@@ -1829,7 +1849,12 @@ mid-task recovery (its Deviation 4) reviews the leftover work together
 with the task's completion. Then rewrite `state.md` (its `Rulings:` line)
 and re-dispatch the phase's controller with the answers in
 `[RESUME_ANSWER]` — the only channel. In Phase 3 the answers are the full
-set defined above, not only the newest return's. A controller that answers
+set defined above, not only the newest return's. The re-dispatch is a new
+fill under the next `<k>`: write the answer lines with the Write tool to
+`<PROMPT_DIR>/dispatch-<k>-answers.txt`, run the phase's fill command with
+`'RESUME_ANSWER=@<PROMPT_DIR>/dispatch-<k>-answers.txt'` (Phase 3 step 2,
+Phase 4), run its `test -s` and dispatch the pointer to the new file —
+never a rewrite of a dispatched prompt file. A controller that answers
 an in-run
 resume with `BLOCKED: previous invocation left <n> open items …` did not
 receive the answers — a malformed dispatch: retry the identical dispatch
@@ -1900,7 +1925,8 @@ by the loop's existing rule (an id already carrying a `decided (…)` line
 is skipped; a fix commit already in `git log` is not dispatched again).
 Phase 3 is idempotent by construction: the ruling and any amendment are
 committed before the re-dispatch, so a retry rebuilds the identical
-`[RESUME_ANSWER]` from the ruling-record entry; the batch controller's
+`[RESUME_ANSWER]` from the ruling-record entry — a new fill under the next
+`<k>` from the same entry, which produces the same content; the batch controller's
 existing rules skip every task whose checkboxes are ticked and recover a
 mid-task crash (its Deviation 4); the amendment block is found by its
 label and never inserted twice. What makes the resume safe to repeat is
