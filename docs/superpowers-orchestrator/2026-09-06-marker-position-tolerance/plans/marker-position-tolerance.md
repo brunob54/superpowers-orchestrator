@@ -387,6 +387,8 @@ git commit -m "fix(hooks): exempt a report marker within the first 10 non-blank 
 
 ### Task 2: Widen the orchestrator's Return contract
 
+> **Amendment 10 (orchestrator ruling):** Task 2's Contract now bounds where the leading token may be read. The Must-convey list said the token is on "the first non-blank line below the marker line" with no upper bound, while ruling 2 had already bounded every consumed field to the marker line and the 14 raw lines below it. A `BLOCKED` token standing far below that block — behind 20 blank lines — was therefore read as the return's token and would stop a run, which is the same hole ruling 2 closed for the fields, one step further. The token search is now bounded to that same block, and a return whose block holds no token line is malformed for the token's absence, exactly as an absent token is malformed today. Decided by the user at the resume of 2026-09-07, answering the escalated item `[I4 inv 4]`.
+
 **Files:**
 - Modify: `skills/orchestrating-development/SKILL.md` (the `**Return contract:**` bullet of `## Controller Dispatch Rules (apply to every phase)`)
 - Test: `tests/orchestrating-development/run-tests.sh`
@@ -398,7 +400,7 @@ git commit -m "fix(hooks): exempt a report marker within the first 10 non-blank 
 **Contract:**
 
 1. The `**Return contract:**` bullet of `## Controller Dispatch Rules` — wording artifact
-   - Must convey, all of: the templates still tell the controller to put the marker on its first line; a return is accepted when a line whose surrounding whitespace is removed equals `<!-- orchestration report -->` and is among the first 10 non-blank lines; blank lines are skipped and do not consume that budget; only this marker is searched for, so a line equal to another skill's marker is ordinary preamble; with more than one such line the first begins the report and everything above it is ignored and is never a reason to retry; the leading token is on the first non-blank line below the marker line, using the same meaning of "non-blank" as the window rule, so a whitespace-only line is skipped rather than being read as the token line; the 15-line cap counts from the marker line, which is line 1 of the 15, and exceeding it is not malformed; the malformed list is otherwise unchanged, and a malformed return or controller error gets one identical retry before the major-error stop.
+   - Must convey, all of: the templates still tell the controller to put the marker on its first line; a return is accepted when a line whose surrounding whitespace is removed equals `<!-- orchestration report -->` and is among the first 10 non-blank lines; blank lines are skipped and do not consume that budget; only this marker is searched for, so a line equal to another skill's marker is ordinary preamble; with more than one such line the first begins the report and everything above it is ignored and is never a reason to retry; the leading token is on the first non-blank line below the marker line and inside the same block every consumed field is read from — the marker line and the 14 raw lines below it — using the same meaning of "non-blank" as the window rule, so a whitespace-only line is skipped rather than being read as the token line, and a token standing below that block is not read and the return is malformed for the token's absence; the 15-line cap counts from the marker line, which is line 1 of the 15, and exceeding it is not malformed; the malformed list is otherwise unchanged, and a malformed return or controller error gets one identical retry before the major-error stop.
    - Invariant: no sentence in the bullet still makes the marker's position on the first line a condition of acceptance.
    - Verification: `bash tests/orchestrating-development/run-tests.sh` asserts, inside the Controller Dispatch Rules range, the fragment `among the **first 10 non-blank lines**`, the fragment `<!-- orchestration report -->` and the fragment `a longer report is **not** malformed`.
    - Sentence wording is free; the properties above bind.
@@ -615,6 +617,8 @@ git commit -m "docs(orchestrating-development): state the widened guard exemptio
 
 ### Task 4: Correct the remaining guard passages and run the acceptance check
 
+> **Amendment 11 (orchestrator ruling):** Task 4's "Does NOT cover" scoped every skill-side usability rule out of this branch. That left `hooks/subagent-guard.js` exempting a marker anywhere in the first 10 non-blank lines while `skills/multi-code-review/SKILL.md` and `skills/multi-doc-review/SKILL.md` kept discarding any report whose first line is not the marker — so the exact message shape this branch newly lets through is dropped by its receiver, and the guard block that used to send the reviewer back is gone. Reviewers raised it in every invocation of this run, the last time with a reproduction against both predicates. The two named usability rules are now in scope and are widened to the same window; `skills/researching-prior-art/` keeps its first-line rules. Decided by the user at the resume of 2026-09-07, answering the escalated item `[I1 inv 4]` and superseding ruling 3 of this run.
+
 **Files:**
 - Modify: `skills/multi-doc-review/SKILL.md`
 - Modify: `skills/multi-code-review/SKILL.md`
@@ -625,7 +629,7 @@ git commit -m "docs(orchestrating-development): state the widened guard exemptio
 
 **Security flag:** `none`
 
-**Does NOT cover:** Only the passages that describe the *hook's* exemption change. The skill-side usability rules of the other two markers are untouched: `skills/multi-code-review/SKILL.md:602`, `skills/multi-doc-review/SKILL.md:114`, `skills/researching-prior-art/research-prompt.md:164` and `controller-prompt.md:126`/`:233` keep requiring the marker as a report's **first line**, and the unusable-report path (one identical retry, then `inconclusive` when no reviewer of the round returns a usable report) is unchanged. The two `reviewer-prompt.md` notes rewritten in Step 5 likewise keep telling the reviewer to make the marker its first output line: only their sentence about what the *hook* exempts changes. No release file is edited (Global Constraint 8).
+**Does NOT cover:** Only the passages that describe the *hook's* exemption change, plus the two skill-side usability rules named next. The skill-side usability rules of `skills/multi-code-review/SKILL.md:602` and `skills/multi-doc-review/SKILL.md:114` are widened to the same 10-non-blank-line window as the hook, so that a report the hook now lets through is not discarded by the skill that receives it. The remaining skill-side rules are untouched: `skills/researching-prior-art/research-prompt.md:164` and `controller-prompt.md:126`/`:233` keep requiring the marker as a report's **first line**, and the unusable-report path (one identical retry, then `inconclusive` when no reviewer of the round returns a usable report) is unchanged. The two `reviewer-prompt.md` notes rewritten in Step 5 likewise keep telling the reviewer to make the marker its first output line: only their sentence about what the *hook* exempts changes. No release file is edited (Global Constraint 8).
 
 **Contract:**
 
