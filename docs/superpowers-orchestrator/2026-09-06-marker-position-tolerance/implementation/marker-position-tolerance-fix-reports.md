@@ -168,3 +168,25 @@ Output (tail):
 ```
 Results: 60 passed, 0 failed
 ```
+
+## Round 2
+
+Findings addressed: I2, I3
+
+Commands run:
+
+```
+bash tests/orchestrating-development/run-tests.sh
+```
+Output (tail):
+```
+Results: 162 passed, 0 failed
+```
+
+```
+bash tests/in-run-rulings/run-tests.sh
+```
+Output (tail):
+```
+Results: 512 passed, 0 failed
+```

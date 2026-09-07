@@ -66,3 +66,18 @@ _Note — verification cycle 3 was dispatched over e86c93d and interrupted befor
 
 _Completed — 2026-09-07 — cap reached — HEAD e86c93dfc1a4d49f6d7b0c35f8172d98453947c6_
 Secrets found: none
+
+## Post-loop addendum — decisions — 2026-09-07
+### Dispositions
+- [I2] (round 2) decided (orchestrator): amend plan: Global Constraint 3 keeps the first-match rule and now also requires the orchestrator to record `note: return carried <n> marker lines; parsed from the first` in the orchestration log when the window holds more than one marker line — the amendment is committed and the plan already reads that way; fix it: state that note requirement in the Return contract of skills/orchestrating-development/SKILL.md, beside the first-match sentence, and leave the parse rule itself unchanged.
+- [I2] (round 2) fixed — the Return contract bullet now records `note: return carried <n> marker lines; parsed from the first` in the orchestration log when the window holds more than one marker line, so the ignored block leaves a trace; the first-match parse rule is unchanged → 08c6c28
+- [I1] (verification 1) decided (orchestrator): amend plan: as on the round 2 line above, Global Constraint 3 keeps first-match and gains the log note; fix it: the same single edit to the Return contract of skills/orchestrating-development/SKILL.md — one fix settles both ids, do not make it twice.
+- [I1] (verification 1) fixed — same item as round 2 [I2]; settled by the single Return contract edit made for it, dispatched once → 08c6c28
+- [I2] (verification 1) decided (orchestrator): amend plan: Global Constraint 4 now says every consumed field is read only from the marker line and the 14 lines below it, and a value standing below that block is never read — the amendment is committed; fix it: state that bound in the Return contract of skills/orchestrating-development/SKILL.md, next to the sentence saying the cap is not a malformed condition.
+- [I2] (verification 1) fixed — the Return contract bullet now bounds every consumed field to the marker line and the 14 lines below it, and states that a value below that block is never read; the 15-line cap stays a non-malformed condition → 08c6c28
+- [I2] (verification 2) decided (orchestrator): plan governs: "The skill-side usability rules of the other two markers are untouched: `skills/multi-code-review/SKILL.md:602`, `skills/multi-doc-review/SKILL.md:114`," — docs/superpowers-orchestrator/2026-09-06-marker-position-tolerance/plans/marker-position-tolerance.md
+- [M1] (verification 2) carried — unchanged; it was already the Minor form of round 2 [I2], which this addendum decides and fixes
+
+_Addendum note — the effective HEAD had moved past this entry's completion marker (e7a4ff8, the plan amendment) before the addendum was written, so the completion marker above is left unchanged, the verification re-review of the fix is skipped, and invocation 2 below reviews it._
+
+_Invocation 2 — 2026-09-07 — N=2 M=2 — BASE..HEAD f112faa..08c6c28 — branch feature/marker-position-tolerance — gate: orchestration_
