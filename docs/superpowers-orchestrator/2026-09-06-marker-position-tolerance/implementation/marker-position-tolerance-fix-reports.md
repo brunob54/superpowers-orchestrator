@@ -228,3 +228,21 @@ $ bash tests/codex/run-unit-tests.sh
 Results: 10 suites passed, 0 suites failed
 All unit tests passed.
 ```
+
+## Round 2
+
+Findings addressed: I1, M1, M2
+
+Command:
+```
+bash tests/orchestrating-development/run-tests.sh
+```
+
+Output (tail):
+```
+  PASS: in-run rulings: contains 'test -s'
+  PASS: in-run rulings: contains 'with the Write tool to `<PROMPT_DIR>/dispatch-<k>-answers.txt`'
+  PASS: in-run rulings: contains '`'RESUME_ANSWER=@<PROMPT_DIR>/dispatch-<k>-answers.txt'`'
+
+Results: 162 passed, 0 failed
+```
