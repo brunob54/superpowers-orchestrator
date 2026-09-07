@@ -53,3 +53,15 @@ collision safe.
 note: the Phase 4 return reported its verification cycle 3 interrupted before
 any reviewer reported, so fix e86c93d entered the branch unreviewed. The
 re-dispatch re-reviews the whole branch over the amended plan, which covers it.
+
+## RULING 4 — 2026-09-07 — phase 4 — three items of invocation 2, all forced, two of them defects this branch introduced
+Items: [I2] forced — (the lost-return item, raised in round 1, round 2, verification 2 and verification 3) amend plan: Task 3's Does-NOT-cover entry now bounds the lost-return marker test to the first 10 non-blank lines; fix it: bound it in the two sentences of the `## In-run rulings` section
+Items: [I1] forced — (the round 2 duplicate-field item) amend plan: Global Constraint 4 takes the first occurrence of a consumed field inside the report block; fix it: state the tie-break in the Return contract. The marker-selection half stays decided by ruling 1
+Items: [I2] forced — (the verification 3 item, logged `unresolved: verification cap`) fix it: the Guard Interaction and Lost-returns sentences must say the guard blocks an unmarked message on any violation pattern, four of which need no action verb
+Detail: docs/superpowers-orchestrator/2026-09-06-marker-position-tolerance/plans/marker-position-tolerance-open-decisions.md
+Forks: none — contradiction: none
+Re-dispatch: phase 4, in-run resume 2 of 3
+
+note: invocation 2 reported its verification cap reached with one item still
+unresolved, so that item could not be fixed inside the loop. It is ruled here
+instead, which is what the in-run ruling path is for.
