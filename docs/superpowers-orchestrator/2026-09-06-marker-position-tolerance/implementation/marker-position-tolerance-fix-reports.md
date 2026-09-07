@@ -319,3 +319,21 @@ Output (tail):
 ```
 Results: 512 passed, 0 failed
 ```
+
+## Round 2
+
+Findings addressed: M2, M3, M5, M6
+
+Commands run and output:
+
+```
+$ bash tests/orchestrating-development/run-tests.sh
+...
+Results: 162 passed, 0 failed
+```
+
+```
+$ bash tests/reviewer-templates/run-tests.sh
+...
+Results: 60 passed, 0 failed
+```
