@@ -171,7 +171,9 @@ this platform lacks` — and stop.
   ignored and is never a reason to retry. When the window holds more than
   one such marker line, record the note `note: return carried <n> marker
   lines; parsed from the first` in the orchestration log, with `<n>` the
-  count of marker lines in the window. The leading token is on the first
+  count of marker lines in the window, appended under the log entry of the
+  phase or batch whose controller return carried the extra marker lines.
+  The leading token is on the first
   non-blank line below that marker line — "non-blank" throughout this bullet,
   so a line holding only spaces is skipped here exactly as it is skipped in
   the window. The 15-line cap counts from the
@@ -598,6 +600,7 @@ plan: docs/superpowers-orchestrator/<date>-<slug>/plans/<slug>.md — <T> tasks
 
 ## Phase 3 — Batch 1 (tasks 1–3) — COMPLETE — commits <base7>..<head7>
 - Task 1: complete — <one-line>
+note: return carried <n> marker lines; parsed from the first
 
 ## Phase 4 — Code review — rounds <r> — <converged|cap> — fixes <n> — unresolved 0
 
@@ -2259,7 +2262,9 @@ non-blank lines starts with that marker, so a return that carries a sentence
 above its marker line is still exempt. Never remove the marker instruction
 from the four templates — free-text `BLOCKED` reasons legitimately pair
 action verbs with skill names. Without the marker, the guard answers with
-`decision: block` and a redo instruction. Measured on 2026-09-06, the
+`decision: block` and a redo instruction only when the message also names a
+plugin skill; a message with no marker that names no skill is not blocked.
+Measured on 2026-09-06, the
 dispatch resumed after one extra turn instead of stalling. But a controller
 that obeys "redo your assigned task" can repeat review rounds and fix
 commits it has already written, so the marker instruction stays mandatory.
