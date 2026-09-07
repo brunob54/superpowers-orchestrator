@@ -326,3 +326,15 @@ _Invocation 4 — 2026-09-07 — N=2 M=2 — BASE..HEAD f112faa..a19c4c4 — bra
 
 _Completed — 2026-09-07 — cap reached — HEAD 76981803479553fb0e9a295b7845f91ac9328d57_
 Secrets found: none
+
+## Post-loop addendum — decisions — 2026-09-07
+
+- [I2] (round 1) decided (user): plan governs: "**The 15-line cap counts from the marker line, which is line 1 of the 15, and exceeding it is not a malformed condition.**" — docs/superpowers-orchestrator/2026-09-06-marker-position-tolerance/plans/marker-position-tolerance.md
+- [I4] (round 1) decided (user): amend plan: Task 2's Contract now bounds the leading-token search to the marker line and the 14 raw lines below it, the same block every consumed field is read from, and a return whose block holds no token line is malformed for the token's absence; the amendment is committed as Amendment 10 and the plan already reads that way. Fix it: state that bound in the `**Return contract:**` bullet of `## Controller Dispatch Rules` in `skills/orchestrating-development/SKILL.md`, so the token search is no longer unbounded.
+- [I4] (round 1) fixed — the `**Return contract:**` bullet now searches for the leading token only inside the marker line and the 14 raw lines below it, the same block every consumed field is read from, and states that a token standing below that block is not read, so the return is malformed for the token's absence exactly as an absent token is today → 0d73bf5
+- [I1] (round 2) decided (user): amend plan: Task 4's Does-NOT-cover entry now brings the two skill-side usability rules into scope and widens them to the same 10-non-blank-line window as the hook, while `skills/researching-prior-art/` keeps its first-line rules; the amendment is committed as Amendment 11 and the plan already reads that way, superseding ruling 3 of this run. Fix it: widen the usability rule of `skills/multi-code-review/SKILL.md` and of `skills/multi-doc-review/SKILL.md` so a report whose marker starts one of its first 10 non-blank lines is usable, and leave the unusable-report path unchanged.
+- [I1] (round 2) fixed — both review skills now call a report usable when the marker line `<!-- multi-review report -->` starts one of its first 10 non-blank lines and a Verdict block is present, matching the window `hooks/subagent-guard.js` exempts; the unusable-report path (one identical retry, then `inconclusive`) is unchanged and `skills/researching-prior-art/` is untouched → 0d73bf5
+
+_Addendum note — the effective HEAD had moved past this entry's completion marker (aa7e4d7, the ruling 9 follow-up carrying Amendments 10 and 11) before the addendum was written, so the completion marker above is left unchanged, the verification re-review of the fix is skipped, and invocation 5 below reviews it._
+
+_Invocation 5 — 2026-09-07 — N=2 M=2 — BASE..HEAD f112faa..0d73bf5 — branch feature/marker-position-tolerance — gate: orchestration_

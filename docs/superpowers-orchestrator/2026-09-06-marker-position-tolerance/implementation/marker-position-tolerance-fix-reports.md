@@ -417,3 +417,21 @@ Results: 162 passed, 0 failed
 ```
 Results: 512 passed, 0 failed
 ```
+
+## Round 2
+
+Findings addressed: I4, I1
+
+Command run:
+```
+bash tests/orchestrating-development/run-tests.sh
+bash tests/reviewer-templates/run-tests.sh
+```
+
+Output (tails):
+```
+Results: 162 passed, 0 failed
+```
+```
+Results: 60 passed, 0 failed
+```
