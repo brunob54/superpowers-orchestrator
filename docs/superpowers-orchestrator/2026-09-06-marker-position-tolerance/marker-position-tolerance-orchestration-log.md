@@ -36,3 +36,20 @@ grounds as batch 1. A FIFTH recorded occurrence of worklist row 9, and the
 second inside this run: two of the two batch controllers dispatched here did
 it, which is a stronger base rate than the three earlier occurrences alone
 suggested.
+
+## RULING 1 — 2026-09-07 — phase 4 — three open items of invocation 1, all bare id [I2], ruled without the user
+Items: [I2] design — (round 2 first-marker item) amend plan: Global Constraint 3 keeps first-match and adds a log note when the window holds more than one marker line; fix it: state the note requirement in the Return contract
+Items: [I1] design — (verification 1 first-marker item, the same issue as round 2 [I2]) same answer as the line above
+Items: [I2] forced — (verification 1 consumed-field-bound item) amend plan: Global Constraint 4 bounds every consumed field to the marker line and the 14 lines below it; fix it: state that bound in the Return contract
+Items: [I2] design — (verification 2 receiver-side usability item) plan governs: the plan scopes the three usability rules out, and the finding's cost premise does not hold — the guard's block text never mentions the marker, so a block never repaired a preambled report
+Detail: docs/superpowers-orchestrator/2026-09-06-marker-position-tolerance/plans/marker-position-tolerance-open-decisions.md
+Forks: 3 of 3 (design consistency, implementation practicality, adversarial) — contradiction: settled
+Re-dispatch: phase 4, in-run resume 1 of 3
+
+note: three of the four open items carry the bare id [I2] in one invocation —
+worklist row 15's structural half, live. Every answer line opens with a
+parenthesis naming its round, which is the v7.11.0 rule that makes the
+collision safe.
+note: the Phase 4 return reported its verification cycle 3 interrupted before
+any reviewer reported, so fix e86c93d entered the branch unreviewed. The
+re-dispatch re-reviews the whole branch over the amended plan, which covers it.
