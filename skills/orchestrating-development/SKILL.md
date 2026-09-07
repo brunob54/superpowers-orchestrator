@@ -174,23 +174,28 @@ this platform lacks` — and stop.
   ignored and is never a reason to retry. When the window holds more than
   one such marker line, record the note `note: return carried <n> marker
   lines; parsed from the first` in the orchestration log, with `<n>` the
-  count of marker lines in the window, appended under the log entry of the
-  phase or batch whose controller return carried the extra marker lines.
+  count of marker lines in the window, appended under whatever orchestration-
+  log entry that return produces — a `## STOPPED` or `## RULING` entry
+  included.
   The leading token is on the first
   non-blank line below that marker line that is not itself equal to the
   marker — any further line equal to the marker is skipped when locating the
-  leading token, so a return whose window holds several marker lines reaches
-  the note above instead of the malformed list below — "non-blank" throughout
+  leading token, so extra marker lines standing immediately below the first
+  one still reach the note above, while an ordinary non-blank line between
+  two marker lines still makes the leading token absent, and the return
+  malformed, as before — "non-blank" throughout
   this bullet, so a line holding only spaces is skipped here exactly as it is
   skipped in the window. The 15-line cap counts from the
   marker line, which is line 1 of the 15; it is an instruction to the
-  controller, not a test you run — a longer report is **not** malformed.
+  controller, not a test you run — a longer report is **not** malformed on
+  its length alone.
   Every field you consume is read only from the marker line and the 14 raw
   lines below it — blank lines included, so the "non-blank" qualifier used
   elsewhere in this bullet does not apply to this count, matching the
   15-line cap the four controller templates give the controller; a value
   standing below that block is not part of the
-  return this contract describes and is never read.
+  return this contract describes and is never read — and a consumed field
+  standing there counts as absent, which is malformed under the list below.
   Detail goes to files. A return is **malformed** when no such marker line
   is in the window, OR the leading token is absent, OR any field you consume
   (`tasks=`, per-task numbers, `rounds=`, `outcome=`, `unresolved=`,
