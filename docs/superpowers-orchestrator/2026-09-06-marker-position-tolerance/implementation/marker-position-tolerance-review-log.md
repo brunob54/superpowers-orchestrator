@@ -81,3 +81,23 @@ Secrets found: none
 _Addendum note — the effective HEAD had moved past this entry's completion marker (e7a4ff8, the plan amendment) before the addendum was written, so the completion marker above is left unchanged, the verification re-review of the fix is skipped, and invocation 2 below reviews it._
 
 _Invocation 2 — 2026-09-07 — N=2 M=2 — BASE..HEAD f112faa..08c6c28 — branch feature/marker-position-tolerance — gate: orchestration_
+
+## Round 1 — Correctness & spec alignment — opus
+**Reviewers:** M=2, usable 2/2
+**Reviewer verdicts:** r1: 0 Critical, 2 Important, 2 Minor | r2: 0 Critical, 1 Important, 3 Minor
+**Sources mapped:** 8/8
+**Reviewer verdict:** 0 Critical, 2 Important, 3 Minor
+**Converged:** no
+### Dispositions
+- [I1] fixed — the Return contract now orders the note `note: return carried <n> marker lines; parsed from the first`, but `## Orchestration Log Format` listed no such line and the bullet named no entry to attach it to, so the trace had no defined home; the line was added to the log-format block and the bullet now names the phase or batch entry it is appended under → ae59204 ← 2/2: r1:I1, r2:M1
+- [I2] user-decision — the rewritten lost-return rule tests every line of a fork's final message with an unbounded prefix match, while both other sides of the change use the first 10 non-blank lines, so a message that merely quotes the reviewer marker at the start of any line counts as a usable return toward the two-usable-returns threshold; both reviewers propose bounding it to the same window, which the plan says is not touched (plan-mandated) — at skills/orchestrating-development/SKILL.md:1432 — clause: Task 3 "The lost-return **rule** of `## In-run rulings` a fork return whose completion notice arrives without the marker line is lost, re-dispatched once, and a second " ← 2/2: r1:I2, r2:I1
+- [M1] carried — the "Measured on 2026-09-06" sentence in `## Guard Interaction` names no record of the measurement and no re-test condition. Not fixed: the probe run, its method and its observation are recorded in this run's own spec at `docs/superpowers-orchestrator/2026-09-06-marker-position-tolerance/specs/marker-position-tolerance-design.md:67-79`, and a citation of a repository-local topic folder inside a shipped skill file would not resolve in any other installation (harness field dropped: repository-readable) ← 2/2: r1:M2, r2:M2
+- [M2] fixed — `## Guard Interaction` said an unmarked return is answered with `decision: block` without the condition that the message also names a plugin skill, so it contradicted the `**Lost returns.**` paragraph of the same file; the condition was added → ae59204 ← 1/2: r1:M1
+- [M3] carried — the plan's Goal sentence says a reviewer report is accepted within the window, while Task 4 leaves the two reviewer-side usability rules on the first line, so the Goal overstates the reviewer side. Not fixed: the reviewer states no code change is needed and the branch follows Task 4; the mismatch is inside the plan's own text ← 1/2: r2:M3
+- [CF1] carried — task-1 report's RED list names 11 failures where the plan's Step 2 predicts 12; both reviewers recommend ship-as-is, the plan's Contract note explains the difference and the report is a completed-step artifact
+- [CF2] carried — `tests/codex/test-subagent-guard.js:465,:474`, the two blank-line cases pass against the unmodified hook; both reviewers recommend ship-as-is, the CRLF sibling carries the discriminating comment
+- [CF3] carried — `tests/codex/test-subagent-guard.js:439-442`, the whole-file negative wording assertion; both reviewers recommend ship-as-is, it is the plan-mandated form and a self-pin the same task owns
+- [CF4] carried — residual exposure: a marker quoted at the start of a line inside the first 10 non-blank lines escapes leakage detection; both reviewers recommend ship-as-is, the bounded window is the documented mitigation. Both add that the unbounded form of the same exposure on the fork path is [I2] above
+- [CF5] carried — the colloquial clause "and keep saying so"; both reviewers recommend ship-as-is, it was already fixed in invocation 1
+- [CF6] carried — the long measurement sentence in `## Guard Interaction`; both reviewers recommend ship-as-is, it was already split in invocation 1; its precision problem is [M1] above
+- [CF7] carried — the six rewritten passages copy the plan's reference wording nearly verbatim; both reviewers recommend ship-as-is, the plan's Body-authority note permits it

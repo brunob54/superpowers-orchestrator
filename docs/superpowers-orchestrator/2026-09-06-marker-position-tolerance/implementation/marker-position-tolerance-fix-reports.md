@@ -190,3 +190,17 @@ Output (tail):
 ```
 Results: 512 passed, 0 failed
 ```
+
+## Round 1
+
+Findings addressed: I1, M1
+
+Command:
+```
+bash tests/orchestrating-development/run-tests.sh
+```
+
+Output (tail):
+```
+Results: 162 passed, 0 failed
+```
