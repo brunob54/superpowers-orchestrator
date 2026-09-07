@@ -181,8 +181,10 @@ this platform lacks` — and stop.
   skips it,
   appended under whatever orchestration-
   log entry that return produces — a `## STOPPED` or `## RULING` entry
-  included. A malformed return produces no orchestration-log entry, so no
-  note is written for it; the retry's return is noted on its own terms.
+  included. A malformed return produces no phase entry of its own, so no
+  note is written for it, and the `## STOPPED` entry that a second
+  malformed return causes carries no note either, because nothing was
+  parsed; the retry's return is noted on its own terms.
   The leading token is on the first
   non-blank line below that marker line that is not itself equal to the
   marker — any further line equal to the marker is skipped when locating the
