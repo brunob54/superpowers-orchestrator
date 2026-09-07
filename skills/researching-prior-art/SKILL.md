@@ -612,9 +612,11 @@ and 5 are conditional; each states its own condition.
 `hooks/subagent-guard.js` exempts a message from skill-leakage blocking when
 one of its first 10 non-blank lines starts with `<!-- research report -->` —
 research reports legitimately quote skill-like phrases found in external
-documentation. This widened rule governs hook blocking only; a report is
-still discarded by `controller-prompt.md`'s report verification when the
-`<!-- research report -->` marker is not its first line. Never remove the
+documentation. This widened rule governs a subagent's final message only.
+`controller-prompt.md`'s report verification discards a different object —
+a researcher's report file — when the `<!-- research report -->` marker is
+not that file's first line; no check anywhere in this skill applies the same
+marker-position test to a research subagent's final message. Never remove the
 marker instruction from `research-prompt.md`
 or `controller-prompt.md`; without it, reports get blocked and assignments
 degrade to evidence gaps.

@@ -295,6 +295,47 @@ assert_file_not_contains "Error Handling: no inline-dispatch fallback" "$ERR_RAN
 assert_file_not_contains "fix-prompt.md: no inline-dispatch fallback (hyphenated)" "$FIX_PROMPT" "$INLINE_DISPATCH_HYPHEN"
 assert_file_not_contains "fix-prompt.md: no inline-dispatch fallback (spaced)" "$FIX_PROMPT" "$INLINE_DISPATCH"
 
+bold "11. Receiver-side report-usability rule (widened marker position) is pinned per skill"
+MARKER_ANYWHERE='and is among the first 10 non-blank'
+VERDICT_BELOW='block must stand below that marker line'
+LAST_LINE_UNUSABLE='is its last non-blank line is unusable'
+ABOVE_IGNORED='everything above that line is ignored'
+OLD_FIRST_LINE_RULE='a report is usable when its first line is'
+
+CODE_VALIDATE_START="$(first_line_of "$CODE_SKILL" '**Validate each report and consolidate:**')"
+CODE_VALIDATE_END="$(first_line_of "$CODE_SKILL" '4. **Triage:**')"
+CODE_VALIDATE_RANGE="$WORK/code-validate.txt"
+if [ -n "$CODE_VALIDATE_START" ] && [ -n "$CODE_VALIDATE_END" ]; then
+  extract_lines "$CODE_SKILL" "$CODE_VALIDATE_START" "$CODE_VALIDATE_END" > "$CODE_VALIDATE_RANGE"
+  ok "multi-code-review SKILL.md: step 3 (Validate each report and consolidate) range located ($CODE_VALIDATE_START..$CODE_VALIDATE_END)"
+else
+  : > "$CODE_VALIDATE_RANGE"
+  bad "multi-code-review SKILL.md: could not locate step 3 (Validate each report and consolidate) range"
+fi
+
+DOC_VALIDATE_START="$(first_line_of "$DOC_SKILL" '**Validate each report and consolidate:**')"
+DOC_VALIDATE_END="$(first_line_of "$DOC_SKILL" '3. **Triage and merge:**')"
+DOC_VALIDATE_RANGE="$WORK/doc-validate.txt"
+if [ -n "$DOC_VALIDATE_START" ] && [ -n "$DOC_VALIDATE_END" ]; then
+  extract_lines "$DOC_SKILL" "$DOC_VALIDATE_START" "$DOC_VALIDATE_END" > "$DOC_VALIDATE_RANGE"
+  ok "multi-doc-review SKILL.md: step 2 (Validate each report and consolidate) range located ($DOC_VALIDATE_START..$DOC_VALIDATE_END)"
+else
+  : > "$DOC_VALIDATE_RANGE"
+  bad "multi-doc-review SKILL.md: could not locate step 2 (Validate each report and consolidate) range"
+fi
+
+assert_file_contains "multi-code-review step 3: marker accepted anywhere in the first 10 non-blank lines" "$CODE_VALIDATE_RANGE" "$MARKER_ANYWHERE"
+assert_file_contains "multi-code-review step 3: Verdict block must stand below the marker line" "$CODE_VALIDATE_RANGE" "$VERDICT_BELOW"
+assert_file_contains "multi-code-review step 3: marker as last non-blank line is unusable" "$CODE_VALIDATE_RANGE" "$LAST_LINE_UNUSABLE"
+assert_file_contains "multi-code-review step 3: everything above the marker line is ignored" "$CODE_VALIDATE_RANGE" "$ABOVE_IGNORED"
+assert_file_not_contains "multi-code-review SKILL.md: pre-change first-line-only wording absent" "$CODE_SKILL" "$OLD_FIRST_LINE_RULE"
+
+assert_file_contains "multi-doc-review step 2: marker accepted anywhere in the first 10 non-blank lines" "$DOC_VALIDATE_RANGE" "$MARKER_ANYWHERE"
+assert_file_contains "multi-doc-review step 2: Verdict block must stand below the marker line" "$DOC_VALIDATE_RANGE" "$VERDICT_BELOW"
+assert_file_contains "multi-doc-review step 2: marker as last non-blank line is unusable" "$DOC_VALIDATE_RANGE" "$LAST_LINE_UNUSABLE"
+assert_file_contains "multi-doc-review step 2: everything above the marker line is ignored" "$DOC_VALIDATE_RANGE" "$ABOVE_IGNORED"
+assert_file_not_contains "multi-doc-review SKILL.md: pre-change first-line-only wording absent" "$DOC_SKILL" "$OLD_FIRST_LINE_RULE"
+
 echo
 bold "Results: $PASS passed, $FAIL failed"
 if [ "$FAIL" -gt 0 ]; then
