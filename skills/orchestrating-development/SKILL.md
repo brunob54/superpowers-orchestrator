@@ -165,7 +165,10 @@ this platform lacks` — and stop.
   accept a return when a line whose surrounding whitespace is removed
   **equals** `<!-- orchestration report -->` and is among the **first 10
   non-blank lines** of the final message; blank lines are skipped and do not
-  consume that budget. Only this marker is searched for: a line equal to
+  consume that budget. Content after the marker on the marker line makes the
+  return malformed under this equality test, even though the hook that also
+  watches for this marker tolerates such content via a prefix match. Only
+  this marker is searched for: a line equal to
   another skill's marker is ordinary preamble. When more than one such line
   is present, the **first** begins the report; everything above it is
   ignored and is never a reason to retry. When the window holds more than
@@ -174,13 +177,19 @@ this platform lacks` — and stop.
   count of marker lines in the window, appended under the log entry of the
   phase or batch whose controller return carried the extra marker lines.
   The leading token is on the first
-  non-blank line below that marker line — "non-blank" throughout this bullet,
-  so a line holding only spaces is skipped here exactly as it is skipped in
-  the window. The 15-line cap counts from the
+  non-blank line below that marker line that is not itself equal to the
+  marker — any further line equal to the marker is skipped when locating the
+  leading token, so a return whose window holds several marker lines reaches
+  the note above instead of the malformed list below — "non-blank" throughout
+  this bullet, so a line holding only spaces is skipped here exactly as it is
+  skipped in the window. The 15-line cap counts from the
   marker line, which is line 1 of the 15; it is an instruction to the
   controller, not a test you run — a longer report is **not** malformed.
-  Every field you consume is read only from the marker line and the 14
-  lines below it; a value standing below that block is not part of the
+  Every field you consume is read only from the marker line and the 14 raw
+  lines below it — blank lines included, so the "non-blank" qualifier used
+  elsewhere in this bullet does not apply to this count, matching the
+  15-line cap the four controller templates give the controller; a value
+  standing below that block is not part of the
   return this contract describes and is never read.
   Detail goes to files. A return is **malformed** when no such marker line
   is in the window, OR the leading token is absent, OR any field you consume
