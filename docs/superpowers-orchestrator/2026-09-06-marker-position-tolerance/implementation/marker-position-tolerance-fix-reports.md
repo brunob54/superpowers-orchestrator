@@ -515,3 +515,74 @@ Output (tail):
 ```
 subagent-guard: 60 passed, 0 failed
 ```
+
+## Round 2
+
+Findings addressed: [M1], [M5]
+
+Command:
+```
+bash tests/reviewer-templates/run-tests.sh
+```
+Output (tail):
+```
+11. Receiver-side report-usability rule (widened marker position) is pinned per skill
+  PASS: multi-code-review SKILL.md: step 3 (Validate each report and consolidate) range located (601..689)
+  PASS: multi-doc-review SKILL.md: step 2 (Validate each report and consolidate) range located (113..176)
+  PASS: multi-code-review step 3: marker accepted anywhere in the first 10 non-blank lines
+  PASS: multi-code-review step 3: Verdict block must stand below the marker line
+  PASS: multi-code-review step 3: marker as last non-blank line is unusable
+  PASS: multi-code-review step 3: everything above the marker line is ignored
+  PASS: multi-code-review SKILL.md: pre-change first-line-only wording absent
+  PASS: multi-doc-review step 2: marker accepted anywhere in the first 10 non-blank lines
+  PASS: multi-doc-review step 2: Verdict block must stand below the marker line
+  PASS: multi-doc-review step 2: marker as last non-blank line is unusable
+  PASS: multi-doc-review step 2: everything above the marker line is ignored
+  PASS: multi-doc-review SKILL.md: pre-change first-line-only wording absent
+
+Results: 72 passed, 0 failed
+```
+
+Command:
+```
+node tests/codex/test-subagent-guard.js
+```
+Output (tail):
+```
+Marker search window
+  ✓ The marker search window is a single named constant
+  ✓ The hook comments state the window rule
+  ✓ multi-review marker on the 10th non-blank line exempts
+  ✓ multi-review marker on the 11th non-blank line does not exempt
+  ✓ orchestration marker on the 10th non-blank line exempts
+  ✓ orchestration marker on the 11th non-blank line does not exempt
+  ✓ research marker on the 10th non-blank line exempts
+  ✓ research marker on the 11th non-blank line does not exempt
+  ✓ Twelve blank lines before the marker still exempt (blanks do not consume the window)
+  ✓ Twelve CRLF blank lines before the marker still exempt
+  ✓ Twelve spaces-only lines before the marker still exempt
+  ✓ Marker followed by text on the first line still exempts (prefix match)
+  ✓ A marker quoted after other text on its line does not exempt
+  ✓ Leading whitespace before a marker on the third non-blank line still exempts
+  ✓ Two marker lines inside the window exempt
+  ✓ A CRLF message with the marker on the second non-blank line exempts
+
+subagent-guard: 60 passed, 0 failed
+```
+
+Command:
+```
+bash tests/orchestrating-development/run-tests.sh
+```
+Output (tail):
+```
+  PASS: in-run rulings: contains 'dispatch-<k>-answers.txt'
+  PASS: in-run rulings: contains 'never with a heredoc'
+  PASS: in-run rulings: contains 'the only channel'
+  PASS: in-run rulings: contains 'a new fill under the next `<k>`'
+  PASS: in-run rulings: contains 'test -s'
+  PASS: in-run rulings: contains 'with the Write tool to `<PROMPT_DIR>/dispatch-<k>-answers.txt`'
+  PASS: in-run rulings: contains '`RESUME_ANSWER=@<PROMPT_DIR>/dispatch-<k>-answers.txt`'
+
+Results: 162 passed, 0 failed
+```
