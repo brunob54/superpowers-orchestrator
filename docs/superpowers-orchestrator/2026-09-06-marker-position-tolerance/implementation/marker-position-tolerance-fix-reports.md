@@ -204,3 +204,27 @@ Output (tail):
 ```
 Results: 162 passed, 0 failed
 ```
+
+## Round 2
+
+Findings addressed: I3, M1, M2
+
+Fix locations:
+- I3 — skills/orchestrating-development/SKILL.md (leading-token sentence): added the exception that a further line equal to the marker is skipped when locating the leading token, so a window with several marker lines reaches the note rule instead of the malformed list.
+- M1 — skills/orchestrating-development/SKILL.md (equals-marker sentence): added a sentence stating that content after the marker on the marker line makes the return malformed under this equality test, even though the guard hook's prefix match tolerates it.
+- M2 — skills/orchestrating-development/SKILL.md (14-lines-below sentence): stated explicitly that the 14 lines are raw lines, blank lines included, and that the bullet's "non-blank" qualifier does not apply to this count.
+
+Covering tests run:
+
+```
+$ bash tests/orchestrating-development/run-tests.sh
+...
+Results: 162 passed, 0 failed
+```
+
+```
+$ bash tests/codex/run-unit-tests.sh
+...
+Results: 10 suites passed, 0 suites failed
+All unit tests passed.
+```
