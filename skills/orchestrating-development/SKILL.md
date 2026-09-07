@@ -619,12 +619,15 @@ plan: docs/superpowers-orchestrator/<date>-<slug>/plans/<slug>.md — <T> tasks
 
 ## Phase 3 — Batch 1 (tasks 1–3) — COMPLETE — commits <base7>..<head7>
 - Task 1: complete — <one-line>
-note: return carried <n> marker lines; parsed from the first (written only when the window held more than one marker line)
+note: return carried <n> marker lines; parsed from the first
 
 ## Phase 4 — Code review — rounds <r> — <converged|cap> — fixes <n> — unresolved 0
 
 _Completed — YYYY-MM-DD — HEAD <sha7>_
 ```
+
+The `note:` line is written only when the window held more than one
+marker line.
 
 An in-run ruling (`## In-run rulings`) writes, instead of a stop, one
 entry per ruled return and re-dispatches the phase:
@@ -1455,9 +1458,9 @@ subagent, and the bounds read the same for both. A **reviewer's return**
 is **lost** when no line among the **first 10 non-blank lines** of the
 reviewer's final message, with its surrounding whitespace removed, starts
 with `<!-- multi-review report -->` — blank lines are skipped and do not
-consume that budget, the same window every other predicate of this change
-uses; this rule keys on the marker's presence, not on its position within
-that window, and unlike the controller Return contract above it is a
+consume that budget, the same 10-non-blank-line window the Return contract
+above uses; this rule keys on the marker's presence, not on its position
+within that window, and unlike the controller Return contract above it is a
 prefix test, not a whole-line equality test — or when the notice reports
 that the reviewer failed. A lost return is
 re-dispatched once under the same lens; a second loss leaves that lens out
@@ -2277,19 +2280,19 @@ retry the Write through a Bash command to get around a refusal.
 
 ## Guard Interaction
 
-Controller returns open with `<!-- orchestration report -->`;
+Controller returns open with `<!-- orchestration report -->`.
 `hooks/subagent-guard.js` exempts a message when one of its first 10
-non-blank lines starts with that marker, so a return that carries a sentence
+non-blank lines starts with that marker. A return that carries a sentence
 above its marker line is still exempt. Never remove the marker instruction
 from the four templates — free-text `BLOCKED` reasons legitimately pair
 action verbs with skill names. Without the marker, the guard answers with
 `decision: block` and a redo instruction when the message matches any of
-the guard's violation patterns; most of those patterns pair an action verb
-with a plugin skill name, but four match with no action verb at all — a
-`Skill(superpowers…` call form, a `skill: <name>` field, an "I'm using the
-… skill" sentence, and "Invoke the superpowers-…" — so a message with no
-marker is not blocked only when it matches none of those patterns.
-Measured on 2026-09-06, the
+the guard's violation patterns. Most of those patterns pair an action verb
+with a plugin skill name. Four patterns match without pairing an action
+verb with a plugin skill name at all — a `Skill(superpowers…` call form, a
+`skill: <name>` field, an "I'm using the … skill" sentence, and "Invoke the
+superpowers-…" — so a message with no marker is not blocked only when it
+matches none of the guard's violation patterns. Measured on 2026-09-06, the
 dispatch resumed after one extra turn instead of stalling. But a controller
 that obeys "redo your assigned task" can repeat review rounds and fix
 commits it has already written, so the marker instruction stays mandatory.
