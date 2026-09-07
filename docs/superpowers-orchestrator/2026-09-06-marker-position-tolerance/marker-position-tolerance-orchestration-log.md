@@ -123,3 +123,5 @@ because an `amend plan` ruling moves the effective HEAD and always starts a new
 invocation over the amended plan. The figures on the heading line are the final
 return's. Thirteen rulings were recorded across the phase; three of them were
 escalated to the author at the resume cap and answered on 2026-09-07.
+
+_Completed — 2026-09-07 — HEAD 4613fae_
