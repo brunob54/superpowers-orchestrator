@@ -246,3 +246,23 @@ Output (tail):
 
 Results: 162 passed, 0 failed
 ```
+
+## Round 2
+
+Findings addressed: I3, M1, M2, M3.
+
+Covering tests run:
+
+```
+$ bash tests/reviewer-templates/run-tests.sh
+```
+```
+Results: 60 passed, 0 failed
+```
+
+```
+$ bash tests/orchestrating-development/run-tests.sh
+```
+```
+Results: 162 passed, 0 failed
+```
