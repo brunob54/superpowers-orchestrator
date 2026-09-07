@@ -100,3 +100,18 @@ Ruled: [I2 inv 2] forced — (this answers the verification 3 guard-condition it
 Ruled: [I1 inv 3] forced — (this answers the verification 3 fork-return item) amend plan: Global Constraint 3 applies its three reading rules to a fork's reviewer return, with the fork's 25-line cap; fix it: state them in the `## In-run rulings` fork-return text
 Ruled: [I2 inv 3] forced — (this answers the verification 3 guard-quoting item) plan governs: Task 1's Does-NOT-cover entry accepted this residual by name, and the narrowing contradicts Global Constraints 2 and 5
 Resume: Resume orchestration for docs/superpowers-orchestrator/2026-09-06-marker-position-tolerance/plans/marker-position-tolerance.md
+
+## RULING 12 — 2026-09-07 — phase 4 — two design items of invocation 5, both rejected after unanimous three-lens rounds
+Items: [I1] design — (this answers the round 2 fenced-preamble item of invocation 5) plan governs: "With more than one such line, the first begins the report; everything above it is ignored." — the spec states first-match verbatim at its property 4, so token-gating changes the spec, and it trades a fail-safe malformed-and-retry for a fail-unsafe silent wrong return
+Items: [I1] design — (this answers the verification 3 receiver-trace item of invocation 5) plan governs: "Only the passages that describe the *hook's* exemption change, plus the two skill-side usability rules named next." — the spec's Out-of-scope list already rejected this note by name and its Error handling table sets the accepting row to "no log note"
+Detail: docs/superpowers-orchestrator/2026-09-06-marker-position-tolerance/plans/marker-position-tolerance-open-decisions.md
+Forks: 3 of 3 (design consistency, implementation practicality, adversarial) — contradiction: none — for the round 2 item; the three tabled different follow-ups, settled on the effective-HEAD fact
+Forks: 3 of 3 (design consistency, implementation practicality, adversarial) — contradiction: none — for the verification 3 item; two lenses independently tabled one third outcome, recorded for the author
+Re-dispatch: phase 4, in-run resume 1 of 3
+
+note: neither ruling amends the plan, so the effective HEAD does not move and the
+re-dispatch journals two decisions rather than starting a new invocation. Ruling 12
+also corrects the record on Amendment 1: its stated ground (token-gating narrows
+what is accepted) is true of last-match only, and all three lenses conceded that
+token-gated first-match is a strict superset. The rejection stands on the spec and
+on fail-safe versus fail-unsafe instead.
