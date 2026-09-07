@@ -166,3 +166,24 @@ _Invocation 2 — 2026-09-07 — N=2 M=2 — BASE..HEAD f112faa..08c6c28 — bra
 
 _Completed — 2026-09-07 — cap reached — HEAD 82bb81ef504c7f00c5356ed002e687f067483cef_
 Secrets found: none
+
+## Post-loop addendum — decisions — 2026-09-07
+
+- [I2] (round 1) decided (orchestrator): amend plan: Task 3's Does-NOT-cover entry now says the lost-return rule's marker test is bounded to the same first 10 non-blank lines as every other predicate of this change, because rewriting its sentence turned an opens-with test into an every-line prefix test and so changed the rule after all — the amendment is committed and the plan already reads that way; fix it: in `skills/orchestrating-development/SKILL.md`, bound the reviewer-return loss test to the first 10 non-blank lines of the reviewer's final message, so a failure notice that quotes the reviewer marker on a later line is still a lost return. Do not add an `ITEM:` or `VERDICT:` presence test — that gap predates this branch and is recorded for the release step.
+- [I2] (round 1) fixed — the reviewer-return loss test is now bounded to the first 10 non-blank lines of the reviewer's final message, blank lines skipped and not consuming the budget; it stays a prefix test and no `ITEM:`/`VERDICT:` presence test was added → db7d0e4
+- [I2] (round 2) decided (orchestrator): same item as round 1 [I2] of this invocation — the answer names one item and one fix; the plan amendment and the single edit above settle it, do not make the edit twice.
+- [I2] (round 2) fixed — same item as round 1 [I2]; settled by the single bounded-window edit, dispatched once → db7d0e4
+- [I1] (round 2) decided (orchestrator): amend plan: Global Constraint 4 now says that when a consumed field appears more than once inside the marker line and the 14 lines below it, the first occurrence is its value, matching the first-match rule of constraint 3 — the amendment is committed; fix it: state that tie-break in the Return contract of `skills/orchestrating-development/SKILL.md`. The marker-selection half of this finding is not reopened: ruling 1 decided it after a three-lens review and the clause carries `(amended by ruling 1)`.
+- [I1] (round 2) fixed — the Return contract bullet now states that a consumed field appearing more than once inside the marker line and the 14 raw lines below it takes its value from the first occurrence, matching the first-match rule the same bullet applies to a window holding more than one marker line; the read bound, the malformed list and the marker-selection rule are unchanged → db7d0e4
+- [M3] (verification 1) carried — unchanged; it was already the Minor form of the lost-return item this addendum decides and fixes.
+- [I2] (verification 2) decided (orchestrator): same item as round 1 [I2] and round 2 [I2] of this invocation; settled by the same single edit.
+- [I2] (verification 2) fixed — same item as round 1 [I2]; settled by the single bounded-window edit, dispatched once → db7d0e4
+- [I1] (verification 3) decided (orchestrator): same item as round 1 [I2], round 2 [I2] and verification 2 [I2] of this invocation; settled by the same single edit, and the reviewer's additional proposal of an `ITEM:`/`VERDICT:` presence test is explicitly refused by the answer.
+- [I1] (verification 3) fixed — same item as round 1 [I2]; settled by the single bounded-window edit, dispatched once → db7d0e4
+- [I2] (verification 3) decided (orchestrator): fix it: the `## Guard Interaction` sentence and the `**Lost returns.**` sentence must state the blocking condition correctly — the guard answers an unmarked message with `decision: block` when the message matches any of the hook's violation patterns, and four of those patterns need no action verb at all (`Skill(superpowers…`, `skill: <name>`, `I'm using the … skill`, `Invoke the superpowers-…`). Neither sentence may keep the verb-and-skill-name pairing as a necessary condition.
+- [I2] (verification 3) fixed — both sentences now say the guard blocks an unmarked message that matches any of its violation patterns, and both name the four patterns that need no action verb; the verb-and-skill-name pairing is no longer a necessary condition in either direction → db7d0e4
+- [M2] (verification 3) carried — unchanged; `skills/multi-code-review/SKILL.md:815` and `skills/multi-code-review/fix-prompt.md:13` carry the same narrowed description, and the answer for [I2] names only the two `skills/orchestrating-development/SKILL.md` sentences, so those two passages are outside what this addendum was told to change.
+
+_Addendum note — the effective HEAD had moved past this entry's completion marker (7e48995, the ruling 4 plan amendment) before the addendum was written, so the completion marker above is left unchanged, the verification re-review of the fix is skipped, and invocation 3 below reviews it._
+
+_Invocation 3 — 2026-09-07 — N=2 M=2 — BASE..HEAD f112faa..db7d0e4 — branch feature/marker-position-tolerance — gate: orchestration_
