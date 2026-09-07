@@ -161,13 +161,21 @@ Four changes.
   touch it: a notice with the marker anywhere is not lost, exactly as today.
   Only the neighbouring sentence describing the *hook's* exemption changes
   (Scope item 3).
-- **The skill-side usability rules of the other markers.**
-  `skills/multi-code-review/SKILL.md:602`,
-  `skills/multi-doc-review/SKILL.md:114`,
+- **The skill-side usability rules of the research marker.**
   `skills/researching-prior-art/research-prompt.md:164` and
   `controller-prompt.md:126`/`:233` keep requiring the marker as a report's
-  first line. Only the hook's exemption widens for those markers; what makes
-  a report *usable* is untouched.
+  first line. Only the hook's exemption widens for the `<!-- research
+  report -->` marker; what makes a *research* report usable is untouched.
+  **Amended during the run.** This bullet also named the usability rules of
+  `skills/multi-code-review/SKILL.md` and of `skills/multi-doc-review/SKILL.md`
+  as untouched. The author removed those two from this list at the resume of
+  2026-09-07, after reviewers showed that a report the widened hook now lets
+  through was still discarded by the skill that receives it. Both rules are in
+  scope and shipped widened to the hook's own window. The decision is recorded
+  as Amendment 11 of
+  `docs/superpowers-orchestrator/2026-09-06-marker-position-tolerance/plans/marker-position-tolerance.md`,
+  and the shipped wording is quoted below under *Why the same predicate serves
+  all three markers*.
 - **Hook wiring files.** `subagent-guard.js` is registered in exactly two
   places: `hooks/hooks.json` (`SubagentStop`) and `plugin.universal.yaml`
   (line 86); it appears in neither `hooks/codex-hooks.json` nor
@@ -301,11 +309,36 @@ first is worse, so the hook's exemption only ever widens.
 have the same failure mode. Leaving them strict while the orchestration marker
 widens would be an inconsistency with no reason behind it. The visible effect
 of widening them is an improvement: a reviewer report with a preamble returns
-instead of being blocked into a redo turn, and it is then handled by the
-defined unusable-report path — one identical retry first, and `inconclusive`
-only when no reviewer of the round returns a usable report
-(`skills/multi-code-review/SKILL.md:602-607`,
-`skills/multi-doc-review/SKILL.md:114-118`).
+instead of being blocked into a redo turn.
+
+**The two receiving skills were widened with it (author decision taken during
+the run).** Widening the hook alone was not enough: the exact message shape the
+hook newly let through was then discarded by the skill that received it,
+because that skill still required the marker as the report's first line. At the
+resume of 2026-09-07 the author brought the two receiving rules into scope and
+widened them to the hook's own window — Amendment 11 of
+`docs/superpowers-orchestrator/2026-09-06-marker-position-tolerance/plans/marker-position-tolerance.md`,
+which supersedes ruling 3 of this run. `skills/multi-code-review/SKILL.md`
+(step 3) and `skills/multi-doc-review/SKILL.md` (step 2) now read:
+
+> a report is usable when a line whose surrounding whitespace (a trailing `\r`
+> of a message using CRLF line endings included) is removed starts with the
+> marker `<!-- multi-review report -->` and is among the first 10 non-blank
+> lines of the message; blank lines are skipped and do not consume that budget,
+> and a line holding only spaces counts as blank. A Verdict block must stand
+> below that marker line — a report whose qualifying marker line is its last
+> non-blank line is unusable. The first such marker line begins the report;
+> everything above that line is ignored, and the Verdict block and the
+> enumerated findings are read only from that line downward.
+
+So a reviewer report carrying a preamble is now *usable*, and never reaches the
+unusable-report path. That path itself is unchanged — one identical retry
+first, and `inconclusive` only when no reviewer of the round returns a usable
+report (`skills/multi-code-review/SKILL.md:611-617`,
+`skills/multi-doc-review/SKILL.md:123-128`) — it simply applies to fewer
+reports: a marker that first appears below the 10th non-blank line, a missing
+marker, or a qualifying marker line with no Verdict block below it. The
+research marker's receivers were not widened; see Non-goals.
 
 ## Interfaces
 
