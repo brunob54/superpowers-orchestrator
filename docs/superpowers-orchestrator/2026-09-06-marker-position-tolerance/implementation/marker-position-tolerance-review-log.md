@@ -419,3 +419,10 @@ _Invocation 5 — 2026-09-07 — N=2 M=2 — BASE..HEAD f112faa..0d73bf5 — bra
 
 _Completed — 2026-09-07 — cap reached — HEAD a4bcf7f89b76adc110cafec43df3fd48cf043835_
 Secrets found: none
+
+## Post-loop addendum — decisions — 2026-09-07
+
+- [I1] (round 2) decided (orchestrator): plan governs: "With more than one such line, the first begins the report; everything above it is ignored." — docs/superpowers-orchestrator/2026-09-06-marker-position-tolerance/plans/marker-position-tolerance.md
+- [I1] (verification 3) decided (orchestrator): plan governs: "Only the passages that describe the *hook's* exemption change, plus the two skill-side usability rules named next." — docs/superpowers-orchestrator/2026-09-06-marker-position-tolerance/plans/marker-position-tolerance.md
+
+_Addendum note — the effective HEAD was unchanged when this addendum was written: the only commits after the completion marker (a4bcf7f) are review-log commits and the ruling 12 commit, which changes the orchestration log and the ruling record alone, both inside the blinding pathspec set. The completion marker above therefore stands as the current effective HEAD, both items are decided without a code change, no fix subagent and no verification re-review run, and no new invocation follows._
