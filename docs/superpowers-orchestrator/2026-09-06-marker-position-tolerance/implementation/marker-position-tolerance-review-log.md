@@ -270,3 +270,15 @@ _Invocation 3 — 2026-09-07 — N=2 M=2 — BASE..HEAD f112faa..db7d0e4 — bra
 
 _Completed — 2026-09-07 — cap reached — HEAD aed9ae329148ce1b70d052f1ca2f00cfc6d772ed_
 Secrets found: none
+
+## Post-loop addendum — decisions — 2026-09-07
+
+- [I1] (verification 3) decided (orchestrator): amend plan: Global Constraint 3 now applies its three reading rules to a fork's reviewer return as well — the first line in the window that starts with `<!-- multi-review report -->` begins the report, everything above it is ignored, and the return's `ITEM:`, `VERDICT:`, `REASON:`, `CONTRADICTS:` and `TABLED:` lines are read only from that line and the 24 lines below it, the first occurrence of each being its value; the amendment is committed and the plan already reads that way. Fix it: state those rules in the fork-return text of the `## In-run rulings` section of `skills/orchestrating-development/SKILL.md`, beside the lost-return rule, using the fork's own 25-line cap and not the controller's 15.
+- [I1] (verification 3) fixed — the "Lost returns" paragraph of `## In-run rulings` now states the three reading rules for a fork's reviewer return: the first window line starting with the reviewer marker begins the report and everything above it is ignored; `ITEM:`, `VERDICT:`, `REASON:`, `CONTRADICTS:` and `TABLED:` are read only from that marker line and the 24 lines below it, the fork's own 25-line cap and never the controller's 15; and a field appearing twice inside that block takes its first occurrence → a19c4c4
+- [I1] (verification 2) decided (orchestrator): same item as verification 3 [I1] of this invocation — one item, one fix; settled by the single edit above, not made twice.
+- [I1] (verification 2) fixed — same item as verification 3 [I1]; settled by the single fork-return reading-rules edit, dispatched once → a19c4c4
+- [I2] (verification 3) decided (orchestrator): plan governs: "A leaking subagent that emits an exact marker at the start of one of its first 10 non-blank lines is exempt; that was already true at line 1 and the prompt inst" — docs/superpowers-orchestrator/2026-09-06-marker-position-tolerance/plans/marker-position-tolerance.md
+
+_Addendum note — the effective HEAD had moved past this entry's completion marker (1558621, the ruling 7 plan amendment) before the addendum was written, so the completion marker above is left unchanged, the verification re-review of the fix is skipped, and invocation 4 below reviews it._
+
+_Invocation 4 — 2026-09-07 — N=2 M=2 — BASE..HEAD f112faa..a19c4c4 — branch feature/marker-position-tolerance — gate: orchestration_

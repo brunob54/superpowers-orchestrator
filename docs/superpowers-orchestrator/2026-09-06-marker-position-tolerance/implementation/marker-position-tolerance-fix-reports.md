@@ -382,3 +382,20 @@ Output (tail):
 ```
 Results: 166 passed, 0 failed
 ```
+
+## Round 2
+
+Findings addressed: [I1]
+
+Fix: added the three reading rules (first-marker-begins-report, read
+window bounded to the marker line plus 24 lines below it, first
+occurrence wins on a repeated field) to the fork-return text of the
+`## In-run rulings` section's "Lost returns" paragraph in
+skills/orchestrating-development/SKILL.md, immediately after the
+lost-return sentence.
+
+Command run:
+    bash tests/orchestrating-development/run-tests.sh
+
+Output (tail):
+    Results: 162 passed, 0 failed
