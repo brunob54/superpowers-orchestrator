@@ -110,11 +110,15 @@ For each round `i` in 1..N:
    or binds a shared resource (a fixed port, a fixed temporary path, a
    shared test database) — read-only inspection only; anything that must
    run is run once by the controller.
-2. **Validate each report and consolidate:** a report is usable when the
-   marker line `<!-- multi-review report -->` starts one of its first 10
-   non-blank lines and a Verdict block is present. The first line among the
-   report's first 10 non-blank lines that starts with `<!-- multi-review
-   report -->` begins the report; everything above that line is ignored,
+2. **Validate each report and consolidate:** a report is usable when a
+   line whose surrounding whitespace (a trailing `\r` of a message using
+   CRLF line endings included) is removed starts with the marker
+   `<!-- multi-review report -->` and is among the first 10 non-blank
+   lines of the message; blank lines are skipped and do not consume that
+   budget, and a line holding only spaces counts as blank. A Verdict
+   block must stand below that marker line — a report whose qualifying
+   marker line is its last non-blank line is unusable. The first such
+   marker line begins the report; everything above that line is ignored,
    and the Verdict block and the enumerated findings are read only from
    that line downward. Each unusable report →
    retry the identical dispatch once, keeping the same reviewer number; the

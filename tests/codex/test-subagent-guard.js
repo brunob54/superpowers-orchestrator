@@ -477,6 +477,15 @@ test('Twelve CRLF blank lines before the marker still exempt', () => {
   assert.deepStrictEqual(out, {}, `Expected exempt, got: ${JSON.stringify(out)}`);
 });
 
+// This is the case that pins the TRAILING half of the line trim. With
+// trimStart() alone a spaces-only line would keep its trailing spaces,
+// counts as non-blank, consumes the window, and pushes the marker out of it.
+test('Twelve spaces-only lines before the marker still exempt', () => {
+  const message = new Array(12).fill('   ').concat([ORCHESTRATION_MARKER, VERB_SKILL_BODY]).join('\n');
+  const out = runGuard(message);
+  assert.deepStrictEqual(out, {}, `Expected exempt, got: ${JSON.stringify(out)}`);
+});
+
 test('Marker followed by text on the first line still exempts (prefix match)', () => {
   const out = runGuard([
     '<!-- orchestration report --> REVIEW_DONE rounds=2',
