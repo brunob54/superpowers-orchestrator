@@ -435,3 +435,21 @@ Results: 162 passed, 0 failed
 ```
 Results: 60 passed, 0 failed
 ```
+
+## Round 1
+
+Findings addressed: I1, I2, I3, M3, M4
+
+Command run:
+```
+bash tests/reviewer-templates/run-tests.sh
+bash tests/in-run-rulings/run-tests.sh
+```
+
+Output (tails):
+```
+Results: 60 passed, 0 failed
+```
+```
+Results: 512 passed, 0 failed
+```
