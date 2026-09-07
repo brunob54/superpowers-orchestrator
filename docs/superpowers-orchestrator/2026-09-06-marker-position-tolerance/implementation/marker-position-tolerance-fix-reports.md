@@ -484,3 +484,34 @@ Output (tail):
 ```
 subagent-guard: 60 passed, 0 failed
 ```
+
+## Round 2
+
+Findings addressed: I3, M1
+
+Command run:
+```
+bash tests/reviewer-templates/run-tests.sh
+```
+Output (tail):
+```
+[1mResults: 72 passed, 0 failed[0m
+```
+
+Command run:
+```
+bash tests/in-run-rulings/run-tests.sh
+```
+Output (tail):
+```
+[1mResults: 512 passed, 0 failed[0m
+```
+
+Command run:
+```
+node tests/codex/test-subagent-guard.js
+```
+Output (tail):
+```
+subagent-guard: 60 passed, 0 failed
+```
