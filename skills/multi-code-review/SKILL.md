@@ -812,8 +812,10 @@ code has been revised since, so a re-pass is meaningful):
      number for `<i>`. Its complete rules are the body of
      `./fix-prompt.md` and are not restated here; one reason stays in this
      file because the template does not carry it: `hooks/subagent-guard.js`
-     blocks a subagent's final message that names a roster skill without
-     the report marker, and only reviewers emit that marker. Dispatch it
+     blocks a subagent's final message that pairs an action verb with a
+     plugin skill name only when none of the message's first 10 non-blank
+     lines starts with a report marker, so a message that quotes a marker
+     line at the start of a line is exempt too. Dispatch it
      by pointer: write the list to `<PROMPT_DIR>/round-<i>-findings.txt`
      under the value-file rule. When the loop started over pre-existing
      uncommitted changes the user consented to (Working-tree

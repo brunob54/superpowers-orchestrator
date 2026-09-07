@@ -10,8 +10,10 @@ the controller dispatches a pointer to that file (SKILL.md, Procedure,
 the controller passes only the values listed in the legend.
 
 The fix subagent's final message must not name any skill of this plugin:
-`hooks/subagent-guard.js` blocks a subagent's final message that names one
-without the report marker, and only reviewers emit that marker.
+`hooks/subagent-guard.js` blocks a subagent's final message that pairs an
+action verb with a plugin skill name only when none of the message's first
+10 non-blank lines starts with a report marker, so a message that quotes a
+marker line at the start of a line is exempt too.
 
 ```
 Agent tool (general-purpose):

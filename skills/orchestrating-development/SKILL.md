@@ -174,7 +174,8 @@ this platform lacks` — and stop.
   ignored and is never a reason to retry. When the window holds more than
   one such marker line, record the note `note: return carried <n> marker
   lines; parsed from the first` in the orchestration log, with `<n>` the
-  count of marker lines in the window, appended under whatever orchestration-
+  count of lines in the window equal to `<!-- orchestration report -->`,
+  appended under whatever orchestration-
   log entry that return produces — a `## STOPPED` or `## RULING` entry
   included.
   The leading token is on the first
@@ -614,7 +615,7 @@ plan: docs/superpowers-orchestrator/<date>-<slug>/plans/<slug>.md — <T> tasks
 
 ## Phase 3 — Batch 1 (tasks 1–3) — COMPLETE — commits <base7>..<head7>
 - Task 1: complete — <one-line>
-note: return carried <n> marker lines; parsed from the first
+note: return carried <n> marker lines; parsed from the first (written only when the window held more than one marker line)
 
 ## Phase 4 — Code review — rounds <r> — <converged|cap> — fixes <n> — unresolved 0
 
@@ -2276,8 +2277,9 @@ non-blank lines starts with that marker, so a return that carries a sentence
 above its marker line is still exempt. Never remove the marker instruction
 from the four templates — free-text `BLOCKED` reasons legitimately pair
 action verbs with skill names. Without the marker, the guard answers with
-`decision: block` and a redo instruction only when the message also names a
-plugin skill; a message with no marker that names no skill is not blocked.
+`decision: block` and a redo instruction only when the message also pairs
+an action verb with a skill name; a message with no marker that pairs no
+action verb with a skill name is not blocked.
 Measured on 2026-09-06, the
 dispatch resumed after one extra turn instead of stalling. But a controller
 that obeys "redo your assigned task" can repeat review rounds and fix
