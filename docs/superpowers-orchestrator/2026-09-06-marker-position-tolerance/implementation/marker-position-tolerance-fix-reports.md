@@ -399,3 +399,21 @@ Command run:
 
 Output (tail):
     Results: 162 passed, 0 failed
+
+## Round 1
+
+Findings addressed: I1, I3, M3, M2, M4, CF6
+
+Command run:
+```
+bash tests/orchestrating-development/run-tests.sh
+bash tests/in-run-rulings/run-tests.sh
+```
+
+Output (tails):
+```
+Results: 162 passed, 0 failed
+```
+```
+Results: 512 passed, 0 failed
+```
