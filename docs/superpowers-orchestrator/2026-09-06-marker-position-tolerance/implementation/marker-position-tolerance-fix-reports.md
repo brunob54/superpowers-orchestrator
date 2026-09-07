@@ -337,3 +337,17 @@ $ bash tests/reviewer-templates/run-tests.sh
 ...
 Results: 60 passed, 0 failed
 ```
+
+## Round 2
+
+Findings addressed: M2
+
+Command:
+```
+bash tests/orchestrating-development/run-tests.sh
+```
+
+Output (tail):
+```
+Results: 162 passed, 0 failed
+```
