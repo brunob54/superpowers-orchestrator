@@ -168,12 +168,18 @@ this platform lacks` — and stop.
   consume that budget. Only this marker is searched for: a line equal to
   another skill's marker is ordinary preamble. When more than one such line
   is present, the **first** begins the report; everything above it is
-  ignored and is never a reason to retry. The leading token is on the first
+  ignored and is never a reason to retry. When the window holds more than
+  one such marker line, record the note `note: return carried <n> marker
+  lines; parsed from the first` in the orchestration log, with `<n>` the
+  count of marker lines in the window. The leading token is on the first
   non-blank line below that marker line — "non-blank" throughout this bullet,
   so a line holding only spaces is skipped here exactly as it is skipped in
   the window. The 15-line cap counts from the
   marker line, which is line 1 of the 15; it is an instruction to the
   controller, not a test you run — a longer report is **not** malformed.
+  Every field you consume is read only from the marker line and the 14
+  lines below it; a value standing below that block is not part of the
+  return this contract describes and is never read.
   Detail goes to files. A return is **malformed** when no such marker line
   is in the window, OR the leading token is absent, OR any field you consume
   (`tasks=`, per-task numbers, `rounds=`, `outcome=`, `unresolved=`,
