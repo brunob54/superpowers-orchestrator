@@ -65,3 +65,15 @@ Re-dispatch: phase 4, in-run resume 2 of 3
 note: invocation 2 reported its verification cap reached with one item still
 unresolved, so that item could not be fixed inside the loop. It is ruled here
 instead, which is what the in-run ruling path is for.
+
+## RULING 7 — 2026-09-07 — phase 4 — two items of invocation 3, both forced, one fixed and one rejected
+Items: [I1] forced — (the verification 3 fork-return item) amend plan: Global Constraint 3 now applies its three reading rules to a fork's reviewer return, with the fork's 25-line cap; fix it: state them in the `## In-run rulings` fork-return text
+Items: [I2] forced — (the verification 3 guard-quoting item) plan governs: Task 1's Does-NOT-cover entry accepted this residual by name, and the proposed narrowing contradicts Global Constraints 2 and 5
+Detail: docs/superpowers-orchestrator/2026-09-06-marker-position-tolerance/plans/marker-position-tolerance-open-decisions.md
+Forks: none — contradiction: none
+Re-dispatch: phase 4, in-run resume 3 of 3
+
+note: this is the last in-run resume the cap allows. A fourth open return of
+this phase escalates every open item as `chain` and stops the run for the user.
+The ruling therefore dispatches one fix, not two: the second item's only
+non-contradicting remedy is a comment, which is recorded for the release step.

@@ -55,3 +55,21 @@ Ruling record for the orchestration run. Appended, never rewritten.
 - **Defensible answers:** n/a
 - **Forks:** none
 - **Resolution:** fix it: state the condition correctly in both sentences — the guard blocks an unmarked message when it matches any of the hook's violation patterns, four of which need no action verb. The forced fact: the claim was verified false against `hooks/subagent-guard.js` by two reviewers and again by the orchestrator reading the pattern list, and a document that describes a hook wrongly is the failure this whole branch exists to remove.
+
+## Ruling 7 — 2026-09-07 — phase 4 — [I1] The fork return has no reading rules
+
+- **Class:** forced
+- **Item:** [I1 inv 3] Important skills/orchestrating-development/SKILL.md:1468 — the widened fork lost-return rule states no bound on where a fork's `ITEM:`/`VERDICT:`/`REASON:`/`CONTRADICTS:`/`TABLED:` lines are read and no rule about text above the marker, so a preamble `VERDICT:` and the report's own give two orchestrators two answers. The same question rulings 1, 2 and 5 answered for the controller side. Raised in verification cycle 3 of invocation 3.
+- **Contract clause:** "With more than one such line, the first begins the report; everything above it is ignored." — docs/superpowers-orchestrator/2026-09-06-marker-position-tolerance/plans/marker-position-tolerance.md, Global Constraint 3
+- **Defensible answers:** n/a
+- **Forks:** none
+- **Resolution:** amend plan: Global Constraint 3 now applies its three reading rules to a fork's reviewer return as well, with the fork's own 25-line cap; fix it: state them in the `## In-run rulings` fork-return text of `skills/orchestrating-development/SKILL.md` — the forced fact: the branch widened where a fork's marker may stand, which is what makes text above it possible at all, and three rulings of this same run already fixed the identical questions on the controller side; any answer other than the same one would make one message parse two ways depending on which side reads it.
+
+## Ruling 8 — 2026-09-07 — phase 4 — [I2] A quoted bare marker line disables the guard for a whole message
+
+- **Class:** forced
+- **Item:** [I2 inv 3] Important hooks/subagent-guard.js:109-117 — 16 files under `skills/` and `docs/` carry a bare marker line, so an implementer quoting a template it edited disables the leakage guard for its whole message; the reviewer's proposed narrowing contradicts Global Constraint 2, and its comment-only alternative had no verification cycle left. Raised in verification cycle 3 of invocation 3.
+- **Contract clause:** "A leaking subagent that emits an exact marker at the start of one of its first 10 non-blank lines is exempt; that was already true at line 1 and the prompt instruction remains the first layer of defence." — docs/superpowers-orchestrator/2026-09-06-marker-position-tolerance/plans/marker-position-tolerance.md, Task 1 Does NOT cover
+- **Defensible answers:** n/a
+- **Forks:** none
+- **Resolution:** plan governs: "A leaking subagent that emits an exact marker at the start of one of its first 10 non-blank lines is exempt; that was already true at line 1 and the prompt instruction remains the first layer of defence." — docs/superpowers-orchestrator/2026-09-06-marker-position-tolerance/plans/marker-position-tolerance.md — the plan accepted this residual by name before the work began, and the spec's Failure-mode check accepted it too; the reviewer's narrowing contradicts Global Constraints 2 and 5, which forbid the hook gaining a second condition and require its exemption only ever to widen. The reviewer's own second alternative — record the accepted residual in the `hasReportMarker` comment — changes no behaviour and is recorded for the release step rather than dispatched here, because this is the last in-run resume the cap allows and a comment carries no verification risk worth spending it on. What is new in this finding is the scale (16 files carry a bare marker line), not the risk; the scale is recorded here so the release-step note can cite it.
