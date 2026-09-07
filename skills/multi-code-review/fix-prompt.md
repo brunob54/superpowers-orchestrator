@@ -12,7 +12,8 @@ the controller passes only the values listed in the legend.
 The fix subagent's final message must not name any skill of this plugin:
 `hooks/subagent-guard.js` blocks a subagent's final message that matches
 one of its skill-leakage patterns (a plugin skill name paired with an
-action verb, and a few name-only forms) only when none of the message's
+action verb, and four patterns that match without pairing an action verb
+with a plugin skill name at all) only when none of the message's
 first 10 non-blank lines starts with a report marker, so a message that
 quotes a marker line at the start of one of its first 10 non-blank lines
 is exempt too; the fix

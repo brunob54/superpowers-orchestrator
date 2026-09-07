@@ -112,9 +112,14 @@ For each round `i` in 1..N:
    run is run once by the controller.
 2. **Validate each report and consolidate:** a report is usable when the
    marker line `<!-- multi-review report -->` starts one of its first 10
-   non-blank lines and a Verdict block is present. Each unusable report →
-   retry the identical dispatch once, keeping the same reviewer number; the retries of one round may go out
-   together in one message. After the retries, *u* = the number of usable
+   non-blank lines and a Verdict block is present. The first line among the
+   report's first 10 non-blank lines that starts with `<!-- multi-review
+   report -->` begins the report; everything above that line is ignored,
+   and the Verdict block and the enumerated findings are read only from
+   that line downward. Each unusable report →
+   retry the identical dispatch once, keeping the same reviewer number; the
+   retries of one round may go out together in one message. After the
+   retries, *u* = the number of usable
    reports. u = 0 → log the round as `inconclusive` (nothing is triaged,
    the clean streak is broken) and continue to the next round. u ≥ 1 →
    build one **consolidated finding set** from the usable reports by the
@@ -502,8 +507,8 @@ invocation note (which carries `M=` like every other); failed rounds get
 `hooks/subagent-guard.js` exempts a message from skill-leakage blocking when
 one of its first 10 non-blank lines starts with `<!-- multi-review report -->`
 — reviewer reports legitimately quote skill names. A report that carries a
-sentence above its marker line is therefore still exempt. This widened rule
-governs hook blocking only; the validation step above is unchanged, and a
-report is still usable only when the marker is its first line. Never remove the
+sentence above its marker line is therefore still exempt. The validation step
+above uses that same 10-non-blank-line window; only `reviewer-prompt.md` still
+tells the reviewer to make the marker its first output line. Never remove the
 marker instruction from `reviewer-prompt.md`; without it, reports about
 skill-discussing documents get blocked and rounds degrade to retries.
