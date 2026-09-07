@@ -163,3 +163,6 @@ _Invocation 2 — 2026-09-07 — N=2 M=2 — BASE..HEAD f112faa..08c6c28 — bra
 - [M2] carried — `skills/multi-code-review/SKILL.md:815` and `skills/multi-code-review/fix-prompt.md:13` carry the same narrowed description as [I2] and omit the four verb-free patterns. Not fixed: same cause as [I2], and the reviewer notes the preamble never reaches the fix subagent because `fill-prompt.js` writes only the fenced body ← 1/2: r1:M2
 - [M3] carried — the two reviewer-prompt notes state the widened hook rule without saying that a report whose first line is not the marker is still discarded as unusable, so a reviewer could act on a tolerance its own loop does not grant. Not fixed: ruling 3 of this run kept the two receiver-side usability rules untouched, and a fix made in the last available cycle would ship unreviewed ← 1/2: r2:M2
 - [M4] carried — the fix-prompt paragraph that forbids naming a plugin skill now ends by describing the marker exemption, which states a bypass to the one agent the prohibition targets; reviewer proposes adding an explicit prohibition on quoting a marker to obtain the exemption. Not fixed: a new rule for the fix subagent is beyond this branch, and the last verification cycle is spent ← 1/2: r2:M3
+
+_Completed — 2026-09-07 — cap reached — HEAD 82bb81ef504c7f00c5356ed002e687f067483cef_
+Secrets found: none
