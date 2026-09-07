@@ -162,8 +162,9 @@ this platform lacks` — and stop.
 - **Return contract:** the four templates tell the controller to make
   `<!-- orchestration report -->` its first line, and that instruction does
   not change. You
-  accept a return when a line whose surrounding whitespace is removed
-  **equals** `<!-- orchestration report -->` and is among the **first 10
+  accept a return when a line whose surrounding whitespace (a trailing `\r`
+  of a message using CRLF line endings included) is removed **equals**
+  `<!-- orchestration report -->` and is among the **first 10
   non-blank lines** of the final message; blank lines are skipped and do not
   consume that budget. Content after the marker on the marker line makes the
   return malformed under this equality test, even though the hook that also
