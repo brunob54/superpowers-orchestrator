@@ -598,11 +598,20 @@ code has been revised since, so a re-pass is meaningful):
       do not read any other file in that directory — which is the one
       sanctioned exception to the template's "Nothing else may be added
       to the prompt" rule.
-3. **Validate each report and consolidate:** a report is usable when its
-   first line is `<!-- multi-review report -->` and a Verdict block is
-   present. Each unusable report → retry the identical dispatch once,
-   keeping the same reviewer number; the retries of one round may go out
-   together in one message. After the retries, *u* = the number of usable
+3. **Validate each report and consolidate:** a report is usable when a
+   line whose surrounding whitespace (a trailing `\r` of a message using
+   CRLF line endings included) is removed starts with the marker
+   `<!-- multi-review report -->` and is among the first 10 non-blank
+   lines of the message; blank lines are skipped and do not consume that
+   budget, and a line holding only spaces counts as blank. A Verdict
+   block must stand below that marker line — a report whose qualifying
+   marker line is its last non-blank line is unusable. The first such
+   marker line begins the report; everything above that line is ignored,
+   and the Verdict block and the enumerated findings are read only from
+   that line downward. Each unusable report →
+   retry the identical dispatch once, keeping the same reviewer number; the
+   retries of one round may go out together in one message. After the
+   retries, *u* = the number of usable
    reports. u = 0 → write the round entry in the `inconclusive` form
    (never clean; nothing is triaged), then read the M final messages and
    decide which of the two u = 0 cases this is. The round is fatal only
@@ -612,10 +621,10 @@ code has been revised since, so a re-pass is meaningful):
    at all. Test that observably: a message that names files or hunks of
    the diff, or that carries a Findings or Verdict section, shows the
    prompt file's content and is NOT such a sign. A report unusable on
-   format alone therefore never makes the round fatal — a preamble line
-   before the `<!-- multi-review report -->` marker, or a missing Verdict
-   block, means the reviewer read its prompt file and reviewed the diff
-   and only the format failed. When at least one message shows no sign of
+   format alone therefore never makes the round fatal — a marker that first
+   appears below the report's 10th non-blank line, or a missing Verdict
+   block, means the reviewer read its prompt file and reviewed the diff and
+   only the format failed. When at least one message shows no sign of
    the prompt file's content, the pointer mechanism failed: stop and
    return `BLOCKED: no reviewer of round <i> could use its prompt file —
    <each reviewer's final message, one line each>`; a round in which a
@@ -812,8 +821,15 @@ code has been revised since, so a re-pass is meaningful):
      number for `<i>`. Its complete rules are the body of
      `./fix-prompt.md` and are not restated here; one reason stays in this
      file because the template does not carry it: `hooks/subagent-guard.js`
-     blocks a subagent's final message that names a roster skill without
-     the report marker, and only reviewers emit that marker. Dispatch it
+     blocks a subagent's final message that matches one of its
+     skill-leakage patterns (a plugin skill name paired with an action
+     verb, and four patterns that match without pairing an action verb
+     with a plugin skill name at all) only when none of the message's
+     first 10 non-blank lines starts with a report marker, so a message
+     that quotes a marker line at the start of one of its first 10
+     non-blank lines is exempt too; the
+     fix subagent's final message carries no report marker, so it must
+     not name a plugin skill. Dispatch it
      by pointer: write the list to `<PROMPT_DIR>/round-<i>-findings.txt`
      under the value-file rule. When the loop started over pre-existing
      uncommitted changes the user consented to (Working-tree
@@ -1828,8 +1844,9 @@ completed invocation only on explicit user request.
   content, and continue the loop otherwise. A final message shows a sign
   of the prompt file's content when it names files or hunks of the diff,
   or carries a Findings or Verdict section; a report unusable on format
-  alone — a preamble line before the marker, a missing Verdict block —
-  whose text shows the diff was reviewed is therefore not a pointer
+  alone — a marker that first appears below the report's 10th non-blank
+  line, a missing Verdict block — whose text shows the diff was reviewed is
+  therefore not a pointer
   failure: that round is logged `inconclusive` and the loop continues,
   exactly as a round whose final messages all show an environment death
   (a usage limit, a tool error, no message at all). A reviewer that reads another
@@ -1857,7 +1874,10 @@ completed invocation only on explicit user request.
 ## Guard Interaction
 
 Reviewer reports open with `<!-- multi-review report -->` —
-`hooks/subagent-guard.js` exempts messages opening with that marker from
-skill-leakage blocking (code reviews in this repository legitimately
-quote skill names). Never remove the marker instruction from
-`reviewer-prompt.md`.
+`hooks/subagent-guard.js` exempts a message from skill-leakage blocking when
+one of its first 10 non-blank lines starts with that marker (code reviews in
+this repository legitimately quote skill names), so a report with a sentence
+above its marker line is still exempt. The validation step above uses
+that same 10-non-blank-line window; only `reviewer-prompt.md` still tells
+the reviewer to make the marker its first output line. Never remove the
+marker instruction from `reviewer-prompt.md`.

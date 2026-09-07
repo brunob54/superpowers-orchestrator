@@ -110,11 +110,20 @@ For each round `i` in 1..N:
    or binds a shared resource (a fixed port, a fixed temporary path, a
    shared test database) — read-only inspection only; anything that must
    run is run once by the controller.
-2. **Validate each report and consolidate:** a report is usable when its
-   first line is `<!-- multi-review report -->` and a Verdict block is
-   present. Each unusable report → retry the identical dispatch once,
-   keeping the same reviewer number; the retries of one round may go out
-   together in one message. After the retries, *u* = the number of usable
+2. **Validate each report and consolidate:** a report is usable when a
+   line whose surrounding whitespace (a trailing `\r` of a message using
+   CRLF line endings included) is removed starts with the marker
+   `<!-- multi-review report -->` and is among the first 10 non-blank
+   lines of the message; blank lines are skipped and do not consume that
+   budget, and a line holding only spaces counts as blank. A Verdict
+   block must stand below that marker line — a report whose qualifying
+   marker line is its last non-blank line is unusable. The first such
+   marker line begins the report; everything above that line is ignored,
+   and the Verdict block and the enumerated findings are read only from
+   that line downward. Each unusable report →
+   retry the identical dispatch once, keeping the same reviewer number; the
+   retries of one round may go out together in one message. After the
+   retries, *u* = the number of usable
    reports. u = 0 → log the round as `inconclusive` (nothing is triaged,
    the clean streak is broken) and continue to the next round. u ≥ 1 →
    build one **consolidated finding set** from the usable reports by the
@@ -499,8 +508,11 @@ invocation note (which carries `M=` like every other); failed rounds get
 
 ## Guard Interaction
 
-`hooks/subagent-guard.js` exempts messages opening with
-`<!-- multi-review report -->` from skill-leakage blocking — reviewer reports
-legitimately quote skill names. Never remove the marker instruction from
-`reviewer-prompt.md`; without it, reports about skill-discussing documents
-get blocked and rounds degrade to retries.
+`hooks/subagent-guard.js` exempts a message from skill-leakage blocking when
+one of its first 10 non-blank lines starts with `<!-- multi-review report -->`
+— reviewer reports legitimately quote skill names. A report that carries a
+sentence above its marker line is therefore still exempt. The validation step
+above uses that same 10-non-blank-line window; only `reviewer-prompt.md` still
+tells the reviewer to make the marker its first output line. Never remove the
+marker instruction from `reviewer-prompt.md`; without it, reports about
+skill-discussing documents get blocked and rounds degrade to retries.

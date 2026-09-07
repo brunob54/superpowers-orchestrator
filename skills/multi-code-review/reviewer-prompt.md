@@ -6,9 +6,11 @@ lens comes from SKILL.md's Lens Rotation. The reviewers are not told that
 other reviewers exist.
 
 The marker line in the output format is load-bearing:
-`hooks/subagent-guard.js` exempts messages that OPEN with it from
-skill-leakage blocking. Without it, reports quoting skill names get
-blocked and the round degrades to a retry.
+`hooks/subagent-guard.js` exempts a message from skill-leakage
+blocking when one of its first 10 non-blank lines starts with that
+marker. Without the marker, reports quoting skill names get blocked
+and the round degrades to a retry — so the template keeps requiring
+it as the report's first line.
 
 ```
 Agent tool (general-purpose):

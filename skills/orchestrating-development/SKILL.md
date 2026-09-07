@@ -159,15 +159,68 @@ this platform lacks` — and stop.
   `../subagent-driven-development/SKILL.md`, `../multi-code-review/SKILL.md`.
   Controllers read these files as their procedure; they never use the Skill
   tool. Controllers never write `state.md` — you are its only writer.
-- **Return contract:** first line exactly `<!-- orchestration report -->`
-  (guard exemption); leading token on the next line; hard cap 15 lines;
-  detail goes to files. A return is **malformed** when the marker line or
-  the leading token is absent OR any field you consume (`tasks=`, per-task
-  numbers, `rounds=`, `outcome=`, `unresolved=`, `user_decision=`,
-  `fixes=`) is absent or unparseable. An unparseable stop-rule field never
-  defaults to 0. Malformed return or controller error → retry the identical
-  dispatch once — the same pointer to the same file, no fill and no new
-  file; second failure → major error → stop, logging
+- **Return contract:** the four templates tell the controller to make
+  `<!-- orchestration report -->` its first line, and that instruction does
+  not change. You
+  accept a return when a line whose surrounding whitespace (a trailing `\r`
+  of a message using CRLF line endings included) is removed **equals**
+  `<!-- orchestration report -->` and is among the **first 10
+  non-blank lines** of the final message; blank lines are skipped and do not
+  consume that budget. A line carrying content after the marker is not a
+  qualifying marker line under this equality test, even though the hook that
+  also watches for this marker tolerates such content via a prefix match. Only
+  this marker is searched for: a line equal to
+  another skill's marker is ordinary preamble. When more than one such line
+  is present, the **first** begins the report; everything above it is
+  ignored and is never a reason to retry. When the window holds more than
+  one such marker line, record the note `note: return carried <n> marker
+  lines; parsed from the first` in the orchestration log, with `<n>` the
+  count of lines in the window equal to `<!-- orchestration report -->`,
+  appended under whatever orchestration-
+  log entry that return produces — a `## STOPPED` or `## RULING` entry
+  included. A marker line standing outside the window is neither counted
+  for `<n>` nor a reason to write this note, even when the leading-token
+  rule below skips it. A malformed return produces no phase entry of its own, so no
+  note is written for it, and the `## STOPPED` entry that a second
+  malformed return causes carries no note either, because nothing was
+  parsed; the retry's return is noted on its own terms.
+  The leading token is on the first
+  non-blank line below that marker line that is not itself equal to the
+  marker, searched for only inside the same block every consumed field is
+  read from — the marker line and the 14 raw lines below it; any further
+  line equal to the marker is skipped when locating the leading token, so
+  extra marker lines standing immediately below the first one still reach
+  the note above, while an ordinary non-blank line between two marker
+  lines is itself read as the token line, so the return is malformed only
+  when that line carries no leading token — "non-blank" throughout this
+  bullet, so a line holding only spaces is skipped here exactly as it is
+  skipped in the window. A token standing below that block is not read,
+  and the return is malformed for the token's absence, exactly as an
+  absent token is malformed today. The 15-line cap counts from the
+  marker line, which is line 1 of the 15; it is an instruction to the
+  controller, not a test you run — a longer report is **not** malformed on
+  its length alone.
+  Every field you consume is read only from the marker line and the 14 raw
+  lines below it — blank lines included, so the "non-blank" qualifier used
+  elsewhere in this bullet does not apply to this count. This is not the
+  same count as the four controller templates' 15-line cap: the templates
+  state that cap over the whole final message, whatever number of lines
+  preceded the marker, while this read block is the marker line plus the 14
+  raw lines below it. A value
+  standing below that block is not part of the
+  return this contract describes and is never read — and a consumed field
+  standing there counts as absent, which is malformed under the list below.
+  When a consumed field appears more than once inside the marker line and
+  the 14 raw lines below it, the first occurrence is its value, matching
+  the first-match rule this bullet already applies to a window holding
+  more than one marker line.
+  Detail goes to files. A return is **malformed** when no such marker line
+  is in the window, OR the leading token is absent, OR any field you consume
+  (`tasks=`, per-task numbers, `rounds=`, `outcome=`, `unresolved=`,
+  `user_decision=`, `fixes=`) is absent or unparseable. An unparseable
+  stop-rule field never defaults to 0. Malformed return or controller error
+  → retry the identical dispatch once — the same pointer to the same file,
+  no fill and no new file; second failure → major error → stop, logging
   `inconclusive controller: <phase/batch>`.
 
 ## Phase 0 — Setup (the only interactive moment)
@@ -579,11 +632,15 @@ plan: docs/superpowers-orchestrator/<date>-<slug>/plans/<slug>.md — <T> tasks
 
 ## Phase 3 — Batch 1 (tasks 1–3) — COMPLETE — commits <base7>..<head7>
 - Task 1: complete — <one-line>
+note: return carried <n> marker lines; parsed from the first
 
 ## Phase 4 — Code review — rounds <r> — <converged|cap> — fixes <n> — unresolved 0
 
 _Completed — YYYY-MM-DD — HEAD <sha7>_
 ```
+
+The `note:` line is written only when the window held more than one
+marker line.
 
 An in-run ruling (`## In-run rulings`) writes, instead of a stop, one
 entry per ruled return and re-dispatches the phase:
@@ -1401,17 +1458,35 @@ the ruling records `contradiction: unsettled`. A contradiction, settled or
 not, is recorded in the ruling and surfaced in the Phase 5 report; it is
 never resolved silently.
 
-**Lost returns.** `hooks/subagent-guard.js` exempts a final message that
-opens with the marker line; a message without it that names a plugin
-skill is answered with `decision: block` and a redo instruction, so the
-fork spends another turn rewriting — the notice still arrives, later.
+**Lost returns.** `hooks/subagent-guard.js` exempts a final message when one
+of its first 10 non-blank lines starts with the marker; a message with no
+such line that matches any of the guard's violation patterns is answered
+with `decision: block` and a redo instruction, so the fork spends another
+turn rewriting — the notice still arrives, later.
 
 Every bound below is stated over the **reviewer returns of the round**,
 never over the dispatch type: a lens of a round is dispatched as a fork
 or, under the inheritance rule above, as a fresh `general-purpose`
 subagent, and the bounds read the same for both. A **reviewer's return**
-is **lost** when its completion notice arrives without the marker line,
-or reports that the reviewer failed. A lost return is
+is **lost** when no line among the **first 10 non-blank lines** of the
+reviewer's final message, with its surrounding whitespace removed, starts
+with `<!-- multi-review report -->` — blank lines are skipped and do not
+consume that budget, the same 10-non-blank-line window the Return contract
+above uses; this rule keys on the marker's presence, not on its position
+within that window, and unlike the controller Return contract above it is a
+prefix test, not a whole-line equality test — or when the notice reports
+that the reviewer failed. The same reading rules the controller Return
+contract states above govern a fork's reviewer return: the first line in
+the window that starts with `<!-- multi-review report -->` begins the
+report and everything above it is ignored; the return's `ITEM:`,
+`VERDICT:`, `REASON:`, `CONTRADICTS:` and `TABLED:` lines are read only
+from that marker line and the 24 raw lines below it — blank lines
+included. This is not the same count as the fork prompt's own 25-line
+message cap: the cap is stated over the whole final message, whatever
+number of lines preceded the marker, while this read block is the marker
+line plus the 24 raw lines below it; and when one of those fields
+appears more than once inside that block, the first occurrence is its
+value. A lost return is
 re-dispatched once under the same lens; a second loss leaves that lens out
 and the ruling records `forks: <k> of <planned>`. A completion notice
 that arrives from a dispatch already declared lost is discarded: it is
@@ -2229,15 +2304,30 @@ retry the Write through a Bash command to get around a refusal.
 
 ## Guard Interaction
 
-Controller returns open with `<!-- orchestration report -->`;
-`hooks/subagent-guard.js` exempts messages opening with that marker.
-Never remove the marker instruction from the four templates — free-text
-`BLOCKED` reasons legitimately pair action verbs with skill names, and an
-unmarked return would be blocked, hang the dispatch, and stall the
-unattended run. Nested workers dispatched by batch controllers carry
-SDD's leakage-prevention line; nested reviewers inside the two loop
-controllers emit `<!-- multi-review report -->`, which the guard already
-exempts. Forks dispatched under `## In-run rulings` open their return
+Controller returns open with `<!-- orchestration report -->`.
+`hooks/subagent-guard.js` exempts a message when one of its first 10
+non-blank lines starts with that marker. A return that carries a sentence
+above its marker line is still exempt. Never remove the marker instruction
+from the four templates — free-text `BLOCKED` reasons legitimately pair
+action verbs with skill names.
+
+Without the marker, the guard answers with `decision: block` and a redo
+instruction when the message matches any of the guard's violation
+patterns. Most of those patterns pair an action verb with a plugin skill
+name. Four patterns match without pairing an action verb with a plugin
+skill name at all: a `Skill(superpowers…` call form, a `skill: <name>`
+field, an "I'm using the … skill" sentence, and "Invoke the
+superpowers-…" sentence. A message with no marker is not blocked only
+when it matches none of the guard's violation patterns. Measured on
+2026-09-06, the dispatch resumed after one extra turn instead of
+stalling. A controller that obeys "redo your assigned task" can repeat
+review rounds and fix commits it has already written. The marker
+instruction stays mandatory for that reason.
+
+Nested workers dispatched by batch controllers carry SDD's
+leakage-prevention line. Nested reviewers inside the two loop controllers
+emit `<!-- multi-review report -->`, which the guard already exempts.
+Forks dispatched under `## In-run rulings` open their return
 with that same `<!-- multi-review report -->` marker; a fork return
 without it is a lost return under that section's rule, never a reason to
 remove the marker instruction from the fork prompt.

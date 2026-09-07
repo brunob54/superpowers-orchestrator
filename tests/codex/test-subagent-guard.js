@@ -9,6 +9,8 @@
  *   - False positive avoidance (bare mentions without action verbs)
  *   - SKILL_NAMES completeness (includes new skills)
  *   - Output shape: decision=block + reason string
+ *   - Marker search window: a marker at the start of any of the first 10
+ *     non-blank lines exempts; the 11th does not
  *
  * Run: node tests/codex/test-subagent-guard.js
  * No dependencies beyond Node.js stdlib.
@@ -64,6 +66,31 @@ function runGuard(lastMessage) {
     if (err.stdout) return JSON.parse(err.stdout.trim());
     throw err;
   }
+}
+
+const REVIEW_MARKER = '<!-- multi-review report -->';
+const ORCHESTRATION_MARKER = '<!-- orchestration report -->';
+const RESEARCH_MARKER = '<!-- research report -->';
+// The window the guard searches, in non-blank lines. Kept in step with
+// MARKER_SEARCH_LINES in hooks/subagent-guard.js.
+const WINDOW = 10;
+// A body that pairs an action verb with a skill name. Every exemption test
+// carries one, so the test fails on the unmodified guard instead of passing
+// vacuously — the convention this file already states at its whitespace tests.
+const VERB_SKILL_BODY =
+  'BLOCKED task=3: plan says use executing-plans semantics but the spec forbids it.';
+
+/**
+ * A message whose Nth non-blank line is `marker`, with (n - 1) lines of
+ * narration above it and a verb+skill body below.
+ */
+function markerOnNonBlankLine(marker, n) {
+  const lines = [];
+  for (let i = 1; i < n; i++) {
+    lines.push(`Narration line ${i} of the controller's own summary.`);
+  }
+  lines.push(marker, VERB_SKILL_BODY);
+  return lines.join('\n');
 }
 
 // ── SKILL_NAMES completeness ─────────────────────────────────────────────────
@@ -266,9 +293,9 @@ test('Marker-prefixed report quoting skill names is exempt', () => {
   assert.deepStrictEqual(out, {});
 });
 
-test('Marker mid-message does not exempt', () => {
-  const out = runGuard('I was invoking brainstorming.\n<!-- multi-review report -->');
-  assert.strictEqual(out.decision, 'block');
+test('multi-review marker on the second non-blank line exempts', () => {
+  const out = runGuard(`I was invoking brainstorming.\n${REVIEW_MARKER}\n${VERB_SKILL_BODY}`);
+  assert.deepStrictEqual(out, {});
 });
 
 test('Leading whitespace before marker still exempts', () => {
@@ -332,9 +359,9 @@ test('same skill-naming BLOCKED text without the marker is blocked', () => {
   assert.strictEqual(out.decision, 'block');
 });
 
-test('orchestration marker after the first line does not exempt', () => {
-  const out = runGuard('I was using executing-plans.\n<!-- orchestration report -->');
-  assert.strictEqual(out.decision, 'block');
+test('orchestration marker on the second non-blank line exempts', () => {
+  const out = runGuard(`I was using executing-plans.\n${ORCHESTRATION_MARKER}\n${VERB_SKILL_BODY}`);
+  assert.deepStrictEqual(out, {});
 });
 
 test('leading whitespace before the orchestration marker still exempts', () => {
@@ -380,9 +407,9 @@ test('Marker-prefixed research report quoting skill names is exempt', () => {
   assert.deepStrictEqual(out, {});
 });
 
-test('Research marker mid-message does not exempt', () => {
-  const out = runGuard('I was invoking brainstorming.\n<!-- research report -->');
-  assert.strictEqual(out.decision, 'block');
+test('research marker on the second non-blank line exempts', () => {
+  const out = runGuard(`I was invoking brainstorming.\n${RESEARCH_MARKER}\n${VERB_SKILL_BODY}`);
+  assert.deepStrictEqual(out, {});
 });
 
 test('Leading whitespace before research marker still exempts', () => {
@@ -390,6 +417,120 @@ test('Leading whitespace before research marker still exempts', () => {
   // guard — a benign body would pass vacuously.
   const out = runGuard('  <!-- research report -->\nSummary: the docs recommend using refactoring before adoption.');
   assert.deepStrictEqual(out, {});
+});
+
+// ── Marker search window ─────────────────────────────────────────────────────
+
+console.log('\nMarker search window');
+
+test('The marker search window is a single named constant', () => {
+  const declarations = source.match(/const\s+MARKER_SEARCH_LINES\b/g) || [];
+  assert.strictEqual(
+    declarations.length, 1,
+    `Expected exactly one MARKER_SEARCH_LINES declaration, found ${declarations.length}`
+  );
+  assert.ok(
+    /const\s+MARKER_SEARCH_LINES\s*=\s*10\s*;/.test(source),
+    'MARKER_SEARCH_LINES must be 10'
+  );
+});
+
+test('The hook comments state the window rule', () => {
+  assert.ok(
+    !/opens with/.test(source),
+    'No comment in hooks/subagent-guard.js may still say a marker "opens with" the message'
+  );
+  assert.ok(
+    source.includes('MARKER_SEARCH_LINES non-blank lines'),
+    'The hook comments must state the window in terms of MARKER_SEARCH_LINES non-blank lines'
+  );
+});
+
+for (const [label, marker] of [
+  ['multi-review', REVIEW_MARKER],
+  ['orchestration', ORCHESTRATION_MARKER],
+  ['research', RESEARCH_MARKER],
+]) {
+  test(`${label} marker on the 10th non-blank line exempts`, () => {
+    const out = runGuard(markerOnNonBlankLine(marker, WINDOW));
+    assert.deepStrictEqual(out, {}, `Expected exempt, got: ${JSON.stringify(out)}`);
+  });
+
+  test(`${label} marker on the 11th non-blank line does not exempt`, () => {
+    const out = runGuard(markerOnNonBlankLine(marker, WINDOW + 1));
+    assert.strictEqual(out.decision, 'block', `Expected block, got: ${JSON.stringify(out)}`);
+  });
+}
+
+test('Twelve blank lines before the marker still exempt (blanks do not consume the window)', () => {
+  const message = new Array(12).fill('').concat([ORCHESTRATION_MARKER, VERB_SKILL_BODY]).join('\n');
+  const out = runGuard(message);
+  assert.deepStrictEqual(out, {}, `Expected exempt, got: ${JSON.stringify(out)}`);
+});
+
+// This case documents the intended behaviour: a line holding only
+// whitespace is blank and does not consume the window. It does not
+// distinguish trim() from trimStart(), because trailing whitespace can
+// never affect a startsWith test, and either function empties a line
+// that holds only a carriage return.
+test('Twelve CRLF blank lines before the marker still exempt', () => {
+  const message = new Array(12).fill('').concat([ORCHESTRATION_MARKER, VERB_SKILL_BODY]).join('\r\n');
+  const out = runGuard(message);
+  assert.deepStrictEqual(out, {}, `Expected exempt, got: ${JSON.stringify(out)}`);
+});
+
+// This case documents the intended behaviour: a line holding only
+// whitespace is blank and does not consume the window. It does not
+// distinguish trim() from trimStart(), because trailing whitespace can
+// never affect a startsWith test, and either function empties a
+// spaces-only line.
+test('Twelve spaces-only lines before the marker still exempt', () => {
+  const message = new Array(12).fill('   ').concat([ORCHESTRATION_MARKER, VERB_SKILL_BODY]).join('\n');
+  const out = runGuard(message);
+  assert.deepStrictEqual(out, {}, `Expected exempt, got: ${JSON.stringify(out)}`);
+});
+
+test('Marker followed by text on the first line still exempts (prefix match)', () => {
+  const out = runGuard([
+    '<!-- orchestration report --> REVIEW_DONE rounds=2',
+    'The loop finished by using multi-code-review semantics.',
+  ].join('\n'));
+  assert.deepStrictEqual(out, {}, `Expected exempt, got: ${JSON.stringify(out)}`);
+});
+
+test('A marker quoted after other text on its line does not exempt', () => {
+  const out = runGuard([
+    'Round 1 findings:',
+    `- [C1] the ${ORCHESTRATION_MARKER} marker is described wrongly | reword`,
+    'I was using executing-plans to check that.',
+  ].join('\n'));
+  assert.strictEqual(out.decision, 'block', `Expected block, got: ${JSON.stringify(out)}`);
+});
+
+test('Leading whitespace before a marker on the third non-blank line still exempts', () => {
+  const out = runGuard([
+    'Self-Review complete.',
+    'No spec requirement is left without a task.',
+    `   ${ORCHESTRATION_MARKER}`,
+    VERB_SKILL_BODY,
+  ].join('\n'));
+  assert.deepStrictEqual(out, {}, `Expected exempt, got: ${JSON.stringify(out)}`);
+});
+
+test('Two marker lines inside the window exempt', () => {
+  const out = runGuard([
+    'The round 2 reviewer returned this, quoted below in full.',
+    REVIEW_MARKER,
+    'Quoted above from the round 2 reviewer return.',
+    ORCHESTRATION_MARKER,
+    'REVIEW_DONE rounds=2 — the loop ran by using multi-code-review semantics.',
+  ].join('\n'));
+  assert.deepStrictEqual(out, {}, `Expected exempt, got: ${JSON.stringify(out)}`);
+});
+
+test('A CRLF message with the marker on the second non-blank line exempts', () => {
+  const out = runGuard(`Self-Review complete.\r\n${ORCHESTRATION_MARKER}\r\n${VERB_SKILL_BODY}\r\n`);
+  assert.deepStrictEqual(out, {}, `Expected exempt, got: ${JSON.stringify(out)}`);
 });
 
 // ── Summary ──────────────────────────────────────────────────────────────────
