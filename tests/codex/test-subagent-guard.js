@@ -468,18 +468,22 @@ test('Twelve blank lines before the marker still exempt (blanks do not consume t
   assert.deepStrictEqual(out, {}, `Expected exempt, got: ${JSON.stringify(out)}`);
 });
 
-// This is the case that pins the TRAILING half of the line trim. With
-// trimStart() alone every blank CRLF line is the single character "\r",
-// counts as non-blank, consumes the window, and pushes the marker out of it.
+// This case documents the intended behaviour: a line holding only
+// whitespace is blank and does not consume the window. It does not
+// distinguish trim() from trimStart(), because trailing whitespace can
+// never affect a startsWith test, and either function empties a line
+// that holds only a carriage return.
 test('Twelve CRLF blank lines before the marker still exempt', () => {
   const message = new Array(12).fill('').concat([ORCHESTRATION_MARKER, VERB_SKILL_BODY]).join('\r\n');
   const out = runGuard(message);
   assert.deepStrictEqual(out, {}, `Expected exempt, got: ${JSON.stringify(out)}`);
 });
 
-// This is the case that pins the TRAILING half of the line trim. With
-// trimStart() alone a spaces-only line would keep its trailing spaces,
-// counts as non-blank, consumes the window, and pushes the marker out of it.
+// This case documents the intended behaviour: a line holding only
+// whitespace is blank and does not consume the window. It does not
+// distinguish trim() from trimStart(), because trailing whitespace can
+// never affect a startsWith test, and either function empties a
+// spaces-only line.
 test('Twelve spaces-only lines before the marker still exempt', () => {
   const message = new Array(12).fill('   ').concat([ORCHESTRATION_MARKER, VERB_SKILL_BODY]).join('\n');
   const out = runGuard(message);

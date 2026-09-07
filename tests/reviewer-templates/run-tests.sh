@@ -86,6 +86,20 @@ assert_file_not_contains() { # desc file needle
 assert_file_has_line() { # desc file exact-line (whole-line match, fixed string)
   if grep -qxF -- "$3" "$2"; then ok "$1"; else bad "$1 (no line exactly: $3)"; fi
 }
+# Join the lines of file $1 into one line — each line trimmed of leading and
+# trailing blanks, lines separated by one space — so that a prose fragment
+# that the text wraps across a line break still matches as one fixed
+# string. Whole-line needles never go through this; they use
+# assert_file_has_line on the unfolded file.
+fold_file() { # file
+  awk '{ line = $0; sub(/^[ \t]+/, "", line); sub(/[ \t]+$/, "", line); if (NR > 1) printf " "; printf "%s", line } END { print "" }' "$1"
+}
+assert_folded_contains() { # desc file needle (fixed string, matched across line breaks)
+  if fold_file "$2" | grep -qF -- "$3"; then ok "$1"; else bad "$1 (missing: $3)"; fi
+}
+assert_folded_not_contains() { # desc file needle (fixed string, matched across line breaks)
+  if fold_file "$2" | grep -qF -- "$3"; then bad "$1 (must not contain: $3)"; else ok "$1"; fi
+}
 
 # Line number of the first line containing the fixed string $2 in file $1;
 # empty when absent.
@@ -324,17 +338,17 @@ else
   bad "multi-doc-review SKILL.md: could not locate step 2 (Validate each report and consolidate) range"
 fi
 
-assert_file_contains "multi-code-review step 3: marker accepted anywhere in the first 10 non-blank lines" "$CODE_VALIDATE_RANGE" "$MARKER_ANYWHERE"
-assert_file_contains "multi-code-review step 3: Verdict block must stand below the marker line" "$CODE_VALIDATE_RANGE" "$VERDICT_BELOW"
-assert_file_contains "multi-code-review step 3: marker as last non-blank line is unusable" "$CODE_VALIDATE_RANGE" "$LAST_LINE_UNUSABLE"
-assert_file_contains "multi-code-review step 3: everything above the marker line is ignored" "$CODE_VALIDATE_RANGE" "$ABOVE_IGNORED"
-assert_file_not_contains "multi-code-review SKILL.md: pre-change first-line-only wording absent" "$CODE_SKILL" "$OLD_FIRST_LINE_RULE"
+assert_folded_contains "multi-code-review step 3: marker accepted anywhere in the first 10 non-blank lines" "$CODE_VALIDATE_RANGE" "$MARKER_ANYWHERE"
+assert_folded_contains "multi-code-review step 3: Verdict block must stand below the marker line" "$CODE_VALIDATE_RANGE" "$VERDICT_BELOW"
+assert_folded_contains "multi-code-review step 3: marker as last non-blank line is unusable" "$CODE_VALIDATE_RANGE" "$LAST_LINE_UNUSABLE"
+assert_folded_contains "multi-code-review step 3: everything above the marker line is ignored" "$CODE_VALIDATE_RANGE" "$ABOVE_IGNORED"
+assert_folded_not_contains "multi-code-review SKILL.md: pre-change first-line-only wording absent" "$CODE_SKILL" "$OLD_FIRST_LINE_RULE"
 
-assert_file_contains "multi-doc-review step 2: marker accepted anywhere in the first 10 non-blank lines" "$DOC_VALIDATE_RANGE" "$MARKER_ANYWHERE"
-assert_file_contains "multi-doc-review step 2: Verdict block must stand below the marker line" "$DOC_VALIDATE_RANGE" "$VERDICT_BELOW"
-assert_file_contains "multi-doc-review step 2: marker as last non-blank line is unusable" "$DOC_VALIDATE_RANGE" "$LAST_LINE_UNUSABLE"
-assert_file_contains "multi-doc-review step 2: everything above the marker line is ignored" "$DOC_VALIDATE_RANGE" "$ABOVE_IGNORED"
-assert_file_not_contains "multi-doc-review SKILL.md: pre-change first-line-only wording absent" "$DOC_SKILL" "$OLD_FIRST_LINE_RULE"
+assert_folded_contains "multi-doc-review step 2: marker accepted anywhere in the first 10 non-blank lines" "$DOC_VALIDATE_RANGE" "$MARKER_ANYWHERE"
+assert_folded_contains "multi-doc-review step 2: Verdict block must stand below the marker line" "$DOC_VALIDATE_RANGE" "$VERDICT_BELOW"
+assert_folded_contains "multi-doc-review step 2: marker as last non-blank line is unusable" "$DOC_VALIDATE_RANGE" "$LAST_LINE_UNUSABLE"
+assert_folded_contains "multi-doc-review step 2: everything above the marker line is ignored" "$DOC_VALIDATE_RANGE" "$ABOVE_IGNORED"
+assert_folded_not_contains "multi-doc-review SKILL.md: pre-change first-line-only wording absent" "$DOC_SKILL" "$OLD_FIRST_LINE_RULE"
 
 echo
 bold "Results: $PASS passed, $FAIL failed"
