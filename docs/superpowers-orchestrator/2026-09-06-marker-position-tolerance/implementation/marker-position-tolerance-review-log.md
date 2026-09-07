@@ -61,3 +61,8 @@ _Invocation 1 — 2026-09-06 — N=2 M=2 — BASE..HEAD f112faa..c41d44c — bra
 - [M1] carried — taking the FIRST qualifying marker line makes a controller's self-correction unreachable; this is the same open item already logged `user-decision` as round 2 [I2] and verification 1 [I1], and it is Minor here, so it carries rather than opening a second item ← 2/2: r1:M1, r2:M1
 - [M2] fixed — the window qualifier in the loss sentence dangled behind a long subject, so two agents could attach it differently; the same rewrite that fixed [I1] removed the qualifier and stated the test unambiguously → e86c93d ← 2/2: r1:M2, r2:M2
 - [M3] rejected: contradicts binding plan text — Global Constraint 5 "**The hook gains no second condition.** It never checks for a leading token, and its exemption only ever widens." — reviewer proposes tracking code-fence toggles in the window scan so a marker quoted inside a fence stops exempting; that is a second condition and it narrows the exemption ← 1/2: r2:M3
+
+_Note — verification cycle 3 was dispatched over e86c93d and interrupted before any reviewer returned a report, so no entry is written for it (Error Handling: a failure before any reviewer report of the round owes no round entry). The fix commit e86c93d therefore ships without a later review round over it._
+
+_Completed — 2026-09-07 — cap reached — HEAD e86c93dfc1a4d49f6d7b0c35f8172d98453947c6_
+Secrets found: none
