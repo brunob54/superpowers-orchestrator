@@ -174,10 +174,14 @@ this platform lacks` — and stop.
   ignored and is never a reason to retry. When the window holds more than
   one such marker line, record the note `note: return carried <n> marker
   lines; parsed from the first` in the orchestration log, with `<n>` the
-  count of lines in the window equal to `<!-- orchestration report -->`,
+  count of lines in the window equal to `<!-- orchestration report -->` —
+  a marker line standing outside the window is neither counted for `<n>`
+  nor a reason to write this note, even when the leading-token rule below
+  skips it,
   appended under whatever orchestration-
   log entry that return produces — a `## STOPPED` or `## RULING` entry
-  included.
+  included. A malformed return produces no orchestration-log entry, so no
+  note is written for it; the retry's return is noted on its own terms.
   The leading token is on the first
   non-blank line below that marker line that is not itself equal to the
   marker — any further line equal to the marker is skipped when locating the
@@ -192,8 +196,11 @@ this platform lacks` — and stop.
   its length alone.
   Every field you consume is read only from the marker line and the 14 raw
   lines below it — blank lines included, so the "non-blank" qualifier used
-  elsewhere in this bullet does not apply to this count, matching the
-  15-line cap the four controller templates give the controller; a value
+  elsewhere in this bullet does not apply to this count. This is not the
+  same count as the four controller templates' 15-line cap: the templates
+  state that cap over the whole final message, whatever number of lines
+  preceded the marker, while this read block is the marker line plus the 14
+  raw lines below it. A value
   standing below that block is not part of the
   return this contract describes and is never read — and a consumed field
   standing there counts as absent, which is malformed under the list below.
