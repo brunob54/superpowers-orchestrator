@@ -197,6 +197,10 @@ this platform lacks` — and stop.
   standing below that block is not part of the
   return this contract describes and is never read — and a consumed field
   standing there counts as absent, which is malformed under the list below.
+  When a consumed field appears more than once inside the marker line and
+  the 14 raw lines below it, the first occurrence is its value, matching
+  the first-match rule this bullet already applies to a window holding
+  more than one marker line.
   Detail goes to files. A return is **malformed** when no such marker line
   is in the window, OR the leading token is absent, OR any field you consume
   (`tasks=`, per-task numbers, `rounds=`, `outcome=`, `unresolved=`,
@@ -1440,20 +1444,22 @@ never resolved silently.
 
 **Lost returns.** `hooks/subagent-guard.js` exempts a final message when one
 of its first 10 non-blank lines starts with the marker; a message with no
-such line that names a plugin skill is answered with `decision: block` and a
-redo instruction, so the fork spends another turn rewriting — the notice
-still arrives, later.
+such line that matches any of the guard's violation patterns is answered
+with `decision: block` and a redo instruction, so the fork spends another
+turn rewriting — the notice still arrives, later.
 
 Every bound below is stated over the **reviewer returns of the round**,
 never over the dispatch type: a lens of a round is dispatched as a fork
 or, under the inheritance rule above, as a fresh `general-purpose`
 subagent, and the bounds read the same for both. A **reviewer's return**
-is **lost** when no line of the reviewer's final message, with its
-surrounding whitespace removed, starts with `<!-- multi-review report -->`
-— this rule keys on the marker's presence, not on its position, and
-unlike the controller Return contract above it is a prefix test, not a
-whole-line equality test — or when the notice reports that the reviewer
-failed. A lost return is
+is **lost** when no line among the **first 10 non-blank lines** of the
+reviewer's final message, with its surrounding whitespace removed, starts
+with `<!-- multi-review report -->` — blank lines are skipped and do not
+consume that budget, the same window every other predicate of this change
+uses; this rule keys on the marker's presence, not on its position within
+that window, and unlike the controller Return contract above it is a
+prefix test, not a whole-line equality test — or when the notice reports
+that the reviewer failed. A lost return is
 re-dispatched once under the same lens; a second loss leaves that lens out
 and the ruling records `forks: <k> of <planned>`. A completion notice
 that arrives from a dispatch already declared lost is discarded: it is
@@ -2277,9 +2283,12 @@ non-blank lines starts with that marker, so a return that carries a sentence
 above its marker line is still exempt. Never remove the marker instruction
 from the four templates — free-text `BLOCKED` reasons legitimately pair
 action verbs with skill names. Without the marker, the guard answers with
-`decision: block` and a redo instruction only when the message also pairs
-an action verb with a skill name; a message with no marker that pairs no
-action verb with a skill name is not blocked.
+`decision: block` and a redo instruction when the message matches any of
+the guard's violation patterns; most of those patterns pair an action verb
+with a plugin skill name, but four match with no action verb at all — a
+`Skill(superpowers…` call form, a `skill: <name>` field, an "I'm using the
+… skill" sentence, and "Invoke the superpowers-…" — so a message with no
+marker is not blocked only when it matches none of those patterns.
 Measured on 2026-09-06, the
 dispatch resumed after one extra turn instead of stalling. But a controller
 that obeys "redo your assigned task" can repeat review rounds and fix
