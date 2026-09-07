@@ -77,3 +77,11 @@ note: this is the last in-run resume the cap allows. A fourth open return of
 this phase escalates every open item as `chain` and stops the run for the user.
 The ruling therefore dispatches one fix, not two: the second item's only
 non-contradicting remedy is a comment, which is recorded for the release step.
+
+## RULING 9 — 2026-09-07 — phase 4 — the in-run resume cap is reached; all three items escalate as chain
+Items: [I2] escalated (chain) — (the round 1 cap-wording item) the Return contract bullet states the 15-line cap two incompatible ways
+Items: [I4] escalated (chain) — (the round 1 token-search item) the leading-token search is unbounded while consumed fields are bounded
+Items: [I1] escalated (chain) — (the round 2 receiver-side usability item) the hook widened while the two review skills kept the first-line usability test, reproduced by both reviewers
+Detail: docs/superpowers-orchestrator/2026-09-06-marker-position-tolerance/plans/marker-position-tolerance-open-decisions.md
+Forks: none — contradiction: none
+Re-dispatch: none — escalated

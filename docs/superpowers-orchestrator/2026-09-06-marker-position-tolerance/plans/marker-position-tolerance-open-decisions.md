@@ -73,3 +73,30 @@ Ruling record for the orchestration run. Appended, never rewritten.
 - **Defensible answers:** n/a
 - **Forks:** none
 - **Resolution:** plan governs: "A leaking subagent that emits an exact marker at the start of one of its first 10 non-blank lines is exempt; that was already true at line 1 and the prompt instruction remains the first layer of defence." — docs/superpowers-orchestrator/2026-09-06-marker-position-tolerance/plans/marker-position-tolerance.md — the plan accepted this residual by name before the work began, and the spec's Failure-mode check accepted it too; the reviewer's narrowing contradicts Global Constraints 2 and 5, which forbid the hook gaining a second condition and require its exemption only ever to widen. The reviewer's own second alternative — record the accepted residual in the `hasReportMarker` comment — changes no behaviour and is recorded for the release step rather than dispatched here, because this is the last in-run resume the cap allows and a comment carries no verification risk worth spending it on. What is new in this finding is the scale (16 files carry a bare marker line), not the risk; the scale is recorded here so the release-step note can cite it.
+
+## Ruling 9 — 2026-09-07 — phase 4 — [I2] The Return contract states the 15-line cap two incompatible ways
+
+- **Class:** escalated (chain)
+- **Item:** [I2 inv 4] Important skills/orchestrating-development/SKILL.md:195 — the same bullet says "The 15-line cap counts from the marker line, which is line 1 of the 15" and, four lines later, "the templates state that cap over the whole final message, whatever number of lines preceded the marker". The four templates say `## Return (final message, 15 lines max)`, so the second is true and the first misdescribes the instruction it attributes to the controller. Raised in round 1 of invocation 4.
+- **Contract clause:** "**The 15-line cap counts from the marker line, which is line 1 of the 15, and exceeding it is not a malformed condition.**" — docs/superpowers-orchestrator/2026-09-06-marker-position-tolerance/plans/marker-position-tolerance.md, Global Constraint 4
+- **Defensible answers:** (a) restate the cap sentence as the templates state it, amending Global Constraint 4's verbatim wording; (b) leave the constraint and change only the skill sentence that misdescribes it.
+- **Forks:** none — the cap was reached before this return, so no ruling was made
+- **Resolution:** escalated — the fourth open return of Phase 4 reached the in-run resume cap of 3, so every open item of this return is `escalated (chain)` whatever its own class would have been. This one would otherwise have been a design item: it amends the verbatim wording of a Global Constraint the user's own spec fixed.
+
+## Ruling 10 — 2026-09-07 — phase 4 — [I4] The leading-token search is unbounded while consumed fields are bounded
+
+- **Class:** escalated (chain)
+- **Item:** [I4 inv 4] Important skills/orchestrating-development/SKILL.md:187 — the leading token is located by an unbounded search ("the first non-blank line below that marker line"), so a `BLOCKED` token standing 20 blank lines below the marker, outside the marker line plus 14 lines, is read as the return's token and stops the run. Ruling 2 closed exactly this hole for consumed fields; the token, which selects the phase outcome, was left unbounded. Raised in round 1 of invocation 4.
+- **Contract clause:** "Must convey, all of: the templates still tell the controller to put the mar…" — docs/superpowers-orchestrator/2026-09-06-marker-position-tolerance/plans/marker-position-tolerance.md, Task 2 Contract
+- **Defensible answers:** (a) bound the token search to the marker line and the 14 lines below it, amending the Task 2 Contract's Must-convey wording; (b) leave it unbounded because a 20-blank-line gap has never been observed.
+- **Forks:** none — the cap was reached before this return, so no ruling was made
+- **Resolution:** escalated — `chain`, as above. On the merits it is the same hole ruling 2 closed for consumed fields, one step further; a resumed run should expect answer (a).
+
+## Ruling 11 — 2026-09-07 — phase 4 — [I1] The receiver-side usability test, raised a third time and now reproduced
+
+- **Class:** escalated (chain)
+- **Item:** [I1 inv 4] Important — the hook exemption is widened to the first 10 non-blank lines while `multi-code-review` and `multi-doc-review` keep their usability test at "first line is the marker", so the exact message shape the branch newly lets through is discarded downstream, and the guard block that previously sent the reviewer back is gone. Both reviewers reproduced it against the two predicates (the new guard returns `{}` where the pre-change one returned `decision: block`), and both note that the plan's Goal line names a reviewer report as well. Raised in round 2 of invocation 4; the same question was ruled `plan governs` as ruling 3 of invocation 1.
+- **Contract clause:** "The skill-side usability rules of the other two markers are untouched: `skills/multi-code-review/SKILL.md:602`, `skills/multi-doc-review/SKILL.md:114`," — docs/superpowers-orchestrator/2026-09-06-marker-position-tolerance/plans/marker-position-tolerance.md, Task 4
+- **Defensible answers:** (a) widen the usability test in both skills to the same 10-non-blank-line window; (b) state in both Guard Interaction sections that the retry is now the only repair; (c) keep the plan as written, as ruling 3 decided.
+- **Forks:** none — the cap was reached before this return, so no ruling was made
+- **Resolution:** escalated — `chain`, as above. It is also the one item of this run that a ruling should no longer decide alone: three lenses chose (c) at invocation 1 on the argument that a block never repaired a preambled report, and reviewers have raised it again in every invocation since, now with a reproduction and with the plan's own Goal line as evidence against (c). The author should decide it.
