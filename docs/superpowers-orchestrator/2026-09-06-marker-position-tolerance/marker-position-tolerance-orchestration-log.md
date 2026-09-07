@@ -115,3 +115,11 @@ also corrects the record on Amendment 1: its stated ground (token-gating narrows
 what is accepted) is true of last-match only, and all three lenses conceded that
 token-gated first-match is a strict superset. The rejection stands on the spec and
 on fail-safe versus fail-unsafe instead.
+
+## Phase 4 — Code review — rounds 2 — cap — fixes 4 — unresolved 0
+
+note: the phase ran five review invocations in all, each of 2 rounds at M=2,
+because an `amend plan` ruling moves the effective HEAD and always starts a new
+invocation over the amended plan. The figures on the heading line are the final
+return's. Thirteen rulings were recorded across the phase; three of them were
+escalated to the author at the resume cap and answered on 2026-09-07.
