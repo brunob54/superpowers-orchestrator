@@ -85,3 +85,18 @@ Items: [I1] escalated (chain) — (the round 2 receiver-side usability item) the
 Detail: docs/superpowers-orchestrator/2026-09-06-marker-position-tolerance/plans/marker-position-tolerance-open-decisions.md
 Forks: none — contradiction: none
 Re-dispatch: none — escalated
+
+## STOPPED — 2026-09-07 — phase 4 — in-run resume cap reached with three open items
+Detail: docs/superpowers-orchestrator/2026-09-06-marker-position-tolerance/implementation/marker-position-tolerance-review-log.md
+Open: [I2 inv 4] escalated (chain) — (round 1) the Return contract bullet states the 15-line cap two incompatible ways; the fix amends Global Constraint 4's verbatim wording
+Open: [I4 inv 4] escalated (chain) — (round 1) the leading-token search is unbounded while consumed fields are bounded; the fix amends the Task 2 Contract wording
+Open: [I1 inv 4] escalated (chain) — (round 2) the hook widened while multi-code-review and multi-doc-review keep the first-line usability test; ruled `plan governs` as ruling 3 and raised again in every invocation since
+Ruled: [I2 inv 1] design — (this answers the round 2 first-marker item; verification 1 [I1] is the same item) amend plan: Global Constraint 3 keeps first-match and gains a log note when the window holds more than one marker line; fix it: state the note in the Return contract
+Ruled: [I2 inv 1] forced — (this answers the verification 1 consumed-field item) amend plan: Global Constraint 4 bounds every consumed field to the marker line and the 14 lines below it; fix it: state that bound in the Return contract
+Ruled: [I2 inv 1] design — (this answers the verification 2 receiver-side usability item) plan governs: the plan scopes the three usability rules out, and the guard's block text never mentions the marker, so a block never repaired a preambled report
+Ruled: [I2 inv 2] forced — (this answers the lost-return item raised in round 1, round 2, verification 2 and verification 3) amend plan: Task 3 bounds the lost-return marker test to the first 10 non-blank lines; fix it: bound it in the two sentences of `## In-run rulings`
+Ruled: [I1 inv 2] forced — (this answers the round 2 duplicate-field item) amend plan: Global Constraint 4 takes the first occurrence of a consumed field inside the report block; fix it: state the tie-break in the Return contract
+Ruled: [I2 inv 2] forced — (this answers the verification 3 guard-condition item) fix it: both sentences must say the guard blocks an unmarked message on any violation pattern, four of which need no action verb
+Ruled: [I1 inv 3] forced — (this answers the verification 3 fork-return item) amend plan: Global Constraint 3 applies its three reading rules to a fork's reviewer return, with the fork's 25-line cap; fix it: state them in the `## In-run rulings` fork-return text
+Ruled: [I2 inv 3] forced — (this answers the verification 3 guard-quoting item) plan governs: Task 1's Does-NOT-cover entry accepted this residual by name, and the narrowing contradicts Global Constraints 2 and 5
+Resume: Resume orchestration for docs/superpowers-orchestrator/2026-09-06-marker-position-tolerance/plans/marker-position-tolerance.md
