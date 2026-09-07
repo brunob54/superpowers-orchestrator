@@ -288,3 +288,34 @@ Output (tail):
 ```
 Results: 512 passed, 0 failed
 ```
+
+## Round 1
+
+Findings addressed: I1, M1, M2, M3, M4, M5, CF1.
+
+Command:
+```
+bash tests/reviewer-templates/run-tests.sh
+```
+Output (tail):
+```
+Results: 60 passed, 0 failed
+```
+
+Command:
+```
+bash tests/orchestrating-development/run-tests.sh
+```
+Output (tail):
+```
+Results: 162 passed, 0 failed
+```
+
+Command:
+```
+bash tests/in-run-rulings/run-tests.sh
+```
+Output (tail):
+```
+Results: 512 passed, 0 failed
+```
