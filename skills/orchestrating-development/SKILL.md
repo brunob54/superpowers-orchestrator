@@ -1472,7 +1472,15 @@ consume that budget, the same 10-non-blank-line window the Return contract
 above uses; this rule keys on the marker's presence, not on its position
 within that window, and unlike the controller Return contract above it is a
 prefix test, not a whole-line equality test — or when the notice reports
-that the reviewer failed. A lost return is
+that the reviewer failed. The same reading rules the controller Return
+contract states above govern a fork's reviewer return: the first line in
+the window that starts with `<!-- multi-review report -->` begins the
+report and everything above it is ignored; the return's `ITEM:`,
+`VERDICT:`, `REASON:`, `CONTRADICTS:` and `TABLED:` lines are read only
+from that marker line and the 24 lines below it — the fork's own 25-line
+cap, never the controller's 15-line cap; and when one of those fields
+appears more than once inside that block, the first occurrence is its
+value. A lost return is
 re-dispatched once under the same lens; a second loss leaves that lens out
 and the ruling records `forks: <k> of <planned>`. A completion notice
 that arrives from a dispatch already declared lost is discarded: it is
