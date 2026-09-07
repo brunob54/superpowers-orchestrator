@@ -598,10 +598,10 @@ code has been revised since, so a re-pass is meaningful):
       do not read any other file in that directory — which is the one
       sanctioned exception to the template's "Nothing else may be added
       to the prompt" rule.
-3. **Validate each report and consolidate:** a report is usable when its
-   first line is `<!-- multi-review report -->` and a Verdict block is
-   present. Each unusable report → retry the identical dispatch once,
-   keeping the same reviewer number; the retries of one round may go out
+3. **Validate each report and consolidate:** a report is usable when the
+   marker line `<!-- multi-review report -->` starts one of its first 10
+   non-blank lines and a Verdict block is present. Each unusable report →
+   retry the identical dispatch once, keeping the same reviewer number; the retries of one round may go out
    together in one message. After the retries, *u* = the number of usable
    reports. u = 0 → write the round entry in the `inconclusive` form
    (never clean; nothing is triaged), then read the M final messages and

@@ -110,10 +110,10 @@ For each round `i` in 1..N:
    or binds a shared resource (a fixed port, a fixed temporary path, a
    shared test database) — read-only inspection only; anything that must
    run is run once by the controller.
-2. **Validate each report and consolidate:** a report is usable when its
-   first line is `<!-- multi-review report -->` and a Verdict block is
-   present. Each unusable report → retry the identical dispatch once,
-   keeping the same reviewer number; the retries of one round may go out
+2. **Validate each report and consolidate:** a report is usable when the
+   marker line `<!-- multi-review report -->` starts one of its first 10
+   non-blank lines and a Verdict block is present. Each unusable report →
+   retry the identical dispatch once, keeping the same reviewer number; the retries of one round may go out
    together in one message. After the retries, *u* = the number of usable
    reports. u = 0 → log the round as `inconclusive` (nothing is triaged,
    the clean streak is broken) and continue to the next round. u ≥ 1 →

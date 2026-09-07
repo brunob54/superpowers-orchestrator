@@ -186,13 +186,17 @@ this platform lacks` — and stop.
   parsed; the retry's return is noted on its own terms.
   The leading token is on the first
   non-blank line below that marker line that is not itself equal to the
-  marker — any further line equal to the marker is skipped when locating the
-  leading token, so extra marker lines standing immediately below the first
-  one still reach the note above, while an ordinary non-blank line between
-  two marker lines is itself read as the token line, so the return is
-  malformed only when that line carries no leading token — "non-blank" throughout
-  this bullet, so a line holding only spaces is skipped here exactly as it is
-  skipped in the window. The 15-line cap counts from the
+  marker, searched for only inside the same block every consumed field is
+  read from — the marker line and the 14 raw lines below it; any further
+  line equal to the marker is skipped when locating the leading token, so
+  extra marker lines standing immediately below the first one still reach
+  the note above, while an ordinary non-blank line between two marker
+  lines is itself read as the token line, so the return is malformed only
+  when that line carries no leading token — "non-blank" throughout this
+  bullet, so a line holding only spaces is skipped here exactly as it is
+  skipped in the window. A token standing below that block is not read,
+  and the return is malformed for the token's absence, exactly as an
+  absent token is malformed today. The 15-line cap counts from the
   marker line, which is line 1 of the 15; it is an instruction to the
   controller, not a test you run — a longer report is **not** malformed on
   its length alone.
