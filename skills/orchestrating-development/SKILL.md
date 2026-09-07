@@ -166,22 +166,21 @@ this platform lacks` — and stop.
   of a message using CRLF line endings included) is removed **equals**
   `<!-- orchestration report -->` and is among the **first 10
   non-blank lines** of the final message; blank lines are skipped and do not
-  consume that budget. Content after the marker on the marker line makes the
-  return malformed under this equality test, even though the hook that also
-  watches for this marker tolerates such content via a prefix match. Only
+  consume that budget. A line carrying content after the marker is not a
+  qualifying marker line under this equality test, even though the hook that
+  also watches for this marker tolerates such content via a prefix match. Only
   this marker is searched for: a line equal to
   another skill's marker is ordinary preamble. When more than one such line
   is present, the **first** begins the report; everything above it is
   ignored and is never a reason to retry. When the window holds more than
   one such marker line, record the note `note: return carried <n> marker
   lines; parsed from the first` in the orchestration log, with `<n>` the
-  count of lines in the window equal to `<!-- orchestration report -->` —
-  a marker line standing outside the window is neither counted for `<n>`
-  nor a reason to write this note, even when the leading-token rule below
-  skips it,
+  count of lines in the window equal to `<!-- orchestration report -->`,
   appended under whatever orchestration-
   log entry that return produces — a `## STOPPED` or `## RULING` entry
-  included. A malformed return produces no phase entry of its own, so no
+  included. A marker line standing outside the window is neither counted
+  for `<n>` nor a reason to write this note, even when the leading-token
+  rule below skips it. A malformed return produces no phase entry of its own, so no
   note is written for it, and the `## STOPPED` entry that a second
   malformed return causes carries no note either, because nothing was
   parsed; the retry's return is noted on its own terms.
@@ -190,8 +189,8 @@ this platform lacks` — and stop.
   marker — any further line equal to the marker is skipped when locating the
   leading token, so extra marker lines standing immediately below the first
   one still reach the note above, while an ordinary non-blank line between
-  two marker lines still makes the leading token absent, and the return
-  malformed, as before — "non-blank" throughout
+  two marker lines is itself read as the token line, so the return is
+  malformed only when that line carries no leading token — "non-blank" throughout
   this bullet, so a line holding only spaces is skipped here exactly as it is
   skipped in the window. The 15-line cap counts from the
   marker line, which is line 1 of the 15; it is an instruction to the
@@ -1477,8 +1476,11 @@ contract states above govern a fork's reviewer return: the first line in
 the window that starts with `<!-- multi-review report -->` begins the
 report and everything above it is ignored; the return's `ITEM:`,
 `VERDICT:`, `REASON:`, `CONTRADICTS:` and `TABLED:` lines are read only
-from that marker line and the 24 lines below it — the fork's own 25-line
-cap, never the controller's 15-line cap; and when one of those fields
+from that marker line and the 24 raw lines below it — blank lines
+included. This is not the same count as the fork prompt's own 25-line
+message cap: the cap is stated over the whole final message, whatever
+number of lines preceded the marker, while this read block is the marker
+line plus the 24 raw lines below it; and when one of those fields
 appears more than once inside that block, the first occurrence is its
 value. A lost return is
 re-dispatched once under the same lens; a second loss leaves that lens out
@@ -2303,21 +2305,25 @@ Controller returns open with `<!-- orchestration report -->`.
 non-blank lines starts with that marker. A return that carries a sentence
 above its marker line is still exempt. Never remove the marker instruction
 from the four templates — free-text `BLOCKED` reasons legitimately pair
-action verbs with skill names. Without the marker, the guard answers with
-`decision: block` and a redo instruction when the message matches any of
-the guard's violation patterns. Most of those patterns pair an action verb
-with a plugin skill name. Four patterns match without pairing an action
-verb with a plugin skill name at all — a `Skill(superpowers…` call form, a
-`skill: <name>` field, an "I'm using the … skill" sentence, and "Invoke the
-superpowers-…" — so a message with no marker is not blocked only when it
-matches none of the guard's violation patterns. Measured on 2026-09-06, the
-dispatch resumed after one extra turn instead of stalling. But a controller
-that obeys "redo your assigned task" can repeat review rounds and fix
-commits it has already written, so the marker instruction stays mandatory.
-Nested workers dispatched by batch controllers carry
-SDD's leakage-prevention line; nested reviewers inside the two loop
-controllers emit `<!-- multi-review report -->`, which the guard already
-exempts. Forks dispatched under `## In-run rulings` open their return
+action verbs with skill names.
+
+Without the marker, the guard answers with `decision: block` and a redo
+instruction when the message matches any of the guard's violation
+patterns. Most of those patterns pair an action verb with a plugin skill
+name. Four patterns match without pairing an action verb with a plugin
+skill name at all: a `Skill(superpowers…` call form, a `skill: <name>`
+field, an "I'm using the … skill" sentence, and "Invoke the
+superpowers-…" sentence. A message with no marker is not blocked only
+when it matches none of the guard's violation patterns. Measured on
+2026-09-06, the dispatch resumed after one extra turn instead of
+stalling. A controller that obeys "redo your assigned task" can repeat
+review rounds and fix commits it has already written. The marker
+instruction stays mandatory for that reason.
+
+Nested workers dispatched by batch controllers carry SDD's
+leakage-prevention line. Nested reviewers inside the two loop controllers
+emit `<!-- multi-review report -->`, which the guard already exempts.
+Forks dispatched under `## In-run rulings` open their return
 with that same `<!-- multi-review report -->` marker; a fork return
 without it is a lost return under that section's rule, never a reason to
 remove the marker instruction from the fork prompt.
