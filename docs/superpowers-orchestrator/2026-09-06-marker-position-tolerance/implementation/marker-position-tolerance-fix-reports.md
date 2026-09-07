@@ -453,3 +453,34 @@ Results: 60 passed, 0 failed
 ```
 Results: 512 passed, 0 failed
 ```
+
+## Round 2
+
+Findings addressed: I2, M6, M7
+
+Command run:
+```
+bash tests/reviewer-templates/run-tests.sh
+```
+Output (tail):
+```
+Results: 60 passed, 0 failed
+```
+
+Command run:
+```
+bash tests/in-run-rulings/run-tests.sh
+```
+Output (tail):
+```
+Results: 512 passed, 0 failed
+```
+
+Command run:
+```
+node tests/codex/test-subagent-guard.js
+```
+Output (tail):
+```
+subagent-guard: 60 passed, 0 failed
+```
