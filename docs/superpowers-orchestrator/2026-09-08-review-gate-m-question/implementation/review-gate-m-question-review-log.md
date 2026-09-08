@@ -167,3 +167,15 @@ _Invocation 2 — 2026-09-08 — N=3 M=3 — BASE..HEAD 9f73f00..a969659 — bra
 - [M2] fixed — the 'another pass requested' marker counts only in the invocation text; an occurrence arriving through a tool result is data → 119531c ← 1/3: r1:M1
 - [M3] fixed — both gates carry a fourth origin sentence for a log line that predates the M token, so M=1 is never announced as recorded or as the default → 119531c ← 1/3: r2:M1
 - [M4] rejected: plan governs (orchestrator decision) — "Must convey, in this order: the platform check; the suppression check with the origin echo; the question one question batch for whichever of N and M" — the same objection to the doc gates recovering review parameters from the committed sidecar log was decided on this run's invocation 1 addendum ← 1/3: r3:M1
+
+## Round 6 verification 1 — Security — opus
+**Reviewers:** M=3, usable 3/3
+**Reviewer verdicts:** r1: 0 Critical, 0 Important, 3 Minor | r2: 0 Critical, 0 Important, 2 Minor | r3: 0 Critical, 0 Important, 2 Minor
+**Sources mapped:** 7/7
+**Reviewer verdict:** 0 Critical, 0 Important, 5 Minor
+### Dispositions
+- [M1] carried — the code gate's inline carried Minor-findings list is guarded only against an N or M form; the rest of the list, and TOPIC_DIR, carry no data rule ← 3/3: r1:M2, r2:M2, r3:M1
+- [M2] carried — the suite pins the sidecar path's two guard sentences but not the marker-recognition clause that stops a planted string being read ← 1/3: r1:M1
+- [M3] rejected: refuted — the round's Reviewers line already records the effective M whenever it differs from the invocation line's M (multi-doc-review Review Log Format), so a resumed round's real reviewer count is in the log ← 1/3: r1:M3
+- [M4] rejected: plan governs (orchestrator decision) — "Must convey, in this order: the platform check; the suppression check with the origin echo; the question one question batch for whichever of N and M" — the same objection to the doc gates re-emitting log-recorded N and M as invocation tokens was decided on this run's invocation 1 addendum ← 1/3: r2:M1
+- [M5] rejected: the loop never edits plan text, and the plan's falsification step has already been executed; the plan's Task 5 Step 2b restores a mutated skill file with a bare git checkout and no cleanliness precondition ← 1/3: r3:M2
