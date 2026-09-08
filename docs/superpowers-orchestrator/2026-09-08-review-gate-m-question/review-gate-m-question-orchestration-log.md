@@ -29,3 +29,5 @@ Forks: none — contradiction: none
 Re-dispatch: phase 4, in-run resume 1 of 3
 
 ## Phase 4 — Code review — rounds 6 — cap — fixes 9 — unresolved 0
+
+_Completed — 2026-09-08 — HEAD 732bac1_
