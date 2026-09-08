@@ -120,7 +120,7 @@ A single review — even a careful one — inherits the authoring conversation's
 - Reviewers receive only template placeholders (document path, doc type, lens instructions, and — for plans — the spec path); they are barred from the Skill tool, review logs, sibling spec/plan documents, and the target's git history.
 - Convergence is judged from the reviewer's **enumerated findings** (never the count line, never post-triage): a round is clean only when the consolidated finding set is empty **and** every reviewer returned a usable report (u = M). Rejecting findings at triage never makes a round clean, so the controller cannot game the exit. An unusable report is retried once; if any reviewer is still unusable after the retry, the round is logged PARTIAL as `usable <u>/<m>` (never clean), unless every reviewer is unusable (u = 0), which is logged `inconclusive` (breaks the clean streak).
 - Reviewer reports carry the marker `<!-- multi-review report -->` on their first line; `hooks/subagent-guard.js` exempts a message from skill-leakage blocking when one of its first 10 non-blank lines starts with that marker, since reports about skill-discussing documents legitimately quote skill names.
-- N semantics: integer 0–10 (anything else falls back to 3); N=0 skips the loop but logs a `skipped` entry; the loop runs at most once per gate (recorded in the log, surviving restarts).
+- N semantics: integer 0–10 (anything else falls back to 3); N=0 skips the loop but logs a `skipped` entry; the loop runs at most once per gate (recorded in the log, surviving restarts) — except that a recorded `N=0` (skipped) entry does not block a later invocation, and an interrupted entry (not all of its recorded N rounds logged) is resumed rather than blocked.
 
 ### How to use
 
@@ -166,7 +166,7 @@ Dogfood evidence from building it: the design spec collected **33 findings acros
 
 ### How to use
 
-- **Automatic:** at subagent-driven-development's final whole-branch review gate, replacing the former single-pass review; the gate asks you for N and M, and falls back to the single-pass review where `multi-code-review` refuses (no Agent tool, Codex, Cursor).
+- **Automatic:** at subagent-driven-development's final whole-branch review gate, replacing the former single-pass review; in interactive SDD the gate asks you for N and M first, in batched autonomous mode it asks nothing and uses that mode's own rule.
 - **Direct:** `/multi-code-review [BASE] [N|N=<n>] [M=<m>]` — or phrases like `review the branch 3 times` / `several independent code reviews of this branch` / `review the branch 3 times with 2 reviewers per lens`. Single-argument form: an integer 0–10 is N, anything else is a git ref.
 - **Audit trail:** `.superpowers/reviews/<branch-slug>-review-log.md` — or, in a pipeline run, `docs/superpowers-orchestrator/<date>-<slug>/implementation/<slug>-review-log.md`, committed — for per-round verdicts, dispositions, and fix commit SHAs.
 - **Claude Code only** — the loop requires the Agent tool; on Codex and Cursor the SDD gate keeps its single-pass final review.

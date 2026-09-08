@@ -269,9 +269,10 @@ test quality), each round dispatching M identical reviewers in parallel
 (default 1) whose reports are consolidated before triage, with
 Critical/Important findings fixed between rounds and an early exit after two
 consecutive clean rounds — with M > 1 a round is clean only when every
-reviewer returned a usable report. The gate asks you for N and M first;
-each reviewer here reads the whole-branch diff, so M costs more at this
-gate than at the two document gates. The harness-claims rule from Stage 1
+reviewer returned a usable report. In interactive SDD the gate asks you
+for N and M first; in batched autonomous mode it asks nothing and uses
+that mode's own rule. Each reviewer here reads the whole-branch diff, so M
+costs more at this gate than at the two document gates. The harness-claims rule from Stage 1
 applies here as well: a finding built on an untested claim about the agent
 runtime is never escalated to you — the controller runs the named probe
 first, or lists it under `Harness probes owed:`. Throughout, any "done" claim
