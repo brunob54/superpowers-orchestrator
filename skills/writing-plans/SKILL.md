@@ -382,13 +382,17 @@ decides whether the loop runs, resumes or is skipped.` when both were
 recoverable, `Re-invoking multi-doc-review with N=<n>, M=<m> (the log's
 invocation line does not record them, so these are the defaults); the
 skill decides whether the loop runs, resumes or is skipped.` when neither
-was, and `Re-invoking multi-doc-review with N=<n> (recorded on the log's
+was, `Re-invoking multi-doc-review with N=<n> (recorded on the log's
 invocation line), M=<m> (the log does not record it, so this is the
 default); the skill decides whether the loop runs, resumes or is
-skipped.` when only one was — order the clauses to match whichever value
-actually came from which source. Never state an origin the values did not
-have. After the invocation returns, report its outcome — ran, resumed at
-round `k`, or already complete.
+skipped.` when only one was, and `Re-invoking multi-doc-review with
+N=<n> (recorded on the log's invocation line), M=<m> (the log's
+invocation line predates M, so M is read as 1); the skill decides
+whether the loop runs, resumes or is skipped.` when N was recorded and
+the log's invocation line predates M — order the clauses to match
+whichever value actually came from which source. Never state an origin
+the values did not have. After the invocation returns, report its
+outcome — ran, resumed at round `k`, or already complete.
 
 Otherwise ask the user for N and M, in one question batch — whichever of
 the two they have not already stated, and always N when the stated N is 0.
