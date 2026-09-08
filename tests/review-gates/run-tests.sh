@@ -158,6 +158,52 @@ assert_contains "multi-code-review keeps the single-argument form rule" "$MCR_NO
 assert_contains "multi-code-review keeps the Batched Autonomous Mode sentence" "$MCR_NORM" \
   '**Batched Autonomous Mode never asks:**'
 
+# --- Gate spans -------------------------------------------------------
+# Spec gate: checklist item 13 of skills/brainstorming/SKILL.md, up to
+# item 14.
+BS_SPAN="$WORK/bs-span.txt"
+BS_13="$(first_match_from "$BRAINSTORMING" '^13\. ' 1)"
+BS_14="$(first_match_from "$BRAINSTORMING" '^14\. ' "$((${BS_13:-0} + 1))")"
+slice_to "spec gate span (step 13)" "$BRAINSTORMING" "$BS_13" "$BS_14" "$BS_SPAN"
+BS_NORM="$WORK/bs-span-norm.txt"
+normalize_to "$BS_SPAN" "$BS_NORM"
+BS_FILE_NORM="$WORK/bs-file-norm.txt"
+normalize_to "$BRAINSTORMING" "$BS_FILE_NORM"
+
+# Wording contracts shared by every gate.
+ANCHOR='ask the user for N and M'
+D_MARKER='the value of the `<reviewers-per-lens>` tag emitted by'
+D_TAIL='never a parameter'
+COST_LINE='The M reviewers of a round run at the same time, so running time stays close to one review; the token cost grows about M times per round, and the loop runs about N × M reviewers in total.'
+SHARED_PINS=(
+  'in one question batch'
+  'before reading any count as N'
+  'inside quoted or pasted material'
+  'is authoritative and overrides'
+  'never inherited'
+)
+SUPPRESSION='already holds an invocation entry from this gate'
+NO_INVOKE_PHRASE='at most once per gate'
+
+bold "1/3/4/5. Spec gate (brainstorming step 13)"
+assert_icontains "spec gate asks for N and M" "$BS_NORM" "$ANCHOR"
+assert_order "spec gate: platform check before the question" "$BS_NORM" \
+  'lacks the Agent tool' "$ANCHOR"
+assert_order "spec gate: suppression check before the question" "$BS_NORM" \
+  "$SUPPRESSION" "$ANCHOR"
+assert_order "spec gate: question before the invocation" "$BS_NORM" \
+  "$ANCHOR" 'invoke `superpowers-orchestrator:multi-doc-review` on the saved spec'
+assert_icontains "spec gate carries the cost sentence" "$BS_NORM" "$COST_LINE"
+for pin in "${SHARED_PINS[@]}"; do
+  assert_contains "spec gate shared rules block pin: $pin" "$BS_NORM" "$pin"
+done
+assert_contains "spec gate passes the tokens last" "$BS_NORM" '`N=<n> M=<m>` as the last tokens'
+
+bold "11. The spec gate no longer suppresses the invocation"
+assert_not_icontains "brainstorming drops 'at most once per gate'" "$BS_FILE_NORM" "$NO_INVOKE_PHRASE"
+assert_icontains "brainstorming leaves the run/resume/skip decision to the skill" "$BS_FILE_NORM" \
+  'decides whether the loop runs, resumes or is skipped'
+
 echo
 bold "Results: $PASS passed, $FAIL failed"
 if [ "$FAIL" -gt 0 ]; then
