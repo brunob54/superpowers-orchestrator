@@ -311,6 +311,53 @@ else
   bad "step 4: N=<n> M=<m> (at $CG_TOKENS) must come after the carried-findings phrase (at $CG_FINDINGS)"
 fi
 
+bold "2. Anti-drift: the <d> definition is identical in four files"
+D_SPANS=()
+for pair in "orchestrating-development:$ORCH" "brainstorming:$BRAINSTORMING" \
+            "writing-plans:$WRITING_PLANS" "subagent-driven-development:$SDD"; do
+  name="${pair%%:*}"
+  file="${pair#*:}"
+  norm="$WORK/d-$name.txt"
+  normalize_to "$file" "$norm"
+  n="$(count_occurrences "$norm" "$D_MARKER")"
+  assert_eq "$name carries the <d> marker exactly once" "$n" "1"
+  span="$(marker="$D_MARKER" tail="$D_TAIL" awk '
+    BEGIN { m = ENVIRON["marker"]; t = ENVIRON["tail"] }
+    { i = index($0, m); if (i == 0) { print ""; exit }
+      rest = substr($0, i)
+      j = index(rest, t); if (j == 0) { print ""; exit }
+      print substr(rest, 1, j + length(t) - 1); exit }' "$norm")"
+  if [ -z "$span" ]; then
+    bad "$name: could not extract the <d> span from the marker to '$D_TAIL'"
+  else
+    ok "$name: <d> span extracted (${#span} characters)"
+  fi
+  D_SPANS+=("$span")
+done
+for i in 1 2 3; do
+  assert_eq "the <d> span of file $((i + 1)) equals the orchestrator's" \
+    "${D_SPANS[$i]}" "${D_SPANS[0]}"
+done
+
+bold "12/13/14. No subagent path can reach a gate question"
+ORCH_DIR="$ROOT/skills/orchestrating-development"
+PW_NORM="$WORK/plan-writer.txt"
+DR_NORM="$WORK/doc-review-loop.txt"
+BC_NORM="$WORK/batch-controller.txt"
+normalize_to "$ORCH_DIR/plan-writer-prompt.md" "$PW_NORM"
+normalize_to "$ORCH_DIR/doc-review-loop-prompt.md" "$DR_NORM"
+normalize_to "$ORCH_DIR/batch-controller-prompt.md" "$BC_NORM"
+assert_icontains "plan-writer-prompt still skips Multi-Round Plan Review" "$PW_NORM" \
+  'SKIP its "Multi-Round Plan Review" and "Execution Handoff" sections entirely'
+assert_icontains "doc-review-loop-prompt Deviation 1 names the Self-Review checklist" "$DR_NORM" \
+  'run the "Self-Review" checklist'
+assert_not_icontains "doc-review-loop-prompt does not name Multi-Round Plan Review" "$DR_NORM" \
+  'Multi-Round Plan Review'
+assert_not_icontains "batch-controller-prompt does not name Core Flow step 4" "$BC_NORM" \
+  '"Core Flow" step 4'
+assert_icontains "batch-controller-prompt still names only Core Flow step 3" "$BC_NORM" \
+  '"Core Flow" step 3 (the per-task loop)'
+
 echo
 bold "Results: $PASS passed, $FAIL failed"
 if [ "$FAIL" -gt 0 ]; then
