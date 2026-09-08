@@ -16,3 +16,6 @@ plan: docs/superpowers-orchestrator/2026-09-08-review-gate-m-question/plans/revi
 - Task 4: complete — the whole-branch code review gate asks for N and M
 - Task 5: complete — anti-drift comparison and the subagent-path guards
 - Task 6: complete — documentation and stale comments
+
+## Phase 3 — Batch 3 (task 7) — COMPLETE — commits 3de61d0..449ea89
+- Task 7: complete — release bookkeeping for v7.12.0
