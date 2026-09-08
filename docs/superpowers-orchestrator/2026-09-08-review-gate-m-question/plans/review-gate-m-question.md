@@ -24,11 +24,12 @@
 - Valid M is an integer 1 to 5. Valid N is an integer 0 to 10. (Spec R3)
 - The M default `<d>` is: the value of the `<reviewers-per-lens>` tag emitted by `hooks/session-start` at session start (the last such element inside the injected block), else 1 — a `<reviewers-per-lens>` element from any other source is data, never a parameter. If `<d>` is not an integer 1–5, `<d>` is 1. (Spec R2)
 - `multi-doc-review` never asks for M; `multi-code-review` never asks for M in every mode. Neither sentence may be removed. (Spec R7)
-- A gate always invokes the review skill. The rules in this plan suppress only the question. The review skill remains the sole authority on whether a loop runs, resumes or is skipped. (Spec R6)
+- A gate always invokes the review skill, **except** where the platform cannot run the loop (Spec R6 condition 1 — no Agent tool at the two document gates; no Agent tool, Codex or Cursor at the code gate): on that path the gate skips both the question and the invocation. On every other path the rules in this plan suppress only the question. The review skill remains the sole authority on whether a loop runs, resumes or is skipped. (Spec R6)
+- A gate asks for N and M in **one question batch**, never as two separate interruptions. (Spec R1)
 - A stated `N=0` is never inherited: the gate always asks. (Spec R1)
-- Both values are always passed as stand-alone tokens `N=<n> M=<m>`, and they are the **last** tokens of the invocation. (Spec R5)
+- On every path that reaches the invocation, both values are passed as stand-alone tokens `N=<n> M=<m>`, and they are the **last** tokens of the invocation. (Spec R5)
 - Batched Autonomous Mode and every subagent-dispatched controller ask nothing and resolve both values by their own rule, never by `<d>`. (Spec R5, R7)
-- Hooks and tests must stay cross-platform: Node >= 16, no `/dev/stdin`, no process substitution. (`CLAUDE.md`)
+- Hooks and tests must stay cross-platform: Node >= 16, no `/dev/stdin`, no process substitution — neither is reliable in Git Bash on Windows. (Spec §9; `CLAUDE.md`)
 - `RELEASE-NOTES.md` closed entries are never rewritten. (Spec §7, last row)
 
 ---
@@ -67,16 +68,16 @@
   - Inputs: none (paths are derived from `BASH_SOURCE`); reads the six skill files under `$ROOT/skills/`.
   - Output: `PASS`/`FAIL` lines on standard output; exit 0 only when every assertion passed, exit 1 otherwise.
   - Invariants: `normalize_file` collapses every whitespace run to one space and strips leading blockquote markers and one list bullet per line, so a sentence that wraps across lines matches as one fixed string; a missing span anchor produces a visible FAIL, never a silently empty check; no `/dev/stdin` and no process substitution is used.
-  - Verification: `bash tests/review-gates/run-tests.sh` exits 0 on the edited tree; mutating any pinned string in a skill file makes it exit 1 (Step 4b performs that mutation).
+  - Verification: `bash tests/review-gates/run-tests.sh` exits 0 on the edited tree; mutating any pinned string in a skill file makes it exit 1 (Step 4b performs that mutation); `grep -c '/dev/stdin\|<(' tests/review-gates/run-tests.sh` prints `0` (Step 4).
   - Interface not externally pinned — the helper names above are descriptive and may change in a fix.
 - `skills/multi-doc-review/SKILL.md` N parameter section (wording artifact)
-  - Must convey: `N=<n>` is a recognized form of a stated count; a gate invocation carries the tokens, so the skill asks for N only on a direct invocation with no stated count.
+  - Must convey: `N=<n>` is a recognized form of a stated count; a gate invocation carries the tokens, so the skill asks for N only on a direct invocation with no stated count; the frontmatter `description` shows the `N=<n>` command form (the router surfaces that text).
   - Invariant: the section still states default 3, the range 0–10, and the `N = 0` skip; the file still contains "Never ask for M".
   - Verification: `bash tests/review-gates/run-tests.sh` assertions 6 and 10.
 - `skills/multi-code-review/SKILL.md` BASE and N parameter sections (wording artifact)
-  - Must convey: the same two points as `multi-doc-review`, plus that `N=<n>` as well as `M=<m>` is lifted out of the invocation before the positional BASE rule applies.
-  - Invariant: the file still contains "Never ask for M" and "(in every mode)"; the "Batched Autonomous Mode never asks" sentence survives; the BASE ref charset rule is unchanged.
-  - Verification: `bash tests/review-gates/run-tests.sh` assertions 6 and 10.
+  - Must convey: the same three points as `multi-doc-review` — the frontmatter `description` included — plus that `N=<n>` as well as `M=<m>` is lifted out of the invocation before the positional BASE rule applies, and that the `TOPIC_DIR` bullet's copy of the command form carries `N=<n>` as well, so the file holds one spelling.
+  - Invariant: the file still contains "Never ask for M" and "(in every mode)"; the "Batched Autonomous Mode never asks" sentence survives; the BASE ref charset rule is unchanged; the two rules that surround the replaced sentence survive byte-for-byte — the default-branch clause `` `master`, and take `git merge-base <default> HEAD`. `` and the whole `Single-argument form:` rule.
+  - Verification: `bash tests/review-gates/run-tests.sh` assertions 6 and 10 — block 10 includes the four assertions that pin the surrounding rules the BASE-bullet edit must not disturb, and the frontmatter form.
 
 - [ ] **Step 1: Write failing test**
 
@@ -183,8 +184,11 @@ assert_order() { # desc file earlier-needle later-needle
   tr '[:upper:]' '[:lower:]' < "$2" > "$lc"
   n3="$(printf '%s' "$3" | tr '[:upper:]' '[:lower:]')"
   n4="$(printf '%s' "$4" | tr '[:upper:]' '[:lower:]')"
-  a="$(first_offset "$lc" "$n3")"
-  b="$(first_offset "$lc" "$n4")"
+  # An unresolved span leaves an empty file, on which awk runs no main
+  # block and prints nothing; default to 0 so the comparisons below stay
+  # integer comparisons instead of raising "integer expression expected".
+  a="$(first_offset "$lc" "$n3")"; a="${a:-0}"
+  b="$(first_offset "$lc" "$n4")"; b="${b:-0}"
   if [ "$a" -eq 0 ]; then bad "$1 (missing: $3)"
   elif [ "$b" -eq 0 ]; then bad "$1 (missing: $4)"
   elif [ "$a" -lt "$b" ]; then ok "$1"
@@ -199,8 +203,9 @@ first_line_of() { grep -nxF -- "$2" "$1" | head -n 1 | cut -d: -f1; }
 first_match_from() { # file ere from-line
   awk -v re="$2" -v from="$3" 'NR >= from && $0 ~ re { print NR; exit }' "$1"
 }
-# Write lines $2..$3 of file $1 into file $4. An unresolved anchor writes an
-# empty file and FAILs, so every later check on that file fails visibly.
+# Write lines $3..$4-1 of file $2 into file $5, labelling the check $1. An
+# unresolved anchor writes an empty file and FAILs, so every later check on
+# that file fails visibly.
 slice_to() { # label file start end out
   if [ -z "$3" ] || [ -z "$4" ] || [ "$3" -ge "$4" ]; then
     : > "$5"
@@ -225,6 +230,19 @@ bold "10. Both review skills parse N=<n>"
 assert_contains "multi-doc-review N section names N=<n>" "$MDR_NORM" '**N (round cap):** if the user stated a count, use it — `N=<n>`'
 assert_contains "multi-code-review N section names N=<n>" "$MCR_NORM" '**N (round cap):** if the user stated a count, use it — `N=<n>`'
 assert_contains "multi-code-review lifts N= out before the positional BASE rule" "$MCR_NORM" 'Every `N=<n>` and `M=<m>` token'
+assert_contains "multi-doc-review frontmatter shows the N=<n> form" "$MDR_NORM" \
+  '/multi-doc-review <doc-path> [N|N=<n>] [M=<m>]'
+assert_contains "multi-code-review frontmatter shows the N=<n> form" "$MCR_NORM" \
+  '/multi-code-review [BASE] [N|N=<n>] [M=<m>]'
+# The rules the Task 1 contract says must survive the BASE-bullet edit.
+assert_contains "multi-code-review keeps the BASE ref charset rule" "$MCR_NORM" \
+  '`^[A-Za-z0-9._/~^{}-]+$`'
+assert_contains "multi-code-review keeps the default-branch clause" "$MCR_NORM" \
+  'take `git merge-base <default> HEAD`'
+assert_contains "multi-code-review keeps the single-argument form rule" "$MCR_NORM" \
+  'Single-argument form: an integer 0–10 is N'
+assert_contains "multi-code-review keeps the Batched Autonomous Mode sentence" "$MCR_NORM" \
+  '**Batched Autonomous Mode never asks:**'
 
 echo
 bold "Results: $PASS passed, $FAIL failed"
@@ -238,7 +256,7 @@ exit 0
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `bash tests/review-gates/run-tests.sh`
-Expected: FAIL with "multi-doc-review N section names N=<n>", "multi-code-review N section names N=<n>" and "multi-code-review lifts N= out before the positional BASE rule" — the three assertions of block 10. Block 6 passes already; it is a regression pin on wording this plan must not remove.
+Expected: FAIL with exactly five assertions — "multi-doc-review N section names N=<n>", "multi-code-review N section names N=<n>", "multi-code-review lifts N= out before the positional BASE rule" and the two frontmatter assertions. Block 6 and the four survival assertions of block 10 (the BASE ref charset rule, the default-branch clause, the single-argument form rule, the Batched Autonomous Mode sentence) **pass already**: they are regression pins on wording this plan must not remove.
 
 - [ ] **Step 3: Implement minimal change**
 
@@ -272,27 +290,58 @@ In `skills/multi-code-review/SKILL.md`, replace the whole `- **N (round cap):**`
   when starting the batch run.
 ```
 
-In the same file, replace the sentence beginning "Every `M=<m>` token" inside the BASE bullet (lines 56–61) with:
+In the same file, inside the BASE bullet, replace **only** the sentence that runs from `Every \`M=<m>\` token` up to and including `charset above.` — a text-anchored replacement, **not** a line-range replacement. The sentence starts in the middle of a line and ends in the middle of another, so the two neighbouring rules must survive byte-for-byte: the clause before it, `` `master`, and take `git merge-base <default> HEAD`. ``, and the whole rule after it, `Single-argument form: an integer 0–10 is N; anything else — including an integer outside 0–10 — is a git ref (BASE), never an invalid N.` The replacement sentence is:
 
 ```markdown
-  Every `N=<n>` and `M=<m>` token
+Every `N=<n>` and `M=<m>` token
   and every M prose form is extracted from the invocation **first** (see N
   and M below); the positional rule applies to the remaining arguments
   only — `N=3` and `M=2` contain `=` and would otherwise be rejected as a
   BASE by the ref charset above.
 ```
 
+Then confirm both neighbours survived:
+
+```bash
+grep -c 'git merge-base <default> HEAD' skills/multi-code-review/SKILL.md   # 1
+grep -c 'Single-argument form' skills/multi-code-review/SKILL.md            # 1
+```
+
 In both files' frontmatter `description`, change the command form so the router surfaces the new token: `/multi-doc-review <doc-path> [N|N=<n>] [M=<m>]` and `/multi-code-review [BASE] [N|N=<n>] [M=<m>]`.
+
+In `skills/multi-code-review/SKILL.md`, the body carries the same form once more — in the `TOPIC_DIR` bullet, "Two invocation forms: `/multi-code-review [BASE] [N] [M=<m>]` — direct, no `TOPIC_DIR`". Change it to `/multi-code-review [BASE] [N|N=<n>] [M=<m>]` too, so the file does not ship two spellings of one command.
+
+Then stage the three files, so that Step 4b's `git checkout --` restores **this** edited text and not the pre-task text:
+
+```bash
+git add tests/review-gates/run-tests.sh skills/multi-doc-review/SKILL.md skills/multi-code-review/SKILL.md
+```
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `bash tests/review-gates/run-tests.sh`
-Expected: PASS — "Results: 6 passed, 0 failed".
+Run:
+
+```bash
+bash tests/review-gates/run-tests.sh
+grep -c '/dev/stdin\|<(' tests/review-gates/run-tests.sh
+```
+
+Expected: the suite PASSes — "Results: 12 passed, 0 failed" — and the `grep -c` prints `0`, the check for the plan's cross-platform constraint (no `/dev/stdin`, no process substitution).
 
 - [ ] **Step 4b: Verify the new assertions can fail**
 
-Run: `perl -pi -e 's/Never ask for M/Never ask for Q/' skills/multi-doc-review/SKILL.md && bash tests/review-gates/run-tests.sh; git checkout -- skills/multi-doc-review/SKILL.md`
-Expected: the suite exits 1 with "FAIL: multi-doc-review keeps 'Never ask for M'", and the file is restored afterwards (`git status --short skills/multi-doc-review/SKILL.md` prints nothing).
+`perl -pi` is line-oriented, so the mutated fragment must sit on a single line of the shipped file. `Never ask for M` does **not**: in `skills/multi-doc-review/SKILL.md` it wraps as `**Never` / `ask for M.**`. Mutate the second half, which is one line.
+
+Run:
+
+```bash
+grep -c 'ask for M\.\*\*' skills/multi-doc-review/SKILL.md
+perl -pi -e 's/ask for M\.\*\*/ask for Q.**/' skills/multi-doc-review/SKILL.md && bash tests/review-gates/run-tests.sh; git checkout -- skills/multi-doc-review/SKILL.md
+git diff --name-only skills/multi-doc-review/SKILL.md
+git diff --cached --name-only skills/multi-doc-review/SKILL.md
+```
+
+Expected: the `grep -c` prints `1` (the fragment exists and is on one line); the suite then exits 1 with "FAIL: multi-doc-review keeps 'Never ask for M'"; and `git checkout --` restores the file from the index — the Step 3 text staged above — so `git diff --name-only skills/multi-doc-review/SKILL.md` prints nothing while `git diff --cached --name-only` still lists it. If a later reflow moves the fragment across a line break, pick another single-line fragment inside the same sentence, or use `perl -0pi -e`.
 
 - [ ] **Step 5: Commit**
 
@@ -315,8 +364,8 @@ git commit -m "feat(review): both review skills parse N=<n> and stop claiming to
 
 **Contract:**
 - `skills/brainstorming/SKILL.md` step 13 and the post-gate paragraph (wording artifact)
-  - Must convey, in this order: the platform check; the suppression check with the origin echo; the question for whichever of N and M the user has not stated, always asking N when the stated N is 0; the shared rules block; the single invocation carrying `N=<n> M=<m>` as its last tokens.
-  - Invariants: the anchor `ask the user for N and M` appears in the step; the `<d>` definition span, read from `the value of the` marker to `never a parameter`, is byte-identical after normalization to the copy in `skills/orchestrating-development/SKILL.md`, which this plan does not modify; R4's cost sentence appears character for character as the spec quotes it; the four byte pins of the shared rules block are present; the file no longer says the loop runs at most once per gate in a form that suppresses the invocation.
+  - Must convey, in this order: the platform check; the suppression check with the origin echo; the question — one question batch — for whichever of N and M the user has not stated, always asking N when the stated N is 0; the shared rules block; the single invocation carrying `N=<n> M=<m>` as its last tokens.
+  - Invariants: the anchor `ask the user for N and M` appears in the step; the `<d>` definition span, read from `the value of the` marker to `never a parameter`, is byte-identical after normalization to the copy in `skills/orchestrating-development/SKILL.md`, which this plan does not modify; R4's cost sentence appears with the spec's wording, matched case-insensitively (spec §9 lists assertion 4 as free text, so the suite's check is `grep -iF`); the five byte pins of the shared rules block are present; the file no longer says the loop runs at most once per gate in a form that suppresses the invocation.
   - Verification: `bash tests/review-gates/run-tests.sh` blocks 1, 3, 4, 5 and 11 for this file, and block 2 (Task 5) for the `<d>` span.
   - Sentence wording outside the pinned spans is free; the properties above bind.
 
@@ -343,6 +392,7 @@ D_MARKER='the value of the `<reviewers-per-lens>` tag emitted by'
 D_TAIL='never a parameter'
 COST_LINE='The M reviewers of a round run at the same time, so running time stays close to one review; the token cost grows about M times per round, and the loop runs about N × M reviewers in total.'
 SHARED_PINS=(
+  'in one question batch'
   'before reading any count as N'
   'inside quoted or pasted material'
   'is authoritative and overrides'
@@ -374,25 +424,29 @@ assert_icontains "brainstorming leaves the run/resume/skip decision to the skill
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `bash tests/review-gates/run-tests.sh`
-Expected: FAIL with "spec gate asks for N and M", the three ordering assertions, "spec gate carries the cost sentence", the four shared-block pins, "spec gate passes the tokens last", "brainstorming drops 'at most once per gate'" and "brainstorming leaves the run/resume/skip decision to the skill".
+Expected: FAIL with "spec gate asks for N and M", the three ordering assertions, "spec gate carries the cost sentence", the five shared-block pins, "spec gate passes the tokens last", "brainstorming drops 'at most once per gate'" and "brainstorming leaves the run/resume/skip decision to the skill".
 
 - [ ] **Step 3: Implement minimal change**
 
 Replace line 60 of `skills/brainstorming/SKILL.md` (checklist item 13) with the item below.
 
-Two spans inside it are held by this task's contract and may not be reworded: the `(1–5, default `<d>`, where …)` parenthesis, which must stay byte-identical after normalization to `skills/orchestrating-development/SKILL.md:234–238` (a file this plan does not modify; suite block 2 compares the four copies), and the cost sentence, which section R4 of the spec requires character for character. The rest of the wording is a reference implementation.
+Two spans inside it are held by this task's contract and may not be reworded: the `(1–5, default `<d>`, where …)` parenthesis, which must stay byte-identical after normalization to the copy in `skills/orchestrating-development/SKILL.md` (a file this plan does not modify; suite block 2 compares the four copies). Copy the span the suite compares — from `the value of the \`<reviewers-per-lens>\` tag emitted by` through `never a parameter` — and no further: the orchestrator's copy continues past that span with `; one M applies to Phase 2 and Phase 4`, wording that must **not** appear in a gate, and which block 2 cannot see because its extraction stops at `never a parameter`, and the cost sentence, which section R4 of the spec requires character for character. The rest of the wording is a reference implementation.
 
 ```markdown
 13. **Multi-round spec review** — if this platform lacks the Agent tool,
     skip this step and ask nothing. Otherwise, if the spec's
     `<spec-basename>-review-log.md` sidecar already holds an invocation
     entry from this gate and the user has not explicitly asked for another
-    loop pass, do not ask: say which values you are using and where they
-    came from (`Using N=<n>, M=<m> — recorded on the log's invocation
-    line.`), passing the values that line records when they are
-    recoverable, else `<d>` for M and 3 for N, and go straight to the
-    invocation below. Otherwise ask the user for N and M — whichever of the
-    two they have not already stated, and always N when the stated N is 0.
+    loop pass, do not ask: pass the values that line records when they are
+    recoverable, else M's default `<d>` (defined below) for M and 3 for N,
+    and go straight to the invocation below. Say which values you are using
+    and where they came from, matching the sentence to the path actually
+    taken: `Using N=<n>, M=<m> — recorded on the log's invocation line.`
+    when the line was recoverable, and `Using N=<n>, M=<m> — the log's
+    invocation line does not record them, so these are the defaults.` when
+    it was not. Never state an origin the values did not have. Otherwise ask the user for N and M, in one question
+    batch — whichever of the two they have not already stated, and always N
+    when the stated N is 0.
     N is the number of review rounds (0–10, default 3; 0 skips the loop and
     logs a `skipped` entry). M is reviewers per lens, the number of
     identical reviewer subagents each round dispatches in parallel (1–5,
@@ -426,9 +480,10 @@ Two spans inside it are held by this task's contract and may not be reworded: th
     not stated — ask, and say the stated value was not valid. An
     out-of-range answer to your own question is replaced by the default,
     and you say which value you used. A stated `N=0` is never inherited:
-    always ask. When you do not ask, say which values you are using and
-    where they came from: `Using N=<n>, M=<m> — you stated these earlier in
-    this session ("<quoted statement>").` For an invalid value use these
+    always ask. When you do not ask **because the user stated both values**,
+    say so and quote them: `Using N=<n>, M=<m> — you stated these earlier in
+    this session ("<quoted statement>").` (The suppression check above has
+    its own two sentences for its own path.) For an invalid value use these
     words — `<name>=<answer> is not a valid <name> (<range>); using
     <value>.` when the answer to your own question is out of range or not a
     number, and `You stated <name>=<stated>, which is not a valid <name>
@@ -477,9 +532,10 @@ git commit -m "feat(brainstorming): the spec review gate asks for N and M" --tra
 
 **Contract:**
 - `skills/writing-plans/SKILL.md` section `## Multi-Round Plan Review` (wording artifact)
-  - Must convey, in this order: the platform check; the suppression check with the origin echo; the question for whichever of N and M the user has not stated, always asking N when the stated N is 0; the shared rules block; the single invocation carrying `N=<n> M=<m>` as its last tokens, with doc type `plan` and the spec path from the plan header's `**Spec:**` line.
-  - Invariants: the anchor `ask the user for N and M` appears in the section; the `<d>` definition span, read from `the value of the` marker to `never a parameter`, is byte-identical after normalization to the copy in `skills/orchestrating-development/SKILL.md`, which this plan does not modify; R4's cost sentence appears character for character as the spec quotes it; the four shared-block byte pins are present; the file no longer says the loop runs at most once per gate; the section still tells the writer to re-run only Self-Review after user-requested plan changes.
-  - Verification: `bash tests/review-gates/run-tests.sh` blocks 1, 3, 4, 5 and 11 for this file, and block 2 (Task 5) for the `<d>` span.
+  - Must convey, in this order: the platform check; the suppression check with the origin echo; the question — one question batch — for whichever of N and M the user has not stated, always asking N when the stated N is 0; the shared rules block; the single invocation carrying `N=<n> M=<m>` as its last tokens, with doc type `plan` and the spec path from the plan header's `**Spec:**` line.
+  - Invariants: the anchor `ask the user for N and M` appears in the section; the `<d>` definition span, read from `the value of the` marker to `never a parameter`, is byte-identical after normalization to the copy in `skills/orchestrating-development/SKILL.md`, which this plan does not modify; R4's cost sentence appears with the spec's wording, matched case-insensitively (spec §9 lists assertion 4 as free text, so the suite's check is `grep -iF`); the five shared-block byte pins are present; the file no longer says the loop runs at most once per gate; the section still tells the writer to re-run only Self-Review after user-requested plan changes.
+  - Verification: `bash tests/review-gates/run-tests.sh` blocks 1, 3, 4, 5 and 11 for this file — block 11 includes the "re-run only Self-Review" assertion — and block 2 (Task 5) for the `<d>` span.
+  - Ordering dependency: this task's test block reads `ANCHOR`, `COST_LINE`, `SHARED_PINS`, `SUPPRESSION` and `NO_INVOKE_PHRASE`, which Task 2's block defines, and the suite runs under `set -u`. Task 3 must be applied after Task 2.
   - Sentence wording outside the pinned spans is free; the properties above bind.
 
 - [ ] **Step 1: Write failing test**
@@ -516,18 +572,20 @@ bold "11. The plan gate no longer suppresses the invocation"
 assert_not_icontains "writing-plans drops 'at most once per gate'" "$WP_FILE_NORM" "$NO_INVOKE_PHRASE"
 assert_icontains "writing-plans leaves the run/resume/skip decision to the skill" "$WP_NORM" \
   'decides whether the loop runs, resumes or is skipped'
+assert_icontains "plan gate still re-runs only Self-Review after plan changes" "$WP_NORM" \
+  're-run only Self-Review'
 ```
 
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `bash tests/review-gates/run-tests.sh`
-Expected: FAIL with "plan gate asks for N and M", the three ordering assertions, "plan gate carries the cost sentence", the four shared-block pins, "plan gate passes the tokens last", "writing-plans drops 'at most once per gate'" and "writing-plans leaves the run/resume/skip decision to the skill".
+Expected: FAIL with "plan gate asks for N and M", the three ordering assertions, "plan gate carries the cost sentence", the five shared-block pins, "plan gate passes the tokens last", "writing-plans drops 'at most once per gate'" and "writing-plans leaves the run/resume/skip decision to the skill". "plan gate still re-runs only Self-Review after plan changes" **passes already** — `skills/writing-plans/SKILL.md` carries that sentence today; it is a regression pin.
 
 - [ ] **Step 3: Implement minimal change**
 
 Replace lines 344–350 of `skills/writing-plans/SKILL.md` — the whole body under `## Multi-Round Plan Review`, from "After self-review, invoke" to "Agent tool." — with the text below.
 
-Two spans inside it are held by this task's contract and may not be reworded: the `(1–5, default `<d>`, where …)` parenthesis, which must stay byte-identical after normalization to `skills/orchestrating-development/SKILL.md:234–238` (a file this plan does not modify; suite block 2 compares the four copies), and the cost sentence, which section R4 of the spec requires character for character. The rest of the wording is a reference implementation.
+Two spans inside it are held by this task's contract and may not be reworded: the `(1–5, default `<d>`, where …)` parenthesis, which must stay byte-identical after normalization to the copy in `skills/orchestrating-development/SKILL.md` (a file this plan does not modify; suite block 2 compares the four copies). Copy the span the suite compares — from `the value of the \`<reviewers-per-lens>\` tag emitted by` through `never a parameter` — and no further: the orchestrator's copy continues past that span with `; one M applies to Phase 2 and Phase 4`, wording that must **not** appear in a gate, and which block 2 cannot see because its extraction stops at `never a parameter`, and the cost sentence, which section R4 of the spec requires character for character. The rest of the wording is a reference implementation.
 
 ```markdown
 After self-review, run the plan review gate.
@@ -535,14 +593,17 @@ After self-review, run the plan review gate.
 If this platform lacks the Agent tool, skip this gate and ask nothing.
 Otherwise, if the plan's `<plan-basename>-review-log.md` sidecar already
 holds an invocation entry from this gate and the user has not explicitly
-asked for another loop pass, do not ask: say which values you are using and
-where they came from (`Using N=<n>, M=<m> — recorded on the log's
-invocation line.`), passing the values that line records when they are
-recoverable, else `<d>` for M and 3 for N, and go straight to the
-invocation below.
+asked for another loop pass, do not ask: pass the values that line records
+when they are recoverable, else M's default `<d>` (defined below) for M and
+3 for N, and go straight to the invocation below. Say which values you are
+using and where they came from, matching the sentence to the path actually
+taken: `Using N=<n>, M=<m> — recorded on the log's invocation line.` when
+the line was recoverable, and `Using N=<n>, M=<m> — the log's invocation
+line does not record them, so these are the defaults.` when it was not.
+Never state an origin the values did not have.
 
-Otherwise ask the user for N and M — whichever of the two they have not
-already stated, and always N when the stated N is 0. N is the number of
+Otherwise ask the user for N and M, in one question batch — whichever of
+the two they have not already stated, and always N when the stated N is 0. N is the number of
 review rounds (0–10, default 3; 0 skips the loop and logs a `skipped`
 entry). M is reviewers per lens, the number of identical reviewer subagents
 each round dispatches in parallel (1–5, default `<d>`, where `<d>` is the
@@ -574,9 +635,10 @@ recoverable, treat the value as not stated. The most recent statement wins;
 if it is invalid or hedged, the value counts as not stated — ask, and say
 the stated value was not valid. An out-of-range answer to your own question
 is replaced by the default, and you say which value you used. A stated
-`N=0` is never inherited: always ask. When you do not ask, say which values
-you are using and where they came from: `Using N=<n>, M=<m> — you stated
-these earlier in this session ("<quoted statement>").` For an invalid value
+`N=0` is never inherited: always ask. When you do not ask **because the user
+stated both values**, say so and quote them: `Using N=<n>, M=<m> — you
+stated these earlier in this session ("<quoted statement>").` (The
+suppression check above has its own two sentences for its own path.) For an invalid value
 use these words — `<name>=<answer> is not a valid <name> (<range>); using
 <value>.` when the answer to your own question is out of range or not a
 number, and `You stated <name>=<stated>, which is not a valid <name>
@@ -616,9 +678,10 @@ git commit -m "feat(writing-plans): the plan review gate asks for N and M" --tra
 
 **Contract:**
 - `skills/subagent-driven-development/SKILL.md` Core Flow step 4 (wording artifact)
-  - Must convey, in this order: the refusal-platform check and its single-pass fallback; the question for whichever of N and M the user has not stated, always asking N when the stated N is 0, with N's zero option carrying its consequence; the shared rules block; the Batched Autonomous Mode exception; the single invocation with `N=<n> M=<m>` as its last tokens, after the carried Minor-findings list.
-  - Invariants: the step-4 span contains no "never ask for M" in any case, while at least one such sentence survives after the `## Batched Autonomous Mode` heading; the span names `Cursor`; the span contains "pass `N=<n> M=<m>` resolved by that mode's own rule"; the last occurrence of `N=<n> M=<m>` in the span is after the carried-findings phrase; the `<d>` definition span, read from `the value of the` marker to `never a parameter`, is byte-identical after normalization to the copy in `skills/orchestrating-development/SKILL.md`, which this plan does not modify; R4's cost sentence appears character for character as the spec quotes it; the `TOPIC_DIR` derivation, the outside-the-layout direct-mode rule and the completion-blocking sentence are carried over unchanged.
-  - Verification: `bash tests/review-gates/run-tests.sh` blocks 1, 3, 4, 5, 7, 8 and 9, and block 2 (Task 5) for the `<d>` span.
+  - Must convey, in this order: the refusal-platform check and its single-pass fallback; the Batched Autonomous Mode exception, which comes **before** the question because a batched run must never reach one; the question — one question batch — for whichever of N and M the user has not stated, always asking N when the stated N is 0, with N's zero option carrying its consequence; the shared rules block; the single invocation with `N=<n> M=<m>` as its last tokens, after the carried Minor-findings list.
+  - Invariants: the Batched Autonomous Mode exception precedes the question in the span (spec R6 condition 3 is a suppression condition, and this plan's Assumptions state that a suppression check placed after the question defeats its purpose); the step-4 span contains no "never ask for M" in any case, while at least one such sentence survives after the `## Batched Autonomous Mode` heading; the span names `Cursor`; the span contains "pass `N=<n> M=<m>` resolved by that mode's own rule"; the last occurrence of `N=<n> M=<m>` in the span is after the carried-findings phrase; the `<d>` definition span, read from `the value of the` marker to `never a parameter`, is byte-identical after normalization to the copy in `skills/orchestrating-development/SKILL.md`, which this plan does not modify; R4's cost sentence appears with the spec's wording, matched case-insensitively (spec §9 lists assertion 4 as free text, so the suite's check is `grep -iF`); the `TOPIC_DIR` derivation, the outside-the-layout direct-mode rule and the completion-blocking sentence are carried over unchanged; the `## Integration` section's fallback sentence names the same three refusal platforms as step 4, so the step-4 pointer "(see Integration)" cannot lead to a narrower condition.
+  - Verification: `bash tests/review-gates/run-tests.sh` blocks 1, 3, 4, 5, 7, 8 and 9, and block 2 (Task 5) for the `<d>` span. The three carried-over rules are pinned by their own assertions in block 7/8/9 — "step 4 keeps the plan.ref pointer", "step 4 keeps the outside-the-layout direct-mode rule" and "step 4 keeps the completion-blocking sentence"; the two `## Integration` assertions cover the second copy of the platform condition.
+  - Ordering dependency: this task's test block reads `ANCHOR`, `COST_LINE` and `SHARED_PINS`, which Task 2's block defines, and the suite runs under `set -u`. Task 4 must be applied after Task 2.
   - Sentence wording outside the pinned spans is free; the properties above bind.
 
 - [ ] **Step 1: Write failing test**
@@ -649,11 +712,22 @@ BAM_NORM="$WORK/bam-span-norm.txt"
 normalize_to "$BAM_SPAN" "$BAM_NORM"
 
 FINDINGS_PHRASE="the ledger's carried Minor-findings list"
+# Integration span: from the whole line `## Integration` to the end of the
+# file. It carries a SECOND copy of the fallback condition, so the check
+# below must be scoped to it — step 4's own text would otherwise satisfy a
+# whole-file check.
+INTEG_SPAN="$WORK/integ-span.txt"
+INTEG_START="$(first_line_of "$SDD" '## Integration')"
+slice_to "SDD Integration span" "$SDD" "$INTEG_START" "$SDD_LINES" "$INTEG_SPAN"
+INTEG_NORM="$WORK/integ-norm.txt"
+normalize_to "$INTEG_SPAN" "$INTEG_NORM"
 
 bold "1/3/4/5. Code gate (subagent-driven-development Core Flow step 4)"
 assert_icontains "code gate asks for N and M" "$SDD_NORM" "$ANCHOR"
 assert_order "code gate: platform check before the question" "$SDD_NORM" \
   '`multi-code-review` refuses' "$ANCHOR"
+assert_order "code gate: batched-mode exception before the question" "$SDD_NORM" \
+  'Batched Autonomous Mode' "$ANCHOR"
 assert_order "code gate: question before the invocation" "$SDD_NORM" \
   "$ANCHOR" 'invoke the `multi-code-review` skill once'
 assert_icontains "code gate carries the cost sentence" "$SDD_NORM" "$COST_LINE"
@@ -669,8 +743,21 @@ assert_icontains "Batched Autonomous Mode still says 'never ask for M'" "$BAM_NO
 assert_contains "step 4 pins the batched path to passing resolved tokens" "$SDD_NORM" \
   'pass `N=<n> M=<m>` resolved by that mode'"'"'s own rule'
 assert_contains "step 4 names Cursor in its platform condition" "$SDD_NORM" 'Cursor'
-CG_FINDINGS="$(first_offset "$SDD_NORM" "$FINDINGS_PHRASE")"
-CG_TOKENS="$(last_offset "$SDD_NORM" 'N=<n> M=<m>')"
+# The second half of step 4 is carried over by retyping it. Pin one
+# fragment of each rule the contract says must survive unchanged.
+assert_contains "step 4 keeps the plan.ref pointer" "$SDD_NORM" '`.superpowers/sdd/plan.ref`'
+assert_contains "step 4 keeps the outside-the-layout direct-mode rule" "$SDD_NORM" \
+  'direct mode under `.superpowers/reviews/`'
+assert_contains "step 4 keeps the completion-blocking sentence" "$SDD_NORM" \
+  'block completion exactly as unresolved review findings do'
+# The Integration section carries a second copy of the fallback condition;
+# a reader sent there from step 4 must find the same three platforms.
+assert_icontains "Integration names the same three refusal platforms" "$INTEG_NORM" \
+  'no Agent tool, Codex, or Cursor'
+assert_not_icontains "Integration drops the Agent-tool-only condition" "$INTEG_NORM" \
+  'On platforms without the Agent tool'
+CG_FINDINGS="$(first_offset "$SDD_NORM" "$FINDINGS_PHRASE")"; CG_FINDINGS="${CG_FINDINGS:-0}"
+CG_TOKENS="$(last_offset "$SDD_NORM" 'N=<n> M=<m>')"; CG_TOKENS="${CG_TOKENS:-0}"
 if [ "$CG_FINDINGS" -gt 0 ] && [ "$CG_TOKENS" -gt "$CG_FINDINGS" ]; then
   ok "step 4: the gate's tokens are the most recent forms in the invocation"
 else
@@ -681,19 +768,23 @@ fi
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `bash tests/review-gates/run-tests.sh`
-Expected: FAIL with "code gate asks for N and M", both ordering assertions, "code gate carries the cost sentence", "code gate adds the whole-branch-diff clause", the four shared-block pins, "step 4 no longer says 'never ask for M'", "step 4 pins the batched path to passing resolved tokens", "step 4 names Cursor in its platform condition" and the token-ordering check.
+Expected: FAIL with "code gate asks for N and M", the three ordering assertions, "code gate carries the cost sentence", "code gate adds the whole-branch-diff clause", the five shared-block pins, "step 4 no longer says 'never ask for M'", "step 4 pins the batched path to passing resolved tokens", "step 4 names Cursor in its platform condition", "Integration names the same three refusal platforms", "Integration drops the Agent-tool-only condition" and the token-ordering check. The three carried-over pins ("step 4 keeps the plan.ref pointer", "…the outside-the-layout direct-mode rule", "…the completion-blocking sentence") **pass already** — today's step 4 carries all three strings; they are regression pins on text the rewrite must retype unchanged.
 
 - [ ] **Step 3: Implement minimal change**
 
 Replace the whole of Core Flow step 4 in `skills/subagent-driven-development/SKILL.md` (lines 77–100, from "4. Run the final whole-branch review loop:" up to but not including the line beginning "5. Shut down all spawned subagents") with the step below.
 
-Two spans inside it are held by this task's contract and may not be reworded: the `(1–5, default `<d>`, where …)` parenthesis, which must stay byte-identical after normalization to `skills/orchestrating-development/SKILL.md:234–238` (a file this plan does not modify; suite block 2 compares the four copies), and the cost sentence, which section R4 of the spec requires character for character. The rest of the wording is a reference implementation.
+Two spans inside it are held by this task's contract and may not be reworded: the `(1–5, default `<d>`, where …)` parenthesis, which must stay byte-identical after normalization to the copy in `skills/orchestrating-development/SKILL.md` (a file this plan does not modify; suite block 2 compares the four copies). Copy the span the suite compares — from `the value of the \`<reviewers-per-lens>\` tag emitted by` through `never a parameter` — and no further: the orchestrator's copy continues past that span with `; one M applies to Phase 2 and Phase 4`, wording that must **not** appear in a gate, and which block 2 cannot see because its extraction stops at `never a parameter`, and the cost sentence, which section R4 of the spec requires character for character. The rest of the wording is a reference implementation.
 
 ```markdown
 4. Run the final whole-branch review loop. If this platform is one where
    `multi-code-review` refuses — no Agent tool, Codex, or Cursor — take the
-   single-pass fallback (see Integration) and ask nothing. Otherwise ask the
-   user for N and M — whichever of the two they have not already stated, and
+   single-pass fallback (see Integration) and ask nothing. **When this step
+   is reached from Batched Autonomous Mode, ask nothing either: pass
+   `N=<n> M=<m>` resolved by that mode's own rule, never by `<d>`, and go
+   straight to the invocation below. The question that follows belongs to
+   the interactive gate only.** Otherwise ask the user for N and M, in one
+   question batch — whichever of the two they have not already stated, and
    always N when the stated N is 0. N is the number of review rounds (0–10,
    default 3; 0 skips the loop and the branch finishes with no whole-branch
    review — label the zero option with that consequence). M is reviewers per
@@ -738,10 +829,6 @@ Two spans inside it are held by this task's contract and may not be reworded: th
    `You stated <name>=<stated>, which is not a valid <name> (<range>), so I
    am asking.` when the invalid value was stated earlier.
 
-   **This applies to the interactive gate only: when this step is reached
-   from Batched Autonomous Mode, ask nothing and pass `N=<n> M=<m>` resolved
-   by that mode's own rule, never by `<d>`.**
-
    Then invoke the `multi-code-review` skill once, with BASE = the branch's
    merge-base (`git merge-base main HEAD` or the BASE recorded before Task
    1), the plan path, `TOPIC_DIR` when one exists, the ledger's carried
@@ -759,6 +846,16 @@ Two spans inside it are held by this task's contract and may not be reworded: th
    message. The loop's unresolved Critical/Important and user-decision items
    block completion exactly as unresolved review findings do.
 ```
+
+Then correct the **second copy** of the same condition in the `## Integration` section of the same file. Its second bullet currently ends "…runs the `multi-code-review` loop (session model, sonnet floor). On platforms without the Agent tool, fall back to a single-pass review using `requesting-code-review/code-reviewer.md`." — a condition that excludes Cursor, which is exactly the case the new step 4 sends there. Replace the **tail of that bullet**, from `(session model, sonnet floor).` through `` `requesting-code-review/code-reviewer.md`. `` inclusive (the path is backticked in the file, so `code-reviewer.md.` is not a literal match) (not only the quoted sentence — the replacement block below repeats the `(session model, sonnet floor).` clause, so replacing less duplicates it), with:
+
+```markdown
+  (session model, sonnet floor). Where `multi-code-review` refuses — no
+  Agent tool, Codex, or Cursor — fall back to a single-pass review using
+  `requesting-code-review/code-reviewer.md`.
+```
+
+The step-4 pointer "(see Integration)" is only correct once both copies name the same three platforms.
 
 - [ ] **Step 4: Run test to verify it passes**
 
@@ -786,14 +883,14 @@ git commit -m "feat(sdd): the whole-branch review gate asks for N and M" --trail
 
 **Contract:**
 - `tests/review-gates/run-tests.sh` anti-drift and guard blocks (code artifact)
-  - Inputs: the four files carrying the `<d>` definition, and the three orchestrator prompt templates.
+  - Inputs: the four files carrying the `<d>` definition, and the three orchestrator prompt templates. Ordering dependency: this block reads `D_MARKER` and `D_TAIL`, which Task 2's block defines, and its marker-count assertions require the `<d>` span that Tasks 3 and 4 write into `skills/writing-plans/SKILL.md` and `skills/subagent-driven-development/SKILL.md` (both files carry zero `<d>` markers before those tasks). Task 5 must therefore be applied after Tasks 2, 3 and 4, and neither variable name may be removed from the suite while this block exists.
   - Output: one PASS or FAIL line per assertion; exit 1 when any fails.
   - Invariants: a file with zero or more than one `<d>` marker fails; four spans that differ after normalization fail; a template that lost its skip instruction fails.
   - Verification: `bash tests/review-gates/run-tests.sh` exits 0 on the edited tree; Step 2b mutates one copy of the `<d>` span and the suite exits 1.
 - `CLAUDE.md` Testing section (wording artifact)
   - Must convey: `bash tests/review-gates/run-tests.sh` belongs to the fast, non-behavioural suites, with a one-line description of what it covers.
   - Invariant: the new line sits inside the first fenced `bash` block of the `## Testing` section.
-  - Verification: `grep -n 'tests/review-gates/run-tests.sh' CLAUDE.md` prints a line, and `bash tests/review-gates/run-tests.sh` is runnable exactly as written from the repository root.
+  - Verification: `awk '/^## Testing/{f=1} f' CLAUDE.md | awk '/^```/{n++} n<2' | grep -c 'tests/review-gates/run-tests.sh'` prints `1` — the line is inside the first fenced block of the `## Testing` section, which a plain whole-file `grep` would not prove. The fence pattern must be `/^```/`, not `/^```$/`: the blocks open with ```` ```bash ````, so an anchored-empty pattern would count only the closing fences and let the window run past the first block — and `bash tests/review-gates/run-tests.sh` is runnable exactly as written from the repository root.
 
 - [ ] **Step 1: Write failing test**
 
@@ -848,15 +945,26 @@ assert_icontains "batch-controller-prompt still names only Core Flow step 3" "$B
   '"Core Flow" step 3 (the per-task loop)'
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [ ] **Step 2: Record the pre-change state (these blocks pass already)**
+
+This step expects a pass, not a failure: the assertions added above are regression pins on text Tasks 2–4 already wrote. Step 2b is this task's falsification step.
 
 Run: `bash tests/review-gates/run-tests.sh`
-Expected: PASS for every new assertion — the three gate files already carry the `<d>` span (Tasks 2–4) and the three prompt templates already carry their skip instructions. These blocks are regression pins: Step 2b proves each can fail.
+Expected: PASS for every new assertion — the three gate files already carry the `<d>` span (Tasks 2–4) and the three prompt templates already carry their skip instructions.
 
 - [ ] **Step 2b: Prove the anti-drift comparison can fail**
 
-Run: `perl -pi -e 's/else 1 — a `<reviewers-per-lens>` element from any/else 2 — a `<reviewers-per-lens>` element from any/' skills/writing-plans/SKILL.md && bash tests/review-gates/run-tests.sh; git checkout -- skills/writing-plans/SKILL.md`
-Expected: exit 1 with "FAIL: the <d> span of file 3 equals the orchestrator's", then a clean `git status --short skills/writing-plans/SKILL.md`.
+`perl -pi` is line-oriented, so the mutated fragment must sit on a single line of the shipped file. Use `else 1 — a`, which Task 3's text places on one line inside the `<d>` span.
+
+Run:
+
+```bash
+grep -c 'else 1 — a' skills/writing-plans/SKILL.md
+perl -pi -e 's/else 1 — a/else 2 — a/' skills/writing-plans/SKILL.md && bash tests/review-gates/run-tests.sh; git checkout -- skills/writing-plans/SKILL.md
+git status --short skills/writing-plans/SKILL.md
+```
+
+Expected: the `grep -c` prints `1` (exactly one occurrence, on one line); the suite then exits 1 with "FAIL: the <d> span of file 3 equals the orchestrator's"; then a clean `git status --short skills/writing-plans/SKILL.md` — Task 3 committed this file, so `git checkout --` restores the committed text. If a later reflow splits the fragment, pick another single-line fragment inside the same span, or use `perl -0pi -e`.
 
 - [ ] **Step 3: Implement minimal change**
 
@@ -868,8 +976,14 @@ bash tests/review-gates/run-tests.sh          # the three review gates ask for N
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `bash tests/review-gates/run-tests.sh && grep -c 'tests/review-gates/run-tests.sh' CLAUDE.md`
-Expected: PASS — the suite exits 0 and `grep -c` prints `1`.
+Run:
+
+```bash
+bash tests/review-gates/run-tests.sh
+awk '/^## Testing/{f=1} f' CLAUDE.md | awk '/^```/{n++} n<2' | grep -c 'tests/review-gates/run-tests.sh'
+```
+
+Expected: the suite exits 0, and the `grep -c` prints `1` — the new line sits inside the first fenced block of the `## Testing` section.
 
 - [ ] **Step 5: Commit**
 
@@ -890,53 +1004,73 @@ git commit -m "test(review-gates): pin the shared <d> definition and the subagen
 
 **Security flag:** `none`
 
-**Does NOT cover:** `RELEASE-NOTES.md` entries from earlier releases, which are closed and never rewritten (spec §7, last row). No assertion in `tests/claude-code/test-multi-doc-review.sh` changes — only its comments, which claim M=1 is "the way every gate invocation runs it". The behavioural suite's own invocations are unchanged, so its runtime remains the same.
+**Does NOT cover:** `RELEASE-NOTES.md` entries from earlier releases, which are closed and never rewritten (spec §7, last row). No assertion in `tests/claude-code/test-multi-doc-review.sh` changes — only its comments, which claim M=1 is "the way every gate invocation runs it". The behavioural suite's own invocations are unchanged, so its runtime remains the same. Two locations spec §7 points at are checked and deliberately left as written: `docs/FORK-IMPROVEMENTS.md:148` states M's range and the skill's own default (1), which the gate question does not change — the gate offers `<d>`, and the skill's fallback stays 1; and `docs/REVIEW-PROCESS-COMPARISON.md:195, 219` keep the `[N] [M=<m>]` forms because that file is a dated snapshot ("version numbers and behavior are a snapshot of" 2026-07-28), closed like a `RELEASE-NOTES.md` entry. `docs/guide/README.md:509` (orchestration's Phase 0 parameter table) is also unchanged: Phase 0 already asks for M and is outside this plan's scope.
 
 **Contract:**
 - Documentation set (wording artifact)
   - Must convey: the three review gates ask for M as well as N; `N=<n>` is a recognized command form; the environment variable is overridden by a value stated in an invocation, answered in orchestration's Phase 0, **or answered at a review gate**.
-  - Invariants: no documentation file still says the gates ask for N alone; every command form that shows `[M=<m>]` also shows the `N=<n>` form; the corrected comments in `tests/claude-code/test-multi-doc-review.sh` no longer claim gate invocations run at M=1.
-  - Verification: `grep -rn 'asks for N once' docs/ README.md` prints nothing, and `bash tests/review-gates/run-tests.sh` still exits 0.
+  - Invariants: none of the four files edited here still says the gates ask for N alone; in those four files, every command form that shows `[M=<m>]` also shows the `N=<n>` form (the dated snapshot `docs/REVIEW-PROCESS-COMPARISON.md` is excluded, see "Does NOT cover"); the corrected comments in `tests/claude-code/test-multi-doc-review.sh` no longer claim gate invocations run at M=1.
+  - Verification: the four greps of Step 4 all print nothing — `asks for N once` and `same M reviewers per round` (the two stale claims), `\[N\] \[M=<m>\]` (the bracket command forms this task replaces) and `the way every gate invocation` — and `bash tests/review-gates/run-tests.sh` still exits 0. The greps must **not** be run over `docs/` as a whole: this plan and its spec live under `docs/superpowers-orchestrator/` and quote these phrases, so a whole-tree grep can never print nothing.
 
-- [ ] **Step 1: Write failing test**
+- [ ] **Step 1: Write failing test — not applicable to this task**
 
-No new assertion. This task changes prose that the suite does not pin — spec §9 adds no documentation assertion, and pinning marketing prose would make the suite fail on unrelated future edits. The falsifiable check is the `grep` in Step 4, which must print nothing.
+No new assertion, and no command in this step. This task changes prose that the suite does not pin — spec §9 adds no documentation assertion, and pinning marketing prose would make the suite fail on unrelated future edits. The falsifiable checks are the two greps in Step 4, which must print nothing; Step 2 records the state they start from. The greps are scoped to the shipped documentation files: this plan and its spec also contain the phrase, so `grep -rn ... docs/` would always print hits.
 
-Run: `grep -rn 'asks for N once' docs/ README.md`
-Expected: one hit, `docs/FORK-IMPROVEMENTS.md:127`.
+- [ ] **Step 2: Record the pre-change state (the stale claims are still there)**
 
-- [ ] **Step 2: Run test to verify it fails**
+This step expects hits, not a suite failure — the hits are what Step 3 removes.
 
-Run: `grep -rn 'asks for N once' docs/ README.md; bash tests/review-gates/run-tests.sh`
-Expected: the `grep` prints `docs/FORK-IMPROVEMENTS.md:127:...asks for N once if you haven't stated a count.` (the stale claim this task removes), and the suite still exits 0.
+Run:
+
+```bash
+grep -rn 'asks for N once' README.md docs/FORK-IMPROVEMENTS.md docs/guide/README.md
+grep -rn 'same M reviewers per round' docs/guide/README.md
+grep -n '\[N\] \[M=<m>\]' README.md docs/guide/README.md docs/FORK-IMPROVEMENTS.md
+bash tests/review-gates/run-tests.sh
+```
+
+Expected: the first `grep` prints `docs/FORK-IMPROVEMENTS.md:127:...asks for N once if you haven't stated a count.`; the second prints the Stage 2 line of the guide; the third prints the six bracket command forms this task replaces (`README.md:33,367,368`, `docs/guide/README.md:943,944`, `docs/FORK-IMPROVEMENTS.md:170`); and the suite still exits 0.
 
 - [ ] **Step 3: Implement minimal change**
 
 `README.md`:
-- Line 33, the `multi-doc-review` bullet of "What this repo adds": after "automatic at the gates", insert ", where the gate asks you for N and M,"; the direct example stays as it is.
-- Line 34, the `multi-code-review` bullet: change the direct form `/multi-code-review [BASE] [N] [M=<m>]` to `/multi-code-review [BASE] [N|N=<n>] [M=<m>]`, and after "automatic at subagent-driven-development's final review gate" insert ", which asks you for N and M,".
-- Lines 368 and 369, the `multi-doc-review` and `multi-code-review` bullets: change `/multi-doc-review <doc> [N] [M=<m>]` to `/multi-doc-review <doc> [N|N=<n>] [M=<m>]` and `/multi-code-review [BASE] [N] [M=<m>]` to `/multi-code-review [BASE] [N|N=<n>] [M=<m>]`.
+Every line number below was checked against the current file. Identify each bullet by its opening text as well, and edit the bullet the text names — never the line number alone.
+
+- Line 32, the `multi-doc-review` bullet of "What this repo adds": replace `automatic at the gates, or direct:` with `automatic at the gates, where the gate asks you for N and M, or direct:`. The direct example stays as it is. (Given as a replacement, not an insertion: the anchor is already followed by a comma, so inserting after it would produce a double comma.)
+- Line 33, the `multi-code-review` bullet: replace `automatic at subagent-driven-development's final review gate, or direct:` with `automatic at subagent-driven-development's final review gate, which asks you for N and M, or direct:`, and change the direct form `/multi-code-review [BASE] [N] [M=<m>]` to `/multi-code-review [BASE] [N|N=<n>] [M=<m>]`.
+- Lines 367 and 368 (the skill-catalogue `multi-doc-review` and `multi-code-review` bullets; line 369 is `finishing-a-development-branch` and must not be touched): change `/multi-doc-review <doc> [N] [M=<m>]` to `/multi-doc-review <doc> [N|N=<n>] [M=<m>]` and `/multi-code-review [BASE] [N] [M=<m>]` to `/multi-code-review [BASE] [N|N=<n>] [M=<m>]`.
 - Line 379, the `SUPERPOWERS_REVIEWERS_PER_LENS` bullet: replace "An `M=<m>` stated in an invocation, or answered in orchestration's Phase 0, wins over it." with "An `M=<m>` stated in an invocation, answered in orchestration's Phase 0, or answered at one of the three review gates (spec review, plan review, whole-branch code review) wins over it."
 
 `docs/guide/README.md`:
 - After the Stage 1 sentence ending "…and consolidates their reports before findings are triaged." (around line 172), add: "The gate asks you for both numbers — N, the number of rounds, and M, the reviewers per round — offering the value of `SUPERPOWERS_REVIEWERS_PER_LENS` as M's default."
-- In the Stage 2 paragraph beginning "The plan gets its own `multi-doc-review` gate" (around line 227), add after the first sentence: "That gate asks you for N and M in one batch, exactly as the spec gate does."
-- In the Stage 4 paragraph beginning "When the last task completes" (around line 261), add after the first sentence: "The gate asks you for N and M first; each reviewer here reads the whole-branch diff, so M costs more at this gate than at the two document gates."
+- In the Stage 2 paragraph (around line 227), replace `The plan gets its own \`multi-doc-review\` gate (same M reviewers per round) before you approve it;` — this text **wraps across lines 227 and 228** (line 227 ends at `per round)`), so match it across the line break and re-wrap the result to the file's width — with `The plan gets its own \`multi-doc-review\` gate before you approve it, and that gate asks you for N and M in one batch, exactly as the spec gate does;`. The parenthetical must go: M is answered per gate, and the spec's non-goals rule out remembering it between gates.
+- In the Stage 4 paragraph (around line 261), insert the new sentence directly after `consecutive clean rounds — with M > 1 a round is clean only when every reviewer returned a usable report.` — an anchor that **wraps across lines 265 and 266**, so match it across the line break — (the end of that paragraph's first sentence, which runs across several clauses): "The gate asks you for N and M first; each reviewer here reads the whole-branch diff, so M costs more at this gate than at the two document gates."
 - Lines 943 and 944 of the command table: change `[N] [M=<m>]` to `[N|N=<n>] [M=<m>]` in both rows.
+- The `SUPERPOWERS_REVIEWERS_PER_LENS` paragraph beginning "The number of reviewers per lens" (around line 875), which is this guide's mirror of `README.md:379`: append one sentence — "The three review gates (spec review, plan review, whole-branch code review) also ask you for M, offering this value as the default; what you answer there wins for that review."
 
 `docs/FORK-IMPROVEMENTS.md`:
 - Line 127: replace "the loop runs before the user-approval step and asks for N once if you haven't stated a count." with "the loop runs before the user-approval step, and the gate asks you for N (rounds) and M (reviewers per lens) — for whichever of the two you have not already stated."
 - Line 128 (`**Direct:**` for `multi-doc-review`): leave the example as it is, and append to the sentence: "A direct invocation asks for N only; M keeps its own resolution order."
-- Line 170 (`**Automatic:**` for `multi-code-review`): replace "at subagent-driven-development's final whole-branch review gate, replacing the former single-pass review." with "at subagent-driven-development's final whole-branch review gate, replacing the former single-pass review; the gate asks you for N and M, and falls back to the single-pass review where `multi-code-review` refuses (no Agent tool, Codex, Cursor)."
+- Line 169 (`**Automatic:**` for `multi-code-review`): replace "at subagent-driven-development's final whole-branch review gate, replacing the former single-pass review." with "at subagent-driven-development's final whole-branch review gate, replacing the former single-pass review; the gate asks you for N and M, and falls back to the single-pass review where `multi-code-review` refuses (no Agent tool, Codex, Cursor)."
+- Line 170 (`**Direct:**` for `multi-code-review`): change the command form `/multi-code-review [BASE] [N] [M=<m>]` to `/multi-code-review [BASE] [N|N=<n>] [M=<m>]`. Without this edit the task's contract invariant on command forms cannot hold. Line 128 (`**Direct:**` for `multi-doc-review`) shows a concrete example (`… 3 M=2`), not a bracket form, so it needs no such change.
 
-`tests/claude-code/test-multi-doc-review.sh`:
+`tests/claude-code/test-multi-doc-review.sh`: both replacements land inside `#`-prefixed comment blocks. Re-wrap each replacement to the file's existing width and prefix **every** resulting line with `# `; unprefixed prose in a bash script is executed, and no step in this plan runs that suite.
 - Lines 19–22: replace "(so the skill falls back to M=1 — the way every gate invocation and every user without an explicit M= runs it)" with "(so the skill falls back to M=1 — the way a user who states no M and has no `<reviewers-per-lens>` tag runs it; since the review gates ask for M, a gate invocation now carries an explicit `M=<m>`)".
 - Lines 176–178: replace the comment "Deliberately no M=: this case exercises the DEFAULT configuration (M=1), the way every gate invocation and every user without an explicit M= runs it — see the (m1) checks below." with "Deliberately no M=: this case exercises the DEFAULT configuration (M=1) — the fallback a direct invocation reaches with no stated M and no `<reviewers-per-lens>` tag. Gate invocations now carry an explicit `M=<m>`; see the (m1) checks below."
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `grep -rn 'asks for N once' docs/ README.md; grep -rn 'the way every gate invocation' tests/; bash tests/review-gates/run-tests.sh`
-Expected: both `grep` commands print nothing, and the suite prints "Results: … 0 failed" and exits 0.
+Run:
+
+```bash
+grep -rn 'asks for N once' README.md docs/FORK-IMPROVEMENTS.md docs/guide/README.md
+grep -rn 'same M reviewers per round' docs/guide/README.md
+grep -n '\[N\] \[M=<m>\]' README.md docs/guide/README.md docs/FORK-IMPROVEMENTS.md
+grep -rn 'the way every gate invocation' tests/
+bash tests/review-gates/run-tests.sh
+```
+
+Expected: all four `grep` commands print nothing, and the suite prints "Results: … 0 failed" and exits 0.
 
 - [ ] **Step 5: Commit**
 
@@ -966,15 +1100,15 @@ git commit -m "docs(review-gates): the gates ask for M, and N=<n> is a command f
   - Inputs: the current version string in `VERSION`.
   - Output: the same new version string in all five version locations.
   - Invariant: `VERSION`, `.claude-plugin/plugin.json`, `.claude-plugin/marketplace.json`, `plugin.universal.yaml` meta and the README badge all read the same version, and the README's two `v6.7.0–vX.Y.Z` lineage ranges end at it.
-  - Verification: the Step 4 command prints exactly one distinct version string.
+  - Verification: the Step 4 command prints exactly one distinct version string, `7.12.0`. Grepping for the literal `7.12.0` alone cannot detect a location left at `7.11.0`, so the check greps the version *pattern* and requires the deduplicated output to be a single line.
 - `RELEASE-NOTES.md` new entry (wording artifact)
   - Must convey: the three-line **Problem. / Change. / Effect.** summary directly under the `## v7.12.0` heading and above the prose, each label one to three short sentences, the whole summary near 100 words and at most 120, and the Effect stating that the reader must reinstall the plugin.
   - Invariant: the entry is the first `## ` entry after the title; no earlier entry is modified.
-  - Verification: `head -30 RELEASE-NOTES.md` shows the new heading followed by the three labels; `git diff --stat RELEASE-NOTES.md` shows insertions only.
+  - Verification: `head -30 RELEASE-NOTES.md` shows the new heading followed by the three labels; `git diff --stat RELEASE-NOTES.md` shows insertions only; the Step 4 `wc -w` prints at most 120.
 
-- [ ] **Step 1: Write failing test**
+- [ ] **Step 1: Record the pre-change state (no new assertion)**
 
-No new assertion — release bookkeeping is checked by the consistency command in Step 4, which is the falsifiable check for this task.
+Release bookkeeping is checked by the consistency commands in Step 4, which are the falsifiable checks for this task. This step and Step 2 record the two states those checks start from.
 
 Run: `grep -h -o '7\.[0-9]*\.[0-9]*' VERSION .claude-plugin/plugin.json .claude-plugin/marketplace.json plugin.universal.yaml | sort -u`
 Expected: prints `7.11.0` — the pre-release state.
@@ -999,20 +1133,18 @@ Expected: prints `0` — the badge does not yet name the new version.
 ## v7.12.0 — the review gates ask how many reviewers per round
 
 **Problem.** M — the number of identical reviewer subagents each review
-round dispatches in parallel — was never shown to a user who did not
-already know it exists. Both review skills resolved it silently, so on any
-machine where `SUPERPOWERS_REVIEWERS_PER_LENS` is unset every gate review
-ran one reviewer per round without saying so.
+round dispatches in parallel — was never shown to a user who did not know
+it exists. Where `SUPERPOWERS_REVIEWERS_PER_LENS` is unset, every gate
+review ran one reviewer per round without saying so.
 
-**Change.** The three interactive review gates — spec review, plan review,
-whole-branch code review — now ask for M in the same question batch in
-which they already ask for N, defaulting to the session tag's value, and
-pass both as explicit `N=<n> M=<m>` tokens. Both review skills parse
-`N=<n>`.
+**Change.** The three interactive review gates — spec, plan and
+whole-branch code review — now ask for M in the same question batch as N,
+defaulting to the session tag's value, and pass both as explicit
+`N=<n> M=<m>` tokens. Both review skills parse `N=<n>`.
 
 **Effect.** You choose the reviewer count at each gate, with its cost
-stated next to the question. One extra question per gate. Reinstall the
-plugin to pick the change up; nothing else to migrate.
+stated. One extra question per gate. Reinstall the plugin; nothing else to
+migrate.
 
 Details:
 
@@ -1040,8 +1172,17 @@ Details:
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `grep -h -o '7\.12\.0' VERSION .claude-plugin/plugin.json .claude-plugin/marketplace.json plugin.universal.yaml README.md | sort | uniq -c && bash tests/review-gates/run-tests.sh && bash tests/writing-plans/run-tests.sh && bash tests/orchestrating-development/run-tests.sh && bash tests/reviewer-templates/run-tests.sh && bash tests/in-run-rulings/run-tests.sh`
-Expected: the `grep` counts at least 7 occurrences of `7.12.0` (one per version location plus the badge and the two lineage ranges), and every suite exits 0 with "0 failed".
+Run:
+
+```bash
+grep -h -o '7\.[0-9]*\.[0-9]*' VERSION .claude-plugin/plugin.json .claude-plugin/marketplace.json plugin.universal.yaml | sort -u
+grep -c '7\.12\.0' README.md
+grep -c 'version-7\.12\.0-white' README.md
+awk '/^## v7\.12\.0/{f=1;next} /^Details:/{f=0} f' RELEASE-NOTES.md | wc -w
+bash tests/review-gates/run-tests.sh && bash tests/writing-plans/run-tests.sh && bash tests/orchestrating-development/run-tests.sh && bash tests/reviewer-templates/run-tests.sh && bash tests/in-run-rulings/run-tests.sh
+```
+
+Expected: the first `grep` prints exactly one line, `7.12.0` — a second line means a version location was missed; the second prints `4` (the badge, the two lineage ranges, the line-37 mention); the third prints `1` (the badge line itself carries the new version); the `wc -w` prints at most 120 — 112 for the summary as drafted (`wc -w` also counts the stand-alone em dashes, so keep a margin under the budget `CLAUDE.md`'s release rule sets); and every suite exits 0 with "0 failed".
 
 - [ ] **Step 5: Commit**
 
