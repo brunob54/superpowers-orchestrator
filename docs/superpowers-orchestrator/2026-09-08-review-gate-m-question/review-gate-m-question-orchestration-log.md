@@ -4,3 +4,5 @@ _Invocation 1 — 2026-09-08 — spec docs/superpowers-orchestrator/2026-09-08-r
 
 ## Phase 1 — Plan — DONE — 2026-09-08
 plan: docs/superpowers-orchestrator/2026-09-08-review-gate-m-question/plans/review-gate-m-question.md — 7 tasks
+
+## Phase 2 — Plan review — rounds 3 — cap — unresolved 0
