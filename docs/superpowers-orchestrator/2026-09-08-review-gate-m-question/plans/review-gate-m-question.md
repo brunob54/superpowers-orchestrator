@@ -684,7 +684,7 @@ git commit -m "feat(writing-plans): the plan review gate asks for N and M" --tra
   - Ordering dependency: this task's test block reads `ANCHOR`, `COST_LINE` and `SHARED_PINS`, which Task 2's block defines, and the suite runs under `set -u`. Task 4 must be applied after Task 2.
   - Sentence wording outside the pinned spans is free; the properties above bind.
 
-- [ ] **Step 1: Write failing test**
+- [x] **Step 1: Write failing test**
 
 In `tests/review-gates/run-tests.sh`, insert before the `echo` that precedes the `Results:` line:
 
@@ -765,12 +765,12 @@ else
 fi
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `bash tests/review-gates/run-tests.sh`
 Expected: FAIL with "code gate asks for N and M", the three ordering assertions, "code gate carries the cost sentence", "code gate adds the whole-branch-diff clause", the five shared-block pins, "step 4 no longer says 'never ask for M'", "step 4 pins the batched path to passing resolved tokens", "step 4 names Cursor in its platform condition", "Integration names the same three refusal platforms", "Integration drops the Agent-tool-only condition" and the token-ordering check. The three carried-over pins ("step 4 keeps the plan.ref pointer", "…the outside-the-layout direct-mode rule", "…the completion-blocking sentence") **pass already** — today's step 4 carries all three strings; they are regression pins on text the rewrite must retype unchanged.
 
-- [ ] **Step 3: Implement minimal change**
+- [x] **Step 3: Implement minimal change**
 
 Replace the whole of Core Flow step 4 in `skills/subagent-driven-development/SKILL.md` (lines 77–100, from "4. Run the final whole-branch review loop:" up to but not including the line beginning "5. Shut down all spawned subagents") with the step below.
 
@@ -857,12 +857,12 @@ Then correct the **second copy** of the same condition in the `## Integration` s
 
 The step-4 pointer "(see Integration)" is only correct once both copies name the same three platforms.
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `bash tests/review-gates/run-tests.sh`
 Expected: PASS — every assertion of blocks 1/3/4/5 and 7/8/9 for the code gate, plus the earlier blocks.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add skills/subagent-driven-development/SKILL.md tests/review-gates/run-tests.sh
