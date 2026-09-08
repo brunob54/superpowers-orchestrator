@@ -106,3 +106,29 @@ Secrets found: none
 Open items after this addendum: unresolved 0, user-decision 0. The effective HEAD moved past invocation 1's completion marker before this addendum was written, so that marker is left unchanged and a new invocation follows; the verification re-review of the [I2] fix is skipped because invocation 2 reviews it.
 
 _Invocation 2 — 2026-09-08 — N=3 M=3 — BASE..HEAD 9f73f00..a969659 — branch feature/review-gate-m-question — gate: orchestration_
+
+## Round 4 — Correctness & spec alignment — opus
+**Reviewers:** M=3, usable 3/3
+**Reviewer verdicts:** r1: 0 Critical, 1 Important, 3 Minor | r2: 0 Critical, 2 Important, 4 Minor | r3: 0 Critical, 2 Important, 4 Minor
+**Sources mapped:** 16/16
+**Reviewer verdict:** 0 Critical, 5 Important, 7 Minor
+**Converged:** no
+### Dispositions
+- [I1] fixed — the sidecar-read guard now lists the invoker among the readable fields, so a gate can still tell its own entry from a direct one → 41fb0fb ← 1/3: r1:I1
+- [I2] fixed — the guide and FORK-IMPROVEMENTS now qualify the code gate's question: interactive SDD asks, batched autonomous mode asks nothing → 41fb0fb ← 1/3: r2:I1
+- [I3] fixed — the suppression condition gained a third clause, so a stated N=0 is never inherited on that path either → 41fb0fb ← 1/3: r2:I2
+- [I4] fixed — a converged entry with fewer than N logged rounds is complete, not interrupted, so no extra round is dispatched → 41fb0fb ← 1/3: r3:I1
+- [I5] fixed — multi-doc-review states the resume path: no second invocation note, continue at the next round, lens from the original invocation's index → 41fb0fb ← 1/3: r3:I2
+- [M1] fixed — both gates read the most recent invocation line whose invoker names this gate → 41fb0fb ← 3/3: r1:M1, r2:M1, r3:M2
+- [M2] fixed — the FORK-IMPROVEMENTS once-per-gate bullet names the skipped and interrupted exceptions → 41fb0fb ← 3/3: r1:M2, r2:M3, r3:M3
+- [M3] carried — on the recorded-N=0 path the gate still asks for N only; whether M should also be asked there is a design choice the plan does not settle ← 1/3: r1:M3
+- [M4] carried — the gate carries no explicit marker telling the review skill that the user asked for another pass ← 1/3: r2:M2
+- [M5] fixed — the recorded-N=0 path takes a session-stated M first, with a matching origin echo → 41fb0fb ← 1/3: r2:M4
+- [M6] fixed — the shared rules block no longer claims a sentence count for the suppression check → 41fb0fb ← 1/3: r3:M1
+- [M7] carried — the suite does not yet pin the recorded-N=0 and interrupted/skipped rules themselves ← 1/3: r3:M4
+- [CF1] carried — the '(in every mode)' assertion pins an isolated substring (ship-as-is, 3 of 3 reviewers)
+- [CF2] carried — path variables and helpers unused until later tasks (ship-as-is, 3 of 3 reviewers; no longer true on the final tree)
+- [CF3] carried — D_MARKER and D_TAIL unused until Task 5 (ship-as-is, 3 of 3 reviewers; both are read by the shipped anti-drift block)
+- [CF4] rejected: plan governs (orchestrator decision) — "Must convey: `bash tests/review-gates/run-tests.sh` belongs to the fast, non-behavioural suites, with a one-line description of what it covers." — the same item was decided on this run's invocation 1 addendum, so the wording is decided and the item is the loop's to reject (2 of 3 reviewers recommended user-decision)
+- [CF5] carried — docs/guide/README.md repeated 'that gate' (ship-as-is, 3 of 3 reviewers; already resolved on the tree)
+- [CF6] fixed — removed the duplicated single-pass fallback statement from docs/FORK-IMPROVEMENTS.md (fix-before-merge, 1 of 3 reviewers) → 41fb0fb

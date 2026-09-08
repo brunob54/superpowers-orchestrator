@@ -202,3 +202,35 @@ Output (tail):
 ```
 Results: 85 passed, 0 failed
 ```
+
+## Round 4
+
+Findings addressed: I1, I2, I3, I4, I5, M1, M2, M3, M4, CF6 (CF6 folded into
+the I2 edit of docs/FORK-IMPROVEMENTS.md, same lines).
+
+Command:
+```
+bash tests/review-gates/run-tests.sh
+```
+Output (tail):
+```
+Results: 85 passed, 0 failed
+```
+
+Command:
+```
+bash tests/reviewer-templates/run-tests.sh
+```
+Output (tail):
+```
+Results: 72 passed, 0 failed
+```
+
+Command:
+```
+bash tests/writing-plans/run-tests.sh
+```
+Output (tail):
+```
+Results: 15 passed, 0 failed
+```
