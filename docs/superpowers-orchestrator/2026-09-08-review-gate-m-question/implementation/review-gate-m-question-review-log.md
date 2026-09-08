@@ -179,3 +179,6 @@ _Invocation 2 — 2026-09-08 — N=3 M=3 — BASE..HEAD 9f73f00..a969659 — bra
 - [M3] rejected: refuted — the round's Reviewers line already records the effective M whenever it differs from the invocation line's M (multi-doc-review Review Log Format), so a resumed round's real reviewer count is in the log ← 1/3: r1:M3
 - [M4] rejected: plan governs (orchestrator decision) — "Must convey, in this order: the platform check; the suppression check with the origin echo; the question one question batch for whichever of N and M" — the same objection to the doc gates re-emitting log-recorded N and M as invocation tokens was decided on this run's invocation 1 addendum ← 1/3: r2:M1
 - [M5] rejected: the loop never edits plan text, and the plan's falsification step has already been executed; the plan's Task 5 Step 2b restores a mutated skill file with a bare git checkout and no cleanliness precondition ← 1/3: r3:M2
+
+_Completed — 2026-09-08 — cap reached — HEAD 119531c10257fdd3b6aca1efd6e9b64d61a55d04_
+Secrets found: none
