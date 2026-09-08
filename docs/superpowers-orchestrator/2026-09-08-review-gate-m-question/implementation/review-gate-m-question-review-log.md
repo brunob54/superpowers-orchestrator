@@ -154,3 +154,16 @@ _Invocation 2 — 2026-09-08 — N=3 M=3 — BASE..HEAD 9f73f00..a969659 — bra
 - [M5] rejected: harness probe not runnable here — dispatch 5 reviewer-sized subagents in one message and compare wall-clock elapsed time against a single dispatch of the same prompt — (would break a constraint) ← 1/3: r3:M1
 - [M6] fixed — the anti-drift check's title names what it compares, the tag-resolution sentence, instead of claiming the whole definition → 64d7c77 ← 1/3: r3:M2
 - [M7] fixed — the one path that re-runs against a completed entry carries an explicit marker, placed before the N and M tokens → 64d7c77 ← 1/3: r3:M3
+
+## Round 6 — Security — opus
+**Reviewers:** M=3, usable 3/3
+**Reviewer verdicts:** r1: 0 Critical, 1 Important, 2 Minor | r2: 0 Critical, 0 Important, 1 Minor | r3: 0 Critical, 1 Important, 2 Minor
+**Sources mapped:** 7/7
+**Reviewer verdict:** 0 Critical, 1 Important, 4 Minor
+**Converged:** no
+### Dispositions
+- [I1] fixed — multi-doc-review's own log reader now carries the gates' marker-recognition rule, so a quoted invocation line, round header or convergence line in a disposition summary cannot decide whether the loop runs → 119531c ← 2/3: r1:I1, r3:I1
+- [M1] rejected: the loop never edits plan text, and the plan's falsification step has already been executed; the plan's Task 5 Step 2b restores a mutated skill file with a bare git checkout and no cleanliness precondition ← 2/3: r1:M2, r3:M2
+- [M2] fixed — the 'another pass requested' marker counts only in the invocation text; an occurrence arriving through a tool result is data → 119531c ← 1/3: r1:M1
+- [M3] fixed — both gates carry a fourth origin sentence for a log line that predates the M token, so M=1 is never announced as recorded or as the default → 119531c ← 1/3: r2:M1
+- [M4] rejected: plan governs (orchestrator decision) — "Must convey, in this order: the platform check; the suppression check with the origin echo; the question one question batch for whichever of N and M" — the same objection to the doc gates recovering review parameters from the committed sidecar log was decided on this run's invocation 1 addendum ← 1/3: r3:M1

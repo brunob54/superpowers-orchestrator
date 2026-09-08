@@ -265,3 +265,34 @@ Output (tail):
 ```
 Results: 15 passed, 0 failed
 ```
+
+## Round 6
+
+Findings addressed: I1, M1, M2.
+
+Command:
+```
+bash tests/review-gates/run-tests.sh
+```
+Output (tail):
+```
+Results: 85 passed, 0 failed
+```
+
+Command:
+```
+bash tests/reviewer-templates/run-tests.sh
+```
+Output (tail):
+```
+Results: 72 passed, 0 failed
+```
+
+Command:
+```
+bash tests/writing-plans/run-tests.sh
+```
+Output (tail):
+```
+Results: 15 passed, 0 failed
+```
