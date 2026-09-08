@@ -124,8 +124,8 @@ A single review — even a careful one — inherits the authoring conversation's
 
 ### How to use
 
-- **Automatic:** at the brainstorming spec gate and the writing-plans plan gate, the loop runs before the user-approval step and asks for N once if you haven't stated a count.
-- **Direct:** `/multi-doc-review docs/superpowers-orchestrator/<date>-<slug>/specs/<slug>-design.md 3 M=2` — or phrases like `review this spec 3 times` / `run independent review rounds on docs/superpowers-orchestrator/<date>-<slug>/plans/<slug>.md` / `review this spec 3 times with 2 reviewers per lens`.
+- **Automatic:** at the brainstorming spec gate and the writing-plans plan gate, the loop runs before the user-approval step, and the gate asks you for N (rounds) and M (reviewers per lens) — for whichever of the two you have not already stated.
+- **Direct:** `/multi-doc-review docs/superpowers-orchestrator/<date>-<slug>/specs/<slug>-design.md 3 M=2` — or phrases like `review this spec 3 times` / `run independent review rounds on docs/superpowers-orchestrator/<date>-<slug>/plans/<slug>.md` / `review this spec 3 times with 2 reviewers per lens`. A direct invocation asks for N only; M keeps its own resolution order.
 - **Audit trail:** read `<doc-basename>-review-log.md` next to the document for per-round verdicts and every disposition.
 
 ### Where it lives
@@ -166,8 +166,8 @@ Dogfood evidence from building it: the design spec collected **33 findings acros
 
 ### How to use
 
-- **Automatic:** at subagent-driven-development's final whole-branch review gate, replacing the former single-pass review.
-- **Direct:** `/multi-code-review [BASE] [N] [M=<m>]` — or phrases like `review the branch 3 times` / `several independent code reviews of this branch` / `review the branch 3 times with 2 reviewers per lens`. Single-argument form: an integer 0–10 is N, anything else is a git ref.
+- **Automatic:** at subagent-driven-development's final whole-branch review gate, replacing the former single-pass review; the gate asks you for N and M, and falls back to the single-pass review where `multi-code-review` refuses (no Agent tool, Codex, Cursor).
+- **Direct:** `/multi-code-review [BASE] [N|N=<n>] [M=<m>]` — or phrases like `review the branch 3 times` / `several independent code reviews of this branch` / `review the branch 3 times with 2 reviewers per lens`. Single-argument form: an integer 0–10 is N, anything else is a git ref.
 - **Audit trail:** `.superpowers/reviews/<branch-slug>-review-log.md` — or, in a pipeline run, `docs/superpowers-orchestrator/<date>-<slug>/implementation/<slug>-review-log.md`, committed — for per-round verdicts, dispositions, and fix commit SHAs.
 - **Claude Code only** — the loop requires the Agent tool; on Codex and Cursor the SDD gate keeps its single-pass final review.
 
