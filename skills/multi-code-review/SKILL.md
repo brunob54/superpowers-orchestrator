@@ -8,7 +8,7 @@ description: >
   round for Critical/Important findings; sidecar audit log; early exit
   after two consecutive clean rounds. Invoked by
   subagent-driven-development at the final whole-branch review gate, or
-  directly via /multi-code-review [BASE] [N] [M=<m>]. Triggers on: "multi code
+  directly via /multi-code-review [BASE] [N|N=<n>] [M=<m>]. Triggers on: "multi code
   review", "independent code reviews", "several code reviews", "review
   the branch N times", "code review rounds", "whole-branch review loop".
 ---
@@ -53,19 +53,22 @@ final review on such platforms; that fallback lives there, not here.)
   equivalent check; if it fails and no merge-base exists, stop and
   report.) Without a user BASE, resolve the default branch via
   `git symbolic-ref refs/remotes/origin/HEAD`, then `main`, then
-  `master`, and take `git merge-base <default> HEAD`. Every `M=<m>` token
-  and every M prose form is extracted from the invocation **first** (see
-  M below); the positional rule applies to the remaining arguments only —
-  `M=2` contains `=` and would otherwise be rejected as a BASE by the ref
-  charset above. Single-argument form: an integer 0–10 is N; anything
+  `master`, and take `git merge-base <default> HEAD`. Every `N=<n>` and `M=<m>` token
+  and every M prose form is extracted from the invocation **first** (see N
+  and M below); the positional rule applies to the remaining arguments
+  only — `N=3` and `M=2` contain `=` and would otherwise be rejected as a
+  BASE by the ref charset above. Single-argument form: an integer 0–10 is N; anything
   else — including an integer outside 0–10 — is a git ref (BASE), never
   an invalid N. If the
   range is empty or invalid (BASE = HEAD, no merge-base, or BASE does
   not resolve to a commit), stop and report; dispatch nothing.
-- **N (round cap):** if the user stated a count, use it (most recent
+- **N (round cap):** if the user stated a count, use it — `N=<n>`, or a
+  count in a phrase that names the review (most recent
   wins; every M form is extracted from the invocation first — see M
-  below). Otherwise ask once — at gate time for the SDD gate, immediately
-  for direct invocations. Default **3**. Valid N is an integer 0–10;
+  below). The SDD gate carries `N=<n> M=<m>` as its last tokens: it asked
+  for whichever of the two the user had not already stated, so do not ask
+  again. On a direct invocation with no stated count, ask once,
+  immediately. Default **3**. Valid N is an integer 0–10;
   anything else → 3. N = 0 skips the loop and logs a `skipped` entry
   recording `HEAD <sha>` (an explicit user choice; the SDD gate then
   proceeds as if the review passed with zero findings). **Batched
@@ -118,7 +121,7 @@ final review on such platforms; that fallback lives there, not here.)
 - **`TOPIC_DIR` (optional):** an absolute path to a topic folder under the
   repository root (layout defined in the "Artifact Layout" section of
   `skills/brainstorming/SKILL.md`). Two invocation forms:
-  `/multi-code-review [BASE] [N] [M=<m>]` — direct, no `TOPIC_DIR`; and the pipeline
+  `/multi-code-review [BASE] [N|N=<n>] [M=<m>]` — direct, no `TOPIC_DIR`; and the pipeline
   gate call — with `TOPIC_DIR`. Presence of `TOPIC_DIR` selects
   **pipeline mode**; absence selects **direct mode**.
 

@@ -7,7 +7,7 @@ description: >
   document; a sidecar audit log records every disposition; early exit
   after two consecutive clean rounds. Invoked by brainstorming (spec gate)
   and writing-plans (plan gate), or directly via
-  /multi-doc-review <doc-path> [N] [M=<m>].
+  /multi-doc-review <doc-path> [N|N=<n>] [M=<m>].
   Triggers on: "multi doc review", "document review rounds", "review
   rounds", "independent reviews", "review the spec again", "review this N
   times".
@@ -23,11 +23,14 @@ rounds' findings — that independence is the point.
 
 - **Target document:** absolute path, must exist — otherwise stop and report;
   dispatch nothing.
-- **N (round cap):** if the user stated a count, use it (most recent wins;
-  every M form is extracted from the invocation first — see M below).
-  Otherwise ask once — at gate time for gate invocations, immediately for
-  direct invocations. Default **3**. Valid N is an integer 0–10; anything
-  else → 3. N = 0 skips the loop and logs a `skipped` entry.
+- **N (round cap):** if the user stated a count, use it — `N=<n>`, or a
+  count in a phrase that names the review (most recent wins; every M form
+  is extracted from the invocation first — see M below). A gate invocation
+  carries `N=<n> M=<m>` as its last tokens: the gate asked for whichever of
+  the two the user had not already stated, so do not ask again. On a direct
+  invocation with no stated count, ask once, immediately. Default **3**.
+  Valid N is an integer 0–10; anything else → 3. N = 0 skips the loop and
+  logs a `skipped` entry.
 - **M (reviewers per lens):** the number of reviewer subagents dispatched
   per round, all under the round's lens with the identical prompt. Valid M
   is an integer 1–5; anything else (0, 6, a word, a decimal) → the default
