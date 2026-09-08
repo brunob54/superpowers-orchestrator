@@ -1106,19 +1106,19 @@ git commit -m "docs(review-gates): the gates ask for M, and N=<n> is a command f
   - Invariant: the entry is the first `## ` entry after the title; no earlier entry is modified.
   - Verification: `head -30 RELEASE-NOTES.md` shows the new heading followed by the three labels; `git diff --stat RELEASE-NOTES.md` shows insertions only; the Step 4 `wc -w` prints at most 120.
 
-- [ ] **Step 1: Record the pre-change state (no new assertion)**
+- [x] **Step 1: Record the pre-change state (no new assertion)**
 
 Release bookkeeping is checked by the consistency commands in Step 4, which are the falsifiable checks for this task. This step and Step 2 record the two states those checks start from.
 
 Run: `grep -h -o '7\.[0-9]*\.[0-9]*' VERSION .claude-plugin/plugin.json .claude-plugin/marketplace.json plugin.universal.yaml | sort -u`
 Expected: prints `7.11.0` — the pre-release state.
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `grep -c 'version-7\.12\.0-white' README.md`
 Expected: prints `0` — the badge does not yet name the new version.
 
-- [ ] **Step 3: Implement minimal change**
+- [x] **Step 3: Implement minimal change**
 
 - `VERSION`: `7.12.0`
 - `.claude-plugin/plugin.json` line 4: `"version": "7.12.0",`
@@ -1170,7 +1170,7 @@ Details:
   the shared default definition across the four files that carry it.
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run:
 
@@ -1184,7 +1184,7 @@ bash tests/review-gates/run-tests.sh && bash tests/writing-plans/run-tests.sh &&
 
 Expected: the first `grep` prints exactly one line, `7.12.0` — a second line means a version location was missed; the second prints `4` (the badge, the two lineage ranges, the line-37 mention); the third prints `1` (the badge line itself carries the new version); the `wc -w` prints at most 120 — 112 for the summary as drafted (`wc -w` also counts the stand-alone em dashes, so keep a margin under the budget `CLAUDE.md`'s release rule sets); and every suite exits 0 with "0 failed".
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add VERSION .claude-plugin/plugin.json .claude-plugin/marketplace.json plugin.universal.yaml README.md RELEASE-NOTES.md
