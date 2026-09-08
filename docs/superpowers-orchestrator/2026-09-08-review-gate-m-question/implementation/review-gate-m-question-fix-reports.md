@@ -173,3 +173,19 @@ Output (tail):
 ```
 Results: 85 passed, 0 failed
 ```
+
+## Round 3
+
+Findings addressed: M1, M3, M4.
+
+Commands run:
+
+```
+bash tests/review-gates/run-tests.sh
+```
+Output: `Results: 85 passed, 0 failed`
+
+```
+bash tests/reviewer-templates/run-tests.sh
+```
+Output: `Results: 72 passed, 0 failed`

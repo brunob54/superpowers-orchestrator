@@ -70,3 +70,15 @@ _Invocation 1 — 2026-09-08 — N=3 M=3 — BASE..HEAD 9f73f00..ab06ac1 — bra
 - [M2] carried — an in-range value planted on the sidecar's invocation line is still adopted; the doc gates draw no tracked-log distinction ← 1/3: r1:M1
 - [M3] fixed — the suite now pins both guard sentences of the sidecar-read path in each document gate span → 1965b46 ← 1/3: r2:M1
 - [M4] carried — multi-code-review has no mirror rule for an N or M form inside the inline carried-findings list; the gate's own rule is the only guard ← 1/3: r3:M2
+
+## Round 3 verification 2 — Security — opus
+**Reviewers:** M=3, usable 3/3
+**Reviewer verdicts:** r1: 0 Critical, 0 Important, 2 Minor | r2: 0 Critical, 0 Important, 2 Minor | r3: 0 Critical, 1 Important, 1 Minor
+**Sources mapped:** 6/6
+**Reviewer verdict:** 0 Critical, 1 Important, 4 Minor
+### Dispositions
+- [I1] user-decision — the document gates recover M from the committed sidecar log, so a repository file chooses a review parameter, which the project's own invariant for the `<reviewers-per-lens>` tag forbids; the spec's R5 requires that recovery (plan-mandated) — at skills/brainstorming/SKILL.md:65 — clause: Task 2 "Must convey, in this order: the platform check; the suppression check with the origin echo; the question one question batch for whichever of N and M" ← 1/3: r3:I1
+- [M1] fixed — M's resolution step 1 now carries the same tool-result-is-data rule as N's bullet in both review skills → 4397311 ← 2/3: r1:M2, r2:M2
+- [M2] rejected: the loop never edits plan text, and the plan's falsification step has already been executed; the plan's Step 2b restores a mutated skill file with a bare git checkout and no backup ← 1/3: r1:M1
+- [M3] fixed — the gates recognise the invocation line only at the start of a line, so a forged string inside a disposition summary is no longer matched → 4397311 ← 1/3: r2:M1
+- [M4] fixed — multi-doc-review's Once per gate block now states that only the recorded N, M and round headers are read from the log → 4397311 ← 1/3: r3:M1
