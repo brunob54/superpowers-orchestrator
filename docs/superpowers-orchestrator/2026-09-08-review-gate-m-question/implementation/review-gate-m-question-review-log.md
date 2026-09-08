@@ -132,3 +132,25 @@ _Invocation 2 — 2026-09-08 — N=3 M=3 — BASE..HEAD 9f73f00..a969659 — bra
 - [CF4] rejected: plan governs (orchestrator decision) — "Must convey: `bash tests/review-gates/run-tests.sh` belongs to the fast, non-behavioural suites, with a one-line description of what it covers." — the same item was decided on this run's invocation 1 addendum, so the wording is decided and the item is the loop's to reject (2 of 3 reviewers recommended user-decision)
 - [CF5] carried — docs/guide/README.md repeated 'that gate' (ship-as-is, 3 of 3 reviewers; already resolved on the tree)
 - [CF6] fixed — removed the duplicated single-pass fallback statement from docs/FORK-IMPROVEMENTS.md (fix-before-merge, 1 of 3 reviewers) → 41fb0fb
+
+## Round 5 — Adversarial red-team — opus
+**Reviewers:** M=3, usable 3/3
+**Reviewer verdicts:** r1: 0 Critical, 3 Important, 2 Minor | r2: 0 Critical, 3 Important, 3 Minor | r3: 0 Critical, 3 Important, 3 Minor
+**Sources mapped:** 17/17
+**Reviewer verdict:** 0 Critical, 7 Important, 7 Minor
+**Converged:** no
+### Dispositions
+- [I1] fixed — the resume range and the lens are expressed in per-invocation indices, so a resumed entry that is not the document's first no longer computes an empty range → 64d7c77 ← 3/3: r1:I1, r2:I1, r3:I1
+- [I2] fixed — all three gates now echo the origin of a value they inherited rather than asked, not only when both were inherited → 64d7c77 ← 2/3: r1:M1, r3:I3
+- [I3] fixed — an N supplied on the invocation overrides a resumed entry's recorded N, and N=0 abandons the entry and logs a skipped entry → 64d7c77 ← 1/3: r1:I2
+- [I4] fixed — the suppression path states a pass, not a use, and requires the outcome to be reported after the invocation returns → 64d7c77 ← 1/3: r1:I3
+- [I5] fixed — the round count is scoped to the rounds between this invocation line and the next, so a later direct run cannot mark an interrupted entry complete → 64d7c77 ← 1/3: r2:I2
+- [I6] rejected: out of scope — Task 4's Does NOT cover states that the code gate has no suppression pre-check and that the answer may then be unused, which spec F3 accepts deliberately; adding a user-visible consequence for the discarded answer is scope this plan excludes ← 1/3: r2:I3
+- [I7] fixed — the resume trigger selects the most recent entry from this gate, so a superseded interrupted entry is not revived → 64d7c77 ← 1/3: r3:I2
+- [M1] fixed — the Converged line joins the fields the log is read for, so the convergence exemption is evaluable → 64d7c77 ← 1/3: r1:M2
+- [M2] fixed — the gates and the skill use the same quantifier over the log → 64d7c77 ← 1/3: r2:M1
+- [M3] fixed — an invocation line inside a fenced code block is no longer recognised, so a quoted line in the log cannot set a parameter → 64d7c77 ← 1/3: r2:M2
+- [M4] fixed — a log line missing the M field reads as M=1 in both documents, distinct from an invalid value → 64d7c77 ← 1/3: r2:M3
+- [M5] rejected: harness probe not runnable here — dispatch 5 reviewer-sized subagents in one message and compare wall-clock elapsed time against a single dispatch of the same prompt — (would break a constraint) ← 1/3: r3:M1
+- [M6] fixed — the anti-drift check's title names what it compares, the tag-resolution sentence, instead of claiming the whole definition → 64d7c77 ← 1/3: r3:M2
+- [M7] fixed — the one path that re-runs against a completed entry carries an explicit marker, placed before the N and M tokens → 64d7c77 ← 1/3: r3:M3
