@@ -236,6 +236,81 @@ assert_icontains "writing-plans leaves the run/resume/skip decision to the skill
 assert_icontains "plan gate still re-runs only Self-Review after plan changes" "$WP_NORM" \
   're-run only Self-Review'
 
+# Code gate: Core Flow step 4 of skills/subagent-driven-development/SKILL.md.
+# The naive rule fails — `^4\. ` and `^5\. ` both match several times in this
+# file — so both anchors are resolved relative to the `## Core Flow`
+# heading, and the suite FAILs when either does not resolve.
+SDD_SPAN="$WORK/sdd-span.txt"
+SDD_CORE="$(first_line_of "$SDD" '## Core Flow')"
+SDD_S4="$(first_match_from "$SDD" '^4\. ' "$((${SDD_CORE:-0} + 1))")"
+SDD_S5="$(first_match_from "$SDD" '^5\. ' "$((${SDD_S4:-0} + 1))")"
+slice_to "code gate span (Core Flow step 4)" "$SDD" "$SDD_S4" "$SDD_S5" "$SDD_SPAN"
+SDD_NORM="$WORK/sdd-span-norm.txt"
+normalize_to "$SDD_SPAN" "$SDD_NORM"
+
+# Batched Autonomous Mode span: from the whole line `## Batched Autonomous
+# Mode` to the end of the file. The bare string occurs five times, first in
+# the frontmatter, so only the whole-line heading may anchor it.
+BAM_SPAN="$WORK/bam-span.txt"
+BAM_START="$(first_line_of "$SDD" '## Batched Autonomous Mode')"
+SDD_LINES="$(awk 'END { print NR + 1 }' "$SDD")"
+slice_to "batched autonomous mode span" "$SDD" "$BAM_START" "$SDD_LINES" "$BAM_SPAN"
+BAM_NORM="$WORK/bam-span-norm.txt"
+normalize_to "$BAM_SPAN" "$BAM_NORM"
+
+FINDINGS_PHRASE="the ledger's carried Minor-findings list"
+# Integration span: from the whole line `## Integration` to the end of the
+# file. It carries a SECOND copy of the fallback condition, so the check
+# below must be scoped to it — step 4's own text would otherwise satisfy a
+# whole-file check.
+INTEG_SPAN="$WORK/integ-span.txt"
+INTEG_START="$(first_line_of "$SDD" '## Integration')"
+slice_to "SDD Integration span" "$SDD" "$INTEG_START" "$SDD_LINES" "$INTEG_SPAN"
+INTEG_NORM="$WORK/integ-norm.txt"
+normalize_to "$INTEG_SPAN" "$INTEG_NORM"
+
+bold "1/3/4/5. Code gate (subagent-driven-development Core Flow step 4)"
+assert_icontains "code gate asks for N and M" "$SDD_NORM" "$ANCHOR"
+assert_order "code gate: platform check before the question" "$SDD_NORM" \
+  '`multi-code-review` refuses' "$ANCHOR"
+assert_order "code gate: batched-mode exception before the question" "$SDD_NORM" \
+  'Batched Autonomous Mode' "$ANCHOR"
+assert_order "code gate: question before the invocation" "$SDD_NORM" \
+  "$ANCHOR" 'invoke the `multi-code-review` skill once'
+assert_icontains "code gate carries the cost sentence" "$SDD_NORM" "$COST_LINE"
+assert_icontains "code gate adds the whole-branch-diff clause" "$SDD_NORM" \
+  'Each reviewer here reads the whole-branch diff.'
+for pin in "${SHARED_PINS[@]}"; do
+  assert_contains "code gate shared rules block pin: $pin" "$SDD_NORM" "$pin"
+done
+
+bold "7/8/9. The code gate's subagent and batched paths"
+assert_not_icontains "step 4 no longer says 'never ask for M'" "$SDD_NORM" 'never ask for M'
+assert_icontains "Batched Autonomous Mode still says 'never ask for M'" "$BAM_NORM" 'never ask for M'
+assert_contains "step 4 pins the batched path to passing resolved tokens" "$SDD_NORM" \
+  'pass `N=<n> M=<m>` resolved by that mode'"'"'s own rule'
+assert_contains "step 4 names Cursor in its platform condition" "$SDD_NORM" 'Cursor'
+# The second half of step 4 is carried over by retyping it. Pin one
+# fragment of each rule the contract says must survive unchanged.
+assert_contains "step 4 keeps the plan.ref pointer" "$SDD_NORM" '`.superpowers/sdd/plan.ref`'
+assert_contains "step 4 keeps the outside-the-layout direct-mode rule" "$SDD_NORM" \
+  'direct mode under `.superpowers/reviews/`'
+assert_contains "step 4 keeps the completion-blocking sentence" "$SDD_NORM" \
+  'block completion exactly as unresolved review findings do'
+# The Integration section carries a second copy of the fallback condition;
+# a reader sent there from step 4 must find the same three platforms.
+assert_icontains "Integration names the same three refusal platforms" "$INTEG_NORM" \
+  'no Agent tool, Codex, or Cursor'
+assert_not_icontains "Integration drops the Agent-tool-only condition" "$INTEG_NORM" \
+  'On platforms without the Agent tool'
+CG_FINDINGS="$(first_offset "$SDD_NORM" "$FINDINGS_PHRASE")"; CG_FINDINGS="${CG_FINDINGS:-0}"
+CG_TOKENS="$(last_offset "$SDD_NORM" 'N=<n> M=<m>')"; CG_TOKENS="${CG_TOKENS:-0}"
+if [ "$CG_FINDINGS" -gt 0 ] && [ "$CG_TOKENS" -gt "$CG_FINDINGS" ]; then
+  ok "step 4: the gate's tokens are the most recent forms in the invocation"
+else
+  bad "step 4: N=<n> M=<m> (at $CG_TOKENS) must come after the carried-findings phrase (at $CG_FINDINGS)"
+fi
+
 echo
 bold "Results: $PASS passed, $FAIL failed"
 if [ "$FAIL" -gt 0 ]; then
