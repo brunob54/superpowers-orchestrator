@@ -86,7 +86,13 @@ digraph sdd_process {
    the interactive gate only.**
    Otherwise ask the user for N and M, in one
    question batch — whichever of the two they have not already stated, and
-   always N when the stated N is 0. N is the number of review rounds (0–10,
+   always N when the stated N is 0. When exactly one of N or M was already
+   stated (and the stated N is not `0`), echo its origin alongside the
+   question you ask for the other value, in the same shape as the
+   both-stated sentence below: `Using M=<m> — you stated this earlier in
+   this session ("<quoted statement>").` or `Using N=<n> — you stated this
+   earlier in this session ("<quoted statement>").`, whichever value is
+   inherited. N is the number of review rounds (0–10,
    default 3; 0 skips the loop and the branch finishes with no whole-branch
    review — label the zero option with that consequence). M is reviewers per
    lens, the number of identical reviewer subagents each round dispatches in

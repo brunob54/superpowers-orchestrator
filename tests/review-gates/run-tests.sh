@@ -322,7 +322,7 @@ else
   bad "step 4: N=<n> M=<m> (at $CG_TOKENS) must come after the carried-findings phrase (at $CG_FINDINGS)"
 fi
 
-bold "2. Anti-drift: the <d> definition is identical in four files"
+bold "2. Anti-drift: the tag-resolution sentence (\`the value of the\` ... \`never a parameter\`) is identical in four files"
 D_SPANS=()
 for pair in "orchestrating-development:$ORCH" "brainstorming:$BRAINSTORMING" \
             "writing-plans:$WRITING_PLANS" "subagent-driven-development:$SDD"; do
