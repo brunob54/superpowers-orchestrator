@@ -122,3 +122,41 @@ Output:
 OK-no-any-char-match
 OK-matches-dot-space
 ```
+
+## Round 3
+
+Findings addressed: M1, M3, M4.
+
+Command:
+```
+bash tests/review-gates/run-tests.sh
+```
+Output (tail):
+```
+[1m12/13/14. No subagent path can reach a gate question[0m
+[0;32m  PASS: plan-writer-prompt still skips Multi-Round Plan Review[0m
+[0;32m  PASS: doc-review-loop-prompt Deviation 1 names the Self-Review checklist[0m
+[0;32m  PASS: doc-review-loop-prompt does not name Multi-Round Plan Review[0m
+[0;32m  PASS: batch-controller-prompt does not name Core Flow step 4[0m
+[0;32m  PASS: batch-controller-prompt still names only Core Flow step 3[0m
+
+Results: 81 passed, 0 failed
+```
+
+Command:
+```
+bash tests/writing-plans/run-tests.sh
+```
+Output (tail):
+```
+Results: 15 passed, 0 failed
+```
+
+Command:
+```
+bash tests/orchestrating-development/run-tests.sh
+```
+Output (tail):
+```
+Results: 162 passed, 0 failed
+```

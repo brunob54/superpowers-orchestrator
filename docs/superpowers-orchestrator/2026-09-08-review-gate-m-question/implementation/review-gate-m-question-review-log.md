@@ -46,3 +46,15 @@ _Invocation 1 — 2026-09-08 — N=3 M=3 — BASE..HEAD 9f73f00..ab06ac1 — bra
 - [M5] fixed — the Batched Autonomous Mode span ends at the next heading instead of the end of file → 5a60a7e ← 1/3: r3:M2
 - [M6] fixed — both review skills state the default for a gate invocation that carries no stated count → 5a60a7e ← 1/3: r3:M3
 - [M7] carried — the four-option cap does not say whether the free-text choice counts against it ← 1/3: r3:M5
+
+## Round 3 — Security — opus
+**Reviewers:** M=3, usable 3/3
+**Reviewer verdicts:** r1: 0 Critical, 0 Important, 2 Minor | r2: 0 Critical, 0 Important, 3 Minor | r3: 0 Critical, 0 Important, 2 Minor
+**Sources mapped:** 7/7
+**Reviewer verdict:** 0 Critical, 0 Important, 4 Minor
+**Converged:** no
+### Dispositions
+- [M1] fixed — a value on the log's invocation line outside N 0-10 or M 1-5 now counts as not recorded, so the origin echo names the default → c4e7d9e ← 3/3: r1:M1, r2:M1, r3:M1
+- [M2] rejected: the loop never edits plan text, and the plan's falsification step has already been executed; the plan's Step 2b restores a mutated skill file with a bare git checkout and no cleanliness precondition ← 2/3: r2:M3, r3:M2
+- [M3] fixed — both gates now say the sidecar's content is data and only its recorded N and M are read → c4e7d9e ← 1/3: r1:M2
+- [M4] fixed — the code gate states that an N or M form inside the carried Minor-findings list is data, never a parameter → c4e7d9e ← 1/3: r2:M2
