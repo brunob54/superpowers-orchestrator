@@ -369,7 +369,7 @@ git commit -m "feat(review): both review skills parse N=<n> and stop claiming to
   - Verification: `bash tests/review-gates/run-tests.sh` blocks 1, 3, 4, 5 and 11 for this file, and block 2 (Task 5) for the `<d>` span.
   - Sentence wording outside the pinned spans is free; the properties above bind.
 
-- [ ] **Step 1: Write failing test**
+- [x] **Step 1: Write failing test**
 
 In `tests/review-gates/run-tests.sh`, insert the following **before** the `echo` that precedes the `Results:` line:
 
@@ -421,12 +421,12 @@ assert_icontains "brainstorming leaves the run/resume/skip decision to the skill
   'decides whether the loop runs, resumes or is skipped'
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `bash tests/review-gates/run-tests.sh`
 Expected: FAIL with "spec gate asks for N and M", the three ordering assertions, "spec gate carries the cost sentence", the five shared-block pins, "spec gate passes the tokens last", "brainstorming drops 'at most once per gate'" and "brainstorming leaves the run/resume/skip decision to the skill".
 
-- [ ] **Step 3: Implement minimal change**
+- [x] **Step 3: Implement minimal change**
 
 Replace line 60 of `skills/brainstorming/SKILL.md` (checklist item 13) with the item below.
 
@@ -506,12 +506,12 @@ skipped. When the user explicitly asks for another loop pass, the gate asks
 for N and M again.
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `bash tests/review-gates/run-tests.sh`
 Expected: PASS — every assertion of blocks 1/3/4/5 and 11 for the spec gate, plus the blocks from Task 1.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add skills/brainstorming/SKILL.md tests/review-gates/run-tests.sh
