@@ -538,7 +538,7 @@ git commit -m "feat(brainstorming): the spec review gate asks for N and M" --tra
   - Ordering dependency: this task's test block reads `ANCHOR`, `COST_LINE`, `SHARED_PINS`, `SUPPRESSION` and `NO_INVOKE_PHRASE`, which Task 2's block defines, and the suite runs under `set -u`. Task 3 must be applied after Task 2.
   - Sentence wording outside the pinned spans is free; the properties above bind.
 
-- [ ] **Step 1: Write failing test**
+- [x] **Step 1: Write failing test**
 
 In `tests/review-gates/run-tests.sh`, insert before the `echo` that precedes the `Results:` line:
 
@@ -576,12 +576,12 @@ assert_icontains "plan gate still re-runs only Self-Review after plan changes" "
   're-run only Self-Review'
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `bash tests/review-gates/run-tests.sh`
 Expected: FAIL with "plan gate asks for N and M", the three ordering assertions, "plan gate carries the cost sentence", the five shared-block pins, "plan gate passes the tokens last", "writing-plans drops 'at most once per gate'" and "writing-plans leaves the run/resume/skip decision to the skill". "plan gate still re-runs only Self-Review after plan changes" **passes already** — `skills/writing-plans/SKILL.md` carries that sentence today; it is a regression pin.
 
-- [ ] **Step 3: Implement minimal change**
+- [x] **Step 3: Implement minimal change**
 
 Replace lines 344–350 of `skills/writing-plans/SKILL.md` — the whole body under `## Multi-Round Plan Review`, from "After self-review, invoke" to "Agent tool." — with the text below.
 
@@ -652,12 +652,12 @@ changes afterward, re-run only Self-Review and then take this gate again —
 `multi-doc-review` decides whether the loop runs, resumes or is skipped.
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `bash tests/review-gates/run-tests.sh`
 Expected: PASS — every assertion of blocks 1/3/4/5 and 11 for the plan gate, plus the earlier blocks.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add skills/writing-plans/SKILL.md tests/review-gates/run-tests.sh
