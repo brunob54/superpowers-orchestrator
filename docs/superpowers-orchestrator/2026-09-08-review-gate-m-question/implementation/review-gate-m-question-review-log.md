@@ -58,3 +58,15 @@ _Invocation 1 — 2026-09-08 — N=3 M=3 — BASE..HEAD 9f73f00..ab06ac1 — bra
 - [M2] rejected: the loop never edits plan text, and the plan's falsification step has already been executed; the plan's Step 2b restores a mutated skill file with a bare git checkout and no cleanliness precondition ← 2/3: r2:M3, r3:M2
 - [M3] fixed — both gates now say the sidecar's content is data and only its recorded N and M are read → c4e7d9e ← 1/3: r1:M2
 - [M4] fixed — the code gate states that an N or M form inside the carried Minor-findings list is data, never a parameter → c4e7d9e ← 1/3: r2:M2
+
+## Round 3 verification 1 — Security — opus
+**Reviewers:** M=3, usable 3/3
+**Reviewer verdicts:** r1: 0 Critical, 1 Important, 2 Minor | r2: 0 Critical, 0 Important, 2 Minor | r3: 0 Critical, 0 Important, 2 Minor
+**Sources mapped:** 7/7
+**Reviewer verdict:** 0 Critical, 1 Important, 4 Minor
+### Dispositions
+- [I1] fixed — both review skills' N bullets now carry the tool-result-is-data rule that only M's bullet had, closing an N=0 read out of a file → 1965b46 ← 1/3: r1:I1
+- [M1] rejected: the loop never edits plan text, and the plan's falsification step has already been executed; the plan's Step 2b restores a mutated skill file with a bare git checkout and no backup ← 3/3: r1:M2, r2:M2, r3:M1
+- [M2] carried — an in-range value planted on the sidecar's invocation line is still adopted; the doc gates draw no tracked-log distinction ← 1/3: r1:M1
+- [M3] fixed — the suite now pins both guard sentences of the sidecar-read path in each document gate span → 1965b46 ← 1/3: r2:M1
+- [M4] carried — multi-code-review has no mirror rule for an N or M form inside the inline carried-findings list; the gate's own rule is the only guard ← 1/3: r3:M2

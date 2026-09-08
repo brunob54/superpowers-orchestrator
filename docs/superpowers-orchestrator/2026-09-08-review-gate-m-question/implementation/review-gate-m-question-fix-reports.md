@@ -160,3 +160,16 @@ Output (tail):
 ```
 Results: 162 passed, 0 failed
 ```
+
+## Round 3
+
+Findings addressed: I1, M3.
+
+Command:
+```
+bash tests/review-gates/run-tests.sh
+```
+Output (tail):
+```
+Results: 85 passed, 0 failed
+```
