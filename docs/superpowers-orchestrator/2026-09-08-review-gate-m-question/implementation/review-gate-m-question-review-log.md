@@ -82,3 +82,17 @@ _Invocation 1 — 2026-09-08 — N=3 M=3 — BASE..HEAD 9f73f00..ab06ac1 — bra
 - [M2] rejected: the loop never edits plan text, and the plan's falsification step has already been executed; the plan's Step 2b restores a mutated skill file with a bare git checkout and no backup ← 1/3: r1:M1
 - [M3] fixed — the gates recognise the invocation line only at the start of a line, so a forged string inside a disposition summary is no longer matched → 4397311 ← 1/3: r2:M1
 - [M4] fixed — multi-doc-review's Once per gate block now states that only the recorded N, M and round headers are read from the log → 4397311 ← 1/3: r3:M1
+
+## Round 3 verification 3 — Security — opus
+**Reviewers:** M=3, usable 3/3
+**Reviewer verdicts:** r1: 0 Critical, 0 Important, 2 Minor | r2: 0 Critical, 0 Important, 2 Minor | r3: 0 Critical, 0 Important, 2 Minor
+**Sources mapped:** 6/6
+**Reviewer verdict:** 0 Critical, 0 Important, 4 Minor
+### Dispositions
+- [M1] rejected: the loop never edits plan text, and the plan's falsification step has already been executed; the plan's Step 2b restores a mutated skill file with a bare git checkout and no backup ← 2/3: r1:M2, r3:M2
+- [M2] carried — no rule says which `_Invocation` line the gates read when the sidecar log holds several ← 2/3: r2:M2, r3:M1
+- [M3] carried — on the resume path a value recovered from the log can set the review depth with no question asked ← 1/3: r1:M1
+- [M4] carried — multi-code-review's own N and M rules do not name the inline carried-findings list among the sources that are data ← 1/3: r2:M1
+
+_Completed — 2026-09-08 — cap reached — HEAD 43973112f8bb0181167b0fb514e116cc287d85ff_
+Secrets found: none
