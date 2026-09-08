@@ -1012,11 +1012,11 @@ git commit -m "test(review-gates): pin the shared <d> definition and the subagen
   - Invariants: none of the four files edited here still says the gates ask for N alone; in those four files, every command form that shows `[M=<m>]` also shows the `N=<n>` form (the dated snapshot `docs/REVIEW-PROCESS-COMPARISON.md` is excluded, see "Does NOT cover"); the corrected comments in `tests/claude-code/test-multi-doc-review.sh` no longer claim gate invocations run at M=1.
   - Verification: the four greps of Step 4 all print nothing — `asks for N once` and `same M reviewers per round` (the two stale claims), `\[N\] \[M=<m>\]` (the bracket command forms this task replaces) and `the way every gate invocation` — and `bash tests/review-gates/run-tests.sh` still exits 0. The greps must **not** be run over `docs/` as a whole: this plan and its spec live under `docs/superpowers-orchestrator/` and quote these phrases, so a whole-tree grep can never print nothing.
 
-- [ ] **Step 1: Write failing test — not applicable to this task**
+- [x] **Step 1: Write failing test — not applicable to this task**
 
 No new assertion, and no command in this step. This task changes prose that the suite does not pin — spec §9 adds no documentation assertion, and pinning marketing prose would make the suite fail on unrelated future edits. The falsifiable checks are the two greps in Step 4, which must print nothing; Step 2 records the state they start from. The greps are scoped to the shipped documentation files: this plan and its spec also contain the phrase, so `grep -rn ... docs/` would always print hits.
 
-- [ ] **Step 2: Record the pre-change state (the stale claims are still there)**
+- [x] **Step 2: Record the pre-change state (the stale claims are still there)**
 
 This step expects hits, not a suite failure — the hits are what Step 3 removes.
 
@@ -1031,7 +1031,7 @@ bash tests/review-gates/run-tests.sh
 
 Expected: the first `grep` prints `docs/FORK-IMPROVEMENTS.md:127:...asks for N once if you haven't stated a count.`; the second prints the Stage 2 line of the guide; the third prints the six bracket command forms this task replaces (`README.md:33,367,368`, `docs/guide/README.md:943,944`, `docs/FORK-IMPROVEMENTS.md:170`); and the suite still exits 0.
 
-- [ ] **Step 3: Implement minimal change**
+- [x] **Step 3: Implement minimal change**
 
 `README.md`:
 Every line number below was checked against the current file. Identify each bullet by its opening text as well, and edit the bullet the text names — never the line number alone.
@@ -1058,7 +1058,7 @@ Every line number below was checked against the current file. Identify each bull
 - Lines 19–22: replace "(so the skill falls back to M=1 — the way every gate invocation and every user without an explicit M= runs it)" with "(so the skill falls back to M=1 — the way a user who states no M and has no `<reviewers-per-lens>` tag runs it; since the review gates ask for M, a gate invocation now carries an explicit `M=<m>`)".
 - Lines 176–178: replace the comment "Deliberately no M=: this case exercises the DEFAULT configuration (M=1), the way every gate invocation and every user without an explicit M= runs it — see the (m1) checks below." with "Deliberately no M=: this case exercises the DEFAULT configuration (M=1) — the fallback a direct invocation reaches with no stated M and no `<reviewers-per-lens>` tag. Gate invocations now carry an explicit `M=<m>`; see the (m1) checks below."
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run:
 
@@ -1072,7 +1072,7 @@ bash tests/review-gates/run-tests.sh
 
 Expected: all four `grep` commands print nothing, and the suite prints "Results: … 0 failed" and exits 0.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add README.md docs/guide/README.md docs/FORK-IMPROVEMENTS.md tests/claude-code/test-multi-doc-review.sh
