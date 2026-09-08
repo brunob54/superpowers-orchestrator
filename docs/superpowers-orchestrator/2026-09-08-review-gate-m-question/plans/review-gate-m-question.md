@@ -892,7 +892,7 @@ git commit -m "feat(sdd): the whole-branch review gate asks for N and M" --trail
   - Invariant: the new line sits inside the first fenced `bash` block of the `## Testing` section.
   - Verification: `awk '/^## Testing/{f=1} f' CLAUDE.md | awk '/^```/{n++} n<2' | grep -c 'tests/review-gates/run-tests.sh'` prints `1` — the line is inside the first fenced block of the `## Testing` section, which a plain whole-file `grep` would not prove. The fence pattern must be `/^```/`, not `/^```$/`: the blocks open with ```` ```bash ````, so an anchored-empty pattern would count only the closing fences and let the window run past the first block — and `bash tests/review-gates/run-tests.sh` is runnable exactly as written from the repository root.
 
-- [ ] **Step 1: Write failing test**
+- [x] **Step 1: Write failing test**
 
 In `tests/review-gates/run-tests.sh`, insert before the `echo` that precedes the `Results:` line:
 
@@ -945,14 +945,14 @@ assert_icontains "batch-controller-prompt still names only Core Flow step 3" "$B
   '"Core Flow" step 3 (the per-task loop)'
 ```
 
-- [ ] **Step 2: Record the pre-change state (these blocks pass already)**
+- [x] **Step 2: Record the pre-change state (these blocks pass already)**
 
 This step expects a pass, not a failure: the assertions added above are regression pins on text Tasks 2–4 already wrote. Step 2b is this task's falsification step.
 
 Run: `bash tests/review-gates/run-tests.sh`
 Expected: PASS for every new assertion — the three gate files already carry the `<d>` span (Tasks 2–4) and the three prompt templates already carry their skip instructions.
 
-- [ ] **Step 2b: Prove the anti-drift comparison can fail**
+- [x] **Step 2b: Prove the anti-drift comparison can fail**
 
 `perl -pi` is line-oriented, so the mutated fragment must sit on a single line of the shipped file. Use `else 1 — a`, which Task 3's text places on one line inside the `<d>` span.
 
@@ -966,7 +966,7 @@ git status --short skills/writing-plans/SKILL.md
 
 Expected: the `grep -c` prints `1` (exactly one occurrence, on one line); the suite then exits 1 with "FAIL: the <d> span of file 3 equals the orchestrator's"; then a clean `git status --short skills/writing-plans/SKILL.md` — Task 3 committed this file, so `git checkout --` restores the committed text. If a later reflow splits the fragment, pick another single-line fragment inside the same span, or use `perl -0pi -e`.
 
-- [ ] **Step 3: Implement minimal change**
+- [x] **Step 3: Implement minimal change**
 
 Register the suite in `CLAUDE.md`, inside the first fenced `bash` block of the `## Testing` section, after the `tests/orchestrating-development/run-tests.sh` line:
 
@@ -974,7 +974,7 @@ Register the suite in `CLAUDE.md`, inside the first fenced `bash` block of the `
 bash tests/review-gates/run-tests.sh          # the three review gates ask for N and M; the shared <d> definition
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run:
 
@@ -985,7 +985,7 @@ awk '/^## Testing/{f=1} f' CLAUDE.md | awk '/^```/{n++} n<2' | grep -c 'tests/re
 
 Expected: the suite exits 0, and the `grep -c` prints `1` — the new line sits inside the first fenced block of the `## Testing` section.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add tests/review-gates/run-tests.sh CLAUDE.md
