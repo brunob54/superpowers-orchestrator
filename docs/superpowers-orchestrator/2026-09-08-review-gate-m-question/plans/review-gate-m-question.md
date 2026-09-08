@@ -79,7 +79,7 @@
   - Invariant: the file still contains "Never ask for M" and "(in every mode)"; the "Batched Autonomous Mode never asks" sentence survives; the BASE ref charset rule is unchanged; the two rules that surround the replaced sentence survive byte-for-byte — the default-branch clause `` `master`, and take `git merge-base <default> HEAD`. `` and the whole `Single-argument form:` rule.
   - Verification: `bash tests/review-gates/run-tests.sh` assertions 6 and 10 — block 10 includes the four assertions that pin the surrounding rules the BASE-bullet edit must not disturb, and the frontmatter form.
 
-- [ ] **Step 1: Write failing test**
+- [x] **Step 1: Write failing test**
 
 Create `tests/review-gates/run-tests.sh` with the skeleton and the two review-skill assertions:
 
@@ -253,12 +253,12 @@ fi
 exit 0
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `bash tests/review-gates/run-tests.sh`
 Expected: FAIL with exactly five assertions — "multi-doc-review N section names N=<n>", "multi-code-review N section names N=<n>", "multi-code-review lifts N= out before the positional BASE rule" and the two frontmatter assertions. Block 6 and the four survival assertions of block 10 (the BASE ref charset rule, the default-branch clause, the single-argument form rule, the Batched Autonomous Mode sentence) **pass already**: they are regression pins on wording this plan must not remove.
 
-- [ ] **Step 3: Implement minimal change**
+- [x] **Step 3: Implement minimal change**
 
 In `skills/multi-doc-review/SKILL.md`, replace the whole `- **N (round cap):**` bullet (lines 26–30) with:
 
@@ -317,7 +317,7 @@ Then stage the three files, so that Step 4b's `git checkout --` restores **this*
 git add tests/review-gates/run-tests.sh skills/multi-doc-review/SKILL.md skills/multi-code-review/SKILL.md
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run:
 
@@ -328,7 +328,7 @@ grep -c '/dev/stdin\|<(' tests/review-gates/run-tests.sh
 
 Expected: the suite PASSes — "Results: 12 passed, 0 failed" — and the `grep -c` prints `0`, the check for the plan's cross-platform constraint (no `/dev/stdin`, no process substitution).
 
-- [ ] **Step 4b: Verify the new assertions can fail**
+- [x] **Step 4b: Verify the new assertions can fail**
 
 `perl -pi` is line-oriented, so the mutated fragment must sit on a single line of the shipped file. `Never ask for M` does **not**: in `skills/multi-doc-review/SKILL.md` it wraps as `**Never` / `ask for M.**`. Mutate the second half, which is one line.
 
@@ -343,7 +343,7 @@ git diff --cached --name-only skills/multi-doc-review/SKILL.md
 
 Expected: the `grep -c` prints `1` (the fragment exists and is on one line); the suite then exits 1 with "FAIL: multi-doc-review keeps 'Never ask for M'"; and `git checkout --` restores the file from the index — the Step 3 text staged above — so `git diff --name-only skills/multi-doc-review/SKILL.md` prints nothing while `git diff --cached --name-only` still lists it. If a later reflow moves the fragment across a line break, pick another single-line fragment inside the same sentence, or use `perl -0pi -e`.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add tests/review-gates/run-tests.sh skills/multi-doc-review/SKILL.md skills/multi-code-review/SKILL.md
