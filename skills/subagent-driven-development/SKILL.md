@@ -118,9 +118,12 @@ digraph sdd_process {
    stated — ask, and say the stated value was not valid. An out-of-range
    answer to your own question is replaced by the default, and you say which
    value you used. A stated `N=0` is never inherited: always ask. When you
-   do not ask, say which values you are using and where they came from:
-   `Using N=<n>, M=<m> — you stated these earlier in this session ("<quoted
-   statement>").` For an invalid value use these words —
+   do not ask **because the user stated both values**, say which values you
+   are using and where they came from: `Using N=<n>, M=<m> — you stated
+   these earlier in this session ("<quoted statement>").` (Batched
+   Autonomous Mode's non-asking path states its own origin, resolved by
+   that mode's own rule, not the user's statement.) Never state an origin
+   the values did not have. For an invalid value use these words —
    `<name>=<answer> is not a valid <name> (<range>); using <value>.` when
    the answer to your own question is out of range or not a number, and
    `You stated <name>=<stated>, which is not a valid <name> (<range>), so I

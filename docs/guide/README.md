@@ -168,7 +168,8 @@ spec to `docs/superpowers-orchestrator/YYYY-MM-DD-<slug>/specs/<slug>-design.md`
 and the design itself. The spec then passes a self-review and — for
 non-trivial work — N independent `multi-doc-review` rounds before reaching
 you. Each round dispatches M identical reviewers in parallel (M = reviewers
-per lens, default 1; see the `SUPERPOWERS_REVIEWERS_PER_LENS` setting in
+per lens, default 1 when `SUPERPOWERS_REVIEWERS_PER_LENS` is unset; see the
+`SUPERPOWERS_REVIEWERS_PER_LENS` setting in
 §7) and consolidates their reports before findings are triaged. The gate
 asks you for both numbers — N, the number of rounds, and M, the reviewers
 per round — offering the value of `SUPERPOWERS_REVIEWERS_PER_LENS` as M's
@@ -228,8 +229,8 @@ generated plan carries this rule in a `**Body authority:**` note in its
 header, so reviewers and executors read it from the plan itself.
 
 The plan gets its own `multi-doc-review` gate before you approve it, and that
-gate asks you for N and M in one batch, exactly as the spec gate does; that
-gate also audits the contracts — a task body with no stated contract, a
+gate asks you for N and M in one batch, exactly as the spec gate does; it
+also audits the contracts — a task body with no stated contract, a
 contract no check could fail ("must work correctly"), and an
 `**Exact content:**` marker whose reason points at a file the same plan
 writes (a "self-pin") are all findings.
@@ -950,8 +951,8 @@ handled by the router (§2) — just describe what you want.
 | "Resume orchestration for `<plan>`" | Continue an interrupted run from its last boundary | §5 |
 | "Abandon orchestration for `<plan>`" | Confirmed teardown of a wedged run | §5 |
 | "research prior art for `<decision>`" / `/researching-prior-art` | Evidence gathering for one technology decision (normally automatic at §3's research gate) | §3 |
-| `/multi-doc-review <doc> [N|N=<n>] [M=<m>]` | N independent review rounds on a spec or plan, M reviewers per round | §3 |
-| `/multi-code-review [BASE] [N|N=<n>] [M=<m>]` | N whole-branch code-review rounds with fixes, M reviewers per round | §3 |
+| `/multi-doc-review <doc> [N\|N=<n>] [M=<m>]` | N independent review rounds on a spec or plan, M reviewers per round | §3 |
+| `/multi-code-review [BASE] [N\|N=<n>] [M=<m>]` | N whole-branch code-review rounds with fixes, M reviewers per round | §3 |
 | "save state" / "compress context" | Snapshot to `state.md` + decision log entry | §6 |
 | "map this project" | Generate `project-map.md` | §6 |
 | "save this fix" | Record symptom → cause → fix in `known-issues.md` | §6 |

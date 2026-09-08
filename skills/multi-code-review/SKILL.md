@@ -65,9 +65,9 @@ final review on such platforms; that fallback lives there, not here.)
 - **N (round cap):** if the user stated a count, use it — `N=<n>`, or a
   count in a phrase that names the review (most recent
   wins; every M form is extracted from the invocation first — see M
-  below). The SDD gate carries `N=<n> M=<m>` as its last tokens: it asked
-  for whichever of the two the user had not already stated, so do not ask
-  again. On a direct invocation with no stated count, ask once,
+  below). The SDD gate carries `N=<n> M=<m>` as its last tokens — the gate
+  has already resolved both values, so do not ask again. On a direct
+  invocation with no stated count, ask once,
   immediately. Default **3**. Valid N is an integer 0–10;
   anything else → 3. N = 0 skips the loop and logs a `skipped` entry
   recording `HEAD <sha>` (an explicit user choice; the SDD gate then

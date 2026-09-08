@@ -346,14 +346,19 @@ After self-review, run the plan review gate.
 If this platform lacks the Agent tool, skip this gate and ask nothing.
 Otherwise, if the plan's `<plan-basename>-review-log.md` sidecar already
 holds an invocation entry from this gate and the user has not explicitly
-asked for another loop pass, do not ask: pass the values that line records
-when they are recoverable, else M's default `<d>` (defined below) for M and
-3 for N, and go straight to the invocation below. Say which values you are
-using and where they came from, matching the sentence to the path actually
-taken: `Using N=<n>, M=<m> — recorded on the log's invocation line.` when
-the line was recoverable, and `Using N=<n>, M=<m> — the log's invocation
-line does not record them, so these are the defaults.` when it was not.
-Never state an origin the values did not have.
+asked for another loop pass, do not ask — except that a recorded `N=0` is
+never inherited: ask for N exactly as for a stated `N=0`. When N is not
+`0`, pass the values that line records when they are recoverable, else M's
+default `<d>` (defined below) for M and 3 for N, and go straight to the
+invocation below. Say which values you are using and where they came from,
+matching the sentence to the path actually taken: `Using N=<n>, M=<m> —
+recorded on the log's invocation line.` when both were recoverable, `Using
+N=<n>, M=<m> — the log's invocation line does not record them, so these
+are the defaults.` when neither was, and `Using N=<n> (recorded on the
+log's invocation line), M=<m> (the log does not record it, so this is the
+default).` when only one was — order the clauses to match whichever value
+actually came from which source. Never state an origin the values did not
+have.
 
 Otherwise ask the user for N and M, in one question batch — whichever of
 the two they have not already stated, and always N when the stated N is 0. N is the number of
