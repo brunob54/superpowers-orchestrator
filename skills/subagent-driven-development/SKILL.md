@@ -78,9 +78,13 @@ digraph sdd_process {
    `multi-code-review` refuses — no Agent tool, Codex, or Cursor — take the
    single-pass fallback (see Integration) and ask nothing. **When this step
    is reached from Batched Autonomous Mode, ask nothing either: pass
-   `N=<n> M=<m>` resolved by that mode's own rule, never by `<d>`, and go
-   straight to the invocation below. The question that follows belongs to
-   the interactive gate only.** Otherwise ask the user for N and M, in one
+   `N=<n> M=<m>` resolved by that mode's own rule, never by `<d>` — `<d>`
+   names the gate's default-offering resolution, which this path never
+   enters; that mode's own rule may still end at the `<reviewers-per-lens>`
+   session tag as its own last resort — and go straight to the invocation
+   below. The question that follows belongs to
+   the interactive gate only.**
+   Otherwise ask the user for N and M, in one
    question batch — whichever of the two they have not already stated, and
    always N when the stated N is 0. N is the number of review rounds (0–10,
    default 3; 0 skips the loop and the branch finishes with no whole-branch
