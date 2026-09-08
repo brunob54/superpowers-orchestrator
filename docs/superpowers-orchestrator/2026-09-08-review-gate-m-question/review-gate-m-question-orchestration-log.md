@@ -27,3 +27,5 @@ Items: [I1] forced — plan governs: spec R5 requires the doc gates' recovery of
 Detail: docs/superpowers-orchestrator/2026-09-08-review-gate-m-question/plans/review-gate-m-question-open-decisions.md
 Forks: none — contradiction: none
 Re-dispatch: phase 4, in-run resume 1 of 3
+
+## Phase 4 — Code review — rounds 6 — cap — fixes 9 — unresolved 0
