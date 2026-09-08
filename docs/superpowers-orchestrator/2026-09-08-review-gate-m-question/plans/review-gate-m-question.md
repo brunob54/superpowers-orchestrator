@@ -28,9 +28,11 @@
 - A gate asks for N and M in **one question batch**, never as two separate interruptions. (Spec R1)
 - A stated `N=0` is never inherited: the gate always asks. (Spec R1)
 - On every path that reaches the invocation, both values are passed as stand-alone tokens `N=<n> M=<m>`, and they are the **last** tokens of the invocation. (Spec R5)
-- Batched Autonomous Mode and every subagent-dispatched controller ask nothing and resolve both values by their own rule, never by `<d>`. (Spec R5, R7)
+- Batched Autonomous Mode and every subagent-dispatched controller ask nothing and resolve both values by their own rule, never by `<d>` — `<d>` names the gate's default-offering resolution, which these paths never enter; Batched Autonomous Mode's own rule may still end at the `<reviewers-per-lens>` session tag, which is that rule's own last resort. (Spec R5, R7) (amended by ruling 2)
 - Hooks and tests must stay cross-platform: Node >= 16, no `/dev/stdin`, no process substitution — neither is reliable in Git Bash on Windows. (Spec §9; `CLAUDE.md`)
 - `RELEASE-NOTES.md` closed entries are never rewritten. (Spec §7, last row)
+
+> **Amendment 2 (orchestrator ruling):** the Batched Autonomous Mode constraint read "resolve both values by their own rule, never by `<d>`", which, taken literally, forbade the `<reviewers-per-lens>` session tag — the very value that mode's own rule, quoted verbatim in spec R5, ends at ("else the `<reviewers-per-lens>` session tag, else 1"). Two agents could therefore pass different M values for the same run. The entry now says that `<d>` names the gate's default-offering resolution, which these paths never enter, and that the mode's own rule may still end at the session tag as its own last resort. Nothing else in the constraint changed.
 
 ---
 

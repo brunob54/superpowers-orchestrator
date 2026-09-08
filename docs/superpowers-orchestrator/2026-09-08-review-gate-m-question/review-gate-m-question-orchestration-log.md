@@ -19,3 +19,11 @@ plan: docs/superpowers-orchestrator/2026-09-08-review-gate-m-question/plans/revi
 
 ## Phase 3 — Batch 3 (task 7) — COMPLETE — commits 3de61d0..449ea89
 - Task 7: complete — release bookkeeping for v7.12.0
+
+## RULING 1 — 2026-09-08 — phase 4 — three plan-mandated user-decision items, all forced
+Items: [CF4] forced — plan governs: the Task 5 clause requires the line to be conveyed in CLAUDE.md, which is git-ignored here by the repository's own configuration
+Items: [I2] forced — amend plan: `<d>` names the gate's default-offering resolution; the batched mode's own rule may still end at the session tag; fix it: carry that into Core Flow step 4
+Items: [I1] forced — plan governs: spec R5 requires the doc gates' recovery of the recorded M, and the `<reviewers-per-lens>` invariant governs only that tag element
+Detail: docs/superpowers-orchestrator/2026-09-08-review-gate-m-question/plans/review-gate-m-question-open-decisions.md
+Forks: none — contradiction: none
+Re-dispatch: phase 4, in-run resume 1 of 3
