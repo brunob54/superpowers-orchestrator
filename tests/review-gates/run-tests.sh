@@ -162,8 +162,8 @@ assert_contains "multi-code-review keeps the Batched Autonomous Mode sentence" "
 # Spec gate: checklist item 13 of skills/brainstorming/SKILL.md, up to
 # item 14.
 BS_SPAN="$WORK/bs-span.txt"
-BS_13="$(first_match_from "$BRAINSTORMING" '^13\. ' 1)"
-BS_14="$(first_match_from "$BRAINSTORMING" '^14\. ' "$((${BS_13:-0} + 1))")"
+BS_13="$(first_match_from "$BRAINSTORMING" '^13[.] ' 1)"
+BS_14="$(first_match_from "$BRAINSTORMING" '^14[.] ' "$((${BS_13:-0} + 1))")"
 slice_to "spec gate span (step 13)" "$BRAINSTORMING" "$BS_13" "$BS_14" "$BS_SPAN"
 BS_NORM="$WORK/bs-span-norm.txt"
 normalize_to "$BS_SPAN" "$BS_NORM"
@@ -242,19 +242,22 @@ assert_icontains "plan gate still re-runs only Self-Review after plan changes" "
 # heading, and the suite FAILs when either does not resolve.
 SDD_SPAN="$WORK/sdd-span.txt"
 SDD_CORE="$(first_line_of "$SDD" '## Core Flow')"
-SDD_S4="$(first_match_from "$SDD" '^4\. ' "$((${SDD_CORE:-0} + 1))")"
-SDD_S5="$(first_match_from "$SDD" '^5\. ' "$((${SDD_S4:-0} + 1))")"
+SDD_S4="$(first_match_from "$SDD" '^4[.] ' "$((${SDD_CORE:-0} + 1))")"
+SDD_S5="$(first_match_from "$SDD" '^5[.] ' "$((${SDD_S4:-0} + 1))")"
 slice_to "code gate span (Core Flow step 4)" "$SDD" "$SDD_S4" "$SDD_S5" "$SDD_SPAN"
 SDD_NORM="$WORK/sdd-span-norm.txt"
 normalize_to "$SDD_SPAN" "$SDD_NORM"
 
 # Batched Autonomous Mode span: from the whole line `## Batched Autonomous
-# Mode` to the end of the file. The bare string occurs five times, first in
-# the frontmatter, so only the whole-line heading may anchor it.
+# Mode` to the next `## ` heading (twelve sections follow it before the end
+# of the file, so a whole-file-tail span would swallow all of them). The
+# bare string occurs five times, first in the frontmatter, so only the
+# whole-line heading may anchor the start.
 BAM_SPAN="$WORK/bam-span.txt"
 BAM_START="$(first_line_of "$SDD" '## Batched Autonomous Mode')"
 SDD_LINES="$(awk 'END { print NR + 1 }' "$SDD")"
-slice_to "batched autonomous mode span" "$SDD" "$BAM_START" "$SDD_LINES" "$BAM_SPAN"
+BAM_END="$(first_match_from "$SDD" '^## ' "$((${BAM_START:-0} + 1))")"
+slice_to "batched autonomous mode span" "$SDD" "$BAM_START" "${BAM_END:-$SDD_LINES}" "$BAM_SPAN"
 BAM_NORM="$WORK/bam-span-norm.txt"
 normalize_to "$BAM_SPAN" "$BAM_NORM"
 
@@ -274,7 +277,7 @@ assert_icontains "code gate asks for N and M" "$SDD_NORM" "$ANCHOR"
 assert_order "code gate: platform check before the question" "$SDD_NORM" \
   '`multi-code-review` refuses' "$ANCHOR"
 assert_order "code gate: batched-mode exception before the question" "$SDD_NORM" \
-  'Batched Autonomous Mode' "$ANCHOR"
+  'ask nothing either' "$ANCHOR"
 assert_order "code gate: question before the invocation" "$SDD_NORM" \
   "$ANCHOR" 'invoke the `multi-code-review` skill once'
 assert_icontains "code gate carries the cost sentence" "$SDD_NORM" "$COST_LINE"
@@ -289,7 +292,7 @@ assert_not_icontains "step 4 no longer says 'never ask for M'" "$SDD_NORM" 'neve
 assert_icontains "Batched Autonomous Mode still says 'never ask for M'" "$BAM_NORM" 'never ask for M'
 assert_contains "step 4 pins the batched path to passing resolved tokens" "$SDD_NORM" \
   'pass `N=<n> M=<m>` resolved by that mode'"'"'s own rule'
-assert_contains "step 4 names Cursor in its platform condition" "$SDD_NORM" 'Cursor'
+assert_contains "step 4 names Cursor in its platform condition" "$SDD_NORM" 'no Agent tool, Codex, or Cursor'
 # The second half of step 4 is carried over by retyping it. Pin one
 # fragment of each rule the contract says must survive unchanged.
 assert_contains "step 4 keeps the plan.ref pointer" "$SDD_NORM" '`.superpowers/sdd/plan.ref`'

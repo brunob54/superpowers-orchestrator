@@ -27,7 +27,8 @@ rounds' findings — that independence is the point.
   count in a phrase that names the review (most recent wins; every M form
   is extracted from the invocation first — see M below). A gate invocation
   carries `N=<n> M=<m>` as its last tokens — the gate has already resolved
-  both values, so do not ask again. On a direct
+  both values, so do not ask again. A gate invocation carrying no stated
+  count uses the default 3 (never a question). On a direct
   invocation with no stated count, ask once, immediately. Default **3**.
   Valid N is an integer 0–10; anything else → 3. N = 0 skips the loop and
   logs a `skipped` entry.
@@ -85,8 +86,13 @@ rounds' findings — that independence is the point.
 
 **Once per gate:** if the log already holds an invocation entry from this
 gate for this document, do not re-run the loop (this survives session
-restarts). After user-requested changes at the gate, re-run only the host
-self-review checklist. Run the loop again only if the user explicitly asks.
+restarts). An invocation entry whose recorded N is `0` (a skipped entry)
+does not block a later invocation from that gate, because a skipped run
+reviewed nothing. An invocation entry whose recorded N rounds were not all
+logged below it is an interrupted invocation and is resumed at its next
+round, rather than blocked. After user-requested changes at the gate,
+re-run only the host self-review checklist. Run the loop again only if the
+user explicitly asks.
 
 Create or open the sidecar log `<doc-basename>-review-log.md` next to the
 target document and append an invocation note: date, N, M, and invoker
