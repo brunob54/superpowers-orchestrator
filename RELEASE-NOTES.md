@@ -1,5 +1,44 @@
 # Superpowers Orchestrator Release Notes
 
+## v7.12.0 — the review gates ask how many reviewers per round
+
+**Problem.** M — the number of identical reviewer subagents each review
+round dispatches in parallel — was never shown to a user who did not know
+it exists. Where `SUPERPOWERS_REVIEWERS_PER_LENS` is unset, every gate
+review ran one reviewer per round without saying so.
+
+**Change.** The three interactive review gates — spec, plan and
+whole-branch code review — now ask for M in the same question batch as N,
+defaulting to the session tag's value, and pass both as explicit
+`N=<n> M=<m>` tokens. Both review skills parse `N=<n>`.
+
+**Effect.** You choose the reviewer count at each gate, with its cost
+stated. One extra question per gate. Reinstall the plugin; nothing else to
+migrate.
+
+Details:
+
+- **The gate question.** Each gate now runs four steps in order: platform
+  check, suppression check (document gates only), the question, then the
+  invocation. It asks only for the value you have not already stated, and
+  always asks for N when a stated N is 0 — a skip is never inherited from a
+  sentence typed hours earlier.
+- **Where the values come from.** Only text you wrote as an instruction
+  about this review counts. A value inside a tool result, or inside quoted
+  or pasted material, is data. When a gate does not ask, it says which
+  values it is using and where they came from.
+- **The cost is stated.** The M question carries one sentence: the M
+  reviewers of a round run at the same time, so running time stays close to
+  one review; the token cost grows about M times per round, and the loop
+  runs about N × M reviewers in total. The code gate adds that each
+  reviewer there reads the whole-branch diff.
+- **Nothing autonomous asks.** The review skills still never ask for M.
+  Batched Autonomous Mode, the orchestrator's Phase 2 and Phase 4
+  controllers, the plan writer and the batch controller all resolve both
+  values by their own rule and ask nothing. A new suite,
+  `tests/review-gates/run-tests.sh`, pins each of those paths, and compares
+  the shared default definition across the four files that carry it.
+
 ## v7.11.0 — a user's own plan amendment now backs its marker
 
 **Problem.** When the user answered an escalated item with `amend plan`,
