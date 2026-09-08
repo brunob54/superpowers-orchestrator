@@ -204,6 +204,38 @@ assert_not_icontains "brainstorming drops 'at most once per gate'" "$BS_FILE_NOR
 assert_icontains "brainstorming leaves the run/resume/skip decision to the skill" "$BS_FILE_NORM" \
   'decides whether the loop runs, resumes or is skipped'
 
+# Plan gate: the `## Multi-Round Plan Review` section of
+# skills/writing-plans/SKILL.md, up to `## Execution Handoff`.
+WP_SPAN="$WORK/wp-span.txt"
+WP_START="$(first_line_of "$WRITING_PLANS" '## Multi-Round Plan Review')"
+WP_END="$(first_line_of "$WRITING_PLANS" '## Execution Handoff')"
+slice_to "plan gate span (Multi-Round Plan Review)" "$WRITING_PLANS" "$WP_START" "$WP_END" "$WP_SPAN"
+WP_NORM="$WORK/wp-span-norm.txt"
+normalize_to "$WP_SPAN" "$WP_NORM"
+WP_FILE_NORM="$WORK/wp-file-norm.txt"
+normalize_to "$WRITING_PLANS" "$WP_FILE_NORM"
+
+bold "1/3/4/5. Plan gate (writing-plans Multi-Round Plan Review)"
+assert_icontains "plan gate asks for N and M" "$WP_NORM" "$ANCHOR"
+assert_order "plan gate: platform check before the question" "$WP_NORM" \
+  'lacks the Agent tool' "$ANCHOR"
+assert_order "plan gate: suppression check before the question" "$WP_NORM" \
+  "$SUPPRESSION" "$ANCHOR"
+assert_order "plan gate: question before the invocation" "$WP_NORM" \
+  "$ANCHOR" 'invoke `superpowers-orchestrator:multi-doc-review` on the saved plan'
+assert_icontains "plan gate carries the cost sentence" "$WP_NORM" "$COST_LINE"
+for pin in "${SHARED_PINS[@]}"; do
+  assert_contains "plan gate shared rules block pin: $pin" "$WP_NORM" "$pin"
+done
+assert_contains "plan gate passes the tokens last" "$WP_NORM" '`N=<n> M=<m>` as the last tokens'
+
+bold "11. The plan gate no longer suppresses the invocation"
+assert_not_icontains "writing-plans drops 'at most once per gate'" "$WP_FILE_NORM" "$NO_INVOKE_PHRASE"
+assert_icontains "writing-plans leaves the run/resume/skip decision to the skill" "$WP_NORM" \
+  'decides whether the loop runs, resumes or is skipped'
+assert_icontains "plan gate still re-runs only Self-Review after plan changes" "$WP_NORM" \
+  're-run only Self-Review'
+
 echo
 bold "Results: $PASS passed, $FAIL failed"
 if [ "$FAIL" -gt 0 ]; then
