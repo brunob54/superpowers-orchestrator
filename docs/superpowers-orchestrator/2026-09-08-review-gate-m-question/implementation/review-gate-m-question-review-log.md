@@ -96,3 +96,13 @@ _Invocation 1 — 2026-09-08 — N=3 M=3 — BASE..HEAD 9f73f00..ab06ac1 — bra
 
 _Completed — 2026-09-08 — cap reached — HEAD 43973112f8bb0181167b0fb514e116cc287d85ff_
 Secrets found: none
+
+### Post-loop addendum — 2026-09-08 — decisions on invocation 1's open items
+- [CF4] decided (orchestrator): plan governs: "Must convey: `bash tests/review-gates/run-tests.sh` belongs to the fast, non-behavioural suites, with a one-line description of what it covers." — docs/superpowers-orchestrator/2026-09-08-review-gate-m-question/plans/review-gate-m-question.md
+- [I2] decided (orchestrator): amend plan: the Global Constraints entry now reads that `<d>` names the gate's default-offering resolution, which these paths never enter, and that Batched Autonomous Mode's own rule may still end at the `<reviewers-per-lens>` session tag as that rule's own last resort — the amendment is already committed and the plan file reads the amended way; fix it: carry the same disambiguation into the Batched Autonomous Mode qualifier of Core Flow step 4 in `skills/subagent-driven-development/SKILL.md`, so the shipped text no longer forbids the session-tag fallback that mode's own rule ends at, while still forbidding the gate's `<d>` default-offering path
+- [I2] fixed — carried the ruling-2 disambiguation into the Batched Autonomous Mode qualifier of Core Flow step 4, so the shipped text no longer forbids the session-tag fallback that mode's own rule ends at → a969659
+- [I1] decided (orchestrator): plan governs: "Must convey, in this order: the platform check; the suppression check with the origin echo; the question one question batch for whichever of N and M" — docs/superpowers-orchestrator/2026-09-08-review-gate-m-question/plans/review-gate-m-question.md
+
+Open items after this addendum: unresolved 0, user-decision 0. The effective HEAD moved past invocation 1's completion marker before this addendum was written, so that marker is left unchanged and a new invocation follows; the verification re-review of the [I2] fix is skipped because invocation 2 reviews it.
+
+_Invocation 2 — 2026-09-08 — N=3 M=3 — BASE..HEAD 9f73f00..a969659 — branch feature/review-gate-m-question — gate: orchestration_

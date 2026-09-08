@@ -189,3 +189,16 @@ Output: `Results: 85 passed, 0 failed`
 bash tests/reviewer-templates/run-tests.sh
 ```
 Output: `Results: 72 passed, 0 failed`
+
+## Round 2
+
+Findings addressed: I2.
+
+Command:
+```
+bash tests/review-gates/run-tests.sh
+```
+Output (tail):
+```
+Results: 85 passed, 0 failed
+```
