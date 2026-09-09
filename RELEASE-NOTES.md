@@ -10,24 +10,20 @@
 
 ## v7.13.0 — the `<superpowers-defaults>` session block
 
-**Problem.** Only one parameter — M, reviewers per lens — could be set from
-the environment, because it was the only one carried into the session as a
-tag a skill could read. N, the number of review rounds, and the batch task
-cap had no environment default at all, and each new parameter added the same
-way cost a dedicated tag, a dedicated anti-injection rule, and a wording
-block copied into every consuming skill.
+**Problem.** Only M, reviewers per lens, could be set from the environment.
+N, the number of review rounds, and the batch task cap had none, and each new
+parameter cost its own tag, its own anti-injection rule, and a wording block
+copied into every consuming skill.
 
-**Change.** `hooks/session-start` now emits one `<superpowers-defaults>`
-block carrying three lines — `reviewers-per-lens`, `review-rounds`,
-`batch-task-cap` — set by `SUPERPOWERS_REVIEWERS_PER_LENS`,
-`SUPERPOWERS_REVIEW_ROUNDS` and `SUPERPOWERS_BATCH_TASK_CAP`. One resolution
-rule, defined once in `skills/multi-doc-review/SKILL.md`, replaces the four
-copies of the old tag rule.
+**Change.** `hooks/session-start` now emits one `<superpowers-defaults>` block
+carrying `reviewers-per-lens`, `review-rounds` and `batch-task-cap`, set by
+`SUPERPOWERS_REVIEWERS_PER_LENS`, `SUPERPOWERS_REVIEW_ROUNDS` and
+`SUPERPOWERS_BATCH_TASK_CAP`. One resolution rule, defined once in
+`skills/multi-doc-review/SKILL.md`, replaces four copies of the old tag rule.
 
-**Effect.** You can set the review-round count and the batch size the same
-way you already set M. Nothing to migrate: `SUPERPOWERS_REVIEWERS_PER_LENS`
-keeps its name and meaning. Restart the CLI after updating the plugin before
-running a review.
+**Effect.** You can now set the review-round count and the batch size the way
+you already set M. Nothing to migrate: `SUPERPOWERS_REVIEWERS_PER_LENS` keeps
+its name and meaning. Restart the CLI after updating the plugin.
 
 Details:
 
