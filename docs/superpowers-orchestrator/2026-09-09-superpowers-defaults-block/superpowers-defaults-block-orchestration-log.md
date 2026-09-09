@@ -31,3 +31,7 @@ Re-dispatch: phase 3, in-run resume 1 of 3
 ## Phase 3 — Batch 1 (tasks 1–2) — COMPLETE — commits 83a8eeb..9af1995
 - Task 1: complete — the `<superpowers-defaults>` block is emitted by `hooks/session-start`; the old reviewers-tag test is replaced
 - Task 2: complete — the anti-drift wording contract in `tests/review-gates/run-tests.sh` is replaced; the suite is red by design until the skill files are updated
+
+## Phase 3 — Batch 2 (tasks 3–4) — COMPLETE — commits a89e5bf..3ed045d
+- Task 3: complete — `Resolving a default` defined in `skills/multi-doc-review/SKILL.md`; one fix round on the platform clause, which as first written cancelled a user-stated value
+- Task 4: complete — the rule cited in `skills/multi-code-review/SKILL.md`, with the same platform-clause wording pre-corrected so the two files agree
