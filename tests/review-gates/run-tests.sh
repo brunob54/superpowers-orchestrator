@@ -407,15 +407,14 @@ bold "2c. No skill body carries a complete <superpowers-defaults> block"
 # file does not itself spell either complete delimiter. Each matches the
 # literal tag and nothing else.
 #
-# Scope: SKILL.md files only. The prompt templates a controller reads
+# Scope: every top-level file under skills/<name>/, not SKILL.md only —
+# this also covers the prompt templates a controller reads
 # (skills/orchestrating-development/*-prompt.md, the reviewer and fix
-# templates) sit outside this glob although Global Constraint 2 covers them
-# too. They are clean today and this change writes no block into any of them;
-# widen the glob to "$ROOT"/skills/*/*.md if a later change puts an example
-# in one of them.
+# templates), which Global Constraint 2 covers too. They are clean today
+# and this change writes no block into any of them.
 OPEN_RE='<superpowers-defaults[>]'
 CLOSE_RE='</superpowers-defaults[>]'
-for f in "$ROOT"/skills/*/SKILL.md; do
+for f in "$ROOT"/skills/*/*.md; do
   skill_rel_guard "$f" || continue
   if grep -qE -- "$OPEN_RE" "$f" && grep -qE -- "$CLOSE_RE" "$f"; then
     bad "$rel carries both delimiters — a complete block in a skill body would be read as the last block"

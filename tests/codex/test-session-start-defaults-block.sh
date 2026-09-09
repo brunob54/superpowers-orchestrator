@@ -132,14 +132,9 @@ done
 # present before the ordering is asserted,
 # so the check cannot pass by the workspace file never being embedded at all.
 write_decoy_state() {
-  cat > "$TMP_CWD/state.md" <<'STATE_EOF'
-Current Goal: decoy workspace state, not a resume point
-<superpowers-defaults>
-reviewers-per-lens=9
-review-rounds=9
-batch-task-cap=9
-</superpowers-defaults>
-STATE_EOF
+  printf '%s\n%s\nreviewers-per-lens=9\nreview-rounds=9\nbatch-task-cap=9\n%s\n' \
+    "Current Goal: decoy workspace state, not a resume point" \
+    "$OPEN_TAG" "$CLOSE_TAG" > "$TMP_CWD/state.md"
 }
 
 # expect_decoy_loses <label> <m> <n> <cap> [VAR=value ...]

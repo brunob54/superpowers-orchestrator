@@ -87,10 +87,17 @@ final review on such platforms; that fallback lives there, not here.)
 
   **Batched Autonomous Mode never asks:** a count the user stated when
   starting the batch or carried by the resume prompt's `N=<n>`, else
-  `<d-n>`.
-  When `<d-n>` comes from the block rather than from a stated value, say so
-  in the opening message: `N=<n> — the session default from the
-  <superpowers-defaults> block.`
+  `<d-n>` — except a carried `N=<n>` that resolves to 0 (from the resume
+  prompt's token, not freshly stated at this turn's invocation) is asked
+  once, the same ask-once question a direct invocation with no stated
+  count gets, before the loop starts: a zero-review run must never happen
+  silently across a `/clear` boundary. A freshly stated `N=0` at this
+  turn's invocation is not re-asked — the user just saw their own
+  statement.
+  When `<d-n>` comes from the block, or the value was carried by the
+  resume prompt, say so in the opening message: `N=<n> — the session
+  default from the <superpowers-defaults> block.` or `N=<n> — carried by
+  the resume prompt.`
 
   Resolve this value by `Resolving a default` in
   `skills/multi-doc-review/SKILL.md`. In short: a value stated in this
