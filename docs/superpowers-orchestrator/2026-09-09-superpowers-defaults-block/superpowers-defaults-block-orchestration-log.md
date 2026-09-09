@@ -41,3 +41,7 @@ Items: [task 6/1] design — amend plan: keep the two-alternative echo and state
 Detail: docs/superpowers-orchestrator/2026-09-09-superpowers-defaults-block/plans/superpowers-defaults-block-open-decisions.md
 Forks: 3 of 3 (design consistency, implementation practicality, adversarial) — contradiction: none
 Re-dispatch: phase 3, in-run resume 1 of 3
+
+## Phase 3 — Batch 3 (tasks 5–6) — COMPLETE — commits 4a812e4..65b071c
+- Task 5: complete — the spec gate in `skills/brainstorming/SKILL.md`; re-run after ruling 7 so it carries the placeholder-scope sentence
+- Task 6: complete — the plan gate in `skills/writing-plans/SKILL.md`; the same sentence added at the matching position, so the two gate files stay identical
