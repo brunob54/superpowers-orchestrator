@@ -49,3 +49,7 @@ Re-dispatch: phase 3, in-run resume 1 of 3
 ## Phase 3 — Batch 4 (tasks 7–8) — COMPLETE — commits 1b4c01f..2c40fbf
 - Task 7: complete — the code gate, the batch cap and the resume prompt in `skills/subagent-driven-development/SKILL.md`
 - Task 8: complete — Phase 0 in `skills/orchestrating-development/SKILL.md`
+
+## Phase 3 — Batch 5 (tasks 9–10) — COMPLETE — commits f579a43..98ed3f6
+- Task 9: complete — the behavioral tests' environment guard generalized
+- Task 10: complete — documentation updated; one fix round removed a sentence implying the review-rounds variable also supplied the batch-cap default
