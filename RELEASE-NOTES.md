@@ -8,6 +8,79 @@
 > (`REPOZY/superpowers-optimized`) and are kept unchanged as history; any
 > testing they describe was not done here.
 
+## v7.13.0 — the `<superpowers-defaults>` session block
+
+**Problem.** Only one parameter — M, reviewers per lens — could be set from
+the environment, because it was the only one carried into the session as a
+tag a skill could read. N, the number of review rounds, and the batch task
+cap had no environment default at all, and each new parameter added the same
+way cost a dedicated tag, a dedicated anti-injection rule, and a wording
+block copied into every consuming skill.
+
+**Change.** `hooks/session-start` now emits one `<superpowers-defaults>`
+block carrying three lines — `reviewers-per-lens`, `review-rounds`,
+`batch-task-cap` — set by `SUPERPOWERS_REVIEWERS_PER_LENS`,
+`SUPERPOWERS_REVIEW_ROUNDS` and `SUPERPOWERS_BATCH_TASK_CAP`. One resolution
+rule, defined once in `skills/multi-doc-review/SKILL.md`, replaces the four
+copies of the old tag rule.
+
+**Effect.** You can set the review-round count and the batch size the same
+way you already set M. Nothing to migrate: `SUPERPOWERS_REVIEWERS_PER_LENS`
+keeps its name and meaning. Restart the CLI after updating the plugin before
+running a review.
+
+Details:
+
+- **The parameter table.** `reviewers-per-lens` (env
+  `SUPERPOWERS_REVIEWERS_PER_LENS`, accepts `1`–`5`, hardcoded default `1`);
+  `review-rounds` (env `SUPERPOWERS_REVIEW_ROUNDS`, accepts `1`–`10`,
+  hardcoded default `3`); `batch-task-cap` (env `SUPERPOWERS_BATCH_TASK_CAP`,
+  accepts `1`–`5`, hardcoded default `3`). The block always carries all
+  three lines, even when a value falls back to its default, and is emitted
+  last in the session context — after every embedded workspace file. The
+  table lives once, in `skills/multi-doc-review/SKILL.md`'s new `Resolving a
+  default` section; every consuming skill cites it instead of copying it.
+- **Why `0` is rejected for `SUPERPOWERS_REVIEW_ROUNDS`.** N = 0 skips a
+  review loop entirely. An environment variable set once and forgotten would
+  otherwise silently disable spec review, plan review and whole-branch code
+  review on every future session, with no message anywhere. `0` stays
+  available where you state it and see its consequence — in an invocation,
+  and as an option at every gate question — but it is not an accepted block
+  or environment value; an unset or invalid `SUPERPOWERS_REVIEW_ROUNDS`
+  (including `0`) falls back to `3`, like any other rejected value.
+- **Three offered-default labels.** A gate's offered value is labelled
+  **current default** when it equals the hardcoded default, **recommended**
+  when it is stronger (more review rounds, more reviewers, or — since a
+  smaller cap means more human checkpoints — a lower `batch-task-cap`), and
+  **session default** when it is weaker. This replaces M's old two-label
+  rule and applies it to all three parameters.
+- **N's option list and the recommended-to-current-default relabelling.**
+  The option list is built by taking, in order and skipping any value
+  already held, the offered value, then `3`, then `2`, then `4`, stopping at
+  three values, then appending the zero option last. An offered N of 3 — the
+  common case — reproduces the historical list, but its label changes: it
+  was "3 (recommended)" at all three gates and is now "3 (current
+  default)". This relabelling is intentional, not an accidental edit:
+  labelling a stale environment setting as the project's advice would be
+  wrong in the direction that weakens review.
+- **The resume prompt carries X and N as well as M.** Batched Autonomous
+  Mode's `/clear` handoff previously carried only `M=<m>` across the
+  boundary; a task count X and a review-round count N fall back to the
+  hardcoded default otherwise. Now the resume prompt carries `X=<x>` and
+  `N=<n>` alongside `M=<m>`, so a value you stated survives the boundary
+  instead of being silently re-resolved from the environment on the next
+  batch.
+- **Platform limits.** Claude Code and Cursor run `hooks/session-start` and
+  so emit and read the block. Codex and OpenCode build their session context
+  a different way, emit no block, and resolve every one of the three
+  parameters to its hardcoded default unconditionally — a value stated in
+  the invocation still wins there, only the block tier never applies.
+- **Restart window.** `hooks/session-start` re-runs on `clear` and
+  `compact` and re-injects the block with the current environment values,
+  but a value already resolved earlier in the same run is kept regardless.
+  After changing an environment variable or updating the plugin, restart
+  the CLI before the change takes effect in a new run.
+
 ## v7.12.0 — the review gates ask how many reviewers per round
 
 **Problem.** M — the number of identical reviewer subagents each review
