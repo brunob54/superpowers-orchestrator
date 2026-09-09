@@ -85,8 +85,9 @@ final review on such platforms; that fallback lives there, not here.)
   recording `HEAD <sha>` (an explicit user choice; the SDD gate then
   proceeds as if the review passed with zero findings).
 
-  **Batched Autonomous Mode never asks:** `<d-n>`, or a count the user
-  stated when starting the batch or carried by the resume prompt's `N=<n>`.
+  **Batched Autonomous Mode never asks:** a count the user stated when
+  starting the batch or carried by the resume prompt's `N=<n>`, else
+  `<d-n>`.
   When `<d-n>` comes from the block rather than from a stated value, say so
   in the opening message: `N=<n> — the session default from the
   <superpowers-defaults> block.`

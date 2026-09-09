@@ -363,8 +363,11 @@ the boundary it writes a handoff into `state.md` (position, decisions, open
 issues, and the exact resume prompt), tells you to `/clear`, and you paste:
 
 ```
-Resume the plan at docs/superpowers-orchestrator/2026-08-04-my-feature/plans/my-feature.md (batched autonomous mode)
+Resume the plan at docs/superpowers-orchestrator/2026-08-04-my-feature/plans/my-feature.md (batched autonomous mode, X=<x>, N=<n>, M=<m>)
 ```
+
+`X=<x>`, `N=<n>` and `M=<m>` appear only when you stated that value when
+the batch run started — omit whichever you did not state.
 
 Fresh session, cached-context costs gone, next batch begins. A context-
 pressure gate (§7) also blocks *starting* a batch mid-session when the
@@ -423,7 +426,10 @@ These are the actual dialogs:
 
 > Batch complete (N tasks). Context at P%. To continue: run `/clear`, then
 > paste:
-> "Resume the plan at `<plan-path>` (batched autonomous mode)"
+> "Resume the plan at `<plan-path>` (batched autonomous mode, X=<x>, N=<n>, M=<m>)"
+>
+> (`X=<x>`, `N=<n>` and `M=<m>` appear only when you stated that value
+> when the batch run started.)
 
 One rule matters when following these dialogs: **paste the prompts
 verbatim.** They're tuned to the router's scoring, not just written to be
@@ -782,8 +788,11 @@ Batches end with a handoff written to `state.md` containing verbatim resume
 instructions. After `/clear` (or a crash), paste:
 
 ```
-Resume the plan at docs/superpowers-orchestrator/2026-08-04-my-feature/plans/my-feature.md (batched autonomous mode)
+Resume the plan at docs/superpowers-orchestrator/2026-08-04-my-feature/plans/my-feature.md (batched autonomous mode, X=<x>, N=<n>, M=<m>)
 ```
+
+`X=<x>`, `N=<n>` and `M=<m>` appear only when you stated that value when
+the batch run started — omit whichever you did not state.
 
 Resume reads `state.md`, then **reconciles against the authoritative
 record**: plan checkboxes + git history. `state.md` is narrative and may be
@@ -971,7 +980,7 @@ handled by the router (§2) — just describe what you want.
 | --- | --- | --- |
 | "build / add / change X" | Routed into design → the full pipeline | §3 |
 | "implement the next N tasks of `<plan>`" | Batched autonomous execution, cap N | §3 |
-| "Resume the plan at `<plan>` (batched autonomous mode)" | Next batch, fresh session | §5 |
+| "Resume the plan at `<plan>` (batched autonomous mode, X=<x>, N=<n>, M=<m>)" — X, N, M appear only when stated | Next batch, fresh session | §5 |
 | "orchestrate the development of `<spec>`" | Full autonomous pipeline, one setup conversation | §4 |
 | "Resume orchestration for `<plan>`" | Continue an interrupted run from its last boundary | §5 |
 | "Abandon orchestration for `<plan>`" | Confirmed teardown of a wedged run | §5 |

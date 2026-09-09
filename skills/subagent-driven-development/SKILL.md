@@ -129,8 +129,10 @@ digraph sdd_process {
    Offer at most four options per question and make the full range
    reachable through the free-text choice; where no option-based question
    tool is available, ask the same two questions in plain text, stating
-   both ranges and both defaults. For N take, in order and skipping any
-   value already held, `<d-n>`, then 3, then 2, then 4; stop at three
+   both ranges and both defaults. For N, the value used to build the list
+   and carry the label is `<d-n>` — never a stated 0: when `<d-n>` is 0,
+   use the hardcoded default 3 instead. Take, in order and skipping any
+   value already held, that value, then 3, then 2, then 4; stop at three
    values; then append
    `0 — skip; the branch finishes with no whole-branch review` as the
    fourth. Zero is always present and always last.
@@ -273,11 +275,14 @@ the user. Announce: `I'm using subagent-driven-development (batched autonomous m
    start from the plan the prompt names, and overwrite it at this batch's end.
    Never resume from a `state.md` that points somewhere the prompt does not.
    Otherwise run the Resume Procedure below before executing anything.
-2. Execute tasks with the normal per-task flow (implementer → task review (both verdicts) → update plan.md checkbox → commit). Per-task checkboxes and
+2. Resolve the task cap X (see the task-cap bullet under step 4 below for the
+   resolution order). If it resolves to 0, stop now, before running any
+   task: write the handoff into `state.md`, say why, and stop.
+3. Execute tasks with the normal per-task flow (implementer → task review (both verdicts) → update plan.md checkbox → commit). Per-task checkboxes and
    commits are the crash-safe position record — never defer them to batch end.
    This mode executes tasks sequentially — the Parallel Waves default does NOT
    apply inside a batch, because the boundary must be evaluated after every task.
-3. After each task, end the batch when ANY of the following holds:
+4. After each task, end the batch when ANY of the following holds:
    - **The task cap is reached (primary boundary).** The cap is the user's
      explicit task count X when one was given — stated when the batch run
      started, or carried across `/clear` by the resume prompt's `X=<x>` —
@@ -325,7 +330,7 @@ would otherwise linger as orphans.
 Then stop with a message stating what was completed, any open issues
 (blocking questions first), and verbatim resume instructions:
 
-> Batch complete (N tasks). Context at P%. To continue: run `/clear`, then paste:
+> Batch complete (<t> tasks). Context at P%. To continue: run `/clear`, then paste:
 > "Resume the plan at <plan-path> (batched autonomous mode)"
 
 When the user stated a task count X, a round count N, or M (reviewers per

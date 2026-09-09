@@ -157,7 +157,7 @@ expect_decoy_loses() {
   rm -f "$TMP_CWD/state.md"
   want=$(expected_block "$m" "$n" "$cap")
   case "$ctx" in
-    *"$decoy"*"$CLOSE_TAG"*) : ;;
+    *"$decoy"*"$CLOSE_TAG"*"$OPEN_TAG"*) : ;;
     *) bad "${label}: the decoy block from state.md is absent or incomplete — the workspace file was not embedded, or its closing delimiter was not written literally"; return ;;
   esac
   case "$ctx" in
