@@ -907,6 +907,19 @@ git commit -m "docs(multi-code-review): resolve N and M through the cited rule" 
 
 ### Task 5: Update the spec gate in `skills/brainstorming/SKILL.md`
 
+> **Amendment 7 (orchestrator ruling):** Step 4 mandated a two-alternative
+> origin echo (tier 2 or tier 3) on the resume path, while Task 3 renamed the
+> placeholders in that echo to `<d-n>` and `<d-m>`, whose normative definition
+> in `skills/multi-doc-review/SKILL.md` includes tier 1, a value stated in this
+> session. A reader following the "(defined below)" pointer therefore reaches a
+> wider meaning than the branch intends, and the two alternatives could then
+> state an origin the value did not have. The echo keeps exactly two
+> alternatives, as the design document requires; Step 4 now also mandates one
+> sentence saying that on this path the two placeholders mean the
+> tier-2-or-tier-3 result, because this branch does not consult a stated value.
+> Task 5 is re-run so that `skills/brainstorming/SKILL.md` carries that sentence
+> too and the two gate files stay identical.
+
 **Files:**
 - Modify: `skills/brainstorming/SKILL.md`
 
@@ -921,11 +934,11 @@ git commit -m "docs(multi-code-review): resolve N and M through the cited rule" 
 - Verification: `bash tests/review-gates/run-tests.sh` — assertions 1/3/4/5 for the spec gate, 2, 2b, 2c and 11.
 - Sentence wording is free; the properties above bind.
 
-- [x] **Step 1: Rename the placeholder**
+- [ ] **Step 1: Rename the placeholder**
 
 Replace every `<d>` in the file with `<d-m>` (11 occurrences, on lines 82, 85, 93, 124, 127, 128, 129, 130). The rename is mechanical: `<d>` means "the default for M" at every one of them. Do not touch `<D>`.
 
-- [x] **Step 2: Rewrite the M definition in the question block**
+- [ ] **Step 2: Rewrite the M definition in the question block**
 
 Replace the whole M definition — from `M is reviewers per lens` in line 122 through `removed if among them.` on line 130: the tag sentence, the validity sentence and the offer sentence — with the body below. The definition ends **mid-line 130**, at `removed if among them.`; the rest of line 130 (`Say with the M`) and line 131 (`question: The M`) form the `Say with the M question:` sentence and survive unchanged, together with the cost sentence that follows. (No assertion pins `Say with the M question:` itself — the pinned neighbour is the cost sentence at `tests/review-gates/run-tests.sh:177`. It is a boundary the mid-line replacement must not cut, not a test pin.) A whole-line replacement of 122–130 would cut that pin in half.
 
@@ -943,7 +956,7 @@ Replace the whole M definition — from `M is reviewers per lens` in line 122 th
 > **recommended** when it is `2`–`5`, then 1, 2 and 3 with `<d-m>` removed if
 > among them.
 
-- [x] **Step 3: Rewrite N's default, range and option list**
+- [ ] **Step 3: Rewrite N's default, range and option list**
 
 - In the same question block, replace `N is the number of review rounds (0–10, default 3; 0 skips the loop and logs a `skipped` entry).` with:
 
@@ -969,7 +982,7 @@ Replace the whole M definition — from `M is reviewers per lens` in line 122 th
 
 - On the resume path, replace `else M's default `<d-m>` (defined below) for M and 3 for N` with `else M's default `<d-m>` (defined below) for M and N's default `<d-n>` (defined below) for N`. Both halves carry "(defined below)": `<d-n>` is first defined about 28 lines later, in the "Otherwise ask the user" branch.
 
-- [x] **Step 4: Give N its own origin clause on the resume path**
+- [ ] **Step 4: Give N its own origin clause on the resume path**
 
 N now has three possible origins on the resume path: recorded on the log's invocation line, the block's `review-rounds` line, or the hardcoded default. Today N can never name the block.
 
@@ -994,7 +1007,7 @@ The joint plural clause cannot survive. Under the new rule N and M can resolve a
 > invocation line does not record it, so this is <whichever of the same two
 > applies>); the skill decides whether the loop runs, resumes or is skipped.`
 
-Write the replacement in the **choose-one** form the file already uses at lines 87–90 ("whichever of … actually applies"), naming both alternatives for each value — never as one filled combination. A skill body is static text: a body showing only "the session default from the `<superpowers-defaults>` block" would make the gate claim a block origin on Codex, on OpenCode, and in every session where the `review-rounds` line is absent. All four combinations of the two values are possible, and each parenthetical states the tier that actually supplied that value.
+Write the replacement in the **choose-one** form the file already uses at lines 87–90 ("whichever of … actually applies"), naming both alternatives for each value — never as one filled combination. Two alternatives are the complete set on this path, and one further sentence must say why. In the same branch, state that here `<d-n>` and `<d-m>` name the tier-2-or-tier-3 result — the block's matching line, else the hardcoded default — because this branch does not consult a value stated in this session. Without that sentence a reader follows the "(defined below)" pointer to `Resolving a default` in `skills/multi-doc-review/SKILL.md`, whose tier 1 *is* a stated value, and the two alternatives would then be able to state an origin the value did not have. Write the same sentence in every file that carries this two-alternative choose-one, so the gates do not diverge. A skill body is static text: a body showing only "the session default from the `<superpowers-defaults>` block" would make the gate claim a block origin on Codex, on OpenCode, and in every session where the `review-rounds` line is absent. All four combinations of the two values are possible, and each parenthetical states the tier that actually supplied that value.
 
 Extend the only-one-recovered sentence (lines 102–105) the same way. It assumes today that the recovered value is N and the missing one M; it must state each value's own origin whichever of the two was recovered, using the same two N forms.
 
@@ -1004,12 +1017,12 @@ Never state an origin the value did not have: on Codex, on OpenCode, or in any s
 
 **One surviving sentence must be reconciled.** `tests/review-gates/run-tests.sh:241` pins, in both gate spans, the fragment `counts as not recorded, so the default applies and the origin echo names the default` (`skills/brainstorming/SKILL.md:76-77`, `skills/writing-plans/SKILL.md:361-362`) — outside every span these tasks replace, and it cannot be reworded through that fragment without breaking the suite. It describes an invalid recorded N. Read "the default" there as *the value `Resolving a default` produced*, and add a following sentence — outside the pinned fragment — saying that the echo names the tier that produced it, using the same two N forms. Do not edit the pinned fragment itself.
 
-- [x] **Step 5: Verify this file**
+- [ ] **Step 5: Verify this file**
 
 Run: `bash tests/review-gates/run-tests.sh 2>&1 | grep -E 'brainstorming|spec gate'`
 Expected: PASS for "brainstorming cites the rule by name", the three absence assertions for this file, and every surviving spec-gate assertion (1/3/4/5 and 11).
 
-- [x] **Step 6: Commit**
+- [ ] **Step 6: Commit**
 
 ```bash
 git add skills/brainstorming/SKILL.md

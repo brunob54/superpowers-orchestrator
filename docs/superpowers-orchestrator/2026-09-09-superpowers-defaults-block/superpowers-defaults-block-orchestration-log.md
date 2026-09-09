@@ -35,3 +35,9 @@ Re-dispatch: phase 3, in-run resume 1 of 3
 ## Phase 3 — Batch 2 (tasks 3–4) — COMPLETE — commits a89e5bf..3ed045d
 - Task 3: complete — `Resolving a default` defined in `skills/multi-doc-review/SKILL.md`; one fix round on the platform clause, which as first written cancelled a user-stated value
 - Task 4: complete — the rule cited in `skills/multi-code-review/SKILL.md`, with the same platform-clause wording pre-corrected so the two files agree
+
+## RULING 7 — 2026-09-09 — phase 3 — the resume-path origin echo keeps two alternatives and gains a scope sentence; task 5 re-run
+Items: [task 6/1] design — amend plan: keep the two-alternative echo and state that `<d-n>`/`<d-m>` mean the tier-2-or-tier-3 result on that path
+Detail: docs/superpowers-orchestrator/2026-09-09-superpowers-defaults-block/plans/superpowers-defaults-block-open-decisions.md
+Forks: 3 of 3 (design consistency, implementation practicality, adversarial) — contradiction: none
+Re-dispatch: phase 3, in-run resume 1 of 3
