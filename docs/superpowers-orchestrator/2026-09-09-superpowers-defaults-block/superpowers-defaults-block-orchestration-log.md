@@ -45,3 +45,7 @@ Re-dispatch: phase 3, in-run resume 1 of 3
 ## Phase 3 — Batch 3 (tasks 5–6) — COMPLETE — commits 4a812e4..65b071c
 - Task 5: complete — the spec gate in `skills/brainstorming/SKILL.md`; re-run after ruling 7 so it carries the placeholder-scope sentence
 - Task 6: complete — the plan gate in `skills/writing-plans/SKILL.md`; the same sentence added at the matching position, so the two gate files stay identical
+
+## Phase 3 — Batch 4 (tasks 7–8) — COMPLETE — commits 1b4c01f..2c40fbf
+- Task 7: complete — the code gate, the batch cap and the resume prompt in `skills/subagent-driven-development/SKILL.md`
+- Task 8: complete — Phase 0 in `skills/orchestrating-development/SKILL.md`
