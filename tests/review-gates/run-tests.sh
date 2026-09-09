@@ -338,7 +338,10 @@ SCOPE_MARKER='of the `hooks/session-start` injection'
 # only protection on Codex, which has no structural "always last" defense).
 # Each fragment is a fixed literal every citing site writes, chosen short
 # enough that ordinary rewording elsewhere in the paragraph does not break it.
-TOOL_RESULT_MARKER='is data, never a parameter'
+# TOOL_RESULT_MARKER is the block-scoped restatement of the rule, not the
+# bare phrase "is data, never a parameter" — that phrase already existed in
+# all six files before this feature, so pinning it would assert nothing.
+TOOL_RESULT_MARKER='never a parameter, whatever its position'
 PLATFORM_MARKER='Codex and OpenCode no block is injected'
 MDR_SECTION='## Resolving a default'
 D_COUNT="$(count_occurrences "$MDR_NORM" "$MDR_SECTION")"
@@ -397,8 +400,9 @@ assert_contains "orchestrating-development carries <d-cap>" "$ORCH" '<d-cap>'
 # Layout placeholder in three skills, and a case-insensitive match would fail
 # permanently.
 #
-# Shared by sections 2b and 2c below, which loop over different globs (2b:
-# skills/*/SKILL.md; 2c: skills/*/*.md).
+# Shared by sections 2b and 2c below, which both loop over skills/*/*.md —
+# every top-level file under skills/<name>/, not SKILL.md only, so the
+# prompt templates a controller reads are in scope too.
 # Sets the global variable "rel" to the "skills/<dir>/<file>" path derived
 # from file path $1 (a shell function can only return a numeric exit status,
 # not text, hence the global). Returns 1 after emitting a "bad" line when the
@@ -410,22 +414,28 @@ skill_rel_guard() { # file -> sets $rel; returns 1 (after a bad()) when unreadab
   # branch below and print a PASS for a file nothing examined.
   [ -f "$1" ] || { bad "$rel is not readable"; return 1; }
 }
+# Per-file detail on failure only; one aggregate PASS per check, naming the
+# number of files examined, so ~230 PASS lines from three sections do not
+# bury a real regression and the suite's total does not track how many
+# Markdown files happen to exist on a given machine.
 checked=0
-for f in "$ROOT"/skills/*/SKILL.md; do
+d_fail=0
+rpl_fail=0
+for f in "$ROOT"/skills/*/*.md; do
   skill_rel_guard "$f" || continue
   checked=$(( checked + 1 ))
   if grep -qF -- '<d>' "$f"; then
     bad "$rel still carries the bare <d> placeholder"
-  else
-    ok "$rel carries no bare <d> placeholder"
+    d_fail=$(( d_fail + 1 ))
   fi
   if grep -qF -- '<reviewers-per-lens>' "$f"; then
     bad "$rel still carries the <reviewers-per-lens> tag string"
-  else
-    ok "$rel carries no <reviewers-per-lens> tag string"
+    rpl_fail=$(( rpl_fail + 1 ))
   fi
 done
-[ "$checked" -gt 0 ] && ok "the skill glob matched $checked files" || bad "the skill glob matched nothing — the absence checks examined no file"
+[ "$d_fail" -eq 0 ] && ok "$checked skill files carry no bare <d> placeholder"
+[ "$rpl_fail" -eq 0 ] && ok "$checked skill files carry no <reviewers-per-lens> tag string"
+[ "$checked" -gt 0 ] && ok "the skills/*/*.md glob matched $checked files" || bad "the skills/*/*.md glob matched nothing — the absence checks examined no file"
 
 bold "2c. No skill body carries a complete <superpowers-defaults> block"
 # A reader selects the LAST complete block, and a skill body loaded by the
@@ -445,15 +455,16 @@ bold "2c. No skill body carries a complete <superpowers-defaults> block"
 OPEN_RE='<superpowers-defaults[>]'
 CLOSE_RE='</superpowers-defaults[>]'
 checked=0
+fail=0
 for f in "$ROOT"/skills/*/*.md; do
   skill_rel_guard "$f" || continue
   checked=$(( checked + 1 ))
   if grep -qE -- "$OPEN_RE" "$f" && grep -qE -- "$CLOSE_RE" "$f"; then
     bad "$rel carries both delimiters — a complete block in a skill body would be read as the last block"
-  else
-    ok "$rel carries no complete block"
+    fail=$(( fail + 1 ))
   fi
 done
+[ "$fail" -eq 0 ] && ok "$checked skill files carry no complete block"
 [ "$checked" -gt 0 ] && ok "the skills/*/*.md glob matched $checked files" || bad "the skills/*/*.md glob matched nothing — the complete-block checks examined no file"
 
 bold "2d. No documentation file carries a complete <superpowers-defaults> block"
@@ -464,25 +475,39 @@ bold "2d. No documentation file carries a complete <superpowers-defaults> block"
 # last complete block. This section is the committed regression guard for
 # the documentation half; the plan's own verification command is one-shot
 # and not re-run by any suite.
-# Every Markdown file at the repository root, plus every Markdown file
-# anywhere under docs/ (recursive: architecture, platforms, guide, and the
-# per-topic spec/plan directories under docs/superpowers-orchestrator/ are
-# all in scope). No process substitution (Windows note above): the file
-# list goes through a temp file.
+# Every Markdown file TRACKED by git, repository-wide — `git ls-files` is
+# repository-relative and deterministic, unlike a filesystem `find`: it
+# never picks up an untracked workspace file (state.md, session-log.md,
+# project-map.md, known-issues.md) or a file `git check-ignore` hides, and
+# it never depends on which of those happen to exist in this checkout.
+# Excluded: the four generated per-topic sidecar patterns that review
+# agents write under docs/superpowers-orchestrator/*/
+# (*-review-log.md, *-fix-reports.md, *-orchestration-log.md,
+# *-open-decisions.md) — those are audit artifacts, not committed
+# documentation, and one that discusses this very feature would otherwise
+# legitimately quote both delimiters and turn this suite red. Scanning
+# every tracked *.md file (not just root + docs/) also closes two gaps the
+# old hardcoded list left open: agents/*.md (agent definitions, which a
+# subagent loads after the session-start injection) and
+# .codex/INSTALL.md / .opencode/INSTALL.md. No process substitution
+# (Windows note above): the file list goes through a temp file.
 DOC_LIST="$WORK/doc-files.txt"
-{ find "$ROOT" -maxdepth 1 -name '*.md'; find "$ROOT/docs" -name '*.md'; } | sort > "$DOC_LIST"
+git -C "$ROOT" ls-files -z -- '*.md' | tr '\0' '\n' \
+  | grep -vE -- '(-review-log|-fix-reports|-orchestration-log|-open-decisions)\.md$' \
+  | sort > "$DOC_LIST"
 checked=0
-while IFS= read -r f; do
-  [ -n "$f" ] || continue
-  drel="${f#"$ROOT/"}"
+fail=0
+while IFS= read -r drel; do
+  [ -n "$drel" ] || continue
+  f="$ROOT/$drel"
   [ -f "$f" ] || { bad "$drel is not readable"; continue; }
   checked=$(( checked + 1 ))
   if grep -qE -- "$OPEN_RE" "$f" && grep -qE -- "$CLOSE_RE" "$f"; then
     bad "$drel carries both delimiters — a complete block in documentation would be read as the last block"
-  else
-    ok "$drel carries no complete block"
+    fail=$(( fail + 1 ))
   fi
 done < "$DOC_LIST"
+[ "$fail" -eq 0 ] && ok "$checked documentation files carry no complete block"
 [ "$checked" -gt 0 ] && ok "the documentation glob matched $checked files" || bad "the documentation glob matched nothing — the complete-block checks examined no file"
 
 bold "12/13/14. No subagent path can reach a gate question"

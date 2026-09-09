@@ -177,9 +177,11 @@ SPEC2_SHA_BEFORE=$(shasum "$SPEC2" | cut -d' ' -f1)
 
 PROMPT2="Invoke the superpowers-orchestrator:multi-doc-review skill on the document $SPEC2 with N=2. Do not ask me any questions — use N=2 and proceed to completion."
 # Deliberately no M=: this case exercises the DEFAULT configuration (M=1) —
-# the fallback a direct invocation reaches with no stated M and no
-# `<superpowers-defaults>` block's `reviewers-per-lens` line. Gate
-# invocations now carry an explicit `M=<m>`; see the (m1) checks below.
+# resolved through the hook's `<superpowers-defaults>` block's
+# `reviewers-per-lens=1` line, which Claude Code always emits. The tier-3
+# hardcoded fallback (no stated M and no block) is reachable only on a
+# platform that emits no block. Gate invocations now carry an explicit
+# `M=<m>`; see the (m1) checks below.
 
 # Safety net (Case 2): re-snapshot the plugin repository immediately before
 # this case's agent call, same as assertion (e) does for Case 1. Case 1's

@@ -25,6 +25,13 @@ REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 HOOK="${REPO_ROOT}/hooks/session-start"
 OPEN_TAG="<superpowers-defaults>"
 CLOSE_TAG="</superpowers-defaults>"
+# hooks/session-start embeds the using-superpowers skill body inside
+# <EXTREMELY_IMPORTANT>...</EXTREMELY_IMPORTANT>, before any workspace file
+# and before the <superpowers-defaults> block. A skill body is allowed an
+# opening-only mention of the tag (tests/review-gates/run-tests.sh section
+# 2c), so the opening-delimiter count below is scoped to the text after
+# this marker — the only embedded file that could carry such a mention.
+EMBED_MARKER="</EXTREMELY_IMPORTANT>"
 
 TMP_HOME=$(mktemp -d)
 TMP_CWD=$(mktemp -d)
@@ -69,7 +76,7 @@ expected_block() {
 
 # expect_block <label> <m> <n> <cap> [VAR=value ...]
 expect_block() {
-  local label="$1" m="$2" n="$3" cap="$4" ctx want count
+  local label="$1" m="$2" n="$3" cap="$4" ctx want count tail
   shift 4
   ctx=$(run_hook "$@")
   want=$(expected_block "$m" "$n" "$cap")
@@ -77,10 +84,17 @@ expect_block() {
     *"$want") ok "${label} -> ${m}/${n}/${cap}, exact block at the end of the context" ;;
     *) bad "${label} -> the context does not end with the exact ${m}/${n}/${cap} block" ;;
   esac
-  # No-decoy case: the opening delimiter must appear exactly once, so a
-  # second interpolation of the escaped block (or a duplicated printf) that
-  # still passes the suffix check above is caught here.
-  count=$(printf '%s' "$ctx" | grep -o -F -- "$OPEN_TAG" | wc -l | tr -d ' ')
+  # No-decoy case: the opening delimiter must appear exactly once in the
+  # text after the last EMBED_MARKER, so a second interpolation of the
+  # escaped block (or a duplicated printf) that still passes the suffix
+  # check above is caught here, while a permitted opening-only mention of
+  # the tag inside the embedded using-superpowers skill body cannot trip
+  # this count. "|| true" keeps the count-0 case (the absent-block failure
+  # this suite exists to catch) from killing the script under
+  # "set -euo pipefail": grep exits 1 on no match, and pipefail would
+  # otherwise propagate that exit status into this assignment.
+  tail="${ctx##*$EMBED_MARKER}"
+  count=$(printf '%s' "$tail" | grep -o -F -- "$OPEN_TAG" | wc -l | tr -d ' ' || true)
   if [ "$count" -eq 1 ]; then
     ok "${label}: opening delimiter appears exactly once"
   else
