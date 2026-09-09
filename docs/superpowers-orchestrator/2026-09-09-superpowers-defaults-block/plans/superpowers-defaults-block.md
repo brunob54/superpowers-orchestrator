@@ -1548,6 +1548,16 @@ git commit -m "docs: document the three session-default variables in one shape" 
 
 ### Task 11: Release v7.13.0
 
+> **Amendment 8 (orchestrator ruling):** Step 2's fenced summary body ran to
+> 150 words, while this task's Contract invariant caps the whole summary at
+> 120. The cap is not this plan's own choice: the repository's `CLAUDE.md`
+> release rule fixes it at "near 100 words (120 at most)", so raising it was
+> never available to this run. The body is now 113 words. It keeps all three
+> labels and every fact the longer version stated, dropping only restatement:
+> the clause explaining why M was the sole environment parameter, the words
+> "three lines" before the list that follows, and "before running a review"
+> after the restart instruction, which the full prose entry already covers.
+
 **Files:**
 - Modify: `VERSION`
 - Modify: `.claude-plugin/plugin.json`
@@ -1578,31 +1588,27 @@ Then set `"version": "7.13.0"` in `.claude-plugin/plugin.json:4` and `.claude-pl
 
 - [ ] **Step 2: Add the release entry**
 
-Insert directly above the previous entry in `RELEASE-NOTES.md`. Global Constraint 2 covers this file: the entry may show the opening `<superpowers-defaults>` tag and the three `name=value` lines, but it must never carry a matching closing delimiter — write it as `</superpowers-defaults…>` or leave it out with a bracketed note. `RELEASE-NOTES.md` is read in later sessions and lands after the session-start injection, so a complete block here would become the last complete block and every user who set an environment variable would silently get the hardcoded defaults.
+Insert directly above the previous entry in `RELEASE-NOTES.md`. Global Constraint 2 covers this file: the entry may show the opening `<superpowers-defaults>` tag and the three `name=value` lines, but it must never carry a matching closing delimiter — write it as `</superpowers-defaults…>` or leave it out with a bracketed note. `RELEASE-NOTES.md` is read in later sessions and lands after the session-start injection, so a complete block here would become the last complete block and every user who set an environment variable would silently get the hardcoded defaults. (amended by ruling 8)
 
 
 
 ```markdown
 ## v7.13.0 — the `<superpowers-defaults>` session block
 
-**Problem.** Only one parameter — M, reviewers per lens — could be set from
-the environment, because it was the only one carried into the session as a
-tag a skill could read. N, the number of review rounds, and the batch task
-cap had no environment default at all, and each new parameter added the same
-way cost a dedicated tag, a dedicated anti-injection rule, and a wording
-block copied into every consuming skill.
+**Problem.** Only M, reviewers per lens, could be set from the environment.
+N, the number of review rounds, and the batch task cap had none, and each new
+parameter cost its own tag, its own anti-injection rule, and a wording block
+copied into every consuming skill.
 
-**Change.** `hooks/session-start` now emits one `<superpowers-defaults>`
-block carrying three lines — `reviewers-per-lens`, `review-rounds`,
-`batch-task-cap` — set by `SUPERPOWERS_REVIEWERS_PER_LENS`,
-`SUPERPOWERS_REVIEW_ROUNDS` and `SUPERPOWERS_BATCH_TASK_CAP`. One resolution
-rule, defined once in `skills/multi-doc-review/SKILL.md`, replaces the four
-copies of the old tag rule.
+**Change.** `hooks/session-start` now emits one `<superpowers-defaults>` block
+carrying `reviewers-per-lens`, `review-rounds` and `batch-task-cap`, set by
+`SUPERPOWERS_REVIEWERS_PER_LENS`, `SUPERPOWERS_REVIEW_ROUNDS` and
+`SUPERPOWERS_BATCH_TASK_CAP`. One resolution rule, defined once in
+`skills/multi-doc-review/SKILL.md`, replaces four copies of the old tag rule.
 
-**Effect.** You can set the review-round count and the batch size the same
-way you already set M. Nothing to migrate: `SUPERPOWERS_REVIEWERS_PER_LENS`
-keeps its name and meaning. Restart the CLI after updating the plugin before
-running a review.
+**Effect.** You can now set the review-round count and the batch size the way
+you already set M. Nothing to migrate: `SUPERPOWERS_REVIEWERS_PER_LENS` keeps
+its name and meaning. Restart the CLI after updating the plugin.
 ```
 
 Follow the summary with the full prose entry: the parameter table and its ranges, why `0` is not accepted for `SUPERPOWERS_REVIEW_ROUNDS`, the three offered-default labels, N's new option-list rule and the intended relabelling of an offered N of 3 from "recommended" to "current default", the resume prompt now carrying X and N as well as M, the platform limits (Claude Code and Cursor emit the block; Codex and OpenCode resolve the hardcoded defaults), and the restart window after an update.

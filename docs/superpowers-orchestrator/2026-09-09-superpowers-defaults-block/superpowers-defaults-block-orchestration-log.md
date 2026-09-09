@@ -53,3 +53,9 @@ Re-dispatch: phase 3, in-run resume 1 of 3
 ## Phase 3 — Batch 5 (tasks 9–10) — COMPLETE — commits f579a43..98ed3f6
 - Task 9: complete — the behavioral tests' environment guard generalized
 - Task 10: complete — documentation updated; one fix round removed a sentence implying the review-rounds variable also supplied the batch-cap default
+
+## RULING 8 — 2026-09-09 — phase 3 — the mandated release-notes summary exceeded the repository's own word cap; body trimmed
+Items: [task 11/1] forced — amend plan: Step 2's fenced summary body rewritten at 113 words, all three labels and every fact kept
+Detail: docs/superpowers-orchestrator/2026-09-09-superpowers-defaults-block/plans/superpowers-defaults-block-open-decisions.md
+Forks: none
+Re-dispatch: phase 3, in-run resume 1 of 3
