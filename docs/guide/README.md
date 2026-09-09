@@ -172,10 +172,12 @@ non-trivial work — N independent `multi-doc-review` rounds before reaching
 you. Each round dispatches M identical reviewers in parallel (M = reviewers
 per lens, default 1 when `SUPERPOWERS_REVIEWERS_PER_LENS` is unset; see the
 `SUPERPOWERS_REVIEWERS_PER_LENS` setting in
-§7) and consolidates their reports before findings are triaged. The gate
-asks you for both numbers — N, the number of rounds, and M, the reviewers
-per round — offering the value of `SUPERPOWERS_REVIEWERS_PER_LENS` as M's
-default.
+§7) and consolidates their reports before findings are triaged. N, the number
+of rounds, has the same kind of environment default: `SUPERPOWERS_REVIEW_ROUNDS`
+(see §7), which also supplies the default batch cap via
+`SUPERPOWERS_BATCH_TASK_CAP`. The gate asks you for both numbers — N, the
+number of rounds, and M, the reviewers per round — offering the resolved
+value for each as its default.
 
 Reviewers in both review loops (`multi-doc-review` here and in Stage 2,
 `multi-code-review` in Stage 4) follow one rule about the **harness** — the
@@ -514,10 +516,13 @@ thing you hear is completion or a stop.
 
 | Question | Range | Default |
 | --- | --- | --- |
-| `N_plan` — plan-review rounds | 0–10 (0 = skip) | 3 |
-| `N_code` — code-review rounds | 0–10 (0 = skip) | 3 |
+| `N_plan` — plan-review rounds | 0–10 (0 = skip) | 3, or the value of `SUPERPOWERS_REVIEW_ROUNDS` |
+| `N_code` — code-review rounds | 0–10 (0 = skip) | 3, or the value of `SUPERPOWERS_REVIEW_ROUNDS` |
 | `M` — reviewers per lens: identical reviewers dispatched in parallel per review round, for both loops | 1–5 | 1, or the value of `SUPERPOWERS_REVIEWERS_PER_LENS` |
-| Batch cap — tasks per implementation batch | 1–5 | 3 |
+| Batch cap — tasks per implementation batch | 1–5 | 3, or the value of `SUPERPOWERS_BATCH_TASK_CAP` |
+
+One `SUPERPOWERS_REVIEW_ROUNDS` value supplies the offered default for both
+`N_plan` and `N_code`; you may still answer the two questions differently.
 
 The same batch asks for two confirmations:
 
@@ -886,7 +891,7 @@ The number of reviewers per lens — M, the identical reviewer subagents each
 `multi-doc-review` / `multi-code-review` round dispatches in parallel — is set
 the same way (an integer 1–5, default 1; restart the CLI after changing it;
 an invalid value silently falls back to 1). Honored on Claude Code;
-not verified on Cursor or Codex:
+not verified on Cursor; no block is emitted on Codex or OpenCode:
 
 ```json
 { "env": { "SUPERPOWERS_REVIEWERS_PER_LENS": "3" } }
@@ -895,6 +900,23 @@ not verified on Cursor or Codex:
 The three review gates (spec review, plan review, whole-branch code review)
 also ask you for M, offering this value as the default; what you answer
 there wins for that review.
+
+Beside it, two more variables are set the same way. `SUPERPOWERS_REVIEW_ROUNDS`
+sets N, the number of review rounds each review loop runs (an integer 1–10,
+default 3; restart the CLI after changing it; an invalid value silently
+falls back to 3). `0` is deliberately not accepted here: it would silently
+disable spec review, plan review and whole-branch code review on every
+future session — N = 0 stays available only where you state it and see its
+effect, in an invocation or at a gate question. `SUPERPOWERS_BATCH_TASK_CAP`
+sets how many tasks one Batched Autonomous Mode batch implements before it
+stops and writes its handoff (an integer 1–5, default 3; restart the CLI
+after changing it; an invalid value silently falls back to 3). Both are
+honored on Claude Code; not verified on Cursor; no block is emitted on
+Codex or OpenCode:
+
+```json
+{ "env": { "SUPERPOWERS_REVIEW_ROUNDS": "5", "SUPERPOWERS_BATCH_TASK_CAP": "2" } }
+```
 
 **One complication: the plugin has to guess how big the memory is.**
 Different Claude models have different context-window sizes (some 200

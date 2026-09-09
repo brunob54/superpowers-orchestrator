@@ -130,7 +130,7 @@ A single review — even a careful one — inherits the authoring conversation's
 
 ### Where it lives
 
-`skills/multi-doc-review/` (`SKILL.md` controller + `reviewer-prompt.md` dispatch template), gate steps in `skills/brainstorming/SKILL.md` and `skills/writing-plans/SKILL.md`, `hooks/skill-rules.json` routing entry, `hooks/subagent-guard.js` marker exemption, `hooks/session-start` (the `<reviewers-per-lens>` session tag, v7.4.0), `tests/claude-code/test-multi-doc-review.sh`, `tests/codex/test-session-start-reviewers-tag.sh`.
+`skills/multi-doc-review/` (`SKILL.md` controller + `reviewer-prompt.md` dispatch template), gate steps in `skills/brainstorming/SKILL.md` and `skills/writing-plans/SKILL.md`, `hooks/skill-rules.json` routing entry, `hooks/subagent-guard.js` marker exemption, `hooks/session-start` (the `<superpowers-defaults>` session block, v7.13.0), `tests/claude-code/test-multi-doc-review.sh`, `tests/codex/test-session-start-defaults-block.sh`.
 
 ### References
 
@@ -173,7 +173,7 @@ Dogfood evidence from building it: the design spec collected **33 findings acros
 
 ### Where it lives
 
-`skills/multi-code-review/` (`SKILL.md` controller + `reviewer-prompt.md` dispatch template), the final-gate step in `skills/subagent-driven-development/SKILL.md`, `hooks/skill-rules.json` routing entry, `hooks/subagent-guard.js` roster, `hooks/session-start` (the `<reviewers-per-lens>` session tag, v7.4.0), `tests/claude-code/test-multi-code-review.sh`, `tests/codex/test-subagent-guard.js`, `tests/codex/test-session-start-reviewers-tag.sh`.
+`skills/multi-code-review/` (`SKILL.md` controller + `reviewer-prompt.md` dispatch template), the final-gate step in `skills/subagent-driven-development/SKILL.md`, `hooks/skill-rules.json` routing entry, `hooks/subagent-guard.js` roster, `hooks/session-start` (the `<superpowers-defaults>` session block, v7.13.0), `tests/claude-code/test-multi-code-review.sh`, `tests/codex/test-subagent-guard.js`, `tests/codex/test-session-start-defaults-block.sh`.
 
 ### References
 
