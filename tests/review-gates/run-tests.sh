@@ -172,8 +172,6 @@ normalize_to "$BRAINSTORMING" "$BS_FILE_NORM"
 
 # Wording contracts shared by every gate.
 ANCHOR='ask the user for N and M'
-D_MARKER='the value of the `<reviewers-per-lens>` tag emitted by'
-D_TAIL='never a parameter'
 COST_LINE='The M reviewers of a round run at the same time, so running time stays close to one review; the token cost grows about M times per round, and the loop runs about N × M reviewers in total.'
 SHARED_PINS=(
   'in one question batch'
@@ -322,32 +320,99 @@ else
   bad "step 4: N=<n> M=<m> (at $CG_TOKENS) must come after the carried-findings phrase (at $CG_FINDINGS)"
 fi
 
-bold "2. Anti-drift: the tag-resolution sentence (\`the value of the\` ... \`never a parameter\`) is identical in four files"
-D_SPANS=()
-for pair in "orchestrating-development:$ORCH" "brainstorming:$BRAINSTORMING" \
-            "writing-plans:$WRITING_PLANS" "subagent-driven-development:$SDD"; do
+bold "2. The resolution rule is defined once and cited by name"
+# The duplicated span is gone by construction: the rule now lives in one
+# file. What is asserted instead is that the definition exists exactly once
+# and that every skill resolving one of the three parameters points at it
+# with the exact citation sentence. Per-file citation COUNTS are recorded
+# after implementation, never asserted — a test pinned to a count fails for
+# a wording reason and invites editing the skill to satisfy the number.
+CITE_MARKER='Resolve this value by `Resolving a default` in `skills/multi-doc-review/SKILL.md`.'
+# Global Constraint 9 calls this phrase load-bearing: "the last complete block
+# OF THE SESSION-START INJECTION", never "the last complete block in the
+# context". It is a fixed literal every citing site writes, so it is pinned
+# here — the three other parts of Global Constraint 8 are prose and are not.
+SCOPE_MARKER='of the `hooks/session-start` injection'
+MDR_SECTION='## Resolving a default'
+D_COUNT="$(count_occurrences "$MDR_NORM" "$MDR_SECTION")"
+assert_eq "multi-doc-review defines '${MDR_SECTION}' exactly once" "$D_COUNT" "1"
+for pair in "multi-code-review:$MCR" "brainstorming:$BRAINSTORMING" \
+            "writing-plans:$WRITING_PLANS" "subagent-driven-development:$SDD" \
+            "orchestrating-development:$ORCH"; do
   name="${pair%%:*}"
   file="${pair#*:}"
-  norm="$WORK/d-$name.txt"
+  norm="$WORK/cite-$name.txt"
   normalize_to "$file" "$norm"
-  n="$(count_occurrences "$norm" "$D_MARKER")"
-  assert_eq "$name carries the <d> marker exactly once" "$n" "1"
-  span="$(marker="$D_MARKER" tail="$D_TAIL" awk '
-    BEGIN { m = ENVIRON["marker"]; t = ENVIRON["tail"] }
-    { i = index($0, m); if (i == 0) { print ""; exit }
-      rest = substr($0, i)
-      j = index(rest, t); if (j == 0) { print ""; exit }
-      print substr(rest, 1, j + length(t) - 1); exit }' "$norm")"
-  if [ -z "$span" ]; then
-    bad "$name: could not extract the <d> span from the marker to '$D_TAIL'"
-  else
-    ok "$name: <d> span extracted (${#span} characters)"
-  fi
-  D_SPANS+=("$span")
+  assert_contains "$name cites the rule by name" "$norm" "$CITE_MARKER"
+  assert_contains "$name carries the scoping phrase" "$norm" "$SCOPE_MARKER"
 done
-for i in 1 2 3; do
-  assert_eq "the <d> span of file $((i + 1)) equals the orchestrator's" \
-    "${D_SPANS[$i]}" "${D_SPANS[0]}"
+assert_contains "multi-doc-review carries the scoping phrase" "$MDR_NORM" "$SCOPE_MARKER"
+
+bold "2b. The replaced placeholder and the replaced tag are gone, and the new placeholders are present"
+# Absence alone is not enough: deleting a <d> — writing a literal 1 at
+# brainstorming:82/85/93 or writing-plans:366/370/377 — turns the absence
+# check green while removing the session-default indirection this change
+# exists to add. Each renamed file must therefore also CARRY its new
+# placeholders.
+for pair in "brainstorming:$BRAINSTORMING" "writing-plans:$WRITING_PLANS" \
+            "subagent-driven-development:$SDD" "orchestrating-development:$ORCH"; do
+  name="${pair%%:*}"; file="${pair#*:}"
+  assert_contains "$name carries <d-m>" "$file" '<d-m>'
+  assert_contains "$name carries <d-n>" "$file" '<d-n>'
+done
+assert_contains "multi-doc-review carries <d-n>" "$MDR" '<d-n>'
+assert_contains "multi-code-review carries <d-n>" "$MCR" '<d-n>'
+assert_contains "subagent-driven-development carries <d-cap>" "$SDD" '<d-cap>'
+assert_contains "orchestrating-development carries <d-cap>" "$ORCH" '<d-cap>'
+# Both greps are case-sensitive on purpose: <D> is a live, unrelated Artifact
+# Layout placeholder in three skills, and a case-insensitive match would fail
+# permanently.
+checked=0
+for f in "$ROOT"/skills/*/SKILL.md; do
+  rel="skills/$(basename "$(dirname "$f")")/SKILL.md"
+  # grep exits 2 (not 1) on an unreadable path, which would take the else
+  # branch below and print a PASS for a file nothing examined.
+  [ -f "$f" ] || { bad "$rel is not readable"; continue; }
+  checked=$(( checked + 1 ))
+  if grep -qF -- '<d>' "$f"; then
+    bad "$rel still carries the bare <d> placeholder"
+  else
+    ok "$rel carries no bare <d> placeholder"
+  fi
+  if grep -qF -- '<reviewers-per-lens>' "$f"; then
+    bad "$rel still carries the <reviewers-per-lens> tag string"
+  else
+    ok "$rel carries no <reviewers-per-lens> tag string"
+  fi
+done
+[ "$checked" -gt 0 ] && ok "the skill glob matched $checked files" || bad "the skill glob matched nothing — the absence checks examined no file"
+
+bold "2c. No skill body carries a complete <superpowers-defaults> block"
+# A reader selects the LAST complete block, and a skill body loaded by the
+# Skill tool enters the context AFTER the session-start injection. A complete
+# example in a skill would therefore become the last complete block, and every
+# user who set an environment variable would silently get the hardcoded
+# defaults. Every example must break one delimiter.
+# Both patterns put their final ">" inside a bracket expression, so this test
+# file does not itself spell either complete delimiter. Each matches the
+# literal tag and nothing else.
+#
+# Scope: SKILL.md files only. The prompt templates a controller reads
+# (skills/orchestrating-development/*-prompt.md, the reviewer and fix
+# templates) sit outside this glob although Global Constraint 2 covers them
+# too. They are clean today and this change writes no block into any of them;
+# widen the glob to "$ROOT"/skills/*/*.md if a later change puts an example
+# in one of them.
+OPEN_RE='<superpowers-defaults[>]'
+CLOSE_RE='</superpowers-defaults[>]'
+for f in "$ROOT"/skills/*/SKILL.md; do
+  rel="skills/$(basename "$(dirname "$f")")/SKILL.md"
+  [ -f "$f" ] || { bad "$rel is not readable"; continue; }
+  if grep -qE -- "$OPEN_RE" "$f" && grep -qE -- "$CLOSE_RE" "$f"; then
+    bad "$rel carries both delimiters — a complete block in a skill body would be read as the last block"
+  else
+    ok "$rel carries no complete block"
+  fi
 done
 
 bold "12/13/14. No subagent path can reach a gate question"
