@@ -32,7 +32,8 @@ this guide documents the stable user surface and links there.
 
 Install and update commands for every platform (Claude Code, Cursor, Codex,
 OpenCode, GitHub Copilot CLI) live in the [main README's Installation
-section](../../README.md#installation) — one source of truth, not duplicated
+section](../../README.md#installation), which also records that only Claude
+Code and GitHub Copilot CLI have actually been used — one source of truth, not duplicated
 here. What the README doesn't tell you:
 
 **You run the installed copy, not a checkout.** Sessions load the plugin from
@@ -51,7 +52,8 @@ the version is in the plugin's install path and its `VERSION` file.
 copy under `~/.claude/statusline/` that your `settings.json` points at.
 
 Platform capabilities differ — Codex and Cursor lack the nested subagent
-dispatch that §4's orchestration requires (it refuses cleanly there). See
+dispatch that §4's orchestration requires, and the skill is written to
+refuse there (not observed, since neither has been run). See
 [docs/platforms](../platforms) for per-platform notes.
 
 ## 2. Quick start — your first session
@@ -883,8 +885,8 @@ You can change the threshold in your `settings.json` (a percentage, 10–90):
 The number of reviewers per lens — M, the identical reviewer subagents each
 `multi-doc-review` / `multi-code-review` round dispatches in parallel — is set
 the same way (an integer 1–5, default 1; restart the CLI after changing it;
-an invalid value silently falls back to 1). Honored on Claude Code and
-Cursor; has no effect on Codex:
+an invalid value silently falls back to 1). Honored on Claude Code;
+not verified on Cursor or Codex:
 
 ```json
 { "env": { "SUPERPOWERS_REVIEWERS_PER_LENS": "3" } }

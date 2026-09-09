@@ -1,5 +1,11 @@
 # Installing Superpowers Orchestrator for OpenCode
 
+> **Status: never run on OpenCode.** These steps were derived from the
+> OpenCode documentation and source code. The plugin has not been used inside
+> a live OpenCode session, so treat every instruction here as a starting
+> point rather than a walked path. Only Claude Code and GitHub Copilot CLI
+> have actually been used to run this plugin.
+
 ## Prerequisites
 
 - [OpenCode.ai](https://opencode.ai) installed
@@ -61,7 +67,7 @@ cmd /c mklink /J "$env:USERPROFILE\.config\opencode\skills\superpowers" "$env:US
 
 ### 4. Restart OpenCode
 
-Restart OpenCode. The plugin will automatically inject superpowers context.
+Restart OpenCode. The plugin should then inject superpowers context.
 
 Verify by asking: "do you have superpowers?"
 
@@ -122,7 +128,7 @@ cd ~/.config/opencode/superpowers && git pull
 Set-Location "$env:USERPROFILE\.config\opencode\superpowers"; git pull
 ```
 
-## Troubleshooting
+## Troubleshooting (untested — checks to try)
 
 ### Plugin not loading
 
@@ -158,6 +164,10 @@ When skills reference Claude Code tools:
 
 ### Nested subagents
 
+**Status: not tested.** Everything in this section was derived by reading
+the OpenCode source and documentation. The pipeline has never been run on
+OpenCode, so none of it is confirmed end to end.
+
 Skills such as `orchestrating-development` dispatch a controller subagent
 that dispatches worker subagents (*nested dispatch*). OpenCode blocks this
 by default: the `task` tool is removed from every subagent. To enable it,
@@ -179,8 +189,25 @@ you need OpenCode v1.18.2 or newer and two settings in `opencode.json`:
 
 `subagent_depth` is a top-level key (default `1`; `2` allows
 session → controller → worker). `permission.task` goes on the agent that
-acts as controller; without an explicit rule OpenCode denies the `task`
-tool to children even when the depth allows them.
+acts as controller. Both are needed, and they are independent gates:
+when OpenCode starts a subagent it injects a blanket `task` deny unless
+that subagent's permission set already contains a rule under the key
+`task`. The deny removes the `task` tool from the subagent's tool list
+before the model sees it, so the depth limit is never consulted.
+
+Two details that the OpenCode documentation does not state (both read from
+the source at v1.18.30, `subagent-permissions.ts:18`):
+
+- The check is exact string equality against `task`. A wildcard rule does
+  not satisfy it, so a global `"permission": { "*": "allow" }` still leaves
+  subagents unable to dispatch.
+- The action is ignored. Any value under the `task` key, including
+  `"deny"`, suppresses the injected blanket deny.
+
+A top-level `"permission": { "task": "allow" }` works instead of the
+`agent` block, because OpenCode merges the top-level permission block into
+every agent before dispatch. That form grants `task` to every agent rather
+than only to the controller.
 
 Caveat: prompts raised by a depth-2 subagent never reach the user and the
 session hangs (open OpenCode issues #13715, #39112, #43996), so unattended

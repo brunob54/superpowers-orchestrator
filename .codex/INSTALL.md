@@ -1,5 +1,12 @@
 # Installing Superpowers Orchestrator for Codex
 
+> **Status: never run on Codex.** Everything here was written from the Codex
+> documentation and this repository's own script-level tests. The plugin has
+> not been used inside a live Codex session. A `✅` below means the feature
+> is implemented and wired for Codex, not that it was seen working. Only
+> Claude Code and GitHub Copilot CLI have actually been used to run this
+> plugin.
+
 ## What you get
 
 | Feature | macOS / Linux (hooks enabled) | Windows native |
@@ -10,17 +17,17 @@
 | Startup context injection (project map, state, known issues) | ✅ with hooks | ❌ |
 | Proactive skill routing on every prompt | ✅ with hooks | ❌ |
 | Dangerous Bash command blocking | ✅ with hooks | ❌ |
-| Stop-time discipline reminders | ⚠️ implemented; revalidate live after install/update | ❌ |
+| Stop-time discipline reminders | ⚠️ implemented; never seen live | ❌ |
 | Custom agents (code-reviewer, red-team) | ✅ manual install | ✅ manual install |
 | Bash command compression | ✅ reactive `PostToolUse(Bash)` smart-compress | ❌ |
 | Read/Write interception | ❌ Codex limitation | ❌ |
 | Subagent leakage guard | ❌ Codex limitation | ❌ |
 
-**Skills work on all platforms. Lifecycle hooks require macOS or Linux.**
+**Skills are expected to work on all platforms. Lifecycle hooks require macOS or Linux.**
 
 **Important:** This document treats the **standard install** as the complete install for the current platform. On macOS/Linux that means skills + hooks + custom agents. On Windows native that means skills + custom agents; hooks remain unavailable because Codex does not support them there. A reduced setup may still function, but it should be treated as a fallback, not the default install story.
 
-**Minimum tested Codex CLI for live hooks:** `codex-cli 0.118.0`. Older Codex builds may silently ignore the current top-level `hooks` registry shape.
+**Codex CLI the hook registry shape targets:** `codex-cli 0.118.0`. Older Codex builds are expected to ignore the current top-level `hooks` registry shape. This floor is taken from the Codex documentation; no version was tested.
 
 ---
 
@@ -115,13 +122,13 @@ test -f ~/.codex/hooks.json && echo "hooks.json present"
 grep -n '"hooks"' ~/.codex/hooks.json
 ```
 
-Confirm `codex --version` reports `0.118.0` or newer before trusting live hook behavior.
+Confirm `codex --version` reports `0.118.0` or newer. That floor comes from the Codex documentation; no version has been tried.
 
 ---
 
 ## Hook behavior notes
 
-**What hooks do:**
+**What the hooks are intended to do (not confirmed live):**
 - **SessionStart:** Inject project context (project map, state, known issues, using-superpowers skill) at session start. Check for plugin updates (non-destructive: only applies if the clone is clean and can fast-forward to `origin/main`).
 - **UserPromptSubmit:** Proactive skill routing — analyzes each prompt and injects skill suggestions before the model responds.
 - **PreToolUse (Bash):** Safety dispatcher — blocks dangerous shell commands (rm -rf ~, curl|sh, fork bombs, etc.) and secret exfiltration attempts before execution.
@@ -182,7 +189,7 @@ cp ~/.codex/superpowers-orchestrator/codex-agents/*.toml ~/.codex/agents/
 
 Skills and hooks update from the clone automatically. Custom agents are copied files, so re-copy them after pulling updates.
 
-After updating hooks, restart Codex and rerun live smoke checks against the actual installed home. `Stop` reminder visibility is the main behavior still worth revalidating.
+After updating hooks, restart Codex and run the live smoke checks against the actual installed home. They have never been run, so treat the whole set as outstanding, `Stop` reminder visibility most of all.
 
 ### Clean reinstall fallback
 
@@ -190,7 +197,7 @@ Use a clean reinstall instead of the standard update flow when:
 
 - the installed clone is dirty or diverged
 - the install path changed
-- hooks still behave inconsistently after update
+- hooks do not appear to fire after an update
 - custom agent files are stale or missing
 - you want a pristine known-good install and are fine losing local changes inside the installed clone
 
@@ -227,7 +234,7 @@ After a clean reinstall:
 
 1. On macOS/Linux, confirm `codex_hooks = true` is still set in `~/.codex/config.toml`
 2. Restart Codex
-3. On macOS/Linux, re-run the live hook smoke checks against the actual installed home
+3. On macOS/Linux, run the live hook smoke checks against the actual installed home (never yet run)
 
 ---
 
@@ -252,7 +259,7 @@ Remove-Item -Recurse -Force "$env:USERPROFILE\.codex\superpowers-orchestrator"
 
 ## Troubleshooting
 
-### Hooks not running (macOS/Linux)
+### If hooks do not run (macOS/Linux) — untested checklist
 
 1. Confirm `codex --version` is `0.118.0` or newer
 2. Confirm `codex_hooks = true` is set in `~/.codex/config.toml`
