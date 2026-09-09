@@ -173,11 +173,11 @@ you. Each round dispatches M identical reviewers in parallel (M = reviewers
 per lens, default 1 when `SUPERPOWERS_REVIEWERS_PER_LENS` is unset; see the
 `SUPERPOWERS_REVIEWERS_PER_LENS` setting in
 §7) and consolidates their reports before findings are triaged. N, the number
-of rounds, has the same kind of environment default: `SUPERPOWERS_REVIEW_ROUNDS`
-(see §7), which also supplies the default batch cap via
-`SUPERPOWERS_BATCH_TASK_CAP`. The gate asks you for both numbers — N, the
-number of rounds, and M, the reviewers per round — offering the resolved
-value for each as its default.
+of rounds, and the batch cap now have the same kind of environment default:
+`SUPERPOWERS_REVIEW_ROUNDS` for N and `SUPERPOWERS_BATCH_TASK_CAP` for the
+batch cap (see §7). The gate asks you for both numbers — N, the number of
+rounds, and M, the reviewers per round — offering the resolved value for each
+as its default.
 
 Reviewers in both review loops (`multi-doc-review` here and in Stage 2,
 `multi-code-review` in Stage 4) follow one rule about the **harness** — the
