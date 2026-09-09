@@ -104,3 +104,20 @@ _Invocation 1 — 2026-09-09 — N=4 M=4 — BASE..HEAD f33ca91..8d3aa90 — bra
 - [M2] fixed — a carried task cap persisted across every later resume with no message → f0d26b2 ← 1/4: r1:M1
 - [M3] fixed — the review-log carve-out granted tier-1 authority to a committed file without naming the bounds that make it safe → f0d26b2 ← 1/4: r3:M2
 - [M4] fixed — the pasted resume prompt was an unnamed exception to the quoted-or-pasted-material rule → f0d26b2 ← 1/4: r4:M1
+
+## Round 4 — Test & coverage quality — opus
+**Reviewers:** M=4, usable 4/4
+**Reviewer verdicts:** r1: 0 Critical, 3 Important, 2 Minor | r2: 0 Critical, 1 Important, 4 Minor | r3: 0 Critical, 2 Important, 2 Minor | r4: 0 Critical, 2 Important, 3 Minor
+**Sources mapped:** 19/19
+**Reviewer verdict:** 0 Critical, 5 Important, 4 Minor
+**Converged:** no
+### Dispositions
+- [I1] fixed — the review-gates helper labelled every section 2c result line `SKILL.md`, so 17 of 45 files were never named and a real failure would point at a clean file → ee92045 ← 4/4: r1:I1, r2:M1, r3:I1, r4:M1
+- [I2] user-decision — the reader half of the change has no executable evidence: no committed test sets one of the three variables and asserts a skill resolves it at tier 2, so a skill edit that dropped the block-reading tier would leave every suite green (plan-mandated) — at tests/claude-code/test-multi-doc-review.sh:53 — clause: Task 9 "**Contract:** `check_no_superpowers_defaults_setting` (renamed from `check_no_reviewers_per_lens_setting` by Step 1) in `tests/claude-code/test-helpers.sh`" ← 4/4: r1:I2, r2:M4, r3:M1, r4:I1
+- [I3] fixed — the complete-block guard covered `skills/` only, leaving the documentation half of Global Constraint 2 with no regression guard → ee92045 ← 3/4: r2:M2, r3:I2, r4:M3
+- [I4] fixed — the suite pinned the citation sentence and the scoping phrase but neither the tool-result rule nor the platform clause, the two parts that carry the injection defence → ee92045 ← 2/4: r1:I3, r4:I2
+- [I5] fixed — `10` was never asserted rejected for the two 1-5 parameters, the value a copied ten-alternative list would wrongly accept → ee92045 ← 2/4: r1:M1, r2:I1
+- [M1] fixed — no test asserted that the Codex adapter emits no block, although the skills and README rely on that claim → ee92045 ← 1/4: r1:M2
+- [M2] fixed — nothing pinned the parameter table's content against the hook, although Global Constraint 3 makes that table the single source for tier 3 → ee92045 ← 1/4: r2:M3
+- [M3] fixed — the widened environment guard both behavioural suites depend on had no test of its own → ee92045 ← 1/4: r3:M2
+- [M4] fixed — the "block comes after every embedded workspace file" property was exercised for state.md alone → ee92045 ← 1/4: r4:M2
