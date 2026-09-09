@@ -141,3 +141,36 @@ Output (tail):
 
 Results: 512 passed, 0 failed
 ```
+
+## Round 3
+
+Finding ids addressed: I1, I2, I3, I4, I5, M1, M2, M3, M4
+
+Command:
+```
+bash tests/codex/test-session-start-defaults-block.sh
+```
+Output (tail):
+```
+  ok   - decoy, no variable set: the workspace decoy precedes the hook's block, which ends the context
+  ok   - decoy, SUPERPOWERS_REVIEW_ROUNDS=8: the workspace decoy precedes the hook's block, which ends the context
+  53 passed, 0 failed
+```
+
+Command:
+```
+bash tests/review-gates/run-tests.sh
+```
+Output (tail):
+```
+[1m12/13/14. No subagent path can reach a gate question[0m
+  PASS: plan-writer-prompt still skips Multi-Round Plan Review
+  PASS: doc-review-loop-prompt Deviation 1 names the Self-Review checklist
+  PASS: doc-review-loop-prompt does not name Multi-Round Plan Review
+  PASS: batch-controller-prompt does not name Core Flow step 4
+  PASS: batch-controller-prompt still names only Core Flow step 3
+
+Results: 200 passed, 0 failed
+```
+(Section 2c now globs `skills/*/*.md` — 45 files checked, up from 28 under
+the old `skills/*/SKILL.md`-only glob; all pass.)

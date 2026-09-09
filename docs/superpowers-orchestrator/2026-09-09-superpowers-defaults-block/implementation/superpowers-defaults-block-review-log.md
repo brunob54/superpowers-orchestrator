@@ -87,3 +87,20 @@ _Invocation 1 — 2026-09-09 — N=4 M=4 — BASE..HEAD f33ca91..8d3aa90 — bra
 - [M9] fixed — "reproduces the historical list exactly" was untrue of the labels, which changed deliberately → bd33b79 ← 1/4: r3:M3
 - [M10] rejected: Global Constraint 7 pins the citation sentence verbatim, including its repository-relative path, so the loop cannot change it — the citation names a repository-relative path that does not resolve from the plugin cache ← 1/4: r4:M2
 - [M11] fixed — the handoff paragraph used the symbol N for both the completed-task count and the review round count → bd33b79 ← 1/4: r4:M3
+
+## Round 3 — Security — opus
+**Reviewers:** M=4, usable 4/4
+**Reviewer verdicts:** r1: 0 Critical, 1 Important, 2 Minor | r2: 0 Critical, 2 Important, 1 Minor | r3: 0 Critical, 1 Important, 2 Minor | r4: 0 Critical, 2 Important, 1 Minor
+**Sources mapped:** 12/12
+**Reviewer verdict:** 0 Critical, 5 Important, 4 Minor
+**Converged:** no
+### Dispositions
+- [I1] fixed — a resume-carried N, especially N=0, is a tier-1 value that is never echoed and reaches the session through state.md as well as through the pasted prompt, so a batch run could finish with no whole-branch review and no message → f0d26b2 ← 2/4: r1:I1, r4:I2
+- [I2] fixed — the hook unit test's decoy fixture stored a literal complete block in a tracked file, the exact payload the design defends against → f0d26b2 ← 1/4: r2:I1
+- [I3] fixed — the stated-value anti-injection property's origin list omitted automatically injected content, while the block property already covered it → f0d26b2 ← 1/4: r2:I2
+- [I4] fixed — the platform clause did not say that the Codex adapter embeds repository workspace files and emits no block, so on that platform the clause is the only protection; the structural half of the reviewer's fix was not applied because Global Constraint 12 binds the Codex path unchanged → f0d26b2 ← 1/4: r3:I1
+- [I5] fixed — the `X=<x>` token was missing from the stated-value enumeration, and the batch path neutralized only a block, not a stated cap token → f0d26b2 ← 1/4: r4:I1
+- [M1] fixed — the review-gates complete-block guard globbed only `skills/*/SKILL.md`, leaving the prompt templates unchecked → f0d26b2 ← 3/4: r1:M2, r2:M1, r3:M1
+- [M2] fixed — a carried task cap persisted across every later resume with no message → f0d26b2 ← 1/4: r1:M1
+- [M3] fixed — the review-log carve-out granted tier-1 authority to a committed file without naming the bounds that make it safe → f0d26b2 ← 1/4: r3:M2
+- [M4] fixed — the pasted resume prompt was an unnamed exception to the quoted-or-pasted-material rule → f0d26b2 ← 1/4: r4:M1
