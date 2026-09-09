@@ -367,12 +367,22 @@ assert_contains "orchestrating-development carries <d-cap>" "$ORCH" '<d-cap>'
 # Both greps are case-sensitive on purpose: <D> is a live, unrelated Artifact
 # Layout placeholder in three skills, and a case-insensitive match would fail
 # permanently.
-checked=0
-for f in "$ROOT"/skills/*/SKILL.md; do
-  rel="skills/$(basename "$(dirname "$f")")/SKILL.md"
+#
+# Shared by sections 2b and 2c below, which both loop over the same glob.
+# Sets the global variable "rel" to the "skills/<dir>/SKILL.md" path derived
+# from file path $1 (a shell function can only return a numeric exit status,
+# not text, hence the global). Returns 1 after emitting a "bad" line when the
+# file is not readable; the caller must "continue" its loop on that
+# non-zero return so its own per-file checks are skipped for that file.
+skill_rel_guard() { # file -> sets $rel; returns 1 (after a bad()) when unreadable
+  rel="skills/$(basename "$(dirname "$1")")/SKILL.md"
   # grep exits 2 (not 1) on an unreadable path, which would take the else
   # branch below and print a PASS for a file nothing examined.
-  [ -f "$f" ] || { bad "$rel is not readable"; continue; }
+  [ -f "$1" ] || { bad "$rel is not readable"; return 1; }
+}
+checked=0
+for f in "$ROOT"/skills/*/SKILL.md; do
+  skill_rel_guard "$f" || continue
   checked=$(( checked + 1 ))
   if grep -qF -- '<d>' "$f"; then
     bad "$rel still carries the bare <d> placeholder"
@@ -406,8 +416,7 @@ bold "2c. No skill body carries a complete <superpowers-defaults> block"
 OPEN_RE='<superpowers-defaults[>]'
 CLOSE_RE='</superpowers-defaults[>]'
 for f in "$ROOT"/skills/*/SKILL.md; do
-  rel="skills/$(basename "$(dirname "$f")")/SKILL.md"
-  [ -f "$f" ] || { bad "$rel is not readable"; continue; }
+  skill_rel_guard "$f" || continue
   if grep -qE -- "$OPEN_RE" "$f" && grep -qE -- "$CLOSE_RE" "$f"; then
     bad "$rel carries both delimiters — a complete block in a skill body would be read as the last block"
   else
