@@ -168,8 +168,12 @@ spec to `docs/superpowers-orchestrator/YYYY-MM-DD-<slug>/specs/<slug>-design.md`
 and the design itself. The spec then passes a self-review and — for
 non-trivial work — N independent `multi-doc-review` rounds before reaching
 you. Each round dispatches M identical reviewers in parallel (M = reviewers
-per lens, default 1; see the `SUPERPOWERS_REVIEWERS_PER_LENS` setting in
-§7) and consolidates their reports before findings are triaged.
+per lens, default 1 when `SUPERPOWERS_REVIEWERS_PER_LENS` is unset; see the
+`SUPERPOWERS_REVIEWERS_PER_LENS` setting in
+§7) and consolidates their reports before findings are triaged. The gate
+asks you for both numbers — N, the number of rounds, and M, the reviewers
+per round — offering the value of `SUPERPOWERS_REVIEWERS_PER_LENS` as M's
+default.
 
 Reviewers in both review loops (`multi-doc-review` here and in Stage 2,
 `multi-code-review` in Stage 4) follow one rule about the **harness** — the
@@ -224,11 +228,12 @@ must match (a wire format, a file the plan does not itself write). Every
 generated plan carries this rule in a `**Body authority:**` note in its
 header, so reviewers and executors read it from the plan itself.
 
-The plan gets its own `multi-doc-review` gate (same M reviewers per round)
-before you approve it; that gate also audits the contracts — a task body with
-no stated contract, a contract no check could fail ("must work correctly"),
-and an `**Exact content:**` marker whose reason points at a file the same
-plan writes (a "self-pin") are all findings.
+The plan gets its own `multi-doc-review` gate before you approve it, and that
+gate asks you for N and M in one batch, exactly as the spec gate does; it
+also audits the contracts — a task body with no stated contract, a
+contract no check could fail ("must work correctly"), and an
+`**Exact content:**` marker whose reason points at a file the same plan
+writes (a "self-pin") are all findings.
 
 This file is the pipeline's backbone: its checkboxes are the durable
 position record that execution ticks and commits task by task (§5).
@@ -264,7 +269,10 @@ test quality), each round dispatching M identical reviewers in parallel
 (default 1) whose reports are consolidated before triage, with
 Critical/Important findings fixed between rounds and an early exit after two
 consecutive clean rounds — with M > 1 a round is clean only when every
-reviewer returned a usable report. The harness-claims rule from Stage 1
+reviewer returned a usable report. In interactive SDD the gate asks you
+for N and M first; in batched autonomous mode it asks nothing and uses
+that mode's own rule. Each reviewer here reads the whole-branch diff, so M
+costs more at this gate than at the two document gates. The harness-claims rule from Stage 1
 applies here as well: a finding built on an untested claim about the agent
 runtime is never escalated to you — the controller runs the named probe
 first, or lists it under `Harness probes owed:`. Throughout, any "done" claim
@@ -882,6 +890,10 @@ Cursor; has no effect on Codex:
 { "env": { "SUPERPOWERS_REVIEWERS_PER_LENS": "3" } }
 ```
 
+The three review gates (spec review, plan review, whole-branch code review)
+also ask you for M, offering this value as the default; what you answer
+there wins for that review.
+
 **One complication: the plugin has to guess how big the memory is.**
 Different Claude models have different context-window sizes (some 200
 thousand tokens, some 1 million). Hooks are not told which one is active, so
@@ -940,8 +952,8 @@ handled by the router (§2) — just describe what you want.
 | "Resume orchestration for `<plan>`" | Continue an interrupted run from its last boundary | §5 |
 | "Abandon orchestration for `<plan>`" | Confirmed teardown of a wedged run | §5 |
 | "research prior art for `<decision>`" / `/researching-prior-art` | Evidence gathering for one technology decision (normally automatic at §3's research gate) | §3 |
-| `/multi-doc-review <doc> [N] [M=<m>]` | N independent review rounds on a spec or plan, M reviewers per round | §3 |
-| `/multi-code-review [BASE] [N] [M=<m>]` | N whole-branch code-review rounds with fixes, M reviewers per round | §3 |
+| `/multi-doc-review <doc> [N\|N=<n>] [M=<m>]` | N independent review rounds on a spec or plan, M reviewers per round | §3 |
+| `/multi-code-review [BASE] [N\|N=<n>] [M=<m>]` | N whole-branch code-review rounds with fixes, M reviewers per round | §3 |
 | "save state" / "compress context" | Snapshot to `state.md` + decision log entry | §6 |
 | "map this project" | Generate `project-map.md` | §6 |
 | "save this fix" | Record symptom → cause → fix in `known-issues.md` | §6 |

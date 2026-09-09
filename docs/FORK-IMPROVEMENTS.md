@@ -119,13 +119,13 @@ A single review — even a careful one — inherits the authoring conversation's
 
 - Reviewers receive only template placeholders (document path, doc type, lens instructions, and — for plans — the spec path); they are barred from the Skill tool, review logs, sibling spec/plan documents, and the target's git history.
 - Convergence is judged from the reviewer's **enumerated findings** (never the count line, never post-triage): a round is clean only when the consolidated finding set is empty **and** every reviewer returned a usable report (u = M). Rejecting findings at triage never makes a round clean, so the controller cannot game the exit. An unusable report is retried once; if any reviewer is still unusable after the retry, the round is logged PARTIAL as `usable <u>/<m>` (never clean), unless every reviewer is unusable (u = 0), which is logged `inconclusive` (breaks the clean streak).
-- Reviewer reports open with the marker `<!-- multi-review report -->`; `hooks/subagent-guard.js` exempts such messages from skill-leakage blocking, since reports about skill-discussing documents legitimately quote skill names.
-- N semantics: integer 0–10 (anything else falls back to 3); N=0 skips the loop but logs a `skipped` entry; the loop runs at most once per gate (recorded in the log, surviving restarts).
+- Reviewer reports carry the marker `<!-- multi-review report -->` on their first line; `hooks/subagent-guard.js` exempts a message from skill-leakage blocking when one of its first 10 non-blank lines starts with that marker, since reports about skill-discussing documents legitimately quote skill names.
+- N semantics: integer 0–10 (anything else falls back to 3); N=0 skips the loop but logs a `skipped` entry; the loop runs at most once per gate (recorded in the log, surviving restarts) — except that a recorded `N=0` (skipped) entry does not block a later invocation, and an interrupted entry (not all of its recorded N rounds logged) is resumed rather than blocked.
 
 ### How to use
 
-- **Automatic:** at the brainstorming spec gate and the writing-plans plan gate, the loop runs before the user-approval step and asks for N once if you haven't stated a count.
-- **Direct:** `/multi-doc-review docs/superpowers-orchestrator/<date>-<slug>/specs/<slug>-design.md 3 M=2` — or phrases like `review this spec 3 times` / `run independent review rounds on docs/superpowers-orchestrator/<date>-<slug>/plans/<slug>.md` / `review this spec 3 times with 2 reviewers per lens`.
+- **Automatic:** at the brainstorming spec gate and the writing-plans plan gate, the loop runs before the user-approval step, and the gate asks you for N (rounds) and M (reviewers per lens) — for whichever of the two you have not already stated.
+- **Direct:** `/multi-doc-review docs/superpowers-orchestrator/<date>-<slug>/specs/<slug>-design.md 3 M=2` — or phrases like `review this spec 3 times` / `run independent review rounds on docs/superpowers-orchestrator/<date>-<slug>/plans/<slug>.md` / `review this spec 3 times with 2 reviewers per lens`. A direct invocation asks for N only; M keeps its own resolution order.
 - **Audit trail:** read `<doc-basename>-review-log.md` next to the document for per-round verdicts and every disposition.
 
 ### Where it lives
@@ -166,8 +166,8 @@ Dogfood evidence from building it: the design spec collected **33 findings acros
 
 ### How to use
 
-- **Automatic:** at subagent-driven-development's final whole-branch review gate, replacing the former single-pass review.
-- **Direct:** `/multi-code-review [BASE] [N] [M=<m>]` — or phrases like `review the branch 3 times` / `several independent code reviews of this branch` / `review the branch 3 times with 2 reviewers per lens`. Single-argument form: an integer 0–10 is N, anything else is a git ref.
+- **Automatic:** at subagent-driven-development's final whole-branch review gate, replacing the former single-pass review; in interactive SDD the gate asks you for N and M first, in batched autonomous mode it asks nothing and uses that mode's own rule.
+- **Direct:** `/multi-code-review [BASE] [N|N=<n>] [M=<m>]` — or phrases like `review the branch 3 times` / `several independent code reviews of this branch` / `review the branch 3 times with 2 reviewers per lens`. Single-argument form: an integer 0–10 is N, anything else is a git ref.
 - **Audit trail:** `.superpowers/reviews/<branch-slug>-review-log.md` — or, in a pipeline run, `docs/superpowers-orchestrator/<date>-<slug>/implementation/<slug>-review-log.md`, committed — for per-round verdicts, dispositions, and fix commit SHAs.
 - **Claude Code only** — the loop requires the Agent tool; on Codex and Cursor the SDD gate keeps its single-pass final review.
 
@@ -200,7 +200,7 @@ The fork's stages were each automated individually — batched SDD execution (v6
 ### How it works
 
 - Controllers return compact structured final messages; round-by-round detail stays in the sub-skills' own logs and files — it never enters the orchestrator's context. A malformed return gets one identical retry, then the run stops.
-- Controllers dispatch their own nested workers (implementers, reviewers, fix subagents). `hooks/subagent-guard.js` records this sanctioned nesting and exempts returns opening with the `<!-- orchestration report -->` marker from skill-leakage blocking — free-text `BLOCKED` reasons may legitimately name skills.
+- Controllers dispatch their own nested workers (implementers, reviewers, fix subagents). `hooks/subagent-guard.js` records this sanctioned nesting and exempts a return from skill-leakage blocking when one of its first 10 non-blank lines starts with the `<!-- orchestration report -->` marker — free-text `BLOCKED` reasons may legitimately name skills, and a controller that writes a sentence above its marker still returns cleanly.
 - A **Major-Error Stop Policy** enumerates the stop conditions (unresolved review findings, malformed returns after retry, failed phase-boundary commits, missing artifacts on resume, zero-checkbox plans); each writes a `STOPPED` entry with a one-line reason and the exact resume command.
 - The batch controller carries **mid-task crash recovery**: on retry it derives the review base from the last ledger line, falling back to the last `chore(plan): <slug> task <n> complete` commit and then the merge-base with the default branch — never its own starting HEAD — so a crashed attempt's commits can never bypass the task-review gate. A `[RESUME_ANSWER]` placeholder carries the user's answer when a `BLOCKED` run is resumed.
 - Dogfood evidence: the feature's own spec collected **35 findings across 4 review rounds**, its implementation plan **22 findings (all applied, none rejected)**, and the branch went through the v6.10.0 whole-branch loop before merging ([spec review log](superpowers-orchestrator/2026-08-04-orchestrating-development/specs/orchestrating-development-design-review-log.md), [plan review log](superpowers-orchestrator/2026-08-04-orchestrating-development/plans/orchestrating-development-review-log.md)).

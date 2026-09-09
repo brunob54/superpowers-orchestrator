@@ -18,8 +18,9 @@
 #
 # Case 2 (M=1, the default configuration): repeats the setup on a second,
 # separate spec and topic dir, invokes the skill with N=2 and no M= (so the
-# skill falls back to M=1 — the way every gate invocation and every user
-# without an explicit M= runs it), and asserts:
+# skill falls back to M=1 — the way a user who states no M and has no
+# `<reviewers-per-lens>` tag runs it; since the review gates ask for M, a gate
+# invocation now carries an explicit `M=<m>`), and asserts:
 #   (a2)/(b2)/(c2) same checks as Case 1
 #   (i2) the invocation line records N=2 M=1 (M is recorded even at M=1, so
 #        a log is self-describing)
@@ -173,9 +174,10 @@ SPEC2_EOF
 SPEC2_SHA_BEFORE=$(shasum "$SPEC2" | cut -d' ' -f1)
 
 PROMPT2="Invoke the superpowers-orchestrator:multi-doc-review skill on the document $SPEC2 with N=2. Do not ask me any questions — use N=2 and proceed to completion."
-# Deliberately no M=: this case exercises the DEFAULT configuration (M=1),
-# the way every gate invocation and every user without an explicit M= runs
-# it — see the (m1) checks below.
+# Deliberately no M=: this case exercises the DEFAULT configuration (M=1) —
+# the fallback a direct invocation reaches with no stated M and no
+# `<reviewers-per-lens>` tag. Gate invocations now carry an explicit `M=<m>`;
+# see the (m1) checks below.
 
 # Safety net (Case 2): re-snapshot the plugin repository immediately before
 # this case's agent call, same as assertion (e) does for Case 1. Case 1's
