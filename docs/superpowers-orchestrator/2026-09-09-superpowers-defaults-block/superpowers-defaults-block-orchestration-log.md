@@ -4,3 +4,5 @@ _Invocation 1 — 2026-09-09 — spec docs/superpowers-orchestrator/2026-09-09-s
 
 ## Phase 1 — Plan — DONE — 2026-09-09
 plan: docs/superpowers-orchestrator/2026-09-09-superpowers-defaults-block/plans/superpowers-defaults-block.md — 11 tasks
+
+## Phase 2 — Plan review — rounds 4 — cap — unresolved 0
