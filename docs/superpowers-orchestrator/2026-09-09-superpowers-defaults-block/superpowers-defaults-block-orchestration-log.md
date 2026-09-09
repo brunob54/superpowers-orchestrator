@@ -27,3 +27,7 @@ Items: [task 7/2] forced — amend plan: Task 7 Step 6's resume-prompt body now 
 Detail: docs/superpowers-orchestrator/2026-09-09-superpowers-defaults-block/plans/superpowers-defaults-block-open-decisions.md
 Forks: none
 Re-dispatch: phase 3, in-run resume 1 of 3
+
+## Phase 3 — Batch 1 (tasks 1–2) — COMPLETE — commits 83a8eeb..9af1995
+- Task 1: complete — the `<superpowers-defaults>` block is emitted by `hooks/session-start`; the old reviewers-tag test is replaced
+- Task 2: complete — the anti-drift wording contract in `tests/review-gates/run-tests.sh` is replaced; the suite is red by design until the skill files are updated
