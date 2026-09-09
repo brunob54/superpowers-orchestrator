@@ -193,40 +193,42 @@ EOF
     echo "$plan_file"
 }
 
-# [I2] Detect SUPERPOWERS_REVIEWERS_PER_LENS set in the `env` block of a
-# settings file that applies to a `claude -p` run started from $plugin_dir:
-# a user-level ~/.claude/settings.json, a user-level
+# [I2] Detect any of the superpowers session-default variables set in the
+# `env` block of a settings file that applies to a `claude -p` run started
+# from $plugin_dir: a user-level ~/.claude/settings.json, a user-level
 # ${CLAUDE_CONFIG_DIR:-$HOME/.claude}/settings.json or settings.local.json
 # (relevant only when CLAUDE_CONFIG_DIR points somewhere other than
 # ~/.claude), a project-level $plugin_dir/.claude/settings.json or
 # $plugin_dir/.claude/settings.local.json, or the enterprise
 # managed-settings.json (macOS: /Library/Application Support/ClaudeCode/;
 # Linux: /etc/claude-code/), which has the highest precedence of all of them.
-# README.md and docs/guide/README.md tell users to set M this way; Claude
+# README.md and docs/guide/README.md tell users to set these that way; Claude
 # Code applies that env block inside its own process and passes it to hooks,
-# so a shell-level `unset` of the same variable does not remove it. Tolerates
-# a missing file. Uses plain grep — no jq dependency (not used elsewhere in
-# these tests).
-# Usage: check_no_reviewers_per_lens_setting "$PLUGIN_DIR"
-check_no_reviewers_per_lens_setting() {
+# so a shell-level `unset` of the same variable does not remove it. Any of
+# them reaching hooks/session-start changes the <superpowers-defaults> block
+# the session is given, which is what the default cases in these tests
+# depend on. Tolerates a missing file. Uses plain grep — no jq dependency.
+# Usage: check_no_superpowers_defaults_setting "$PLUGIN_DIR"
+check_no_superpowers_defaults_setting() {
     local plugin_dir="$1"
-    local var="SUPERPOWERS_REVIEWERS_PER_LENS"
     local config_dir="${CLAUDE_CONFIG_DIR:-$HOME/.claude}"
-    local f
-    for f in "$HOME/.claude/settings.json" \
-             "$HOME/.claude/settings.local.json" \
-             "$config_dir/settings.json" \
-             "$config_dir/settings.local.json" \
-             "$plugin_dir/.claude/settings.json" \
-             "$plugin_dir/.claude/settings.local.json" \
-             "/Library/Application Support/ClaudeCode/managed-settings.json" \
-             "/etc/claude-code/managed-settings.json"; do
-        if [ -f "$f" ] && grep -qE "\"$var\"[[:space:]]*:" "$f"; then
-            echo "ABORT: $var is set in the env block of $f."
-            echo "Claude Code applies that env block inside its own process and passes it to hooks, so the shell-level 'unset $var' in this script does not remove it."
-            echo "The default-M (M=1) cases in this test cannot be trusted while $var is set there — remove or comment it out in $f before running this test."
-            return 1
-        fi
+    local var f
+    for var in SUPERPOWERS_REVIEWERS_PER_LENS SUPERPOWERS_REVIEW_ROUNDS SUPERPOWERS_BATCH_TASK_CAP; do
+        for f in "$HOME/.claude/settings.json" \
+                 "$HOME/.claude/settings.local.json" \
+                 "$config_dir/settings.json" \
+                 "$config_dir/settings.local.json" \
+                 "$plugin_dir/.claude/settings.json" \
+                 "$plugin_dir/.claude/settings.local.json" \
+                 "/Library/Application Support/ClaudeCode/managed-settings.json" \
+                 "/etc/claude-code/managed-settings.json"; do
+            if [ -f "$f" ] && grep -qE "\"$var\"[[:space:]]*:" "$f"; then
+                echo "ABORT: $var is set in the env block of $f."
+                echo "Claude Code applies that env block inside its own process and passes it to hooks, so the shell-level 'unset $var' in this script does not remove it."
+                echo "The default cases in this test cannot be trusted while $var is set there — remove or comment it out in $f before running this test."
+                return 1
+            fi
+        done
     done
     return 0
 }
@@ -240,7 +242,7 @@ export -f assert_order
 export -f create_test_project
 export -f cleanup_test_project
 export -f create_test_plan
-export -f check_no_reviewers_per_lens_setting
+export -f check_no_superpowers_defaults_setting
 
 # assert_round_reviewers <log> <round> <m> <findings>
 # <m> must be a single digit, 1-9: the function builds character classes like
