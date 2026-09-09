@@ -1118,11 +1118,11 @@ git commit -m "docs(writing-plans): offer N and M from the session defaults bloc
 - Verification: `bash tests/review-gates/run-tests.sh` — assertions 1/3/4/5 for the code gate, 2, 2b, 2c and 7/8/9.
 - Sentence wording is free; the properties above bind.
 
-- [ ] **Step 1: Rename the placeholder**
+- [x] **Step 1: Rename the placeholder**
 
 Replace every `<d>` with `<d-m>` (10 occurrences, on lines 81, 99, 103, 104, 105). Do not touch `<D>`.
 
-- [ ] **Step 2: Rewrite the step 4 last-resort sentence (from `**When this step` in line 79 through `the interactive gate only.**` on line 86)**
+- [x] **Step 2: Rewrite the step 4 last-resort sentence (from `**When this step` in line 79 through `the interactive gate only.**` on line 86)**
 
 This is an intended behaviour change, not a preserved meaning: the tag it names carries M only, so N has no session-level last resort on this path today, and naming the block gives N one. Keep the pinned fragment `pass `N=<n> M=<m>` resolved by that mode's own rule` byte-for-byte.
 
@@ -1138,7 +1138,7 @@ The scoping phrase is written **unbolded** in this one body. The whole paragraph
 > the invocation below. The question that follows belongs to the interactive
 > gate only.**
 
-- [ ] **Step 3: Rewrite the M definition, N's default and N's option list in step 4**
+- [x] **Step 3: Rewrite the M definition, N's default and N's option list in step 4**
 
 Apply Task 5's Step 2 wording — the M definition, which starts mid-line 97 at `M is reviewers per` and ends on line 105 at `removed if among them.` — retyped for this file; `Say with the M question:` and the cost sentence that follows it survive unchanged. Do **not** import Task 5's N sentence: at this gate N = 0 means `multi-code-review` is never invoked, so no `skipped` log entry is written, and the sentence carries an instruction this gate needs. Replace this file's own N sentence — from `N is the number of review rounds (0–10,` in line 95 through `with that consequence).` on line 97 — with: (amended by ruling 5)
 
@@ -1161,7 +1161,7 @@ Then replace `For N offer 3 (recommended), 2, 4 and `0 — skip; the branch fini
 > `0 — skip; the branch finishes with no whole-branch review` as the fourth.
 > Zero is always present and always last.
 
-- [ ] **Step 4: Rewrite the cross-reference at line 147**
+- [x] **Step 4: Rewrite the cross-reference at line 147**
 
 Once the local rule above it is a citation, the word "above" points at nothing. Replace `the same treatment a `<reviewers-per-lens>` element from another source gets above` with:
 
@@ -1175,7 +1175,7 @@ Once the local rule above it is a citation, the word "above" points at nothing. 
 > and OpenCode no block is injected, so the hardcoded default applies
 > unconditionally.
 
-- [ ] **Step 5: Rewrite the task cap (lines 251–256)**
+- [x] **Step 5: Rewrite the task cap (lines 251–256)**
 
 The range includes the three-line parenthetical at 254–256, which the reference body below reproduces; replacing only 251–253 would leave that parenthetical in the file twice.
 
@@ -1201,7 +1201,7 @@ The range includes the three-line parenthetical at 254–256, which the referenc
 >   handoff and the Resume Instructions both route through /clear; the 60%
 >   context gate on prompt submission catches mid-session starts.)
 
-- [ ] **Step 6: Rewrite the resume prompt — the paragraph beginning `When the user stated M (reviewers per lens for the final review loop) when` (lines 286–290 of the unedited file)**
+- [x] **Step 6: Rewrite the resume prompt — the paragraph beginning `When the user stated M (reviewers per lens for the final review loop) when` (lines 286–290 of the unedited file)**
 
 Lines 292 through the start of line 295 are a different paragraph — the plan-complete branch — and stay unchanged here. Step 7 rewrites only the sentence that begins at `The loop runs` in line 295.
 
@@ -1222,7 +1222,7 @@ Today only M crosses the batch boundary, and lines 296–299 say the default res
 > value falls back to its hardcoded default unconditionally.
 > Write nothing about a value the user did not state.
 
-- [ ] **Step 7: Rewrite the plan-complete final-loop sentence (from `The loop runs` in line 295 through `and end the batch.` on line 300)**
+- [x] **Step 7: Rewrite the plan-complete final-loop sentence (from `The loop runs` in line 295 through `and end the batch.` on line 300)**
 
 > The loop runs autonomously: never ask for N (the count the user stated when
 > starting the batch or carried by the resume prompt's `N=<n>`, else the
@@ -1235,12 +1235,12 @@ Today only M crosses the batch boundary, and lines 296–299 say the default res
 > user-decision findings are journaled under `## Open Issues` and end the
 > batch.
 
-- [ ] **Step 8: Verify this file**
+- [x] **Step 8: Verify this file**
 
 Run: `bash tests/review-gates/run-tests.sh 2>&1 | grep -E 'subagent-driven-development|code gate|step 4|Batched|Integration'`
 Expected: PASS for "subagent-driven-development cites the rule by name", the three absence assertions for this file, and every surviving code-gate and batched-path assertion (1/3/4/5 and 7/8/9). `Integration` is in the filter because two of those assertions are named "Integration names the same three refusal platforms" and "Integration drops the Agent-tool-only condition" and match none of the other terms.
 
-- [ ] **Step 9: Commit**
+- [x] **Step 9: Commit**
 
 ```bash
 git add skills/subagent-driven-development/SKILL.md
