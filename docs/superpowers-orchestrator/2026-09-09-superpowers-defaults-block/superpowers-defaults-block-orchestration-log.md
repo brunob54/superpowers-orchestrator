@@ -62,3 +62,12 @@ Re-dispatch: phase 3, in-run resume 1 of 3
 
 ## Phase 3 — Batch 6 (task 11) — COMPLETE — commits 791b44f..f0cca20
 - Task 11: complete — v7.13.0 released across the five version sites; the release-notes summary carries the amended 113-word body
+
+## RULING 9 — 2026-09-10 — phase 4 — four open items closed against the design's own stated scope
+Items: [CF38] forced — plan governs: Global Constraint 8 binds citing sites, and these two paragraphs cite nothing
+Items: [I2] forced — plan governs: the design fixes the behavioral test work at two edits and states no test sets the variable
+Items: [I2] forced — accept: the design ordered the old anti-drift pin removed and stated exactly what replaces it
+Items: [I3] forced — accept: the echo constraint binds the skills, not the suite, whose asserted contract the design fixes
+Detail: docs/superpowers-orchestrator/2026-09-09-superpowers-defaults-block/plans/superpowers-defaults-block-open-decisions.md
+Forks: none
+Re-dispatch: phase 4, in-run resume 1 of 3

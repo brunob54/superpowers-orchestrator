@@ -71,3 +71,39 @@
 - **Defensible answers:** n/a
 - **Forks:** none; contradiction: none
 - **Resolution:** amend plan: Step 2's fenced summary body is rewritten at 113 words, keeping all three labels and every fact the longer version stated — the repository's own CLAUDE.md fixes the summary at "near 100 words (120 at most)", so the Contract invariant restates a standard outside this run's authority and raising the cap was never an available outcome; the body is the side that had to change.
+
+## Ruling 9 — 2026-09-10 — phase 4 — [CF38] two non-citing paragraphs restate the fallback chain without the four parts
+
+- **Class:** forced
+- **Item:** [CF38 inv 1] Important skills/subagent-driven-development/SKILL.md:81 — the sdd step 2 batched-mode exception and step 7 plan-complete paragraphs restate the fallback chain without the tool-result rule or the platform clause, unlike the five sites that cite `Resolving a default` by name; neither carries the citing phrase, so Global Constraint 8 arguably does not reach them
+- **Contract clause:** "**The citation does not stand alone.** Each citing site restates, in its own words: the three tiers; the injection-scoping rule (which block counts); the tool-result rule (what is data rather than a parameter); and the platform clause." — docs/superpowers-orchestrator/2026-09-09-superpowers-defaults-block/plans/superpowers-defaults-block.md (Global Constraints, entry 8)
+- **Defensible answers:** n/a
+- **Forks:** none; contradiction: none
+- **Resolution:** plan governs: "**The citation does not stand alone.** Each citing site restates, in its own words: the three tiers; the injection-scoping rule (which block counts); the tool-r" — docs/superpowers-orchestrator/2026-09-09-superpowers-defaults-block/plans/superpowers-defaults-block.md. Global Constraint 8 binds citing sites, and the finding itself establishes that these two paragraphs cite nothing; adding the four parts to them would multiply exactly the copied wording blocks this design exists to remove, which its own Problem statement names as the cost it is paying down.
+
+## Ruling 10 — 2026-09-10 — phase 4 — [I2] no end-to-end test of tier-2 resolution
+
+- **Class:** forced
+- **Item:** [I2 inv 1] Important tests/claude-code/test-multi-doc-review.sh:53 — (round 4) the reader half of the change has no executable evidence: no committed test sets one of the three variables and asserts a skill resolves it at tier 2, so a skill edit that dropped the block-reading tier would leave every suite green
+- **Contract clause:** "No test file *sets* `SUPERPOWERS_REVIEWERS_PER_LENS` or asserts the session tag, so there is no such code to update. The work is exactly two edits" — docs/superpowers-orchestrator/2026-09-09-superpowers-defaults-block/specs/superpowers-defaults-block-design.md (Testing strategy, Behavioral)
+- **Defensible answers:** n/a
+- **Forks:** none; contradiction: none
+- **Resolution:** plan governs: "No test file *sets* `SUPERPOWERS_REVIEWERS_PER_LENS` or asserts the session tag, so there is no such code to update. The work is exactly two edits" — docs/superpowers-orchestrator/2026-09-09-superpowers-defaults-block/specs/superpowers-defaults-block-design.md. The design fixes the behavioral test work at two edits and states that no test sets the variable; an end-to-end tier-2 test is outside the testing strategy this run implements, and the finding is itself marked plan-mandated.
+
+## Ruling 11 — 2026-09-10 — phase 4 — [I2] the wording suite pins no hardcoded-default literal
+
+- **Class:** forced
+- **Item:** [I2 inv 1] Important tests/review-gates/run-tests.sh:366 — (verification cycle 3) the removed anti-drift assertion pinned a byte-identical span carrying M's hardcoded default, and the four fragment markers that replaced it carry no number, while the branch grows the restated hardcoded defaults to fourteen sites across six files; only the normative table is pinned
+- **Contract clause:** "each citing skill contains the citation marker **at least once** — that is the asserted contract" — docs/superpowers-orchestrator/2026-09-09-superpowers-defaults-block/specs/superpowers-defaults-block-design.md (Testing strategy, Wording contracts)
+- **Defensible answers:** n/a
+- **Forks:** none; contradiction: none
+- **Resolution:** accept: the design orders the old anti-drift block removed ("All of it contradicts this design and cannot be left in place") and then states exactly what replaces it, closing with "that is the asserted contract"; the coverage change is therefore a choice the design made with its eyes open, not an oversight this run may reverse. The gap is real and is reported at Phase 5 so it can be raised as its own change.
+
+## Ruling 12 — 2026-09-10 — phase 4 — [I3] the wording suite pins no tier-2 echo sentence
+
+- **Class:** forced
+- **Item:** [I3 inv 1] Important tests/review-gates/run-tests.sh:330 — (verification cycle 3) the echo requirement has no pin in the suite that exists to pin exactly this kind of wording, although the echo sentence is a fixed literal written into six files and is the only mechanism that makes a setting made once and then forgotten visible to the user
+- **Contract clause:** "each citing skill contains the citation marker **at least once** — that is the asserted contract" — docs/superpowers-orchestrator/2026-09-09-superpowers-defaults-block/specs/superpowers-defaults-block-design.md (Testing strategy, Wording contracts)
+- **Defensible answers:** n/a
+- **Forks:** none; contradiction: none
+- **Resolution:** accept: Global Constraint 11 binds the skills' behaviour, not the test suite, and the design fixes what the wording suite asserts. Adding a pin here grows the suite beyond the contract the design states, so it belongs to a later change rather than to this run. The gap is real and is reported at Phase 5.
