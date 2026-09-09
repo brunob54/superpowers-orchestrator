@@ -295,3 +295,89 @@ Output (tail):
  All unit tests passed.
 ==================================================
 ```
+
+## Round 4
+
+Findings addressed: I1, M1, M3, M4, M5, M8, M9, M10.
+
+- [I1] `tests/codex/test-check-no-superpowers-defaults-setting.sh`: every
+  call to `check_no_superpowers_defaults_setting` now runs with `HOME` and
+  `CLAUDE_CONFIG_DIR` pinned to fresh temporary directories for that call
+  only (`run_helper`), so the real machine's settings files can no longer
+  make the "message names the fixture path" assertion fail, or the "exits
+  1" assertion pass against the wrong file. The two absolute enterprise
+  `managed-settings.json` paths are detected up front; if either already
+  sets one of the three variables, the test reports itself skipped (exit 0)
+  instead of failing for an environment reason. Header comment corrected to
+  describe this.
+- [M8] (done together with I1) added one fixture case per relative settings
+  path the helper checks — `HOME/.claude/settings.json`,
+  `HOME/.claude/settings.local.json`, `CONFIG_DIR/settings.json`,
+  `CONFIG_DIR/settings.local.json`, `PLUGIN_DIR/.claude/settings.json`,
+  `PLUGIN_DIR/.claude/settings.local.json` — and a clean case with no
+  fixture anywhere under the temporary `HOME`, `CLAUDE_CONFIG_DIR` or plugin
+  directory, asserting exit 0.
+- [M3] `tests/codex/test-session-start-defaults-block.sh` `expect_block()`
+  (around line 71): added an assertion that the opening delimiter
+  (`$OPEN_TAG`) appears exactly once in the decoded context for every
+  no-decoy case, catching a second interpolation of the escaped block or a
+  duplicated `printf` that the suffix-only check could not.
+- [M10] `tests/codex/test-session-start-defaults-block.sh` line ~119: added
+  a trailing-space form (`"3 "`) and a tab-padded form (`$'3\t'`) to the
+  shared rejected-form loop.
+- [M4] `tests/review-gates/run-tests.sh` (section 2, after the citation-site
+  loop): added a byte pin asserting `skills/multi-doc-review/SKILL.md`
+  still names the literal opening delimiter `<superpowers-defaults>`
+  (no closing tag anywhere in that line, so the test file still spells no
+  complete delimiter pair).
+- [M5] `tests/review-gates/run-tests.sh` (same location): added
+  `TOOL_RESULT_MARKER` and `PLATFORM_MARKER` assertions over the normalized
+  `multi-doc-review` file, beside the existing `SCOPE_MARKER` one.
+- [M1] `tests/review-gates/run-tests.sh` section 2d: replaced the
+  hardcoded four-entry `DOC_FILES` array with a glob — every `*.md` at the
+  repository root plus every `*.md` recursively under `docs/` (no process
+  substitution; the file list goes through `$WORK/doc-files.txt`). Nothing
+  under `docs/` is excluded.
+- [M9] `tests/codex/test-session-start-adapter.js` (around line 124): added
+  `assert.ok(ctx.length > 0, ...)` before the delimiter-absence assertion.
+
+Commands and output:
+
+```
+$ bash tests/codex/test-check-no-superpowers-defaults-setting.sh
+...
+Results: 22 passed, 0 failed
+```
+
+```
+$ bash tests/codex/test-session-start-defaults-block.sh
+...
+  133 passed, 0 failed
+```
+
+```
+$ node tests/codex/test-session-start-adapter.js
+...
+session-start-adapter: 15 passed, 0 failed
+```
+
+```
+$ bash tests/review-gates/run-tests.sh
+...
+Results: 349 passed, 0 failed
+```
+
+```
+$ bash tests/codex/run-unit-tests.sh
+...
+ Results: 11 suites passed, 0 suites failed
+ All unit tests passed.
+```
+
+I1 failure-mode re-verification: ran
+`tests/codex/test-check-no-superpowers-defaults-setting.sh` with the real
+`HOME` pointed at a temporary directory whose `.claude/settings.json` set
+`SUPERPOWERS_REVIEWERS_PER_LENS` to `3`. The suite still reported 22
+passed, 0 failed (the hermetic per-call `HOME`/`CLAUDE_CONFIG_DIR`
+redirection means the polluted real `HOME` is never read). The temporary
+directory was removed afterward.

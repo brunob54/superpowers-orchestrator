@@ -121,3 +121,22 @@ _Invocation 1 — 2026-09-09 — N=4 M=4 — BASE..HEAD f33ca91..8d3aa90 — bra
 - [M2] fixed — nothing pinned the parameter table's content against the hook, although Global Constraint 3 makes that table the single source for tier 3 → ee92045 ← 1/4: r2:M3
 - [M3] fixed — the widened environment guard both behavioural suites depend on had no test of its own → ee92045 ← 1/4: r3:M2
 - [M4] fixed — the "block comes after every embedded workspace file" property was exercised for state.md alone → ee92045 ← 1/4: r4:M2
+
+## Round 4 verification 1 — Test & coverage quality — opus
+**Reviewers:** M=4, usable 4/4
+**Reviewer verdicts:** r1: 0 Critical, 2 Important, 3 Minor | r2: 0 Critical, 1 Important, 4 Minor | r3: 0 Critical, 1 Important, 4 Minor | r4: 0 Critical, 1 Important, 4 Minor
+**Sources mapped:** 20/20
+**Reviewer verdict:** 0 Critical, 2 Important, 10 Minor
+### Dispositions
+- [I1] fixed — the guard unit test added in round 4 was not hermetic: it called the helper with the real HOME, so on a machine configured the documented way the fast unit suite went red for an environment reason and the fixture path was never exercised → 7b5c8dc ← 3/4: r1:I1, r2:I1, r3:I1
+- [I2] rejected: duplicate of round 4 [I2], already logged user-decision — the reader half of the change still has no end-to-end test ← 3/4: r1:I2, r2:M4, r4:I1
+- [M1] fixed — section 2d guarded a hardcoded four-file list while the constraint covers every documentation file and the plan itself → 7b5c8dc ← 4/4: r1:M1, r2:M2, r3:M1, r4:M1
+- [M2] carried — the per-file marker and placeholder assertions require one occurrence, so an edit that stripped all but one site stays green; the plan refuses to pin counts, and a floor is a count ← 2/4: r1:M2, r2:M3
+- [M3] fixed — every assertion was a suffix match, so a duplicated block would pass all of them → 7b5c8dc ← 1/4: r1:M3
+- [M4] fixed — nothing pinned the block's delimiter name in the normative skill, so a rename there alone would silently disable tier 2 → 7b5c8dc ← 1/4: r2:M1
+- [M5] fixed — the defining file was not asserted for the tool-result rule or the platform clause, only the five citing files were → 7b5c8dc ← 1/4: r3:M2
+- [M6] carried — no assertion pins the three-label rule or the N option-list worked example ← 1/4: r3:M3
+- [M7] carried — no assertion covers the resume-prompt token shape or the two batch-cap origin sentences ← 1/4: r3:M4
+- [M8] fixed — the guard test exercised one of the eight settings paths and had no clean case → 7b5c8dc ← 1/4: r4:M2
+- [M9] fixed — the adapter's delimiter-absence assertion passed on an empty context → 7b5c8dc ← 1/4: r4:M3
+- [M10] fixed — trailing-space and tab-padded rejected forms were not covered → 7b5c8dc ← 1/4: r4:M4
