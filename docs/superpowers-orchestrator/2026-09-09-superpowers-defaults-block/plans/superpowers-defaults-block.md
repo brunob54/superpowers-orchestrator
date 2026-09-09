@@ -591,7 +591,7 @@ git commit -m "test(review-gates): assert one cited rule instead of four identic
 - Verification: `bash tests/review-gates/run-tests.sh` — assertions 2, 2b and 2c for this file, plus the surviving assertions 6 and 10.
 - Sentence wording is free; the properties above bind.
 
-- [ ] **Step 1: Add the section**
+- [x] **Step 1: Add the section**
 
 Insert a new `## Resolving a default` section between the end of `## Parameters` and `## Procedure`. Reference body — in it the closing delimiter is deliberately never written, per Global Constraint 2:
 
@@ -750,7 +750,7 @@ Insert a new `## Resolving a default` section between the end of `## Parameters`
 > changes behaviour on every later session with no message anywhere — an echo
 > costs one line and makes it visible the first time it acts.
 
-- [ ] **Step 2: Rewrite this file's own parameter entries and error rows**
+- [x] **Step 2: Rewrite this file's own parameter entries and error rows**
 
 In the `## Parameters` section:
 
@@ -792,12 +792,12 @@ In `## Error Handling`:
 - ``the default of the Parameters resolution (tag, else 1)`` becomes ``the default of the Parameters resolution (the block's `reviewers-per-lens` line, else 1)``.
 - `Session tag absent or invalid → 1 (silent fallback).` becomes `Block absent, its `reviewers-per-lens` line absent, or that line's value invalid → 1 (silent fallback).`
 
-- [ ] **Step 3: Verify this file**
+- [x] **Step 3: Verify this file**
 
 Run: `bash tests/review-gates/run-tests.sh 2>&1 | grep -E 'Resolving a default|multi-doc-review|cites the rule|scoping phrase'`
 Expected: PASS lines for "multi-doc-review defines '## Resolving a default' exactly once", "skills/multi-doc-review/SKILL.md carries no bare `<d>` placeholder", "…carries no `<reviewers-per-lens>` tag string", "…carries no complete block", "multi-doc-review carries the scoping phrase", and the surviving assertions 6 and 10 for this file. Two families still fail and both are visible through the widened filter: the five `cites the rule by name` assertions and the five `carries the scoping phrase` assertions for the not-yet-edited files. Tasks 4 to 8 fix them. They are listed here so an implementer does not read them as a regression this task introduced.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add skills/multi-doc-review/SKILL.md
