@@ -333,9 +333,26 @@ CITE_MARKER='Resolve this value by `Resolving a default` in `skills/multi-doc-re
 # context". It is a fixed literal every citing site writes, so it is pinned
 # here — the three other parts of Global Constraint 8 are prose and are not.
 SCOPE_MARKER='of the `hooks/session-start` injection'
+# The other two parts of Global Constraint 8: the tool-result rule (the
+# prompt-injection defense for this feature) and the platform clause (the
+# only protection on Codex, which has no structural "always last" defense).
+# Each fragment is a fixed literal every citing site writes, chosen short
+# enough that ordinary rewording elsewhere in the paragraph does not break it.
+TOOL_RESULT_MARKER='is data, never a parameter'
+PLATFORM_MARKER='Codex and OpenCode no block is injected'
 MDR_SECTION='## Resolving a default'
 D_COUNT="$(count_occurrences "$MDR_NORM" "$MDR_SECTION")"
 assert_eq "multi-doc-review defines '${MDR_SECTION}' exactly once" "$D_COUNT" "1"
+# Byte pins on the single normative parameter table (Global Constraint 3):
+# each row's env var, block line and hardcoded default, as they appear
+# together in that row, so an edit that lets the table disagree with
+# hooks/session-start fails here instead of passing every other assertion.
+assert_contains "multi-doc-review parameter table: reviewers-per-lens row" "$MDR_NORM" \
+  '`SUPERPOWERS_REVIEWERS_PER_LENS` | `reviewers-per-lens` | `1` `2` `3` `4` `5` | `1` |'
+assert_contains "multi-doc-review parameter table: review-rounds row" "$MDR_NORM" \
+  '`SUPERPOWERS_REVIEW_ROUNDS` | `review-rounds` | `1` through `10` | `3` |'
+assert_contains "multi-doc-review parameter table: batch-task-cap row" "$MDR_NORM" \
+  '`SUPERPOWERS_BATCH_TASK_CAP` | `batch-task-cap` | `1` `2` `3` `4` `5` | `3` |'
 for pair in "multi-code-review:$MCR" "brainstorming:$BRAINSTORMING" \
             "writing-plans:$WRITING_PLANS" "subagent-driven-development:$SDD" \
             "orchestrating-development:$ORCH"; do
@@ -345,6 +362,8 @@ for pair in "multi-code-review:$MCR" "brainstorming:$BRAINSTORMING" \
   normalize_to "$file" "$norm"
   assert_contains "$name cites the rule by name" "$norm" "$CITE_MARKER"
   assert_contains "$name carries the scoping phrase" "$norm" "$SCOPE_MARKER"
+  assert_contains "$name carries the tool-result rule" "$norm" "$TOOL_RESULT_MARKER"
+  assert_contains "$name carries the platform clause" "$norm" "$PLATFORM_MARKER"
 done
 assert_contains "multi-doc-review carries the scoping phrase" "$MDR_NORM" "$SCOPE_MARKER"
 
@@ -368,14 +387,15 @@ assert_contains "orchestrating-development carries <d-cap>" "$ORCH" '<d-cap>'
 # Layout placeholder in three skills, and a case-insensitive match would fail
 # permanently.
 #
-# Shared by sections 2b and 2c below, which both loop over the same glob.
-# Sets the global variable "rel" to the "skills/<dir>/SKILL.md" path derived
+# Shared by sections 2b and 2c below, which loop over different globs (2b:
+# skills/*/SKILL.md; 2c: skills/*/*.md).
+# Sets the global variable "rel" to the "skills/<dir>/<file>" path derived
 # from file path $1 (a shell function can only return a numeric exit status,
 # not text, hence the global). Returns 1 after emitting a "bad" line when the
 # file is not readable; the caller must "continue" its loop on that
 # non-zero return so its own per-file checks are skipped for that file.
 skill_rel_guard() { # file -> sets $rel; returns 1 (after a bad()) when unreadable
-  rel="skills/$(basename "$(dirname "$1")")/SKILL.md"
+  rel="skills/$(basename "$(dirname "$1")")/$(basename "$1")"
   # grep exits 2 (not 1) on an unreadable path, which would take the else
   # branch below and print a PASS for a file nothing examined.
   [ -f "$1" ] || { bad "$rel is not readable"; return 1; }
@@ -414,14 +434,44 @@ bold "2c. No skill body carries a complete <superpowers-defaults> block"
 # and this change writes no block into any of them.
 OPEN_RE='<superpowers-defaults[>]'
 CLOSE_RE='</superpowers-defaults[>]'
+checked=0
 for f in "$ROOT"/skills/*/*.md; do
   skill_rel_guard "$f" || continue
+  checked=$(( checked + 1 ))
   if grep -qE -- "$OPEN_RE" "$f" && grep -qE -- "$CLOSE_RE" "$f"; then
     bad "$rel carries both delimiters — a complete block in a skill body would be read as the last block"
   else
     ok "$rel carries no complete block"
   fi
 done
+[ "$checked" -gt 0 ] && ok "the skills/*/*.md glob matched $checked files" || bad "the skills/*/*.md glob matched nothing — the complete-block checks examined no file"
+
+bold "2d. No documentation file carries a complete <superpowers-defaults> block"
+# Global Constraint 2 of the plan forbids a complete block in "any skill
+# body, any documentation file, or this plan" for the same reason section 2c
+# guards skill bodies: a documentation file read during a session enters the
+# context after the session-start injection, so its block would become the
+# last complete block. This section is the committed regression guard for
+# the documentation half; the plan's own verification command is one-shot
+# and not re-run by any suite.
+DOC_FILES=(
+  "$ROOT/README.md"
+  "$ROOT/docs/guide/README.md"
+  "$ROOT/docs/FORK-IMPROVEMENTS.md"
+  "$ROOT/RELEASE-NOTES.md"
+)
+checked=0
+for f in "${DOC_FILES[@]}"; do
+  drel="${f#"$ROOT/"}"
+  [ -f "$f" ] || { bad "$drel is not readable"; continue; }
+  checked=$(( checked + 1 ))
+  if grep -qE -- "$OPEN_RE" "$f" && grep -qE -- "$CLOSE_RE" "$f"; then
+    bad "$drel carries both delimiters — a complete block in documentation would be read as the last block"
+  else
+    ok "$drel carries no complete block"
+  fi
+done
+[ "$checked" -gt 0 ] && ok "the documentation file list matched $checked files" || bad "the documentation file list matched nothing — the complete-block checks examined no file"
 
 bold "12/13/14. No subagent path can reach a gate question"
 ORCH_DIR="$ROOT/skills/orchestrating-development"

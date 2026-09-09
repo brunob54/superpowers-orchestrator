@@ -116,7 +116,7 @@ done
 # Rejected values, per parameter. 6 through 10 are ACCEPTED for review-rounds
 # and must never appear in its rejected set — that range is the capability
 # this design adds.
-for v in 0 6 11; do
+for v in 0 6 7 8 9 10 11; do
   expect_block "SUPERPOWERS_REVIEWERS_PER_LENS=${v}" 1 3 3 "SUPERPOWERS_REVIEWERS_PER_LENS=${v}"
   expect_block "SUPERPOWERS_BATCH_TASK_CAP=${v}" 1 3 3 "SUPERPOWERS_BATCH_TASK_CAP=${v}"
 done
@@ -163,6 +163,62 @@ expect_decoy_loses() {
 
 expect_decoy_loses "decoy, no variable set" 1 3 3
 expect_decoy_loses "decoy, SUPERPOWERS_REVIEW_ROUNDS=8" 1 8 3 "SUPERPOWERS_REVIEW_ROUNDS=8"
+
+# write_decoy_state above exercises the ordering property (Global Constraint
+# 5: the hook's own block comes after every embedded workspace file) for
+# state.md only. The other three Markdown workspace files the hook embeds —
+# project-map.md, session-log.md and known-issues.md — are never written by
+# any case above, so the same suffix assertion passes for them by their
+# absence, not by their ordering. context-snapshot.json is JSON, not
+# Markdown, and is left uncovered here.
+#
+# Each file gets its own decoy block with a distinct reviewers-per-lens
+# value so a failure names which file's ordering broke. Each fixture also
+# satisfies the content gate the hook applies before embedding that file
+# (read via hooks/session-start): project-map.md has none beyond existing
+# and non-empty; session-log.md needs a "## ... [saved]" heading; state.md
+# needs a "Current Goal:" line that does not say "no active task"; known-
+# issues.md needs a "## " heading that is not "## ~~" (fixed).
+write_decoy_workspace_files() {
+  printf '# Decoy Project Map\n\n%s\nreviewers-per-lens=91\nreview-rounds=91\nbatch-task-cap=91\n%s\n' \
+    "$OPEN_TAG" "$CLOSE_TAG" > "$TMP_CWD/project-map.md"
+  printf '## 2024-01-01 Decoy entry [saved]\n%s\nreviewers-per-lens=92\nreview-rounds=92\nbatch-task-cap=92\n%s\n' \
+    "$OPEN_TAG" "$CLOSE_TAG" > "$TMP_CWD/session-log.md"
+  printf '%s\n%s\nreviewers-per-lens=93\nreview-rounds=93\nbatch-task-cap=93\n%s\n' \
+    "Current Goal: decoy workspace state, not a resume point" \
+    "$OPEN_TAG" "$CLOSE_TAG" > "$TMP_CWD/state.md"
+  printf '## Decoy known issue\n%s\nreviewers-per-lens=94\nreview-rounds=94\nbatch-task-cap=94\n%s\n' \
+    "$OPEN_TAG" "$CLOSE_TAG" > "$TMP_CWD/known-issues.md"
+}
+
+# expect_all_decoys_lose <label> <m> <n> <cap> [VAR=value ...]
+# Each of the four fixtures may carry its own complete decoy block; only the
+# hook's own block, appended last, may be the LAST complete block in the
+# context. For each decoy: first assert it is present with its own closing
+# delimiter followed later by another opening delimiter (so the check cannot
+# pass by the workspace file never being embedded at all), then assert the
+# context still ends with the hook's own block after that decoy.
+expect_all_decoys_lose() {
+  local label="$1" m="$2" n="$3" cap="$4" ctx want decoy
+  shift 4
+  write_decoy_workspace_files
+  ctx=$(run_hook "$@")
+  rm -f "$TMP_CWD/project-map.md" "$TMP_CWD/session-log.md" "$TMP_CWD/state.md" "$TMP_CWD/known-issues.md"
+  want=$(expected_block "$m" "$n" "$cap")
+  for decoy in "reviewers-per-lens=91" "reviewers-per-lens=92" "reviewers-per-lens=93" "reviewers-per-lens=94"; do
+    case "$ctx" in
+      *"$decoy"*"$CLOSE_TAG"*"$OPEN_TAG"*) : ;;
+      *) bad "${label}: decoy ${decoy} is absent or incomplete — its workspace file was not embedded, or its closing delimiter was not written literally"; return ;;
+    esac
+    case "$ctx" in
+      *"$decoy"*"$want") : ;;
+      *) bad "${label}: the context does not end with the hook's block after decoy ${decoy}"; return ;;
+    esac
+  done
+  ok "${label}: project-map.md, session-log.md, state.md and known-issues.md decoys all precede the hook's block, which ends the context"
+}
+
+expect_all_decoys_lose "decoys in project-map.md, session-log.md, state.md and known-issues.md, no variable set" 1 3 3
 
 echo "  ${PASS} passed, ${FAIL} failed"
 [ "$FAIL" -eq 0 ]
