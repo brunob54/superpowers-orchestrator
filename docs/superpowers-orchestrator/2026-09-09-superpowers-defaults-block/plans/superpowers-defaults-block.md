@@ -437,18 +437,18 @@ git commit -m "feat(hooks): emit a <superpowers-defaults> block carrying three p
 - Verification: `bash tests/review-gates/run-tests.sh` — after this task it fails only on the new assertions for skills not yet edited, and passes completely after Task 8.
 - The assertion descriptions and the section numbering are free wording; the properties above bind.
 
-- [ ] **Step 1: Run the suite to record the starting state**
+- [x] **Step 1: Run the suite to record the starting state**
 
 Run: `bash tests/review-gates/run-tests.sh`
 Expected: PASS — the suite is green before this task changes it.
 
-- [ ] **Step 2: Remove the anti-drift block**
+- [x] **Step 2: Remove the anti-drift block**
 
 Delete the two variable definitions in the shared-wording block (`D_MARKER` and `D_TAIL`, at lines 175–176), and delete the whole section that begins with the `bold "2. Anti-drift: …"` line and ends with the identity loop (lines 325–351). **Both ranges are measured against the unedited file and are independent of each other:** deleting 175–176 first shifts the second range to 323–349. Delete the later range first, or anchor both on their quoted text.
 
 The deleted section contains: the `D_SPANS` array, the per-file loop that asserts the `<d>` marker occurs exactly once and extracts the span, and the three `assert_eq` comparisons. Nothing else in the file uses `D_MARKER`, `D_TAIL` or `D_SPANS`.
 
-- [ ] **Step 3: Add the replacement assertions**
+- [x] **Step 3: Add the replacement assertions**
 
 Insert, at the position the deleted section occupied:
 
@@ -549,14 +549,14 @@ for f in "$ROOT"/skills/*/SKILL.md; do
 done
 ```
 
-- [ ] **Step 4: Run the suite to verify the new assertions fail**
+- [x] **Step 4: Run the suite to verify the new assertions fail**
 
 Run: `bash tests/review-gates/run-tests.sh`
 Expected: FAIL — "multi-doc-review defines '## Resolving a default' exactly once" reports `0`; the five `cites the rule by name` assertions and the six `carries the scoping phrase` assertions are missing; the new `carries <d-m>` / `<d-n>` / `<d-cap>` presence assertions fail; and every skill still carrying `<d>` or `<reviewers-per-lens>` is reported. Tasks 3 to 8 turn these green one file at a time; every other assertion in the suite still passes.
 
 **Record the suite's totals from this run** — the final `Results: <p> passed, <f> failed` line — in this task's commit message body. Task 8 Step 2 checks `p + f` against the green run. Without that total, losing part of Step 3's inserted block during the edit (most damagingly the `for pair in …` loop, which carries all five citation and five scoping assertions) makes the suite print `0 failed` and exit 0 while asserting nothing, and Tasks 3 to 7's read-by-eye steps would show fewer PASS lines than expected — which the red phase already tells the reader to expect.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add tests/review-gates/run-tests.sh
