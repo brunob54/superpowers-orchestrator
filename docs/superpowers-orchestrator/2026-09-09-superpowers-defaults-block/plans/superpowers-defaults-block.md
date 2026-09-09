@@ -1058,11 +1058,11 @@ git commit -m "docs(brainstorming): offer N and M from the session defaults bloc
 - Verification: `bash tests/review-gates/run-tests.sh` — assertions 1/3/4/5 for the plan gate, 2, 2b, 2c, 11 and 15.
 - Sentence wording is free; the properties above bind.
 
-- [ ] **Step 1: Rename the placeholder**
+- [x] **Step 1: Rename the placeholder**
 
 Replace every `<d>` in the file with `<d-m>` (11 occurrences, on lines 366, 370, 377, 407, 411, 412, 413). Do not touch `<D>`, which this file uses for the Artifact Layout topic folder.
 
-- [ ] **Step 2: Rewrite the M definition, N's default, N's option list and the resume origins**
+- [x] **Step 2: Rewrite the M definition, N's default, N's option list and the resume origins**
 
 Apply five edits to the `## Multi-Round Plan Review` section, one per site, retyping Task 5's reference bodies into this file rather than referring to them — the two files are read independently:
 
@@ -1072,12 +1072,12 @@ Apply five edits to the `## Multi-Round Plan Review` section, one per site, rety
 4. `else M's default `<d>` (defined below) for M and 3 for N` at line 377 becomes `else M's default `<d-m>` (defined below) for M and N's default `<d-n>` (defined below) for N` (the `<d>` there is already renamed by Step 1).
 5. The resume-path origin sentences take Task 5 Step 4's edit, at the sites that step names, translated to this file's line numbers: the four `Re-invoking multi-doc-review with …` sentences run from line 379 to line 395, and the joint plural clause to split is at lines 382–383. The three standalone forms at lines 371–374 are M's and are inside the "recorded N is `0`" branch, so no *N* wording is added there — but they take Task 5 Step 4's fourth-choice addition all the same, exactly as in Task 5. M in that branch resolves from `M's default `<d-m>``, which after Step 1 is the block-resolved value, so add beside the existing `so this is the default` form the tier-2 form `M=<m> — the log's invocation line does not record it, so this is the session default from the `<superpowers-defaults>` block.`, and use each form when `<d-m>` resolved at that tier. Leaving these three forms unchanged would report a tier-2 M as the hardcoded default, which Global Constraint 11 and this task's own Contract both forbid.
 
-- [ ] **Step 3: Verify this file**
+- [x] **Step 3: Verify this file**
 
 Run: `bash tests/review-gates/run-tests.sh 2>&1 | grep -E 'writing-plans|plan gate'`
 Expected: PASS for "writing-plans cites the rule by name", the three absence assertions for this file, and every surviving plan-gate assertion (1/3/4/5, 11 and 15).
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add skills/writing-plans/SKILL.md
