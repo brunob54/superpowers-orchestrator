@@ -1493,7 +1493,7 @@ git commit -m "test(claude-code): guard all three session-default variables" --t
 - Verification: `! grep -rn '<reviewers-per-lens>' README.md docs/guide/README.md docs/FORK-IMPROVEMENTS.md` and a delimiter-pair check over the same files.
 - Sentence wording is free; the properties above bind.
 
-- [ ] **Step 1: Rewrite the README "Environment variables" section**
+- [x] **Step 1: Rewrite the README "Environment variables" section**
 
 Replace the section body (lines 377–381, below the `### Environment variables` heading at line 375, which stays) with entries in one shape. Every entry states name, meaning, accepted range, default, override, and where it is honored.
 
@@ -1511,7 +1511,7 @@ Replace the section body (lines 377–381, below the `### Environment variables`
 > - `SUPERPOWERS_AUTO_UPDATE` — `0` disables the startup update check; see **Available Update Notification** below. Range: `0` or unset. Default: unset (the check runs). Override: not overridable in an invocation. Honored wherever the `session-start` hook runs.
 > - `SP_NO_COMPRESS` — `1` disables smart-compress globally, so Bash output enters the context unfiltered; a `.sp-no-compress` file disables it per project. Range: `1` or unset. Default: unset (compression is on). Override: not overridable in an invocation. Honored wherever the `bash-compress-hook` runs. See the **bash-compress-hook** entry below and `docs/architecture/smart-compress.md`. *(The `SP_` prefix breaks the `SUPERPOWERS_` convention and is kept: the name is already documented and users may have it in `settings.json`.)*
 
-- [ ] **Step 2: Update `docs/guide/README.md` at its three sites**
+- [x] **Step 2: Update `docs/guide/README.md` at its three sites**
 
 - `:171-178` — the M description (the sentence to change, "offering the value of `SUPERPOWERS_REVIEWERS_PER_LENS` as M's default", ends on line 178): keep it, and add that N and the batch cap now have the same kind of environment default, naming `SUPERPOWERS_REVIEW_ROUNDS` and `SUPERPOWERS_BATCH_TASK_CAP` and pointing at §7. Change "offering the value of `SUPERPOWERS_REVIEWERS_PER_LENS` as M's default" to say the gate offers the resolved value for both N and M.
 - `:515-520` — the Phase 0 question table (line 515 is the header row, 516 the separator, 517–520 the four data rows; the reference table below reproduces the header and separator, so the replacement must start at 515 or those two rows are duplicated). Give the three rows an environment source, in the same shape the `M` row already uses:
@@ -1526,18 +1526,18 @@ Replace the section body (lines 377–381, below the `### Environment variables`
   Add one sentence below the table: one `SUPERPOWERS_REVIEW_ROUNDS` value supplies the offered default for both round counts, and you may still answer the two questions differently.
 - `:885-896` — the settings section, written for M alone. Add `SUPERPOWERS_REVIEW_ROUNDS` (1–10, default 3, `0` not accepted and why) and `SUPERPOWERS_BATCH_TASK_CAP` (1–5, default 3) beside it, keeping the existing "restart the CLI after changing it", "an invalid value silently falls back", and "Honored on Claude Code; not verified on Cursor or Codex" statements, and adding OpenCode alongside Codex as a platform where no block is emitted.
 
-- [ ] **Step 3: Update `docs/FORK-IMPROVEMENTS.md`**
+- [x] **Step 3: Update `docs/FORK-IMPROVEMENTS.md`**
 
 At `:133` and `:176`, both file inventories read `hooks/session-start` (the `<reviewers-per-lens>` session tag, v7.4.0), `tests/codex/test-session-start-reviewers-tag.sh`. Replace both with `hooks/session-start` (the `<superpowers-defaults>` session block, v7.13.0), `tests/codex/test-session-start-defaults-block.sh`. Do **not** keep a historical mention of the old tag or the old test file here: Step 4's grep forbids both strings in this file, and the contract's invariant says no documentation file still names the tag. `RELEASE-NOTES.md` is where the history is recorded, and it is not touched.
 
-- [ ] **Step 4: Verify**
+- [x] **Step 4: Verify**
 
 Run: `bad=0; ! grep -rn '<reviewers-per-lens>\|test-session-start-reviewers-tag' README.md docs/guide/README.md docs/FORK-IMPROVEMENTS.md || bad=1; for f in README.md docs/guide/README.md docs/FORK-IMPROVEMENTS.md; do if grep -qE '<superpowers-defaults[>]' "$f" && grep -qE '</superpowers-defaults[>]' "$f"; then echo "FAIL: $f carries a complete block"; bad=1; fi; done; [ "$bad" -eq 0 ] && echo OK`
 
 The check sets a flag rather than calling `exit`: this command is a one-liner run in the session's own shell, where `exit 1` would end that shell instead of the check.
 Expected: PASS — prints `OK`; no documentation file still names the removed tag or the removed test file, and none carries a complete block.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add README.md docs/guide/README.md docs/FORK-IMPROVEMENTS.md
