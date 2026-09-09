@@ -126,7 +126,7 @@ The spec covers one subsystem: how three numeric parameters travel from the envi
   - Invariant: it names `test-session-start-defaults-block.sh` and no longer names `test-session-start-reviewers-tag.sh`.
   - Verification: `bash tests/codex/run-unit-tests.sh` runs the new test and reports no missing file.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Create `tests/codex/test-session-start-defaults-block.sh`. In the fenced body below the closing delimiter is written as `</superpowers-defaults…>` in the two places where it would otherwise complete a block inside this plan file; in the real test file write the literal closing tag instead — `</superpowers-defaults` immediately followed by `>` — in both places — the test file must carry the complete literal, because asserting the exact emitted string is its whole purpose, and it is not a skill body or a documentation file.
 
@@ -311,7 +311,7 @@ Make it executable in the same step: `chmod +x tests/codex/test-session-start-de
 
 Note for Step 6: the deleted test file is **not** named in that commit's `git add`. `git rm` in Step 4 already staged its deletion, and `git add` on a path that no longer exists fails with `fatal: pathspec … did not match any files` (exit 128) and stages nothing at all, so the commit would carry only the deletion.
 
-- [ ] **Step 2: Check the delimiter substitution, then run the test to verify it fails**
+- [x] **Step 2: Check the delimiter substitution, then run the test to verify it fails**
 
 First confirm both `…` placeholders were replaced in the file you just wrote:
 
@@ -323,7 +323,7 @@ This check exists because a leftover `…` is invisible at this step otherwise. 
 Then run: `bash tests/codex/test-session-start-defaults-block.sh`
 Expected: FAIL — every assertion reports "the context does not end with the exact … block", because the unmodified hook still appends `<reviewers-per-lens>1</reviewers-per-lens>`.
 
-- [ ] **Step 3: Implement the block in `hooks/session-start`**
+- [x] **Step 3: Implement the block in `hooks/session-start`**
 
 Replace the whole `# ── Reviewers per lens ──` section (lines 420–439: the comment block, the `reviewers_content=` assignment and its `case` statement) with the body below. In the fenced body the closing delimiter is written as `</superpowers-defaults…>`; in the real hook write the literal closing tag instead — `</superpowers-defaults` immediately followed by `>`.
 
@@ -388,7 +388,7 @@ defaults_escaped=$(escape_for_json "$defaults_content")
 
 and in the `session_context` assignment replace the trailing `${reviewers_escaped}` with `${defaults_escaped}`, leaving the rest of that line unchanged.
 
-- [ ] **Step 4: Delete the replaced test and update the runner**
+- [x] **Step 4: Delete the replaced test and update the runner**
 
 ```bash
 git rm tests/codex/test-session-start-reviewers-tag.sh
@@ -400,7 +400,7 @@ In `tests/codex/run-unit-tests.sh`, replace line 48 with:
 run_test "session-start (superpowers-defaults block)" "${SCRIPT_DIR}/test-session-start-defaults-block.sh" bash
 ```
 
-- [ ] **Step 5: Run the tests to verify they pass**
+- [x] **Step 5: Run the tests to verify they pass**
 
 Run: `grep -c 'superpowers-defaults…' hooks/session-start; grep -cE '<superpowers-defaults[>]' hooks/session-start; grep -cE '</superpowers-defaults[>]' hooks/session-start`
 Expected: `0`, then a count of at least 1, then a count of at least 1.
@@ -410,7 +410,7 @@ This check is not redundant with Step 2's. The test and the hook each carry the 
 Then run: `bash tests/codex/test-session-start-defaults-block.sh && bash tests/codex/run-unit-tests.sh`
 Expected: PASS — the block test reports `0 failed`, and the runner reports every unit test passing with no missing file.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add hooks/session-start tests/codex/test-session-start-defaults-block.sh tests/codex/run-unit-tests.sh
