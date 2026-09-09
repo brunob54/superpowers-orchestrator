@@ -118,6 +118,9 @@ Every project goes through this process. A todo list, a single-function utility,
     other value write "the log's invocation line does not record it, so
     this is " followed by whichever of "the session default from the
     <superpowers-defaults> block" or "the default" applies to that value.
+    Here `<d-n>` and `<d-m>` name the tier-2-or-tier-3 result — the
+    block's matching line, else the hardcoded default — because this
+    branch does not consult a value stated in this session.
     Use `Re-invoking multi-doc-review with
     N=<n> (recorded on the log's invocation line), M=<m> (the log's
     invocation line predates M, so M is read as 1); the skill decides
