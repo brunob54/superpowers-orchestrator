@@ -65,3 +65,25 @@ _Invocation 1 — 2026-09-09 — N=4 M=4 — BASE..HEAD f33ca91..8d3aa90 — bra
 - [CF39] carried — docs/guide/README.md:176-178 uses "the batch cap" with a definite article before the term is glossed
 - [CF40] carried — the README `SP_NO_COMPRESS` trailing parenthetical is verbatim from the plan's Task 10 Step 2 reference body; kept so a later editor does not delete it
 - [CF41] carried — the task-11 review package carried no commit-trailer evidence; a tooling observation about scripts/review-package
+
+## Round 2 — Adversarial red-team — opus
+**Reviewers:** M=4, usable 4/4
+**Reviewer verdicts:** r1: 0 Critical, 1 Important, 6 Minor | r2: 0 Critical, 2 Important, 2 Minor | r3: 0 Critical, 1 Important, 3 Minor | r4: 0 Critical, 2 Important, 3 Minor
+**Sources mapped:** 20/20
+**Reviewer verdict:** 0 Critical, 3 Important, 11 Minor
+**Converged:** no
+### Dispositions
+- [I1] fixed — the N option list emitted the zero option twice, first and last, and labelled the leading zero "session default" whenever the offered value resolved to 0 → bd33b79 ← 4/4: r1:I1, r2:I1, r3:I1, r4:I1
+- [I2] fixed — the tier-1 validity table said "falls to the parameter's default" in some rows and "falls to tier 2" in others, making the same invalid input resolve to two different depths → bd33b79 ← 1/4: r2:I2
+- [I3] fixed — the session-wide tool-result rule's excluded-origins list omitted automatically injected instruction and memory files (CLAUDE.md, AGENTS.md, another SessionStart hook's output) → bd33b79 — (harness field dropped: repository-readable) ← 1/4: r4:I2
+- [M1] fixed — "X = 0 is an explicit stop" named an input case no step of Batched Autonomous Mode implemented; the boundary was evaluated only after a task had run → bd33b79 ← 3/4: r1:M3, r3:M1, r4:M1
+- [M2] fixed — the hook unit test's decoy completeness guard was satisfied by the hook's own closing delimiter, so it could never fail for the reason its message stated → bd33b79 ← 2/4: r1:M2, r2:M1
+- [M3] carried — the hook unit test's decoy fixture writes a complete block as literal physical lines in a tracked file; the plan's File Structure records this as deliberate ← 1/4: r1:M1
+- [M4] fixed — multi-code-review's batched-mode sentence listed `<d-n>` before the stated count, inverting tier-1 precedence → bd33b79 ← 1/4: r1:M4
+- [M5] fixed — the Phase 0 paragraph computed the offered default from the answer the question had not yet received → bd33b79 ← 1/4: r1:M5
+- [M6] fixed — the guide showed the old resume-prompt shape at four sites, which drops every stated value at the batch boundary → bd33b79 ← 1/4: r1:M6
+- [M7] carried — the offered-default label calls any value above the hardcoded default "recommended", so a stale high `SUPERPOWERS_REVIEW_ROUNDS` is presented as project advice; changing it is a design decision beyond this plan ← 1/4: r2:M2
+- [M8] fixed — docs/FORK-IMPROVEMENTS.md:123 and README.md:30 still stated the superseded "falls back to 3" rule → bd33b79 ← 1/4: r3:M2
+- [M9] fixed — "reproduces the historical list exactly" was untrue of the labels, which changed deliberately → bd33b79 ← 1/4: r3:M3
+- [M10] rejected: Global Constraint 7 pins the citation sentence verbatim, including its repository-relative path, so the loop cannot change it — the citation names a repository-relative path that does not resolve from the plugin cache ← 1/4: r4:M2
+- [M11] fixed — the handoff paragraph used the symbol N for both the completed-task count and the review round count → bd33b79 ← 1/4: r4:M3
