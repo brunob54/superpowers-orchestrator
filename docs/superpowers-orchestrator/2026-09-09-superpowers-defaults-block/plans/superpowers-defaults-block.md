@@ -1576,7 +1576,7 @@ git commit -m "docs: document the three session-default variables in one shape" 
 - Invariants: `VERSION`, `.claude-plugin/plugin.json`, `.claude-plugin/marketplace.json`, `plugin.universal.yaml`'s meta and the README version badge all read `7.13.0`; both `v6.7.0–v7.12.0` ranges in the README's Lineage & status note read `v6.7.0–v7.13.0`; the new `RELEASE-NOTES.md` entry carries `**Problem.**`, `**Change.**` and `**Effect.**` directly under its `## v7.13.0` heading, each one to three short sentences, the whole summary near 100 words and at most 120; every statement in the summary is supported by the entry's own prose *(read-verified)*; `RELEASE-NOTES.md` carries no complete block.
 - Verification: `grep -rn '7\.13\.0' VERSION .claude-plugin/plugin.json .claude-plugin/marketplace.json plugin.universal.yaml README.md RELEASE-NOTES.md` shows one hit per required site and `grep -c '7\.12\.0' VERSION .claude-plugin/plugin.json .claude-plugin/marketplace.json` reports `0` for each.
 
-- [ ] **Step 1: Bump the version everywhere**
+- [x] **Step 1: Bump the version everywhere**
 
 ```bash
 printf '7.13.0\n' > VERSION
@@ -1586,7 +1586,7 @@ Then set `"version": "7.13.0"` in `.claude-plugin/plugin.json:4` and `.claude-pl
 
 `README.md` carries a **fourth** `7.12.0`, at line 37: the running release inventory that today ends "…and review gates that ask for M (v7.12.0) — are covered in RELEASE-NOTES.md". Extend it with the new release — "the `<superpowers-defaults>` session block (v7.13.0)" — so the inventory does not stop at the previous release. Nothing else in the repository catches this line; the release checklist in `CLAUDE.md` does not name it.
 
-- [ ] **Step 2: Add the release entry**
+- [x] **Step 2: Add the release entry**
 
 Insert directly above the previous entry in `RELEASE-NOTES.md`. Global Constraint 2 covers this file: the entry may show the opening `<superpowers-defaults>` tag and the three `name=value` lines, but it must never carry a matching closing delimiter — write it as `</superpowers-defaults…>` or leave it out with a bracketed note. `RELEASE-NOTES.md` is read in later sessions and lands after the session-start injection, so a complete block here would become the last complete block and every user who set an environment variable would silently get the hardcoded defaults. (amended by ruling 8)
 
@@ -1613,7 +1613,7 @@ its name and meaning. Restart the CLI after updating the plugin.
 
 Follow the summary with the full prose entry: the parameter table and its ranges, why `0` is not accepted for `SUPERPOWERS_REVIEW_ROUNDS`, the three offered-default labels, N's new option-list rule and the intended relabelling of an offered N of 3 from "recommended" to "current default", the resume prompt now carrying X and N as well as M, the platform limits (Claude Code and Cursor emit the block; Codex and OpenCode resolve the hardcoded defaults), and the restart window after an update.
 
-- [ ] **Step 3: Verify**
+- [x] **Step 3: Verify**
 
 Run:
 
@@ -1643,7 +1643,7 @@ if grep -qE '<superpowers-defaults[>]' RELEASE-NOTES.md && grep -qE '</superpowe
 
 Expected: PASS — every suite reports zero failures; each file reports `ok` for its wanted count of `7.13.0` (`README.md` carries four: the badge, the two Lineage ranges and the release inventory at line 37), the three metadata files carry no `7.12.0`, the run ends with `ok: version bump complete`, and `RELEASE-NOTES.md` carries no complete block.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add VERSION .claude-plugin/plugin.json .claude-plugin/marketplace.json plugin.universal.yaml README.md RELEASE-NOTES.md
