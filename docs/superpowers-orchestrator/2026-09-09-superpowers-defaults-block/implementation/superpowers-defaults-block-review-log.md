@@ -1,0 +1,67 @@
+# Review log — superpowers-defaults-block
+
+_Invocation 1 — 2026-09-09 — N=4 M=4 — BASE..HEAD f33ca91..8d3aa90 — branch feature/superpowers-defaults-block — gate: orchestration_
+
+## Round 1 — Correctness & spec alignment — opus
+**Reviewers:** M=4, usable 4/4
+**Reviewer verdicts:** r1: 0 Critical, 3 Important, 4 Minor | r2: 0 Critical, 1 Important, 3 Minor | r3: 0 Critical, 1 Important, 2 Minor | r4: 0 Critical, 2 Important, 4 Minor
+**Sources mapped:** 20/20
+**Reviewer verdict:** 0 Critical, 5 Important, 10 Minor
+**Converged:** no
+### Dispositions
+- [I1] fixed — README's three block-carried entries claimed the value is "always" the default on Codex and OpenCode, contradicting the branch's own tier-1 rule → dc1eef2 ← 3/4: r2:I1, r3:I1, r4:I2
+- [I2] fixed — the platform clause said the default applies "unconditionally" at nine sites in four gate skills, which discards a value the user stated → dc1eef2 ← 2/4: r1:I1, r4:M3
+- [I3] fixed — the sdd invocation step restated the resolution rule with no antecedent, inviting re-resolution of N and M already answered at the gate → dc1eef2 ← 1/4: r1:I2
+- [I4] fixed — the release entry claimed as fact that Cursor emits and reads the block, while README and guide call Cursor unverified → dc1eef2 ← 1/4: r1:I3
+- [I5] fixed — multi-doc-review's N entry restated one of the four parts Global Constraint 8 requires, while its M entry restated all four → dc1eef2 ← 1/4: r4:I1
+- [M1] fixed — orchestrating-development's Phase 0 citation was singular for four values and named only the invocation as tier 1 → dc1eef2 ← 2/4: r2:M3, r4:M4
+- [M2] fixed — README's positional claim about a planted block was unscoped, dropping the injection-scoping distinction → dc1eef2 ← 2/4: r3:M1, r4:M2
+- [M3] carried — docs/guide/README.md:174-179 names the batch cap at the spec gate, where it plays no part ← 1/4: r1:M1
+- [M4] carried — multi-code-review's platform clause names Codex, a platform this skill refuses to run on ← 1/4: r1:M2
+- [M5] carried — the hook unit test exercises only the Claude Code output branch, never the Cursor additional_context branch ← 1/4: r1:M3
+- [M6] fixed — the release entry described the removed behaviour in the present tense ("fall back") → dc1eef2 ← 1/4: r1:M4
+- [M7] carried — the guide uses the term "block" three times without ever naming `<superpowers-defaults>` ← 1/4: r2:M1
+- [M8] carried — the sdd Batch End handoff names only one source for a stated X, unlike its two sibling passages ← 1/4: r2:M2
+- [M9] fixed — the sdd batched-mode exception excluded `<d-m>` by name but not `<d-n>` → dc1eef2 ← 1/4: r3:M2
+- [M10] carried — the decoy pre-check in the hook unit test is satisfied by the hook's own closing delimiter ← 1/4: r4:M1
+- [CF1] fixed — multi-doc-review's `### The block` parenthetical read as a competing selection rule against the session-wide tool-result rule → dc1eef2
+- [CF2] fixed — the hook unit test's comment cited a test file this branch deletes → dc1eef2
+- [CF3] fixed — "the table above" was ambiguous with two tables preceding it → dc1eef2
+- [CF4] fixed — the tier-1 validity table named one value with two undefined phrases → dc1eef2
+- [CF5] fixed — the four-form M list had no form for a review-log line carrying no `M=` token → dc1eef2
+- [CF6] carried — the hook unit test's command substitution strips trailing newlines; coverage gap only
+- [CF7] carried — docs/FORK-IMPROVEMENTS.md:133,176 stale inventories; already fixed by Task 10 on this branch
+- [CF8] carried — tests/review-gates/run-tests.sh:377 defines skill_rel_guard at its call site rather than in the helpers block
+- [CF9] carried — tests/review-gates/run-tests.sh:339-347 re-normalizes three files that already have normalized copies
+- [CF10] carried — tests/review-gates/run-tests.sh section 2c has no `checked -gt 0` vacuous-pass guard of its own
+- [CF11] carried — multi-doc-review:72-75 says "silently" where it means "without asking"
+- [CF12] carried — multi-doc-review:36-38 describes an impossible alternative
+- [CF13] carried — multi-doc-review:72 drops the "if valid" qualifier resolution item 1 carries
+- [CF14] carried — multi-doc-review:172 names only the invocation, while the tier-1 table lists two entry points
+- [CF15] carried — multi-doc-review uses `<d-n>` at :36 and :713 before its definition at :106
+- [CF16] carried — multi-doc-review:713 "Invalid N → `<d-n>`" is mildly circular
+- [CF17] carried — multi-doc-review:170-174 states the platform restriction three times
+- [CF18] carried — multi-doc-review:72-78 ragged line wrapping
+- [CF19] carried — multi-code-review:96-98 omits ", if valid" from the N restatement's tier 2
+- [CF20] carried — multi-code-review:1713 carries no pointer to where `<d-n>` is defined
+- [CF21] carried — multi-code-review:80-82 names the section before the citation says which file holds it
+- [CF22] carried — multi-code-review:127-128 drops "whatever its position" from the M restatement
+- [CF23] carried — multi-code-review states the tool-result rule twice per parameter, as Global Constraint 8 requires; noted for later editors
+- [CF24] carried — brainstorming uses "tier 2" and "tier 3" without defining them in that file
+- [CF25] carried — brainstorming:114-115 vs :109-111 use two different choose-one shapes in one paragraph
+- [CF26] carried — brainstorming:138-139 forward reference created by the brief's verbatim body
+- [CF27] carried — brainstorming:156 restates the fallback already given at :152
+- [CF28] carried — brainstorming's out-of-range-answer messages name the replacement value but not the tier that supplied it
+- [CF29] carried — brainstorming:78-83 reconciling sentence lists only the tier-2 and tier-3 forms
+- [CF30] carried — brainstorming:141-142 names the section but not its file
+- [CF31] carried — brainstorming:121 "Here `<d-n>` and `<d-m>` name …" could read as scoped to the preceding sentence; byte-shared with writing-plans
+- [CF32] carried — writing-plans:363-367 and brainstorming:78-84 plan-mandated ordering weakness
+- [CF33] carried — writing-plans:385 is the only line in its range above the file's wrapping convention
+- [CF34] carried — writing-plans:387,431 short remainder lines left by an earlier commit's splices
+- [CF35] carried — writing-plans:422-429 N definition carries no validity fallback sentence, while the M definition does
+- [CF36] carried — commits 89dbf61 and 30c5744 share one subject line
+- [CF37] carried — the sdd step 4 N sentence is a forward reference with no antecedent in that file
+- [CF38] user-decision — the sdd step 2 batched-mode exception and step 7 plan-complete paragraphs restate the fallback chain without the tool-result rule or the platform clause, unlike the five sites that cite `Resolving a default` by name; neither carries the citing phrase, so Global Constraint 8 arguably does not reach them — at skills/subagent-driven-development/SKILL.md:81 — clause: Global Constraints "**The citation does not stand alone.** Each citing site restates, in its own words: the three tiers; the injection-scoping rule (which block counts); the tool-r"
+- [CF39] carried — docs/guide/README.md:176-178 uses "the batch cap" with a definite article before the term is glossed
+- [CF40] carried — the README `SP_NO_COMPRESS` trailing parenthetical is verbatim from the plan's Task 10 Step 2 reference body; kept so a later editor does not delete it
+- [CF41] carried — the task-11 review package carried no commit-trailer evidence; a tooling observation about scripts/review-package
