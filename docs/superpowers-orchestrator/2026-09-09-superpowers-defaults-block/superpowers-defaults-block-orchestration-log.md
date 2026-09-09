@@ -59,3 +59,6 @@ Items: [task 11/1] forced — amend plan: Step 2's fenced summary body rewritten
 Detail: docs/superpowers-orchestrator/2026-09-09-superpowers-defaults-block/plans/superpowers-defaults-block-open-decisions.md
 Forks: none
 Re-dispatch: phase 3, in-run resume 1 of 3
+
+## Phase 3 — Batch 6 (task 11) — COMPLETE — commits 791b44f..f0cca20
+- Task 11: complete — v7.13.0 released across the five version sites; the release-notes summary carries the amended 113-word body
