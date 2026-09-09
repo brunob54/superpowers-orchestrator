@@ -123,6 +123,8 @@ test('Context never emits a <superpowers-defaults> block (the Codex adapter embe
   try {
     const result = runAdapter({ source: 'startup' }, dir);
     const ctx = result._rawPlainText || '';
+    assert.ok(ctx.length > 0,
+      'Codex adapter context is empty — this assertion would examine nothing');
     // The regex splits the delimiter's final ">" into a bracket expression
     // so this test file itself does not spell a complete opening delimiter.
     assert.ok(!/<superpowers-defaults[>]/.test(ctx),

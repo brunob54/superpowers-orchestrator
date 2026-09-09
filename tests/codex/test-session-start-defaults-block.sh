@@ -69,7 +69,7 @@ expected_block() {
 
 # expect_block <label> <m> <n> <cap> [VAR=value ...]
 expect_block() {
-  local label="$1" m="$2" n="$3" cap="$4" ctx want
+  local label="$1" m="$2" n="$3" cap="$4" ctx want count
   shift 4
   ctx=$(run_hook "$@")
   want=$(expected_block "$m" "$n" "$cap")
@@ -77,6 +77,15 @@ expect_block() {
     *"$want") ok "${label} -> ${m}/${n}/${cap}, exact block at the end of the context" ;;
     *) bad "${label} -> the context does not end with the exact ${m}/${n}/${cap} block" ;;
   esac
+  # No-decoy case: the opening delimiter must appear exactly once, so a
+  # second interpolation of the escaped block (or a duplicated printf) that
+  # still passes the suffix check above is caught here.
+  count=$(printf '%s' "$ctx" | grep -o -F -- "$OPEN_TAG" | wc -l | tr -d ' ')
+  if [ "$count" -eq 1 ]; then
+    ok "${label}: opening delimiter appears exactly once"
+  else
+    bad "${label}: opening delimiter appears ${count} times, expected exactly 1"
+  fi
 }
 
 echo "session-start: <superpowers-defaults> block"
@@ -106,8 +115,11 @@ expect_block "all three set" 5 10 5 \
   "SUPERPOWERS_REVIEWERS_PER_LENS=5" "SUPERPOWERS_REVIEW_ROUNDS=10" "SUPERPOWERS_BATCH_TASK_CAP=5"
 
 # Rejected forms, shared by all three parameters. Literal case alternatives
-# reject each of these exactly; a character class would not.
-for v in " 3" "+3" "03" "3.0" "-1" "word" ""; do
+# reject each of these exactly; a character class would not. Leading
+# whitespace, trailing whitespace and a tab-padded value are all covered, so
+# a future change back to a pattern such as "[1-5]*" cannot pass this suite
+# while accepting a padded form.
+for v in " 3" "+3" "03" "3.0" "-1" "word" "" "3 " $'3\t'; do
   expect_block "SUPERPOWERS_REVIEWERS_PER_LENS='${v}'" 1 3 3 "SUPERPOWERS_REVIEWERS_PER_LENS=${v}"
   expect_block "SUPERPOWERS_REVIEW_ROUNDS='${v}'" 1 3 3 "SUPERPOWERS_REVIEW_ROUNDS=${v}"
   expect_block "SUPERPOWERS_BATCH_TASK_CAP='${v}'" 1 3 3 "SUPERPOWERS_BATCH_TASK_CAP=${v}"

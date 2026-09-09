@@ -366,6 +366,16 @@ for pair in "multi-code-review:$MCR" "brainstorming:$BRAINSTORMING" \
   assert_contains "$name carries the platform clause" "$norm" "$PLATFORM_MARKER"
 done
 assert_contains "multi-doc-review carries the scoping phrase" "$MDR_NORM" "$SCOPE_MARKER"
+assert_contains "multi-doc-review carries the tool-result rule" "$MDR_NORM" "$TOOL_RESULT_MARKER"
+assert_contains "multi-doc-review carries the platform clause" "$MDR_NORM" "$PLATFORM_MARKER"
+# The five citing sites above are pinned only for the delimiter's presence
+# by way of the rest of this suite (sections 2c/2d assert its ABSENCE
+# elsewhere); pin here that the file DEFINING the rule still names the
+# opening delimiter, so deleting the term from the normative section while
+# the five restatements still point at it by name would be caught. Written
+# as the literal open tag alone (no closing tag anywhere in this line), so
+# this test file spells no complete delimiter pair.
+assert_contains "multi-doc-review names the opening <superpowers-defaults> delimiter" "$MDR_NORM" '<superpowers-defaults>'
 
 bold "2b. The replaced placeholder and the replaced tag are gone, and the new placeholders are present"
 # Absence alone is not enough: deleting a <d> — writing a literal 1 at
@@ -454,14 +464,16 @@ bold "2d. No documentation file carries a complete <superpowers-defaults> block"
 # last complete block. This section is the committed regression guard for
 # the documentation half; the plan's own verification command is one-shot
 # and not re-run by any suite.
-DOC_FILES=(
-  "$ROOT/README.md"
-  "$ROOT/docs/guide/README.md"
-  "$ROOT/docs/FORK-IMPROVEMENTS.md"
-  "$ROOT/RELEASE-NOTES.md"
-)
+# Every Markdown file at the repository root, plus every Markdown file
+# anywhere under docs/ (recursive: architecture, platforms, guide, and the
+# per-topic spec/plan directories under docs/superpowers-orchestrator/ are
+# all in scope). No process substitution (Windows note above): the file
+# list goes through a temp file.
+DOC_LIST="$WORK/doc-files.txt"
+{ find "$ROOT" -maxdepth 1 -name '*.md'; find "$ROOT/docs" -name '*.md'; } | sort > "$DOC_LIST"
 checked=0
-for f in "${DOC_FILES[@]}"; do
+while IFS= read -r f; do
+  [ -n "$f" ] || continue
   drel="${f#"$ROOT/"}"
   [ -f "$f" ] || { bad "$drel is not readable"; continue; }
   checked=$(( checked + 1 ))
@@ -470,8 +482,8 @@ for f in "${DOC_FILES[@]}"; do
   else
     ok "$drel carries no complete block"
   fi
-done
-[ "$checked" -gt 0 ] && ok "the documentation file list matched $checked files" || bad "the documentation file list matched nothing — the complete-block checks examined no file"
+done < "$DOC_LIST"
+[ "$checked" -gt 0 ] && ok "the documentation glob matched $checked files" || bad "the documentation glob matched nothing — the complete-block checks examined no file"
 
 bold "12/13/14. No subagent path can reach a gate question"
 ORCH_DIR="$ROOT/skills/orchestrating-development"
