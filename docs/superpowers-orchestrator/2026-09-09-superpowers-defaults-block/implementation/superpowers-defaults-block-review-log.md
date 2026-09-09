@@ -140,3 +140,25 @@ _Invocation 1 — 2026-09-09 — N=4 M=4 — BASE..HEAD f33ca91..8d3aa90 — bra
 - [M8] fixed — the guard test exercised one of the eight settings paths and had no clean case → 7b5c8dc ← 1/4: r4:M2
 - [M9] fixed — the adapter's delimiter-absence assertion passed on an empty context → 7b5c8dc ← 1/4: r4:M3
 - [M10] fixed — trailing-space and tab-padded rejected forms were not covered → 7b5c8dc ← 1/4: r4:M4
+
+## Round 4 verification 2 — Test & coverage quality — opus
+**Reviewers:** M=4, usable 4/4
+**Reviewer verdicts:** r1: 0 Critical, 1 Important, 6 Minor | r2: 0 Critical, 2 Important, 4 Minor | r3: 0 Critical, 1 Important, 5 Minor | r4: 0 Critical, 1 Important, 6 Minor
+**Sources mapped:** 26/26
+**Reviewer verdict:** 0 Critical, 3 Important, 12 Minor
+### Dispositions
+- [I1] fixed — the documentation guard added in cycle 1 scanned untracked workspace files and generated review sidecars, so the suite could go red on content outside the branch and contradicted the hook test's own decoy fixture → e919eb1 ← 4/4: r1:M5, r2:I1, r3:M3, r4:I1
+- [I2] rejected: duplicate of round 4 [I2], already logged user-decision — no test exercises tier-2 resolution end to end ← 3/4: r1:I1, r2:I2, r4:M6
+- [I3] fixed — the tool-result marker added in round 4 already existed in all six files at BASE, so that assertion could never fail → e919eb1 ← 2/4: r1:M2, r3:I1
+- [M1] fixed — the count assertion added in cycle 1 aborted the whole suite under `set -euo pipefail` in exactly the absent-block case it was written for → e919eb1 ← 4/4: r1:M1, r2:M1, r3:M2, r4:M3
+- [M2] fixed — the guard test's only clean case had no settings file at all, so the helper's pattern was never exercised in the passing direction → e919eb1 ← 3/4: r2:M2, r3:M5, r4:M2
+- [M3] fixed — the Case 2 comment described a tier-3 fallback that no longer occurs on Claude Code → e919eb1 ← 1/4: r1:M3
+- [M4] fixed — the enterprise-settings skip silenced the whole file and reported it as a passing suite → e919eb1 ← 1/4: r1:M4
+- [M5] fixed — the exactly-once count spanned the whole context, so an opening-only mention in the one embedded skill body would have failed it → e919eb1 ← 1/4: r1:M6
+- [M6] carried — the adapter test's title claims more than it checks: a block planted in a workspace file still passes through on Codex, which is the documented and plan-bound behaviour ← 1/4: r2:M3
+- [M7] carried — the citation assertion matches once per file, not once per resolving site; the plan refuses to pin counts ← 1/4: r2:M4
+- [M8] carried — the three offered-default labels and the two echo sentences carry no byte pin ← 1/4: r3:M1
+- [M9] fixed — section 2b's absence checks used a narrower glob than section 2c → e919eb1 ← 1/4: r3:M4
+- [M10] fixed — per-file PASS lines made the suite total depend on how many Markdown files exist at run time, breaking the plan's total-comparison check → e919eb1 ← 1/4: r4:M1
+- [M11] fixed — `agents/*.md` and the two `INSTALL.md` files were outside every complete-block guard; the tracked-file list of [I1] covers them → e919eb1 ← 1/4: r4:M4
+- [M12] fixed — roughly 230 per-file PASS lines buried the wording assertions the suite exists to protect → e919eb1 ← 1/4: r4:M5

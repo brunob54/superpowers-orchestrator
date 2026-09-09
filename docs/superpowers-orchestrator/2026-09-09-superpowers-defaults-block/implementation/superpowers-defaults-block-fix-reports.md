@@ -381,3 +381,159 @@ I1 failure-mode re-verification: ran
 passed, 0 failed (the hermetic per-call `HOME`/`CLAUDE_CONFIG_DIR`
 redirection means the polluted real `HOME` is never read). The temporary
 directory was removed afterward.
+
+## Round 4
+
+Finding ids addressed: I1, I3, M1, M2, M3, M4, M5, M9, M10.
+
+- [I1] `tests/review-gates/run-tests.sh` section 2d (DOC_LIST build): replaced
+  `{ find "$ROOT" -maxdepth 1 -name '*.md'; find "$ROOT/docs" -name '*.md'; }`
+  with `git -C "$ROOT" ls-files -z -- '*.md' | tr '\0' '\n'`, piped through a
+  `grep -vE` that drops any path matching `*-review-log.md`,
+  `*-fix-reports.md`, `*-orchestration-log.md` or `*-open-decisions.md`. The
+  list is now tracked-files-only and repository-relative, so it can no
+  longer pick up untracked workspace files (state.md, session-log.md,
+  project-map.md, known-issues.md) or generated per-topic sidecars, and it
+  now also covers `agents/*.md` and `.codex/INSTALL.md` /
+  `.opencode/INSTALL.md`, which the old hardcoded root+docs/ list missed.
+  Verified directly: `git -C "$PWD" ls-files -z -- '*.md' | tr '\0' '\n' |
+  wc -l` = 196 tracked `.md` files; after the sidecar exclusion, 130. Also
+  verified the decoy scenario named in the finding: wrote an untracked
+  `state.md` at the repository root holding a complete
+  `<superpowers-defaults>` block, re-ran the suite (still 121 passed, 0
+  failed), then deleted the file.
+- [I3] `tests/review-gates/run-tests.sh` line ~343 (now further down after
+  other edits): `TOOL_RESULT_MARKER` changed from `'is data, never a
+  parameter'` (already present verbatim in all six citing files at base
+  commit f33ca91, so it asserted nothing) to `'never a parameter, whatever
+  its position'`. Verified against `git show f33ca91:<file>` for all six
+  files with the suite's own whitespace normalization
+  (`tr '\n' ' ' | tr -s ' '`): base=0, head=1 for every file
+  (multi-doc-review, multi-code-review, brainstorming, writing-plans,
+  subagent-driven-development, orchestrating-development).
+- [M1] `tests/codex/test-session-start-defaults-block.sh` `expect_block()`:
+  appended `|| true` to the `grep -o -F | wc -l | tr -d ' '` pipeline so a
+  count of 0 (the absent-delimiter case, under `set -euo pipefail`) no
+  longer aborts the script via `set -e` before printing its FAIL line.
+  Verified by copying the test into `tests/codex/` (so its relative
+  `REPO_ROOT` computation stays correct), rewriting `OPEN_TAG` to a
+  non-matching literal, and confirming the script now runs to completion
+  and reports `0 passed, 133 failed` instead of dying mid-run; the copy was
+  then deleted.
+- [M5] Same function: the opening-delimiter count is now taken only from the
+  text after the last `</EXTREMELY_IMPORTANT>` marker (a new `EMBED_MARKER`
+  constant, via `tail="${ctx##*$EMBED_MARKER}"`), not the whole decoded
+  context — so a permitted opening-only mention of the tag inside the
+  embedded `using-superpowers` skill body (allowed by
+  `tests/review-gates/run-tests.sh` section 2c) cannot trip the no-decoy
+  count-exactly-1 assertion. Decoy cases are unaffected: they use
+  `expect_decoy_loses` / `expect_all_decoys_lose`, not `expect_block`, and
+  workspace-file decoys are planted after `</EXTREMELY_IMPORTANT>` regardless.
+- [M2] `tests/codex/test-check-no-superpowers-defaults-setting.sh`: added two
+  "returns 0" cases with a settings file that DOES exist — one holding an
+  unrelated key (`{"env": {"SOMETHING_ELSE": "1"}}`), expecting exit 0; one
+  naming `SUPERPOWERS_REVIEWERS_PER_LENS` outside the `"env"` block
+  (`{"other": {"SUPERPOWERS_REVIEWERS_PER_LENS": "3"}}`). The helper's grep
+  matches the variable name as a JSON key anywhere in the file regardless of
+  nesting, so the second case returns 1, not 0; asserted as the current
+  behaviour with a comment recording that the helper's own message ("is set
+  in the env block of ...") overstates what the check confirmed. The helper
+  itself was not changed.
+- [M4] Same file: narrowed the enterprise-settings skip so it no longer
+  aborts the whole file. `ENTERPRISE_POLLUTED` now records which variable
+  and path triggered, and a new `skip_if_polluted` helper gates only the
+  "returns 0" cases (the pre-existing clean case and the two new M2 cases);
+  every "returns 1" case keeps running unconditionally, since each one's own
+  fixture sits at a path the helper checks before either absolute
+  enterprise path. Header comment corrected to match.
+- [M3] `tests/claude-code/test-multi-doc-review.sh` Case 2 comment
+  (~line 179): corrected to say the case resolves M through the hook's
+  `<superpowers-defaults>` block's `reviewers-per-lens=1` line (which Claude
+  Code always emits), and that the tier-3 hardcoded fallback is reachable
+  only on a platform that emits no block. No assertion changed.
+- [M9] `tests/review-gates/run-tests.sh` section 2b: changed the loop glob
+  from `"$ROOT"/skills/*/SKILL.md` to `"$ROOT"/skills/*/*.md`, matching
+  section 2c, so the prompt templates under
+  `skills/orchestrating-development/*-prompt.md` are in scope for the bare
+  `<d>` and `<reviewers-per-lens>` absence checks too.
+- [M10] `tests/review-gates/run-tests.sh` sections 2b, 2c and 2d: replaced
+  the per-file `ok "$rel carries no ..."` PASS line with a per-check failure
+  counter and one aggregate PASS line per check, naming the number of files
+  examined (e.g. "45 skill files carry no bare <d> placeholder", "130
+  documentation files carry no complete block"). Per-file `bad` lines on
+  failure are unchanged, and each section's `checked -gt 0` vacuous-pass
+  guard is unchanged. New recorded total after this change: 121 passed, 0
+  failed (down from 349, entirely from the ~230 collapsed per-file PASS
+  lines; no assertion was removed — see the per-file `checked` counts still
+  printed: 45 skill files (2b and 2c), 130 documentation files (2d)).
+
+Command:
+```
+bash tests/review-gates/run-tests.sh
+```
+Output (tail):
+```
+2b. The replaced placeholder and the replaced tag are gone, and the new placeholders are present
+  ...
+  PASS: 45 skill files carry no bare <d> placeholder
+  PASS: 45 skill files carry no <reviewers-per-lens> tag string
+  PASS: the skills/*/*.md glob matched 45 files
+2c. No skill body carries a complete <superpowers-defaults> block
+  PASS: 45 skill files carry no complete block
+  PASS: the skills/*/*.md glob matched 45 files
+2d. No documentation file carries a complete <superpowers-defaults> block
+  PASS: 130 documentation files carry no complete block
+  PASS: the documentation glob matched 130 files
+12/13/14. No subagent path can reach a gate question
+  PASS: plan-writer-prompt still skips Multi-Round Plan Review
+  PASS: doc-review-loop-prompt Deviation 1 names the Self-Review checklist
+  PASS: doc-review-loop-prompt does not name Multi-Round Plan Review
+  PASS: batch-controller-prompt does not name Core Flow step 4
+  PASS: batch-controller-prompt still names only Core Flow step 3
+
+Results: 121 passed, 0 failed
+```
+
+Command:
+```
+bash tests/codex/test-session-start-defaults-block.sh
+```
+Output (tail):
+```
+  ok   - decoy, no variable set: the workspace decoy precedes the hook's block, which ends the context
+  ok   - decoy, SUPERPOWERS_REVIEW_ROUNDS=8: the workspace decoy precedes the hook's block, which ends the context
+  ok   - decoys in project-map.md, session-log.md, state.md and known-issues.md, no variable set: project-map.md, session-log.md, state.md and known-issues.md decoys all precede the hook's block, which ends the context
+  133 passed, 0 failed
+```
+
+Command:
+```
+bash tests/codex/test-check-no-superpowers-defaults-setting.sh
+```
+Output (full tail):
+```
+  ok   - no fixture anywhere: exits 0
+  ok   - settings file with an unrelated key: exits 0
+  ok   - variable named outside the env block: exits 1 (message overstates: claims the env block)
+
+Results: 24 passed, 0 failed
+```
+
+Command:
+```
+bash tests/codex/run-unit-tests.sh
+```
+Output (tail):
+```
+protect-secrets: 43 passed, 0 failed
+
+==================================================
+ Results: 11 suites passed, 0 suites failed
+ All unit tests passed.
+==================================================
+```
+
+`tests/claude-code/test-multi-doc-review.sh` (M3, comment-only, no assertion
+changed): `bash -n tests/claude-code/test-multi-doc-review.sh` reports no
+syntax error. The file's own suite invokes the real `claude` CLI headlessly
+(10-30 min) and was not re-run for a comment-only edit.
