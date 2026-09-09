@@ -19,3 +19,11 @@ Items: [task 5/1] forced — amend plan: item 5 now takes Task 5 Step 4's fourth
 Detail: docs/superpowers-orchestrator/2026-09-09-superpowers-defaults-block/plans/superpowers-defaults-block-open-decisions.md
 Forks: none
 Re-dispatch: phase 3, in-run resume 1 of 3
+
+## RULING 4 — 2026-09-09 — phase 3 — three plan clauses contradicted the spec's prose-question rule and Global Constraint 8; all amended
+Items: [task 3/1] forced — amend plan: Task 3 and Task 4 ask-once clauses now offer `<d-n>` without claiming it is presented first
+Items: [task 7/1] forced — amend plan: Task 7 Step 3's citing site now carries all four parts Global Constraint 8 requires
+Items: [task 7/2] forced — amend plan: Task 7 Step 6's resume-prompt body now carries all four parts
+Detail: docs/superpowers-orchestrator/2026-09-09-superpowers-defaults-block/plans/superpowers-defaults-block-open-decisions.md
+Forks: none
+Re-dispatch: phase 3, in-run resume 1 of 3

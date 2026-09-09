@@ -26,3 +26,30 @@
 - **Defensible answers:** n/a
 - **Forks:** none; contradiction: none
 - **Resolution:** amend plan: Task 6 Step 2 item 5 now directs the same fourth-choice addition Task 5 Step 4 makes, and excludes only the N wording from that branch — item 5's instruction was unexecutable as written, because "exactly as in Task 5" describes a Task 5 step that does change those forms, and the only other reading breaches both Global Constraint 11 and Task 6's own binding Contract, which requires the same four properties as Task 5's contract.
+
+## Ruling 4 — 2026-09-09 — phase 3 — [task 3/1] "presents `<d-n>` first" contradicts the prose-question rule
+
+- **Class:** forced
+- **Item:** [task 3/1] n/a n/a — Task 3 Step 1 pastes the normative sentence "'Presented first' does not apply to a prose question", and Task 3 Step 2 then mandates a sentence saying the ask-once prose question presents `<d-n>` first; Task 4 Step 2 repeats the same clause.
+- **Contract clause:** "\"Presented first\" does not apply to a prose question." — docs/superpowers-orchestrator/2026-09-09-superpowers-defaults-block/specs/superpowers-defaults-block-design.md (The offered-default rule, Prose questions)
+- **Defensible answers:** n/a
+- **Forks:** none; contradiction: none
+- **Resolution:** amend plan: Task 3 Step 2 and Task 4 Step 2 now say the question offers `<d-n>` and that "presented first" does not apply to it — the design document states that rule for prose questions with no carve-out, so the only resolution that does not change the spec is to drop the "presents first" clause; the alternative would have required narrowing the spec's own sentence, which is out of this run's authority.
+
+## Ruling 5 — 2026-09-09 — phase 3 — [task 7/1] Task 7 Step 3's citing site carries 2 of 4 required parts
+
+- **Class:** forced
+- **Item:** [task 7/1] n/a n/a — Task 7 Step 3's replacement N sentence cites `Resolving a default` but restates only the three tiers and the injection-scoping rule, omitting the tool-result rule and the platform clause.
+- **Contract clause:** "**The citation does not stand alone.**" — docs/superpowers-orchestrator/2026-09-09-superpowers-defaults-block/plans/superpowers-defaults-block.md (Global Constraints, entry 8)
+- **Defensible answers:** n/a
+- **Forks:** none; contradiction: none
+- **Resolution:** amend plan: the body now carries all four parts, in the wording Task 5 Step 3 already uses for the byte-identical site in the sibling file — Global Constraint 8 says an implementer may not trim below the four parts, and the only alternative would declare a binding constraint inapplicable at a site the plan nowhere exempts.
+
+## Ruling 6 — 2026-09-09 — phase 3 — [task 7/2] Task 7 Step 6's resume-prompt body carries 2 of 4 required parts
+
+- **Class:** forced
+- **Item:** [task 7/2] n/a n/a — Task 7 Step 6's replacement resume-prompt body cites `Resolving a default` by name and by file, so it is a citing site, and it restates only the tiers and the injection-scoping rule.
+- **Contract clause:** "**The citation does not stand alone.**" — docs/superpowers-orchestrator/2026-09-09-superpowers-defaults-block/plans/superpowers-defaults-block.md (Global Constraints, entry 8)
+- **Defensible answers:** n/a
+- **Forks:** none; contradiction: none
+- **Resolution:** amend plan: the body now states the tool-result rule and the platform clause as well — nothing in the plan exempts a resume prompt from Global Constraint 8, and this same task's Steps 4 and 5 bodies already carried all four parts, so Step 6 was the outlier rather than a stated exception.
