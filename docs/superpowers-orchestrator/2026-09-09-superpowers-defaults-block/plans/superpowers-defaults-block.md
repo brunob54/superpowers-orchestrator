@@ -832,7 +832,7 @@ git commit -m "docs(multi-doc-review): define the single Resolving a default rul
 - Verification: `bash tests/review-gates/run-tests.sh` — assertions 2, 2b, 2c and 10 for this file, and the surviving assertions 6 and the Batched-Autonomous-Mode pin.
 - Sentence wording is free; the properties above bind.
 
-- [ ] **Step 1: Rewrite the N entry**
+- [x] **Step 1: Rewrite the N entry**
 
 In the `**N (round cap):**` bullet (lines 65–83; line 84 opens the `**M (reviewers per lens):**` bullet that Step 2 rewrites separately), keep the opening pin and the tool-result sentence unchanged, and:
 
@@ -860,7 +860,7 @@ In the `**N (round cap):**` bullet (lines 65–83; line 84 opens the `**M (revie
   > whatever its position. On Codex and OpenCode no block is injected, so N
   > resolves to 3 unconditionally.
 
-- [ ] **Step 2: Rewrite the M entry**
+- [x] **Step 2: Rewrite the M entry**
 
 In the `**M (reviewers per lens):**` bullet, replace resolution item 2 — the whole `<reviewers-per-lens>` paragraph — and item 3 with: (amended by ruling 2)
 
@@ -885,18 +885,18 @@ In the `**M (reviewers per lens):**` bullet, replace resolution item 2 — the w
 
 Update any following sentence that still says "a template value wins over a tag" to say "over the block".
 
-- [ ] **Step 3: Update the error-handling rows**
+- [x] **Step 3: Update the error-handling rows**
 
 - ``the default of the Parameters resolution (tag, else 1)`` becomes ``the default of the Parameters resolution (the block's `reviewers-per-lens` line, else 1)``.
 - `Session tag absent or invalid → 1 (silent fallback).` becomes `Block absent, its `reviewers-per-lens` line absent, or that line's value invalid → 1 (silent fallback).`
 - `Invalid N → 3.` becomes ``Invalid N → `<d-n>`.``
 
-- [ ] **Step 4: Verify this file**
+- [x] **Step 4: Verify this file**
 
 Run: `bash tests/review-gates/run-tests.sh 2>&1 | grep -E 'multi-code-review'`
 Expected: PASS lines for "multi-code-review cites the rule by name", "skills/multi-code-review/SKILL.md carries no bare `<d>` placeholder", "…no `<reviewers-per-lens>` tag string", "…no complete block", and every surviving multi-code-review assertion including the Batched Autonomous Mode pin.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add skills/multi-code-review/SKILL.md
