@@ -61,13 +61,14 @@ Details:
   wrong in the direction that weakens review.
 - **The resume prompt carries X and N as well as M.** Batched Autonomous
   Mode's `/clear` handoff previously carried only `M=<m>` across the
-  boundary; a task count X and a review-round count N fall back to the
+  boundary; a task count X and a review-round count N fell back to the
   hardcoded default otherwise. Now the resume prompt carries `X=<x>` and
   `N=<n>` alongside `M=<m>`, so a value you stated survives the boundary
   instead of being silently re-resolved from the environment on the next
   batch.
-- **Platform limits.** Claude Code and Cursor run `hooks/session-start` and
-  so emit and read the block. Codex and OpenCode build their session context
+- **Platform limits.** Claude Code runs `hooks/session-start` and so emits
+  and reads the block; Cursor runs the same hook, but this has not been
+  verified for this fork. Codex and OpenCode build their session context
   a different way, emit no block, and resolve every one of the three
   parameters to its hardcoded default unconditionally — a value stated in
   the invocation still wins there, only the block tier never applies.

@@ -90,8 +90,7 @@ expect_block "no variable set" 1 3 3
 # Three rows carry no information on their own: reviewers-per-lens=1,
 # review-rounds=3 and batch-task-cap=3 assert the same block the unset case
 # asserts, so they cannot tell a correct read of the variable from the
-# fallback. The other values in each loop carry it. This is the caveat the
-# replaced test recorded at test-session-start-reviewers-tag.sh:78-82.
+# fallback. The other values in each loop carry it.
 for v in 1 2 3 4 5; do
   expect_block "SUPERPOWERS_REVIEWERS_PER_LENS=${v}" "$v" 3 3 "SUPERPOWERS_REVIEWERS_PER_LENS=${v}"
 done
