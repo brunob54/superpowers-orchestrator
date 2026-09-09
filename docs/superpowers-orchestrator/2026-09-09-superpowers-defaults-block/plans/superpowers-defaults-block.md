@@ -1374,7 +1374,7 @@ orchestrating-development: <n>" \
 - Verification: `bash -n` on each file, plus `grep -n 'unset SUPERPOWERS' ` showing all three names on one line in each file.
 - The comment wording above each site is free; the three names and the call are what bind.
 
-- [ ] **Step 1: Generalize the guard**
+- [x] **Step 1: Generalize the guard**
 
 In `tests/claude-code/test-helpers.sh`, replace the single-variable body with a loop over the three names, and update the surrounding comment so it describes all three:
 
@@ -1422,7 +1422,7 @@ check_no_superpowers_defaults_setting() {
 
 Update the `export -f check_no_reviewers_per_lens_setting` line to the new name.
 
-- [ ] **Step 2: Generalize the two call sites**
+- [x] **Step 2: Generalize the two call sites**
 
 In `tests/claude-code/test-multi-code-review.sh` (around line 76) and `tests/claude-code/test-multi-doc-review.sh` (around line 51), replace the single `unset` and the call:
 
@@ -1431,7 +1431,7 @@ unset SUPERPOWERS_REVIEWERS_PER_LENS SUPERPOWERS_REVIEW_ROUNDS SUPERPOWERS_BATCH
 check_no_superpowers_defaults_setting "$PLUGIN_DIR" || exit 1
 ```
 
-- [ ] **Step 3: Correct the comments that name the removed tag**
+- [x] **Step 3: Correct the comments that name the removed tag**
 
 Only two comments carry the removed tag string: `tests/claude-code/test-multi-doc-review.sh:22` and `:179`. At those two sites make "`<reviewers-per-lens>` tag" read "`<superpowers-defaults>` block's `reviewers-per-lens` line". They read false once the tag is removed, and the code and its comment change together.
 
@@ -1439,7 +1439,7 @@ Two further comments — `tests/claude-code/test-multi-code-review.sh:69` and `t
 
 Leave every other "reviewers-per-lens" mention in these files alone. At `tests/claude-code/test-multi-code-review.sh:15`, and at `test-multi-code-review.sh:221`, `:230`, `:372`, `test-multi-doc-review.sh:144`, `:152`, `:240` and `test-helpers.sh:259`, the phrase names **review-log entry lines** (`Reviewers`, `Reviewer verdicts`, `Sources mapped`), not the session tag; rewriting them would turn a correct comment into a false one.
 
-- [ ] **Step 4: Verify**
+- [x] **Step 4: Verify**
 
 Run: `bash -n tests/claude-code/test-helpers.sh && bash -n tests/claude-code/test-multi-code-review.sh && bash -n tests/claude-code/test-multi-doc-review.sh && ! grep -rn 'check_no_reviewers_per_lens_setting\|<reviewers-per-lens>' tests/claude-code/`
 Expected: PASS — all three files parse, and no occurrence of the old function name or the old tag string remains under `tests/claude-code/`.
@@ -1466,7 +1466,7 @@ Expected: `ok: rejects SUPERPOWERS_REVIEW_ROUNDS and names the fixture`, `ok: re
 
 The check reads the guard's **message**, not only its exit status. The reference guard loops variable-outer, file-inner: on a machine that sets `SUPERPOWERS_REVIEWERS_PER_LENS` in `~/.claude/settings.json` or in the enterprise managed-settings file — the machine this guard exists for — it returns 1 on the first variable, before the fixture is read, so a status-only check would report success while testing neither new name. The last line's `>/dev/null` keeps the clean-directory half quiet; that half is machine-dependent either way.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add tests/claude-code/test-helpers.sh tests/claude-code/test-multi-code-review.sh tests/claude-code/test-multi-doc-review.sh
