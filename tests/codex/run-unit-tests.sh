@@ -45,7 +45,7 @@ run_test "posttool-bash-compress-adapter" "${SCRIPT_DIR}/test-posttool-bash-comp
 run_test "stop-adapter"         "${SCRIPT_DIR}/test-stop-adapter.js"
 run_test "stop-reminders (Claude Stop shape)" "${SCRIPT_DIR}/test-stop-reminders.js"
 run_test "session-start-adapter" "${SCRIPT_DIR}/test-session-start-adapter.js"
-run_test "session-start (reviewers-per-lens tag)" "${SCRIPT_DIR}/test-session-start-reviewers-tag.sh" bash
+run_test "session-start (superpowers-defaults block)" "${SCRIPT_DIR}/test-session-start-defaults-block.sh" bash
 run_test "skill-activator (UserPromptSubmit)" "${SCRIPT_DIR}/test-skill-activator.js"
 run_test "statusline-context-cache" "${SCRIPT_DIR}/test-statusline-cache.js"
 run_test "subagent-guard (SubagentStop)" "${SCRIPT_DIR}/test-subagent-guard.js"
