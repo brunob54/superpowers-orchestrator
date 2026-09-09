@@ -1,7 +1,7 @@
 {
   "name": "superpowers-orchestrator",
   "version": "7.0.1",
-  "description": "Structured workflow skills for Codex — systematic debugging, TDD, brainstorming, code review, and 30+ expert workflows. Skills work on all platforms. Lifecycle hooks (routing, safety, reminders) require separate setup on macOS/Linux.",
+  "description": "Structured workflow skills for Codex — systematic debugging, TDD, brainstorming, code review, and 30+ expert workflows. Skills are expected to work on all platforms. Lifecycle hooks (routing, safety, reminders) require separate setup on macOS/Linux. Not yet run on a live Codex install.",
   "author": {
     "name": "Jesse Vincent, forked by brunob54"
   },

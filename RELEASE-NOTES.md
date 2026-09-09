@@ -1,5 +1,13 @@
 # Superpowers Orchestrator Release Notes
 
+> **Note on platform claims.** Only Claude Code and GitHub Copilot CLI have
+> actually been used to run this plugin. Statements anywhere in this file
+> about Codex, OpenCode, or Gemini CLI being validated, proven, or confirmed
+> live do **not** reflect a run performed for this fork. Entries before
+> v6.7.0 were inherited from the parent project
+> (`REPOZY/superpowers-optimized`) and are kept unchanged as history; any
+> testing they describe was not done here.
+
 ## v7.12.0 — the review gates ask how many reviewers per round
 
 **Problem.** M — the number of identical reviewer subagents each review
@@ -1434,7 +1442,7 @@ Debug-prompt routing fix.
 
 ### Fixes
 
-**systematic-debugging trigger keywords** — Added "debug" and "root cause" to the systematic-debugging rule in `hooks/skill-rules.json`. Canonical debugging prompts such as "debug this stack trace and identify the root cause" scored below the routing confidence threshold because the rule contained neither word, so no skill hint was injected. Surfaced by the Codex post-push validation smoke checks; covered by three new matcher tests (including a `--debug`-build-flag negative).
+**systematic-debugging trigger keywords** — Added "debug" and "root cause" to the systematic-debugging rule in `hooks/skill-rules.json`. Canonical debugging prompts such as "debug this stack trace and identify the root cause" scored below the routing confidence threshold because the rule contained neither word, so no skill hint was injected. Surfaced by the repo-adapter smoke checks in the Codex post-push validation checklist — these run the hook scripts directly against fixture input and need no live Codex install, which is what was done here; covered by three new matcher tests (including a `--debug`-build-flag negative).
 
 ## v6.7.0 (2026-07-07)
 

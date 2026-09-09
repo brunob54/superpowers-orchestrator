@@ -1,6 +1,6 @@
 <div align="center">
 
-[![AI Coding Agents](https://img.shields.io/badge/USE_WITH-Claude_Code_%7C_Codex_%7C_OpenCode_%7C_Gemini_CLI_%7C_Antigravity-white?style=for-the-badge)]()
+[![AI Coding Agents](https://img.shields.io/badge/USE_WITH-Claude_Code_%7C_Copilot_CLI-white?style=for-the-badge)]()
 
 [![GitHub stars](https://img.shields.io/github/stars/brunob54/superpowers-orchestrator?style=for-the-badge&color=white)](https://github.com/brunob54/superpowers-orchestrator/stargazers)
 [![Version](https://img.shields.io/badge/version-7.12.0-white?style=for-the-badge)](RELEASE-NOTES.md)
@@ -11,7 +11,7 @@
 
 # Superpowers Orchestrator
 
-**Superpowers** is a plugin for coding agents (Claude Code, Cursor, Codex, OpenCode, GitHub Copilot CLI) that adds a disciplined development workflow: a design specification first, then a task plan, then test-driven implementation with staged code reviews. The workflow is implemented as *skills* (instruction files the agent follows) and *hooks* (scripts that run automatically at session events).
+**Superpowers** is a plugin for coding agents (Claude Code and GitHub Copilot CLI, which are the two it has been used with; Cursor, Codex and OpenCode integrations exist but are untested — see [Platform status](#installation)) that adds a disciplined development workflow: a design specification first, then a task plan, then test-driven implementation with staged code reviews. The workflow is implemented as *skills* (instruction files the agent follows) and *hooks* (scripts that run automatically at session events).
 
 This repository is a fork of [obra/superpowers](https://github.com/obra/superpowers) via [REPOZY/superpowers-optimized](https://github.com/REPOZY/superpowers-optimized). Its own contribution is **orchestration**: the same workflow can run autonomously from an approved specification to a merge-ready branch, with independent review rounds between stages — see [What this repo adds](#what-this-repo-adds).
 
@@ -49,7 +49,7 @@ From [REPOZY/superpowers-optimized](https://github.com/REPOZY/superpowers-optimi
 From [obra/superpowers](https://github.com/obra/superpowers) (the original, by Jesse Vincent): the skills framework itself and the core workflow skills — brainstorming, writing plans, test-driven development, systematic debugging, and code review.
 
 ## Quick start
-In any supported agent IDE, start a new chat and paste:
+In Claude Code or Copilot CLI, start a new chat and paste:
 
 ```
 Activate Superpowers Orchestrator and plan a secure user-authentication endpoint with full TDD and security review.
@@ -60,7 +60,7 @@ The agent will automatically route to the correct workflow, apply safety guards,
 See [Installation](#installation) for install, update, and uninstall commands on all platforms.
 
 > [!NOTE]
-> **Codex parity boundary:** Claude Code gets the full 10-hook lifecycle. Codex now has verified live support for `SessionStart`, `UserPromptSubmit`, and `PreToolUse(Bash)` on macOS/Linux with `codex_hooks = true` and `codex-cli 0.118.0+` (tested on `0.118.0`). This repo now also ships a Codex-specific `PostToolUse(Bash)` smart-compress hook that can replace noisy Bash output after execution using the existing compression rules. `Stop` is implemented for Codex, but visible reminder surfacing should still be revalidated after install/update. Codex still does **not** expose Claude's `PostToolUse(Edit|Write|Skill)`, `SubagentStop`, `Read/Edit/Write` interception, or Claude's pre-execution Bash rewrite path, so full Claude parity is not possible today.
+> **Codex parity boundary:** Claude Code gets the full 10-hook lifecycle. Codex adapters are implemented for `SessionStart`, `UserPromptSubmit`, and `PreToolUse(Bash)` on macOS/Linux, and expect `codex_hooks = true` with `codex-cli 0.118.0+`. This was written from the Codex documentation and has not been run against a live Codex install, so treat it as unverified. This repo now also ships a Codex-specific `PostToolUse(Bash)` smart-compress hook that can replace noisy Bash output after execution using the existing compression rules. `Stop` is implemented for Codex, but its reminder has never been seen surfacing in a live session. Codex still does **not** expose Claude's `PostToolUse(Edit|Write|Skill)`, `SubagentStop`, `Read/Edit/Write` interception, or Claude's pre-execution Bash rewrite path, so full Claude parity is not possible today.
 
 ---
 
@@ -376,12 +376,12 @@ With this stack, sessions start with full context and zero re-discovery overhead
 
 Set these in `settings.json`'s `env` block so they survive plugin updates; a changed value takes effect after the CLI is restarted.
 
-- `SUPERPOWERS_REVIEWERS_PER_LENS` — M, reviewers per lens: how many identical reviewer subagents each `multi-doc-review` / `multi-code-review` round dispatches in parallel (integer 1–5, default 1). Example: `{ "env": { "SUPERPOWERS_REVIEWERS_PER_LENS": "3" } }`. An `M=<m>` stated in an invocation, answered in orchestration's Phase 0, or answered at one of the three review gates (spec review, plan review, whole-branch code review) wins over it. An invalid or unset value falls back to 1, emitted as an explicit `<reviewers-per-lens>1</reviewers-per-lens>` tag placed after every embedded workspace file so that a tag planted in a repository file cannot choose M. Honored on Claude Code and Cursor; has no effect on Codex.
+- `SUPERPOWERS_REVIEWERS_PER_LENS` — M, reviewers per lens: how many identical reviewer subagents each `multi-doc-review` / `multi-code-review` round dispatches in parallel (integer 1–5, default 1). Example: `{ "env": { "SUPERPOWERS_REVIEWERS_PER_LENS": "3" } }`. An `M=<m>` stated in an invocation, answered in orchestration's Phase 0, or answered at one of the three review gates (spec review, plan review, whole-branch code review) wins over it. An invalid or unset value falls back to 1, emitted as an explicit `<reviewers-per-lens>1</reviewers-per-lens>` tag placed after every embedded workspace file so that a tag planted in a repository file cannot choose M. Honored on Claude Code; not verified on Cursor or Codex.
 - `SUPERPOWERS_PRESSURE_THRESHOLD` — the context-pressure gate's block threshold (a percentage, 10–90, default 60); see **skill-activator** below.
 - `SUPERPOWERS_AUTO_UPDATE` — `0` disables the startup update check; see **Available Update Notification** below.
 
 ### Hooks (10 total)
-This is the full cross-platform hook inventory for the plugin. Claude Code gets the full set. Codex currently wires the smaller `SessionStart` / `UserPromptSubmit` / `PreToolUse(Bash)` / `PostToolUse(Bash)` / `Stop` subset through `hooks/codex/*`, subject to Codex platform limits.
+This is the full cross-platform hook inventory for the plugin. Claude Code gets the full set. Codex ships adapters for the smaller `SessionStart` / `UserPromptSubmit` / `PreToolUse(Bash)` / `PostToolUse(Bash)` / `Stop` subset in `hooks/codex/*`, subject to Codex platform limits. These have not been confirmed live.
 
 - **context-engine** (SessionStart) — Runs git commands on every session start and writes `context-snapshot.json`: changed files, blast radius (which other files reference each changed file, filtered to actual import/require references), recent commits, and change stats. Uses per-project watermarks (md5 of cwd) so multiple projects don't interfere, and cross-session diff base so "what changed" reflects changes since your last session, not just the last commit. Zero dependencies. Silent no-op on non-git projects
 - **session-start** (SessionStart) — Injects using-superpowers routing into every session; injects `project-map.md` content directly if it exists (full content ≤200 lines, Critical Constraints + Hot Files only above that); checks for available plugin update
@@ -416,6 +416,15 @@ This is the full cross-platform hook inventory for the plugin. Claude Code gets 
 (`git commit --trailer`) and its pathspec magic (`:(top)`, `:(exclude)` —
 used to keep review material out of every reviewer's diff) both need it.
 
+**Platform status:** only **Claude Code** and **GitHub Copilot CLI** have
+actually been used to run this plugin. Every other platform — at present
+Cursor, Codex, OpenCode and Gemini CLI — was written from that platform's
+documentation and source code and has never been run. If a platform below is
+not one of the two named here, assume its install steps are a starting point
+rather than a confirmed path, and that nothing about its behaviour has been
+observed. Only someone actually running the pipeline on a platform can settle
+that; nobody has.
+
 ### Claude Code
 
 **Install**
@@ -442,6 +451,9 @@ used to keep review material out of every reviewer's diff) both need it.
 
 ### Cursor
 
+**Status: not tested.** These steps were derived from Cursor's documentation.
+The plugin has not been run in a live Cursor session.
+
 **Install**
 ```
 /plugin-add superpowers-orchestrator
@@ -463,7 +475,7 @@ used to keep review material out of every reviewer's diff) both need it.
 
 Use the linked install doc as the single source of truth for the complete install/update flow on the current platform.
 
-For live Codex hooks, use `codex-cli 0.118.0` or newer. Older CLI builds may silently ignore the current `hooks.json` shape.
+The Codex hook registry shape targets `codex-cli 0.118.0` or newer; older CLI builds are expected to ignore it. This floor comes from the Codex documentation, not from a run.
 
 **Install** — tell the agent:
 ```
@@ -483,6 +495,11 @@ If the installed Codex copy looks stale, dirty, or inconsistent after update, us
 
 ### OpenCode
 
+**Status: not tested.** Nothing in this section — the install and update
+commands included — has been run on OpenCode. It was derived by reading the
+OpenCode documentation and source. Treat every step here as a starting
+point, not a confirmed path.
+
 **Install** — tell the agent:
 ```
 Fetch and follow instructions from https://raw.githubusercontent.com/brunob54/superpowers-orchestrator/refs/heads/main/.opencode/INSTALL.md
@@ -494,6 +511,59 @@ Fetch and follow the update instructions from https://raw.githubusercontent.com/
 ```
 
 Or manually: `git pull` in your local clone of the repository.
+
+**Required for the orchestration skills: raise the subagent depth.**
+`orchestrating-development`, `multi-doc-review` and `multi-code-review`
+dispatch a controller subagent that itself dispatches worker subagents
+(*nested dispatch*: session → controller → worker). OpenCode allows only one
+level by default — the top-level `subagent_depth` option is `1`, which lets
+the main session start subagents but stops those subagents from starting
+more. Set it to `2`. This needs OpenCode v1.18.2 or newer.
+
+Put this in `opencode.json` in your project root, or in
+`~/.config/opencode/opencode.json` to apply it to every project
+([OpenCode config docs](https://opencode.ai/docs/config)):
+
+```json
+{
+  "$schema": "https://opencode.ai/config.json",
+  "subagent_depth": 2,
+  "agent": {
+    "general": {
+      "permission": {
+        "task": { "*": "allow" }
+      }
+    }
+  }
+}
+```
+
+Both settings are needed, and they work independently of each other.
+`subagent_depth` raises the nesting limit. `permission.task` says which
+subagents an agent may invoke ([OpenCode agent
+docs](https://opencode.ai/docs/agents)), and it is needed for a second
+reason that the documentation does not state: when OpenCode starts a
+subagent, it injects a blanket `task` deny into that subagent unless the
+subagent's own permission set already contains a rule under the key `task`.
+That deny removes the `task` tool from the subagent's tool list before the
+model sees it, so the controller cannot dispatch workers at all — the depth
+limit is never even consulted.
+
+Note that the check looks for the exact key `task`. A wildcard rule does not
+satisfy it: a global `"permission": { "*": "allow" }` still leaves subagents
+unable to dispatch. The action does not matter either — any value under the
+`task` key suppresses the injected deny.
+
+A shorter form also works: a top-level `"permission": { "task": "allow" }`
+instead of the `agent` block. OpenCode merges the top-level permission block
+into every agent before dispatch, so the controller ends up with the `task`
+key it needs. The trade-off is that this grants `task` to every agent rather
+than only to the controller.
+
+Known limitation: a question or a permission prompt raised by a depth-2
+subagent does not reach the user, and the session stops responding (open
+OpenCode issues #13715, #39112, #43996). Unattended pipeline runs are
+therefore not supported on OpenCode yet.
 
 ---
 
@@ -536,17 +606,17 @@ and have not been verified on Copilot CLI.
 
 ### Available Update Notification
 
-You will be **automatically notified** when a new version is available in Claude/Cursor.
+In Claude Code you are **automatically notified** when a new version is available. The same path is implemented for Cursor but has not been seen working there.
 
 ![](media/UpdatedAvailable.png)
 
-OpenCode, Codex, and Gemini CLI perform a best-effort startup update check once per 24 hours.
+On OpenCode, Codex, and Gemini CLI the plugin is written to perform a best-effort startup update check once per 24 hours. This has not been observed running on any of the three.
 
 Auto-update is non-destructive: it only applies when the plugin clone is clean and can fast-forward to `origin/main` (`git merge --ff-only origin/main`).
 If the repo is dirty, ahead, or diverged, auto-update is skipped and manual `git pull` remains the fallback.
-For Codex, SessionStart update notices require `codex_hooks = true`, `~/.codex/hooks.json` setup, `codex-cli 0.118.0+`, and a non-Windows environment.
+For Codex, SessionStart update notices are written to require `codex_hooks = true`, `~/.codex/hooks.json` setup, `codex-cli 0.118.0+`, and a non-Windows environment.
 
-To disable startup auto-update checks for Codex/OpenCode/Gemini CLI:
+To disable startup auto-update checks for Codex/OpenCode/Gemini CLI (the check itself is unverified on all three):
 
 1. Set env var `SUPERPOWERS_AUTO_UPDATE=0`, or
 2. Create `~/.config/superpowers/update.conf` with:

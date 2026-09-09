@@ -256,6 +256,10 @@ Skills written for Claude Code are automatically adapted for OpenCode. The boots
 
 ### Nested Subagents (subagent_depth)
 
+**Status: not tested.** Everything in this section was derived by reading
+the OpenCode source and documentation. The pipeline has never been run on
+OpenCode, so none of it is confirmed end to end.
+
 Several skills dispatch a **controller subagent** that itself dispatches
 **worker subagents** (`orchestrating-development`, `researching-prior-art`,
 the review loops it drives). This is called *nested dispatch*: a subagent
@@ -292,10 +296,26 @@ and two settings in `opencode.json` (project root or
   per-agent override; the value is global.
 - `permission.task` must be set on the **intermediate** agent (the one that
   acts as controller — `general` in the example; use the name of the agent
-  you dispatch). Without an explicit rule OpenCode injects a `deny` for
-  child agents even when the depth allows them. Rules are evaluated in
+  you dispatch). Without it OpenCode injects a blanket `task` deny into the
+  subagent, which removes the `task` tool from its tool list before the
+  model sees it. The depth limit is therefore never consulted for that
+  subagent: the permission gate takes effect first. Rules are evaluated in
   order, so a later `"*": "deny"` overrides an earlier allow
   (https://opencode.ai/docs/agents/, section "Task permissions").
+- The check for that injected deny is **exact string equality** against the
+  key `task` (`packages/opencode/src/agent/subagent-permissions.ts:18`, read
+  at v1.18.30). Two consequences, neither of them documented upstream:
+  a wildcard rule does not satisfy it, so a global
+  `"permission": { "*": "allow" }` — and the `"*": "allow"` that every
+  built-in agent carries — still leaves subagents unable to dispatch; and
+  the action is ignored, so any value under `task`, even `"deny"`,
+  suppresses the injected deny.
+- A top-level `"permission": { "task": "allow" }` is a valid shorter form,
+  since OpenCode merges the top-level permission block into every agent
+  before dispatch. It grants `task` to every agent, not only the controller.
+- Only `general` and `explore` are dispatchable built-in subagents; the
+  other built-ins (`build`, `plan`, and the hidden `compaction`, `title`,
+  `summary`) are primary or internal agents.
 - If the depth limit is reached, the `task` tool fails with *"Increase
   subagent_depth to allow nested subagents"*.
 

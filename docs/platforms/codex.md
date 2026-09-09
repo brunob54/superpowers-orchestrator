@@ -2,6 +2,13 @@
 
 Guide for using Superpowers Orchestrator with OpenAI Codex CLI.
 
+> **Status: never run on Codex.** Everything here was written from the Codex
+> documentation and this repository's own script-level tests. The plugin has
+> not been used inside a live Codex session. A `✅` below means the feature
+> is implemented and wired for Codex, not that it was seen working. Only
+> Claude Code and GitHub Copilot CLI have actually been used to run this
+> plugin.
+
 ## What you get
 
 | Feature | macOS / Linux (hooks enabled) | Windows native |
@@ -13,7 +20,7 @@ Guide for using Superpowers Orchestrator with OpenAI Codex CLI.
 | Startup context injection (project map, state, known issues) | ✅ with hooks | ❌ |
 | Proactive skill routing on every prompt | ✅ with hooks | ❌ |
 | Dangerous Bash command blocking | ✅ with hooks | ❌ |
-| Stop-time discipline reminders | ⚠️ implemented; revalidate live after install/update | ❌ |
+| Stop-time discipline reminders | ⚠️ implemented; never seen live | ❌ |
 | Custom agents (code-reviewer, red-team) | ✅ manual install | ✅ manual install |
 | Bash command compression | ✅ reactive `PostToolUse(Bash)` smart-compress | ❌ |
 | Read/Edit/Write interception | ❌ (Codex limitation) | ❌ |
@@ -23,7 +30,7 @@ Guide for using Superpowers Orchestrator with OpenAI Codex CLI.
 
 **Important:** The standard install for this plugin should be the complete install for the current platform. That means skills + custom agents everywhere, plus lifecycle hooks on macOS/Linux. Skipping the custom agent files should be treated as a fallback or constrained setup, not the default install path.
 
-**Minimum tested Codex CLI for live hooks:** `codex-cli 0.118.0`. Older Codex builds may silently ignore the current top-level `hooks` registry shape.
+**Codex CLI the hook registry shape targets:** `codex-cli 0.118.0`. Older Codex builds are expected to ignore the current top-level `hooks` registry shape. This floor is taken from the Codex documentation; no version was tested.
 
 ---
 
@@ -130,7 +137,7 @@ Also confirm:
 codex --version
 ```
 
-Use `0.118.0` or newer before trusting live hook behavior.
+Use `0.118.0` or newer. That floor comes from the Codex documentation; no version has been tried.
 
 ---
 
@@ -148,12 +155,12 @@ The `using-superpowers` skill is discovered automatically and enforces workflow 
 
 When hooks are enabled, Codex uses the Codex-specific hook subset shipped by this plugin: `SessionStart` for context injection, `UserPromptSubmit` for routing, `PreToolUse(Bash)` for safety checks, `PostToolUse(Bash)` for reactive smart-compress of noisy shell output, and `Stop` for discipline reminders.
 
-Verified live on `codex-cli 0.118.0` in a temp Codex home:
-- `SessionStart`
-- `UserPromptSubmit`
-- `PreToolUse(Bash)`
-
-`Stop` is implemented in the correct Codex output shape, but visible live reminder surfacing should still be revalidated after install/update in the actual installed environment.
+**Not verified live.** The adapters for `SessionStart`, `UserPromptSubmit`
+and `PreToolUse(Bash)` have been exercised only as scripts, by feeding them
+fixture JSON in this repository's own test suite. Nobody has run them inside
+a live Codex session on any `codex-cli` version. `Stop` is implemented in
+what the Codex documentation describes as the correct output shape, but its
+reminder has never been seen surfacing in a real session.
 
 Codex still cannot match Claude Code's full hook surface. There is no Codex parity today for `PostToolUse(Edit|Write|Skill)`, `SubagentStop`, `Read/Edit/Write` interception, or Claude's pre-execution Bash rewrite path. The Codex `PostToolUse(Bash)` smart-compress hook is reactive: it replaces verbose Bash output after execution, which improves context usage but is not the same mechanism as Claude's `PreToolUse` command rewrite.
 
@@ -205,7 +212,7 @@ cp ~/.codex/superpowers-orchestrator/codex-agents/*.toml ~/.codex/agents/
 
 Skills and hooks update from the clone automatically. Custom agents are copied files, so re-copy them after pulling updates.
 
-After updating hooks, restart Codex and rerun the live smoke checks against the actual installed home. `Stop` reminder visibility is the main behavior still worth revalidating.
+After updating hooks, restart Codex and run the live smoke checks against the actual installed home. They have never been run, so treat the whole set as outstanding, `Stop` reminder visibility most of all.
 
 ### Clean reinstall fallback
 
@@ -250,7 +257,7 @@ After a clean reinstall:
 
 1. On macOS/Linux, confirm `codex_hooks = true` is still set in `~/.codex/config.toml`
 2. Restart Codex
-3. On macOS/Linux, re-run the live hook smoke checks against the actual installed home
+3. On macOS/Linux, run the live hook smoke checks against the actual installed home (never yet run)
 
 ---
 
