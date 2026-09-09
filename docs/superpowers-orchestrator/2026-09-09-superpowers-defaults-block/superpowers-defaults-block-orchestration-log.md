@@ -13,3 +13,9 @@ Items: [task 4/1] forced — amend plan: restore the required backticked scoping
 Detail: docs/superpowers-orchestrator/2026-09-09-superpowers-defaults-block/plans/superpowers-defaults-block-open-decisions.md
 Forks: none
 Re-dispatch: phase 3, in-run resume 1 of 3
+
+## RULING 3 — 2026-09-09 — phase 3 — Task 6 Step 2 item 5 contradicted Task 5 Step 4 and Global Constraint 11; amended
+Items: [task 5/1] forced — amend plan: item 5 now takes Task 5 Step 4's fourth-choice addition, excluding only the N wording
+Detail: docs/superpowers-orchestrator/2026-09-09-superpowers-defaults-block/plans/superpowers-defaults-block-open-decisions.md
+Forks: none
+Re-dispatch: phase 3, in-run resume 1 of 3

@@ -17,3 +17,12 @@
 - **Defensible answers:** n/a
 - **Forks:** none; contradiction: none
 - **Resolution:** amend plan: rewrite that clause to "only the last complete `<superpowers-defaults>` block **of the `hooks/session-start` injection** counts", matching the sibling body for the same edit in the plan's Task 3 — Global Constraint 9 fixes one byte form for this phrase and says "never" of the unbackticked spelling, which the test suite's assertion does not match, so the mandated body as written produced text the constraint forbids.
+
+## Ruling 3 — 2026-09-09 — phase 3 — [task 5/1] Task 6 Step 2 item 5 contradicts Task 5 Step 4
+
+- **Class:** forced
+- **Item:** [task 5/1] n/a n/a — Task 6 Step 2 item 5 says to leave the three standalone M-origin forms unchanged, "exactly as in Task 5", but Task 5 Step 4 adds a fourth choice to the byte-identical list in the other file; following item 5 also reports a tier-2 M as the hardcoded default.
+- **Contract clause:** "**Every path that resolves a parameter at tier 2 without asking must echo the resolved value and its source,**" — docs/superpowers-orchestrator/2026-09-09-superpowers-defaults-block/plans/superpowers-defaults-block.md (Global Constraints, entry 11)
+- **Defensible answers:** n/a
+- **Forks:** none; contradiction: none
+- **Resolution:** amend plan: Task 6 Step 2 item 5 now directs the same fourth-choice addition Task 5 Step 4 makes, and excludes only the N wording from that branch — item 5's instruction was unexecutable as written, because "exactly as in Task 5" describes a Task 5 step that does change those forms, and the only other reading breaches both Global Constraint 11 and Task 6's own binding Contract, which requires the same four properties as Task 5's contract.

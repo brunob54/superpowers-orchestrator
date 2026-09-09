@@ -1010,6 +1010,17 @@ git commit -m "docs(brainstorming): offer N and M from the session defaults bloc
 
 ### Task 6: Update the plan gate in `skills/writing-plans/SKILL.md`
 
+> **Amendment 3 (orchestrator ruling):** Step 2 item 5 told the implementer to
+> leave the three standalone M-origin forms unchanged, "exactly as in Task 5".
+> That instruction could not be carried out, because Task 5 Step 4 does change
+> the byte-identical forms in the other file — it adds a fourth choice to that
+> list. Carrying it out as written would also have left the plan gate
+> reporting a tier-2 M as the hardcoded default, which Global Constraint 11
+> forbids and which this task's own Contract forbids by requiring the same
+> four properties as Task 5's contract. The item now directs the same
+> fourth-choice addition to be made here, and keeps only the *N* wording out
+> of that branch, which was the one exclusion the branch genuinely needs.
+
 **Files:**
 - Modify: `skills/writing-plans/SKILL.md`
 
@@ -1036,7 +1047,7 @@ Apply five edits to the `## Multi-Round Plan Review` section, one per site, rety
 2. The N sentence — from `N is the number of` in line 404 through `logs a `skipped` entry).` on line 406 — takes Task 5 Step 3's first body.
 3. `For N offer 3 (recommended), 2, 4 and 0.` at line 422 takes Task 5 Step 3's option-list body.
 4. `else M's default `<d>` (defined below) for M and 3 for N` at line 377 becomes `else M's default `<d-m>` (defined below) for M and N's default `<d-n>` (defined below) for N` (the `<d>` there is already renamed by Step 1).
-5. The resume-path origin sentences take Task 5 Step 4's edit, at the sites that step names, translated to this file's line numbers: the four `Re-invoking multi-doc-review with …` sentences run from line 379 to line 395, and the joint plural clause to split is at lines 382–383. The three standalone forms at lines 371–374 are M's and are inside the "recorded N is `0`" branch — leave them unchanged, exactly as in Task 5.
+5. The resume-path origin sentences take Task 5 Step 4's edit, at the sites that step names, translated to this file's line numbers: the four `Re-invoking multi-doc-review with …` sentences run from line 379 to line 395, and the joint plural clause to split is at lines 382–383. The three standalone forms at lines 371–374 are M's and are inside the "recorded N is `0`" branch, so no *N* wording is added there — but they take Task 5 Step 4's fourth-choice addition all the same, exactly as in Task 5. M in that branch resolves from `M's default `<d-m>``, which after Step 1 is the block-resolved value, so add beside the existing `so this is the default` form the tier-2 form `M=<m> — the log's invocation line does not record it, so this is the session default from the `<superpowers-defaults>` block.`, and use each form when `<d-m>` resolved at that tier. Leaving these three forms unchanged would report a tier-2 M as the hardcoded default, which Global Constraint 11 and this task's own Contract both forbid.
 
 - [ ] **Step 3: Verify this file**
 
