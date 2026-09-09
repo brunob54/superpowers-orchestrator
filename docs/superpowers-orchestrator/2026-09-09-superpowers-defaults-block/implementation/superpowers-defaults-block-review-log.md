@@ -162,3 +162,27 @@ _Invocation 1 — 2026-09-09 — N=4 M=4 — BASE..HEAD f33ca91..8d3aa90 — bra
 - [M10] fixed — per-file PASS lines made the suite total depend on how many Markdown files exist at run time, breaking the plan's total-comparison check → e919eb1 ← 1/4: r4:M1
 - [M11] fixed — `agents/*.md` and the two `INSTALL.md` files were outside every complete-block guard; the tracked-file list of [I1] covers them → e919eb1 ← 1/4: r4:M4
 - [M12] fixed — roughly 230 per-file PASS lines buried the wording assertions the suite exists to protect → e919eb1 ← 1/4: r4:M5
+
+## Round 4 verification 3 — Test & coverage quality — opus
+**Reviewers:** M=4, usable 4/4
+**Reviewer verdicts:** r1: 0 Critical, 1 Important, 4 Minor | r2: 0 Critical, 2 Important, 4 Minor | r3: 0 Critical, 0 Important, 5 Minor | r4: 0 Critical, 0 Important, 3 Minor
+**Sources mapped:** 19/19
+**Reviewer verdict:** 0 Critical, 3 Important, 11 Minor
+### Dispositions
+- [I1] rejected: duplicate of round 4 [I2], already logged user-decision — no test exercises tier-2 resolution end to end ← 3/4: r1:M3, r2:I1, r3:M4
+- [I2] unresolved: verification cap — the removed anti-drift assertion pinned a byte-identical span carrying M's hardcoded default, and the four fragment markers that replaced it carry no number, while the branch grows the restated hardcoded defaults to fourteen sites across six files; only the normative table is pinned, so thirteen literals can go stale with every suite green — at tests/review-gates/run-tests.sh:366 — clause: Global Constraints "**The parameter table is the single source for tier 3.** `SUPERPOWERS_REVIEWERS_PER_LENS` → block line `reviewers-per-lens`, accepted `1` `2` `3` `4` `5`, hardc" ← 1/4: r1:I1
+- [I3] unresolved: verification cap — the echo requirement has no pin in the suite that exists to pin exactly this kind of wording, although the echo sentence is a fixed literal written into six files and is the only mechanism that makes a setting made once and then forgotten visible to the user — at tests/review-gates/run-tests.sh:330 — clause: Global Constraints "**Every path that resolves a parameter at tier 2 without asking must echo the resolved value and its source,** in its opening or completion message. This is req" ← 1/4: r2:I2
+- [M1] carried — the hook test runs only the Claude Code output branch; the Cursor and no-plugin-root branches are never exercised ← 2/4: r1:M4, r3:M3
+- [M2] carried — `<d-m>` and `<d-cap>` are pinned where they are used but not in the file that defines them ← 2/4: r2:M3, r3:M1
+- [M3] carried — the decoy ordering cases cover four of the five sources the hook embeds; `context-snapshot.json` is uncovered ← 2/4: r3:M5, r4:M3
+- [M4] carried — the two absolute enterprise settings paths are never exercised by any case of the guard test ← 1/4: r1:M1
+- [M5] carried — the placeholder presence checks are whole-file, while their comment claims they catch a literal written at named line numbers ← 1/4: r1:M2
+- [M6] carried — the Case 2 comment now names a tier the assertions still cannot distinguish, because both tiers yield the same value ← 1/4: r2:M1
+- [M7] carried — the parameter-table pins read only the skill file, so the cross-file guarantee their comment states does not exist ← 1/4: r2:M2
+- [M8] carried — the three offered-default labels and the batch-cap direction sentence carry no byte pin ← 1/4: r2:M4
+- [M9] carried — the adapter test's title claims coverage of the planted-block case, which no unit test can reach ← 1/4: r3:M2
+- [M10] carried — the file guards use `[ -f ]` where the message says "not readable"; an unreadable file is counted as examined ← 1/4: r4:M1
+- [M11] carried — no negative assertion guards the wording Global Constraint 9 forbids ("the last complete block in the context") ← 1/4: r4:M2
+
+_Completed — 2026-09-10 — cap reached — HEAD e919eb1017f66afaac45aa7405b9a15d69190bf3_
+Secrets found: none
