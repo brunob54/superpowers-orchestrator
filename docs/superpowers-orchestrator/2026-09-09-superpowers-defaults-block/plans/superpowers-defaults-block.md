@@ -1265,7 +1265,7 @@ git commit -m "docs(sdd): resolve N, M and the batch cap through the session def
 - Verification: `bash tests/review-gates/run-tests.sh` — the full suite, exit 0.
 - Sentence wording is free; the properties above bind.
 
-- [ ] **Step 1: Rewrite the Phase 0 question (lines 232–245)**
+- [x] **Step 1: Rewrite the Phase 0 question (lines 232–245)**
 
 > 2. **Ask once (single batch):** N_plan (0–10, default `<d-n>`), N_code
 >    (0–10, default `<d-n>`), M — reviewers per lens, the number of identical
@@ -1303,12 +1303,12 @@ Keep the two confirmation bullets that follow unchanged.
 
 This rewrite is the only removal path in Task 8: the replaced span carries both `<d>` occurrences (lines 234 and 235) and both `<reviewers-per-lens>` occurrences (lines 235 and 237). Narrowing the rewrite to the question sentence alone leaves them behind and Step 2's whole-suite expectation fails with nothing in the task pointing at the cause. Tasks 5, 6 and 7 have an explicit rename step; Task 8 does not, because this one replacement covers every occurrence.
 
-- [ ] **Step 2: Run the whole wording suite**
+- [x] **Step 2: Run the whole wording suite**
 
 Run: `bash tests/review-gates/run-tests.sh`
 Expected: PASS — `Results: <n> passed, 0 failed`, exit 0, **and `<n>` equal to the `<p> + <f>` total recorded in Task 2's commit message**. Every citation assertion, every scoping assertion, every presence and absence assertion and every surviving gate assertion is green. The total is checked because `0 failed` alone is also what a suite that lost its assertions prints.
 
-- [ ] **Step 3: Record the per-file citation counts**
+- [x] **Step 3: Record the per-file citation counts**
 
 Run the count through the **same** normalization the suite's `normalize_file` uses (`tests/review-gates/run-tests.sh`), not a weaker one: `normalize_file` also strips leading blanks, block-quote `>` markers and one list marker per line, so a citation written inside a block quote is found by the assertion and missed by a plain `tr` pipeline — the count would read `0` against a green test.
 
@@ -1331,7 +1331,7 @@ Two things are deliberate here. The function goes through a **temporary file**, 
 
 Expected: one count per file, each ≥ 1. Record the numbers in the commit message body. They are a record, never an assertion: a test pinned to an exact count fails for a wording reason and invites editing the skill to satisfy the number.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add skills/orchestrating-development/SKILL.md
