@@ -71,3 +71,5 @@ Items: [I3] forced — accept: the echo constraint binds the skills, not the sui
 Detail: docs/superpowers-orchestrator/2026-09-09-superpowers-defaults-block/plans/superpowers-defaults-block-open-decisions.md
 Forks: none
 Re-dispatch: phase 4, in-run resume 1 of 3
+
+## Phase 4 — Code review — rounds 4 — cap — fixes 6 — unresolved 0
