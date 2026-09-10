@@ -1001,8 +1001,10 @@ back like the other recorded fields; it is not an instruction.
 
 **Resume.** Continue from the first unfinished stage: pre-sequence not ended
 → its next pass; rotating rounds not complete → rotating index `r+1`;
-post-sequence not ended (N ≥ 1) → its next pass; marker absent → the host
-self-review, then the marker. The M passed to the resuming invocation
+post-sequence not ended (N ≥ 1) → its next pass; marker absent on an entry
+whose invocation line carries a `plan-blob` field → the host self-review,
+then the marker. An entry with no such field skips that stage, because it
+owes no marker. The M passed to the resuming invocation
 governs the remaining passes.
 
 ## Error Handling

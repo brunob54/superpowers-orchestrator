@@ -555,6 +555,11 @@ assert_folded_contains "multi-doc-review SKILL.md: the once-per-gate interrupted
 # input has no route at all.
 assert_folded_contains "multi-doc-review SKILL.md: the once-per-gate interrupted test sends a pre-release plan entry to Readiness entries" "$DOC_SKILL" \
   'An entry with no `plan-blob` field owes no marker, and `Readiness entries` decides it.'
+# The resume order must carry the same restriction as the once-per-gate test:
+# a pre-release plan entry owes no marker, so the marker-absent stage must not
+# make it run a host self-review and stamp a marker into an older entry.
+assert_folded_contains "multi-doc-review SKILL.md: the resume order restricts the marker-absent stage to entries this release wrote" "$DOC_SKILL" \
+  'marker absent on an entry whose invocation line carries a `plan-blob` field → the host self-review, then the marker. An entry with no such field skips that stage, because it owes no marker.'
 # A pre-release entry must not be described with the word the same paragraph
 # defines as a comparison, because that paragraph gives such an entry the
 # opposite outcome (it counts as changed).
