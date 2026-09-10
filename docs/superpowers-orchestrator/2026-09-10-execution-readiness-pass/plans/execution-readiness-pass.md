@@ -925,7 +925,7 @@ git commit -m "test(reviewer-templates): bound multi-doc-review SKILL.md at 1080
 > - Invariants: the sentence `For a plan, the Execution readiness pass runs even when N is 0.` follows the sentence stating N's range and its `skipped` entry; the clause `add 2 to 6 further passes of M reviewers` follows the existing cost sentence, which is unchanged up to and including `and the loop runs about N × M reviewers in total.`; neither string appears anywhere in `skills/brainstorming/SKILL.md`.
 > - Verification: `bash tests/review-gates/run-tests.sh`, section 15, and its existing assertion `plan gate carries the cost sentence`, which still passes.
 
-- [ ] **Step 1: Write failing test**
+- [x] **Step 1: Write failing test**
 
 Add this section to `tests/review-gates/run-tests.sh`, directly before the final `echo` / `bold "Results: ..."` block:
 
@@ -939,12 +939,12 @@ assert_not_icontains "brainstorming carries no readiness N=0 sentence" "$BS_FILE
 assert_not_icontains "brainstorming carries no readiness cost clause" "$BS_FILE_NORM" "$READINESS_COST"
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `bash tests/review-gates/run-tests.sh`
 Expected: FAIL with "plan gate carries the readiness N=0 sentence (missing: For a plan, the Execution readiness pass runs even when N is 0.)" and with the cost-clause assertion failing the same way; the two `brainstorming carries no …` assertions pass already.
 
-- [ ] **Step 3: Implement minimal change**
+- [x] **Step 3: Implement minimal change**
 
 In `skills/writing-plans/SKILL.md`, in the `## Multi-Round Plan Review` section, insert one sentence directly after the clause that ends `0 skips the loop and logs a \`skipped\` entry).` and before the sentence beginning `` `<d-n>` is resolved by ``:
 
@@ -962,12 +962,12 @@ sequences (1 to 3 when N is 0); on a platform without parallel dispatch the
 reviewers of a pass run one after another.
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `bash tests/review-gates/run-tests.sh`
 Expected: PASS — "Results: <n> passed, 0 failed", including the existing "plan gate carries the cost sentence".
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add skills/writing-plans/SKILL.md tests/review-gates/run-tests.sh
