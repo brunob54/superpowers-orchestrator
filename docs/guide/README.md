@@ -239,6 +239,29 @@ contract no check could fail ("must work correctly"), and an
 `**Exact content:**` marker whose reason points at a file the same plan
 writes (a "self-pin") are all findings.
 
+Since v7.14.0 the plan gate also runs an **Execution readiness pass**: a
+review that reads the plan as the agent that will execute it and reports
+conflicts that would stop execution — tasks that contradict each other or a
+Global Constraint, a task clause that contradicts the spec section it traces
+to, a mandated body that breaks its own task's contract, and a sweep of
+every site each Global Constraints entry binds. It runs once before the
+rotating rounds and once after them, each repeated until a pass changes
+nothing (at most three passes), and it runs for a plan even when you answer
+N = 0. For a plan, add 2 to 6 further passes of M reviewers on top of the N rounds
+(1 to 3 when N is 0); where the platform cannot dispatch in parallel, the M
+reviewers of a pass run one after another.
+
+A conflict the pass cannot decide — the spec contradicts itself, or the plan
+itself mandates something the review rubric calls a defect — is not applied:
+it is listed in the review log's `Owed:` block and in the gate's report.
+
+The net for an owed conflict is the pre-flight plan read that
+`subagent-driven-development` does before Task 1 (§3, Stage 3). That net
+exists on that path only: a plan executed through `executing-plans`, or a
+plan you approve at the writing-plans gate and never run through
+orchestration, has no later check for it — read the `Owed:` list yourself in
+that case.
+
 This file is the pipeline's backbone: its checkboxes are the durable
 position record that execution ticks and commits task by task (§5).
 
@@ -463,7 +486,7 @@ flowchart TD
     P0 --> P1
 
     subgraph AUTO["🤖 Unattended — hours, zero questions"]
-        P1["Phase 1 — write plan<br/>from the spec"] --> P2["Phase 2 — N_plan<br/>plan-review rounds"]
+        P1["Phase 1 — write plan<br/>from the spec"] --> P2["Phase 2 — readiness pass,<br/>N_plan rounds, readiness pass"]
         P2 --> P3["Phase 3 — implementation batch<br/>(≤ cap tasks; checkbox + commit per task)"]
         P3 -->|tasks remain| P3
         P3 --> P4["Phase 4 — N_code whole-branch<br/>review rounds, fixes committed"]
@@ -522,7 +545,7 @@ thing you hear is completion or a stop.
 
 | Question | Range | Default |
 | --- | --- | --- |
-| `N_plan` — plan-review rounds | 0–10 (0 = skip) | 3, or the value of `SUPERPOWERS_REVIEW_ROUNDS` |
+| `N_plan` — plan-review rounds | 0–10 (0 = no rotating rounds; the Execution readiness pass still runs) | 3, or the value of `SUPERPOWERS_REVIEW_ROUNDS` |
 | `N_code` — code-review rounds | 0–10 (0 = skip) | 3, or the value of `SUPERPOWERS_REVIEW_ROUNDS` |
 | `M` — reviewers per lens: identical reviewers dispatched in parallel per review round, for both loops | 1–5 | 1, or the value of `SUPERPOWERS_REVIEWERS_PER_LENS` |
 | Batch cap — tasks per implementation batch | 1–5 | 3, or the value of `SUPERPOWERS_BATCH_TASK_CAP` |
@@ -554,7 +577,7 @@ The same batch asks for two confirmations:
 | Phase | What it does | Artifact |
 | --- | --- | --- |
 | 1 — Plan | Writes the implementation plan from the spec | `docs/superpowers-orchestrator/<date>-<slug>/plans/<slug>.md` |
-| 2 — Plan review | N independent review rounds, findings applied between rounds | plan review-log sidecar |
+| 2 — Plan review | An Execution readiness pass, N independent review rounds with findings applied between rounds, then a second readiness pass | plan review-log sidecar |
 | 3 — Implementation | Tasks in batches of ≤ cap; each task test-driven, reviewed, and committed with its checkbox ticked | commits on `feature/<slug>` |
 | 4 — Code review | N whole-branch review rounds with fixes applied | `<topic>/implementation/<slug>-review-log.md`, committed |
 | 5 — Completion | Verifies every checkbox and a clean tree, then hands over | final report |
@@ -773,6 +796,10 @@ how much is redone differs:
   re-dispatch and fills the stopped phase's prompt there, with your resume
   answers in a value file next to it.
 
+  A Phase 2 readiness pass is recorded in the same review log under its own
+  `## Readiness` heading, so a resumed loop continues from the pass or the
+  round it stopped at, never from the beginning.
+
 To tear down a wedged or superseded run instead of resuming it:
 
 ```
@@ -985,7 +1012,7 @@ handled by the router (§2) — just describe what you want.
 | "Resume orchestration for `<plan>`" | Continue an interrupted run from its last boundary | §5 |
 | "Abandon orchestration for `<plan>`" | Confirmed teardown of a wedged run | §5 |
 | "research prior art for `<decision>`" / `/researching-prior-art` | Evidence gathering for one technology decision (normally automatic at §3's research gate) | §3 |
-| `/multi-doc-review <doc> [N\|N=<n>] [M=<m>]` | N independent review rounds on a spec or plan, M reviewers per round | §3 |
+| `/multi-doc-review <doc> [N\|N=<n>] [M=<m>]` | N independent review rounds on a spec or plan, M reviewers per round; a plan also gets an Execution readiness pass before and after them | §3 |
 | `/multi-code-review [BASE] [N\|N=<n>] [M=<m>]` | N whole-branch code-review rounds with fixes, M reviewers per round | §3 |
 | "save state" / "compress context" | Snapshot to `state.md` + decision log entry | §6 |
 | "map this project" | Generate `project-map.md` | §6 |

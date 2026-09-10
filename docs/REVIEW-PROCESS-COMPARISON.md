@@ -108,7 +108,10 @@ real projects":
 - **One broad review at the end** of the run, "on the most capable model,"
   instead of re-reviewing everything task by task.
 - **Pre-flight plan read** before the first task, surfacing internal plan
-  conflicts at once instead of mid-run.
+  conflicts at once instead of mid-run. Since v7.14.0 the plan review gate
+  runs the same criteria as an Execution readiness pass, so the decidable
+  conflicts are fixed before the plan is approved; the pre-flight read stays
+  as the net for the rest.
 - **File handoffs.** `task-brief` and `review-package` scripts write task text
   and review diffs to files, because pasted diffs "park permanently in the most
   expensive context."
@@ -186,9 +189,10 @@ Everything below was added on top of the REPOZY v6.6.1 baseline
 **v6.8.0 — SDD review flow rework.** A deliberate port of obra's v6.0.0
 per-task review design into the REPOZY-structured skill: single task reviewer
 with two verdicts, `task-brief` / `review-package` file handoffs, one fix
-subagent per round covering both verdicts, pre-flight plan review,
-model-required dispatches. The parent's two-reviewer prompts were replaced by
-`task-reviewer-prompt.md`.
+subagent per round covering both verdicts, pre-flight plan review
+(kept as the net once v7.14.0 moved its decidable conflicts to the plan
+review gate), model-required dispatches. The parent's two-reviewer prompts
+were replaced by `task-reviewer-prompt.md`.
 
 **v6.9.0 — multi-doc-review** (renamed from `multi-review` in v6.11.0).
 N-round independent document review at the brainstorming (spec) and
