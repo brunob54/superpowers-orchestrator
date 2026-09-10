@@ -445,7 +445,7 @@ git commit -m "feat(multi-doc-review): run readiness sequences around the rotati
 > - Invariant: every Error Handling bullet other than the invalid-N bullet is unchanged; the invalid-N bullet keeps its first sentence about tier 2 and tier 3 verbatim; neither the new bullet nor the rewritten one uses the word `unresolved`.
 > - Verification: the same suite section asserts the new bullet's three clauses and the narrowed invalid-N wording.
 
-- [ ] **Step 1: Write failing test**
+- [x] **Step 1: Write failing test**
 
 Add this section to `tests/reviewer-templates/run-tests.sh`, directly after section 13:
 
@@ -476,12 +476,12 @@ for needle in 'rejected: not a conflict' \
 done
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `bash tests/reviewer-templates/run-tests.sh`
 Expected: FAIL with "multi-doc-review SKILL.md: triage carries 'rejected: not a conflict'" and the other nine needles reported missing — all ten needles of section 14 are absent from the file before this task.
 
-- [ ] **Step 3: Implement minimal change**
+- [x] **Step 3: Implement minimal change**
 
 In `skills/multi-doc-review/SKILL.md`, insert this subsection directly after the `### Readiness sequences (plan documents only)` subsection added by Task 2, and before the `## Lens Rotation` heading:
 
@@ -536,7 +536,7 @@ Then append this bullet after the existing harness-probe bullet:
   as a round is.
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `bash tests/reviewer-templates/run-tests.sh`
 Expected: PASS — "Results: <n> passed, 0 failed".
@@ -544,7 +544,7 @@ Expected: PASS — "Results: <n> passed, 0 failed".
 Run: `awk 'END { print NR }' skills/multi-doc-review/SKILL.md`
 Expected: a number at most 1080. If it is larger, tighten under the rule of Global Constraint 1 before committing.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add skills/multi-doc-review/SKILL.md tests/reviewer-templates/run-tests.sh
