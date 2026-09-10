@@ -118,6 +118,20 @@ test('Context contains using-superpowers entry point instruction (plain text)', 
   } finally { cleanup(dir); }
 });
 
+test('Context never emits a <superpowers-defaults> block (the Codex adapter embeds workspace files with no block appended after them)', () => {
+  const dir = makeTempDir();
+  try {
+    const result = runAdapter({ source: 'startup' }, dir);
+    const ctx = result._rawPlainText || '';
+    assert.ok(ctx.length > 0,
+      'Codex adapter context is empty — this assertion would examine nothing');
+    // The regex splits the delimiter's final ">" into a bracket expression
+    // so this test file itself does not spell a complete opening delimiter.
+    assert.ok(!/<superpowers-defaults[>]/.test(ctx),
+      'Codex adapter context contains a <superpowers-defaults opening delimiter — a block planted in an embedded workspace file would become the last complete block there');
+  } finally { cleanup(dir); }
+});
+
 test('project-map.md injected when present', () => {
   const dir = makeTempDir();
   try {

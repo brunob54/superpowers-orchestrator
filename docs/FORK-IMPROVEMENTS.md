@@ -120,7 +120,7 @@ A single review — even a careful one — inherits the authoring conversation's
 - Reviewers receive only template placeholders (document path, doc type, lens instructions, and — for plans — the spec path); they are barred from the Skill tool, review logs, sibling spec/plan documents, and the target's git history.
 - Convergence is judged from the reviewer's **enumerated findings** (never the count line, never post-triage): a round is clean only when the consolidated finding set is empty **and** every reviewer returned a usable report (u = M). Rejecting findings at triage never makes a round clean, so the controller cannot game the exit. An unusable report is retried once; if any reviewer is still unusable after the retry, the round is logged PARTIAL as `usable <u>/<m>` (never clean), unless every reviewer is unusable (u = 0), which is logged `inconclusive` (breaks the clean streak).
 - Reviewer reports carry the marker `<!-- multi-review report -->` on their first line; `hooks/subagent-guard.js` exempts a message from skill-leakage blocking when one of its first 10 non-blank lines starts with that marker, since reports about skill-discussing documents legitimately quote skill names.
-- N semantics: integer 0–10 (anything else falls back to 3); N=0 skips the loop but logs a `skipped` entry; the loop runs at most once per gate (recorded in the log, surviving restarts) — except that a recorded `N=0` (skipped) entry does not block a later invocation, and an interrupted entry (not all of its recorded N rounds logged) is resumed rather than blocked.
+- N semantics: integer 0–10 (anything else falls back to the session default (`SUPERPOWERS_REVIEW_ROUNDS`, else 3)); N=0 skips the loop but logs a `skipped` entry; the loop runs at most once per gate (recorded in the log, surviving restarts) — except that a recorded `N=0` (skipped) entry does not block a later invocation, and an interrupted entry (not all of its recorded N rounds logged) is resumed rather than blocked.
 
 ### How to use
 
@@ -130,7 +130,7 @@ A single review — even a careful one — inherits the authoring conversation's
 
 ### Where it lives
 
-`skills/multi-doc-review/` (`SKILL.md` controller + `reviewer-prompt.md` dispatch template), gate steps in `skills/brainstorming/SKILL.md` and `skills/writing-plans/SKILL.md`, `hooks/skill-rules.json` routing entry, `hooks/subagent-guard.js` marker exemption, `hooks/session-start` (the `<reviewers-per-lens>` session tag, v7.4.0), `tests/claude-code/test-multi-doc-review.sh`, `tests/codex/test-session-start-reviewers-tag.sh`.
+`skills/multi-doc-review/` (`SKILL.md` controller + `reviewer-prompt.md` dispatch template), gate steps in `skills/brainstorming/SKILL.md` and `skills/writing-plans/SKILL.md`, `hooks/skill-rules.json` routing entry, `hooks/subagent-guard.js` marker exemption, `hooks/session-start` (the `<superpowers-defaults>` session block, v7.13.0), `tests/claude-code/test-multi-doc-review.sh`, `tests/codex/test-session-start-defaults-block.sh`.
 
 ### References
 
@@ -173,7 +173,7 @@ Dogfood evidence from building it: the design spec collected **33 findings acros
 
 ### Where it lives
 
-`skills/multi-code-review/` (`SKILL.md` controller + `reviewer-prompt.md` dispatch template), the final-gate step in `skills/subagent-driven-development/SKILL.md`, `hooks/skill-rules.json` routing entry, `hooks/subagent-guard.js` roster, `hooks/session-start` (the `<reviewers-per-lens>` session tag, v7.4.0), `tests/claude-code/test-multi-code-review.sh`, `tests/codex/test-subagent-guard.js`, `tests/codex/test-session-start-reviewers-tag.sh`.
+`skills/multi-code-review/` (`SKILL.md` controller + `reviewer-prompt.md` dispatch template), the final-gate step in `skills/subagent-driven-development/SKILL.md`, `hooks/skill-rules.json` routing entry, `hooks/subagent-guard.js` roster, `hooks/session-start` (the `<superpowers-defaults>` session block, v7.13.0), `tests/claude-code/test-multi-code-review.sh`, `tests/codex/test-subagent-guard.js`, `tests/codex/test-session-start-defaults-block.sh`.
 
 ### References
 

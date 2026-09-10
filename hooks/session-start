@@ -417,26 +417,56 @@ if [ -f "context-snapshot.json" ]; then
     fi
 fi
 
-# ── Reviewers per lens ────────────────────────────────────────────────────────
-# SUPERPOWERS_REVIEWERS_PER_LENS (an integer from 1 to 5) is the number of
-# reviewer subagents the review-loop skills dispatch per round. Skills are
-# Markdown read by the model and cannot read environment variables, so the
-# value travels as a session tag. Any other value (unset, 0, 6, 10, 3.0, a
-# word) falls back to 1. The pattern [1-5] matches exactly one character.
+# ── Session defaults block ────────────────────────────────────────────────────
+# Skills are Markdown read by the model and cannot read environment
+# variables, so a value a skill needs travels into the session as a block
+# injected here. One block carries every parameter, one name=value line each:
 #
-# The fallback emits an explicit <reviewers-per-lens>1</reviewers-per-lens>
-# rather than no tag at all. This tag is appended AFTER every embedded
-# workspace file (project-map.md, session-log.md, state.md, known-issues.md,
-# context-snapshot.json), and the skills read the LAST element, so the tag
-# emitted here always wins. Emitting nothing on the fallback path would leave
-# a <reviewers-per-lens> string planted in any one of those repository files
-# as the only element in the context, letting repository content choose M.
-# An explicit 1 is semantically identical to no tag for every legitimate
-# session and closes that path.
-reviewers_content="\n\n<reviewers-per-lens>1</reviewers-per-lens>"
+#   SUPERPOWERS_REVIEWERS_PER_LENS -> reviewers-per-lens  (1-5,  default 1)
+#   SUPERPOWERS_REVIEW_ROUNDS      -> review-rounds       (1-10, default 3)
+#   SUPERPOWERS_BATCH_TASK_CAP     -> batch-task-cap      (1-5,  default 3)
+#
+# Validation uses literal case alternatives, one per accepted value, never a
+# character class: [1-5] matches exactly one character and cannot express a
+# two-digit value, and literal alternatives also reject " 3", "+3", "03" and
+# "3.0" exactly. Any other value (unset, empty, 0, 11, a word) falls back to
+# the hardcoded default, silently — an invalid value is never an error.
+#
+# 0 is deliberately not accepted for SUPERPOWERS_REVIEW_ROUNDS: N=0 skips a
+# review loop, and a variable set once and then forgotten would disable spec
+# review, plan review and whole-branch code review on every future session
+# with no message anywhere. N=0 stays reachable per invocation and per gate
+# question, where the user sees its consequence.
+#
+# The block is always complete — every line is emitted even on the fallback
+# path — and it is appended AFTER every embedded workspace file
+# (project-map.md, session-log.md, state.md, known-issues.md,
+# context-snapshot.json). Readers take the LAST complete block of this
+# injection, so the block emitted here always wins. Emitting nothing on the
+# fallback path would leave a block planted in any one of those repository
+# files as the only block in the context, letting repository content choose
+# the parameters.
+#
+# IMPORTANT: printf puts REAL newline bytes in the variable. A bash
+# double-quoted "\n" is the two characters backslash and n, and
+# escape_for_json below doubles the backslash first, so the model would
+# receive one physical line instead of a block. Command substitution strips
+# trailing newlines only, and this string ends with the closing delimiter, so
+# the two leading newlines survive unchanged.
+reviewers_per_lens=1
 case "${SUPERPOWERS_REVIEWERS_PER_LENS:-}" in
-  [1-5]) reviewers_content="\n\n<reviewers-per-lens>${SUPERPOWERS_REVIEWERS_PER_LENS}</reviewers-per-lens>" ;;
+  1|2|3|4|5) reviewers_per_lens="${SUPERPOWERS_REVIEWERS_PER_LENS}" ;;
 esac
+review_rounds=3
+case "${SUPERPOWERS_REVIEW_ROUNDS:-}" in
+  1|2|3|4|5|6|7|8|9|10) review_rounds="${SUPERPOWERS_REVIEW_ROUNDS}" ;;
+esac
+batch_task_cap=3
+case "${SUPERPOWERS_BATCH_TASK_CAP:-}" in
+  1|2|3|4|5) batch_task_cap="${SUPERPOWERS_BATCH_TASK_CAP}" ;;
+esac
+defaults_content=$(printf '\n\n<superpowers-defaults>\nreviewers-per-lens=%s\nreview-rounds=%s\nbatch-task-cap=%s\n</superpowers-defaults>' \
+  "$reviewers_per_lens" "$review_rounds" "$batch_task_cap")
 
 # ── Load using-superpowers skill body ─────────────────────────────────────────
 using_superpowers_content=$(awk '
@@ -465,9 +495,9 @@ session_log_escaped=$(escape_for_json "$session_log_content")
 state_escaped=$(escape_for_json "$state_content")
 known_issues_escaped=$(escape_for_json "$known_issues_content")
 context_snapshot_escaped=$(escape_for_json "$context_snapshot_content")
-reviewers_escaped=$(escape_for_json "$reviewers_content")
+defaults_escaped=$(escape_for_json "$defaults_content")
 
-session_context="<EXTREMELY_IMPORTANT>\nYou have superpowers-orchestrator.\n\n**The \`superpowers-orchestrator:using-superpowers\` guidance is loaded below. For all other skills, use the \`Skill\` tool.**\n\n**MANDATORY FIRST ACTIONS — before ANY tool calls beyond reading files:**\n1. Silently activate token-efficiency (its rules apply immediately)\n2. Classify the task complexity (micro/lightweight/full) per the Entry Sequence below\n3. If the user names a specific skill (e.g. use brainstorming, use context management), that IS a Skill tool invocation — call \`Skill\` with that skill name. Do NOT re-implement the skill's purpose with ad-hoc agents or manual steps.\n\n${using_superpowers_escaped}\n\n${warning_escaped}${update_escaped}${git_escaped}\n</EXTREMELY_IMPORTANT>${project_map_escaped}${session_log_escaped}${state_escaped}${known_issues_escaped}${context_snapshot_escaped}${reviewers_escaped}"
+session_context="<EXTREMELY_IMPORTANT>\nYou have superpowers-orchestrator.\n\n**The \`superpowers-orchestrator:using-superpowers\` guidance is loaded below. For all other skills, use the \`Skill\` tool.**\n\n**MANDATORY FIRST ACTIONS — before ANY tool calls beyond reading files:**\n1. Silently activate token-efficiency (its rules apply immediately)\n2. Classify the task complexity (micro/lightweight/full) per the Entry Sequence below\n3. If the user names a specific skill (e.g. use brainstorming, use context management), that IS a Skill tool invocation — call \`Skill\` with that skill name. Do NOT re-implement the skill's purpose with ad-hoc agents or manual steps.\n\n${using_superpowers_escaped}\n\n${warning_escaped}${update_escaped}${git_escaped}\n</EXTREMELY_IMPORTANT>${project_map_escaped}${session_log_escaped}${state_escaped}${known_issues_escaped}${context_snapshot_escaped}${defaults_escaped}"
 
 # ── Output ─────────────────────────────────────────────────────────────────────
 # Uses printf instead of heredoc (cat <<EOF) to work around a bash 5.3+

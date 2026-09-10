@@ -19,8 +19,9 @@
 # Case 2 (M=1, the default configuration): repeats the setup on a second,
 # separate spec and topic dir, invokes the skill with N=2 and no M= (so the
 # skill falls back to M=1 — the way a user who states no M and has no
-# `<reviewers-per-lens>` tag runs it; since the review gates ask for M, a gate
-# invocation now carries an explicit `M=<m>`), and asserts:
+# `<superpowers-defaults>` block's `reviewers-per-lens` line runs it; since
+# the review gates ask for M, a gate invocation now carries an explicit
+# `M=<m>`), and asserts:
 #   (a2)/(b2)/(c2) same checks as Case 1
 #   (i2) the invocation line records N=2 M=1 (M is recorded even at M=1, so
 #        a log is self-describing)
@@ -41,15 +42,16 @@ source "$SCRIPT_DIR/test-helpers.sh"
 
 # [I2] M must come from the prompt (M=2 explicit in Case 1, or no M= for the
 # Case 2 default), never from the developer's own environment. `unset` here
-# only clears SUPERPOWERS_REVIEWERS_PER_LENS from THIS shell's environment —
-# it does NOT remove a value Claude Code applies from a settings file's
-# `env` block (README.md and docs/guide/README.md document setting M that
-# way): Claude Code applies that block inside its own process and passes it
-# to hooks, so the shell-level unset cannot reach it. The check below
-# detects that case and aborts before any `claude -p` call, instead of
-# letting Case 2's M=1 default silently resolve to a different M.
-unset SUPERPOWERS_REVIEWERS_PER_LENS
-check_no_reviewers_per_lens_setting "$PLUGIN_DIR" || exit 1
+# only clears SUPERPOWERS_REVIEWERS_PER_LENS, SUPERPOWERS_REVIEW_ROUNDS and
+# SUPERPOWERS_BATCH_TASK_CAP from THIS shell's environment — it does NOT
+# remove a value Claude Code applies from a settings file's `env` block
+# (README.md and docs/guide/README.md document setting M that way): Claude
+# Code applies that block inside its own process and passes it to hooks, so
+# the shell-level unset cannot reach it. The check below detects that case
+# and aborts before any `claude -p` call, instead of letting Case 2's M=1
+# default silently resolve to a different M.
+unset SUPERPOWERS_REVIEWERS_PER_LENS SUPERPOWERS_REVIEW_ROUNDS SUPERPOWERS_BATCH_TASK_CAP
+check_no_superpowers_defaults_setting "$PLUGIN_DIR" || exit 1
 
 TEST_PROJECT=$(create_test_project)
 trap "cleanup_test_project '$TEST_PROJECT'" EXIT
@@ -175,9 +177,11 @@ SPEC2_SHA_BEFORE=$(shasum "$SPEC2" | cut -d' ' -f1)
 
 PROMPT2="Invoke the superpowers-orchestrator:multi-doc-review skill on the document $SPEC2 with N=2. Do not ask me any questions — use N=2 and proceed to completion."
 # Deliberately no M=: this case exercises the DEFAULT configuration (M=1) —
-# the fallback a direct invocation reaches with no stated M and no
-# `<reviewers-per-lens>` tag. Gate invocations now carry an explicit `M=<m>`;
-# see the (m1) checks below.
+# resolved through the hook's `<superpowers-defaults>` block's
+# `reviewers-per-lens=1` line, which Claude Code always emits. The tier-3
+# hardcoded fallback (no stated M and no block) is reachable only on a
+# platform that emits no block. Gate invocations now carry an explicit
+# `M=<m>`; see the (m1) checks below.
 
 # Safety net (Case 2): re-snapshot the plugin repository immediately before
 # this case's agent call, same as assertion (e) does for Case 1. Case 1's
