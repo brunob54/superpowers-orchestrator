@@ -444,6 +444,31 @@ else
   bad "Readiness sequences subsection is misplaced (after-loop='$AFTER_LOOP_LINE' seq='$SEQ_LINE' lens-rotation='$LENS_ROT_LINE')"
 fi
 
+bold "14. Triage of a readiness finding"
+# Position: the triage subsection follows the sequences subsection and still
+# precedes the Lens Rotation heading.
+TRIAGE_LINE="$(first_line_of "$DOC_SKILL" '### Triage of a readiness finding')"
+SEQ_LINE_14="$(first_line_of "$DOC_SKILL" '### Readiness sequences (plan documents only)')"
+LENS_ROT_LINE_14="$(first_line_of "$DOC_SKILL" '## Lens Rotation')"
+if [ -n "$TRIAGE_LINE" ] && [ -n "$SEQ_LINE_14" ] && [ -n "$LENS_ROT_LINE_14" ] &&
+   [ "$TRIAGE_LINE" -gt "$SEQ_LINE_14" ] && [ "$TRIAGE_LINE" -lt "$LENS_ROT_LINE_14" ]; then
+  ok "Triage subsection sits after the sequences subsection and before Lens Rotation (line $TRIAGE_LINE)"
+else
+  bad "Triage subsection is misplaced (seq='$SEQ_LINE_14' triage='$TRIAGE_LINE' lens-rotation='$LENS_ROT_LINE_14')"
+fi
+for needle in 'rejected: not a conflict' \
+              'rejected: plan-mandated' \
+              'rejected: undecidable at this gate' \
+              'out of lens scope' \
+              'A readiness finding never produces an unresolved: line, in any caller.' \
+              'reverses an amendment made earlier in the same sequence' \
+              '`rejected: plan-mandated — <text>`, never amended' \
+              'a readiness entry with a missing or malformed' \
+              'as a round is' \
+              'for a plan document the Execution readiness pre-sequence still runs'; do
+  assert_folded_contains "multi-doc-review SKILL.md: triage carries '$needle'" "$DOC_SKILL" "$needle"
+done
+
 echo
 bold "Results: $PASS passed, $FAIL failed"
 if [ "$FAIL" -gt 0 ]; then

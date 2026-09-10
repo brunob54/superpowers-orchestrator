@@ -646,6 +646,37 @@ no entries to cover would make every report of that pass unusable. Stop at
 that paragraph — the sentence beginning `Coverage, ambiguity, feasibility`
 belongs to no check and always stays.
 
+### Triage of a readiness finding
+
+**Step 0 — verify.** Quote both sides from their files before any
+disposition. If either side is not found verbatim, or the higher side does
+not state what the finding claims, dispose
+`rejected: not a conflict — <side not found>`.
+
+**Step 1 — authority.** **Fixed text**, never amended by this triage: the
+spec named on the plan's `**Spec:**` line; a `**Global Constraints:**` entry
+that traces to that spec (an entry is not fixed only when it both fails to
+trace to the spec and restates the body of an artifact the plan itself
+creates or modifies); an `**Exact content:**` body whose reason names a pin
+outside the plan; a `**Contract:**` invariant that restates an external
+standard. **Plan text**, amendable: everything else.
+
+| Conflict | Disposition |
+|---|---|
+| fixed text vs plan text | amend the plan side, `applied` |
+| plan text vs plan text | amend the side the spec decides against; failing that, the side the Global Constraints block decides against; failing both, `rejected: undecidable at this gate — <both sides>` |
+| fixed text vs fixed text (the spec contradicts itself, or a finding reverses an amendment made earlier in the same sequence) | `rejected: undecidable at this gate — spec inconsistent` |
+| the plan mandates a rubric defect (check 2) | `rejected: plan-mandated — <text>`, never amended |
+
+`A readiness finding never produces an unresolved: line, in any caller.` A
+finding whose application fails is disposed `rejected: undecidable at this
+gate`; a finding outside the lens (coverage, ambiguity, feasibility, style)
+is rejected with the reason `out of lens scope`. The three conflict
+rejections — `rejected: undecidable at this gate`, `rejected: plan-mandated`
+and `rejected: not a conflict` — are listed in the invocation entry's
+`Owed:` block; an `out of lens scope` rejection never is, because it names
+no conflict and has no two sides.
+
 ## Lens Rotation
 
 | Round | Lens |
@@ -859,7 +890,9 @@ invocation note (which carries `M=` like every other); failed rounds get
 - All reviewer reports unusable twice (u = 0) → `inconclusive` round,
   continue (never counts as clean).
 - Target document missing → stop and report; nothing dispatched.
-- Invalid N (not an integer 0–10) → tier 2, else tier 3. N = 0 → skip, log.
+- Invalid N (not an integer 0–10) → tier 2, else tier 3. N = 0 → skip the
+  rotating loop, log; for a plan document the Execution readiness
+  pre-sequence still runs.
 - M stated but invalid (0, 6, `two`, `2.5`) → the default of the Parameters
   resolution (the block's `reviewers-per-lens` line, else 1); never ask;
   note the substitution in the completion message. Block absent, its
@@ -886,6 +919,11 @@ invocation note (which carries `M=` like every other); failed rounds get
   `rejected: harness probe not runnable here — <probe> — (<reason>)`,
   never treated as
   support for the claim; the probe goes on the `Harness probes owed:` line.
+- Readiness pass whose reports are all unusable (u = 0) → `inconclusive`,
+  and the pass is open; a readiness entry with a missing or malformed
+  `**Result:**` line is read as open. A readiness pass with a
+  prompt-delivery or round-level failure is handled by the bullets above,
+  as a round is.
 
 ## Guard Interaction
 
