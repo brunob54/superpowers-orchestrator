@@ -423,6 +423,10 @@ assert_folded_contains "multi-doc-review SKILL.md: the N parameter keeps its N=0
 # The After-the-loop step must trigger the post-sequence in place, symmetric
 # with the pre-sequence trigger at the round loop's firing site.
 assert_folded_contains "multi-doc-review SKILL.md: After-the-loop step triggers the readiness post-sequence" "$DOC_SKILL" 'For a plan document, the post-sequence of `Readiness sequences` (below) runs first, before the self-review'
+# The post-sequence trigger must carry the same resume guard as the
+# pre-sequence trigger — otherwise a resume after the post-sequence ended
+# re-runs it before falling into the self-review.
+assert_folded_contains "multi-doc-review SKILL.md: post-sequence trigger carries a resume guard" "$DOC_SKILL" 'no post-sequence, and on a resume the resume rule of `Readiness entries` decides whether it has already ended.'
 # The readiness prose must never spell the cell title in bold: section 12
 # resolves the cell by the first `**Execution readiness**` line in the file.
 READINESS_BOLD_COUNT="$(grep -cF -- '**Execution readiness**' "$DOC_SKILL" | tr -d ' ')"

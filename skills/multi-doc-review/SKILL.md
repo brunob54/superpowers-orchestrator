@@ -563,20 +563,22 @@ invocation, or the resumed range above for a resume):
 
 **After the loop:** For a plan document, the post-sequence of `Readiness
 sequences` (below) runs first, before the self-review — with N = 0 there is
-no post-sequence. Run a self-review on the final merged document — at a
-gate, the host skill's own checklist (brainstorming's Spec Self-Review /
-writing-plans' Self-Review, already in context); for direct invocations, the
-four-item list: placeholder scan, internal consistency, ambiguity, scope.
-Fix merge-introduced issues inline and note them in the log. Then report:
-rounds run, per-round finding counts, converged vs cap reached, log path,
-effective M (and any substitution), and a `Harness probes owed:` line — one
-item `- [<id>] <probe> — (<reason>) (round <i>)` per `rejected: harness
-probe not runnable here` disposition of this invocation, with `(addendum)`
-in place of `(round <i>)` for a rejection made in a post-loop addendum, and
-the reason clause copied from the rejection line, or `Harness probes owed:
-none`. The line is always written; a report without it is defective. The
-user runs the owed probes after the loop. The host gate's single user
-approval follows — this skill adds no approvals of its own.
+no post-sequence, and on a resume the resume rule of `Readiness entries`
+decides whether it has already ended. Run a self-review on the final merged
+document — at a gate, the host skill's own checklist (brainstorming's Spec
+Self-Review / writing-plans' Self-Review, already in context); for direct
+invocations, the four-item list: placeholder scan, internal consistency,
+ambiguity, scope. Fix merge-introduced issues inline and note them in the
+log. Then report: rounds run, per-round finding counts, converged vs cap
+reached, log path, effective M (and any substitution), and a
+`Harness probes owed:` line — one item
+`- [<id>] <probe> — (<reason>) (round <i>)` per
+`rejected: harness probe not runnable here` disposition of this invocation,
+with `(addendum)` in place of `(round <i>)` for a rejection made in a
+post-loop addendum, and the reason clause copied from the rejection line, or
+`Harness probes owed: none`. The line is always written; a report without it
+is defective. The user runs the owed probes after the loop. The host gate's
+single user approval follows — this skill adds no approvals of its own.
 
 ### Readiness sequences (plan documents only)
 
@@ -588,9 +590,9 @@ always runs every sequence that applies to it — both when N ≥ 1, the
 pre-sequence alone when N = 0 — and a re-run started by the
 `another pass requested` marker is a fresh invocation for this rule. A
 **readiness pass** is one review dispatched under the lens
-`Execution readiness`: M
-reviewers filled from `reviewer-prompt.md` with `[LENS_NAME]` =
-`Execution readiness`, `[LENS_INSTRUCTIONS]` = that lens's `plan:` cell and
+`Execution readiness`: M reviewers filled from `reviewer-prompt.md` with
+`[LENS_NAME]` = `Execution readiness`, `[LENS_INSTRUCTIONS]` = that lens's
+`plan:` cell and
 `[ROUND]` = `readiness <pre|post> <p>`, every other placeholder as a
 rotating round fills it; then the same validation, consolidation and triage
 as a round, and one log entry under its own heading. A pass is **settled**
@@ -613,13 +615,13 @@ entry is logged as today, the pre-sequence runs, then the host self-review.
 A readiness report that lacks a `coverage:` line for any entry of the plan's
 `**Global Constraints:**` block is **unusable** — this is the second
 usability condition named in step 2, and it applies to `Execution readiness`
-passes only. It is retried once under
-the report-validation rule of step 2, and a reviewer still unusable leaves
-the pass with fewer than M usable reports, so the pass is open. A missing
-sweep costs a retry; it can never end a sequence. When a structure the lens
-cell names is missing, remove that clause from `[LENS_INSTRUCTIONS]` and
-write a header note directly after the `**Result:**` line of every readiness
-entry of this invocation — a header line, not a disposition line:
+passes only. It is retried once under the report-validation rule of step 2,
+and a reviewer still unusable leaves the pass with fewer than M usable
+reports, so the pass is open. A missing sweep costs a retry; it can never
+end a sequence. When a structure the lens cell names is missing, remove that
+clause from `[LENS_INSTRUCTIONS]` and write a header note directly after the
+`**Result:**` line of every readiness entry of this invocation — a header
+line, not a disposition line:
 
 | Missing | Clause removed | Note line |
 |---|---|---|
@@ -633,6 +635,7 @@ instructions carry a gap in the numbering. That gap is safe because the cell
 opens with `Run all the checks below` and no count, and tells the reviewer
 that a missing number was removed on purpose and must not be
 reconstructed.
+
 The rows for checks (3) and (4) remove their numbered item only. The Global
 Constraints row removes two things — check (5), and the paragraph beginning
 `For check (5) report ONE finding`, which is the paragraph that carries both
