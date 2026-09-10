@@ -852,7 +852,7 @@ git commit -m "feat(multi-doc-review): readiness log entries, completeness and r
 > - Invariants: the maximum is the literal 1080; the comment above it records the 788-line baseline, names 7.14.0 as the release that set the figure, and records that the figure supersedes the spec's 938.
 > - Verification: `bash tests/reviewer-templates/run-tests.sh` passes on the real file, and the same arithmetic reports a number above 1080 for a fixture built from that file plus 200 blank lines.
 
-- [ ] **Step 1: Add the budget assertion**
+- [x] **Step 1: Add the budget assertion**
 
 This assertion is expected to pass on its first run: Task 4 Step 4 already
 brought the file inside the budget. Its falsifiability is shown by Step 2,
@@ -877,7 +877,7 @@ else
 fi
 ```
 
-- [ ] **Step 2: Show the arithmetic reports an over-budget file**
+- [x] **Step 2: Show the arithmetic reports an over-budget file**
 
 Run:
 
@@ -889,17 +889,17 @@ OVER="$(mktemp)" && cat skills/multi-doc-review/SKILL.md > "$OVER" && \
 
 Expected: a number greater than 1080 — the same arithmetic the assertion uses reports an over-budget file, so the check is not vacuous. This exercises the arithmetic, not the suite's `bad` branch; that branch is ordinary shared code, already exercised by every other failing assertion in the file.
 
-- [ ] **Step 3: Run the suite on the real file**
+- [x] **Step 3: Run the suite on the real file**
 
 Run: `bash tests/reviewer-templates/run-tests.sh`
 Expected: PASS, including a line "multi-doc-review SKILL.md is <n> lines (max 1080)" with `<n>` at most 1080.
 
-- [ ] **Step 4: Run the neighbouring suites**
+- [x] **Step 4: Run the neighbouring suites**
 
 Run: `bash tests/review-gates/run-tests.sh && bash tests/writing-plans/run-tests.sh`
 Expected: PASS for both — "Results: <n> passed, 0 failed".
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add tests/reviewer-templates/run-tests.sh
