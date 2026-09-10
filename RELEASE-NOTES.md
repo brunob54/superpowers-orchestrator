@@ -8,6 +8,59 @@
 > (`REPOZY/superpowers-optimized`) and are kept unchanged as history; any
 > testing they describe was not done here.
 
+## v7.14.0 — the Execution readiness pass
+
+**Problem.** Conflicts findable from the plan and the spec alone reached the
+pre-flight plan read, after four review rounds had passed. One run of
+2026-09-09 lost about 48 minutes to three pre-flight blocks before Task 1
+began.
+
+**Change.** The plan review gate now runs an Execution readiness pass —
+five numbered conflict checks, including a sweep of every site each Global
+Constraints entry binds — before the rotating rounds and after them, each
+repeated until a pass changes nothing. `N_plan = 0` no longer skips Phase 2.
+
+**Effect.** Decidable plan conflicts are fixed at the gate; the pre-flight
+read stays as the net. Reinstall the plugin before the next run.
+
+Details:
+
+- **The lens cell.** `skills/multi-doc-review/SKILL.md` gains an
+  `Execution readiness` cell with five numbered checks: tasks that
+  contradict each other or a Global Constraint; anything the plan mandates
+  that the review rubric treats as a defect; a task clause that contradicts
+  the spec section it traces to; a mandated body that breaks its own task's
+  contract; and, per Global Constraints entry, every site the entry binds.
+  The sweep must end in a `coverage: GC<k> — <n> sites checked` line per
+  entry — a report without it is unusable and is retried once, so a missing
+  sweep can never end a sequence.
+- **The sequences.** A pre-sequence runs before rotating round 1 and a
+  post-sequence after the last rotating round. Each runs at most three
+  passes and ends at its first *settled* pass — one that applied no Critical
+  and no Important finding with all M reviewers usable. Readiness passes are
+  not counted in N and are not part of the two-consecutive-clean-rounds
+  streak. The host self-review stays last, after the post-sequence.
+- **Triage.** Both sides of a conflict are quoted from their files before
+  any disposition. Fixed text — the spec, a spec-traced Global Constraints
+  entry, an externally pinned `**Exact content:**` body, a `**Contract:**`
+  invariant restating an external standard — is never amended; plan text is.
+  A conflict nothing decides, and a defect the plan itself mandates, are
+  rejected with a reason and listed in the log's `Owed:` block. A readiness
+  finding never produces an `unresolved:` line, so no new human stop is
+  created.
+- **`N_plan = 0`.** Phase 2 now dispatches its controller for every value of
+  `N_plan`; with 0 the controller runs the readiness pre-sequence, no
+  rotating round, and returns `rounds=0 outcome=cap unresolved=0`. A
+  `skipped (N_plan=0)` line written by an earlier release still means
+  Phase 2 is complete.
+- **Logs.** A readiness pass is written under `## Readiness <pre|post> <p>`
+  with a `**Result:** <settled|open>` line, never under `## Round`, so a
+  session running an older installed copy counts fewer rounds and
+  re-reviews rather than skipping rounds.
+- **Cost.** 2 to 6 further passes of M reviewers on top of N × M (1 to 3
+  when N is 0), before retries. Where the platform cannot dispatch in
+  parallel, the reviewers of a pass run one after another.
+
 ## v7.13.0 — the `<superpowers-defaults>` session block
 
 **Problem.** Only M, reviewers per lens, could be set from the environment.
