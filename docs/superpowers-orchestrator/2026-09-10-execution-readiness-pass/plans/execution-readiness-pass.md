@@ -575,7 +575,7 @@ git commit -m "feat(multi-doc-review): triage rules for readiness findings" --tr
 > - Invariants: the four item labels `Readiness pre:`, `Readiness post:`, `Readiness conflicts applied:` and `Readiness conflicts owed:` appear; the existing `Harness probes owed:` sentence is unchanged; the `REVIEW_DONE` token list is restated without additions.
 > - Verification: the same suite section asserts the four labels and `rounds=0 outcome=cap unresolved=0`.
 
-- [ ] **Step 1: Write failing test**
+- [x] **Step 1: Write failing test**
 
 Add this section to `tests/reviewer-templates/run-tests.sh`, directly after section 14:
 
@@ -633,12 +633,12 @@ assert_folded_not_contains "multi-doc-review SKILL.md: the unnarrowed N=0 once-p
   'An entry whose recorded N is `0` (a skipped entry) does not block'
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `bash tests/reviewer-templates/run-tests.sh`
 Expected: FAIL with "multi-doc-review SKILL.md: readiness entry heading shape (no line exactly: ## Readiness <pre|post> <p> — Execution readiness — <model>)" and the other needles reported missing.
 
-- [ ] **Step 3: Implement minimal change**
+- [x] **Step 3: Implement minimal change**
 
 In `skills/multi-doc-review/SKILL.md`, make two edits to the **Once per gate** paragraph of the Procedure.
 
@@ -818,7 +818,7 @@ return keeps its tokens, `rounds` counts rotating rounds only, and for N = 0
 it returns `rounds=0 outcome=cap unresolved=0`.
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `bash tests/reviewer-templates/run-tests.sh`
 Expected: PASS — "Results: <n> passed, 0 failed".
@@ -826,7 +826,7 @@ Expected: PASS — "Results: <n> passed, 0 failed".
 Run: `awk 'END { print NR }' skills/multi-doc-review/SKILL.md`
 Expected: a number at most 1080 — about 1046 if every reference body went in verbatim. This is the task that adds the most lines, so it is the one to check carefully. If the count is above 1080, apply Move 1 (reflow) and, if needed, Move 2 (cut) of Global Constraint 1 — the shortenable universe is every paragraph Tasks 1 to 4 added to this file, Task 1's lens cell included — then re-run `bash tests/reviewer-templates/run-tests.sh` and confirm it is still green before committing.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add skills/multi-doc-review/SKILL.md tests/reviewer-templates/run-tests.sh
