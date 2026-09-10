@@ -521,6 +521,14 @@ assert_folded_contains "multi-doc-review SKILL.md: once-per-gate defers a plan N
 # input. Folded, because the sentence wraps across line breaks in the file.
 assert_folded_not_contains "multi-doc-review SKILL.md: the unnarrowed N=0 once-per-gate sentence is gone" "$DOC_SKILL" \
   'An entry whose recorded N is `0` (a skipped entry) does not block'
+# The Otherwise entry condition must carry the same narrowing, or the file
+# states two rules for a plan resume with N=0.
+assert_folded_contains "multi-doc-review SKILL.md: Otherwise entry condition narrows the N=0 resume clause" "$DOC_SKILL" \
+  '`N=0` on a resume of a `spec` or a `general` document above'
+# The plan-blob rewrite must be ordered where the marker is written, because a
+# resume enters at On a resume and never reads the Otherwise branch.
+assert_folded_contains "multi-doc-review SKILL.md: the marker site orders the plan-blob rewrite" "$DOC_SKILL" \
+  'you rewrite the invocation line'"'"'s `plan-blob` value to what `git hash-object <plan path>`'
 echo
 bold "Results: $PASS passed, $FAIL failed"
 if [ "$FAIL" -gt 0 ]; then

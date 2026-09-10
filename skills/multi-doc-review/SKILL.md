@@ -365,7 +365,7 @@ the entry was created, not the M actually used on a later resume.
 
 **Otherwise** (a fresh invocation — including no entry found above, an
 entry found complete above with the marker present, or `N=0` on a resume
-above): create or open the sidecar log `<doc-basename>-review-log.md` next
+of a `spec` or a `general` document above): create or open the sidecar log `<doc-basename>-review-log.md` next
 to the target document and append an invocation note: date, N, M, and
 invoker (`gate: brainstorming` | `gate: writing-plans` |
 `gate: orchestration` | `direct`), and — for a plan document only — the
@@ -642,7 +642,9 @@ neither breaks nor starts the streak, and rotating lens selection keeps
 using the per-invocation rotating round index. `The host self-review runs
 after the post-sequence.` It stays the last edit inside the gate, and when
 it finishes you write `**Host self-review:** done` as its own line of the
-invocation entry. With N = 0 the rotating loop is skipped and its `skipped`
+invocation entry. For a plan document, at that same moment you rewrite the
+invocation line's `plan-blob` value to what `git hash-object <plan path>`
+prints then. With N = 0 the rotating loop is skipped and its `skipped`
 entry is logged as today, the pre-sequence runs, then the host self-review.
 
 A readiness report that lacks a `coverage:` line for any entry of the plan's
