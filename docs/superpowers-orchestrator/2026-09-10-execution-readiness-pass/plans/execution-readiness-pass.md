@@ -1401,7 +1401,7 @@ git commit -m "docs: describe the Execution readiness pass and its limits" --tra
 > - Invariants: the string `7.14.0` appears in `VERSION`, in `.claude-plugin/plugin.json`, in `.claude-plugin/marketplace.json`, in the `meta:` block of `plugin.universal.yaml` and in the README version badge; the two README lineage ranges read `v6.7.0–v7.14.0`; the README sentence that lists the releases covered in `RELEASE-NOTES.md` names v7.14.0 as its last entry; no badge, metadata value or lineage range still carries `7.13.0`, while the historical release lists in `README.md` and `RELEASE-NOTES.md` keep naming it; `RELEASE-NOTES.md` gains a `## v7.14.0` entry whose first three paragraphs are labelled `**Problem.**`, `**Change.**` and `**Effect.**` and total no more than 120 words, counted as the command in Step 3 counts them — the words of those three paragraphs, excluding the three bold labels themselves.
 > - Verification: `grep -rn '7\.14\.0' VERSION .claude-plugin/plugin.json .claude-plugin/marketplace.json plugin.universal.yaml README.md RELEASE-NOTES.md` lists a hit in each of the six files, and the stale-version grep of Step 3 returns nothing.
 
-- [ ] **Step 1: Bump the version in the five metadata places**
+- [x] **Step 1: Bump the version in the five metadata places**
 
 ```bash
 printf '7.14.0\n' > VERSION
@@ -1423,7 +1423,7 @@ the `<superpowers-defaults>` session block (v7.13.0), and the Execution readines
 
 That sentence is a historical list, so it keeps naming v7.13.0.
 
-- [ ] **Step 2: Add the release entry**
+- [x] **Step 2: Add the release entry**
 
 Insert this entry into `RELEASE-NOTES.md` directly above the `## v7.13.0` heading:
 
@@ -1482,7 +1482,7 @@ Details:
   parallel, the reviewers of a pass run one after another.
 ```
 
-- [ ] **Step 3: Verify the version is consistent**
+- [x] **Step 3: Verify the version is consistent**
 
 Run: `grep -rn '7\.14\.0' VERSION .claude-plugin/plugin.json .claude-plugin/marketplace.json plugin.universal.yaml README.md RELEASE-NOTES.md | head -20`
 Expected: at least one hit in each of the six files — the same six the Contract's Verification names, `RELEASE-NOTES.md` included — with the badge URL and both lineage ranges among the `README.md` hits.
@@ -1496,7 +1496,7 @@ Expected: a number at most 120. The count excludes the three bold labels (`**Pro
 Run: `grep -n 'version-7\.13\.0\|"version": "7\.13\.0"\|version: "7\.13\.0"\|v6\.7\.0–v7\.13\.0' VERSION .claude-plugin/plugin.json .claude-plugin/marketplace.json plugin.universal.yaml README.md`
 Expected: no output (exit status 1) — no badge, metadata value or lineage range still carries the old version. The historical release list in `README.md` and every entry of `RELEASE-NOTES.md` keep naming v7.13.0, and this grep matches neither.
 
-- [ ] **Step 4: Run every affected suite**
+- [x] **Step 4: Run every affected suite**
 
 Run:
 
@@ -1513,7 +1513,7 @@ bash tests/codex/run-unit-tests.sh
 
 Expected: PASS for every suite — each ends with "Results: <n> passed, 0 failed" (the Codex suite prints its own summary) and the chain exits 0.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add VERSION .claude-plugin/plugin.json .claude-plugin/marketplace.json plugin.universal.yaml README.md RELEASE-NOTES.md
