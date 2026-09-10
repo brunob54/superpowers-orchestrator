@@ -572,6 +572,22 @@ assert_folded_contains "multi-doc-review SKILL.md: the resume order restricts th
 # opposite outcome (it counts as changed).
 assert_folded_contains "multi-doc-review SKILL.md: a pre-release entry is decided by the pre-release rule, not called unchanged" "$DOC_SKILL" \
   'the once-per-gate rule decides it, as that rule stood before this release.'
+
+bold "16. multi-doc-review SKILL.md stays inside its size budget"
+# The Phase 2 controller and the writing-plans host session read this file
+# whole. Baseline 788 lines before 7.14.0; the Execution readiness feature
+# adds about 258, so the file may not exceed 1080. Figure set by release
+# 7.14.0; it supersedes the 938 the design document names, because the plan
+# review added five corrections whose prose the smaller figure could not
+# hold.
+MDR_MAX_LINES=1080
+MDR_LINES="$(awk 'END { print NR }' "$DOC_SKILL")"
+if [ "$MDR_LINES" -le "$MDR_MAX_LINES" ]; then
+  ok "multi-doc-review SKILL.md is $MDR_LINES lines (max $MDR_MAX_LINES)"
+else
+  bad "multi-doc-review SKILL.md is $MDR_LINES lines, over the $MDR_MAX_LINES-line budget"
+fi
+
 echo
 bold "Results: $PASS passed, $FAIL failed"
 if [ "$FAIL" -gt 0 ]; then
