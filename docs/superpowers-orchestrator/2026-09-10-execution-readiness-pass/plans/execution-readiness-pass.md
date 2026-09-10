@@ -88,7 +88,7 @@ Task order follows the reading order of `skills/multi-doc-review/SKILL.md` (lens
 > - Invariant: the fenced prompt body — every line between the `  prompt: |` line and its closing fence — is byte-identical to the version before this task.
 > - Verification: `bash tests/reviewer-templates/run-tests.sh`, section 12, plus `git diff -U0 -- skills/multi-doc-review/reviewer-prompt.md` showing no changed line inside the fence.
 
-- [ ] **Step 1: Write failing test**
+- [x] **Step 1: Write failing test**
 
 Add these two variable declarations to `tests/reviewer-templates/run-tests.sh`, directly after the `WP_SKILL="$ROOT/skills/writing-plans/SKILL.md"` line:
 
@@ -151,12 +151,12 @@ assert_file_contains "doc-review template: [LENS_NAME] note admits the readiness
 assert_file_contains "doc-review template: [ROUND] note admits a readiness label" "$DOC_PROMPT" '`[ROUND]` — REQUIRED: round number, or a readiness pass label (display only)'
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `bash tests/reviewer-templates/run-tests.sh`
 Expected: FAIL with "multi-doc-review SKILL.md: Execution readiness cell extract is empty" and with the three `doc-review template` needles reported missing.
 
-- [ ] **Step 3: Implement minimal change**
+- [x] **Step 3: Implement minimal change**
 
 In `skills/multi-doc-review/SKILL.md`, insert this cell into the "Lens Instructions" section, after the last line of the `**Adversarial failure modes**` cell and before the `## Review Log Format` heading, separated from both by one blank line:
 
@@ -213,7 +213,7 @@ Replace the two placeholder lines under `**Placeholders:**` with:
 - `[LENS_NAME]` — REQUIRED: lens name from SKILL.md's Lens Rotation, or `Execution readiness`
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `bash tests/reviewer-templates/run-tests.sh`
 Expected: PASS — "Results: <n> passed, 0 failed".
@@ -224,7 +224,7 @@ Expected: exactly the three items above changed — the header sentence, the `[R
 Run: `awk 'END { print NR }' skills/multi-doc-review/SKILL.md`
 Expected: a number at most 1080. If it is larger, tighten under the rule of Global Constraint 1 before committing.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add skills/multi-doc-review/SKILL.md skills/multi-doc-review/reviewer-prompt.md tests/reviewer-templates/run-tests.sh
