@@ -545,6 +545,16 @@ assert_folded_contains "multi-doc-review SKILL.md: a complete N=0 plan entry nev
 # On a resume — the opposite of the rule stated under Readiness entries.
 assert_folded_contains "multi-doc-review SKILL.md: the once-per-gate interrupted test qualifies the post-sequence with N>=1" "$DOC_SKILL" \
   'whose post-sequence has not ended (N ≥ 1) or whose self-review marker is absent'
+# The subject of that same interrupted test must be restricted to entries
+# this release wrote. Without the restriction, a pre-release entry — which
+# never carries the self-review marker — is routed to On a resume and made to
+# run a host self-review the gate does not owe.
+assert_folded_contains "multi-doc-review SKILL.md: the once-per-gate interrupted test only classifies entries this release wrote" "$DOC_SKILL" \
+  'calls interrupted only an entry this release wrote (its invocation line carries a `plan-blob` field)'
+# ... and it must state the route for an entry without the field, or that
+# input has no route at all.
+assert_folded_contains "multi-doc-review SKILL.md: the once-per-gate interrupted test sends a pre-release plan entry to Readiness entries" "$DOC_SKILL" \
+  'An entry with no `plan-blob` field owes no marker, and `Readiness entries` decides it.'
 # A pre-release entry must not be described with the word the same paragraph
 # defines as a comparison, because that paragraph gives such an entry the
 # opposite outcome (it counts as changed).

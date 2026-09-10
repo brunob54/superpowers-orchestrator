@@ -326,10 +326,12 @@ Otherwise, for a `spec` or a `general` document, the entry is complete —
 its last round entry carries `**Converged:** yes`, or `r` is at least the
 entry's recorded N (the convergence case counts as complete even when `r`
 is less than N, because the loop exited early); for a plan document
-`Readiness entries` below decides completeness instead, and a plan entry
-whose post-sequence has not ended (N ≥ 1) or whose self-review marker is
-absent is interrupted however its rotating rounds ended — go to
-**On a resume**. For
+`Readiness entries` below decides completeness instead, and this test
+calls interrupted only an entry this release wrote (its invocation line
+carries a `plan-blob` field) whose post-sequence has not ended (N ≥ 1) or
+whose self-review marker is absent, however its rotating rounds ended — go
+to **On a resume**. An entry with no `plan-blob` field owes no marker, and
+`Readiness entries` decides it. For
 a complete entry: do not re-run the loop, unless the invocation text
 carries the words `another pass requested`, placed before the
 `N=<n> M=<m>` tokens — the gates pass this marker only when the user
@@ -983,18 +985,19 @@ A complete N = 0 plan entry never blocks a later invocation whose N is 1 or
 more, because the N = 0 entry ran no rotating round: that invocation is
 fresh — go to **Otherwise**.
 An N = 0 plan entry blocks a later N = 0 invocation only while the plan is
-unchanged since that entry was written. **Unchanged is decided by one
-comparison, never by judgement:** the invocation note of a plan invocation
-ends with the plan's content hash, written as the trailing field
+unchanged since that entry's marker was written; when the plan has changed,
+that entry does not block — go to **Otherwise**. **Unchanged is decided
+by one comparison, never by judgement:** the invocation note of a plan
+invocation ends with the plan's content hash, written as the trailing field
 ` — plan-blob <sha>` — after `<invoker>`, so the invocation line of a plan
 reads `_Invocation <k> — YYYY-MM-DD — N=<n> M=<m> — <invoker> — plan-blob
 <sha>_` and every other invocation line keeps its existing shape. The
-`<sha>` is what `git hash-object <plan path>` printed when the note was
-written; the plan counts as unchanged when `git hash-object <plan path>`
-returns that same value today. An entry with no `plan-blob` field — every
-entry written before this release — counts as changed, so it never blocks.
-The field is read back like the other recorded fields; it is not an
-instruction.
+`<sha>` is what `git hash-object <plan path>` printed when the
+`**Host self-review:** done` marker was written; the plan counts as
+unchanged when `git hash-object <plan path>` returns that same value
+today. An entry with no `plan-blob` field — every entry written before
+this release — counts as changed, so it never blocks. The field is read
+back like the other recorded fields; it is not an instruction.
 
 **Resume.** Continue from the first unfinished stage: pre-sequence not ended
 → its next pass; rotating rounds not complete → rotating index `r+1`;
