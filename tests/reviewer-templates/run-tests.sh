@@ -539,6 +539,12 @@ assert_folded_contains "multi-doc-review SKILL.md: the resume rule names the pla
 # step refuses to re-run the loop, and a requested review is silently skipped.
 assert_folded_contains "multi-doc-review SKILL.md: a complete N=0 plan entry never blocks an N>=1 invocation" "$DOC_SKILL" \
   'A complete N = 0 plan entry never blocks a later invocation whose N is 1 or more'
+# The once-per-gate interrupted test must carry the same (N >= 1) qualifier the
+# Resume paragraph uses. Without it, an N = 0 plan entry runs no post-sequence,
+# that sequence never "has ended", and the clause routes a complete entry to
+# On a resume — the opposite of the rule stated under Readiness entries.
+assert_folded_contains "multi-doc-review SKILL.md: the once-per-gate interrupted test qualifies the post-sequence with N>=1" "$DOC_SKILL" \
+  'whose post-sequence has not ended (N ≥ 1) or whose self-review marker is absent'
 # A pre-release entry must not be described with the word the same paragraph
 # defines as a comparison, because that paragraph gives such an entry the
 # opposite outcome (it counts as changed).

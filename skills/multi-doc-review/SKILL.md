@@ -327,8 +327,9 @@ its last round entry carries `**Converged:** yes`, or `r` is at least the
 entry's recorded N (the convergence case counts as complete even when `r`
 is less than N, because the loop exited early); for a plan document
 `Readiness entries` below decides completeness instead, and a plan entry
-whose post-sequence has not ended or whose self-review marker is absent is
-interrupted however its rotating rounds ended — go to **On a resume**. For
+whose post-sequence has not ended (N ≥ 1) or whose self-review marker is
+absent is interrupted however its rotating rounds ended — go to
+**On a resume**. For
 a complete entry: do not re-run the loop, unless the invocation text
 carries the words `another pass requested`, placed before the
 `N=<n> M=<m>` tokens — the gates pass this marker only when the user
