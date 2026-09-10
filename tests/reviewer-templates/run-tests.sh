@@ -463,6 +463,7 @@ for needle in 'rejected: not a conflict' \
               'A readiness finding never produces an unresolved: line, in any caller.' \
               'reverses an amendment made earlier in the same sequence' \
               '`rejected: plan-mandated — <text>`, never amended' \
+              'Readiness pass whose reports are all unusable (u = 0) → `inconclusive`, and the pass is open' \
               'a readiness entry with a missing or malformed' \
               'as a round is' \
               'for a plan document the Execution readiness pre-sequence still runs'; do
