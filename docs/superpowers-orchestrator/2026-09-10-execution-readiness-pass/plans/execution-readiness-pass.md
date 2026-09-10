@@ -255,7 +255,7 @@ git commit -m "feat(multi-doc-review): add the Execution readiness lens cell" --
 > - Invariant: the existing sentence `N = 0 skips the loop and logs a \`skipped\` entry.` is unchanged and the new sentence follows it.
 > - Verification: the same suite section asserts `For a plan document, the Execution readiness pre-sequence still runs.` and the unchanged sentence together.
 
-- [ ] **Step 1: Write failing test**
+- [x] **Step 1: Write failing test**
 
 Add this section to `tests/reviewer-templates/run-tests.sh`, directly after section 12:
 
@@ -301,12 +301,12 @@ assert_eq() { # desc actual expected
 }
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `bash tests/reviewer-templates/run-tests.sh`
 Expected: FAIL with "multi-doc-review SKILL.md: procedure carries 'pre-sequence'" and the other nine needles reported missing.
 
-- [ ] **Step 3: Implement minimal change**
+- [x] **Step 3: Implement minimal change**
 
 In `skills/multi-doc-review/SKILL.md`, in the `**N (round cap):**` bullet of the Parameters section, append one sentence directly after `N = 0 skips the loop and logs a \`skipped\` entry.`:
 
@@ -406,7 +406,7 @@ that paragraph — the sentence beginning `Coverage, ambiguity, feasibility`
 belongs to no check and always stays.
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `bash tests/reviewer-templates/run-tests.sh`
 Expected: PASS — "Results: <n> passed, 0 failed".
@@ -414,7 +414,7 @@ Expected: PASS — "Results: <n> passed, 0 failed".
 Run: `awk 'END { print NR }' skills/multi-doc-review/SKILL.md`
 Expected: a number at most 1080. If it is larger, tighten under the rule of Global Constraint 1 before committing.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add skills/multi-doc-review/SKILL.md tests/reviewer-templates/run-tests.sh
