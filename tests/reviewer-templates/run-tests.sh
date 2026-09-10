@@ -529,6 +529,13 @@ assert_folded_contains "multi-doc-review SKILL.md: Otherwise entry condition nar
 # resume enters at On a resume and never reads the Otherwise branch.
 assert_folded_contains "multi-doc-review SKILL.md: the marker site orders the plan-blob rewrite" "$DOC_SKILL" \
   'you rewrite the invocation line'"'"'s `plan-blob` value to what `git hash-object <plan path>`'
+# The marker site must restrict its subject the way the once-per-gate test and
+# the resume order already do. Unrestricted, a resume of a pre-release plan
+# entry stamps the marker and a new plan-blob field into an entry an earlier
+# release wrote, and the next invocation then reads that entry as one this
+# release wrote and runs a pre-sequence the plan never owed.
+assert_folded_contains "multi-doc-review SKILL.md: the marker site excludes a pre-release plan entry" "$DOC_SKILL" \
+  'For a plan document whose invocation line carries a `plan-blob` field, at that same moment you rewrite the invocation line'"'"'s `plan-blob` value to what `git hash-object <plan path>` prints then; a plan entry with no such field owes neither the field nor the marker'
 # The resume paragraph must not state that the whole invocation line is
 # frozen: the marker site rewrites one field of it, and a controller reads
 # the resume paragraph first.
