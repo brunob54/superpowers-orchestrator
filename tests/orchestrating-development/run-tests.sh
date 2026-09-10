@@ -322,7 +322,9 @@ bold "5b. Controllers that run commands read a background result through tail, n
 # controller's window, and in one controller that class was a single 125 KB
 # whole read of a background test-suite log — larger than every prompt the
 # controller was given. Only the two templates that run commands carry the
-# rule; the plan-writer and doc-review controllers run none.
+# rule; the plan-writer controller runs none, and the doc-review controller
+# runs only a read-only inspection command that prints a single line, so
+# nothing needs reading through tail.
 for t in batch-controller-prompt.md code-review-loop-prompt.md; do
   f="$ORCH_DIR/$t"
   assert_file_contains "$t: never reads a background command's output file whole" \

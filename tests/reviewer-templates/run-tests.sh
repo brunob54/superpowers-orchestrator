@@ -588,6 +588,15 @@ else
   bad "multi-doc-review SKILL.md is $MDR_LINES lines, over the $MDR_MAX_LINES-line budget"
 fi
 
+bold "17. The doc-review-loop controller template accepts N_PLAN = 0"
+DOC_LOOP_PROMPT="$ROOT/skills/orchestrating-development/doc-review-loop-prompt.md"
+assert_file_contains "doc-review-loop template: [N_PLAN] range starts at 0" "$DOC_LOOP_PROMPT" '`[N_PLAN]` — REQUIRED: integer 0–10'
+assert_folded_contains "doc-review-loop template: host self-review after the post-sequence" "$DOC_LOOP_PROMPT" 'The host self-review runs after the post-sequence.'
+assert_folded_contains "doc-review-loop template: counts rotating entries only" "$DOC_LOOP_PROMPT" 'count rotating entries only'
+assert_folded_contains "doc-review-loop template: defers to the skill's completeness rule" "$DOC_LOOP_PROMPT" "the skill's completeness rule"
+assert_folded_contains "doc-review-loop template: Deviation 3 is unchanged" "$DOC_LOOP_PROMPT" 'A Critical/Important finding is `unresolved` only when applying it was attempted and failed twice'
+assert_folded_contains "doc-review-loop template: controller may run read-only inspection commands" "$DOC_LOOP_PROMPT" "run the read-only inspection commands the skill's procedure names"
+
 echo
 bold "Results: $PASS passed, $FAIL failed"
 if [ "$FAIL" -gt 0 ]; then
