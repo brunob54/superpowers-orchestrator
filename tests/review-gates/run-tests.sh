@@ -537,6 +537,40 @@ assert_icontains "plan gate carries the readiness cost clause" "$WP_NORM" "$READ
 assert_not_icontains "brainstorming carries no readiness N=0 sentence" "$BS_FILE_NORM" "$READINESS_N0"
 assert_not_icontains "brainstorming carries no readiness cost clause" "$BS_FILE_NORM" "$READINESS_COST"
 
+# Phase 0 of the orchestrator: from its heading to the Phase 1 heading.
+ORCH_P0_SPAN="$WORK/orch-phase0.txt"
+ORCH_P0_START="$(first_line_of "$ORCH" '## Phase 0 — Setup (the only interactive moment)')"
+ORCH_P0_END="$(first_line_of "$ORCH" '## Phase 1 — Plan Writing')"
+slice_to "orchestration Phase 0 span" "$ORCH" "$ORCH_P0_START" "$ORCH_P0_END" "$ORCH_P0_SPAN"
+ORCH_P0_NORM="$WORK/orch-phase0-norm.txt"
+normalize_to "$ORCH_P0_SPAN" "$ORCH_P0_NORM"
+assert_icontains "orchestration Phase 0 carries the readiness N=0 sentence" "$ORCH_P0_NORM" "$READINESS_N0"
+assert_icontains "orchestration Phase 0 carries the readiness cost clause" "$ORCH_P0_NORM" "$READINESS_COST"
+ORCH_FILE_NORM="$WORK/orch-file-norm.txt"
+normalize_to "$ORCH" "$ORCH_FILE_NORM"
+assert_not_icontains "orchestrator no longer narrows both phases with one N=0 sentence" "$ORCH_FILE_NORM" \
+  'N=0 means you skip that phase yourself'
+# The Log Format section is what a resuming orchestrator reads to classify a
+# log entry, so the earlier-release exception must stand there, not only in
+# Phase 0. Span: the Log Format heading to the `## state.md Section` heading.
+# Do NOT end the span at "the next line starting with ## ": the section opens
+# with a fenced example log whose body lines start with `## Phase 1 — …`, so
+# that rule would cut the span off after six lines and both assertions below
+# would fail on a correct implementation. `first_line_of` here is `grep -nxF`
+# (whole line), and `## state.md Section` is a real heading further down.
+ORCH_LOGFMT_SPAN="$WORK/orch-logformat.txt"
+ORCH_LOGFMT_START="$(first_line_of "$ORCH" '## Orchestration Log Format')"
+ORCH_LOGFMT_END="$(first_line_of "$ORCH" '## state.md Section')"
+slice_to "orchestration Log Format span" "$ORCH" "$ORCH_LOGFMT_START" "$ORCH_LOGFMT_END" "$ORCH_LOGFMT_SPAN"
+ORCH_LOGFMT_NORM="$WORK/orch-logformat-norm.txt"
+normalize_to "$ORCH_LOGFMT_SPAN" "$ORCH_LOGFMT_NORM"
+assert_icontains "Log Format keeps the earlier-release skipped (N_plan=0) exception" "$ORCH_LOGFMT_NORM" \
+  'written by an earlier release still means Phase 2 is complete'
+# The bare '(N_plan=0)' would also match the earlier-release sentence above,
+# so pin the current rounds shape in full.
+assert_icontains "Log Format names the (N_plan=0) parenthetical of the rounds field" "$ORCH_LOGFMT_NORM" \
+  'rounds 0 (N_plan=0) — cap — unresolved 0'
+
 echo
 bold "Results: $PASS passed, $FAIL failed"
 if [ "$FAIL" -gt 0 ]; then

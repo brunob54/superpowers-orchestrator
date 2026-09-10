@@ -377,6 +377,11 @@ for needle in 'dispatch-<k>-answers.txt' "$NO_HEREDOC" 'the only channel' 'a new
   assert_folded_contains "in-run rulings: contains '$needle'" "$INRUN_RANGE" "$needle"
 done
 
+bold "9. Phase 2 dispatches the plan-review controller for every N_plan"
+assert_file_not_contains "phase 2: no N_plan=0 skip branch" "$PHASE2_RANGE" 'If N_plan = 0, log the skip'
+assert_folded_contains "phase 2: names the N_plan=0 log line" "$PHASE2_RANGE" \
+  '## Phase 2 — Plan review — rounds 0 (N_plan=0) — cap — unresolved 0'
+
 echo
 bold "Results: $PASS passed, $FAIL failed"
 if [ "$FAIL" -gt 0 ]; then
