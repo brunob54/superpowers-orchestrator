@@ -1255,7 +1255,7 @@ git commit -m "feat(orchestrating-development): accept N_PLAN=0 in the plan-revi
 > - Invariants: no documentation file carries a complete `<superpowers-defaults>` block (checked by `tests/review-gates/run-tests.sh` section 2d); every phrase quoted from a skill matches that skill's text after Tasks 1 to 8.
 > - Verification: `bash tests/review-gates/run-tests.sh` stays green, and each of these fixed strings is found in the file named — a one-word mention of the lens name would otherwise satisfy the check: `0 = no rotating rounds` and `add 2 to 6 further passes of M reviewers` and `## Readiness` and `executing-plans` in `docs/guide/README.md`; `not part of the rotation` in `docs/FORK-IMPROVEMENTS.md`; `kept as the net` in `docs/REVIEW-PROCESS-COMPARISON.md`. The remaining Must-convey items are reviewer-checked, not machine-checked; this task adds no wording suite.
 
-- [ ] **Step 1: Update the guide's plan stage**
+- [x] **Step 1: Update the guide's plan stage**
 
 In `docs/guide/README.md`, in `### Stage 2 — Plan (\`writing-plans\`)`, replace the paragraph that begins `The plan gets its own \`multi-doc-review\` gate before you approve it` with:
 
@@ -1294,7 +1294,7 @@ orchestration, has no later check for it — read the `Owed:` list yourself in
 that case.
 ```
 
-- [ ] **Step 2: Update the guide's orchestration sections**
+- [x] **Step 2: Update the guide's orchestration sections**
 
 In the Phase 0 parameter table of `docs/guide/README.md`, replace the `N_plan` row with:
 
@@ -1333,7 +1333,7 @@ In the `## 8. Phrase cheat-sheet` table, replace the `/multi-doc-review` row wit
 | `/multi-doc-review <doc> [N\|N=<n>] [M=<m>]` | N independent review rounds on a spec or plan, M reviewers per round; a plan also gets an Execution readiness pass before and after them | §3 |
 ```
 
-- [ ] **Step 3: Update the two comparison documents**
+- [x] **Step 3: Update the two comparison documents**
 
 Every anchor quoted in this step is wrapped across physical lines in its file (for example the `- **Pre-flight plan read**` bullet in `docs/REVIEW-PROCESS-COMPARISON.md`). Match each anchor ignoring its line breaks, and keep the surrounding wrapping style of the file you edit; a literal single-line search will not find them.
 
@@ -1361,7 +1361,7 @@ one fix subagent per round covering both verdicts, pre-flight plan review
 review gate),
 ```
 
-- [ ] **Step 4: Verify**
+- [x] **Step 4: Verify**
 
 Run: `grep -c 'Execution readiness' docs/guide/README.md docs/FORK-IMPROVEMENTS.md docs/REVIEW-PROCESS-COMPARISON.md`
 Expected: a count of at least 1 for each of the three files.
@@ -1372,7 +1372,7 @@ Run, each as its own `grep -cF` and each expected to print a non-zero count:
 Run: `bash tests/review-gates/run-tests.sh`
 Expected: PASS — "Results: <n> passed, 0 failed", including "<n> documentation files carry no complete block".
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add docs/guide/README.md docs/FORK-IMPROVEMENTS.md docs/REVIEW-PROCESS-COMPARISON.md
