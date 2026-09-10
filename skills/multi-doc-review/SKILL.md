@@ -561,21 +561,22 @@ invocation, or the resumed range above for a resume):
    findings, two consecutive clean rounds are harder to reach with M > 1
    than with M = 1 — that is the intended effect.
 
-**After the loop:** run a self-review on the final merged document — at a
+**After the loop:** For a plan document, the post-sequence of `Readiness
+sequences` (below) runs first, before the self-review — with N = 0 there is
+no post-sequence. Run a self-review on the final merged document — at a
 gate, the host skill's own checklist (brainstorming's Spec Self-Review /
 writing-plans' Self-Review, already in context); for direct invocations, the
 four-item list: placeholder scan, internal consistency, ambiguity, scope.
 Fix merge-introduced issues inline and note them in the log. Then report:
 rounds run, per-round finding counts, converged vs cap reached, log path,
-effective M (and any substitution), and a `Harness probes owed:` line —
-one item `- [<id>] <probe> — (<reason>) (round <i>)` per
-`rejected: harness probe not runnable here` disposition of this invocation,
-with `(addendum)` in place of `(round <i>)` for a rejection made in a
-post-loop addendum, and the reason clause copied from the rejection line,
-or `Harness probes owed: none`. The line is always written; a report
-without it is defective. The user runs the owed probes after the loop.
-The host gate's single user approval follows — this skill adds no approvals
-of its own.
+effective M (and any substitution), and a `Harness probes owed:` line — one
+item `- [<id>] <probe> — (<reason>) (round <i>)` per `rejected: harness
+probe not runnable here` disposition of this invocation, with `(addendum)`
+in place of `(round <i>)` for a rejection made in a post-loop addendum, and
+the reason clause copied from the rejection line, or `Harness probes owed:
+none`. The line is always written; a report without it is defective. The
+user runs the owed probes after the loop. The host gate's single user
+approval follows — this skill adds no approvals of its own.
 
 ### Readiness sequences (plan documents only)
 

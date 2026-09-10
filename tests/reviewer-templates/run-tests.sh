@@ -420,6 +420,9 @@ for needle in 'a report that carries no `coverage:` line for some entry of the p
   assert_folded_contains "multi-doc-review SKILL.md: procedure carries '$needle'" "$DOC_SKILL" "$needle"
 done
 assert_folded_contains "multi-doc-review SKILL.md: the N parameter keeps its N=0 sentence" "$DOC_SKILL" 'N = 0 skips the loop and logs a `skipped` entry.'
+# The After-the-loop step must trigger the post-sequence in place, symmetric
+# with the pre-sequence trigger at the round loop's firing site.
+assert_folded_contains "multi-doc-review SKILL.md: After-the-loop step triggers the readiness post-sequence" "$DOC_SKILL" 'For a plan document, the post-sequence of `Readiness sequences` (below) runs first, before the self-review'
 # The readiness prose must never spell the cell title in bold: section 12
 # resolves the cell by the first `**Execution readiness**` line in the file.
 READINESS_BOLD_COUNT="$(grep -cF -- '**Execution readiness**' "$DOC_SKILL" | tr -d ' ')"
