@@ -999,7 +999,7 @@ git commit -m "feat(writing-plans): state the readiness pass and its cost at the
 > - Invariants: the Phase 2 span no longer carries `If N_plan = 0, log the skip`; it carries the log line `## Phase 2 — Plan review — rounds 0 (N_plan=0) — cap — unresolved 0`; the existing fill command, its `test -s` check and the sentence that dispatches the pointer are unchanged, so the existing assertions of `tests/orchestrating-development/run-tests.sh` sections 5 and 7 still pass.
 > - Verification: `bash tests/orchestrating-development/run-tests.sh`, section 9.
 
-- [ ] **Step 1: Write failing test**
+- [x] **Step 1: Write failing test**
 
 In `tests/review-gates/run-tests.sh`, extend section 15 (added in Task 6) with the orchestrator's Phase 0 span and its two assertions. Add this directly below the four assertions already in that section:
 
@@ -1048,12 +1048,12 @@ assert_folded_contains "phase 2: names the N_plan=0 log line" "$PHASE2_RANGE" \
   '## Phase 2 — Plan review — rounds 0 (N_plan=0) — cap — unresolved 0'
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `bash tests/review-gates/run-tests.sh; bash tests/orchestrating-development/run-tests.sh`
 Expected: FAIL in both, on five assertions: "orchestration Phase 0 carries the readiness N=0 sentence", "orchestration Phase 0 carries the readiness cost clause", "orchestrator no longer narrows both phases with one N=0 sentence" (the phrase `N=0 means you skip that phase yourself` is still present before Step 3), "Log Format keeps the earlier-release skipped (N_plan=0) exception" and "Log Format names the (N_plan=0) parenthetical of the rounds field" from the review-gates suite, plus "phase 2: no N_plan=0 skip branch (must not contain: If N_plan = 0, log the skip)" from the orchestrating-development suite. The two Log Format assertions fail because the span from `## Orchestration Log Format` to `## state.md Section` carries neither sentence before Step 3.
 
-- [ ] **Step 3: Implement minimal change**
+- [x] **Step 3: Implement minimal change**
 
 **Every anchor this step quotes is wrapped across physical lines in `skills/orchestrating-development/SKILL.md` — the two Phase 2 anchors included — and the Log Format one starts mid-line** — the sentence `Skipped loops write the \`skipped (N_x=0)\` line shapes from Phase 0.` begins at the end of the line that closes the parenthetical `… line of the review log.)` and runs over three lines. Match every anchor ignoring its line breaks, replace only the sentence named, and leave the rest of the paragraph it sits in — including that closing parenthesis — untouched. The replacement stays inside that same paragraph; it does not become a new one.
 
@@ -1120,12 +1120,12 @@ human and the Resume step can tell it from a controller that produced
 nothing.
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `bash tests/review-gates/run-tests.sh && bash tests/orchestrating-development/run-tests.sh`
 Expected: PASS for both — "Results: <n> passed, 0 failed".
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add skills/orchestrating-development/SKILL.md tests/review-gates/run-tests.sh tests/orchestrating-development/run-tests.sh
