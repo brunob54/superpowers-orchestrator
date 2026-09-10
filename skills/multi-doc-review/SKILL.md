@@ -359,22 +359,25 @@ continuing across all invocations (Round numbering, in **Otherwise**
 below). Lens selection always uses the per-invocation round index — `r+1`,
 `r+2`, and so on — never the global `## Round <i>` header number. The M
 passed to this invocation governs these rounds even when it differs from
-the entry's recorded M (M, Parameters above); the entry's invocation line
-is left exactly as it was first written — it records what was true when
-the entry was created, not the M actually used on a later resume.
+the entry's recorded M (M, Parameters above); the entry's recorded N, M
+and invoker are left exactly as they were first written — they record
+what was true when the entry was created, not the M actually used on a
+later resume. The `plan-blob` field is the one exception: it is rewritten
+once, at the marker, under the resume order of `Readiness entries` below.
 
 **Otherwise** (a fresh invocation — including no entry found above, an
 entry found complete above with the marker present, or `N=0` on a resume
-of a `spec` or a `general` document above): create or open the sidecar log `<doc-basename>-review-log.md` next
-to the target document and append an invocation note: date, N, M, and
-invoker (`gate: brainstorming` | `gate: writing-plans` |
-`gate: orchestration` | `direct`), and — for a plan document only — the
-plan's content hash as a trailing `plan-blob <sha>` field, the value
-`git hash-object <plan path>` prints now. That first value is provisional:
-you rewrite it, once, when you write the `**Host self-review:** done`
-marker, to what `git hash-object <plan path>` prints then. The field's
-*presence* marks the entry as written by this release from the note
-onward; its *value* is meaningful only once the marker stands beside it.
+of a `spec` or a `general` document above): create or open the sidecar
+log `<doc-basename>-review-log.md` next to the target document and append
+an invocation note: date, N, M, and invoker (`gate: brainstorming` |
+`gate: writing-plans` | `gate: orchestration` | `direct`), and — for a
+plan document only — the plan's content hash as a trailing
+`plan-blob <sha>` field, the value `git hash-object <plan path>` prints
+now. That first value is provisional: you rewrite it, once, when you
+write the `**Host self-review:** done` marker, to what
+`git hash-object <plan path>` prints then. The field's *presence* marks
+the entry as written by this release from the note onward; its *value* is
+meaningful only once the marker stands beside it.
 Round numbering continues across invocations; lens selection does NOT — it
 uses the per-invocation round index (round 1 of a re-run uses lens 1, on
 the by-then revised document), while the log's `## Round <i>` header uses
@@ -830,9 +833,9 @@ Sidecar file next to the target document: `<doc-basename>-review-log.md`.
 
 The invocation line records M right after N, **including when M = 1**, so
 that a log is self-describing. A line without `M=` (written by a release
-before 7.4.0) is read as M = 1. The invocation line below adds `M=<m>`;
-the round entry that follows it (M = 1) is byte-identical to earlier
-releases:
+before 7.4.0) is read as M = 1. The two invocation lines below add
+`M=<m>`; the round entry that follows them (M = 1) is byte-identical to
+earlier releases:
 
 ```
 _Invocation <k> — YYYY-MM-DD — N=<n> M=<m> — <invoker>_
@@ -966,13 +969,14 @@ a spec that appeared or disappeared between runs changes the classification
 of an existing entry, and that costs a pass, never correctness. An entry
 whose invocation line carries no `plan-blob` field was written before this
 release: both sequences count as ended, it owes no readiness pass and no
-marker, and the once-per-gate rule decides it unchanged. **Never use the
-absence of a `## Readiness` heading as that test.** An invocation of this
-release that was interrupted during pass 1 of its pre-sequence has written
-no `## Readiness` heading yet and is byte-identical, in every other field,
-to an old entry — keying on the heading would classify it as pre-release and
-switch the whole feature off for that plan, silently. The `plan-blob` field
-is present from the invocation note onward, so it separates the two cases.
+marker, and the once-per-gate rule decides it, as that rule stood before
+this release. **Never use the absence of a `## Readiness` heading as that
+test.** An invocation of this release that was interrupted during pass 1
+of its pre-sequence has written no `## Readiness` heading yet and is
+byte-identical, in every other field, to an old entry — keying on the
+heading would classify it as pre-release and switch the whole feature off
+for that plan, silently. The `plan-blob` field is present from the
+invocation note onward, so it separates the two cases.
 An N = 0 plan entry blocks a later N = 0 invocation only while the plan is
 unchanged since that entry was written. **Unchanged is decided by one
 comparison, never by judgement:** the invocation note of a plan invocation

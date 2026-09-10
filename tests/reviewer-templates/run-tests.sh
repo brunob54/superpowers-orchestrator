@@ -529,6 +529,16 @@ assert_folded_contains "multi-doc-review SKILL.md: Otherwise entry condition nar
 # resume enters at On a resume and never reads the Otherwise branch.
 assert_folded_contains "multi-doc-review SKILL.md: the marker site orders the plan-blob rewrite" "$DOC_SKILL" \
   'you rewrite the invocation line'"'"'s `plan-blob` value to what `git hash-object <plan path>`'
+# The resume paragraph must not state that the whole invocation line is
+# frozen: the marker site rewrites one field of it, and a controller reads
+# the resume paragraph first.
+assert_folded_contains "multi-doc-review SKILL.md: the resume rule names the plan-blob exception" "$DOC_SKILL" \
+  'The `plan-blob` field is the one exception: it is rewritten once, at the marker'
+# A pre-release entry must not be described with the word the same paragraph
+# defines as a comparison, because that paragraph gives such an entry the
+# opposite outcome (it counts as changed).
+assert_folded_contains "multi-doc-review SKILL.md: a pre-release entry is decided by the pre-release rule, not called unchanged" "$DOC_SKILL" \
+  'the once-per-gate rule decides it, as that rule stood before this release.'
 echo
 bold "Results: $PASS passed, $FAIL failed"
 if [ "$FAIL" -gt 0 ]; then
