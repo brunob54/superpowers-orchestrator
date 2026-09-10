@@ -2,8 +2,8 @@
 
 Use this template when dispatching a multi-doc-review reviewer subagent. M
 reviewers per round (default 1), all with this identical prompt; the lens
-comes from SKILL.md's Lens Rotation table. The reviewers are not told that
-other reviewers exist.
+comes from SKILL.md's Lens Rotation table, or `Execution readiness` for a
+readiness pass. The reviewers are not told that other reviewers exist.
 
 **Purpose:** Independent review of one document under one lens, with no
 authoring context and no knowledge of prior rounds.
@@ -135,8 +135,8 @@ Agent tool (general-purpose):
 ```
 
 **Placeholders:**
-- `[ROUND]` — REQUIRED: round number (display only)
-- `[LENS_NAME]` — REQUIRED: lens name from SKILL.md's Lens Rotation
+- `[ROUND]` — REQUIRED: round number, or a readiness pass label (display only)
+- `[LENS_NAME]` — REQUIRED: lens name from SKILL.md's Lens Rotation, or `Execution readiness`
 - `[LENS_INSTRUCTIONS]` — REQUIRED: the lens instruction text for this doc
   type, copied verbatim from SKILL.md's Lens Instructions
 - `[DOC_PATH]` — REQUIRED: absolute path of the target document

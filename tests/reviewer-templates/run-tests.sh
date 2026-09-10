@@ -18,6 +18,8 @@ DOC_SKILL="$ROOT/skills/multi-doc-review/SKILL.md"
 CODE_SKILL="$ROOT/skills/multi-code-review/SKILL.md"
 FIX_PROMPT="$ROOT/skills/multi-code-review/fix-prompt.md"
 WP_SKILL="$ROOT/skills/writing-plans/SKILL.md"
+SDD_SKILL="$ROOT/skills/subagent-driven-development/SKILL.md"
+SDD_TASK_REVIEWER="$ROOT/skills/subagent-driven-development/task-reviewer-prompt.md"
 
 # Wording contracts asserted below. Each is one fixed string.
 RULE_HEADING='    ### Harness claims'
@@ -349,6 +351,56 @@ assert_folded_contains "multi-doc-review step 2: Verdict block must stand below 
 assert_folded_contains "multi-doc-review step 2: marker as last non-blank line is unusable" "$DOC_VALIDATE_RANGE" "$LAST_LINE_UNUSABLE"
 assert_folded_contains "multi-doc-review step 2: everything above the marker line is ignored" "$DOC_VALIDATE_RANGE" "$ABOVE_IGNORED"
 assert_folded_not_contains "multi-doc-review SKILL.md: pre-change first-line-only wording absent" "$DOC_SKILL" "$OLD_FIRST_LINE_RULE"
+
+bold "12. Execution readiness lens cell"
+# The cell is the last one in Lens Instructions, so the extractor stops at
+# the next top-level heading as well as at the next bold cell title.
+READINESS_CELL="$WORK/readiness-cell.txt"
+awk '
+  $0 == "**Execution readiness**" { inlens = 1; next }
+  inlens && /^\*\*/ { exit }
+  inlens && /^## / { exit }
+  inlens { print }
+' "$DOC_SKILL" > "$READINESS_CELL"
+if [ -s "$READINESS_CELL" ]; then
+  ok "multi-doc-review SKILL.md: Execution readiness cell extract is non-empty"
+else
+  bad "multi-doc-review SKILL.md: Execution readiness cell extract is empty"
+fi
+ADV_CELL_LINE="$(first_line_of "$DOC_SKILL" '**Adversarial failure modes**')"
+RDY_CELL_LINE="$(first_line_of "$DOC_SKILL" '**Execution readiness**')"
+LOG_FORMAT_LINE="$(first_line_of "$DOC_SKILL" '## Review Log Format')"
+if [ -n "$ADV_CELL_LINE" ] && [ -n "$RDY_CELL_LINE" ] && [ -n "$LOG_FORMAT_LINE" ] &&
+   [ "$RDY_CELL_LINE" -gt "$ADV_CELL_LINE" ] && [ "$RDY_CELL_LINE" -lt "$LOG_FORMAT_LINE" ]; then
+  ok "Execution readiness cell sits between the Adversarial cell and Review Log Format (line $RDY_CELL_LINE)"
+else
+  bad "Execution readiness cell is misplaced (adversarial='$ADV_CELL_LINE' readiness='$RDY_CELL_LINE' log-format='$LOG_FORMAT_LINE')"
+fi
+# The two strings the cell copies. Each is asserted in the cell AND in the
+# file it was copied from, so drift on either side turns this suite red.
+PREFLIGHT_CRITERION="tasks that contradict each other or the plan's Global Constraints"
+RUBRIC_PARENTHETICAL='(a test that asserts nothing, verbatim duplication of a logic block)'
+assert_folded_contains "Execution readiness cell: pre-flight criterion" "$READINESS_CELL" "$PREFLIGHT_CRITERION"
+assert_folded_contains "subagent-driven-development SKILL.md: still carries the pre-flight criterion" "$SDD_SKILL" "$PREFLIGHT_CRITERION"
+assert_folded_contains "Execution readiness cell: rubric-defect parenthetical" "$READINESS_CELL" "$RUBRIC_PARENTHETICAL"
+assert_folded_contains "subagent-driven-development SKILL.md: still carries the rubric-defect parenthetical" "$SDD_SKILL" "$RUBRIC_PARENTHETICAL"
+assert_folded_contains "task-reviewer-prompt.md: still carries the rubric-defect parenthetical" "$SDD_TASK_REVIEWER" "$RUBRIC_PARENTHETICAL"
+for numbered in '(1) tasks that contradict' \
+                '(2) anything the plan explicitly mandates' \
+                '(3) a task clause that contradicts' \
+                '(4) a mandated body' \
+                '(5) for each entry of the plan' \
+                'Run all the checks below'; do
+  assert_folded_contains "Execution readiness cell: numbered check '$numbered'" "$READINESS_CELL" "$numbered"
+done
+assert_folded_contains "Execution readiness cell: one finding per Global Constraints entry" "$READINESS_CELL" 'report ONE finding per Global Constraints entry'
+assert_folded_contains "Execution readiness cell: coverage line shape" "$READINESS_CELL" 'coverage: GC<k> — <n> sites checked'
+assert_file_contains "Execution readiness cell: spec line is not used" "$READINESS_CELL" '- spec: not used'
+assert_file_contains "Execution readiness cell: general line is not used" "$READINESS_CELL" '- general: not used'
+# Folded, not plain: the replacement wraps this phrase across a line break.
+assert_folded_contains "doc-review template: header sentence admits the readiness lens" "$DOC_PROMPT" 'or `Execution readiness` for a readiness pass'
+assert_file_contains "doc-review template: [LENS_NAME] note admits the readiness lens" "$DOC_PROMPT" "\`[LENS_NAME]\` — REQUIRED: lens name from SKILL.md's Lens Rotation, or \`Execution readiness\`"
+assert_file_contains "doc-review template: [ROUND] note admits a readiness label" "$DOC_PROMPT" '`[ROUND]` — REQUIRED: round number, or a readiness pass label (display only)'
 
 echo
 bold "Results: $PASS passed, $FAIL failed"

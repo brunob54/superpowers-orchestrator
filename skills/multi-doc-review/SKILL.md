@@ -647,6 +647,39 @@ Copy the cell for the doc type verbatim into `[LENS_INSTRUCTIONS]`.
 - general: How does acting on this document go wrong? Name concrete
   scenarios.
 
+**Execution readiness**
+- plan: Read the plan as the agent that will execute it, task by task, and
+  report every conflict that would stop execution. Quote both sides of each
+  conflict verbatim. Run all the checks below; a number missing from the
+  list was removed on purpose for this plan — never reconstruct it:
+  (1) tasks that contradict each other or the plan's Global Constraints;
+  (2) anything the plan explicitly mandates that the review rubric treats as
+  a defect (a test that asserts nothing, verbatim duplication of a logic
+  block);
+  (3) a task clause that contradicts the spec section it traces to (read the
+  spec listed under Target; the section is the one whose text the clause
+  restates or implements, found from the task's stated purpose);
+  (4) a mandated body — an `**Exact content:**` block, or a sentence a task
+  orders written verbatim — that violates an invariant of its own task's
+  `**Contract:**` field; a fenced code block or block-quoted wording in a
+  task step is a reference implementation, not a mandated body, and is not
+  reported under this check;
+  (5) for each entry of the plan's `**Global Constraints:**` block, every
+  site the entry binds — a site is any task step, mandated body,
+  verification line or header field whose text the entry constrains.
+  For check (5) report ONE finding per Global Constraints entry, listing
+  every failing site inside it, never one finding per site. End your report
+  with a coverage block, one line per entry, in this shape:
+  `coverage: GC<k> — <n> sites checked`. Write that block as the last lines
+  of your report, directly below the `### Findings` section; the output
+  format you were given lists no such block, and this instruction is what
+  adds it. A report without a coverage line for every entry is incomplete
+  and will be discarded.
+  Coverage, ambiguity, feasibility and style belong to the other lenses; do
+  not report them here.
+- spec: not used — the Execution readiness pass runs for plan documents only.
+- general: not used — the Execution readiness pass runs for plan documents only.
+
 ## Review Log Format
 
 Sidecar file next to the target document: `<doc-basename>-review-log.md`.
