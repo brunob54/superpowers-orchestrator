@@ -1151,7 +1151,7 @@ git commit -m "feat(orchestrating-development): dispatch Phase 2 for every N_pla
 > - Invariants: the file holds exactly one line matching a bracketed single capital letter and that line is byte-identical to the checklist-marker line of Deviation 3 — `skills/orchestrating-development/doc-review-loop-prompt.md:72`, quoted with its seven spaces of indentation, its backticks and its trailing period: `` `- [X] unresolved: <reason> — <finding summary>`. `` (`tests/fill-prompt/run-tests.sh` section 10 pins the dedented form, with three spaces); Deviation 3's text is unchanged; the file still carries `run the "Self-Review" checklist` and still holds no `Resume Answer` section.
 > - Verification: `bash tests/reviewer-templates/run-tests.sh`, section 17, then `bash tests/orchestrating-development/run-tests.sh` (sections 5 and 6) and `bash tests/fill-prompt/run-tests.sh`, all green.
 
-- [ ] **Step 1: Write failing test**
+- [x] **Step 1: Write failing test**
 
 Add this section to `tests/reviewer-templates/run-tests.sh`, directly after section 16:
 
@@ -1166,12 +1166,12 @@ assert_folded_contains "doc-review-loop template: Deviation 3 is unchanged" "$DO
 assert_folded_contains "doc-review-loop template: controller may run read-only inspection commands" "$DOC_LOOP_PROMPT" "run the read-only inspection commands the skill's procedure names"
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `bash tests/reviewer-templates/run-tests.sh`
 Expected: FAIL with "doc-review-loop template: [N_PLAN] range starts at 0 (missing: `[N_PLAN]` — REQUIRED: integer 0–10)" and with four of the five folded needles reported missing; the Deviation 3 assertion passes already.
 
-- [ ] **Step 3: Implement minimal change**
+- [x] **Step 3: Implement minimal change**
 
 In `skills/orchestrating-development/doc-review-loop-prompt.md`, replace the placeholder line `- \`[N_PLAN]\` — REQUIRED: integer 1–10` with:
 
@@ -1219,14 +1219,14 @@ Replace Deviation 2 with:
        line when it is absent.
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `bash tests/reviewer-templates/run-tests.sh && bash tests/orchestrating-development/run-tests.sh && bash tests/fill-prompt/run-tests.sh && bash tests/review-gates/run-tests.sh`
 
 `tests/review-gates/run-tests.sh` is in the chain because it also asserts on this template — that it names the `Self-Review` checklist and never names `Multi-Round Plan Review` — so an edit here can turn it red.
 Expected: PASS for all four — "Results: <n> passed, 0 failed" each, including "doc-review-loop-prompt.md: exactly one line with a single-letter bracket token (the checklist marker)".
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add skills/orchestrating-development/doc-review-loop-prompt.md tests/reviewer-templates/run-tests.sh
