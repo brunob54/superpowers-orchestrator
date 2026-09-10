@@ -470,6 +470,57 @@ for needle in 'rejected: not a conflict' \
   assert_folded_contains "multi-doc-review SKILL.md: triage carries '$needle'" "$DOC_SKILL" "$needle"
 done
 
+bold "15. Readiness log entries, completeness, resume and the completion report"
+assert_file_has_line "multi-doc-review SKILL.md: readiness entry heading shape" "$DOC_SKILL" '## Readiness <pre|post> <p> — Execution readiness — <model>'
+assert_file_has_line "multi-doc-review SKILL.md: readiness entry result line" "$DOC_SKILL" '**Result:** <settled|open>'
+# The plan variant of the invocation line must exist as its own whole line,
+# and the writing step must be told to emit the field: without both, the
+# plan-blob comparison is inert because no entry ever carries the field.
+assert_file_has_line "multi-doc-review SKILL.md: plan invocation-line shape carries plan-blob" "$DOC_SKILL" \
+  '_Invocation <k> — YYYY-MM-DD — N=<n> M=<m> — <invoker> — plan-blob <sha>_   <!-- plan documents -->'
+assert_file_has_line "multi-doc-review SKILL.md: the non-plan invocation-line shape is unchanged" "$DOC_SKILL" \
+  '_Invocation <k> — YYYY-MM-DD — N=<n> M=<m> — <invoker>_'
+for needle in '**Host self-review:** done' \
+              'r counts ## Round headings only.' \
+              'open (all inconclusive)' \
+              '`Owed:` block' \
+              'gains ` — superseded` at the end of its heading' \
+              'has ended' \
+              'compared as whole words' \
+              'Readiness pre:' \
+              'Readiness post:' \
+              'Readiness conflicts applied:' \
+              'Readiness conflicts owed:' \
+              'rounds=0 outcome=cap unresolved=0' \
+              'the invocation line, the one-line `skipped` entry, the readiness entries of the pre-sequence, then the self-review marker' \
+              'git hash-object' \
+              'the plan'"'"'s content hash as a trailing `plan-blob <sha>` field' \
+              'counts as changed, so it never blocks'; do
+  assert_folded_contains "multi-doc-review SKILL.md: log format carries '$needle'" "$DOC_SKILL" "$needle"
+done
+assert_folded_contains "multi-doc-review SKILL.md: completion report keeps the harness line" "$DOC_SKILL" 'Harness probes owed:'
+# Position: the readiness-entries subsection is the last block of the Review
+# Log Format section, standing after the Skipped-invocations paragraph and
+# immediately before the Error Handling heading.
+RDY_ENTRIES_LINE="$(first_line_of "$DOC_SKILL" '### Readiness entries')"
+SKIPPED_LINE="$(first_line_of "$DOC_SKILL" 'Skipped invocations (N=0)')"
+ERR_HANDLING_LINE="$(first_line_of "$DOC_SKILL" '## Error Handling')"
+if [ -n "$RDY_ENTRIES_LINE" ] && [ -n "$SKIPPED_LINE" ] && [ -n "$ERR_HANDLING_LINE" ] &&
+   [ "$RDY_ENTRIES_LINE" -gt "$SKIPPED_LINE" ] && [ "$RDY_ENTRIES_LINE" -lt "$ERR_HANDLING_LINE" ]; then
+  ok "Readiness entries subsection sits after the Skipped-invocations paragraph and before Error Handling (line $RDY_ENTRIES_LINE)"
+else
+  bad "Readiness entries subsection is misplaced (skipped='$SKIPPED_LINE' entries='$RDY_ENTRIES_LINE' error-handling='$ERR_HANDLING_LINE')"
+fi
+# The once-per-gate N=0 sentence must be narrowed to spec/general documents,
+# so the file never carries two rules for the same input.
+assert_folded_contains "multi-doc-review SKILL.md: once-per-gate N=0 sentence is narrowed" "$DOC_SKILL" \
+  'For a `spec` or a `general` document, an entry whose recorded N is `0`'
+assert_folded_contains "multi-doc-review SKILL.md: once-per-gate defers a plan N=0 entry to Readiness entries" "$DOC_SKILL" \
+  'For a plan document a skipped run still ran the readiness pre-sequence'
+# The unnarrowed sentence must be gone, or the file carries two rules for one
+# input. Folded, because the sentence wraps across line breaks in the file.
+assert_folded_not_contains "multi-doc-review SKILL.md: the unnarrowed N=0 once-per-gate sentence is gone" "$DOC_SKILL" \
+  'An entry whose recorded N is `0` (a skipped entry) does not block'
 echo
 bold "Results: $PASS passed, $FAIL failed"
 if [ "$FAIL" -gt 0 ]; then
