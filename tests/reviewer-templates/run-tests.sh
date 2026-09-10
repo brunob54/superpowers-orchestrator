@@ -534,6 +534,11 @@ assert_folded_contains "multi-doc-review SKILL.md: the marker site orders the pl
 # the resume paragraph first.
 assert_folded_contains "multi-doc-review SKILL.md: the resume rule names the plan-blob exception" "$DOC_SKILL" \
   'The `plan-blob` field is the one exception: it is rewritten once, at the marker'
+# A complete N = 0 plan entry must not block a later invocation that asks for
+# rotating rounds: without this clause the entry is complete, the once-per-gate
+# step refuses to re-run the loop, and a requested review is silently skipped.
+assert_folded_contains "multi-doc-review SKILL.md: a complete N=0 plan entry never blocks an N>=1 invocation" "$DOC_SKILL" \
+  'A complete N = 0 plan entry never blocks a later invocation whose N is 1 or more'
 # A pre-release entry must not be described with the word the same paragraph
 # defines as a comparison, because that paragraph gives such an entry the
 # opposite outcome (it counts as changed).
