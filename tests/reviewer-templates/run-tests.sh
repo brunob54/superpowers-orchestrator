@@ -88,6 +88,9 @@ assert_file_not_contains() { # desc file needle
 assert_file_has_line() { # desc file exact-line (whole-line match, fixed string)
   if grep -qxF -- "$3" "$2"; then ok "$1"; else bad "$1 (no line exactly: $3)"; fi
 }
+assert_eq() { # desc actual expected
+  if [ "$2" = "$3" ]; then ok "$1"; else bad "$1 (expected '$3', got '$2')"; fi
+}
 # Join the lines of file $1 into one line — each line trimmed of leading and
 # trailing blanks, lines separated by one space — so that a prose fragment
 # that the text wraps across a line break still matches as one fixed
@@ -401,6 +404,38 @@ assert_file_contains "Execution readiness cell: general line is not used" "$READ
 assert_folded_contains "doc-review template: header sentence admits the readiness lens" "$DOC_PROMPT" 'or `Execution readiness` for a readiness pass'
 assert_file_contains "doc-review template: [LENS_NAME] note admits the readiness lens" "$DOC_PROMPT" "\`[LENS_NAME]\` — REQUIRED: lens name from SKILL.md's Lens Rotation, or \`Execution readiness\`"
 assert_file_contains "doc-review template: [ROUND] note admits a readiness label" "$DOC_PROMPT" '`[ROUND]` — REQUIRED: round number, or a readiness pass label (display only)'
+
+bold "13. Readiness sequences in the multi-doc-review procedure"
+for needle in 'a report that carries no `coverage:` line for some entry of the plan' \
+              'pre-sequence' \
+              'post-sequence' \
+              'at most three passes' \
+              'Readiness passes are not counted in N and are not part of the two-consecutive-clean-rounds streak.' \
+              'The host self-review runs after the post-sequence.' \
+              'coverage:` line for any entry' \
+              '**Note:** clause-vs-spec check not run — no locatable spec' \
+              '**Note:** Global Constraints sweep not run — no block' \
+              '**Note:** Contract check not run — no Contract fields' \
+              'For a plan document, the Execution readiness pre-sequence still runs.'; do
+  assert_folded_contains "multi-doc-review SKILL.md: procedure carries '$needle'" "$DOC_SKILL" "$needle"
+done
+assert_folded_contains "multi-doc-review SKILL.md: the N parameter keeps its N=0 sentence" "$DOC_SKILL" 'N = 0 skips the loop and logs a `skipped` entry.'
+# The readiness prose must never spell the cell title in bold: section 12
+# resolves the cell by the first `**Execution readiness**` line in the file.
+READINESS_BOLD_COUNT="$(grep -cF -- '**Execution readiness**' "$DOC_SKILL" | tr -d ' ')"
+assert_eq "multi-doc-review SKILL.md: exactly one bold Execution readiness title (the lens cell)" "$READINESS_BOLD_COUNT" "1"
+# Position: the subsection must land in the Procedure, after the After-the-loop
+# step and before the Lens Rotation heading. Without this, a subsection dropped
+# into the wrong section passes every needle above.
+SEQ_LINE="$(first_line_of "$DOC_SKILL" '### Readiness sequences (plan documents only)')"
+AFTER_LOOP_LINE="$(first_line_of "$DOC_SKILL" '**After the loop:**')"
+LENS_ROT_LINE="$(first_line_of "$DOC_SKILL" '## Lens Rotation')"
+if [ -n "$SEQ_LINE" ] && [ -n "$AFTER_LOOP_LINE" ] && [ -n "$LENS_ROT_LINE" ] &&
+   [ "$SEQ_LINE" -gt "$AFTER_LOOP_LINE" ] && [ "$SEQ_LINE" -lt "$LENS_ROT_LINE" ]; then
+  ok "Readiness sequences subsection sits after **After the loop:** and before Lens Rotation (line $SEQ_LINE)"
+else
+  bad "Readiness sequences subsection is misplaced (after-loop='$AFTER_LOOP_LINE' seq='$SEQ_LINE' lens-rotation='$LENS_ROT_LINE')"
+fi
 
 echo
 bold "Results: $PASS passed, $FAIL failed"

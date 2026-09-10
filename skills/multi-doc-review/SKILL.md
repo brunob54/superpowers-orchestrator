@@ -52,6 +52,7 @@ rounds' findings — that independence is the point.
   N is the stated value when one was given, and 3 otherwise. Valid N is an
   integer 0–10; anything else
   → `<d-n>`. N = 0 skips the loop and logs a `skipped` entry.
+  For a plan document, the Execution readiness pre-sequence still runs.
 - **M (reviewers per lens):** the number of reviewer subagents dispatched
   per round, all under the round's lens with the identical prompt. Valid M
   is an integer 1–5; anything else (0, 6, a word, a decimal) → the default
@@ -360,6 +361,11 @@ the per-invocation round index (round 1 of a re-run uses lens 1, on the
 by-then revised document), while the log's `## Round <i>` header uses the
 continuing global number.
 
+On a fresh invocation of a plan document, run the pre-sequence of
+`Readiness sequences` below before round 1. On a resume, the resume rule of
+`Readiness entries` decides which stage runs first — never re-run a
+pre-sequence that has already ended.
+
 For each round `i` in the range established above (1..N for a fresh
 invocation, or the resumed range above for a resume):
 
@@ -393,7 +399,10 @@ invocation, or the resumed range above for a resume):
    marker line is its last non-blank line is unusable. The first such
    marker line begins the report; everything above that line is ignored,
    and the Verdict block and the enumerated findings are read only from
-   that line downward. Each unusable report →
+   that line downward. For an `Execution readiness` pass one further
+   condition applies: a report that carries no `coverage:` line for some
+   entry of the plan's `**Global Constraints:**` block is unusable too
+   (`Readiness sequences` below). Each unusable report →
    retry the identical dispatch once, keeping the same reviewer number; the
    retries of one round may go out together in one message. After the
    retries, *u* = the number of usable
@@ -567,6 +576,71 @@ or `Harness probes owed: none`. The line is always written; a report
 without it is defective. The user runs the owed probes after the loop.
 The host gate's single user approval follows — this skill adds no approvals
 of its own.
+
+### Readiness sequences (plan documents only)
+
+For a plan document, run a **readiness sequence** before rotating round 1
+(the **pre-sequence**) and, when N ≥ 1, a second after the last rotating
+round (the **post-sequence**), over the plan as that round's triage left it;
+for `spec` and `general` documents neither sequence runs. A fresh invocation
+always runs every sequence that applies to it — both when N ≥ 1, the
+pre-sequence alone when N = 0 — and a re-run started by the
+`another pass requested` marker is a fresh invocation for this rule. A
+**readiness pass** is one review dispatched under the lens
+`Execution readiness`: M
+reviewers filled from `reviewer-prompt.md` with `[LENS_NAME]` =
+`Execution readiness`, `[LENS_INSTRUCTIONS]` = that lens's `plan:` cell and
+`[ROUND]` = `readiness <pre|post> <p>`, every other placeholder as a
+rotating round fills it; then the same validation, consolidation and triage
+as a round, and one log entry under its own heading. A pass is **settled**
+when it **applied** no Critical and no Important finding and all M reviewers
+returned a usable report; any other pass is **open**, an inconclusive pass
+included. A sequence runs **at most three passes** and ends at its first
+settled pass or at its cap, whichever comes first; the cap is one instead of
+three when the plan has no locatable spec. A third pass that is still open
+ends the sequence and stops nothing.
+
+`Readiness passes are not counted in N and are not part of the
+two-consecutive-clean-rounds streak.` A pre-sequence that applies findings
+neither breaks nor starts the streak, and rotating lens selection keeps
+using the per-invocation rotating round index. `The host self-review runs
+after the post-sequence.` It stays the last edit inside the gate, and when
+it finishes you write `**Host self-review:** done` as its own line of the
+invocation entry. With N = 0 the rotating loop is skipped and its `skipped`
+entry is logged as today, the pre-sequence runs, then the host self-review.
+
+A readiness report that lacks a `coverage:` line for any entry of the plan's
+`**Global Constraints:**` block is **unusable** — this is the second
+usability condition named in step 2, and it applies to `Execution readiness`
+passes only. It is retried once under
+the report-validation rule of step 2, and a reviewer still unusable leaves
+the pass with fewer than M usable reports, so the pass is open. A missing
+sweep costs a retry; it can never end a sequence. When a structure the lens
+cell names is missing, remove that clause from `[LENS_INSTRUCTIONS]` and
+write a header note directly after the `**Result:**` line of every readiness
+entry of this invocation — a header line, not a disposition line:
+
+| Missing | Clause removed | Note line |
+|---|---|---|
+| no locatable spec | check (3) | `**Note:** clause-vs-spec check not run — no locatable spec` |
+| no `**Global Constraints:**` block | check (5) and the paragraph beginning `For check (5) report ONE finding`, which carries the `coverage: GC<k>` shape | `**Note:** Global Constraints sweep not run — no block` |
+| no task carries `**Contract:**` | check (4) | `**Note:** Contract check not run — no Contract fields` |
+
+Removing a clause never renumbers the checks that remain: the numbers of
+the surviving checks are left exactly as they are, so the filled
+instructions carry a gap in the numbering. That gap is safe because the cell
+opens with `Run all the checks below` and no count, and tells the reviewer
+that a missing number was removed on purpose and must not be
+reconstructed.
+The rows for checks (3) and (4) remove their numbered item only. The Global
+Constraints row removes two things — check (5), and the paragraph beginning
+`For check (5) report ONE finding`, which is the paragraph that carries both
+the `coverage: GC<k> — <n> sites checked` shape and the discard rule. Do not
+look for a third item: the shape is a phrase inside that paragraph, not a
+line of its own. The paragraph goes because a coverage requirement left with
+no entries to cover would make every report of that pass unusable. Stop at
+that paragraph — the sentence beginning `Coverage, ambiguity, feasibility`
+belongs to no check and always stays.
 
 ## Lens Rotation
 
