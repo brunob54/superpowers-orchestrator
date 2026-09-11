@@ -417,7 +417,12 @@ for needle in 'a report that carries no `coverage:` line for some entry of the p
               '**Note:** clause-vs-spec check not run — no locatable spec' \
               '**Note:** Global Constraints sweep not run — no block' \
               '**Note:** Contract check not run — no Contract fields' \
-              'For a plan document, the Execution readiness pre-sequence still runs.'; do
+              'For a plan document, the Execution readiness pre-sequence still runs.' \
+              'run a **readiness sequence** before rotating round 1' \
+              'when N ≥ 1, a second after the last rotating round' \
+              'a re-run started by the `another pass requested` marker is a fresh invocation for this rule' \
+              'applied** no Critical and no Important finding and all M reviewers returned a usable report' \
+              'the cap is one instead of three when the plan has no locatable spec'; do
   assert_folded_contains "multi-doc-review SKILL.md: procedure carries '$needle'" "$DOC_SKILL" "$needle"
 done
 assert_folded_contains "multi-doc-review SKILL.md: the N parameter keeps its N=0 sentence" "$DOC_SKILL" 'N = 0 skips the loop and logs a `skipped` entry.'
@@ -444,6 +449,17 @@ if [ -n "$SEQ_LINE" ] && [ -n "$AFTER_LOOP_LINE" ] && [ -n "$LENS_ROT_LINE" ] &&
 else
   bad "Readiness sequences subsection is misplaced (after-loop='$AFTER_LOOP_LINE' seq='$SEQ_LINE' lens-rotation='$LENS_ROT_LINE')"
 fi
+# The Lens Rotation table must never gain an Execution readiness row: the
+# release's promise that the readiness pass is uncounted in N would break
+# with the suite still green.
+LENS_INSTR_LINE="$(first_line_of "$DOC_SKILL" '## Lens Instructions')"
+LENS_ROTATION_RANGE="$WORK/lens-rotation-table.txt"
+if [ -n "$LENS_ROT_LINE" ] && [ -n "$LENS_INSTR_LINE" ]; then
+  extract_lines "$DOC_SKILL" "$LENS_ROT_LINE" "$LENS_INSTR_LINE" > "$LENS_ROTATION_RANGE"
+else
+  : > "$LENS_ROTATION_RANGE"
+fi
+assert_folded_not_contains "multi-doc-review SKILL.md: Lens Rotation table does not list Execution readiness" "$LENS_ROTATION_RANGE" 'Execution readiness'
 
 bold "14. Triage of a readiness finding"
 # Position: the triage subsection follows the sequences subsection and still
@@ -467,7 +483,9 @@ for needle in 'rejected: not a conflict' \
               'Readiness pass whose reports are all unusable (u = 0) → `inconclusive`, and the pass is open' \
               'a readiness entry with a missing or malformed' \
               'as a round is' \
-              'for a plan document the Execution readiness pre-sequence still runs'; do
+              'for a plan document the Execution readiness pre-sequence still runs' \
+              'amend the plan side, `applied`' \
+              'amend the side the spec decides against; failing that, the side the Global Constraints block decides against'; do
   assert_folded_contains "multi-doc-review SKILL.md: triage carries '$needle'" "$DOC_SKILL" "$needle"
 done
 
@@ -576,11 +594,13 @@ assert_folded_contains "multi-doc-review SKILL.md: a pre-release entry is decide
 
 bold "16. multi-doc-review SKILL.md stays inside its size budget"
 # The Phase 2 controller and the writing-plans host session read this file
-# whole. Baseline 788 lines before 7.14.0; the Execution readiness feature
-# adds about 258, so the file may not exceed 1080. Figure set by release
-# 7.14.0; it supersedes the 938 the design document names, because the plan
-# review added five corrections whose prose the smaller figure could not
-# hold.
+# whole. Measured: 788 lines before 7.14.0, the Execution readiness feature
+# added 291, and the file now stands at 1079 — one line of headroom left
+# under the 1080 maximum. Figure set by release 7.14.0; it supersedes the
+# 938 the design document names, because the plan review added five
+# corrections whose prose the smaller figure could not hold. A further
+# addition must first recover lines by reflowing, per the plan's Global
+# Constraint 1.
 MDR_MAX_LINES=1080
 MDR_LINES="$(awk 'END { print NR }' "$DOC_SKILL")"
 if [ "$MDR_LINES" -le "$MDR_MAX_LINES" ]; then
@@ -597,6 +617,8 @@ assert_folded_contains "doc-review-loop template: counts rotating entries only" 
 assert_folded_contains "doc-review-loop template: defers to the skill's completeness rule" "$DOC_LOOP_PROMPT" "the skill's completeness rule"
 assert_folded_contains "doc-review-loop template: Deviation 3 is unchanged" "$DOC_LOOP_PROMPT" 'A Critical/Important finding is `unresolved` only when applying it was attempted and failed twice'
 assert_folded_contains "doc-review-loop template: controller may run read-only inspection commands" "$DOC_LOOP_PROMPT" "run the read-only inspection commands the skill's procedure names"
+assert_folded_contains "doc-review-loop template: readiness finding disposed under triage, never logged as unresolved" "$DOC_LOOP_PROMPT" "A readiness finding is disposed under the skill's \"Triage of a readiness finding\", never logged as unresolved."
+assert_folded_contains "doc-review-loop template: appends the Loop complete line when it is absent" "$DOC_LOOP_PROMPT" 'and append the `_Loop complete_` line when it is absent.'
 
 echo
 bold "Results: $PASS passed, $FAIL failed"

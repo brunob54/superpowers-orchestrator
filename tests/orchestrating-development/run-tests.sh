@@ -383,6 +383,10 @@ bold "9. Phase 2 dispatches the plan-review controller for every N_plan"
 assert_file_not_contains "phase 2: no N_plan=0 skip branch" "$PHASE2_RANGE" 'If N_plan = 0, log the skip'
 assert_folded_contains "phase 2: names the N_plan=0 log line" "$PHASE2_RANGE" \
   '## Phase 2 — Plan review — rounds 0 (N_plan=0) — cap — unresolved 0'
+assert_folded_contains "phase 2: the controller is dispatched for every N_plan value, 0 included" "$PHASE2_RANGE" \
+  'The controller is dispatched for every `N_plan` value, 0 included'
+assert_folded_contains "phase 2: N_plan=0 returns rounds=0 outcome=cap unresolved=0" "$PHASE2_RANGE" \
+  'returns `rounds=0 outcome=cap unresolved=0`'
 
 echo
 bold "Results: $PASS passed, $FAIL failed"
