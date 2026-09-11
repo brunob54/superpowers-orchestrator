@@ -130,3 +130,21 @@ test suite does not pin it. Recorded here so the gap is visible to a later relea
 - [M5] carried — section 14 leaves two Error Handling invariants unasserted (the tier-2 and tier-3 first sentence, and the absence of the word `unresolved` in the two bullets) and two of its needles stop mid-sentence; both needles are brief-mandated and already carried from the ledger ← 1/3: r1:M5
 - [M6] fixed — one assertion now guards the `## Lens Rotation` table against an `Execution readiness` row, which the existing bold-count guard would not have caught → 9ee6b97 ← 1/3: r3:M3
 - [M7] carried — the six documentation needles the plan names for docs/guide/README.md, docs/FORK-IMPROVEMENTS.md and docs/REVIEW-PROCESS-COMPARISON.md are run once by hand and committed to no suite ← 1/3: r3:M5
+
+## Round 4 verification 1 — Test & coverage quality — opus
+**Reviewers:** M=3, usable 3/3
+**Reviewer verdicts:** r1: 0 Critical, 1 Important, 6 Minor, counts recomputed | r2: 0 Critical, 0 Important, 4 Minor | r3: 0 Critical, 1 Important, 5 Minor
+**Sources mapped:** 17/17
+**Reviewer verdict:** 0 Critical, 2 Important, 9 Minor
+### Dispositions
+- [I1] fixed — one needle now pins the silent-failure guard "Never use the absence of a `## Readiness` heading as that test", which the plan's own cut procedure would otherwise have allowed to be deleted with the suite green → 6b978c3 ← 1/3: r1:I1
+- [I2] fixed — three needles now pin the **On a resume** plan narrowing, the only one of the five corrections the plan calls undroppable that carried no contract test → 6b978c3 ← 1/3: r3:I1
+- [M1] carried — the section 13, 14 and 15 needle loops assert against the whole file although their descriptions name a subsection, and the two bare needles `pre-sequence` and `post-sequence`, which the plan's Task 2 Contract lists as invariants and which therefore stay, cannot fail on their own ← 3/3: r1:M1, r1:M4, r2:M2, r3:M2
+- [M2] fixed — the Lens Rotation range no longer falls back to an empty file: an unresolved or inverted anchor now calls `bad`, so the guard on the release's uncounted-lens promise can no longer pass vacuously. This was a defect in a round 4 fix → 6b978c3 ← 3/3: r1:M2, r2:M1, r3:M1
+- [M3] carried — the 1080-line maximum leaves one line of headroom, and the plan's Global Constraint 1 promises a 34-line margin. The maximum is binding plan text this loop cannot raise, and the test comment already records the measured state; the remaining hazard is that the next one-line wording fix in that file turns the suite red until prose is reflowed ← 2/3: r1:M6, r3:M3
+- [M4] carried — three needles are short fragments matched file-wide (`as a round is`, `has ended`, `git hash-object`); two of the three are named as invariants by the plan's Task 4 Contract ← 1/3: r1:M3
+- [M5] carried — Step 0 of the readiness triage, the step that produces `rejected: not a conflict`, carries no needle ← 1/3: r1:M5
+- [M6] fixed — two needles now pin the orchestration path's own report shapes, the compact `readiness owed: <n>` note and the `gate: orchestration` invoker value → 6b978c3 ← 1/3: r2:M3
+- [M7] carried — the coverage-index `<k>` rules and the clause-removal rule "Removing a clause never renumbers the checks that remain" carry no needle ← 1/3: r2:M4
+- [M8] fixed — one needle now pins "today that is one command … and nothing else", the premise the Phase 2 background-read exemption rests on → 6b978c3 ← 1/3: r3:M4
+- [M9] carried — four further pieces of behaviour-bearing prose carry no needle: the lens cell's "never reconstruct it" safety sentence, its other-lenses boundary sentence, the `<k>` numbering rule and the `Readiness post: not run (N=0)` shape ← 1/3: r3:M5

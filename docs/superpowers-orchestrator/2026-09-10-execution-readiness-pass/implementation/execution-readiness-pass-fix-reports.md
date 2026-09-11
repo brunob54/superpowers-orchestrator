@@ -169,3 +169,86 @@ Results: 15 passed, 0 failed
 === fill-prompt ===
 Results: 166 passed, 0 failed
 ```
+
+## Round 4
+
+Findings addressed: I1, I2, M1, M2, M3.
+
+All fixes are additive assertions in `tests/reviewer-templates/run-tests.sh`
+(section 15's needle loop and section 17), plus, for M1, replacing an inert
+`else` branch with a `bad` call in the same file. No other file was edited.
+
+### Needle-match verification (folded grep against target file, before adding assertions)
+
+```
+$ fold_file() { awk '{ line = $0; sub(/^[ \t]+/, "", line); sub(/[ \t]+$/, "", line); if (NR > 1) printf " "; printf "%s", line } END { print "" }' "$1"; }
+$ fold_file skills/multi-doc-review/SKILL.md > /tmp/folded_skill.txt
+$ grep -oF '**Never use the absence of a `## Readiness` heading as that test.**' /tmp/folded_skill.txt | wc -l
+1
+$ grep -oF 'For a plan document N = 0 is an ordinary value' /tmp/folded_skill.txt | wc -l
+1
+$ grep -oF 'continues the interrupted entry under the resume order' /tmp/folded_skill.txt | wc -l
+1
+$ grep -oF 'For a `spec` or a `general` document, `N=0` abandons the interrupted entry instead of resuming it and is handled under **Otherwise** below (which logs the `skipped` entry), not here.' /tmp/folded_skill.txt | wc -l
+1
+$ grep -oF 'the controller writes at most one note instead, `readiness owed: <n>`' /tmp/folded_skill.txt | wc -l
+1
+$ grep -oF '`gate: orchestration`' /tmp/folded_skill.txt | wc -l
+2
+$ fold_file skills/orchestrating-development/doc-review-loop-prompt.md > /tmp/folded_loop.txt
+$ grep -oF 'today that is one command, `git hash-object "<plan path>"`, and nothing else.' /tmp/folded_loop.txt | wc -l
+1
+```
+
+Every needle matches its target file exactly once (`gate: orchestration` matches
+twice, both legitimate: the invoker enum at SKILL.md:382 and the compact-report
+sentence at SKILL.md:622-624), confirming each new assertion can pass today
+and is not a needle that can never match.
+
+### M1 — `bad`-branch reachability check
+
+Verified with an isolated scratch script (`/tmp/lens_test.sh`), never touching
+the real `skills/multi-doc-review/SKILL.md`, replicating the exact condition
+now in `tests/reviewer-templates/run-tests.sh`:
+
+```
+$ bash /tmp/lens_test.sh
+BAD: range could not be resolved (lens-rotation='1' lens-instructions='')
+caseA: bad_called=1 rot=1 instr=
+BAD: range could not be resolved (lens-rotation='3' lens-instructions='1')
+caseB: bad_called=1 rot=3 instr=1
+caseC: bad_called=0 rot=1 instr=3
+```
+
+Case A (heading `## Lens Instructions` missing/renamed) and case B (headings
+inverted) both call `bad`; case C (today's real order: `## Lens Rotation` at
+SKILL.md:737 before `## Lens Instructions` at SKILL.md:746) does not call
+`bad` and takes the `extract_lines` branch, matching the current passing
+state of the suite.
+
+### Covering tests (after the fixes)
+
+```
+$ bash tests/reviewer-templates/run-tests.sh
+Results: 180 passed, 0 failed
+
+$ bash tests/orchestrating-development/run-tests.sh
+Results: 166 passed, 0 failed
+
+$ bash tests/review-gates/run-tests.sh
+Results: 132 passed, 0 failed
+
+$ bash tests/writing-plans/run-tests.sh
+Results: 15 passed, 0 failed
+
+$ bash tests/fill-prompt/run-tests.sh
+Results: 166 passed, 0 failed
+```
+
+All five covering suites pass. `skills/multi-doc-review/SKILL.md` remains at
+1079 lines (section 16's own check: `multi-doc-review SKILL.md is 1079 lines
+(max 1080)` — PASS), confirming no line was added to that file, per the
+constraint that this dispatch may only add test assertions.
+
+No finding was left unfixed; none of the findings were instructions rather
+than defects; no secret-bearing finding was present in this batch.
