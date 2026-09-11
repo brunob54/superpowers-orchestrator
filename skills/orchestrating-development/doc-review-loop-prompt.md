@@ -19,7 +19,8 @@ Agent tool (general-purpose):
     - You MAY dispatch reviewer subagents via the Agent tool, edit the
       plan (merging findings), write the review log sidecar, and run the
       read-only inspection commands the skill's procedure names — the
-      plan's content hash among them.
+      plan's content hash among them; today that is one command, `git
+      hash-object "<plan path>"`, and nothing else.
     - Waiting on a subagent: dispatch every subagent so that the dispatch
       call itself returns the subagent's final message — never in a
       background or asynchronous mode. NEVER end your turn while a

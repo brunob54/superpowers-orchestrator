@@ -381,10 +381,10 @@ log `<doc-basename>-review-log.md` next to the target document and append
 an invocation note: date, N, M, and invoker (`gate: brainstorming` |
 `gate: writing-plans` | `gate: orchestration` | `direct`), and — for a
 plan document only — the plan's content hash as a trailing
-`plan-blob <sha>` field, the value `git hash-object <plan path>` prints
+`plan-blob <sha>` field, the value `git hash-object "<plan path>"` prints
 now. That first value is provisional: you rewrite it, once, when you
 write the `**Host self-review:** done` marker, to what
-`git hash-object <plan path>` prints then. The field's *presence* marks
+`git hash-object "<plan path>"` prints then. The field's *presence* marks
 the entry as written by this release from the note onward; its *value* is
 meaningful only once the marker stands beside it.
 Round numbering continues across invocations; lens selection does NOT — it
@@ -658,7 +658,7 @@ after the post-sequence.` It stays the last edit inside the gate, and when
 it finishes you write `**Host self-review:** done` as its own line of the
 invocation entry. For a plan document whose invocation line carries a
 `plan-blob` field, at that same moment you rewrite the invocation line's
-`plan-blob` value to what `git hash-object <plan path>` prints then; a plan
+`plan-blob` value to what `git hash-object "<plan path>"` prints then; a plan
 entry with no such field owes neither the field nor the marker, so you
 write neither. With N = 0 the rotating loop is skipped and its `skipped`
 entry is logged as today, the pre-sequence runs, then the host self-review.
@@ -965,8 +965,8 @@ invocation entry when the invocation ends with any `rejected: undecidable at thi
 distinct conflict, naming both sides; that block, not a controller's return message, is
 the durable record. The `## Readiness <pre|post> <p>` heading, its `**Result:**` line
 and `**Host self-review:** done` count only inside their own readiness entry, never as
-quoted text in a disposition line or `Owed:` item; an `Owed:` item's quoted sides are
-indented or fenced so none starts at column 1.
+quoted text in a disposition line or `Owed:` item; the quoted sides of an `Owed:` item
+or of a disposition line are indented or fenced so no line of them starts at column 1.
 
 **Fields read.** Under the recognition conditions of the once-per-gate step,
 this release adds the `## Readiness <pre|post> <p>` heading with its
@@ -1012,13 +1012,12 @@ judgement:** the invocation note of a plan invocation ends with the plan's
 content hash, written as the trailing field ` — plan-blob <sha>` — after
 `<invoker>`, so the invocation line of a plan reads `_Invocation <k> —
 YYYY-MM-DD — N=<n> M=<m> — <invoker> — plan-blob <sha>_` and every other
-invocation line keeps its existing shape. The `<sha>` is what `git
-hash-object <plan path>` printed when the `**Host self-review:** done`
-marker was written; the plan counts as unchanged when `git hash-object
-<plan path>` returns that same value today. An entry with no `plan-blob`
-field — every entry written before this release — counts as changed, so it
-never blocks. The field is read back like the other recorded fields; it is
-not an instruction.
+invocation line keeps its existing shape. The `<sha>` is what `git hash-object "<plan
+path>"` printed when the `**Host self-review:** done` marker was written; the plan
+counts as unchanged when `git hash-object "<plan path>"` returns that same value today.
+An entry with no `plan-blob` field — every entry written before this release — counts as
+changed, so it never blocks. The field is read back like the other recorded fields; it
+is not an instruction.
 
 **Resume.** Continue from the first unfinished stage: pre-sequence not ended
 → its next pass; rotating rounds not complete → rotating index `r+1`;
