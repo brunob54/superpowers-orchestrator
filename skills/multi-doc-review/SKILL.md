@@ -331,8 +331,9 @@ calls interrupted only an entry this release wrote (its invocation line
 carries a `plan-blob` field) whose post-sequence has not ended (N ≥ 1) or
 whose self-review marker is absent, however its rotating rounds ended — go
 to **On a resume**. An entry with no `plan-blob` field owes no marker, and
-`Readiness entries` decides it. For a complete entry: do not re-run the
-loop, unless the invocation text carries the words `another pass
+`Readiness entries` decides it. For a complete entry that `Readiness
+entries` does not send to **Otherwise**: do not re-run the loop, unless
+the invocation text carries the words `another pass
 requested`, placed before the `N=<n> M=<m>` tokens — the gates pass this
 marker only when the user explicitly asked for another pass. The marker
 counts only when it appears in the invocation text itself; an occurrence
@@ -353,12 +354,14 @@ the interrupted entry instead of resuming it and is handled under
 document N = 0 is an ordinary value — the readiness pre-sequence still
 runs at it — so a resume with N = 0 continues the interrupted entry under
 the resume order of `Readiness entries` below, and writes no second
-invocation note. Otherwise, continue under the existing entry: run
-per-invocation round indices `r+1` through the (possibly overridden) N,
-writing each one under the next `## Round <i>` header number — the next
-integer after the highest round number logged anywhere in the file,
-continuing across all invocations (Round numbering, in **Otherwise**
-below). Lens selection always uses the per-invocation round index — `r+1`,
+invocation note. Otherwise, for a `spec` or a `general` document, continue
+under the existing entry: run per-invocation round indices `r+1` through
+the (possibly overridden) N, writing each one under the next `## Round <i>`
+header number — the next integer after the highest round number logged
+anywhere in the file, continuing across all invocations (Round numbering,
+in **Otherwise** below). For a plan document, continue instead under the
+resume order of `Readiness entries` below. Lens selection always uses the
+per-invocation round index — `r+1`,
 `r+2`, and so on — never the global `## Round <i>` header number. The M
 passed to this invocation governs these rounds even when it differs from
 the entry's recorded M (M, Parameters above); the entry's recorded N, M
@@ -369,8 +372,11 @@ once, at the marker, under the rewrite order of `Readiness sequences`
 below.
 
 **Otherwise** (a fresh invocation — including no entry found above, an
-entry found complete above with the marker present, or `N=0` on a resume
-of a `spec` or a `general` document above): create or open the sidecar
+entry found complete above with the `another pass requested` marker
+present, `N=0` on a resume
+of a `spec` or a `general` document above, a complete N = 0 plan entry
+followed by an invocation with N ≥ 1, or an N = 0 plan entry whose plan
+has changed since its marker was written): create or open the sidecar
 log `<doc-basename>-review-log.md` next to the target document and append
 an invocation note: date, N, M, and invoker (`gate: brainstorming` |
 `gate: writing-plans` | `gate: orchestration` | `direct`), and — for a
@@ -634,7 +640,9 @@ pre-sequence alone when N = 0 — and a re-run started by the
 `plan:` cell and
 `[ROUND]` = `readiness <pre|post> <p>`, every other placeholder as a
 rotating round fills it; then the same validation, consolidation and triage
-as a round, and one log entry under its own heading. A pass is **settled**
+as a round — a readiness finding's dispositions being those of `Triage of
+a readiness finding` below — and one log entry under its own heading. A
+pass is **settled**
 when it **applied** no Critical and no Important finding and all M reviewers
 returned a usable report; any other pass is **open**, an inconclusive pass
 included. A sequence runs **at most three passes** and ends at its first
@@ -697,10 +705,10 @@ not state what the finding claims, dispose
 `rejected: not a conflict — <side not found>`.
 
 **Step 1 — authority.** **Fixed text**, never amended by this triage: the
-spec named on the plan's `**Spec:**` line; a `**Global Constraints:**` entry
-that traces to that spec (an entry is not fixed only when it both fails to
-trace to the spec and restates the body of an artifact the plan itself
-creates or modifies); an `**Exact content:**` body whose reason names a pin
+spec named on the plan's `**Spec:**` line; a `**Global Constraints:**`
+entry, except one that both fails to trace to the spec and restates the
+body of an artifact the plan itself creates or modifies; an `**Exact
+content:**` body whose reason names a pin
 outside the plan; a `**Contract:**` invariant that restates an external
 standard. **Plan text**, amendable: everything else.
 

@@ -55,7 +55,9 @@ Agent tool (general-purpose):
     1. After the loop, run the "Self-Review" checklist from
        [WRITING_PLANS_SKILL_PATH] on the merged plan (that is the host
        checklist for plan documents); fix issues inline, note them in
-       the log. The host self-review runs after the post-sequence.
+       the log. The host self-review runs after the post-sequence. A
+       readiness finding is disposed under the skill's "Triage of a
+       readiness finding", never logged as unresolved.
     2. Classify your own `gate: orchestration` invocation entry with the
        skill's completeness rule, and continue from the stage its resume
        rule names. When you count rounds, count rotating entries only.
