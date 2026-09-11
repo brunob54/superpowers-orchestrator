@@ -388,6 +388,14 @@ assert_folded_contains "subagent-driven-development SKILL.md: still carries the 
 assert_folded_contains "Execution readiness cell: rubric-defect parenthetical" "$READINESS_CELL" "$RUBRIC_PARENTHETICAL"
 assert_folded_contains "subagent-driven-development SKILL.md: still carries the rubric-defect parenthetical" "$SDD_SKILL" "$RUBRIC_PARENTHETICAL"
 assert_folded_contains "task-reviewer-prompt.md: still carries the rubric-defect parenthetical" "$SDD_TASK_REVIEWER" "$RUBRIC_PARENTHETICAL"
+# The clause-removal table (section above this one, quoting the cell
+# verbatim as its removal anchors) names "the paragraph beginning `For
+# check (5) report ONE finding`" and "the sentence beginning `Coverage,
+# ambiguity, feasibility`" as the text a controller locates and removes.
+# Pin both anchors on the cell side, so a reword of either leaves the
+# removal instruction unable to find its target instead of passing silently.
+assert_folded_contains "Execution readiness cell: check (5) paragraph opening" "$READINESS_CELL" 'For check (5) report ONE finding'
+assert_folded_contains "Execution readiness cell: Coverage/ambiguity/feasibility closing sentence" "$READINESS_CELL" 'Coverage, ambiguity, feasibility and style belong to the other lenses'
 for numbered in '(1) tasks that contradict' \
                 '(2) anything the plan explicitly mandates' \
                 '(3) a task clause that contradicts' \
@@ -523,6 +531,13 @@ for needle in '**Host self-review:** done' \
               'counts as changed, so it never blocks'; do
   assert_folded_contains "multi-doc-review SKILL.md: log format carries '$needle'" "$DOC_SKILL" "$needle"
 done
+# The 'has ended' needle above is also matched by two unrelated sentences
+# ("its pre-sequence has ended and the self-review marker is present" /
+# "its pre-sequence has ended, its post-sequence has ended"), so it stays
+# green even if the sequence-end definition sentence itself is deleted or
+# reworded. Pin the definition sentence itself with a fragment that occurs
+# once in the file, so removing or rewording it turns this suite red.
+assert_folded_contains "multi-doc-review SKILL.md: sequence-end definition sentence is present" "$DOC_SKILL" 'A sequence **has ended** when its last pass reads'
 assert_folded_contains "multi-doc-review SKILL.md: completion report keeps the harness line" "$DOC_SKILL" 'Harness probes owed:'
 # The compact orchestration report shape, and the gate value it depends on,
 # carry no assertion elsewhere: pin both so the path this pipeline actually
