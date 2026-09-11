@@ -430,7 +430,15 @@ for needle in 'a report that carries no `coverage:` line for some entry of the p
               'when N ≥ 1, a second after the last rotating round' \
               'a re-run started by the `another pass requested` marker is a fresh invocation for this rule' \
               'applied** no Critical and no Important finding and all M reviewers returned a usable report' \
-              'the cap is one instead of three when the plan has no locatable spec'; do
+              'the cap is one instead of three when the plan has no locatable spec' \
+              '| no locatable spec | check (3) | `**Note:** clause-vs-spec check not run — no locatable spec` |' \
+              '| no `**Global Constraints:**` block | check (5) and the paragraph beginning `For check (5) report ONE finding`, which carries the `coverage: GC<k>` shape | `**Note:** Global Constraints sweep not run — no block` |' \
+              '| no task carries `**Contract:**` | check (4) | `**Note:** Contract check not run — no Contract fields` |' \
+              '1-based position among the plan'"'"'s `**Global Constraints:**` block'"'"'s top-level list items' \
+              'repeated or out-of-range `<k>` counts as a missing line for the position it skips' \
+              'A **readiness pass** is one review dispatched under the lens `Execution readiness`: M reviewers filled from `reviewer-prompt.md` with `[LENS_NAME]` = `Execution readiness`, `[LENS_INSTRUCTIONS]` = that lens'"'"'s `plan:` cell and `[ROUND]` = `readiness <pre|post> <p>`, every other placeholder as a rotating round fills it' \
+              'Invalid N (not an integer 0–10) → tier 2, else tier 3.' \
+              'N = 0 → skip the rotating loop, log;'; do
   assert_folded_contains "multi-doc-review SKILL.md: procedure carries '$needle'" "$DOC_SKILL" "$needle"
 done
 assert_folded_contains "multi-doc-review SKILL.md: the N parameter keeps its N=0 sentence" "$DOC_SKILL" 'N = 0 skips the loop and logs a `skipped` entry.'
