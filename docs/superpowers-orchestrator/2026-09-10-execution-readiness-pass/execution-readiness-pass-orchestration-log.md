@@ -26,3 +26,12 @@ plan: docs/superpowers-orchestrator/2026-09-10-execution-readiness-pass/plans/ex
 
 ## Phase 3 — Batch 4 (task 10) — COMPLETE — commits 8a2d85b..008eb35
 - Task 10: complete — release commit, review clean on the first round
+
+## RULING 1 — 2026-09-11 — phase 4 — four open items of the code-review return ruled; three fixes and one plan amendment
+Items: [I1] design — fix it: pin the three fallback-row needles, the `<k>` numbering rule and the removal table's `Clause removed` cells; leave the explanatory paragraphs unpinned; Step 0 and Step 1 owed against Task 3
+Items: [I2] design — fix it: one `assert_folded_contains` needle over the whole readiness lens-wiring sentence, never a whole-line assertion
+Items: [I3] design — fix it: needles for the tier sentence and `skip the rotating loop, log` only; the readiness clause is already pinned; correct the disposition text
+Items: [L31] forced — amend plan: take tests/smart-compress/run-tests.sh out of Task 10 Step 4's chain and record its 8 failures as predating BASE; fix it: nothing further in code
+Detail: docs/superpowers-orchestrator/2026-09-10-execution-readiness-pass/plans/execution-readiness-pass-open-decisions.md
+Forks: 9 of 9 (design consistency, implementation practicality, adversarial) — contradiction: settled
+Re-dispatch: phase 4, in-run resume 1 of 3

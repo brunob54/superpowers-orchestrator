@@ -1383,6 +1383,8 @@ git commit -m "docs: describe the Execution readiness pass and its limits" --tra
 
 ### Task 10: Release 7.14.0
 
+> **Amendment 4 (orchestrator ruling):** Step 4 previously expected every one of its eight suites to end "Results: <n> passed, 0 failed" and the `&&` chain to exit 0. `tests/smart-compress/run-tests.sh` ends "79 passed, 8 failed" on this branch and before it: the code review controller re-ran the suite and confirmed with `git diff` over BASE..HEAD that the branch changes neither that suite nor `hooks/`, so those 8 failures predate BASE and are outside this branch's scope. The unamended wording would read those failures as a regression of the release commit, and its `&&` chain stopped at that suite's non-zero exit, so `tests/codex/run-unit-tests.sh` never ran. Step 4 now runs that suite outside the chain and records its failures as pre-existing.
+
 **Files:**
 - Modify: `VERSION`
 - Modify: `.claude-plugin/plugin.json`
@@ -1507,11 +1509,16 @@ bash tests/orchestrating-development/run-tests.sh && \
 bash tests/writing-plans/run-tests.sh && \
 bash tests/fill-prompt/run-tests.sh && \
 bash tests/in-run-rulings/run-tests.sh && \
-bash tests/smart-compress/run-tests.sh && \
 bash tests/codex/run-unit-tests.sh
 ```
 
-Expected: PASS for every suite — each ends with "Results: <n> passed, 0 failed" (the Codex suite prints its own summary) and the chain exits 0.
+Then, separately — outside the chain, because this suite is red before this branch:
+
+```bash
+bash tests/smart-compress/run-tests.sh
+```
+
+Expected: PASS for every suite of the chain — each ends with "Results: <n> passed, 0 failed" (the Codex suite prints its own summary) and the chain exits 0. `tests/smart-compress/run-tests.sh` is expected to end "79 passed, 8 failed": those 8 failures predate BASE and belong to neither this branch nor this plan, which change neither that suite nor `hooks/`. Treat a different failure count there as a finding; treat 8 as the known pre-existing state.
 
 - [x] **Step 5: Commit**
 
