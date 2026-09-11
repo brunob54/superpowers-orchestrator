@@ -94,3 +94,19 @@ named no probe.
 - [M8] carried — the pre-sequence's only procedural trigger is "before round 1", a point that does not exist at N = 0 ← 1/3: r3:M1
 - [M9] carried — the plan's Global Constraint 1 states "about 258 net lines", "near 1046" and a "34-line margin"; the file is now at the 1080 cap with no headroom, and tests/reviewer-templates/run-tests.sh repeats the 258 figure. The binding rule, at most 1080 lines, holds. The subject is binding plan text, which this loop never edits ← 1/3: r3:M2
 - [M10] carried — the plan's Task 9 Step 1 fenced body holds an implementer-only note between two sentences meant to be written; the shipped guide correctly omits it ← 1/3: r3:M3
+
+## Round 3 — Security — opus
+**Reviewers:** M=3, usable 3/3
+**Reviewer verdicts:** r1: 0 Critical, 1 Important, 2 Minor | r2: 0 Critical, 0 Important, 3 Minor | r3: 0 Critical, 0 Important, 2 Minor
+**Sources mapped:** 8/8
+**Reviewer verdict:** 0 Critical, 1 Important, 2 Minor
+**Converged:** no
+### Dispositions
+- [I1] fixed — the column-1 guard on quoted control fields now covers a disposition line as well as an `Owed:` item, so a quoted `**Host self-review:** done` or `## Readiness` line can no longer be read as a real field → 7674643 ← 2/3: r1:I1, r2:M3
+- [M1] fixed — `git hash-object "<plan path>"` is quoted at all five sites, and the two test needles that quoted the unquoted form were updated with it → 7674643 ← 3/3: r1:M1, r2:M2, r3:M1
+- [M2] fixed — the controller's read-only-command grant keeps its Contract-mandated wording and now enumerates what that is today, one command and nothing else → 7674643 ← 3/3: r1:M2, r2:M1, r3:M2
+
+Note on [I1]: the fix asked for the disposition-line half to be added to the test
+assertion that pins the `Owed:` half. No assertion pins that guard sentence at all
+today, so none was extended and none was added; the shipped rule carries the fix, the
+test suite does not pin it. Recorded here so the gap is visible to a later release.
