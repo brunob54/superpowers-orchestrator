@@ -327,10 +327,10 @@ its last round entry carries `**Converged:** yes`, or `r` is at least the
 entry's recorded N (the convergence case counts as complete even when `r`
 is less than N, because the loop exited early); for a plan document
 `Readiness entries` below decides completeness instead, and this test
-calls interrupted only an entry this release wrote (its invocation line
-carries a `plan-blob` field) whose post-sequence has not ended (N ≥ 1) or
-whose self-review marker is absent, however its rotating rounds ended — go
-to **On a resume**. An entry with no `plan-blob` field owes no marker, and
+calls interrupted only an entry this release wrote (its invocation line carries a
+`plan-blob` field) whose pre-sequence has not ended, or whose post-sequence has not
+ended (N ≥ 1) or whose self-review marker is absent, however its rotating rounds
+ended — go to **On a resume**. An entry with no `plan-blob` field owes no marker, and
 `Readiness entries` decides it. For a complete entry that `Readiness
 entries` does not send to **Otherwise**: do not re-run the loop, unless
 the invocation text carries the words `another pass
@@ -667,9 +667,13 @@ A readiness report that lacks a `coverage:` line for any entry of the plan's
 `**Global Constraints:**` block is **unusable** — this is the second
 usability condition named in step 2, and it applies to `Execution readiness`
 passes only. It is retried once under the report-validation rule of step 2,
-and a reviewer still unusable leaves the pass with fewer than M usable
-reports, so the pass is open. A missing sweep costs a retry; it can never
-end a sequence. When a structure the lens cell names is missing, remove that
+and a reviewer still unusable leaves the pass with fewer than M usable reports, so
+the pass is open. A missing sweep costs a retry; it can never settle a sequence.
+`<k>` is the entry's 1-based position among the plan's `**Global Constraints:**`
+block's top-level list items, counted in document order — one top-level list item
+is one entry. The coverage block holds exactly one line per position, in order; a
+repeated or out-of-range `<k>` counts as a missing line for the position it skips.
+When a structure the lens cell names is missing, remove that
 clause from `[LENS_INSTRUCTIONS]` and write a header note directly after the
 `**Result:**` line of every readiness entry of this invocation — a header
 line, not a disposition line:
@@ -699,18 +703,20 @@ belongs to no check and always stays.
 
 ### Triage of a readiness finding
 
-**Step 0 — verify.** Quote both sides from their files before any
-disposition. If either side is not found verbatim, or the higher side does
-not state what the finding claims, dispose
-`rejected: not a conflict — <side not found>`.
+**Step 0 — verify.** Quote both sides from their files before any disposition. A
+side counts as found when it matches after the file's lines are folded into one
+line and every run of whitespace is collapsed to a single space. If either side is
+not found under that comparison, or the higher side does not state what the finding
+claims, dispose `rejected: not a conflict — <side not found>`.
 
-**Step 1 — authority.** **Fixed text**, never amended by this triage: the
-spec named on the plan's `**Spec:**` line; a `**Global Constraints:**`
-entry, except one that both fails to trace to the spec and restates the
-body of an artifact the plan itself creates or modifies; an `**Exact
-content:**` body whose reason names a pin
-outside the plan; a `**Contract:**` invariant that restates an external
-standard. **Plan text**, amendable: everything else.
+**Step 1 — authority.** **Fixed text**, never amended by this triage: the spec named
+on the plan's `**Spec:**` line; a `**Global Constraints:**` entry, except one that
+both fails to trace to the spec and restates the body of an artifact the plan itself
+creates or modifies; an `**Exact content:**` body whose reason names a pin outside
+the plan; a `**Contract:**` invariant that restates an external standard. **Plan
+text**, amendable: everything else. A finding that reverses an amendment made
+earlier in the same sequence takes the `fixed text vs fixed text` row below whatever
+the authority of its two sides.
 
 | Conflict | Disposition |
 |---|---|
@@ -829,12 +835,12 @@ Copy the cell for the doc type verbatim into `[LENS_INSTRUCTIONS]`.
   verification line or header field whose text the entry constrains.
   For check (5) report ONE finding per Global Constraints entry, listing
   every failing site inside it, never one finding per site. End your report
-  with a coverage block, one line per entry, in this shape:
-  `coverage: GC<k> — <n> sites checked`. Write that block as the last lines
-  of your report, directly below the `### Findings` section; the output
-  format you were given lists no such block, and this instruction is what
-  adds it. A report without a coverage line for every entry is incomplete
-  and will be discarded.
+  with a coverage block, one line per entry, in this shape: `coverage: GC<k> —
+  <n> sites checked`. Write that block as the last lines of your report, below
+  the `### Findings` section when the report has one and below `### Verdict`
+  otherwise, whether or not you report any finding; the output format you were
+  given lists no such block, and this instruction is what adds it. A report
+  without a coverage line for every entry is incomplete and will be discarded.
   Coverage, ambiguity, feasibility and style belong to the other lenses; do
   not report them here.
 - spec: not used — the Execution readiness pass runs for plan documents only.
@@ -948,35 +954,41 @@ A readiness pass is written under its own heading, never `## Round`:
 **Result:** <settled|open>
 ```
 
-`open` after an all-inconclusive pass is written `open (all inconclusive)`.
-The rest of the entry is the round-entry body above under the same rules,
-with no `**Converged:**` line. A settled pass with an empty consolidated set
-writes the one disposition line `- none — no material issues under this
-lens`. An N = 0 plan invocation entry is laid out as: the invocation line,
-the one-line `skipped` entry, the readiness entries of the pre-sequence,
-then the self-review marker. An `Owed:` block is appended to the invocation
-entry when the invocation ends with any `rejected: undecidable at this gate`,
-`rejected: plan-mandated` or `rejected: not a conflict` disposition — one
-item per distinct conflict, naming both sides; that block, not a
-controller's return message, is the durable record.
+`open` after an all-inconclusive pass is written `open (all inconclusive)`. The rest of
+the entry is the round-entry body above under the same rules, with no `**Converged:**`
+line. A settled pass with an empty consolidated set writes the one disposition line `-
+none — no material issues under this lens`. An N = 0 plan invocation entry is laid out
+as: the invocation line, the one-line `skipped` entry, the readiness entries of the
+pre-sequence, then the self-review marker. An `Owed:` block is appended to the
+invocation entry when the invocation ends with any `rejected: undecidable at this gate`,
+`rejected: plan-mandated` or `rejected: not a conflict` disposition — one item per
+distinct conflict, naming both sides; that block, not a controller's return message, is
+the durable record. The `## Readiness <pre|post> <p>` heading, its `**Result:**` line
+and `**Host self-review:** done` count only inside their own readiness entry, never as
+quoted text in a disposition line or `Owed:` item; an `Owed:` item's quoted sides are
+indented or fenced so none starts at column 1.
 
 **Fields read.** Under the recognition conditions of the once-per-gate step,
 this release adds the `## Readiness <pre|post> <p>` heading with its
 `**Result:**` line and the `**Host self-review:** done` line;
-`r counts ## Round headings only.` A readiness entry's sequence and pass
-number come from its heading, and where a heading disagrees with the entry's
-position among the `## Round` headings, position governs and you rewrite the
-heading; an entry a later resume made obsolete gains ` — superseded` at the
-end of its heading. `settled` and `open` are compared as whole words.
+`r counts ## Round headings only.` A readiness entry's sequence and pass number come from
+its heading; `## Round`-heading position governs the heading, and you rewrite it, only when
+such a heading exists and the entry is before the first or after the last — with none
+logged, the heading governs. `<p>` is the entry's ordinal among that sequence's own
+readiness entries, never from `## Round` headings. An entry a later resume made obsolete
+gains ` — superseded` at the end of its heading — the one condition: a resume redoes a pass
+whose logged entry has no valid `**Result:**` line; such an entry counts toward nothing,
+including the pass count. `settled` and `open` are compared as whole words.
 
-**Completeness.** An invocation entry for a plan written by this release —
-its invocation line carries a `plan-blob` field — is complete when its
-recorded N is 0, its pre-sequence has ended and the self-review marker is
-present, or when its last round entry carries `**Converged:** yes` or `r`
-is at least its recorded N, its post-sequence has ended and that marker is
-present. A sequence **has ended** when its last pass reads
-`**Result:** settled` or it holds as many passes as its cap; any other
-state is interrupted. The cap is recomputed when the entry is read, from
+**Completeness.** An invocation entry for a plan written by this release — its
+invocation line carries a `plan-blob` field — is complete when its recorded N is 0,
+its pre-sequence has ended and the self-review marker is present; when a resume
+overrode the recorded N with N = 0, its rotating rounds count as complete on that
+basis; or when its last round entry carries `**Converged:** yes` or `r` is at least
+its recorded N, its pre-sequence has ended, its post-sequence has ended and that
+marker is present. A sequence **has ended** when its last pass reads `**Result:**
+settled` or it holds at least as many passes as its cap; any other state is
+interrupted. The cap is recomputed when the entry is read, from
 whether the plan has a locatable spec at that moment, and is never recorded
 in the entry. Accepted by design: a spec that appeared or disappeared
 between runs changes the classification of an existing entry, and that
