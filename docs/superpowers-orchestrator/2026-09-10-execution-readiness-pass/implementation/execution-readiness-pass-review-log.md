@@ -180,3 +180,6 @@ test suite does not pin it. Recorded here so the gap is visible to a later relea
 - [M3] carried — sections 13, 14 and 15 still assert against the whole file rather than the subsection their descriptions name ← 2/3: r2:M2, r3:M3
 - [M4] carried — section 14 recomputes `SEQ_LINE` and `LENS_ROT_LINE` under new names with identical arguments, so a later change to one anchor string leaves the other stale ← 1/3: r2:M3
 - [M5] carried — one assertion description in tests/orchestrating-development/run-tests.sh names a reason that holds for only one of the two templates its loop runs over ← 1/3: r2:M4
+
+_Completed — 2026-09-11 — cap reached — HEAD 9c4305ac0fd8a73c239b3abd85c6908020c4d11f_
+Secrets found: none
