@@ -110,3 +110,23 @@ Note on [I1]: the fix asked for the disposition-line half to be added to the tes
 assertion that pins the `Owed:` half. No assertion pins that guard sentence at all
 today, so none was extended and none was added; the shipped rule carries the fix, the
 test suite does not pin it. Recorded here so the gap is visible to a later release.
+
+## Round 4 — Test & coverage quality — opus
+**Reviewers:** M=3, usable 3/3
+**Reviewer verdicts:** r1: 0 Critical, 2 Important, 5 Minor | r2: 0 Critical, 2 Important, 3 Minor | r3: 0 Critical, 2 Important, 5 Minor
+**Sources mapped:** 19/19
+**Reviewer verdict:** 0 Critical, 5 Important, 7 Minor
+**Converged:** no
+### Dispositions
+- [I1] fixed — section 13 gains three needles pinning the settled-pass definition, the reduced cap for a plan with no locatable spec, and the fresh-invocation clause; a reviewer had proved by mutation that deleting the cap clause left the suite green → 9ee6b97 ← 3/3: r1:I1, r2:M3, r3:I2
+- [I2] fixed — the size-budget comment now records the measured figures, 788 at base, 291 added, 1079 now, one line of headroom under the 1080 maximum, in place of arithmetic the file contradicted; the 1080 figure itself is binding plan text and was not touched → 9ee6b97 ← 3/3: r1:M1, r2:I1, r3:M2
+- [I3] fixed — two needles now pin the pre-sequence and post-sequence ordering sentence itself, beside the two bare words the plan's Task 2 Contract lists as invariants, which are kept → 9ee6b97 ← 2/3: r1:I2, r2:M1
+- [I4] fixed — two positive assertions pin the sentence that states the N_plan = 0 behaviour and its return contract, so a reworded reintroduction of the Phase 2 skip can no longer pass on the negative assertion alone → 9ee6b97 ← 1/3: r2:I2
+- [I5] fixed — section 14 gains needles for the two central rows of the readiness triage table, including the only statement that a readiness finding is ever applied; a reviewer had proved by mutation that deleting both rows left the suite green → 9ee6b97 ← 1/3: r3:I1
+- [M1] carried — this suite's `first_line_of` is substring-based while the sibling suites use a whole-line form; every anchor is unique today ← 2/3: r1:M4, r3:M4
+- [M2] carried — sections 13, 14 and 15 verify subsection-scoped contracts with file-wide matches, so prose that migrates into another section keeps the suite green ← 2/3: r2:M2, r3:M1
+- [M3] fixed — two assertions pin the Phase 2 template's new sentences: the readiness exclusion from `unresolved`, and the `_Loop complete_` line appended when it is absent → 9ee6b97 ← 1/3: r1:M2
+- [M4] carried — the plan's Task 10 verification greps for `executing-plans`, a string already present twice in the guide before this branch, so that one check passes vacuously. The subject is plan text, which this loop never edits ← 1/3: r1:M3
+- [M5] carried — section 14 leaves two Error Handling invariants unasserted (the tier-2 and tier-3 first sentence, and the absence of the word `unresolved` in the two bullets) and two of its needles stop mid-sentence; both needles are brief-mandated and already carried from the ledger ← 1/3: r1:M5
+- [M6] fixed — one assertion now guards the `## Lens Rotation` table against an `Execution readiness` row, which the existing bold-count guard would not have caught → 9ee6b97 ← 1/3: r3:M3
+- [M7] carried — the six documentation needles the plan names for docs/guide/README.md, docs/FORK-IMPROVEMENTS.md and docs/REVIEW-PROCESS-COMPARISON.md are run once by hand and committed to no suite ← 1/3: r3:M5
