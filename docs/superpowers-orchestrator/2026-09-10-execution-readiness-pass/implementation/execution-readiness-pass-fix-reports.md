@@ -59,3 +59,34 @@ Results: 15 passed, 0 failed
 === fill-prompt ===
 Results: 166 passed, 0 failed
 ```
+
+## Round 2
+
+Findings addressed: I1, I2, I3, I4, I5, I6, I7, I8, M1, M2, M3.
+
+Command:
+```
+bash tests/reviewer-templates/run-tests.sh
+bash tests/orchestrating-development/run-tests.sh
+bash tests/review-gates/run-tests.sh
+bash tests/writing-plans/run-tests.sh
+bash tests/fill-prompt/run-tests.sh
+```
+
+Output (tail of each):
+```
+=== reviewer-templates ===
+Results: 163 passed, 0 failed
+
+=== orchestrating-development ===
+Results: 164 passed, 0 failed
+
+=== review-gates ===
+Results: 132 passed, 0 failed
+
+=== writing-plans ===
+Results: 15 passed, 0 failed
+
+=== fill-prompt ===
+Results: 166 passed, 0 failed
+```

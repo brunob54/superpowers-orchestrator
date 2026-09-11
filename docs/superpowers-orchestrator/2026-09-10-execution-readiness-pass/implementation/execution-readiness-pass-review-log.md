@@ -68,3 +68,29 @@ named no probe.
 - [L29] carried — skills/orchestrating-development/doc-review-loop-prompt.md:58,64, "post-sequence" is used twice and defined only in the skill the template points at
 - [L30] carried — docs/REVIEW-PROCESS-COMPARISON.md:192-195, the reflow moved one line-wrap boundary past the mandated phrase; no word changed
 - [L31] user-decision — the plan's Task 10 Step 4 expects every suite in its eight-suite chain to end "0 failed", but tests/smart-compress/run-tests.sh ends 79 passed, 8 failed; the controller re-ran it on this branch and confirmed the failures, and git diff over BASE..HEAD shows the branch changes neither that suite nor hooks/, so the redness predates the branch. A reader of Task 10 Step 4 would read those 8 failures as a regression of the release commit (plan-mandated) — at docs/superpowers-orchestrator/2026-09-10-execution-readiness-pass/plans/execution-readiness-pass.md:1514 — clause: Task 10 "Expected: PASS for every suite each ends with 'Results: <n> passed, 0 failed' (the Codex suite prints its own summary) and the chain exits 0."
+
+## Round 2 — Adversarial red-team — opus
+**Reviewers:** M=3, usable 3/3
+**Reviewer verdicts:** r1: 0 Critical, 4 Important, 4 Minor | r2: 0 Critical, 3 Important, 4 Minor | r3: 0 Critical, 4 Important, 3 Minor
+**Sources mapped:** 22/22
+**Reviewer verdict:** 0 Critical, 8 Important, 10 Minor
+**Converged:** no
+### Dispositions
+- [I1] fixed — the lens cell's coverage-block anchor now exists in every report shape, so a zero-finding readiness report can carry the block instead of being discarded; both mitigation sentences are kept → b2590ba ← 3/3: r1:I2, r2:I3, r3:I1
+- [I2] fixed — `<k>` of `coverage: GC<k>` is defined as the 1-based position among the Global Constraints top-level list items, one line per position in order, a repeated or out-of-range `<k>` counting as a missing line → b2590ba ← 2/3: r1:I3, r2:I1
+- [I3] fixed — Step 0 of the readiness triage now defines "found" as matching after the file's lines are folded and whitespace runs collapsed, so ordinary wrapped plan prose is no longer rejected as not a conflict → b2590ba ← 1/3: r1:I1
+- [I4] fixed — position governs a readiness heading only where a `## Round` heading exists and the entry lies outside their span, and `<p>` is the entry's ordinal among its own sequence's entries → b2590ba ← 1/3: r1:I4
+- [I5] fixed — "its pre-sequence has not ended" is added to the plan interrupted test and to the N ≥ 1 completeness clause, so the resume order and the completeness rule speak about the same three stages → b2590ba ← 1/3: r2:I2
+- [I6] fixed — one routing sentence above the conflict table sends an amendment-reversal finding to the `fixed text vs fixed text` row whatever its sides' authority; the row and its pinned phrase are byte-identical → b2590ba ← 1/3: r3:I2
+- [I7] fixed — the completeness rule now also holds for a plan entry whose rotating range an overriding N = 0 emptied, so such an entry can no longer stay interrupted forever → b2590ba ← 1/3: r3:I3
+- [I8] fixed — the readiness heading, the `**Result:**` line and `**Host self-review:** done` count only inside their own entry, never as quoted text, and `Owed:` quoted sides must be indented or fenced → b2590ba ← 1/3: r3:I4
+- [M1] fixed — a heading carrying ` — superseded` counts toward nothing, the pass count included, and the one obsolescence condition is named → b2590ba ← 2/3: r1:M1, r2:M2
+- [M2] fixed — the sequence-end test reads "at least as many passes as its cap", so a cap recomputed downward can no longer leave an entry permanently incomplete → b2590ba ← 1/3: r1:M2
+- [M3] carried — the `readiness owed: <n>` note has no field in the orchestrator's Phase 2 log line, so the count is dropped at the phase boundary ← 1/3: r1:M3
+- [M4] carried — the missing-structure header note is required on "every readiness entry of this invocation", which would mean back-filling an entry already closed ← 1/3: r1:M4
+- [M5] carried — the self-review marker and the `plan-blob` rewrite are two writes at "that same moment" with no stated order and no crash rule ← 1/3: r2:M1
+- [M6] fixed — "A missing sweep costs a retry; it can never settle a sequence", which no longer contradicts the cap behaviour → b2590ba ← 1/3: r2:M3
+- [M7] carried — the gate cost sentence omits retries, and docs/guide/README.md promises an owed conflict appears in the gate's report, which the orchestration path does not deliver ← 1/3: r2:M4
+- [M8] carried — the pre-sequence's only procedural trigger is "before round 1", a point that does not exist at N = 0 ← 1/3: r3:M1
+- [M9] carried — the plan's Global Constraint 1 states "about 258 net lines", "near 1046" and a "34-line margin"; the file is now at the 1080 cap with no headroom, and tests/reviewer-templates/run-tests.sh repeats the 258 figure. The binding rule, at most 1080 lines, holds. The subject is binding plan text, which this loop never edits ← 1/3: r3:M2
+- [M10] carried — the plan's Task 9 Step 1 fenced body holds an implementer-only note between two sentences meant to be written; the shipped guide correctly omits it ← 1/3: r3:M3
