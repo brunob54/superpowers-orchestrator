@@ -148,3 +148,20 @@ test suite does not pin it. Recorded here so the gap is visible to a later relea
 - [M7] carried — the coverage-index `<k>` rules and the clause-removal rule "Removing a clause never renumbers the checks that remain" carry no needle ← 1/3: r2:M4
 - [M8] fixed — one needle now pins "today that is one command … and nothing else", the premise the Phase 2 background-read exemption rests on → 6b978c3 ← 1/3: r3:M4
 - [M9] carried — four further pieces of behaviour-bearing prose carry no needle: the lens cell's "never reconstruct it" safety sentence, its other-lenses boundary sentence, the `<k>` numbering rule and the `Readiness post: not run (N=0)` shape ← 1/3: r3:M5
+
+## Round 4 verification 2 — Test & coverage quality — opus
+**Reviewers:** M=3, usable 3/3
+**Reviewer verdicts:** r1: 0 Critical, 0 Important, 4 Minor | r2: 0 Critical, 1 Important, 3 Minor | r3: 0 Critical, 2 Important, 4 Minor
+**Sources mapped:** 14/14
+**Reviewer verdict:** 0 Critical, 2 Important, 8 Minor
+### Dispositions
+- [I1] fixed — one needle now pins the sequence-end definition itself, `A sequence **has ended** when its last pass reads`, which occurs once; the bare `has ended` needle stays because the plan's Task 4 Contract lists it as an invariant, and the ordering half of this finding was already pinned by the round 4 fixes → 9c4305a ← 2/3: r1:M1, r3:I1, r3:M1
+- [I2] fixed — two paired assertions now pin the two lens-cell anchors the clause-removal table quotes verbatim, so a reword on the cell side turns the suite red instead of leaving the removal instruction pointing at text that no longer exists → 9c4305a ← 2/3: r2:I1, r3:I2
+- [M1] carried — the section 13, 14 and 15 needle loops still assert against the whole file rather than the subsection their descriptions name; a reviewer proved by mutation that deleting the triage subsection leaves 6 of 13 needles green, while the position checks do catch an outright deletion ← 2/3: r2:M1, r3:M2
+- [M2] carried — the step-2 coverage usability needle is asserted file-wide although the four sibling step-2 assertions above it use the step-2 span the suite already builds ← 1/3: r1:M2
+- [M3] carried — no test fills the controller template with `N_PLAN=0`, the release's central new input; a reviewer read the fill script and confirmed the value survives, so this is a coverage gap and not a live defect ← 1/3: r1:M3
+- [M4] carried — the 1080-line maximum leaves one line of headroom against the plan's promised 34, and the prescribed remedy is the reflow most likely to disturb the whole-line assertions the same constraint protects ← 1/3: r1:M4
+- [M5] carried — two ordinary sentences in the skill are wrapped in backticks and render as inline code; the assertions match either way, so the suite cannot see the markup choice ← 1/3: r2:M2
+- [M6] carried — Global Constraint 3, no changed line inside the reviewer prompt's fence, has no automated guard; a reviewer confirmed by reading the hunk that both changed regions on this branch are outside the fence ← 1/3: r2:M3
+- [M7] carried — the completion-report line shapes are pinned only by their labels: `Readiness post: not run (N=0)`, the `pass(es) —` shape and the `[ROUND]` value `readiness <pre|post> <p>` are unpinned ← 1/3: r3:M3
+- [M8] carried — the size-budget arithmetic has no negative control in the suite; the plan names one as a manual step, and a reviewer ran it by hand on a padded copy and saw it report over budget ← 1/3: r3:M4

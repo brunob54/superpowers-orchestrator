@@ -252,3 +252,95 @@ constraint that this dispatch may only add test assertions.
 
 No finding was left unfixed; none of the findings were instructions rather
 than defects; no secret-bearing finding was present in this batch.
+
+## Round 4
+
+Findings addressed: [I1], [I2].
+
+### [I1] — tests/reviewer-templates/run-tests.sh, section 15, `'has ended'` needle
+
+The `'has ended'` needle in the section-15 for-loop (line 513) is also
+matched by two unrelated sentences at `skills/multi-doc-review/SKILL.md:985`
+and `:988` ("its pre-sequence has ended and the self-review marker is
+present" / "... its pre-sequence has ended, its post-sequence has ended
+..."), so the loop assertion stays green even if the sequence-end
+definition sentence at `SKILL.md:989` ("A sequence **has ended** when its
+last pass reads `**Result:** settled` or it holds at least as many passes as
+its cap.") is deleted or reworded.
+
+Fix: added one `assert_folded_contains` immediately after the `done` that
+closes that for-loop (now at `tests/reviewer-templates/run-tests.sh:530`),
+pinning the fragment `A sequence **has ended** when its last pass reads`
+against `$DOC_SKILL` (the whole file, matching how the existing loop
+assertions are matched). The existing `'has ended'` needle and every other
+assertion in the loop were left unchanged.
+
+Falsifiability check — folded grep count of the new needle against the
+whole file:
+
+```
+$ fold_file skills/multi-doc-review/SKILL.md | grep -oF 'A sequence **has ended** when its last pass reads' | wc -l
+1
+```
+
+Matches exactly once.
+
+### [I2] — tests/reviewer-templates/run-tests.sh, section 12, Execution readiness lens cell
+
+The clause-removal table (`SKILL.md:684`) and the paragraph above it
+(`SKILL.md:696`, `:701`) quote the lens cell verbatim as the anchors a
+controller uses to find text to remove: "the paragraph beginning `For check
+(5) report ONE finding`" and "the sentence beginning `Coverage, ambiguity,
+feasibility`". Neither anchor was pinned on the cell side before this fix;
+section 12 pinned only the shorter substring `report ONE finding per Global
+Constraints entry` (without the `For check (5) ` prefix), and the closing
+sentence `Coverage, ambiguity, feasibility and style belong to the other
+lenses` (`SKILL.md:844`) was asserted nowhere.
+
+Fix: added two `assert_folded_contains` assertions against `$READINESS_CELL`
+(the extracted Execution readiness cell variable section 12 already builds),
+placed immediately after the existing paired assertions block — right after
+the `"task-reviewer-prompt.md: still carries the rubric-defect
+parenthetical"` assertion and before the `for numbered in ...` loop (now at
+`tests/reviewer-templates/run-tests.sh:391-397`):
+
+- `For check (5) report ONE finding`
+- `Coverage, ambiguity, feasibility and style belong to the other lenses`
+
+No existing assertion was changed.
+
+Falsifiability check — folded grep count of each new needle against the
+extracted cell:
+
+```
+$ fold_file /tmp/readiness-cell.txt | grep -oF 'For check (5) report ONE finding' | wc -l
+1
+$ fold_file /tmp/readiness-cell.txt | grep -oF 'Coverage, ambiguity, feasibility and style belong to the other lenses' | wc -l
+1
+```
+
+Both match exactly once.
+
+### Covering tests (after the fixes)
+
+```
+$ bash tests/reviewer-templates/run-tests.sh
+Results: 183 passed, 0 failed
+
+$ bash tests/orchestrating-development/run-tests.sh
+Results: 166 passed, 0 failed
+
+$ bash tests/review-gates/run-tests.sh
+Results: 132 passed, 0 failed
+
+$ bash tests/writing-plans/run-tests.sh
+Results: 15 passed, 0 failed
+
+$ bash tests/fill-prompt/run-tests.sh
+Results: 166 passed, 0 failed
+```
+
+All five covering suites pass. No existing assertion text changed;
+`MDR_MAX_LINES=1080` untouched; `skills/multi-doc-review/SKILL.md` was not
+edited. No finding was left unfixed; neither finding was an instruction
+rather than a defect; no secret-bearing finding was present in this batch.
