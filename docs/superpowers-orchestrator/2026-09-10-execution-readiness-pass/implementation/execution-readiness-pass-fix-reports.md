@@ -344,3 +344,51 @@ All five covering suites pass. No existing assertion text changed;
 `MDR_MAX_LINES=1080` untouched; `skills/multi-doc-review/SKILL.md` was not
 edited. No finding was left unfixed; neither finding was an instruction
 rather than a defect; no secret-bearing finding was present in this batch.
+
+## Round 4
+
+Findings addressed: I1, I2, I3.
+
+Added 8 new `assert_folded_contains` needles inside the existing section-13
+needle loop of `tests/reviewer-templates/run-tests.sh` (the `for needle in
+... done` loop under `bold "13. Readiness sequences in the multi-doc-review
+procedure"`):
+- 3 whole-row needles for the clause-removal table's fallback rows
+  (`check (3)`, the Global Constraints row naming `check (5)` and its
+  paragraph, `check (4)`), pinning both the `Missing` and `Clause removed`
+  columns together with the already-pinned `Note line` column.
+- 2 needles for the `<k>` numbering rule: the 1-based-position sentence and
+  the repeated-or-out-of-range-counts-as-missing sentence.
+- 1 needle for the whole Execution-readiness lens-wiring sentence
+  (`[LENS_NAME]` / `[LENS_INSTRUCTIONS]` / `[ROUND]` mapped together).
+- 2 needles for the Error Handling bullet: the tier sentence
+  (`Invalid N (not an integer 0–10) → tier 2, else tier 3.`) and the
+  `N = 0 → skip the rotating loop, log;` clause. The already-pinned clause
+  `for a plan document the Execution readiness pre-sequence still runs`
+  (pinned at :428 and :495) was deliberately not re-pinned.
+
+Only `tests/reviewer-templates/run-tests.sh` was edited;
+`skills/multi-doc-review/SKILL.md` and all plan/spec/docs files were left
+untouched, per the findings' scope notes.
+
+Sanity check (not part of the covering-test evidence below): temporarily
+mutated the tier sentence's `tier 3` to `tier 9` and re-ran the suite — the
+new needle failed as expected, confirming the needle is not vacuously true;
+the file was then restored before the covering-test run below.
+
+Covering tests run and their output:
+
+```
+$ bash tests/reviewer-templates/run-tests.sh
+Results: 191 passed, 0 failed
+
+$ bash tests/review-gates/run-tests.sh
+Results: 132 passed, 0 failed
+
+$ bash tests/orchestrating-development/run-tests.sh
+Results: 166 passed, 0 failed
+```
+
+All three required suites pass. No finding was left unfixed. No finding was
+an instruction rather than a defect. No secret-bearing finding was present
+in this batch.
