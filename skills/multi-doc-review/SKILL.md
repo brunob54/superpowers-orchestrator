@@ -846,8 +846,8 @@ Sidecar file next to the target document: `<doc-basename>-review-log.md`.
 
 The invocation line records M right after N, **including when M = 1**, so
 that a log is self-describing. A line without `M=` (written by a release
-before 7.4.0) is read as M = 1. The two invocation lines below add
-`M=<m>`; the round entry that follows them (M = 1) is byte-identical to
+before 7.4.0) is read as M = 1. Either of the two invocation lines below
+adds `M=<m>`; the round entry that follows them (M = 1) is byte-identical to
 earlier releases:
 
 ```

@@ -398,6 +398,7 @@ for numbered in '(1) tasks that contradict' \
 done
 assert_folded_contains "Execution readiness cell: one finding per Global Constraints entry" "$READINESS_CELL" 'report ONE finding per Global Constraints entry'
 assert_folded_contains "Execution readiness cell: coverage line shape" "$READINESS_CELL" 'coverage: GC<k> — <n> sites checked'
+assert_folded_contains "Execution readiness cell: missing coverage line is discarded" "$READINESS_CELL" 'will be discarded'
 assert_file_contains "Execution readiness cell: spec line is not used" "$READINESS_CELL" '- spec: not used'
 assert_file_contains "Execution readiness cell: general line is not used" "$READINESS_CELL" '- general: not used'
 # Folded, not plain: the replacement wraps this phrase across a line break.

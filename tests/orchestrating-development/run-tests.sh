@@ -335,7 +335,7 @@ for t in batch-controller-prompt.md code-review-loop-prompt.md; do
     "$f" "grep -n 'FAIL"
 done
 for t in plan-writer-prompt.md doc-review-loop-prompt.md; do
-  assert_file_not_contains "$t: carries no background-read rule (it runs no commands)" \
+  assert_file_not_contains "$t: carries no background-read rule (its one command prints a single line)" \
     "$ORCH_DIR/$t" 'Never read the output file of a background command whole.'
 done
 
