@@ -454,10 +454,11 @@ fi
 # with the suite still green.
 LENS_INSTR_LINE="$(first_line_of "$DOC_SKILL" '## Lens Instructions')"
 LENS_ROTATION_RANGE="$WORK/lens-rotation-table.txt"
-if [ -n "$LENS_ROT_LINE" ] && [ -n "$LENS_INSTR_LINE" ]; then
+if [ -n "$LENS_ROT_LINE" ] && [ -n "$LENS_INSTR_LINE" ] && [ "$LENS_ROT_LINE" -lt "$LENS_INSTR_LINE" ]; then
   extract_lines "$DOC_SKILL" "$LENS_ROT_LINE" "$LENS_INSTR_LINE" > "$LENS_ROTATION_RANGE"
 else
   : > "$LENS_ROTATION_RANGE"
+  bad "multi-doc-review SKILL.md: Lens Rotation table range could not be resolved (lens-rotation='$LENS_ROT_LINE' lens-instructions='$LENS_INSTR_LINE')"
 fi
 assert_folded_not_contains "multi-doc-review SKILL.md: Lens Rotation table does not list Execution readiness" "$LENS_ROTATION_RANGE" 'Execution readiness'
 
@@ -492,6 +493,11 @@ done
 bold "15. Readiness log entries, completeness, resume and the completion report"
 assert_file_has_line "multi-doc-review SKILL.md: readiness entry heading shape" "$DOC_SKILL" '## Readiness <pre|post> <p> — Execution readiness — <model>'
 assert_file_has_line "multi-doc-review SKILL.md: readiness entry result line" "$DOC_SKILL" '**Result:** <settled|open>'
+# The silent-failure guard the skill names for itself: keying completeness on
+# the absence of a `## Readiness` heading would misclassify an invocation
+# interrupted during pass 1 of its pre-sequence as pre-release, silently.
+assert_folded_contains "multi-doc-review SKILL.md: never key completeness on the absence of a Readiness heading" "$DOC_SKILL" \
+  '**Never use the absence of a `## Readiness` heading as that test.**'
 # The plan variant of the invocation line must exist as its own whole line,
 # and the writing step must be told to emit the field: without both, the
 # plan-blob comparison is inert because no entry ever carries the field.
@@ -518,6 +524,13 @@ for needle in '**Host self-review:** done' \
   assert_folded_contains "multi-doc-review SKILL.md: log format carries '$needle'" "$DOC_SKILL" "$needle"
 done
 assert_folded_contains "multi-doc-review SKILL.md: completion report keeps the harness line" "$DOC_SKILL" 'Harness probes owed:'
+# The compact orchestration report shape, and the gate value it depends on,
+# carry no assertion elsewhere: pin both so the path this pipeline actually
+# runs (gate: orchestration) stays covered.
+assert_folded_contains "multi-doc-review SKILL.md: gate: orchestration writes the compact readiness-owed note" "$DOC_SKILL" \
+  'the controller writes at most one note instead, `readiness owed: <n>`'
+assert_folded_contains "multi-doc-review SKILL.md: invocation note admits the gate: orchestration invoker" "$DOC_SKILL" \
+  '`gate: orchestration`'
 # Position: the readiness-entries subsection is the last block of the Review
 # Log Format section, standing after the Skipped-invocations paragraph and
 # immediately before the Error Handling heading.
@@ -544,6 +557,18 @@ assert_folded_not_contains "multi-doc-review SKILL.md: the unnarrowed N=0 once-p
 # states two rules for a plan resume with N=0.
 assert_folded_contains "multi-doc-review SKILL.md: Otherwise entry condition narrows the N=0 resume clause" "$DOC_SKILL" \
   '`N=0` on a resume of a `spec` or a `general` document above'
+# The On-a-resume narrowing: a plan document treats N = 0 as an ordinary
+# value that continues under Readiness entries, rather than being abandoned
+# under Otherwise the way a spec or general document is. Without these
+# pinned, a later edit could revert the clause and a plan resume with N = 0
+# would fall through to Otherwise, appending a second invocation note and
+# re-running the whole pre-sequence.
+assert_folded_contains "multi-doc-review SKILL.md: On a resume narrows plan N=0 to an ordinary value" "$DOC_SKILL" \
+  'For a plan document N = 0 is an ordinary value'
+assert_folded_contains "multi-doc-review SKILL.md: On a resume routes plan N=0 under the resume order" "$DOC_SKILL" \
+  'continues the interrupted entry under the resume order'
+assert_folded_contains "multi-doc-review SKILL.md: On a resume keeps the narrowed spec-and-general form" "$DOC_SKILL" \
+  'For a `spec` or a `general` document, `N=0` abandons the interrupted entry instead of resuming it and is handled under **Otherwise** below (which logs the `skipped` entry), not here.'
 # The plan-blob rewrite must be ordered where the marker is written, because a
 # resume enters at On a resume and never reads the Otherwise branch.
 assert_folded_contains "multi-doc-review SKILL.md: the marker site orders the plan-blob rewrite" "$DOC_SKILL" \
@@ -617,6 +642,12 @@ assert_folded_contains "doc-review-loop template: counts rotating entries only" 
 assert_folded_contains "doc-review-loop template: defers to the skill's completeness rule" "$DOC_LOOP_PROMPT" "the skill's completeness rule"
 assert_folded_contains "doc-review-loop template: Deviation 3 is unchanged" "$DOC_LOOP_PROMPT" 'A Critical/Important finding is `unresolved` only when applying it was attempted and failed twice'
 assert_folded_contains "doc-review-loop template: controller may run read-only inspection commands" "$DOC_LOOP_PROMPT" "run the read-only inspection commands the skill's procedure names"
+# The background-read exemption elsewhere (its one command prints a single
+# line) holds only because the controller's read-only allowance is itself
+# restricted to one command. Pin that restriction so a later widening of the
+# allowed command set does not silently invalidate the exemption.
+assert_folded_contains "doc-review-loop template: the read-only allowance is restricted to one command" "$DOC_LOOP_PROMPT" \
+  'today that is one command, `git hash-object "<plan path>"`, and nothing else.'
 assert_folded_contains "doc-review-loop template: readiness finding disposed under triage, never logged as unresolved" "$DOC_LOOP_PROMPT" "A readiness finding is disposed under the skill's \"Triage of a readiness finding\", never logged as unresolved."
 assert_folded_contains "doc-review-loop template: appends the Loop complete line when it is absent" "$DOC_LOOP_PROMPT" 'and append the `_Loop complete_` line when it is absent.'
 
