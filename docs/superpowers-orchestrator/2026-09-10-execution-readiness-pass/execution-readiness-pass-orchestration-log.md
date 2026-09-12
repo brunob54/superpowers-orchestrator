@@ -47,3 +47,10 @@ Items: [I1] forced — fix it: pin the earlier-release clause of Deviation 2 in 
 Detail: docs/superpowers-orchestrator/2026-09-10-execution-readiness-pass/plans/execution-readiness-pass-open-decisions.md
 Forks: none
 Re-dispatch: phase 4, in-run resume 3 of 3
+
+## RULING 7 — 2026-09-12 — phase 4 — the in-run resume cap is reached; both open items escalated as chain
+Items: [I1] escalated (chain) — the lens cell's clause-removal safety text is only half pinned at tests/reviewer-templates/run-tests.sh:404
+Items: [I2] escalated (chain) — section 14's needle loop asserts against the whole file at tests/reviewer-templates/run-tests.sh:481
+Detail: docs/superpowers-orchestrator/2026-09-10-execution-readiness-pass/plans/execution-readiness-pass-open-decisions.md
+Forks: none
+Re-dispatch: none — escalated

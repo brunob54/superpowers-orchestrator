@@ -53,3 +53,21 @@
 - **Defensible answers:** n/a
 - **Forks:** none
 - **Resolution:** fix it: add one folded needle to section 17 of tests/reviewer-templates/run-tests.sh pinning the earlier-release clause of Deviation 2, so that deleting it from doc-review-loop-prompt.md turns the suite red — the forced fact is that the item quotes no clause, so `plan governs` has nothing to quote under guard 1, and `accept` would ship the seventh of seven clauses Task 8's Contract lists under Must convey with no coverage while the other six are pinned.
+
+## Ruling 7 — 2026-09-12 — phase 4 — [I1] the lens cell's clause-removal safety text is only half pinned
+
+- **Class:** escalated (chain)
+- **Item:** [I1 inv 2] Important tests/reviewer-templates/run-tests.sh:404 — unresolved: verification cap — the lens cell's clause-removal safety text is only half pinned; the cell clause 'a number missing from the list was removed on purpose for this plan; never reconstruct it', the no-renumbering paragraph and the sentence 'Write that block as the last lines of your report' carry no needle, so deleting any of them leaves every suite green.
+- **Contract clause:** n/a — the item's disposition line records `clause: none`.
+- **Defensible answers:** n/a — the in-run resume cap of 3 was reached, so no ruling is made on the merits.
+- **Forks:** none
+- **Resolution:** escalated — chain: this is the fourth open return of phase 4, and rulings 1, 5 and 6 already used the three in-run resumes the cap allows.
+
+## Ruling 8 — 2026-09-12 — phase 4 — [I2] section 14's needle loop asserts against the whole file
+
+- **Class:** escalated (chain)
+- **Item:** [I2 inv 2] Important tests/reviewer-templates/run-tests.sh:481 — unresolved: verification cap — section 14's needle loop asserts against the whole file instead of the '### Triage of a readiness finding' subsection and several of its needles also match outside it, so the 'fixed text vs fixed text' oscillation-guard row and Step 0's verify paragraph can each be deleted with every section 14 needle still green (one reviewer confirmed both by mutation on a temporary copy).
+- **Contract clause:** n/a — the item's disposition line records `clause: none`.
+- **Defensible answers:** n/a — the in-run resume cap of 3 was reached, so no ruling is made on the merits.
+- **Forks:** none
+- **Resolution:** escalated — chain: this is the fourth open return of phase 4, and rulings 1, 5 and 6 already used the three in-run resumes the cap allows.
