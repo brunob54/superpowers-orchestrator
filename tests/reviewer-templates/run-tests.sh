@@ -434,7 +434,8 @@ for needle in 'a report that carries no `coverage:` line for some entry of the p
               'applied** no Critical and no Important finding and all M reviewers returned a usable report' \
               'the cap is one instead of three when the plan has no locatable spec' \
               '| no locatable spec | check (3) | `**Note:** clause-vs-spec check not run — no locatable spec` |' \
-              '| no `**Global Constraints:**` block | check (5) and the paragraph beginning `For check (5) report ONE finding`, which carries the `coverage: GC<k>` shape | `**Note:** Global Constraints sweep not run — no block` |' \
+              '| no `**Global Constraints:**` block | check (5) and the run of sentences from `For check (5) report ONE finding` up to, but not including, the sentence beginning `Coverage, ambiguity, feasibility`, which carries the `coverage: GC<k>` shape | `**Note:** Global Constraints sweep not run — no block` |' \
+              'the run of sentences that starts at `For check (5) report ONE finding` and runs up to, but not including, the sentence beginning `Coverage, ambiguity, feasibility`' \
               '| no task carries `**Contract:**` | check (4) | `**Note:** Contract check not run — no Contract fields` |' \
               'Removing a clause never renumbers the checks that remain: the numbers of the surviving checks are left exactly as they are' \
               '1-based position among the plan'"'"'s `**Global Constraints:**` block'"'"'s top-level list items' \

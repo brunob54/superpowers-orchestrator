@@ -673,7 +673,7 @@ line, not a disposition line:
 | Missing | Clause removed | Note line |
 |---|---|---|
 | no locatable spec | check (3) | `**Note:** clause-vs-spec check not run — no locatable spec` |
-| no `**Global Constraints:**` block | check (5) and the paragraph beginning `For check (5) report ONE finding`, which carries the `coverage: GC<k>` shape | `**Note:** Global Constraints sweep not run — no block` |
+| no `**Global Constraints:**` block | check (5) and the run of sentences from `For check (5) report ONE finding` up to, but not including, the sentence beginning `Coverage, ambiguity, feasibility`, which carries the `coverage: GC<k>` shape | `**Note:** Global Constraints sweep not run — no block` |
 | no task carries `**Contract:**` | check (4) | `**Note:** Contract check not run — no Contract fields` |
 
 Removing a clause never renumbers the checks that remain: the numbers of
@@ -683,16 +683,16 @@ opens with `Run all the checks below` and no count, and tells the reviewer
 that a missing number was removed on purpose and must not be
 reconstructed.
 
-The rows for checks (3) and (4) remove their numbered item only. The Global
-Constraints row removes two things — check (5), and the paragraph beginning
-`For check (5) report ONE finding`, which is the paragraph that carries both
-the `coverage: GC<k> — <n> sites checked` shape and the discard rule. Do not
-look for a third item: the shape is a phrase inside that paragraph, not a
-line of its own. The paragraph goes because a coverage requirement left with
-no entries to cover would make every report of that pass unusable. The row fires the
-same way when the block is present but holds no recognised top-level list item, since
-that also leaves zero entries to cover. Stop at that paragraph — the sentence
-beginning `Coverage, ambiguity, feasibility` belongs to no check and always stays.
+The rows for checks (3) and (4) remove their numbered item only. The Global Constraints
+row removes two things — check (5), and the run of sentences that starts at `For check
+(5) report ONE finding` and runs up to, but not including, the sentence beginning
+`Coverage, ambiguity, feasibility`, which carries both the `coverage: GC<k> — <n> sites
+checked` shape and the discard rule. Do not look for a third item: the shape is a phrase
+inside that run, not a line of its own. That run goes because a coverage requirement
+left with no entries to cover would make every report of that pass unusable. The row
+fires the same way when the block is present but holds no recognised top-level list
+item, since that also leaves zero entries to cover. Stop before the sentence beginning
+`Coverage, ambiguity, feasibility`, which belongs to no check and always stays.
 
 ### Triage of a readiness finding
 
