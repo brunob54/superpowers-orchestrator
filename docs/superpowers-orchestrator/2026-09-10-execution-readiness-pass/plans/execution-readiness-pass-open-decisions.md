@@ -44,3 +44,12 @@
 - **Defensible answers:** n/a
 - **Forks:** none
 - **Resolution:** fix it: add an assertion in tests/review-gates/run-tests.sh pinning the `N_code=0` half of the split Phase 0 sentence and the `skipped (N_code=0)` log shape, using the folded-needle helper of that suite rather than a whole-line assertion — the forced fact is that the item quotes no clause, so `plan governs` has nothing to quote under guard 1, and `accept` would ship a shape Task 7's Contract names an invariant with no coverage in any suite, leaving `fix it` the only defensible outcome.
+
+## Ruling 6 — 2026-09-12 — phase 4 — [I1] the earlier-release clause of Deviation 2 is a Must-convey clause with no assertion
+
+- **Class:** forced
+- **Item:** [I1 inv 2] Important tests/reviewer-templates/run-tests.sh:667 — unresolved: verification cap — section 17 of tests/reviewer-templates/run-tests.sh pins six of the seven clauses Task 8's Contract lists under Must convey; the seventh, the earlier-release case of the completeness rule in Deviation 2 of skills/orchestrating-development/doc-review-loop-prompt.md ('by whichever of its clauses applied, the clause for an entry written by an earlier release included, which owes no post-sequence'), is pinned by no assertion in any suite, so deleting that clause from the template leaves every suite green. This is the SECOND item carrying the bare id [I1] in invocation 2's entry; it is the one raised by the `## Round 8 verification 4` cycle, not the `N_code=0` item ruled as ruling 5.
+- **Contract clause:** n/a — the item's disposition line records `clause: none`.
+- **Defensible answers:** n/a
+- **Forks:** none
+- **Resolution:** fix it: add one folded needle to section 17 of tests/reviewer-templates/run-tests.sh pinning the earlier-release clause of Deviation 2, so that deleting it from doc-review-loop-prompt.md turns the suite red — the forced fact is that the item quotes no clause, so `plan governs` has nothing to quote under guard 1, and `accept` would ship the seventh of seven clauses Task 8's Contract lists under Must convey with no coverage while the other six are pinned.

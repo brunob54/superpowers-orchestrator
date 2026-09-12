@@ -41,3 +41,9 @@ Items: [I1] forced — fix it: pin the `N_code=0` half of the split Phase 0 sent
 Detail: docs/superpowers-orchestrator/2026-09-10-execution-readiness-pass/plans/execution-readiness-pass-open-decisions.md
 Forks: none
 Re-dispatch: phase 4, in-run resume 2 of 3
+
+## RULING 6 — 2026-09-12 — phase 4 — the one open item of invocation 2's verification addendum ruled as a forced fix
+Items: [I1] forced — fix it: pin the earlier-release clause of Deviation 2 in section 17 of tests/reviewer-templates/run-tests.sh
+Detail: docs/superpowers-orchestrator/2026-09-10-execution-readiness-pass/plans/execution-readiness-pass-open-decisions.md
+Forks: none
+Re-dispatch: phase 4, in-run resume 3 of 3
