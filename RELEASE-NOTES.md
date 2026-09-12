@@ -33,7 +33,7 @@ Details:
   contract; and, per Global Constraints entry, every site the entry binds.
   The sweep must end in a `coverage: GC<k> — <n> sites checked` line per
   entry — a report without it is unusable and is retried once, so a missing
-  sweep can never end a sequence.
+  sweep can never settle a sequence.
 - **The sequences.** A pre-sequence runs before rotating round 1 and a
   post-sequence after the last rotating round. Each runs at most three
   passes and ends at its first *settled* pass — one that applied no Critical
