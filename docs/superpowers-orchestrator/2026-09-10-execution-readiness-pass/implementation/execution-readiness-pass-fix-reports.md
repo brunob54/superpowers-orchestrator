@@ -392,3 +392,67 @@ Results: 166 passed, 0 failed
 All three required suites pass. No finding was left unfixed. No finding was
 an instruction rather than a defect. No secret-bearing finding was present
 in this batch.
+
+## Round 5
+
+Findings addressed: I1, I2, I3, M1, M5.
+
+- **I1** — `skills/multi-doc-review/SKILL.md`, once-per-gate interrupted test
+  (originally lines 322-324). Qualified the interrupted test to `spec` or
+  `general` documents only, and added a sentence stating a plan entry
+  reaches the plan clause of the next sentence unconditionally, never
+  through this test. This lets `Readiness entries` decide completeness for
+  every plan entry, including one finished under an N = 0 resume override.
+- **I2** — `skills/multi-doc-review/SKILL.md`, **On a resume** section
+  (originally lines 357-363). Removed the `spec`/`general` qualifier from
+  the sentence establishing the resumed round range (`r+1` through N) and
+  the `## Round <i>` header numbering, so it applies to every document
+  type. Reworded the plan-document sentence so `Readiness entries` below
+  decides only which stage — pre-sequence, rotating rounds, post-sequence
+  or the marker — runs first; the range and numbering rule is not
+  duplicated.
+- **I3** — `skills/multi-doc-review/SKILL.md`, Step 0 of `### Triage of a
+  readiness finding` (originally lines 706-710). Added a clause exempting
+  a check (2) finding (the plan mandates a rubric defect): it has only one
+  side any file holds — the plan's mandated text — so Step 0 now quotes
+  that text alone and disposes it with the `plan-mandated` row, without
+  requiring a second side to be found.
+- **M1** — `skills/multi-doc-review/SKILL.md` size budget. Reflowed the
+  three paragraphs touched by I1, I2 and I3 (the `**Once per gate:**`
+  paragraph, the `**On a resume**` paragraph, and the Step 0 paragraph) to
+  fill lines up to the width already used elsewhere in the file (~88
+  columns), per Global Constraint 1 Move 1. No wording changed, only line
+  breaks. Checked first that no line in any of the three paragraphs is
+  matched by `assert_file_has_line` or `assert_file_contains` in
+  `tests/reviewer-templates/run-tests.sh` (all matches in these paragraphs
+  use `assert_folded_contains`, which tolerates the reflow) before
+  reflowing. The six exception lines Global Constraint 1 lists were not
+  touched (none fall inside the three reflowed paragraphs). File line count
+  after all edits: 1074 (budget: at most 1080).
+- **M5** — `RELEASE-NOTES.md:36`. Changed `sweep can never end a sequence`
+  to `sweep can never settle a sequence`, matching the corrected wording at
+  `skills/multi-doc-review/SKILL.md` ("can never settle a sequence").
+
+No finding was left unfixed. No finding was an instruction rather than a
+defect. No secret-bearing finding was present in this batch.
+
+Covering tests run and their output:
+
+```
+$ bash tests/reviewer-templates/run-tests.sh
+Results: 191 passed, 0 failed
+
+$ bash tests/review-gates/run-tests.sh
+Results: 132 passed, 0 failed
+
+$ bash tests/orchestrating-development/run-tests.sh
+Results: 166 passed, 0 failed
+
+$ bash tests/writing-plans/run-tests.sh
+Results: 15 passed, 0 failed
+
+$ bash tests/fill-prompt/run-tests.sh
+Results: 166 passed, 0 failed
+```
+
+All five required suites pass.

@@ -199,3 +199,21 @@ Answers supplied by the orchestrator on a later dispatch, for the open items of 
 Verification re-review skipped: the effective HEAD had moved past this entry's completion marker before the addendum was written (the plan amendment of commit 5d8e528), so a new invocation entry follows and reviews the fix. This entry's completion marker is unchanged.
 
 _Invocation 2 — 2026-09-11 — N=4 M=3 — BASE..HEAD 0f0a48d..c9700a9 — branch feature/execution-readiness-pass — gate: orchestration_
+
+## Round 5 — Correctness & spec alignment — opus
+**Reviewers:** M=3, usable 3/3
+**Reviewer verdicts:** r1: 0 Critical, 1 Important, 4 Minor | r2: 0 Critical, 2 Important, 2 Minor | r3: 0 Critical, 1 Important, 4 Minor
+**Sources mapped:** 14/14
+**Reviewer verdict:** 0 Critical, 3 Important, 7 Minor
+**Converged:** no
+### Dispositions
+- [I1] fixed — the once-per-gate interrupted test was unqualified and preempted the plan completeness rule, so an entry finished under an N = 0 override resumed forever; the test is now narrowed to spec and general documents and a plan entry reaches `Readiness entries` unconditionally → 5f01e60 ← 3/3: r1:M2, r2:I1, r3:M3
+- [I2] fixed — the resumed round range and the `## Round <i>` header numbering were narrowed to spec and general documents, leaving a plan resume with no range established anywhere; the sentence now applies to every document type and `Readiness entries` decides only which stage runs first → 5f01e60 ← 2/3: r1:I1, r2:I2
+- [I3] fixed — Step 0 of the readiness triage demanded two file-quotable sides, which made the check (2) plan-mandated row unreachable; Step 0 now exempts a check (2) finding, which has one side only → 5f01e60 ← 1/3: r3:I1
+- [M1] fixed — the 1080-line budget of skills/multi-doc-review/SKILL.md had one line of headroom left; Move 1 reflow of the added prose brought the file to 1074 lines with no whole-line-asserted line reflowed → 5f01e60 ← 2/3: r1:M4, r2:M2
+- [M2] carried — skills/multi-doc-review/SKILL.md:748 tells the controller to copy the lens cell verbatim while `Readiness sequences` may order a clause removed ← 1/3: r1:M1
+- [M3] carried — no Error Handling bullet covers `git hash-object` failing or being unavailable when the `plan-blob` field is written ← 1/3: r1:M3
+- [M4] carried — a readiness entry with a malformed `**Result:**` line is read as open in Error Handling and counts toward nothing under Fields read; the two rules differ on whether it consumes a pass slot ← 1/3: r2:M1
+- [M5] fixed — the RELEASE-NOTES 7.14.0 entry said a missing sweep can never end a sequence where the skill says settle → 5f01e60 ← 1/3: r3:M1
+- [M6] carried — the `Owed:` block requires each item to name both sides, which a `rejected: not a conflict` item cannot do ← 1/3: r3:M2
+- [M7] carried — docs/guide/README.md:248 and the phase table read as though both readiness sequences run at N = 0, while the post-sequence runs only at N >= 1 ← 1/3: r3:M4
