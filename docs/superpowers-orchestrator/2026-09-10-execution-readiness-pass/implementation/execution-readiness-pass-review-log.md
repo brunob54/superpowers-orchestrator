@@ -311,3 +311,21 @@ _Invocation 2 — 2026-09-11 — N=4 M=3 — BASE..HEAD 0f0a48d..c9700a9 — bra
 - [M10] carried — four sentences that bound the sequence cap and the retry path carry no needle, including the rule that a third open pass ends the sequence and stops nothing ← 1/3: r3:M3
 - [M11] carried — the `Owed:` cross-skill contract is pinned on the consumer side while its producer-side needle matches two unrelated sentences, so a producer reword cannot turn the suite red ← 1/3: r3:M4
 - [M12] carried — section 17 pins four fragments of the rewritten Deviation 2 but not its pre-release clause, and adds no negative assertion for the round-counting sentence the rewrite removed ← 1/3: r3:M5
+
+## Round 8 verification 3 — Test & coverage quality — opus
+**Reviewers:** M=3, usable 3/3
+**Reviewer verdicts:** r1: 0 Critical, 1 Important, 5 Minor | r2: 0 Critical, 0 Important, 4 Minor | r3: 0 Critical, 0 Important, 4 Minor
+**Sources mapped:** 14/14
+**Reviewer verdict:** 0 Critical, 1 Important, 10 Minor
+### Dispositions
+- [I1] unresolved: verification cap — the `N_code=0` half of the split Phase 0 sentence, and its `skipped (N_code=0)` log shape, are pinned by no assertion in any suite, although Task 7's Contract names that shape as an invariant, so deleting the surviving half leaves every suite green — at tests/review-gates/run-tests.sh:547 — clause: none ← 1/3: r1:I1
+- [M1] carried — section 14's needle loop is labelled `triage carries` while matching the whole file, four of its needles live under Error Handling, and three rejection reasons also occur in `### Readiness entries`, so deleting them from the triage table leaves the suite green ← 2/3: r1:M2, r3:M1
+- [M2] carried — several rules added by this branch carry no needle: the retry linkage of the coverage-usability rule, the empty Global Constraints block case, the no-renumbering rule, the check (4) fenced-block carve-out, the third-pass rule and the cap-recomputation sentence ← 2/3: r1:M4, r3:M2
+- [M3] carried — the 1080-line bound now stands one line above the measured file, so it records the growth this release produced instead of bounding it, and Global Constraint 1 still describes a 34-line margin ← 2/3: r2:M1, r3:M4
+- [M4] carried — the two `brainstorming carries no readiness sentence` assertions were already green before the change and have no failure mode a plausible edit can reach ← 1/3: r1:M1
+- [M5] carried — section 17 pins the new Deviation 2 wording but adds no negative assertion for the round-counting sentence the rewrite removed, unlike three other places in the same suite ← 1/3: r1:M3
+- [M6] carried — an assertion description in tests/orchestrating-development/run-tests.sh names a reason that holds for only one of the two templates its loop runs over ← 1/3: r1:M5
+- [M7] carried — the sentence that a third open pass ends the sequence and stops nothing, and the completion-report value `Readiness post: not run (N=0)`, carry no assertion ← 1/3: r2:M2
+- [M8] carried — the check (5) all-sites disposition rule, the no-renumbering rule and the cell clause telling the reviewer never to reconstruct a removed check number are all unpinned ← 1/3: r2:M3
+- [M9] carried — five section 14 and 15 needles match more than one place in the file, so deleting the sentence each targets leaves another occurrence behind ← 1/3: r2:M4
+- [M10] carried — the completion report's value shapes and its N = 0 variant appear in no test file, while every sibling shape of the feature is pinned as a whole line ← 1/3: r3:M3
