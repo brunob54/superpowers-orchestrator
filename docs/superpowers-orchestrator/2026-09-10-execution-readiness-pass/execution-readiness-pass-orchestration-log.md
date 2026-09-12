@@ -77,3 +77,5 @@ Forks: 3 of 3 (design consistency, implementation practicality, adversarial) —
 Re-dispatch: phase 4, in-run resume 1 of 3
 
 ## Phase 4 — Code review — rounds 4 — cap — fixes 1 — unresolved 0
+
+_Completed — 2026-09-12 — HEAD afb9cde_
