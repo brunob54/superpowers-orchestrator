@@ -291,3 +291,23 @@ _Invocation 2 — 2026-09-11 — N=4 M=3 — BASE..HEAD 0f0a48d..c9700a9 — bra
 - [M12] carried — the clause `a number missing from the list was removed on purpose for this plan — never reconstruct it` is the third dependency of the clause-removal mechanism and is the only one left unpinned ← 1/3: r3:M2
 - [M13] carried — the consequence sentence of the coverage-usability rule, that a missing sweep can never settle a sequence, carries no assertion while the rule it qualifies is pinned twice ← 1/3: r3:M4
 - [M14] carried — the 35 lines of user-facing readiness description added to docs/guide/README.md and the two sibling documents carry no assertion anywhere, which the plan states as a deliberate choice ← 1/3: r3:M5
+
+## Round 8 verification 2 — Test & coverage quality — opus
+**Reviewers:** M=3, usable 3/3
+**Reviewer verdicts:** r1: 0 Critical, 0 Important, 4 Minor | r2: 0 Critical, 1 Important, 5 Minor | r3: 0 Critical, 0 Important, 5 Minor
+**Sources mapped:** 15/15
+**Reviewer verdict:** 0 Critical, 1 Important, 12 Minor
+### Dispositions
+- [I1] fixed — Task 4's Contract names section 15 as the verification of the rule that a readiness entry omits the `**Converged:**` line, and section 15 pinned nothing for it, leaving the sentence deletable under Global Constraint 1 Move 2 with the consequence that a readiness entry would then read as a converged round entry; section 15 now pins that sentence → 01cad80 ← 1/3: r2:I1
+- [M1] carried — four needles of section 14's loop are labelled `triage carries` while the text they match lives under Error Handling, and `as a round is` is a generic phrase ← 2/3: r1:M2, r2:M2
+- [M2] carried — the 1080-line budget leaves one line of headroom while Global Constraint 1 still justifies the figure by a 34-line margin ← 2/3: r1:M3, r2:M3
+- [M3] carried — the `fixed text vs fixed text` row of the triage table is the one row with no needle unique to it, while its three neighbours each have one ← 1/3: r1:M1
+- [M4] carried — Step 0's folded side-matching definition and the check (5) all-sites rule both decide whether a finding is applied or rejected and carry no assertion ← 1/3: r1:M4
+- [M5] carried — the two trigger sentences that fire the pre-sequence and the post-sequence are asserted by presence in the whole file and never by position, unlike the three subsections around them ← 1/3: r2:M1
+- [M6] carried — the Skipped-invocations plan clause and the no-renumbering rule are named as Contract invariants with section 15 as their verification and no test asserts either ← 1/3: r2:M4
+- [M7] carried — Task 2's Contract requires the new N = 0 sentence to follow the existing one, and the suite asserts each string separately against the whole folded file, so adjacency is unverified ← 1/3: r2:M5
+- [M8] carried — the cell sentence telling the reviewer never to reconstruct a removed check number is the third dependency of the clause-removal mechanism and the only one unpinned ← 1/3: r3:M1
+- [M9] carried — the branch split one Phase 0 rule into two and only the removal of the old combined sentence is asserted; neither replacement is pinned ← 1/3: r3:M2
+- [M10] carried — four sentences that bound the sequence cap and the retry path carry no needle, including the rule that a third open pass ends the sequence and stops nothing ← 1/3: r3:M3
+- [M11] carried — the `Owed:` cross-skill contract is pinned on the consumer side while its producer-side needle matches two unrelated sentences, so a producer reword cannot turn the suite red ← 1/3: r3:M4
+- [M12] carried — section 17 pins four fragments of the rewritten Deviation 2 but not its pre-release clause, and adds no negative assertion for the round-counting sentence the rewrite removed ← 1/3: r3:M5

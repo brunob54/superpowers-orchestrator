@@ -672,3 +672,42 @@ Results: 15 passed, 0 failed
 $ bash tests/fill-prompt/run-tests.sh
 Results: 166 passed, 0 failed
 ```
+
+## Round 8
+
+Findings addressed: I1.
+
+Fix: added one `assert_folded_contains` in tests/reviewer-templates/run-tests.sh
+section 15, pinning the sentence "The rest of the entry is the round-entry
+body above under the same rules, with no `**Converged:**` line." (skills/multi-doc-review/SKILL.md
+lines 958-960). Verified before committing: the needle occurs exactly once in
+the folded file, and the assertion fails when that sentence is removed (tested
+on a scratch copy, then restored — `git status --porcelain` showed no diff
+afterward).
+
+Command:
+```
+bash tests/reviewer-templates/run-tests.sh
+bash tests/review-gates/run-tests.sh
+bash tests/orchestrating-development/run-tests.sh
+bash tests/writing-plans/run-tests.sh
+bash tests/fill-prompt/run-tests.sh
+```
+
+Output (tail of each):
+```
+=== tests/reviewer-templates/run-tests.sh ===
+Results: 192 passed, 0 failed
+
+=== tests/review-gates/run-tests.sh ===
+Results: 132 passed, 0 failed
+
+=== tests/orchestrating-development/run-tests.sh ===
+Results: 169 passed, 0 failed
+
+=== tests/writing-plans/run-tests.sh ===
+Results: 15 passed, 0 failed
+
+=== tests/fill-prompt/run-tests.sh ===
+Results: 166 passed, 0 failed
+```
