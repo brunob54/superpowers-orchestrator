@@ -4,6 +4,8 @@ _Invocation 1 — 2026-09-10 — spec docs/superpowers-orchestrator/2026-09-10-e
 
 _Invocation 2 — 2026-09-10 — M=3 — resumed_
 
+_Invocation 3 — 2026-09-12 — N_code=1 M=1 — resumed_
+
 ## Phase 1 — Plan — DONE — 2026-09-10
 plan: docs/superpowers-orchestrator/2026-09-10-execution-readiness-pass/plans/execution-readiness-pass.md — 10 tasks
 

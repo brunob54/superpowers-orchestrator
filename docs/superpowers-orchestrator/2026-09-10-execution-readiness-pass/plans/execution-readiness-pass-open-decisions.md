@@ -62,6 +62,7 @@
 - **Defensible answers:** n/a — the in-run resume cap of 3 was reached, so no ruling is made on the merits.
 - **Forks:** none
 - **Resolution:** escalated — chain: this is the fourth open return of phase 4, and rulings 1, 5 and 6 already used the three in-run resumes the cap allows.
+- **Follow-up:** fix it: add folded needles for the three unpinned clauses — clause: none
 
 ## Ruling 8 — 2026-09-12 — phase 4 — [I2] section 14's needle loop asserts against the whole file
 
@@ -71,3 +72,4 @@
 - **Defensible answers:** n/a — the in-run resume cap of 3 was reached, so no ruling is made on the merits.
 - **Forks:** none
 - **Resolution:** escalated — chain: this is the fourth open return of phase 4, and rulings 1, 5 and 6 already used the three in-run resumes the cap allows.
+- **Follow-up:** fix it: scope section 14's needle loop to the "### Triage of a readiness finding" subsection — clause: none
