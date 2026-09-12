@@ -489,7 +489,8 @@ rotating round, and returns `rounds=0 outcome=cap unresolved=0`. Its log
 entry keeps the phase's line shape and reads
 `## Phase 2 — Plan review — rounds 0 (N_plan=0) — cap — unresolved 0`, so a
 human and the Resume step can tell it from a controller that produced
-nothing.
+nothing. When the controller's report carries a `readiness owed: <n>`
+note, Phase 2 records it in the same log entry.
 
 ## Phase 3 — Implementation Batches
 
@@ -640,7 +641,9 @@ The open-decisions file is `<topic folder>/plans/<slug>-open-decisions.md`.
    code-review rounds/fixes/outcome, harness probes owed — every
    `rejected: harness probe not runnable here — <probe>` line of the
    code-review log and the plan-review log, listed verbatim with its
-   review log path, or `none` — rulings made in the run — the count of
+   review log path, or `none` — readiness conflicts owed — the
+   plan-review log's `Owed:` block, listed verbatim, or `none` —
+   rulings made in the run — the count of
    `## Ruling` entries in
    `<topic folder>/plans/<slug>-open-decisions.md`, and every entry whose
    Forks line records `contradiction: unsettled`, listed by ruling number,

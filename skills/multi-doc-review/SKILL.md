@@ -689,9 +689,10 @@ Constraints row removes two things — check (5), and the paragraph beginning
 the `coverage: GC<k> — <n> sites checked` shape and the discard rule. Do not
 look for a third item: the shape is a phrase inside that paragraph, not a
 line of its own. The paragraph goes because a coverage requirement left with
-no entries to cover would make every report of that pass unusable. Stop at
-that paragraph — the sentence beginning `Coverage, ambiguity, feasibility`
-belongs to no check and always stays.
+no entries to cover would make every report of that pass unusable. The row fires the
+same way when the block is present but holds no recognised top-level list item, since
+that also leaves zero entries to cover. Stop at that paragraph — the sentence
+beginning `Coverage, ambiguity, feasibility` belongs to no check and always stays.
 
 ### Triage of a readiness finding
 
@@ -719,6 +720,11 @@ the authority of its two sides.
 | plan text vs plan text | amend the side the spec decides against; failing that, the side the Global Constraints block decides against; failing both, `rejected: undecidable at this gate — <both sides>` |
 | fixed text vs fixed text (the spec contradicts itself, or a finding reverses an amendment made earlier in the same sequence) | `rejected: undecidable at this gate — spec inconsistent` |
 | the plan mandates a rubric defect (check 2) | `rejected: plan-mandated — <text>`, never amended |
+
+A check (5) finding has one fixed side, the Global Constraints entry, and one or more
+plan sides, its listed failing sites; `applied` requires every listed site amended,
+and a finding with any site left unamended is disposed `rejected: undecidable at this
+gate`, naming the sites left.
 
 `A readiness finding never produces an unresolved: line, in any caller.` A
 finding whose application fails is disposed `rejected: undecidable at this
@@ -825,17 +831,17 @@ Copy the cell for the doc type verbatim into `[LENS_INSTRUCTIONS]`.
   `**Contract:**` field; a fenced code block or block-quoted wording in a
   task step is a reference implementation, not a mandated body, and is not
   reported under this check;
-  (5) for each entry of the plan's `**Global Constraints:**` block, every
-  site the entry binds — a site is any task step, mandated body,
-  verification line or header field whose text the entry constrains.
-  For check (5) report ONE finding per Global Constraints entry, listing
-  every failing site inside it, never one finding per site. End your report
-  with a coverage block, one line per entry, in this shape: `coverage: GC<k> —
-  <n> sites checked`. Write that block as the last lines of your report, below
-  the `### Findings` section when the report has one and below `### Verdict`
-  otherwise, whether or not you report any finding; the output format you were
-  given lists no such block, and this instruction is what adds it. A report
-  without a coverage line for every entry is incomplete and will be discarded.
+  (5) for each entry of the plan's `**Global Constraints:**` block, every site the entry
+  binds — a site is any task step, mandated body, verification line or header field whose
+  text the entry constrains. For check (5) report ONE finding per Global Constraints
+  entry, listing every failing site inside it, never one finding per site. `<k>` is an
+  entry's 1-based position among the block's top-level list items, in document order. End
+  your report with a coverage block, one line per position, in that order, in this shape:
+  `coverage: GC<k> — <n> sites checked`. Write that block as the last lines of your
+  report, below the `### Findings` section when the report has one and below `### Verdict`
+  otherwise, whether or not you report any finding; the output format you were given lists
+  no such block, and this instruction is what adds it. A report without a coverage line
+  for every entry is incomplete and will be discarded.
   Coverage, ambiguity, feasibility and style belong to the other lenses; do
   not report them here.
 - spec: not used — the Execution readiness pass runs for plan documents only.
@@ -963,34 +969,33 @@ and `**Host self-review:** done` count only inside their own readiness entry, ne
 quoted text in a disposition line or `Owed:` item; the quoted sides of an `Owed:` item
 or of a disposition line are indented or fenced so no line of them starts at column 1.
 
-**Fields read.** Under the recognition conditions of the once-per-gate step,
-this release adds the `## Readiness <pre|post> <p>` heading with its
-`**Result:**` line and the `**Host self-review:** done` line;
-`r counts ## Round headings only.` A readiness entry's sequence and pass number come from
-its heading; `## Round`-heading position governs the heading, and you rewrite it, only when
-such a heading exists and the entry is before the first or after the last — with none
-logged, the heading governs. `<p>` is the entry's ordinal among that sequence's own
+**Fields read.** Under the recognition conditions of the once-per-gate step, this release
+adds the `## Readiness <pre|post> <p>` heading with its `**Result:**` line and the `**Host
+self-review:** done` line; `r counts ## Round headings only.` A readiness entry's sequence
+and pass number come from its heading; `## Round`-heading position governs the heading,
+and you rewrite it, only when such a heading exists and the entry is before the first or
+after the last `## Round` heading of this invocation entry; with none logged in this
+entry, the heading governs. `<p>` is the entry's ordinal among that sequence's own
 readiness entries, never from `## Round` headings. An entry a later resume made obsolete
-gains ` — superseded` at the end of its heading — the one condition: a resume redoes a pass
-whose logged entry has no valid `**Result:**` line; such an entry counts toward nothing,
-including the pass count. `settled` and `open` are compared as whole words.
+gains ` — superseded` at the end of its heading — the one condition: a resume redoes a
+pass whose logged entry has no valid `**Result:**` line; such an entry counts toward
+nothing, including the pass count. `settled` and `open` are compared as whole words.
 
-**Completeness.** An invocation entry for a plan written by this release — its
-invocation line carries a `plan-blob` field — is complete when its recorded N is 0,
-its pre-sequence has ended and the self-review marker is present; when a resume
-overrode the recorded N with N = 0, its rotating rounds count as complete on that
-basis; or when its last round entry carries `**Converged:** yes` or `r` is at least
-its recorded N, its pre-sequence has ended, its post-sequence has ended and that
-marker is present. A sequence **has ended** when its last pass reads `**Result:**
-settled` or it holds at least as many passes as its cap; any other state is
-interrupted. The cap is recomputed when the entry is read, from
-whether the plan has a locatable spec at that moment, and is never recorded
-in the entry. Accepted by design: a spec that appeared or disappeared
-between runs changes the classification of an existing entry, and that
-costs a pass, never correctness. An entry whose invocation line carries no
-`plan-blob` field was written before this release: both sequences count as
-ended, it owes no readiness pass and no marker, and the once-per-gate rule
-decides it, as that rule stood before this release. **Never use the absence
+**Completeness.** An invocation entry for a plan written by this release — its invocation
+line carries a `plan-blob` field — is complete when its recorded N is 0, its pre-sequence
+has ended and the self-review marker is present; when a resume overrode the recorded N
+with N = 0, its rotating rounds count as complete on that basis; or when its pre-sequence
+has ended, its post-sequence has ended (N ≥ 1) and that marker is present, however its
+rotating rounds ended. A sequence **has ended** when its last pass reads `**Result:**
+settled` or it holds at least as many passes as its cap; any other state is interrupted.
+The cap is recomputed when the entry is read, from whether the plan has a locatable spec
+at that moment, and is never recorded in the entry. Accepted by design: a spec that
+appeared or disappeared between runs changes the classification of an existing entry, and
+that costs a pass, never correctness — except that a resume reopening an already-ended
+sequence this way must also re-run the host self-review and rewrite `plan-blob` before the
+entry counts as complete. An entry whose invocation line carries no `plan-blob` field was
+written before this release: both sequences count as ended, it owes no readiness pass and
+no marker, and the once-per-gate rule decides it, as that rule stood before this release. **Never use the absence
 of a `## Readiness` heading as that test.** An invocation of this release
 that was interrupted during pass 1 of its pre-sequence has written no
 `## Readiness` heading yet and is byte-identical, in every other field, to
@@ -1056,11 +1061,11 @@ governs the remaining passes.
   `rejected: harness probe not runnable here — <probe> — (<reason>)`,
   never treated as
   support for the claim; the probe goes on the `Harness probes owed:` line.
-- Readiness pass whose reports are all unusable (u = 0) → `inconclusive`,
-  and the pass is open; a readiness entry with a missing or malformed
-  `**Result:**` line is read as open. A readiness pass with a
-  prompt-delivery or round-level failure is handled by the bullets above,
-  as a round is.
+- Readiness pass whose reports are all unusable (u = 0) → `inconclusive`, and the pass is
+  open; a readiness entry with a missing or malformed `**Result:**` line leaves its
+  sequence open, not ended, but counts toward nothing, including the pass count, once a
+  resume supersedes it. A readiness pass with a prompt-delivery or round-level failure is
+  handled by the bullets above, as a round is.
 
 ## Guard Interaction
 
