@@ -1019,3 +1019,119 @@ Only `tests/reviewer-templates/run-tests.sh` is changed this round
 (`git diff --stat`: `tests/reviewer-templates/run-tests.sh | 30
 +++++++++++++++++++++++++-----`, 1 file changed, 25 insertions(+), 5
 deletions(-)).
+
+## Round 8
+
+Finding addressed: [I1].
+
+### Fix
+
+1. `skills/multi-doc-review/SKILL.md:676` — table row (`Clause removed` cell
+   of the `no **Global Constraints:** block` row): reworded the removal
+   target from "the paragraph beginning `For check (5) report ONE finding`"
+   to "the run of sentences from `For check (5) report ONE finding` up to,
+   but not including, the sentence beginning `Coverage, ambiguity,
+   feasibility`". Both anchor strings kept byte-identical; the row's mention
+   of the `coverage: GC<k>` shape kept.
+2. `skills/multi-doc-review/SKILL.md:686-695` — prose below the table:
+   reworded the same target from "the paragraph beginning ... which is the
+   paragraph that carries ..." / "Stop at that paragraph" to "the run of
+   sentences that starts at `For check (5) report ONE finding` and runs up
+   to, but not including, the sentence beginning `Coverage, ambiguity,
+   feasibility`" / "Stop before the sentence beginning `Coverage, ambiguity,
+   feasibility`". Both anchors kept byte-identical. Reflowed to keep the
+   same 10-line span (line count of the file unchanged: 1079, cap 1080). No
+   blank line was added anywhere in this span, and the Execution readiness
+   lens cell (skills/multi-doc-review/SKILL.md around lines 830-846) was not
+   touched.
+3. `tests/reviewer-templates/run-tests.sh:437` — updated the verbatim row
+   needle in section 13's needle loop to the new row wording, byte-for-byte.
+4. `tests/reviewer-templates/run-tests.sh:438` — added exactly one new
+   `assert_folded_contains` needle (same section-13 loop, against
+   `$DOC_SKILL`) pinning the reworded bounded-span sentence: `the run of
+   sentences that starts at \`For check (5) report ONE finding\` and runs up
+   to, but not including, the sentence beginning \`Coverage, ambiguity,
+   feasibility\``.
+
+No `assert_file_contains` / `assert_file_has_line` was added or changed for
+either needle; both use `assert_folded_contains` only, per the binding
+constraint.
+
+### Verification
+
+Line-count check:
+
+```
+$ awk 'END { print NR }' skills/multi-doc-review/SKILL.md
+1079
+```
+
+Suite run after the fix:
+
+```
+$ bash tests/reviewer-templates/run-tests.sh
+...
+Results: 199 passed, 0 failed
+```
+
+### Mutation test
+
+Copied `skills/multi-doc-review/SKILL.md` aside, then replaced the reworded
+table-row clause and the reworded prose sentences with unrelated text
+(`check (5) and something else entirely`, and `Nothing else to see here.`),
+mutating the real file:
+
+```
+$ bash tests/reviewer-templates/run-tests.sh
+...
+FAIL: multi-doc-review SKILL.md: procedure carries '| no `**Global Constraints:**` block | check (5) and the run of sentences from `For check (5) report ONE finding` up to, but not including, the sentence beginning `Coverage, ambiguity, feasibility`, which carries the `coverage: GC<k>` shape | `**Note:** Global Constraints sweep not run — no block` |' (missing: ...)
+FAIL: multi-doc-review SKILL.md: procedure carries 'the run of sentences that starts at `For check (5) report ONE finding` and runs up to, but not including, the sentence beginning `Coverage, ambiguity, feasibility`' (missing: ...)
+Results: 197 passed, 2 failed
+```
+
+Both the updated row needle (step 3) and the new needle (step 4) turned red,
+as required.
+
+Restored `skills/multi-doc-review/SKILL.md` from the copy made before the
+mutation, and confirmed byte-identity:
+
+```
+$ diff /tmp/SKILL.md.pre-mutation-copy skills/multi-doc-review/SKILL.md && echo IDENTICAL
+IDENTICAL
+$ git diff --stat -- skills/multi-doc-review/SKILL.md
+skills/multi-doc-review/SKILL.md | 22 +++++++++++-----------
+ 1 file changed, 11 insertions(+), 11 deletions(-)
+```
+
+(The `git diff --stat` line above reflects the fix itself against the
+committed HEAD, i.e. the file's state before this round's commit — not a
+residual mutation; the `diff`/`IDENTICAL` check confirms the mutation left
+no trace.)
+
+Suite re-run after restore, confirmed green again:
+
+```
+$ bash tests/reviewer-templates/run-tests.sh
+...
+Results: 199 passed, 0 failed
+```
+
+### Other required suites, all green after the fix
+
+```
+$ bash tests/review-gates/run-tests.sh
+...
+Results: 134 passed, 0 failed
+
+$ bash tests/writing-plans/run-tests.sh
+...
+Results: 15 passed, 0 failed
+
+$ bash tests/orchestrating-development/run-tests.sh
+...
+Results: 169 passed, 0 failed
+
+$ bash tests/fill-prompt/run-tests.sh
+...
+Results: 166 passed, 0 failed
+```
