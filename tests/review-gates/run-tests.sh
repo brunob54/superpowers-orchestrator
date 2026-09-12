@@ -550,6 +550,15 @@ ORCH_FILE_NORM="$WORK/orch-file-norm.txt"
 normalize_to "$ORCH" "$ORCH_FILE_NORM"
 assert_not_icontains "orchestrator no longer narrows both phases with one N=0 sentence" "$ORCH_FILE_NORM" \
   'N=0 means you skip that phase yourself'
+# The old single sentence was split in two. Only the N_plan=0 half is covered
+# by the assertion above, so pin the surviving N_code=0 half as well: Task 7's
+# Contract names the `skipped (N_code=0)` log shape an invariant, and without
+# these two assertions deleting that half leaves every suite green. Folded
+# needles (not whole-line assertions) so the paragraph can still be reflowed.
+assert_icontains "orchestration Phase 0 keeps the N_code=0 half" "$ORCH_P0_NORM" \
+  'N_code=0 means you skip Phase 4 yourself'
+assert_icontains "orchestration Phase 0 names the skipped (N_code=0) log shape" "$ORCH_P0_NORM" \
+  '`## Phase 4 — Code review — skipped (N_code=0)`'
 # The Log Format section is what a resuming orchestrator reads to classify a
 # log entry, so the earlier-release exception must stand there, not only in
 # Phase 0. Span: the Log Format heading to the `## state.md Section` heading.
