@@ -711,3 +711,31 @@ Results: 15 passed, 0 failed
 === tests/fill-prompt/run-tests.sh ===
 Results: 166 passed, 0 failed
 ```
+
+## Round 8
+
+Findings addressed: [I1].
+
+Fix: two assertions added in `tests/review-gates/run-tests.sh` (after the
+`orchestrator no longer narrows both phases with one N=0 sentence`
+assertion) pin the surviving `N_code=0` half of the split Phase 0 sentence
+and its `skipped (N_code=0)` log shape, using the suite's folded-needle
+helper `assert_icontains` against the normalized Phase 0 span.
+
+Covering tests:
+
+```
+$ bash tests/review-gates/run-tests.sh
+Results: 134 passed, 0 failed
+(exit status 0)
+```
+
+Negative check (temporary deletion of the `N_code=0` half of the Phase 0
+sentence in `skills/orchestrating-development/SKILL.md`, then restored):
+
+```
+$ bash tests/review-gates/run-tests.sh
+Results: 132 passed, 2 failed
+  - orchestration Phase 0 keeps the N_code=0 half (missing: N_code=0 means you skip Phase 4 yourself)
+  - orchestration Phase 0 names the skipped (N_code=0) log shape (missing: `## Phase 4 — Code review — skipped (N_code=0)`)
+```
