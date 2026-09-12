@@ -54,3 +54,16 @@ Items: [I2] escalated (chain) — section 14's needle loop asserts against the w
 Detail: docs/superpowers-orchestrator/2026-09-10-execution-readiness-pass/plans/execution-readiness-pass-open-decisions.md
 Forks: none
 Re-dispatch: none — escalated
+
+## STOPPED — 2026-09-12 — phase 4 — in-run resume cap reached; two verification-cap items escalated as chain
+Detail: docs/superpowers-orchestrator/2026-09-10-execution-readiness-pass/implementation/execution-readiness-pass-review-log.md
+Open: [I1] escalated (chain) — the lens cell's clause-removal safety text is only half pinned: the cell clause 'a number missing from the list was removed on purpose for this plan; never reconstruct it', the no-renumbering paragraph and the sentence 'Write that block as the last lines of your report' carry no needle — tests/reviewer-templates/run-tests.sh:404
+Open: [I2] escalated (chain) — section 14's needle loop asserts against the whole file instead of the '### Triage of a readiness finding' subsection, so the 'fixed text vs fixed text' oscillation-guard row and Step 0's verify paragraph can each be deleted with every section 14 needle still green — tests/reviewer-templates/run-tests.sh:481
+Ruled: [I1 inv 1] design — fix it: pin the three fallback rows check (3), check (4), check (5), the `<k>` numbering rule and the removal table's `Clause removed` cells; leave the no-renumbering and "Stop at that paragraph" paragraphs unpinned; Step 0 and Step 1 owed against Task 3
+Ruled: [I2 inv 1] design — fix it: one `assert_folded_contains` needle over the whole readiness lens-wiring sentence, never a whole-line assertion
+Ruled: [I3 inv 1] design — fix it: needles for the tier sentence and `skip the rotating loop, log` only, as whole-bullet needles; the readiness clause is already pinned; correct the disposition text
+Ruled: [L31 inv 1] forced — amend plan: Task 10 Step 4 runs tests/smart-compress/run-tests.sh outside the `&&` chain and records its 8 failures as predating BASE (committed in ruling 1); fix it: nothing further in code
+Ruled: [I1 inv 2] forced — fix it: (this answers the `N_code=0` item at tests/review-gates/run-tests.sh:547) pin the `N_code=0` half of the split Phase 0 sentence and the `skipped (N_code=0)` log shape
+Ruled: [I1 inv 2] forced — fix it: (this answers the `## Round 8 verification 4` item at tests/reviewer-templates/run-tests.sh:667) pin the earlier-release clause of Deviation 2 in section 17
+Owed probe: - [M3] rejected: harness probe not runnable here — dispatch one throwaway subagent, in a session whose Bash allowlist does not name `git hash-object`, told to run `git hash-object <path>`, and observe whether the call returns or raises a permission prompt — (ambiguous observation) ← 1/3: r1:M3
+Resume: Resume orchestration for docs/superpowers-orchestrator/2026-09-10-execution-readiness-pass/plans/execution-readiness-pass.md
