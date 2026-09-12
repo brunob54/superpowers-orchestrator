@@ -239,3 +239,15 @@ _Invocation 2 — 2026-09-11 — N=4 M=3 — BASE..HEAD 0f0a48d..c9700a9 — bra
 - [M4] carried — `rejected: not a conflict` is listed in the `Owed:` block although it names no verified conflict, on the same reasoning that excludes `out of lens scope` ← 1/3: r3:M1
 - [M5] carried — the clause-removal note is ordered onto every readiness entry of the invocation although the structure it depends on can appear or disappear between passes ← 1/3: r3:M2
 - [M6] carried — docs/guide/README.md:248-249 describes a pass as repeated until it changes nothing and omits the second settling condition, that every reviewer of the pass returned a usable report ← 1/3: r3:M4
+
+## Round 7 — Security — opus
+**Reviewers:** M=3, usable 3/3
+**Reviewer verdicts:** r1: 0 Critical, 0 Important, 1 Minor | r2: 0 Critical, 0 Important, 3 Minor | r3: 0 Critical, 0 Important, 1 Minor
+**Sources mapped:** 5/5
+**Reviewer verdict:** 0 Critical, 0 Important, 4 Minor
+**Converged:** no
+### Dispositions
+- [M1] carried — the Phase 2 controller's new Bash grant is stated twice in one sentence, once by open reference to the commands the skill's procedure names and once as a closed enumeration of `git hash-object`; nothing pins the skill side, so a later second command would widen an unattended agent's shell permission with the suite still green ← 2/3: r1:M1, r3:M1
+- [M2] carried — the plan path is interpolated into `git hash-object "<plan path>"` at five sites and double quotes stop word splitting and globbing but not command substitution; no rule validates the path or refuses one holding a backtick or `$(` ← 1/3: r2:M1
+- [M3] carried — the readiness triage now requires both sides quoted verbatim into a committed log and into the Phase 5 report, while skills/multi-doc-review/reviewer-prompt.md carries no rule against reproducing a credential, unlike its multi-code-review sibling ← 1/3: r2:M2
+- [M4] carried — Triage Step 1 takes the spec path from the `**Spec:**` line of the document under review rather than from the `[SPEC_PATH]` the controller was dispatched with, and nothing requires the two to agree or keeps the path inside the repository ← 1/3: r2:M3
