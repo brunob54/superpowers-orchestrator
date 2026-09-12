@@ -330,7 +330,7 @@ _Invocation 2 — 2026-09-11 — N=4 M=3 — BASE..HEAD 0f0a48d..c9700a9 — bra
 - [M9] carried — five section 14 and 15 needles match more than one place in the file, so deleting the sentence each targets leaves another occurrence behind ← 1/3: r2:M4
 - [M10] carried — the completion report's value shapes and its N = 0 variant appear in no test file, while every sibling shape of the feature is pinned as a whole line ← 1/3: r3:M3
 
-_Completed — 2026-09-12 — cap reached — HEAD f64f4acd040f94a9ddb611c9ebd180f61d539621_
+_Completed — 2026-09-12 — cap reached — HEAD f37da46f33dee8fb4595f1d7270e2fa0cd76fdd0_
 Secrets found: none
 
 ### Decisions addendum — 2026-09-12
@@ -397,3 +397,26 @@ Answers supplied by the orchestrator on a later dispatch, for the open item of i
 Verification re-review run: the effective HEAD was unchanged when this addendum was started, so the accepted fix was verified here instead of by a new invocation entry, and this entry's completion marker was moved to the fix commit f64f4ac. No finding of this cycle objects to the fix. Round 8's verification cycles were already spent, so the two Critical/Important findings this cycle raised are recorded `unresolved: verification cap`.
 
 Note on identifiers: the `[I1]` and `[I2]` of `## Round 8 verification 5` above are NEW items and are not the `[I1]` this addendum decided and fixed, nor the `[I1]` of `## Round 8 verification 4`. A later answer naming them must be read against this entry.
+
+### Decisions addendum (3) — 2026-09-12
+
+Answers supplied by the user on a later dispatch, for the two open items of invocation 2's `## Round 8 verification 5` entry.
+
+- [I1] decided (user): fix it: (this answers the `## Round 8 verification 5` item at tests/reviewer-templates/run-tests.sh:404 on the lens cell's clause-removal safety text, NOT the `N_code=0` item already decided and fixed by ruling 5, and NOT the `## Round 8 verification 4` section 17 item already decided and fixed by ruling 6) add folded needles for the three unpinned clauses — the cell clause 'a number missing from the list was removed on purpose for this plan; never reconstruct it', the no-renumbering paragraph, and the sentence 'Write that block as the last lines of your report' — using that suite's folded-needle helper, never a whole-line assertion, for the same reason as rulings 1 to 3 and 5.
+- [I2] decided (user): fix it: (this answers the `## Round 8 verification 5` item at tests/reviewer-templates/run-tests.sh:481) scope section 14's needle loop to the `### Triage of a readiness finding` subsection instead of the whole file, so that a needle also matching text outside that subsection can no longer keep the loop green when the `fixed text vs fixed text` oscillation-guard row or Step 0's verify paragraph is deleted. Verify by mutation: delete each of those two pieces in turn on a temporary copy, confirm the loop turns red, restore, confirm the suite is green again.
+- [I1] fixed — three `assert_folded_contains` needles added to tests/reviewer-templates/run-tests.sh, each copied verbatim from skills/multi-doc-review/SKILL.md: the never-reconstruct cell clause and the sentence `Write that block as the last lines of your report` against the `$READINESS_CELL` extract, and the no-renumbering sentence against `$DOC_SKILL`, that clause standing outside the lens cell. No whole-line assertion was used, so Global Constraint 1 Move 1's no-reflow list is unchanged. Each clause was verified by mutation on a copy of the skill file: deleting it turned exactly its own new assertion red, and the restored file left the suite green at 198 passed, 0 failed → f37da46
+- [I2] fixed — section 14 of tests/reviewer-templates/run-tests.sh now resolves the `### Triage of a readiness finding` subsection into its own range with `extract_lines` (a `bad` call when the range cannot be resolved) and runs nine of its needles against that range; the four needles whose text genuinely lives under the skill's Error Handling section keep their whole-file assertion and carry a corrected description. Scoping alone did not turn the loop red on the two mutations the answer names, because both pinned phrases occur a second time inside the same subsection, so two further needles unique to each were added (`the spec contradicts itself`, `without searching for a second side`). Mutation verification: deleting the `fixed text vs fixed text` oscillation-guard row, and deleting Step 0's verify paragraph, each turned the loop red; after each restore the suite was green at 198 passed, 0 failed, and skills/multi-doc-review/SKILL.md is byte-identical to its pre-mutation content → f37da46
+
+## Round 8 verification 6 — Test & coverage quality — opus
+**Reviewers:** M=1, usable 1/1
+**Reviewer verdict:** 0 Critical, 1 Important, 4 Minor
+### Dispositions
+- [I1] unresolved: verification cap — the two clause-removal anchor needles at tests/reviewer-templates/run-tests.sh:397 and :398 pin their anchors as folded substrings, so they stay green on a cell where neither anchor begins a paragraph; in skills/multi-doc-review/SKILL.md the Execution readiness cell holds no blank line and the string `For check (5) report ONE finding` occurs mid-sentence, so the removal instruction that names it as a paragraph has no locatable target — at tests/reviewer-templates/run-tests.sh:397 — clause: none
+- [M1] carried — three verification pointers of the plan (two Contract `Verification:` fields and one step instruction) name section 15 of tests/review-gates/run-tests.sh while the assertions were implemented as section 16, section 15 being a pre-existing unrelated section
+- [M2] carried — the needle `**Host self-review:** done` matches four places in the folded skill file, and the one sentence that orders the marker to be written carries no needle of its own, so deleting that instruction leaves every suite green
+- [M3] carried — the needle `as a round is` is the four-word tail of the error-handling sentence it stands for and pins none of the rule, so a reword that keeps the tail still passes
+- [M4] carried — Task 9's Contract calls six user-facing documentation strings machine-checked needles while they are checked only by one-off `grep -cF` commands in the task's own step, with no standing assertion
+
+Verification re-review run: the effective HEAD was unchanged when this addendum was started, so the accepted fixes were verified here instead of by a new invocation entry, and this entry's completion marker was moved to the fix commit f37da46. No finding of this cycle objects to either fix. Round 8's three verification cycles were already spent, so the one Important finding this cycle raised is recorded `unresolved: verification cap`.
+
+Note on identifiers: the `[I1]` of `## Round 8 verification 6` above is a NEW item — the clause-removal anchor needles of tests/reviewer-templates/run-tests.sh:397 — and is not the `[I1]` this addendum decided and fixed, nor the `[I1]` of `## Round 8 verification 4` or `## Round 8 verification 5`. A later answer naming it must be read against this entry.

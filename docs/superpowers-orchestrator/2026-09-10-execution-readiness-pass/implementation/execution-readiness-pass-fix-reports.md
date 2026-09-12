@@ -801,3 +801,221 @@ Results: 193 passed, 0 failed
 The template file `skills/orchestrating-development/doc-review-loop-prompt.md`
 ends unchanged (not part of this commit); only
 `tests/reviewer-templates/run-tests.sh` was modified and committed.
+
+## Round 8
+
+Findings addressed: [I1], [I2]. Both are changes to
+`tests/reviewer-templates/run-tests.sh` only; `skills/multi-doc-review/SKILL.md`
+was mutated only in temporary, restored copies during verification and ends
+this round byte-identical to the committed version.
+
+### [I1]
+
+Fix: three folded needles added with `assert_folded_contains` (the helper
+defined at `tests/reviewer-templates/run-tests.sh:102`) in section 12
+("Execution readiness lens cell"), all asserted against `$READINESS_CELL`
+since the three clauses all lie inside that cell:
+
+- `tests/reviewer-templates/run-tests.sh:406` (new) — needle
+  `a number missing from the list was removed on purpose for this plan —
+  never reconstruct it`, copied verbatim (em dash, not the semicolon the
+  finding text paraphrased it with) from
+  `skills/multi-doc-review/SKILL.md:820-821`. Placed directly after the
+  `for numbered in ...; do ... done` loop, next to its neighbouring
+  `Run all the checks below` needle.
+- `tests/reviewer-templates/run-tests.sh:411` (new) — needle
+  `Write that block as the last lines of your report`, copied verbatim from
+  `skills/multi-doc-review/SKILL.md:840`. Placed directly after the existing
+  "coverage line shape" / "missing coverage line is discarded" needles.
+- `tests/reviewer-templates/run-tests.sh:441` (new) — needle `Removing a
+  clause never renumbers the checks that remain: the numbers of the
+  surviving checks are left exactly as they are`, copied verbatim (folded
+  across its line break) from `skills/multi-doc-review/SKILL.md:679-680`.
+  This clause (the no-renumbering paragraph) sits at
+  `skills/multi-doc-review/SKILL.md:679-684`, outside the `**Execution
+  readiness**` lens cell (the cell is lines 817-848) and inside the
+  `### Readiness sequences (plan documents only)` subsection that section 13
+  already covers with `assert_folded_contains` against the whole file
+  `$DOC_SKILL` — no narrower already-resolved range exists for that
+  subsection, so this needle was added as a new element of section 13's
+  existing `for needle in ...; do` array, next to the neighbouring
+  clause-removal table-row needles, asserted against `$DOC_SKILL` like its
+  neighbours.
+
+Note on the finding's location text: the finding names all three clauses as
+belonging to "the existing section 13 assertions for the readiness lens
+cell", but `skills/multi-doc-review/SKILL.md:404` (the line the finding
+cites) falls inside the block labelled `bold "12. Execution readiness lens
+cell"`, not `bold "13. ..."`; clauses (a) and (c) are inside the lens cell
+cell text itself, so they were pinned in section 12 against `$READINESS_CELL`
+per the finding's own disambiguating instruction ("`$READINESS_CELL` for
+text inside the lens cell, ... the narrowest already-resolved range that
+holds it otherwise"); clause (b) is not inside the cell, so it was pinned in
+section 13 against `$DOC_SKILL`, the range its neighbours already use.
+
+Verification (one clause at a time, on the real file, backed up first and
+restored with `cp` from the backup, never `git checkout`, so the check-out
+path was never exercised on a clean-but-uncommitted repo):
+
+```
+$ cp skills/multi-doc-review/SKILL.md /tmp/SKILL.md.orig
+$ shasum skills/multi-doc-review/SKILL.md /tmp/SKILL.md.orig
+041eef60aa9f27d71e4c9bc8c61044b8  skills/multi-doc-review/SKILL.md
+041eef60aa9f27d71e4c9bc8c61044b8  /tmp/SKILL.md.orig
+```
+
+Clause (a) — replaced `Run all the checks below; a number missing from the\n  list was removed on purpose for this plan — never reconstruct it:\n` with `Run all the checks below:\n`:
+
+```
+$ bash tests/reviewer-templates/run-tests.sh 2>&1 | grep -E "FAIL|Results"
+  FAIL: Execution readiness cell: missing-number-was-removed-on-purpose clause (missing: a number missing from the list was removed on purpose for this plan — never reconstruct it)
+Results: 195 passed, 1 failed
+```
+
+Restored (`cp /tmp/SKILL.md.orig skills/multi-doc-review/SKILL.md`) — suite
+green again: `Results: 196 passed, 0 failed`.
+
+Clause (b) — deleted the six-line no-renumbering paragraph
+(`skills/multi-doc-review/SKILL.md:679-685` including its trailing blank
+line):
+
+```
+$ bash tests/reviewer-templates/run-tests.sh 2>&1 | grep -E "FAIL|Results"
+  FAIL: multi-doc-review SKILL.md: procedure carries 'Removing a clause never renumbers the checks that remain: the numbers of the surviving checks are left exactly as they are' (missing: Removing a clause never renumbers the checks that remain: the numbers of the surviving checks are left exactly as they are)
+Results: 195 passed, 1 failed
+```
+
+Restored — suite green again: `Results: 196 passed, 0 failed`.
+
+Clause (c) — replaced the `Write that block as the last lines of your\n  report,` wording with `, ` (dropping the sentence) around
+`skills/multi-doc-review/SKILL.md:840`:
+
+```
+$ bash tests/reviewer-templates/run-tests.sh 2>&1 | grep -E "FAIL|Results"
+  FAIL: Execution readiness cell: coverage block placement sentence (missing: Write that block as the last lines of your report)
+Results: 195 passed, 1 failed
+```
+
+Restored — suite green again: `Results: 196 passed, 0 failed`. Confirmed
+byte-identical to the pre-mutation backup:
+
+```
+$ git diff --stat -- skills/multi-doc-review/SKILL.md
+$ shasum skills/multi-doc-review/SKILL.md /tmp/SKILL.md.orig
+48b4bf3561389a0d8b1d40ab2bbab85d94da3428  skills/multi-doc-review/SKILL.md
+48b4bf3561389a0d8b1d40ab2bbab85d94da3428  /tmp/SKILL.md.orig
+```
+(`git diff --stat` printed nothing.)
+
+### [I2]
+
+Fix, in section 14 ("Triage of a readiness finding") of
+`tests/reviewer-templates/run-tests.sh`:
+
+- Added `TRIAGE_RANGE` (`$WORK/triage-of-a-readiness-finding.txt`), extracted
+  with `extract_lines "$DOC_SKILL" "$TRIAGE_LINE" "$LENS_ROT_LINE_14"` — both
+  bounds were already resolved by the section's existing position check — the
+  same pattern section 13 already uses for `LENS_ROTATION_RANGE`, with a
+  `bad` fallback when either bound is unresolved.
+- Re-scoped 9 of the loop's needles (`rejected: not a conflict`, `rejected:
+  plan-mandated`, `rejected: undecidable at this gate`, `out of lens scope`,
+  `A readiness finding never produces an unresolved: line, in any caller.`,
+  `reverses an amendment made earlier in the same sequence`, `` `rejected:
+  plan-mandated — <text>`, never amended ``, `` amend the plan side,
+  `applied` ``, `amend the side the spec decides against; failing that, the
+  side the Global Constraints block decides against`) from `$DOC_SKILL` to
+  `$TRIAGE_RANGE`, and reworded their description from `triage carries` to
+  `Triage of a readiness finding subsection carries`.
+- Kept the 4 needles that pin text outside the subsection — `Readiness pass
+  whose reports are all unusable (u = 0) → `inconclusive`, and the pass is
+  open` (`skills/multi-doc-review/SKILL.md:1064`), `a readiness entry with a
+  missing or malformed` (`:1065`), `as a round is` (`:1068`), `for a plan
+  document the Execution readiness pre-sequence still runs` (`:1036-1037`) —
+  all four sit under `## Error Handling`, not the triage subsection. No
+  narrower already-resolved range exists in this suite for `$DOC_SKILL`'s
+  Error Handling section, so per the finding's own fallback ("its own
+  resolved range, or the whole file when no narrower range exists") they
+  stay asserted against `$DOC_SKILL`, unweakened, in their own loop with the
+  description corrected to `Error Handling section carries`.
+- Added two further needles to the (now `$TRIAGE_RANGE`-scoped) loop:
+  `the spec contradicts itself` and `without searching for a second side`.
+  These were required beyond the plain re-scope: mutation-testing the
+  re-scoped loop showed the two clauses the finding names as the mutation
+  targets — the `fixed text vs fixed text` row and Step 0's verify paragraph
+  — each duplicate their only previously-pinned phrase
+  (`reverses an amendment made earlier in the same sequence`, and `rejected:
+  not a conflict` respectively) elsewhere inside the same triage subsection
+  (`skills/multi-doc-review/SKILL.md:712-713` inside Step 1's authority
+  paragraph, and `:733-734` inside the subsection's closing paragraph), so
+  scoping to the subsection alone left both mutations green. `the spec
+  contradicts itself` and `without searching for a second side` are each
+  copied verbatim from the row (`:721`) and from Step 0's paragraph (`:702`)
+  respectively, and verified unique in the whole file with
+  `grep -n -F -- '<text>' skills/multi-doc-review/SKILL.md`.
+
+Verification, backup taken first:
+
+```
+$ cp skills/multi-doc-review/SKILL.md /tmp/SKILL.md.orig2
+```
+
+Baseline after the section-14 edit, before adding the two extra needles —
+mutating the `fixed text vs fixed text` row and, separately, Step 0's
+paragraph — suite stayed green both times (`Results: 196 passed, 0 failed`),
+confirming the finding's diagnosis that the plain re-scope was not
+sufficient by itself. After adding the two extra needles:
+
+```
+$ bash tests/reviewer-templates/run-tests.sh 2>&1 | tail -3
+Results: 198 passed, 0 failed
+```
+
+Mutation 1 — deleted the `| fixed text vs fixed text ... | rejected:
+undecidable at this gate — spec inconsistent |` row
+(`skills/multi-doc-review/SKILL.md:721`):
+
+```
+$ bash tests/reviewer-templates/run-tests.sh 2>&1 | grep -E "FAIL|Results"
+  FAIL: multi-doc-review SKILL.md: Triage of a readiness finding subsection carries 'the spec contradicts itself' (missing: the spec contradicts itself)
+Results: 197 passed, 1 failed
+```
+
+Restored (`cp /tmp/SKILL.md.orig2 skills/multi-doc-review/SKILL.md`) — suite
+green again: `Results: 198 passed, 0 failed`.
+
+Mutation 2 — deleted Step 0's whole verify paragraph
+(`skills/multi-doc-review/SKILL.md:699-706` including its trailing blank
+line):
+
+```
+$ bash tests/reviewer-templates/run-tests.sh 2>&1 | grep -E "FAIL|Results"
+  FAIL: multi-doc-review SKILL.md: Triage of a readiness finding subsection carries 'without searching for a second side' (missing: without searching for a second side)
+Results: 197 passed, 1 failed
+```
+
+Restored — suite green again, and confirmed byte-identical to the
+pre-mutation backup:
+
+```
+$ bash tests/reviewer-templates/run-tests.sh 2>&1 | tail -3
+Results: 198 passed, 0 failed
+$ git diff --stat -- skills/multi-doc-review/SKILL.md
+$ shasum skills/multi-doc-review/SKILL.md /tmp/SKILL.md.orig2
+48b4bf3561389a0d8b1d40ab2bbab85d94da3428  skills/multi-doc-review/SKILL.md
+48b4bf3561389a0d8b1d40ab2bbab85d94da3428  /tmp/SKILL.md.orig2
+```
+(`git diff --stat` printed nothing — `skills/multi-doc-review/SKILL.md` is
+unchanged.)
+
+### Final covering-test run
+
+```
+$ bash tests/reviewer-templates/run-tests.sh
+...
+Results: 198 passed, 0 failed
+```
+
+Only `tests/reviewer-templates/run-tests.sh` is changed this round
+(`git diff --stat`: `tests/reviewer-templates/run-tests.sh | 30
++++++++++++++++++++++++++-----`, 1 file changed, 25 insertions(+), 5
+deletions(-)).
