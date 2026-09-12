@@ -329,3 +329,6 @@ _Invocation 2 — 2026-09-11 — N=4 M=3 — BASE..HEAD 0f0a48d..c9700a9 — bra
 - [M8] carried — the check (5) all-sites disposition rule, the no-renumbering rule and the cell clause telling the reviewer never to reconstruct a removed check number are all unpinned ← 1/3: r2:M3
 - [M9] carried — five section 14 and 15 needles match more than one place in the file, so deleting the sentence each targets leaves another occurrence behind ← 1/3: r2:M4
 - [M10] carried — the completion report's value shapes and its N = 0 variant appear in no test file, while every sibling shape of the feature is pinned as a whole line ← 1/3: r3:M3
+
+_Completed — 2026-09-12 — cap reached — HEAD 01cad8013277ba9a840ac75f4d0169e27433dd7c_
+Secrets found: none
