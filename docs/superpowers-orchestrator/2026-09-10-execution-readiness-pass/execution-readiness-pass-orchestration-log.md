@@ -75,3 +75,5 @@ Items: [I1] design — fix it: reword the clause-removal instruction in skills/m
 Detail: docs/superpowers-orchestrator/2026-09-10-execution-readiness-pass/plans/execution-readiness-pass-open-decisions.md
 Forks: 3 of 3 (design consistency, implementation practicality, adversarial) — contradiction: none
 Re-dispatch: phase 4, in-run resume 1 of 3
+
+## Phase 4 — Code review — rounds 4 — cap — fixes 1 — unresolved 0
