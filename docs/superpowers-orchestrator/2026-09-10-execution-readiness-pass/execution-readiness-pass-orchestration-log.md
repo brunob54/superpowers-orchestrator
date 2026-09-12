@@ -35,3 +35,9 @@ Items: [L31] forced — amend plan: take tests/smart-compress/run-tests.sh out o
 Detail: docs/superpowers-orchestrator/2026-09-10-execution-readiness-pass/plans/execution-readiness-pass-open-decisions.md
 Forks: 9 of 9 (design consistency, implementation practicality, adversarial) — contradiction: settled
 Re-dispatch: phase 4, in-run resume 1 of 3
+
+## RULING 5 — 2026-09-12 — phase 4 — the one open item of invocation 2 ruled as a forced fix
+Items: [I1] forced — fix it: pin the `N_code=0` half of the split Phase 0 sentence and the `skipped (N_code=0)` log shape in tests/review-gates/run-tests.sh
+Detail: docs/superpowers-orchestrator/2026-09-10-execution-readiness-pass/plans/execution-readiness-pass-open-decisions.md
+Forks: none
+Re-dispatch: phase 4, in-run resume 2 of 3

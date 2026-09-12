@@ -35,3 +35,12 @@
 - **Defensible answers:** n/a
 - **Forks:** none
 - **Resolution:** amend plan: Task 10 Step 4 takes tests/smart-compress/run-tests.sh out of the `&&` chain and records its 8 pre-existing failures as predating BASE; fix it: nothing further in code — the forced fact is that the clause is binding plan text the finding proves unsatisfiable on this branch, so `plan governs` has no clause that makes the finding non-binding, a bare `fix it` is refused against binding text, and `accept` is valid only for an `unresolved` item, which this is not; `amend plan` is the only answer the guards leave.
+
+## Ruling 5 — 2026-09-12 — phase 4 — [I1] the `skipped (N_code=0)` log shape is a Contract invariant with no assertion
+
+- **Class:** forced
+- **Item:** [I1 inv 2] Important tests/review-gates/run-tests.sh:547 — unresolved: verification cap — the `N_code=0` half of the split Phase 0 sentence, and its `skipped (N_code=0)` log shape, are pinned by no assertion in any suite, although Task 7's Contract names that shape as an invariant, so deleting the surviving half leaves every suite green.
+- **Contract clause:** n/a — the item's disposition line records `clause: none`.
+- **Defensible answers:** n/a
+- **Forks:** none
+- **Resolution:** fix it: add an assertion in tests/review-gates/run-tests.sh pinning the `N_code=0` half of the split Phase 0 sentence and the `skipped (N_code=0)` log shape, using the folded-needle helper of that suite rather than a whole-line assertion — the forced fact is that the item quotes no clause, so `plan governs` has nothing to quote under guard 1, and `accept` would ship a shape Task 7's Contract names an invariant with no coverage in any suite, leaving `fix it` the only defensible outcome.
