@@ -529,7 +529,7 @@ assert_not_icontains "batch-controller-prompt does not name Core Flow step 4" "$
 assert_icontains "batch-controller-prompt still names only Core Flow step 3" "$BC_NORM" \
   '"Core Flow" step 3 (the per-task loop)'
 
-bold "15. The plan gates carry the Execution readiness sentences"
+bold "16. The plan gates carry the Execution readiness sentences"
 READINESS_N0='For a plan, the Execution readiness pass runs even when N is 0.'
 READINESS_COST='add 2 to 6 further passes of M reviewers'
 assert_icontains "plan gate carries the readiness N=0 sentence" "$WP_NORM" "$READINESS_N0"

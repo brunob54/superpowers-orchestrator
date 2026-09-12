@@ -416,8 +416,8 @@ assert_file_contains "doc-review template: [ROUND] note admits a readiness label
 
 bold "13. Readiness sequences in the multi-doc-review procedure"
 for needle in 'a report that carries no `coverage:` line for some entry of the plan' \
-              'pre-sequence' \
-              'post-sequence' \
+              'run the pre-sequence of `Readiness sequences` below before round 1' \
+              'with N = 0 there is no post-sequence, and on a resume the resume rule of `Readiness entries` decides whether it has already ended' \
               'at most three passes' \
               'Readiness passes are not counted in N and are not part of the two-consecutive-clean-rounds streak.' \
               'The host self-review runs after the post-sequence.' \

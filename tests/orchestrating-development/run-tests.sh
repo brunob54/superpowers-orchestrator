@@ -28,6 +28,7 @@ H_PHASE2='## Phase 2 — Plan Review Loop'
 H_PHASE3='## Phase 3 — Implementation Batches'
 H_PHASE4='## Phase 4 — Final Code Review Loop'
 H_PHASE5='## Phase 5 — Completion'
+H_ORCHLOG='## Orchestration Log Format'
 H_RESUME='## Resume'
 H_INRUN='## In-run rulings'
 H_MAJOR='## Major-Error Stop Policy'
@@ -185,6 +186,7 @@ PHASE1_RANGE="$WORK/phase1.txt"
 PHASE2_RANGE="$WORK/phase2.txt"
 PHASE3_RANGE="$WORK/phase3.txt"
 PHASE4_RANGE="$WORK/phase4.txt"
+PHASE5_RANGE="$WORK/phase5.txt"
 RESUME_RANGE="$WORK/resume.txt"
 INRUN_RANGE="$WORK/inrun.txt"
 MAJOR_RANGE="$WORK/major.txt"
@@ -199,6 +201,7 @@ extract_range "Phase 1" "$ORCH_SKILL" "$H_PHASE1" "$H_PHASE2" "$PHASE1_RANGE"
 extract_range "Phase 2" "$ORCH_SKILL" "$H_PHASE2" "$H_PHASE3" "$PHASE2_RANGE"
 extract_range "Phase 3" "$ORCH_SKILL" "$H_PHASE3" "$H_PHASE4" "$PHASE3_RANGE"
 extract_range "Phase 4" "$ORCH_SKILL" "$H_PHASE4" "$H_PHASE5" "$PHASE4_RANGE"
+extract_range "Phase 5" "$ORCH_SKILL" "$H_PHASE5" "$H_ORCHLOG" "$PHASE5_RANGE"
 extract_range "Resume" "$ORCH_SKILL" "$H_RESUME" "$H_INRUN" "$RESUME_RANGE"
 extract_range "In-run rulings" "$ORCH_SKILL" "$H_INRUN" "$H_MAJOR" "$INRUN_RANGE"
 extract_range "Major-Error Stop Policy" "$ORCH_SKILL" "$H_MAJOR" "$H_GUARD" "$MAJOR_RANGE"
@@ -387,6 +390,12 @@ assert_folded_contains "phase 2: the controller is dispatched for every N_plan v
   'The controller is dispatched for every `N_plan` value, 0 included'
 assert_folded_contains "phase 2: N_plan=0 returns rounds=0 outcome=cap unresolved=0" "$PHASE2_RANGE" \
   'returns `rounds=0 outcome=cap unresolved=0`'
+assert_folded_contains "phase 2: records the controller's readiness owed note in the same log entry" "$PHASE2_RANGE" \
+  "When the controller's report carries a \`readiness owed: <n>\` note, Phase 2 records it in the same log entry."
+
+bold "10. Phase 5 reports readiness conflicts owed"
+assert_folded_contains "phase 5: readiness conflicts owed report item" "$PHASE5_RANGE" \
+  "readiness conflicts owed — the plan-review log's \`Owed:\` block, listed verbatim, or \`none\`"
 
 echo
 bold "Results: $PASS passed, $FAIL failed"
