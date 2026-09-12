@@ -514,6 +514,13 @@ assert_file_has_line "multi-doc-review SKILL.md: readiness entry result line" "$
 # interrupted during pass 1 of its pre-sequence as pre-release, silently.
 assert_folded_contains "multi-doc-review SKILL.md: never key completeness on the absence of a Readiness heading" "$DOC_SKILL" \
   '**Never use the absence of a `## Readiness` heading as that test.**'
+# Without this pinned, deleting the sentence would let a readiness entry take
+# the round-entry body including a `**Converged:**` line, and the
+# once-per-gate recognition rule (which counts `**Converged:** yes` at the
+# start of a line of a round entry) would then read a readiness entry as a
+# converged round entry.
+assert_folded_contains "multi-doc-review SKILL.md: readiness entry body carries no Converged line" "$DOC_SKILL" \
+  'The rest of the entry is the round-entry body above under the same rules, with no `**Converged:**` line.'
 # The plan variant of the invocation line must exist as its own whole line,
 # and the writing step must be told to emit the field: without both, the
 # plan-blob comparison is inert because no entry ever carries the field.
