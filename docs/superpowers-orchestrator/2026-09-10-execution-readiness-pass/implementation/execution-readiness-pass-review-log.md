@@ -217,3 +217,25 @@ _Invocation 2 — 2026-09-11 — N=4 M=3 — BASE..HEAD 0f0a48d..c9700a9 — bra
 - [M5] fixed — the RELEASE-NOTES 7.14.0 entry said a missing sweep can never end a sequence where the skill says settle → 5f01e60 ← 1/3: r3:M1
 - [M6] carried — the `Owed:` block requires each item to name both sides, which a `rejected: not a conflict` item cannot do ← 1/3: r3:M2
 - [M7] carried — docs/guide/README.md:248 and the phase table read as though both readiness sequences run at N = 0, while the post-sequence runs only at N >= 1 ← 1/3: r3:M4
+
+## Round 6 — Adversarial red-team — opus
+**Reviewers:** M=3, usable 3/3
+**Reviewer verdicts:** r1: 0 Critical, 6 Important, 3 Minor | r2: 0 Critical, 3 Important, 2 Minor | r3: 0 Critical, 4 Important, 4 Minor
+**Sources mapped:** 22/22
+**Reviewer verdict:** 0 Critical, 8 Important, 6 Minor
+**Converged:** no
+### Dispositions
+- [I1] fixed — the plan interrupted test and the plan completeness rule were no longer exhaustive, so an entry resumed under a lower N matched neither; the completeness rule now carries the same "however its rotating rounds ended" clause and the two tests are exact complements → c082204 ← 3/3: r1:I1, r2:I2, r3:I2
+- [I2] fixed — the `<k>` numbering rule lived only on the controller side, so the reviewer was validated against a definition it never received; the 1-based position rule and the one-line-per-position requirement now sit in the check (5) paragraph of the lens cell → c082204 ← 3/3: r1:I3, r2:I1, r3:I3
+- [I3] fixed — an owed readiness conflict reached nobody on the autonomous path; Phase 2 now records the controller's `readiness owed: <n>` note in its log entry and Phase 5's report lists the readiness owed conflicts beside the harness probes owed, with no new `REVIEW_DONE` token and no new stop → c082204 ← 2/3: r1:I5, r2:M2
+- [I4] fixed — the pre/post classification rule read `## Round` heading position across the whole file instead of the entry being read, which turned a redone pre pass and an N = 0 second invocation into post entries that could never complete; the rule is now scoped to this invocation entry → c082204 ← 2/3: r1:I6, r3:I1
+- [I5] fixed — recomputing the cap on every read could reopen a sequence after the host self-review had run, leaving a stale `plan-blob`; a resume that reopens an ended sequence must now re-run the self-review and rewrite the hash → c082204 ← 1/3: r1:I2
+- [I6] fixed — a `**Global Constraints:**` block holding no top-level list item satisfied the coverage guarantee vacuously; such a block is now treated like no block at all in the clause-removal rule → c082204 ← 1/3: r1:I4
+- [I7] fixed — a readiness entry with a malformed `**Result:**` line was read as an open pass by Error Handling and as counting toward nothing by Fields read; the Error Handling bullet is narrowed so the sequence is open without the entry occupying a pass slot → c082204 ← 1/3: r2:I3
+- [I8] fixed — the triage was written for two-sided conflicts while check (5) mandates one finding per Global Constraints entry over many sites; the triage now states that such a finding has one fixed side and several plan sides and that `applied` requires every site amended → c082204 ← 1/3: r3:I4
+- [M1] fixed — the budget comment's figures were re-measured against the file after the round 6 edits and reflow, which brought it back to the 1079 lines the comment already states, within the 1080 maximum → c082204 ← 3/3: r1:M1, r2:M1, r3:M3
+- [M2] carried — tests/review-gates/run-tests.sh:532 labels a new section `15.` while line 237 already uses `15.`, so a failure reported as 15 is ambiguous ← 1/3: r1:M2
+- [M3] rejected: harness probe not runnable here — dispatch one throwaway subagent, in a session whose Bash allowlist does not name `git hash-object`, told to run `git hash-object <path>`, and observe whether the call returns or raises a permission prompt — (ambiguous observation) ← 1/3: r1:M3
+- [M4] carried — `rejected: not a conflict` is listed in the `Owed:` block although it names no verified conflict, on the same reasoning that excludes `out of lens scope` ← 1/3: r3:M1
+- [M5] carried — the clause-removal note is ordered onto every readiness entry of the invocation although the structure it depends on can appear or disappear between passes ← 1/3: r3:M2
+- [M6] carried — docs/guide/README.md:248-249 describes a pass as repeated until it changes nothing and omits the second settling condition, that every reviewer of the pass returned a usable report ← 1/3: r3:M4

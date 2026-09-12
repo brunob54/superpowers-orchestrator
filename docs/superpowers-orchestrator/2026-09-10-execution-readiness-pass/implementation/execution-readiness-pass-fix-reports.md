@@ -456,3 +456,96 @@ Results: 166 passed, 0 failed
 ```
 
 All five required suites pass.
+
+## Round 6
+
+Findings addressed: [I1] [I2] [I3] [I4] [I5] [I6] [I7] [I8] [M1].
+
+- **I1** — `skills/multi-doc-review/SKILL.md`, Completeness rule (Review Log
+  Format). Replaced the `**Converged:** yes` / `r` ≥ recorded N branch with
+  "or when its pre-sequence has ended, its post-sequence has ended (N ≥ 1)
+  and that marker is present, however its rotating rounds ended" — the same
+  "however its rotating rounds ended" clause the interrupted test already
+  used — so the interrupted test and the completeness rule are exact
+  complements. The previously uncovered input (pre ended, post ended,
+  marker present, recorded N ≥ 1, not converged, r < recorded N, from a
+  resume that lowered N) is now complete.
+- **I2** — `skills/multi-doc-review/SKILL.md`, Execution readiness lens
+  cell, check (5) paragraph. Added the `<k>` numbering rule and the
+  ordering requirement directly into the reviewer-facing text: "`<k>` is an
+  entry's 1-based position among the block's top-level list items, in
+  document order" and "one line per position, in that order" before the
+  `coverage: GC<k> — <n> sites checked` shape. The reviewer now reads the
+  same definition the controller validates against. The
+  byte-identical shape and the clause-removal row at line ~676 both still
+  apply.
+- **I3** — `skills/orchestrating-development/SKILL.md`, Phase 2 and Phase
+  5. Phase 2 now records the controller's `readiness owed: <n>` note in its
+  orchestration log entry when present. Phase 5's report list now names
+  "readiness conflicts owed — the plan-review log's `Owed:` block, listed
+  verbatim, or `none`" beside the existing harness-probes-owed item. No
+  token was added to `REVIEW_DONE`, the orchestrator does not stop on an
+  owed conflict, and the meaning of `unresolved` is unchanged.
+- **I4** — `skills/multi-doc-review/SKILL.md`, `Fields read`. Scoped the
+  `## Round`-heading "before the first or after the last" test to "of this
+  invocation entry" and changed "with none logged" to "with none logged in
+  this entry" — matching the file's existing scoped definition of `r`. This
+  fixes the two misclassifications the finding named (a second N = 0
+  invocation, and a redo appended after an interrupted run).
+- **I5** — `skills/multi-doc-review/SKILL.md`, accepted-by-design note
+  (Completeness). Added the shorter of the two proposed fixes: "except that
+  a resume reopening an already-ended sequence this way must also re-run
+  the host self-review and rewrite `plan-blob` before the entry counts as
+  complete."
+- **I6** — `skills/multi-doc-review/SKILL.md`, Global Constraints
+  clause-removal row explanation. Added "The row fires the same way when
+  the block is present but holds no recognised top-level list item, since
+  that also leaves zero entries to cover." The pinned row text at the table
+  itself (line ~676) was left untouched — the new sentence sits in the
+  explanatory paragraph below it, so the pinned needle and the
+  `**Note:**` line stay intact while the row's condition is broadened.
+- **I7** — `skills/multi-doc-review/SKILL.md`, `## Error Handling`.
+  Narrowed the bullet so a readiness entry with a missing or malformed
+  `**Result:**` line "leaves its sequence open, not ended, but counts
+  toward nothing, including the pass count, once a resume supersedes it" —
+  removing the contradiction with `Fields read`'s "counts toward nothing,
+  including the pass count." Both pinned needles ("a readiness entry with a
+  missing or malformed" and "as a round is") survive.
+- **I8** — `skills/multi-doc-review/SKILL.md`, `### Triage of a readiness
+  finding`. Added a new paragraph after the disposition table: "A check (5)
+  finding has one fixed side, the Global Constraints entry, and one or more
+  plan sides, its listed failing sites; `applied` requires every listed
+  site amended, and a finding with any site left unamended is disposed
+  `rejected: undecidable at this gate`, naming the sites left."
+- **M1** — `tests/reviewer-templates/run-tests.sh:644-652`. No change: after
+  applying I1/I2/I4/I5/I6/I7/I8 and reflowing the touched paragraphs at the
+  file's normal width (rewrap only, no wording removed — the six
+  whole-line-pinned exceptions of Global Constraint 1 were left untouched),
+  `skills/multi-doc-review/SKILL.md` measures exactly 1079 lines, matching
+  the comment's existing "added 291" (788+291=1079) and "the file now
+  stands at 1079" figures. The comment was already correct against the
+  post-fix file, so nothing needed rewriting.
+
+No finding was left unfixed. No finding was an instruction rather than a
+defect. No secret-bearing finding was present in this batch.
+
+Covering tests run and their output:
+
+```
+$ bash tests/reviewer-templates/run-tests.sh
+Results: 191 passed, 0 failed
+
+$ bash tests/review-gates/run-tests.sh
+Results: 132 passed, 0 failed
+
+$ bash tests/orchestrating-development/run-tests.sh
+Results: 166 passed, 0 failed
+
+$ bash tests/writing-plans/run-tests.sh
+Results: 15 passed, 0 failed
+
+$ bash tests/fill-prompt/run-tests.sh
+Results: 166 passed, 0 failed
+```
+
+All five required suites pass.
