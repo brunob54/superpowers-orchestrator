@@ -553,7 +553,7 @@ assert_folded_contains "multi-doc-review SKILL.md: completion report keeps the h
 assert_folded_contains "multi-doc-review SKILL.md: gate: orchestration writes the compact readiness-owed note" "$DOC_SKILL" \
   'the controller writes at most one note instead, `readiness owed: <n>`'
 assert_folded_contains "multi-doc-review SKILL.md: invocation note admits the gate: orchestration invoker" "$DOC_SKILL" \
-  '`gate: orchestration`'
+  '`gate: writing-plans` | `gate: orchestration` | `direct`'
 # Position: the readiness-entries subsection is the last block of the Review
 # Log Format section, standing after the Skipped-invocations paragraph and
 # immediately before the Error Handling heading.
