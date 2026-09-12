@@ -404,9 +404,11 @@ for numbered in '(1) tasks that contradict' \
                 'Run all the checks below'; do
   assert_folded_contains "Execution readiness cell: numbered check '$numbered'" "$READINESS_CELL" "$numbered"
 done
+assert_folded_contains "Execution readiness cell: missing-number-was-removed-on-purpose clause" "$READINESS_CELL" 'a number missing from the list was removed on purpose for this plan — never reconstruct it'
 assert_folded_contains "Execution readiness cell: one finding per Global Constraints entry" "$READINESS_CELL" 'report ONE finding per Global Constraints entry'
 assert_folded_contains "Execution readiness cell: coverage line shape" "$READINESS_CELL" 'coverage: GC<k> — <n> sites checked'
 assert_folded_contains "Execution readiness cell: missing coverage line is discarded" "$READINESS_CELL" 'will be discarded'
+assert_folded_contains "Execution readiness cell: coverage block placement sentence" "$READINESS_CELL" 'Write that block as the last lines of your report'
 assert_file_contains "Execution readiness cell: spec line is not used" "$READINESS_CELL" '- spec: not used'
 assert_file_contains "Execution readiness cell: general line is not used" "$READINESS_CELL" '- general: not used'
 # Folded, not plain: the replacement wraps this phrase across a line break.
@@ -434,6 +436,7 @@ for needle in 'a report that carries no `coverage:` line for some entry of the p
               '| no locatable spec | check (3) | `**Note:** clause-vs-spec check not run — no locatable spec` |' \
               '| no `**Global Constraints:**` block | check (5) and the paragraph beginning `For check (5) report ONE finding`, which carries the `coverage: GC<k>` shape | `**Note:** Global Constraints sweep not run — no block` |' \
               '| no task carries `**Contract:**` | check (4) | `**Note:** Contract check not run — no Contract fields` |' \
+              'Removing a clause never renumbers the checks that remain: the numbers of the surviving checks are left exactly as they are' \
               '1-based position among the plan'"'"'s `**Global Constraints:**` block'"'"'s top-level list items' \
               'repeated or out-of-range `<k>` counts as a missing line for the position it skips' \
               'A **readiness pass** is one review dispatched under the lens `Execution readiness`: M reviewers filled from `reviewer-prompt.md` with `[LENS_NAME]` = `Execution readiness`, `[LENS_INSTRUCTIONS]` = that lens'"'"'s `plan:` cell and `[ROUND]` = `readiness <pre|post> <p>`, every other placeholder as a rotating round fills it' \
@@ -490,6 +493,16 @@ if [ -n "$TRIAGE_LINE" ] && [ -n "$SEQ_LINE_14" ] && [ -n "$LENS_ROT_LINE_14" ] 
 else
   bad "Triage subsection is misplaced (seq='$SEQ_LINE_14' triage='$TRIAGE_LINE' lens-rotation='$LENS_ROT_LINE_14')"
 fi
+# Scope the needle loop below to the triage subsection itself: without this,
+# a needle that also matches text elsewhere in the file stays green when the
+# subsection's own copy of that text is deleted.
+TRIAGE_RANGE="$WORK/triage-of-a-readiness-finding.txt"
+if [ -n "$TRIAGE_LINE" ] && [ -n "$LENS_ROT_LINE_14" ] && [ "$TRIAGE_LINE" -lt "$LENS_ROT_LINE_14" ]; then
+  extract_lines "$DOC_SKILL" "$TRIAGE_LINE" "$LENS_ROT_LINE_14" > "$TRIAGE_RANGE"
+else
+  : > "$TRIAGE_RANGE"
+  bad "multi-doc-review SKILL.md: Triage of a readiness finding range could not be resolved (triage='$TRIAGE_LINE' lens-rotation='$LENS_ROT_LINE_14')"
+fi
 for needle in 'rejected: not a conflict' \
               'rejected: plan-mandated' \
               'rejected: undecidable at this gate' \
@@ -497,13 +510,20 @@ for needle in 'rejected: not a conflict' \
               'A readiness finding never produces an unresolved: line, in any caller.' \
               'reverses an amendment made earlier in the same sequence' \
               '`rejected: plan-mandated — <text>`, never amended' \
-              'Readiness pass whose reports are all unusable (u = 0) → `inconclusive`, and the pass is open' \
+              'amend the plan side, `applied`' \
+              'amend the side the spec decides against; failing that, the side the Global Constraints block decides against' \
+              'the spec contradicts itself' \
+              'without searching for a second side'; do
+  assert_folded_contains "multi-doc-review SKILL.md: Triage of a readiness finding subsection carries '$needle'" "$TRIAGE_RANGE" "$needle"
+done
+# These needles pin text that lives in the skill's Error Handling section,
+# not the triage subsection above; no narrower already-resolved range holds
+# them, so they stay asserted against the whole file.
+for needle in 'Readiness pass whose reports are all unusable (u = 0) → `inconclusive`, and the pass is open' \
               'a readiness entry with a missing or malformed' \
               'as a round is' \
-              'for a plan document the Execution readiness pre-sequence still runs' \
-              'amend the plan side, `applied`' \
-              'amend the side the spec decides against; failing that, the side the Global Constraints block decides against'; do
-  assert_folded_contains "multi-doc-review SKILL.md: triage carries '$needle'" "$DOC_SKILL" "$needle"
+              'for a plan document the Execution readiness pre-sequence still runs'; do
+  assert_folded_contains "multi-doc-review SKILL.md: Error Handling section carries '$needle'" "$DOC_SKILL" "$needle"
 done
 
 bold "15. Readiness log entries, completeness, resume and the completion report"
