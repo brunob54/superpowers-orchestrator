@@ -69,3 +69,9 @@ Ruled: [I1 inv 2] forced — fix it: (this answers the `N_code=0` item at tests/
 Ruled: [I1 inv 2] forced — fix it: (this answers the `## Round 8 verification 4` item at tests/reviewer-templates/run-tests.sh:667) pin the earlier-release clause of Deviation 2 in section 17
 Owed probe: - [M3] rejected: harness probe not runnable here — dispatch one throwaway subagent, in a session whose Bash allowlist does not name `git hash-object`, told to run `git hash-object <path>`, and observe whether the call returns or raises a permission prompt — (ambiguous observation) ← 1/3: r1:M3
 Resume: Resume orchestration for docs/superpowers-orchestrator/2026-09-10-execution-readiness-pass/plans/execution-readiness-pass.md
+
+## RULING 9 — 2026-09-12 — phase 4 — the one open item of verification 6 ruled: reword the removal instruction, assert no paragraph-hood
+Items: [I1] design — fix it: reword the clause-removal instruction in skills/multi-doc-review/SKILL.md to name a bounded run of sentences instead of "the paragraph beginning"; update the row needle at tests/reviewer-templates/run-tests.sh:437 and pin the reworded wording; add no paragraph-hood or whole-line assertion and no blank line in the cell
+Detail: docs/superpowers-orchestrator/2026-09-10-execution-readiness-pass/plans/execution-readiness-pass-open-decisions.md
+Forks: 3 of 3 (design consistency, implementation practicality, adversarial) — contradiction: none
+Re-dispatch: phase 4, in-run resume 1 of 3
