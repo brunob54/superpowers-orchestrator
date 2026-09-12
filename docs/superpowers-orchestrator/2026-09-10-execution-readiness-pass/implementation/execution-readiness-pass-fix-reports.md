@@ -739,3 +739,65 @@ Results: 132 passed, 2 failed
   - orchestration Phase 0 keeps the N_code=0 half (missing: N_code=0 means you skip Phase 4 yourself)
   - orchestration Phase 0 names the skipped (N_code=0) log shape (missing: `## Phase 4 — Code review — skipped (N_code=0)`)
 ```
+
+## Round 8
+
+Findings addressed: [I1].
+
+Fix: one assertion added to section 17 of
+`tests/reviewer-templates/run-tests.sh` (beside the existing section 17
+assertions, after the "appends the Loop complete line when it is absent"
+assertion), using `assert_folded_contains` to pin the clause in Deviation 2
+of `skills/orchestrating-development/doc-review-loop-prompt.md`: "by
+whichever of its clauses applied, the clause for an entry written by an
+earlier release included, which owes no post-sequence".
+
+Verification run 1 (temporary deletion of that clause from
+`skills/orchestrating-development/doc-review-loop-prompt.md`):
+
+```
+$ bash tests/reviewer-templates/run-tests.sh
+...
+17. The doc-review-loop controller template accepts N_PLAN = 0
+  PASS: doc-review-loop template: [N_PLAN] range starts at 0
+  PASS: doc-review-loop template: host self-review after the post-sequence
+  PASS: doc-review-loop template: counts rotating entries only
+  PASS: doc-review-loop template: defers to the skill's completeness rule
+  PASS: doc-review-loop template: Deviation 3 is unchanged
+  PASS: doc-review-loop template: controller may run read-only inspection commands
+  PASS: doc-review-loop template: the read-only allowance is restricted to one command
+  PASS: doc-review-loop template: readiness finding disposed under triage, never logged as unresolved
+  PASS: doc-review-loop template: appends the Loop complete line when it is absent
+  FAIL: doc-review-loop template: the earlier-release clause of the completeness rule owes no post-sequence (missing: by whichever of its clauses applied, the clause for an entry written by an earlier release included, which owes no post-sequence)
+
+Results: 192 passed, 1 failed
+```
+
+Exactly the one new assertion failed; no other assertion in the suite was
+affected.
+
+Verification run 2 (template file restored with
+`git checkout -- skills/orchestrating-development/doc-review-loop-prompt.md`,
+confirmed unchanged via `git status --short`, then the suite re-run):
+
+```
+$ bash tests/reviewer-templates/run-tests.sh
+...
+17. The doc-review-loop controller template accepts N_PLAN = 0
+  PASS: doc-review-loop template: [N_PLAN] range starts at 0
+  PASS: doc-review-loop template: host self-review after the post-sequence
+  PASS: doc-review-loop template: counts rotating entries only
+  PASS: doc-review-loop template: defers to the skill's completeness rule
+  PASS: doc-review-loop template: Deviation 3 is unchanged
+  PASS: doc-review-loop template: controller may run read-only inspection commands
+  PASS: doc-review-loop template: the read-only allowance is restricted to one command
+  PASS: doc-review-loop template: readiness finding disposed under triage, never logged as unresolved
+  PASS: doc-review-loop template: appends the Loop complete line when it is absent
+  PASS: doc-review-loop template: the earlier-release clause of the completeness rule owes no post-sequence
+
+Results: 193 passed, 0 failed
+```
+
+The template file `skills/orchestrating-development/doc-review-loop-prompt.md`
+ends unchanged (not part of this commit); only
+`tests/reviewer-templates/run-tests.sh` was modified and committed.

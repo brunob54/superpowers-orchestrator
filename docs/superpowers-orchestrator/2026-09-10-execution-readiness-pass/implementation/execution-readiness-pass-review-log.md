@@ -330,7 +330,7 @@ _Invocation 2 — 2026-09-11 — N=4 M=3 — BASE..HEAD 0f0a48d..c9700a9 — bra
 - [M9] carried — five section 14 and 15 needles match more than one place in the file, so deleting the sentence each targets leaves another occurrence behind ← 1/3: r2:M4
 - [M10] carried — the completion report's value shapes and its N = 0 variant appear in no test file, while every sibling shape of the feature is pinned as a whole line ← 1/3: r3:M3
 
-_Completed — 2026-09-12 — cap reached — HEAD 9ddfdd366d453a7a30381db6f1b3b8e4ee697890_
+_Completed — 2026-09-12 — cap reached — HEAD f64f4acd040f94a9ddb611c9ebd180f61d539621_
 Secrets found: none
 
 ### Decisions addendum — 2026-09-12
@@ -366,3 +366,34 @@ Answers supplied by the orchestrator on a later dispatch, for the open items of 
 Verification re-review run: the effective HEAD was unchanged when this addendum was started, so the accepted fix was verified here instead of by a new invocation entry, and this entry's completion marker was moved to the fix commit 9ddfdd3. No finding of this cycle objects to the fix. Round 8's three verification cycles were already spent, so the one Critical/Important finding this cycle raised is recorded `unresolved: verification cap`.
 
 Note on identifiers: the `[I1]` of `## Round 8 verification 4` above is a NEW item and is not the `[I1]` this addendum decided and fixed. A later answer naming `[I1]` whose subject is the unpinned Must-convey clause of section 17 of tests/reviewer-templates/run-tests.sh is about that new item and must NOT be skipped as already decided.
+
+### Decisions addendum (2) — 2026-09-12
+
+Answers supplied by the orchestrator on a later dispatch, for the open item of invocation 2's `## Round 8 verification 4` entry.
+
+- [I1] decided (orchestrator): fix it: (this answers the `## Round 8 verification 4` item on section 17 of tests/reviewer-templates/run-tests.sh, NOT the `N_code=0` item of tests/review-gates/run-tests.sh that ruling 5 already decided and that is already fixed) add one folded needle to section 17 of tests/reviewer-templates/run-tests.sh pinning the seventh Must-convey clause of Task 8's Contract — the earlier-release case of the completeness rule in Deviation 2 of skills/orchestrating-development/doc-review-loop-prompt.md, 'by whichever of its clauses applied, the clause for an entry written by an earlier release included, which owes no post-sequence' — so that deleting that clause from the template turns the suite red. Use the folded-needle helper of that suite, never a whole-line assertion, for the same reason as rulings 1 to 3 and 5. Verify with a negative check: delete the clause, confirm exactly that assertion fails, restore, confirm the suite is green again.
+- [I1] fixed — one `assert_folded_contains` needle added at the end of section 17 of tests/reviewer-templates/run-tests.sh, pinning the earlier-release clause of Deviation 2 of skills/orchestrating-development/doc-review-loop-prompt.md; no whole-line assertion was used, so Global Constraint 1 Move 1's no-reflow list is unchanged. Negative check: with that clause deleted from the template the suite reported 192 passed, 1 failed, the one failure being exactly the new assertion; with the template restored (`git checkout --`) the suite is green at 193 passed, 0 failed, and the template file ends unchanged → f64f4ac
+
+## Round 8 verification 5 — Test & coverage quality — opus
+**Reviewers:** M=3, usable 3/3
+**Reviewer verdicts:** r1: 0 Critical, 2 Important, 3 Minor | r2: 0 Critical, 1 Important, 4 Minor | r3: 0 Critical, 1 Important, 6 Minor
+**Sources mapped:** 17/17
+**Reviewer verdict:** 0 Critical, 2 Important, 11 Minor
+### Dispositions
+- [I1] unresolved: verification cap — the lens cell's clause-removal safety text is only half pinned; the cell clause 'a number missing from the list was removed on purpose for this plan; never reconstruct it', the no-renumbering paragraph and the sentence 'Write that block as the last lines of your report' carry no needle, so deleting any of them leaves every suite green — at tests/reviewer-templates/run-tests.sh:404 — clause: none ← 2/3: r1:I1, r2:I1
+- [I2] unresolved: verification cap — section 14's needle loop asserts against the whole file instead of the '### Triage of a readiness finding' subsection and several of its needles also match outside it, so the 'fixed text vs fixed text' oscillation-guard row and Step 0's verify paragraph can each be deleted with every section 14 needle still green (one reviewer confirmed both by mutation on a temporary copy) — at tests/reviewer-templates/run-tests.sh:481 — clause: none ← 2/3: r1:I2, r3:I1
+- [M1] carried — the 1080-line budget stands one line above the measured file (1079) while Global Constraint 1 still justifies the figure by a 34-line margin, so the next one-line wording fix turns the suite red ← 2/3: r1:M1, r2:M2
+- [M2] carried — the rules that decide a readiness disposition carry no needle: Step 0's folded side-matching comparison, the check (5) all-sites rule, the empty Global Constraints block case and the third-open-pass rule ← 2/3: r1:M3, r2:M1
+- [M3] carried — Task 2's Contract requires the new N = 0 sentence to follow the existing one while the suite asserts each string separately against the whole folded file, so the adjacency is unverified ← 1/3: r1:M2
+- [M4] carried — Task 9's only verification of the three user-facing documents is a `grep -c` that passes on any single mention, so the release's user-facing wording is effectively unchecked ← 1/3: r2:M3
+- [M5] carried — section 13's needles are asserted against the whole file although the suite already resolves the '### Readiness sequences' span, so a rule moved into another subsection keeps the suite green ← 1/3: r2:M4
+- [M6] carried — only the second half of the lens cell's output-format mitigation is pinned; the sentence 'Write that block as the last lines of your report' carries no needle of its own ← 1/3: r3:M1
+- [M7] carried — assertion descriptions in sections 13 and 14 name a section that does not hold the string they match, sending a maintainer to the wrong part of a 1079-line file ← 1/3: r3:M2
+- [M8] carried — the needle `as a round is` is a generic 13-character fragment, so almost any reword of the clause it stands for still passes ← 1/3: r3:M3
+- [M9] carried — Tasks 6 and 7 name section 15 of tests/review-gates/run-tests.sh as their verification while the assertions were implemented as section 16 ← 1/3: r3:M4
+- [M10] carried — the Phase 0 sentence `N_plan=0 still dispatches the Phase 2 controller` is a Must-convey item of Task 7's Contract and carries no assertion ← 1/3: r3:M5
+- [M11] carried — the size-budget check has no committed over-budget fixture, so the negative control Task 5's verification names exists only as a manual step ← 1/3: r3:M6
+
+Verification re-review run: the effective HEAD was unchanged when this addendum was started, so the accepted fix was verified here instead of by a new invocation entry, and this entry's completion marker was moved to the fix commit f64f4ac. No finding of this cycle objects to the fix. Round 8's verification cycles were already spent, so the two Critical/Important findings this cycle raised are recorded `unresolved: verification cap`.
+
+Note on identifiers: the `[I1]` and `[I2]` of `## Round 8 verification 5` above are NEW items and are not the `[I1]` this addendum decided and fixed, nor the `[I1]` of `## Round 8 verification 4`. A later answer naming them must be read against this entry.
