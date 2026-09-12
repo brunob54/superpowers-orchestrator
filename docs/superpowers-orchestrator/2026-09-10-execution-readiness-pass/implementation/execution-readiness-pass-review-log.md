@@ -269,3 +269,25 @@ _Invocation 2 — 2026-09-11 — N=4 M=3 — BASE..HEAD 0f0a48d..c9700a9 — bra
 - [M7] carried — three normative rules added to skills/multi-doc-review/SKILL.md carry no needle (the folded side-matching definition, the check (5) all-sites rule, and the no-renumbering sentence), and the Error Handling invariant forbidding the word `unresolved` has no negative assertion ← 1/3: r2:M4
 - [M8] carried — the 1080-line budget leaves one line of headroom while Global Constraint 1 still justifies the figure by a 34-line margin, so the next one-line clarification turns the suite red ← 1/3: r2:M5
 - [M9] carried — section 13's loop describes itself as checking the Procedure while matching the whole folded file, so a sentence moved out of the Procedure keeps every one of those assertions green ← 1/3: r3:M2
+
+## Round 8 verification 1 — Test & coverage quality — opus
+**Reviewers:** M=3, usable 3/3
+**Reviewer verdicts:** r1: 0 Critical, 0 Important, 5 Minor | r2: 0 Critical, 0 Important, 6 Minor | r3: 0 Critical, 1 Important, 5 Minor, counts recomputed
+**Sources mapped:** 17/17
+**Reviewer verdict:** 0 Critical, 1 Important, 14 Minor
+### Dispositions
+- [I1] fixed — the `gate: orchestration` needle matched twice in the folded file and was entailed by the assertion beside it, so the invoker list it claimed to cover could be deleted with the suite green; the needle is now the three-invoker alternation, which occurs once → f35a767 ← 1/3: r3:I1
+- [M1] carried — the plan's three verification pointers and its mandated `bold` line name section 15 of tests/review-gates/run-tests.sh, which is a pre-existing unrelated section; the assertions were correctly implemented as section 16 ← 2/3: r1:M4, r2:M4
+- [M2] carried — the completion-report lines are pinned by their bare prefixes `Readiness pre:` and `Readiness post:`, so the N = 0 variant `Readiness post: not run (N=0)` and the `pass(es) —` shape carry no assertion ← 2/3: r2:M3, r3:M3
+- [M3] carried — the size-budget check has no over-budget fixture, so nothing proves it can fail, and the plan named such a fixture that was not committed ← 1/3: r1:M1
+- [M4] carried — the check (5) removal anchor is asserted as a substring although the removal table names it as a paragraph, and in the cell the string starts mid-line inside numbered item (5) ← 1/3: r1:M2
+- [M5] carried — the `has ended` and `out of lens scope` needles each match several places in the file and cannot fail for the sentence they name, although a precise assertion now stands beside the first ← 1/3: r1:M3
+- [M6] carried — no fill-prompt case fills the doc-review-loop template with the new boundary value `N_PLAN=0`, so the end-to-end path this release enables is never exercised ← 1/3: r1:M5
+- [M7] carried — Task 7's Contract names the `skipped (N_code=0)` log shape as an invariant and no suite greps it, while the symmetric `N_plan=0` shape is pinned twice ← 1/3: r2:M1
+- [M8] carried — the `Owed:` block needle matches both the triage paragraph and the log-format rule it is meant to pin, so rewording the rule leaves it green ← 1/3: r2:M2
+- [M9] carried — the plan's `grep -c` over three documentation files prints `path:0` for a missing needle and still exits 0 when any other file matched, so that check cannot fail ← 1/3: r2:M5
+- [M10] carried — three clauses added to skills/multi-doc-review/SKILL.md carry no needle: the check (4) fenced-block carve-out, the check (5) all-sites rule, and the empty Global Constraints block case ← 1/3: r2:M6
+- [M11] carried — section 14's loop is labelled `triage carries` while asserting against the whole file, and four of its needles live under Error Handling instead ← 1/3: r3:M1
+- [M12] carried — the clause `a number missing from the list was removed on purpose for this plan — never reconstruct it` is the third dependency of the clause-removal mechanism and is the only one left unpinned ← 1/3: r3:M2
+- [M13] carried — the consequence sentence of the coverage-usability rule, that a missing sweep can never settle a sequence, carries no assertion while the rule it qualifies is pinned twice ← 1/3: r3:M4
+- [M14] carried — the 35 lines of user-facing readiness description added to docs/guide/README.md and the two sibling documents carry no assertion anywhere, which the plan states as a deliberate choice ← 1/3: r3:M5

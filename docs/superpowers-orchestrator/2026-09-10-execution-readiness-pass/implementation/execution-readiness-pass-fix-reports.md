@@ -619,3 +619,56 @@ Results: 512 passed, 0 failed
 All five required suites pass, plus the additionally requested
 `tests/in-run-rulings/run-tests.sh` (cited by [I1] as the convention being
 followed).
+
+## Round 8
+
+Findings addressed: [I1]
+
+[I1] — tests/reviewer-templates/run-tests.sh:555-556 — The assertion
+"multi-doc-review SKILL.md: invocation note admits the gate: orchestration
+invoker" pinned the needle `` `gate: orchestration` `` alone, which occurs
+twice in the folded skills/multi-doc-review/SKILL.md file (once in the
+invocation-note invoker list, once in the completion-report paragraph
+already covered by the preceding assertion), so it could never fail on its
+own. Changed the needle to the longer fixed string
+`` `gate: writing-plans` | `gate: orchestration` | `direct` `` , which
+occurs exactly once in the folded file, inside the invocation-note invoker
+alternation (skills/multi-doc-review/SKILL.md:373-374).
+
+Verification that the needle occurs exactly once in the folded file, before
+committing:
+
+```
+$ awk '{ line = $0; sub(/^[ \t]+/, "", line); sub(/[ \t]+$/, "", line); if (NR > 1) printf " "; printf "%s", line } END { print "" }' skills/multi-doc-review/SKILL.md > /tmp/folded.txt
+$ grep -oF '`gate: writing-plans` | `gate: orchestration` | `direct`' /tmp/folded.txt | wc -l
+       1
+```
+
+Verification that the assertion fails when the invoker list is altered
+(reverted before commit; skills/multi-doc-review/SKILL.md carries no diff):
+
+```
+$ sed -i '' 's/`gate: writing-plans` | `gate: orchestration` | `direct`/`gate: writing-plans` | `gate: orchestrationX` | `direct`/' skills/multi-doc-review/SKILL.md
+$ bash tests/reviewer-templates/run-tests.sh 2>&1 | grep -i "invocation note admits"
+  FAIL: multi-doc-review SKILL.md: invocation note admits the gate: orchestration invoker (missing: `gate: writing-plans` | `gate: orchestration` | `direct`)
+```
+
+Covering tests (after reverting the sanity-check edit above), all end with
+0 failed:
+
+```
+$ bash tests/reviewer-templates/run-tests.sh
+Results: 191 passed, 0 failed
+
+$ bash tests/review-gates/run-tests.sh
+Results: 132 passed, 0 failed
+
+$ bash tests/orchestrating-development/run-tests.sh
+Results: 169 passed, 0 failed
+
+$ bash tests/writing-plans/run-tests.sh
+Results: 15 passed, 0 failed
+
+$ bash tests/fill-prompt/run-tests.sh
+Results: 166 passed, 0 failed
+```
