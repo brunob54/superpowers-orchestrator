@@ -549,3 +549,73 @@ Results: 166 passed, 0 failed
 ```
 
 All five required suites pass.
+
+## Round 8
+
+Findings addressed: [I1] [M1] [M4].
+
+- **I1** — `tests/orchestrating-development/run-tests.sh`. The two
+  consumer sentences of the `readiness owed` contract
+  (`skills/orchestrating-development/SKILL.md:492-493` and `:644-645`)
+  carried no assertion. Added `H_ORCHLOG='## Orchestration Log Format'`
+  beside the other heading variables, a `PHASE5_RANGE` work file, and its
+  `extract_range "Phase 5" ... "$H_PHASE5" "$H_ORCHLOG" "$PHASE5_RANGE"`
+  call in section 0. Added
+  `assert_folded_contains "phase 2: records the controller's readiness
+  owed note in the same log entry" "$PHASE2_RANGE"` for "When the
+  controller's report carries a `readiness owed: <n>` note, Phase 2
+  records it in the same log entry." at the end of section 9, and a new
+  section 10 ("Phase 5 reports readiness conflicts owed") with
+  `assert_folded_contains "phase 5: readiness conflicts owed report item"
+  "$PHASE5_RANGE"` for "readiness conflicts owed — the plan-review log's
+  `Owed:` block, listed verbatim, or `none`". Both `assert_folded_contains`
+  calls, never `assert_file_contains`/`assert_file_has_line`, per the
+  finding's no-reflow constraint. Sanity-checked outside the suite that
+  each needle fails against a text sample with the sentence absent and
+  passes against the real extracted range — see the fix subagent's final
+  message for the two ad hoc grep checks.
+- **M1** — `tests/reviewer-templates/run-tests.sh:419-420` (section 13's
+  loop). The bare-word needles `'pre-sequence'` and `'post-sequence'`
+  matched 18 and 8 substring occurrences respectively and could not fail
+  while any sentence of the feature survived anywhere in the file.
+  Replaced them with the two trigger sentences: `'run the pre-sequence of
+  \`Readiness sequences\` below before round 1'` (not asserted anywhere
+  else in the suite) and `'with N = 0 there is no post-sequence, and on a
+  resume the resume rule of \`Readiness entries\` decides whether it has
+  already ended'` (a different fragment from the trigger sentence already
+  pinned at line ~447, so this is new coverage, not a duplicate). Kept
+  `assert_folded_contains`; no other needle in the loop was touched.
+- **M4** — `tests/review-gates/run-tests.sh:532`. Renumbered the section
+  label from `"15. The plan gates carry the Execution readiness
+  sentences"` to `"16. ..."` — the next free label after the pre-existing
+  `"15. Guard sentences on the sidecar-log untrusted-read path"` at line
+  237. Label text only; no assertion in the section was changed.
+
+No finding was left unfixed. No finding was an instruction rather than a
+defect. No secret-bearing finding was present in this batch.
+
+Covering tests run and their output:
+
+```
+$ bash tests/reviewer-templates/run-tests.sh
+Results: 191 passed, 0 failed
+
+$ bash tests/review-gates/run-tests.sh
+Results: 132 passed, 0 failed
+
+$ bash tests/orchestrating-development/run-tests.sh
+Results: 169 passed, 0 failed
+
+$ bash tests/writing-plans/run-tests.sh
+Results: 15 passed, 0 failed
+
+$ bash tests/fill-prompt/run-tests.sh
+Results: 166 passed, 0 failed
+
+$ bash tests/in-run-rulings/run-tests.sh
+Results: 512 passed, 0 failed
+```
+
+All five required suites pass, plus the additionally requested
+`tests/in-run-rulings/run-tests.sh` (cited by [I1] as the convention being
+followed).

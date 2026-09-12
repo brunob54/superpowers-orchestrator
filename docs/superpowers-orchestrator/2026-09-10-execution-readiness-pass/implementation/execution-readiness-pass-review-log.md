@@ -251,3 +251,21 @@ _Invocation 2 — 2026-09-11 — N=4 M=3 — BASE..HEAD 0f0a48d..c9700a9 — bra
 - [M2] carried — the plan path is interpolated into `git hash-object "<plan path>"` at five sites and double quotes stop word splitting and globbing but not command substitution; no rule validates the path or refuses one holding a backtick or `$(` ← 1/3: r2:M1
 - [M3] carried — the readiness triage now requires both sides quoted verbatim into a committed log and into the Phase 5 report, while skills/multi-doc-review/reviewer-prompt.md carries no rule against reproducing a credential, unlike its multi-code-review sibling ← 1/3: r2:M2
 - [M4] carried — Triage Step 1 takes the spec path from the `**Spec:**` line of the document under review rather than from the `[SPEC_PATH]` the controller was dispatched with, and nothing requires the two to agree or keeps the path inside the repository ← 1/3: r2:M3
+
+## Round 8 — Test & coverage quality — opus
+**Reviewers:** M=3, usable 3/3
+**Reviewer verdicts:** r1: 0 Critical, 1 Important, 3 Minor | r2: 0 Critical, 0 Important, 6 Minor | r3: 0 Critical, 1 Important, 3 Minor
+**Sources mapped:** 14/14
+**Reviewer verdict:** 0 Critical, 1 Important, 9 Minor
+**Converged:** no
+### Dispositions
+- [I1] fixed — the `readiness owed` contract was pinned on the producer side only, so the two orchestrator consumer sentences in Phase 2 and Phase 5 could be reworded or dropped with every suite green; tests/orchestrating-development/run-tests.sh now pins both, one against the Phase 2 range and one against a new Phase 5 range → 20a72d1 ← 2/3: r1:I1, r3:I1
+- [M1] fixed — the bare-word needles `pre-sequence` and `post-sequence` matched 18 and 8 places in the folded file and could not fail; they are replaced by the two trigger sentences they were meant to guard → 20a72d1 ← 3/3: r1:M3, r2:M2, r3:M1
+- [M2] carried — `first_line_of` in tests/reviewer-templates/run-tests.sh is a substring match while the same-named helper in the two sibling suites matches whole lines, so a later prose mention of a heading string could silently move an anchor ← 2/3: r2:M6, r3:M3
+- [M3] carried — the size budget asserts a line count while its comment states the purpose as the controllers' read cost, and rewrapping keeps the line guard green while bytes keep rising (788/47088 to 1079/67839) ← 1/3: r1:M1
+- [M4] fixed — tests/review-gates/run-tests.sh labelled a new section 15 while line 237 already used 15; the new section is renumbered 16 ← 1/3: r1:M2
+- [M5] carried — section 14's needle loop asserts against the whole file although it resolved the triage subsection's boundaries, and six of its needles are satisfied by text outside that subsection ← 1/3: r2:M1
+- [M6] carried — Task 9's `executing-plans` documentation needle already matched twice at BASE, so that one `grep -cF` check passes whether or not the task wrote anything ← 1/3: r2:M3
+- [M7] carried — three normative rules added to skills/multi-doc-review/SKILL.md carry no needle (the folded side-matching definition, the check (5) all-sites rule, and the no-renumbering sentence), and the Error Handling invariant forbidding the word `unresolved` has no negative assertion ← 1/3: r2:M4
+- [M8] carried — the 1080-line budget leaves one line of headroom while Global Constraint 1 still justifies the figure by a 34-line margin, so the next one-line clarification turns the suite red ← 1/3: r2:M5
+- [M9] carried — section 13's loop describes itself as checking the Procedure while matching the whole folded file, so a sentence moved out of the Procedure keeps every one of those assertions green ← 1/3: r3:M2
