@@ -680,6 +680,11 @@ assert_folded_contains "doc-review-loop template: the read-only allowance is res
   'today that is one command, `git hash-object "<plan path>"`, and nothing else.'
 assert_folded_contains "doc-review-loop template: readiness finding disposed under triage, never logged as unresolved" "$DOC_LOOP_PROMPT" "A readiness finding is disposed under the skill's \"Triage of a readiness finding\", never logged as unresolved."
 assert_folded_contains "doc-review-loop template: appends the Loop complete line when it is absent" "$DOC_LOOP_PROMPT" 'and append the `_Loop complete_` line when it is absent.'
+# Deviation 2's completeness rule reaches an entry written by an earlier
+# release through one of its own clauses, not through a special case in this
+# template: pin that clause so deleting it from the template cannot leave
+# every suite green.
+assert_folded_contains "doc-review-loop template: the earlier-release clause of the completeness rule owes no post-sequence" "$DOC_LOOP_PROMPT" 'by whichever of its clauses applied, the clause for an entry written by an earlier release included, which owes no post-sequence'
 
 echo
 bold "Results: $PASS passed, $FAIL failed"
