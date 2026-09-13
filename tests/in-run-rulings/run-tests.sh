@@ -1256,7 +1256,7 @@ for pin in '## RULING <n> — YYYY-MM-DD — phase <p> — <one-line summary>' \
            'Items: [<id>] escalated (<spec wrong|scope|irreversible|secret|chain>) — <summary>' \
            'Detail: <topic folder>/plans/<slug>-open-decisions.md' \
            'Forks: none | <k> of <planned> (<lens>, <lens>[, <lens>]) — contradiction: none | settled | unsettled' \
-           'Re-dispatch: phase <p>, in-run resume <r> of 3'; do
+           'Re-dispatch: phase <p>, in-run resume <r> of 3, return <t> of 6'; do
   assert_in_range "RULING example line '$pin'" \
     "$ORCH_SKILL" "$pin" "$LOG_ENTRY_LINE" "$LOG_ENTRY_END" exact
 done
@@ -1595,11 +1595,41 @@ assert_in_range_folded "a Phase 4 Ruled: line carries its review-log invocation 
 assert_in_range_folded "live stop path reads inv <i> from the ruling-record entry's Item field" \
   "$ORCH_SKILL" "read from that ruling's own ruling-record entry \`**Item:**\` field" \
   "$LOG_ENTRY_LINE" "$LOG_ENTRY_END"
-# `<r>` has a defined base, so two agents cannot write `1 of 3` and `0 of 3`
-# for the same first ruling.
-assert_in_range_folded "the in-run resume counter includes the entry being written" \
-  "$ORCH_SKILL" '`<r>` **includes the entry being written**, so the first ruling of a unit writes `in-run resume 1 of 3`' \
-  "$LOG_ENTRY_LINE" "$LOG_ENTRY_END"
+# Both figures have a defined base, so two agents cannot write `1 of 3` and
+# `0 of 3` for the same first ruling.
+assert_in_range_folded "both counters include the entry being written" \
+  "$ORCH_SKILL" 'both **include the entry being written**' \
+  "$CAP_PARA_LINE" "$CAP_PARA_END"
+# Worklist row 17: the cap counts plan rulings, not every open return. A plan
+# ruling is an entry with at least one answer beginning `amend plan` or
+# `plan governs`; a fix-only entry (every answer `fix it` or `accept`) does not
+# consume a resume, so a chain of loop leftovers ruled `fix it` no longer
+# stops a run, while the total ceiling of 6 still bounds it. The stop figures
+# are the ones the return "would write". These pins are scoped to the cap
+# paragraph itself, not the whole log-entry subsection.
+assert_in_range_folded "a plan ruling is an entry with an answer beginning amend plan or plan governs" \
+  "$ORCH_SKILL" 'at least one of whose `Items:` answers begins `amend plan` or `plan governs`' \
+  "$CAP_PARA_LINE" "$CAP_PARA_END"
+assert_in_range_folded "the resume counter counts plan rulings, and the first plan ruling writes 1 of 3" \
+  "$ORCH_SKILL" '`<r>` is the number of plan rulings of the unit, so the first plan ruling of a unit writes `in-run resume 1 of 3`' \
+  "$CAP_PARA_LINE" "$CAP_PARA_END"
+assert_in_range_folded "a fix-only entry does not consume a resume" \
+  "$ORCH_SKILL" 'a fix-only entry does not consume a resume: it repeats the current `<r>` and advances `<t>` only' \
+  "$CAP_PARA_LINE" "$CAP_PARA_END"
+assert_in_range_folded "the return counter counts every entry of the unit" \
+  "$ORCH_SKILL" '`<t>` is the number of all the unit'"'"'s entries, plan ruling and fix-only alike' \
+  "$CAP_PARA_LINE" "$CAP_PARA_END"
+assert_in_range_folded "the stop is the return that would write 4 of 3 or return 7 of 6" \
+  "$ORCH_SKILL" 'The return that would write `4 of 3` or `return 7 of 6` is a stop' \
+  "$CAP_PARA_LINE" "$CAP_PARA_END"
+# Negative: the inverted rule (every entry consumes a resume) and the old
+# single-count wording must not satisfy the pins above.
+assert_absent_in_range_folded_nobacktick "the cap paragraph never says every entry consumes a resume" \
+  "$ORCH_SKILL" 'every entry consumes a resume' \
+  "$CAP_PARA_LINE" "$CAP_PARA_END" fragment
+assert_absent_in_range_folded_nobacktick "the cap paragraph no longer states one undifferentiated count of RULING entries" \
+  "$ORCH_SKILL" 'The count is the number of `## RULING` entries of the same phase' \
+  "$CAP_PARA_LINE" "$CAP_PARA_END" fragment
 
 # "Idempotence of an in-run resume after a crash": Phase 3 is idempotent by
 # construction (ruling and amendment committed before the re-dispatch, so a
@@ -1726,7 +1756,8 @@ for pin in '## RULING <n> — YYYY-MM-DD — phase <p> — <one-line summary>' \
            'Owed probe: <verbatim line>' \
            'Open: [<id>] escalated (<spec wrong|scope|irreversible|secret|chain>) — <summary>' \
            'Ruled: [<id> inv <i>] <forced|design> — <answer>' \
-           'Ruled: [task <n>/<k>] <forced|design> — <answer>'; do
+           'Ruled: [task <n>/<k>] <forced|design> — <answer>' \
+           'Re-dispatch: phase <p>, in-run resume <r> of 3, return <t> of 6'; do
   assert_in_range "log-format example line '$pin'" \
     "$ORCH_SKILL" "$pin" "$LOG_FORMAT_LINE" "$STATE_LINE" exact
 done
