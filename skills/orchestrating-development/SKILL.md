@@ -709,7 +709,7 @@ Open: [<id>] escalated (<spec wrong|scope|irreversible|secret|chain>) — <summa
 Ruled: [<id> inv <i>] <forced|design> — <answer>
 Ruled: [task <n>/<k>] <forced|design> — <answer>
 Owed probe: <verbatim line>
-Resume: Resume orchestration for docs/superpowers-orchestrator/<date>-<slug>/plans/<slug>.md
+Resume: Resume orchestration for docs/superpowers-orchestrator/<date>-<slug>/plans/<slug>.md [<id>]: <answer>; [<id>]: <answer>
 ```
 
 (For a Phase 1 stop the plan may not exist: the Resume line names the
@@ -724,8 +724,12 @@ line that `<id>` is written in the qualified form `[<id> inv <i>]`, with
 the review-log `_Invocation` number the ruling was made against
 (`## In-run rulings`, "A carried Phase 4 id names its invocation") — with the
 escalation reason in parentheses, so the resume prompt can answer each
-open item by id, and one `Ruled:` line per item the orchestrator already
-decided, carried forward by Resume step 3; after them comes one `Owed
+open item by id — the `Resume:` line carries one `[<id>]: <answer>` slot
+per `Open:` line, in the entry's order, so that the prompt the user
+sends back already answers every open id once the slots are filled; a stop
+with no `Open:` line carries no slot — and one `Ruled:` line per item the
+orchestrator already decided, carried forward by Resume step 3; after
+them comes one `Owed
 probe: <verbatim line>` line for every `rejected: harness probe not
 runnable here — <probe>` line of the review log.) A skipped Phase 4
 writes the `skipped (N_code=0)` line shape from Phase 0; Phase 2 is never
@@ -2193,6 +2197,22 @@ rules apply everywhere a ruling is made:
 In-run stop = append `## STOPPED` to the log, commit it, update
 `state.md` `## Open Issues` (blocking items first), report with the
 resume prompt.
+
+**Reporting the stop.** Print the entry's `Resume:` line as the text to
+send back, every slot filled with your recommended answer for that id, and
+beside it the other options you offer for each open id. A recommendation
+that names a parameter override alone (`… with cap=2`) answers no open
+id: sent as it stands, it makes Resume step 3 present the same
+question again and do no work. Every option you offer must pass the
+self-check your own answer lines pass (`## In-run rulings`, "check your
+own answer lines"), because the loop applies the same answer-shape rules
+to the user's answer as to yours: for an item whose `— clause:` names
+binding text under the plan header's `**Body authority:**` note, offer
+only `plan governs`, `amend plan: …; fix it: …` or a further escalation
+— never a bare `fix it` and never `accept`, which the loop refuses and
+returns as `unresolved: fix contradicts binding text`; on a Critical,
+never `accept` and never `plan governs`. An option the loop would
+refuse costs the user a second round trip to be asked again.
 
 **Every `stopped` commit stages by explicit path.** The only file it
 stages is the orchestration log; name it on the command line.

@@ -735,7 +735,9 @@ Two interruption shapes, one resume phrase:
 
 - **Deliberate stop** (major error): the orchestration log ends with a
   `## STOPPED` entry naming the reason, a pointer to the detail file, and the
-  exact resume prompt to paste.
+  exact resume prompt to paste. When the stop waits on your answers, that
+  prompt carries one `[<id>]: <answer>` slot per open item; the stop report
+  prints it with each slot filled by the recommended answer.
 - **Crash / power loss**: no `STOPPED` entry — the log simply ends at the
   last committed boundary. Resume infers the position from the log, the
   plan's checkboxes, and recent git history.
@@ -758,7 +760,13 @@ reviewed together with the task's completion, never blindly trusted.
 If a stop recorded a blocking question, answer it in the resume prompt;
 resume with an unanswered blocker just presents the question and stops again.
 A Phase 3 or Phase 4 stop lists the items to answer on its `Open:` lines,
-by id; answer those and only those. Two open items of one review
+by id, and its `Resume:` line carries one `[<id>]: <answer>` slot per
+open item; fill those slots and only those. An override alone (`... with
+cap=2`) answers nothing and the run stops again on the same question.
+Every option the stop report offers is one the loop will accept: an item
+whose clause names binding plan text is offered `plan governs`,
+`amend plan: …; fix it: …` or a further escalation, never a bare `fix it`
+or `accept`. Two open items of one review
 invocation can carry the same id (`[I1]`), because ids restart in every
 round: when that happens, begin your answer with a short parenthesis
 naming the round it is for — `(this answers the round 4 item on …)` — so

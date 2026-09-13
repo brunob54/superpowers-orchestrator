@@ -2752,6 +2752,38 @@ assert_in_range_folded "decided wording is quoted on a decided line or a rejecte
   "$MCR_SKILL" 'text whose clause is quoted on a `decided (<who>):` line or on a `rejected: plan governs (… decision)` line of any `_Invocation` entry of the same orchestration run (same BASE)' \
   "$NO_FIX_LINE" "$NO_FIX_END"
 
+# --- Stop presentation: the Resume line carries the open ids, and every
+# offered option is one the loop will accept (issues-log rows 24 and 19) ---
+#
+# Row 24: a `## STOPPED` entry's `Resume:` line named the plan path only, so
+# a user who pasted it literally resumed with no answer, and Resume step 3
+# stopped again on the same question. The template line now carries one
+# `[<id>]: <answer>` slot per `Open:` line.
+# Row 19: the orchestrator offered a bare `fix it` for an item whose clause
+# named binding plan text; the loop refuses exactly that shape. The stop
+# report now offers only options that pass the orchestrator's own
+# answer-line self-check.
+STOP_POLICY_LINE="$RULINGS_END"
+STOP_POLICY_END="$GUARD_LINE"
+assert_in_range "the STOPPED template's Resume: line carries an answer slot per open id" \
+  "$ORCH_SKILL" 'Resume: Resume orchestration for docs/superpowers-orchestrator/<date>-<slug>/plans/<slug>.md [<id>]: <answer>; [<id>]: <answer>' \
+  "$LOG_FORMAT_LINE" "$STATE_LINE" exact
+assert_in_range_folded "the log format explains the slots: one per Open: line, none on a stop without one" \
+  "$ORCH_SKILL" 'one `[<id>]: <answer>` slot per `Open:` line, in the entry'"'"'s order' \
+  "$LOG_FORMAT_LINE" "$STATE_LINE"
+assert_in_range_folded "the stop report pastes the Resume: line with its slots filled by the recommended answers" \
+  "$ORCH_SKILL" 'print the entry'"'"'s `Resume:` line as the text to send back, every slot filled with your recommended answer for that id' \
+  "$STOP_POLICY_LINE" "$STOP_POLICY_END"
+assert_in_range_folded "the stop report never recommends a parameter override alone" \
+  "$ORCH_SKILL" 'A recommendation that names a parameter override alone' \
+  "$STOP_POLICY_LINE" "$STOP_POLICY_END"
+assert_in_range_folded "every offered option passes the orchestrator's own answer-line self-check" \
+  "$ORCH_SKILL" 'Every option you offer must pass the self-check your own answer lines pass' \
+  "$STOP_POLICY_LINE" "$STOP_POLICY_END"
+assert_in_range_folded_exact "an item against binding text is offered only plan governs, amend plan, or a further escalation" \
+  "$ORCH_SKILL" 'offer only `plan governs`, `amend plan: …; fix it: …` or a further escalation — never a bare `fix it` and never `accept`' \
+  "$STOP_POLICY_LINE" "$STOP_POLICY_END"
+
 # --- end of checks ---
 
 echo
