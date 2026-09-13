@@ -1040,9 +1040,10 @@ code has been revised since, so a re-pass is meaningful):
      single line `(<n> earlier lines omitted)`, with `<n>` the number of
      lines cut, goes directly after the heading and before those last 150
      lines; when nothing was cut the file carries no such line. The cap
-     bounds the prompt file: the Read tool returns at most 2000 lines by
-     default, and an uncapped failure text — a full test log — could push
-     part of the prompt past what the fix subagent's single Read returns.
+     bounds the prompt file: one Read tool call returns about 25,000 tokens
+     at most and then prints a PARTIAL notice naming the next offset, and
+     an uncapped failure text — a full test log — could push part of the
+     prompt past what the fix subagent's single Read returns.
      `./fix-prompt.md` places every rule before its `[FINDINGS]` and
      `[FAILURE_BLOCK]` blocks for the same reason.
      A failing test can quote a credential, so this Write can be

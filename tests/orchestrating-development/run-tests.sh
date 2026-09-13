@@ -21,6 +21,7 @@ TEMPLATES=(plan-writer-prompt.md doc-review-loop-prompt.md batch-controller-prom
 RESUME_TEMPLATES=(plan-writer-prompt.md batch-controller-prompt.md code-review-loop-prompt.md)
 
 # Section headings of the orchestrator, matched as whole lines.
+H_REQUIRED='## Required Start'
 H_DISPATCH='## Controller Dispatch Rules (apply to every phase)'
 H_PHASE0='## Phase 0 — Setup (the only interactive moment)'
 H_PHASE1='## Phase 1 — Plan Writing'
@@ -194,6 +195,8 @@ TEMPLATES_RANGE="$WORK/templates.txt"
 GUARD_RANGE="$WORK/guard.txt"
 
 bold "0. Section ranges of the orchestrator"
+REQUIRED_RANGE="$WORK/required.txt"
+extract_range "Required Start" "$ORCH_SKILL" "$H_REQUIRED" "$H_DISPATCH" "$REQUIRED_RANGE"
 extract_range "Controller Dispatch Rules" "$ORCH_SKILL" "$H_DISPATCH" "$H_PHASE0" "$DISPATCH_RANGE"
 extract_range "Phase 0" "$ORCH_SKILL" "$H_PHASE0" "$H_PHASE1" "$PHASE0_RANGE"
 extract_range "Phases 1 to 4" "$ORCH_SKILL" "$H_PHASE1" "$H_PHASE5" "$PHASES_RANGE"
@@ -263,28 +266,37 @@ for t in "${TEMPLATES[@]}"; do
 done
 
 bold "3. Major-Error Stop Policy: every failure of the mechanism is fatal, with its cause text"
-for needle in "${CAUSES[@]}" "${NOT_MECHANISM_ROWS[@]}" "$VALUE_WITHHELD" "$NEVER_FAILED_FILE" \
-              "$NO_FALLBACK" "$SAME_POINTER" "$NO_HEREDOC" 'hooks/safety/protect-secrets.js' \
-              'dispatch-<k>-probe-<n>.txt' 'Never withhold a line on this outcome'; do
+for needle in "${CAUSES[@]}" "${NOT_MECHANISM_ROWS[@]}" "$NEVER_FAILED_FILE" \
+              "$NO_FALLBACK" "$SAME_POINTER" 'hooks/safety/protect-secrets.js'; do
   assert_folded_contains "stop policy: contains '$needle'" "$MAJOR_RANGE" "$needle"
 done
-assert_file_not_contains "stop policy: withheld-line form keeps the ruling verb (no pre-amendment location-only form)" "$MAJOR_RANGE" "$VALUE_WITHHELD_OLD_FORM"
+# The secrets-hook probe rule runs before every dispatch fill, so it lives in
+# Controller Dispatch Rules — inside the first 5,000 tokens of the file, which
+# is all that Claude Code attaches again after an auto-compaction. It is the
+# LAST paragraph of that section, so that "from its bold opening to the end
+# of the section" below is the probe rule alone.
+for needle in "$VALUE_WITHHELD" "$NO_HEREDOC" 'hooks/safety/protect-secrets.js' \
+              'dispatch-<k>-probe-<n>.txt' 'Never withhold a line on this outcome'; do
+  assert_folded_contains "dispatch rules: the secrets-hook probe rule contains '$needle'" "$DISPATCH_RANGE" "$needle"
+done
+assert_file_not_contains "dispatch rules: withheld-line form keeps the ruling verb (no pre-amendment location-only form)" "$DISPATCH_RANGE" "$VALUE_WITHHELD_OLD_FORM"
+assert_file_not_contains "stop policy: the secrets-hook probe rule no longer stands in the stop policy" "$MAJOR_RANGE" "$PROBE_OPENING"
 # The mirrored secrets-hook rule stands alone: it must send the reader to no
 # other skill's file for the hook rule. Scoped to the probe rule's own
 # paragraphs — from its bold opening to the end of the section — so that a
 # legitimate mention of multi-code-review elsewhere in the section does not
 # fail the check.
 PROBE_RANGE="$WORK/probe.txt"
-PROBE_START="$(grep -nF -- "$PROBE_OPENING" "$MAJOR_RANGE" | head -n 1 | cut -d: -f1)"
+PROBE_START="$(grep -nF -- "$PROBE_OPENING" "$DISPATCH_RANGE" | head -n 1 | cut -d: -f1)"
 if [ -n "$PROBE_START" ]; then
-  awk -v s="$PROBE_START" 'NR >= s' "$MAJOR_RANGE" > "$PROBE_RANGE"
-  ok "stop policy: secrets-hook probe rule located ($PROBE_START..end of section)"
+  awk -v s="$PROBE_START" 'NR >= s' "$DISPATCH_RANGE" > "$PROBE_RANGE"
+  ok "dispatch rules: secrets-hook probe rule located ($PROBE_START..end of section)"
 else
   : > "$PROBE_RANGE"
-  bad "stop policy: the secrets-hook probe rule opening '$PROBE_OPENING' was not found"
+  bad "dispatch rules: the secrets-hook probe rule opening '$PROBE_OPENING' was not found in Controller Dispatch Rules"
 fi
-assert_file_not_contains "stop policy: the secrets-hook rule names no multi-code-review skill file" "$PROBE_RANGE" 'multi-code-review/SKILL.md'
-assert_file_not_contains "stop policy: the secrets-hook rule holds no 'see multi-code-review' cross-reference" "$PROBE_RANGE" 'see multi-code-review'
+assert_file_not_contains "dispatch rules: the secrets-hook rule names no multi-code-review skill file" "$PROBE_RANGE" 'multi-code-review/SKILL.md'
+assert_file_not_contains "dispatch rules: the secrets-hook rule holds no 'see multi-code-review' cross-reference" "$PROBE_RANGE" 'see multi-code-review'
 
 bold "3b. Guard Interaction and Lost returns state the widened exemption"
 assert_folded_contains "guard interaction: states the 10-non-blank-line window" \
@@ -400,6 +412,28 @@ assert_folded_contains "phase 5: readiness conflicts owed report item" "$PHASE5_
 # is carried to the user by the same scan that carries owed probes.
 assert_folded_contains "phase 5: spec deviations report item" "$PHASE5_RANGE" \
   "spec deviations — every \`- spec deviation:\` line of the plan-review log, listed verbatim with its review log path, or \`none\`"
+
+bold "11. Compaction recovery: the re-read rule stands inside Required Start"
+# After an auto-compaction Claude Code attaches only the first 5,000 tokens
+# of the skill invocation again, so the rule that says "re-read the section
+# you are executing" must itself sit inside that prefix: pinned to the
+# Required Start range and to a line number well inside it.
+RECOVERY_OPENING='**After a compaction summary.**'
+RECOVERY_LINE="$(grep -nF -- "$RECOVERY_OPENING" "$ORCH_SKILL" | head -n 1 | cut -d: -f1)"
+if [ -n "$RECOVERY_LINE" ] && [ "$RECOVERY_LINE" -le 60 ]; then
+  ok "recovery: the paragraph opens at line $RECOVERY_LINE (at or before line 60)"
+else
+  bad "recovery: the paragraph '$RECOVERY_OPENING' opens at line '${RECOVERY_LINE:-none}', not at or before line 60"
+fi
+for needle in 'compaction summary' \
+              'is never a substitute for skill text' \
+              "Read the file with \`offset\` at the section's first line and \`limit\` reaching its last line" \
+              'prints a PARTIAL notice naming the next `offset`' \
+              "grep -n '^## '" \
+              "run Resume step 1's incomplete-ruling scan on the ruling record" \
+              "$H_PHASE3" "$H_PHASE4" "$H_INRUN" "$H_RESUME"; do
+  assert_folded_contains "recovery: Required Start contains '$needle'" "$REQUIRED_RANGE" "$needle"
+done
 
 echo
 bold "Results: $PASS passed, $FAIL failed"

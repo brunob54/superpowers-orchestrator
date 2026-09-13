@@ -23,7 +23,7 @@ Core operating standard for all sessions. Apply permanently from activation.
 3. Match read scope to task type: use Grep to locate specific known content (a function, a config value, an error handler); read complete files when the task requires understanding what a file covers (scope assessment, gap analysis, systemic recommendations). Partial reads cannot prove absence.
 4. Use Glob instead of Bash `ls` or `find`
 5. Do not verify existence of a path already confirmed earlier in the session
-6. The Read tool returns a maximum of 2,000 lines per call. For files you have reason to believe exceed 2,000 lines, use `offset` and `limit` parameters to read in sequential chunks. Never assume a single read covered the complete file.
+6. One Read tool call returns about 25,000 tokens at most; on a larger file it stops early and prints a PARTIAL notice naming the next `offset`. When you need the whole of a large file, read it in sequential chunks with `offset` and `limit` until no PARTIAL notice is printed. Never assume a single read covered the complete file.
 
 ## Agent & External Content Rules
 

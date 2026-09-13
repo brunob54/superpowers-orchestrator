@@ -721,6 +721,19 @@ assert_folded_contains "doc-review-loop template: appends the Loop complete line
 # every suite green.
 assert_folded_contains "doc-review-loop template: the earlier-release clause of the completeness rule owes no post-sequence" "$DOC_LOOP_PROMPT" 'by whichever of its clauses applied, the clause for an entry written by an earlier release included, which owes no post-sequence'
 
+bold "18. The Read tool's limit is stated as measured: about 25,000 tokens per call, then a PARTIAL notice"
+# Both files once claimed "at most 2000 lines by default". The measured
+# behaviour is a token cap: one call returns about 25,000 tokens and prints a
+# PARTIAL notice naming the next offset. Pin the corrected sentence and the
+# absence of the line-count claim in both files.
+TOKEN_EFFICIENCY_SKILL="$ROOT/skills/token-efficiency/SKILL.md"
+assert_folded_contains "multi-code-review: the failure-text cap names the Read tool's token limit" "$CODE_SKILL" \
+  'one Read tool call returns about 25,000 tokens at most and then prints a PARTIAL notice naming the next offset'
+assert_file_not_contains "multi-code-review: no 'at most 2000 lines' claim remains" "$CODE_SKILL" 'at most 2000 lines'
+assert_folded_contains "token-efficiency: rule 6 names the PARTIAL notice and the next offset" "$TOKEN_EFFICIENCY_SKILL" \
+  'prints a PARTIAL notice naming the next `offset`'
+assert_file_not_contains "token-efficiency: no '2,000 lines' claim remains" "$TOKEN_EFFICIENCY_SKILL" '2,000 lines'
+
 echo
 bold "Results: $PASS passed, $FAIL failed"
 if [ "$FAIL" -gt 0 ]; then
