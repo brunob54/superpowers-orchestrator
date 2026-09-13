@@ -197,10 +197,24 @@ in its plan-stage section, after the sentence that describes the N and M
 questions.
 
 **Size budget.** `skills/multi-doc-review/SKILL.md` is read whole by the
-Phase 2 controller and by the writing-plans host session. This design's
-additions to that file are capped at 150 lines; the file is 788 lines at the
-time of writing, so the contract test asserts a maximum of 938 lines and
-names 7.14.0 as the release that set the figure.
+Phase 2 controller and by the writing-plans host session. The contract test
+asserts a maximum of 1080 lines and names 7.14.0 as the release that set the
+figure. The file is 788 lines at the time of writing, so the budget allows
+this design's additions 292 lines.
+
+> **Amendment (2026-09-13):** this figure was 938 lines — a 150-line cap on
+> top of the 788-line baseline — when the design was approved. The plan
+> review then found five corrections that each need prose in this file and
+> cannot be dropped: narrowing the once-per-gate N = 0 sentence, narrowing
+> the "Otherwise the entry is complete" sentence, narrowing the **On a
+> resume** N = 0 sentence, wiring the coverage condition into the usability
+> definition of Procedure step 2, and giving the `plan-blob` field a
+> producer. Re-measuring the reference bodies after four review rounds gave
+> about 258 net added lines against a 150-line cap, so 938 was not reachable
+> without reintroducing the defects those five corrections fix. The plan
+> raised the maximum to 1080, and the shipped file stands at 1079. This
+> amendment brings the spec's figure to the one the plan, the contract test
+> and the shipped file all use.
 
 ## The lens cell
 
@@ -599,8 +613,9 @@ the review-gates suite its `*_NORM` files.
 - `doc-review-loop-prompt.md` declares `[N_PLAN]` as `0–10` and carries
   `count rotating entries only` and `The host self-review runs after the
   post-sequence.`;
-- `skills/multi-doc-review/SKILL.md` is at most 938 lines (baseline 788,
-  set by 7.14.0, recorded in the assertion's comment).
+- `skills/multi-doc-review/SKILL.md` is at most 1080 lines (baseline 788,
+  set by 7.14.0, recorded in the assertion's comment; raised from 938 by the
+  amendment in the "Size budget" section above).
 
 `tests/review-gates/run-tests.sh`: the sentence `For a plan, the Execution
 readiness pass runs even when N is 0.` and the cost clause `add 2 to 6
