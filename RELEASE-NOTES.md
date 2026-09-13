@@ -8,6 +8,50 @@
 > (`REPOZY/superpowers-optimized`) and are kept unchanged as history; any
 > testing they describe was not done here.
 
+## v7.16.0 — a plan review's spec deviation reaches the user
+
+**Problem.** A plan review may leave the plan contradicting the spec on
+purpose, as when a size budget the spec names cannot hold the review's
+corrections. Nothing carried that decision to the user: on one run it
+arrived only through `state.md`, a file every orchestrated run treats as
+losable (issues-log Case 025).
+
+**Change.** The review controller writes one fixed `- spec deviation:`
+line under the change that made it, its completion report always carries
+a `Spec deviations:` line, and the Phase 5 report lists every such line.
+
+**Effect.** The decision to amend the spec or the plan is put to you at
+completion. Reinstall the plugin; nothing else to migrate.
+
+Details:
+
+- **The line.** Procedure step 3 of `skills/multi-doc-review/SKILL.md`:
+  when an applied finding or an inline self-review fix leaves the plan
+  stating something the spec states differently, the controller writes,
+  directly below the disposition or note that made it and at column 1,
+  `- spec deviation: <what the plan now says> — spec: <what the spec
+  says> (<spec path>) — <why kept>`. That line is the durable record and
+  the only carrier; a prose remark such as "flag this to the user" never
+  replaces it. The line takes no source annotation.
+- **The report.** The completion report carries `Spec deviations:` with
+  one item per such line, marked `(round <i>)` or `(self-review)`, or
+  `Spec deviations: none`. Like `Harness probes owed:`, the line is
+  always written and a report without it is defective.
+- **The scan.** Phase 5 step 3 of `skills/orchestrating-development/SKILL.md`
+  lists every `- spec deviation:` line of the plan-review log verbatim
+  with its log path, or `none`, beside the owed probes and the readiness
+  conflicts. The read allowance under In-run rulings names the shape, so
+  the scan reads nothing else from that log.
+- **Size budget.** The doc-review skill stood at 1079 of its 1080-line
+  budget. The 17 added lines were recovered by reflowing Procedure step 3
+  and the touched paragraphs at 88 columns, a width the file already used
+  on 132 lines; a word-level diff shows whitespace-only changes there.
+  The file stands at 1075 lines.
+- **Tests and guide.** Six wording assertions across
+  `tests/reviewer-templates`, `tests/orchestrating-development` and
+  `tests/in-run-rulings`; the guide's harness-probe paragraph explains the
+  new line. Closes worklist row 23 of `docs/orchestration-issues.md`.
+
 ## v7.15.0 — a stop's resume prompt carries its answer slots
 
 **Problem.** A `## STOPPED` entry's `Resume:` line named the plan path
