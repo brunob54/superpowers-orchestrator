@@ -173,7 +173,12 @@ Agent tool (general-purpose):
        code change leaves the `unresolved` and `user_decision` counts of
        your return; an item the answer accepts as a finding to fix
        follows the skill's "Resolving user-decision and unresolved items"
-       rule (one fix subagent, one verification re-review,
+       rule (one fix subagent, one verification re-review logged as
+       `## Round <i> addendum <n> re-review 1`, then — only when a
+       Critical/Important finding still stands — one more fix subagent and
+       re-review 2: at most two fix dispatches and two re-reviews per
+       addendum; a finding still standing after re-review 2 is
+       `unresolved: addendum re-review`, an open item of your return;
        `fixed — <summary> → <sha>` disposition in the same addendum).
        When the effective HEAD had moved, skip that verification
        re-review: the new invocation that always follows reviews the fix.

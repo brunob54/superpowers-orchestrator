@@ -2431,6 +2431,87 @@ assert_in_range_folded "loop covers the no-TOPIC_DIR case, where no record exist
   "$MCR_SKILL" 'the loop was called without `TOPIC_DIR`' \
   "$NO_FIX_LINE" "$NO_FIX_END"
 
+
+bold "8b. The post-loop addendum's verification re-review (row 25)"
+# Row 25: the addendum's re-review had no heading, no budget and no M of its
+# own, so three controllers behaved three ways under one text and labelled
+# every leftover `unresolved: verification cap` although no cap had run. The
+# rule now gives the addendum its own heading with the log's ordinal `<n>`, the
+# re-review the heading `## Round <i> addendum <n> re-review <c>` (starts with
+# `## Round ` so the behavioural helper's round extraction still stops at it;
+# never matches `## Round <i> verification <c>`, so step 6's cycle count is
+# untouched), one more fix and re-review when a Critical/Important stands, a
+# bound of two fixes and two re-reviews, and a truthful label.
+assert_in_range "the addendum heading carries the log's addendum ordinal" \
+  "$MCR_SKILL" '### Post-loop addendum <n> — <date>' \
+  "$MCR_AFTER_LOOP_LINE" "$MCR_ERROR_HANDLING_LINE" exact
+assert_in_range "the addendum re-review heading form" \
+  "$MCR_SKILL" '## Round <i> addendum <n> re-review <c>' \
+  "$MCR_AFTER_LOOP_LINE" "$MCR_ERROR_HANDLING_LINE" exact
+assert_in_range_folded "the addendum re-review is never an in-loop verification entry" \
+  "$MCR_SKILL" 'never a `## Round <i> verification <c>` entry' \
+  "$MCR_AFTER_LOOP_LINE" "$MCR_ERROR_HANDLING_LINE"
+assert_in_range_folded "the addendum re-review runs at this controller's M" \
+  "$MCR_SKILL" "at THIS controller's M" \
+  "$MCR_AFTER_LOOP_LINE" "$MCR_ERROR_HANDLING_LINE"
+assert_in_range_folded "the addendum re-review names the commit it verifies on its Reviewers line" \
+  "$MCR_SKILL" '— verifies <sha>' \
+  "$MCR_AFTER_LOOP_LINE" "$MCR_ERROR_HANDLING_LINE"
+assert_in_range_folded "the addendum bound: two fix dispatches and two re-reviews" \
+  "$MCR_SKILL" 'Two fix dispatches and two re-reviews per addendum is the bound' \
+  "$MCR_AFTER_LOOP_LINE" "$MCR_ERROR_HANDLING_LINE"
+assert_in_range_folded "a clean re-review ends the addendum" \
+  "$MCR_SKILL" 'A clean re-review ends the addendum' \
+  "$MCR_AFTER_LOOP_LINE" "$MCR_ERROR_HANDLING_LINE"
+assert_in_range "the addendum leftover label in the addendum rule" \
+  "$MCR_SKILL" 'unresolved: addendum re-review' \
+  "$MCR_AFTER_LOOP_LINE" "$MCR_ERROR_HANDLING_LINE" exact
+assert_in_range "the addendum leftover label in the canonical disposition list" \
+  "$MCR_SKILL" 'unresolved: addendum re-review' \
+  "$MCR_LOG_FORMAT_LINE" "$MCR_AFTER_LOOP_LINE" exact
+assert_in_range "the Review Log Format names the addendum re-review heading" \
+  "$MCR_SKILL" '## Round <i> addendum <n> re-review <c>' \
+  "$MCR_LOG_FORMAT_LINE" "$MCR_AFTER_LOOP_LINE" exact
+# The false label must not come back: After the Loop names no cap, because
+# the addendum's re-review is bounded by its own two-cycle rule, never by
+# step 6's cycle cap.
+assert_absent_in_range_folded "After the Loop never labels an addendum leftover as a verification-cap item" \
+  "$MCR_SKILL" 'unresolved: verification cap' \
+  "$MCR_AFTER_LOOP_LINE" "$MCR_ERROR_HANDLING_LINE" exact
+assert_absent_in_range_folded "After the Loop no longer writes the addendum re-review under the in-loop cycle header" \
+  "$MCR_SKILL" 'the `## Round <i> verification <c>` header alike' \
+  "$MCR_AFTER_LOOP_LINE" "$MCR_ERROR_HANDLING_LINE" exact
+# Step 6's "same M" bound in-loop cycles only; the addendum re-review follows
+# Error Handling's rule that M always comes from the parameters (F.1 of the
+# row-25 record: the log followed the parameters while the text said "same M").
+assert_in_range_folded "step 6's same-M sentence is scoped to in-loop cycles" \
+  "$MCR_SKILL" 'the same M (this binds in-loop cycles only' \
+  "$NO_FIX_LINE" "$NO_FIX_END"
+assert_in_range_folded "step 6 excludes addendum re-review entries from the next round index" \
+  "$MCR_SKILL" 'verification and addendum re-review entries are excluded' \
+  "$NO_FIX_LINE" "$NO_FIX_END"
+# The prompt-file table gets the reviewer row the re-review lacked.
+MCR_TABLE_LINE="$(line_containing_after "$MCR_SKILL" '| Dispatch | Prompt file | Value files |' 0)"
+MCR_TABLE_END="$(line_containing_after "$MCR_SKILL" 'secrets-probe-<n>.txt' "$MCR_TABLE_LINE")"
+assert_in_range "the prompt-file table has a row for the addendum re-review reviewers" \
+  "$MCR_SKILL" 'addendum-<n>-cycle-<c>-reviewer.md' \
+  "$MCR_TABLE_LINE" "$((MCR_TABLE_END + 1))" exact
+# The controller template's Deviation 5 carries the same bound, so the
+# controller the orchestrator dispatches reads it without opening the skill.
+LOOP_DEV5_LINE="$(line_containing_after "$LOOP_PROMPT" '5. Resume answer:' 0)"
+LOOP_DEV5_END="$(line_containing_after "$LOOP_PROMPT" '## Return (final message, 15 lines max)' "$LOOP_DEV5_LINE")"
+assert_in_range_folded "Deviation 5 states the addendum bound" \
+  "$LOOP_PROMPT" 'at most two fix dispatches and two re-reviews per addendum' \
+  "$LOOP_DEV5_LINE" "$LOOP_DEV5_END"
+assert_in_range "Deviation 5 names the addendum leftover label" \
+  "$LOOP_PROMPT" 'unresolved: addendum re-review' \
+  "$LOOP_DEV5_LINE" "$LOOP_DEV5_END" exact
+# The orchestrator's duplicate-id rule must know the new entry kind, or an
+# answer for an addendum re-review item has no sentence to name it by.
+assert_in_range_folded "the answer-line rule names the addendum re-review as an id-restarting entry" \
+  "$ORCH_SKILL" 'in every round, in every verification cycle and in every addendum re-review' \
+  "$ANSWERS_LINE" "$ANSWERS_END"
+
 bold "9. Controller prompt templates (R10)"
 # Deviation 3's secret EXCEPTION writes one fixed leading form, because that
 # text is what the orchestrator's `secret` escalation class matches. Scope the

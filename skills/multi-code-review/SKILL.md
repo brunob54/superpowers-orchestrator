@@ -424,7 +424,8 @@ invocation by construction):
 | Round `i`, fix subagent | `round-<i>-fix.md` | `round-<i>-findings.txt` |
 | Round `i`, fix re-dispatch | `round-<i>-fix-retry.md` | `round-<i>-failure.txt`; reuses `round-<i>-findings.txt` when the current prompt directory holds it, and writes it first when it does not |
 | Verification cycle `c` fixes (`<c>` = the cycle whose re-review produced the findings being fixed) | `round-<i>-cycle-<c>-fix.md`, `round-<i>-cycle-<c>-fix-retry.md` | `round-<i>-cycle-<c>-findings.txt` (reused by the re-dispatch when the current prompt directory holds it, written first when it does not), `round-<i>-cycle-<c>-failure.txt` |
-| Post-loop addendum fixes, `<k>` = the 1-based index of the addendum fix dispatch within this controller, counting first dispatches only — a re-dispatch keeps the `k` of the dispatch it repeats | `addendum-<k>-fix.md`, `addendum-<k>-fix-retry.md` | `addendum-<k>-findings.txt` (reused by the re-dispatch when the current prompt directory holds it, written first when it does not), `addendum-<k>-failure.txt` |
+| Post-loop addendum fixes, `<k>` = the 1-based index of the addendum fix dispatch within this controller, counting first dispatches only — a re-dispatch keeps the `k` of the dispatch it repeats; the second fix of one addendum, dispatched after re-review 1 (After the Loop), is a first dispatch and takes the next `<k>` | `addendum-<k>-fix.md`, `addendum-<k>-fix-retry.md` | `addendum-<k>-findings.txt` (reused by the re-dispatch when the current prompt directory holds it, written first when it does not), `addendum-<k>-failure.txt` |
+| Post-loop addendum `<n>` re-review `<c>`, reviewers — `<n>` the log's addendum ordinal, `<c>` = 1 or 2 (After the Loop) | `addendum-<n>-cycle-<c>-reviewer.md` | `addendum-<n>-lens.txt` (round `<i>`'s lens text, written first: a post-loop-addendum controller starts from a fresh directory); `CARRIED_BLOCK` is always the empty value `CARRIED_BLOCK=` here |
 | Any dispatch, an inline value moved to a value file (the two rules of step 2 below: the value contains a single quote, or it begins with `@`) | — (the dispatch's own prompt file) | `round-<i>-<name>.txt`, with `<name>` the placeholder name in lower case — `round-<i>-cycle-<c>-<name>.txt` for a verification-cycle dispatch, `addendum-<k>-<name>.txt` for a post-loop addendum dispatch |
 | Any dispatch, the per-line secrets probe of the Critical/Important bullet | — (no dispatch of its own) | `secrets-probe-<n>.txt`, throwaway, `<n>` counting the probe Writes of this controller from 1 |
 
@@ -1094,10 +1095,12 @@ code has been revised since, so a re-pass is meaningful):
    `<i>` = the originating round's number, reused across all cycles of
    that verification (mirroring the fix-commit rule), and `<c>` = the
    1-based cycle index within that round's verification (`1`, `2`, `3`) —
-   same fields as a round, the same M, the same consolidation and the same
-   M ≥ 2 log lines, no Converged line; never counts toward
-   convergence, and verification entries are excluded when computing the
-   next round index on resume.
+   same fields as a round, the same M (this binds in-loop cycles only; an
+   addendum re-review runs at the controller's M — After the Loop), the
+   same consolidation and the same M ≥ 2 log lines, no Converged line;
+   never counts toward convergence, and verification and addendum
+   re-review entries are excluded when computing the next round index on
+   resume.
    Iterate fix → re-review at most **3 cycles**; the cycles still
    available are 3 minus the number of `## Round <i> verification <c>`
    entries already logged for that `<i>` (so a controller resuming after
@@ -1338,8 +1341,10 @@ annotation — see the rule on carried findings below.)
 Rules for the added lines:
 
 - `**Reviewers:**` — M and the usable count *u* of this round. Written when
-  M ≥ 2, and also when the effective M of the round is 1 while the
-  invocation line records a larger M (a resumed invocation given a new M):
+  M ≥ 2, always for an addendum re-review (After the Loop: it ends
+  `— verifies <sha>`), and also when the effective M of the round is 1
+  while the invocation line records a larger M (a resumed invocation given
+  a new M):
   then it is the only added line — `**Reviewers:** M=1, usable 1/1`, or
   `usable 0/1` for an inconclusive round — with original ids, no source
   annotation, and no `**Reviewer verdicts:**` or `**Sources mapped:**` line.
@@ -1406,7 +1411,10 @@ secret value; the same applies to command output quoted in fix reports.
 
 Canonical dispositions — Critical/Important:
 `fixed — <summary> → <sha>` | `rejected: <reason>` | `user-decision` |
-`unresolved: <reason>`; Minor: `fixed — <summary> → <sha>` | `carried` |
+`unresolved: <reason>` (the reasons this skill names:
+`unresolved: verification cap`, step 6; `unresolved: addendum re-review`
+and `unresolved: fix contradicts binding text`, After the Loop); Minor:
+`fixed — <summary> → <sha>` | `carried` |
 `rejected: <reason>` — the `fixed` line uses the shape
 `fixed — <summary> → <sha>`, with the source annotation appended when
 M ≥ 2 (see above). A clean round (zero findings of any severity, and —
@@ -1426,7 +1434,9 @@ changes only the log; a failed round keeps the normal
 `## Round <i> — <lens name> — <model>` header with
 `**Reviewer verdict:** inconclusive` and one disposition line
 `- inconclusive — <reason>`; verification re-reviews use the
-`## Round <i> verification <c>` header with no Converged line.
+`## Round <i> verification <c>` header with no Converged line; an
+addendum's re-review uses the `## Round <i> addendum <n> re-review <c>`
+header (After the Loop), likewise with no Converged line.
 
 **Self-sufficient open-item lines.** A `user-decision` or `unresolved:`
 disposition line carries, after its summary and before any ` ← `
@@ -1461,11 +1471,12 @@ this quote with the plan — the orchestrator's `plan governs` guard, its
 amendment lookup, and the decided-wording test above — normalizes each
 sentence and each list entry of the plan text at that location the same
 way, all four replacements included, and tests the quote as a **prefix** of one of them.
-No consumer compares the quote with the raw plan text. Two full lines:
+No consumer compares the quote with the raw plan text. Three full lines:
 
 ```
 - [I2] user-decision — helper skips the 0/0 case (plan-mandated) — at tests/helpers.sh:251 — clause: Task 6 "the helper skips a 0/0 round" ← 1/3: r1:I2
 - [C1] unresolved: verification cap — race in the retry path — at src/retry.js:40 — clause: none
+- [I1] unresolved: addendum re-review — seventh contract clause pinned by no assertion — at tests/suite.sh:120 — clause: none
 ```
 
 The line keeps its prefix; the source annotation stays last. This is
@@ -1512,16 +1523,38 @@ above. The line is always written; a report without it is defective.
 
 **Resolving user-decision and unresolved items** (interactive; batched
 mode journals and ends the batch instead): present each once, at this
-report. Finding governs → one fix subagent for all accepted findings,
-then one verification re-review; disposition becomes
-`fixed — <summary> → <sha>` in a
-post-loop addendum, and the completion marker's HEAD is updated (in
-pipeline mode only while the effective HEAD is unchanged, compared before
-the addendum is written — Pipeline rule 4). When the
-accepted findings originate in different rounds, `<i>` — for the fix
-commit subject and the `## Round <i> verification <c>` header alike — is the
-**highest** originating round, and the single verification re-review runs
-under that round's lens. Plan
+report. The answers are journaled under the heading
+`### Post-loop addendum <n> — <date>`, `<n>` = 1 plus the number of such
+headings already in this entry (the log's addendum ordinal, never the
+prompt-file counter `<k>`, which restarts in every controller). Finding
+governs → one fix subagent for all accepted findings, then one
+verification re-review, logged as
+`## Round <i> addendum <n> re-review <c> — <lens> — <model>` with `<c>` = 1:
+same fields as a round, on the regenerated package, at THIS controller's M
+(Error Handling: M always comes from the parameters, never from the log;
+step 6's "same M" binds in-loop cycles only), its `**Reviewers:**` line
+always written and ending `— verifies <sha>`, `<sha>` being the fix commit
+it reviews. That entry is never a `## Round <i> verification <c>` entry:
+it counts toward no cycle cap of step 6, and step 6's count ignores it.
+When re-review 1 leaves a Critical/Important finding standing, dispatch
+one more fix subagent for those findings and one more re-review, `<c>` = 2;
+a finding still standing after re-review 2 is
+`unresolved: addendum re-review` (blocking; it carries the `— clause:`
+suffix of "Self-sufficient open-item lines" and is an open item of the
+return like any other `unresolved:` line). Two fix dispatches and two
+re-reviews per addendum is the bound. A re-review is clean when no
+Critical/Important finding stands after triage. A clean re-review ends
+the addendum. On a retry after a lost return, a re-review whose heading
+already stands in the entry is never run again, and a fix whose commit
+the `fixed` line records is never dispatched again (idempotence, below).
+Each accepted
+finding's disposition becomes `fixed — <summary> → <sha>` in the
+addendum, and the completion marker's HEAD is updated (in pipeline mode
+only while the effective HEAD is unchanged, compared before the addendum
+is written — Pipeline rule 4). When the accepted findings originate in
+different rounds, `<i>` — for the fix commit subject and the re-review
+heading alike — is the **highest** originating round, and both re-reviews
+run under that round's lens. Plan
 governs → `rejected: plan governs (user decision) — "<clause>"`; for an
 answer tagged `(orchestrator)`, `rejected: plan governs (orchestrator decision)
 — "<clause>"`. Either way `<clause>` is the plan, spec or skill

@@ -1813,12 +1813,15 @@ names the invocation the answer is for.
 **Two open items of ONE invocation can carry one id: the answer names its
 round in prose.** The `inv <i>` qualifier separates invocations, not
 rounds, and inside a single `_Invocation` entry the ids restart at `[C1]`,
-`[I1]` in every round and in every verification cycle. One entry can
+`[I1]` in every round, in every verification cycle and in every addendum
+re-review (multi-code-review, After the Loop). One entry can
 therefore hold two open items with the same bare id — a round 4
 `user-decision` item and a verification-cycle `unresolved` item, both
 `[I1]` — and the qualified id `[I1 inv 2]` does not tell them apart.
 Every `Ruled:` line and every answer line for such an item opens its
-answer text with a parenthesis naming the round the item came from:
+answer text with a parenthesis naming the entry the item came from — the
+round, or the addendum re-review, as in `(this answers the round 8
+addendum 2 re-review 1 item on …)`:
 
 ```
 Ruled: [I1 inv 2] forced — fix it: (this answers the round 4 user-decision
@@ -2196,8 +2199,8 @@ rules apply everywhere a ruling is made:
    escalate it too, under that same class: an unsure match never becomes a
    ruling. A `— clause: none` follow-up quotes NO clause and matches
    nothing: this guard compares only non-empty quoted clauses, so a
-   clause-less item — the usual shape of a verification-cap or an
-   environment item — is never escalated by it.
+   clause-less item — the usual shape of a verification-cap, an addendum
+   re-review or an environment item — is never escalated by it.
 
 ## Major-Error Stop Policy
 
