@@ -8,6 +8,46 @@
 > (`REPOZY/superpowers-optimized`) and are kept unchanged as history; any
 > testing they describe was not done here.
 
+## v7.15.0 — a stop's resume prompt carries its answer slots
+
+**Problem.** A `## STOPPED` entry's `Resume:` line named the plan path
+only, so sending it back answered none of the open items and the run
+stopped again on the same question. The stop report could also offer an
+answer the review loop refuses, such as a bare `fix it` against binding
+plan text. Each cost one human round trip (issues-log Cases 023 and 024).
+
+**Change.** The `Resume:` line ends with one `[<id>]: <answer>` slot per
+open item. The stop report prints it with each slot filled by the
+recommended answer, and offers only options the loop accepts.
+
+**Effect.** One resume answers a stop. Reinstall the plugin; nothing
+else to migrate.
+
+Details:
+
+- **The `Resume:` line.** The `## STOPPED` template in
+  `skills/orchestrating-development/SKILL.md` writes
+  `Resume orchestration for <plan path> [<id>]: <answer>; [<id>]: <answer>`,
+  one slot per `Open:` line in the entry's order. A stop with no open
+  item carries no slot. Resume step 3 already read answers by id, so the
+  reading side is unchanged.
+- **Reporting the stop.** A new paragraph of the Major-Error Stop Policy:
+  print the `Resume:` line as the text to send back, every slot filled
+  with the recommended answer, and the other options beside it. A
+  recommendation that names a parameter override alone answers no open
+  id and is named as the shape that produces a no-work resume.
+- **Only acceptable options.** Every offered option must pass the
+  self-check the orchestrator applies to its own answer lines. For an
+  item whose clause names binding text under the plan's `**Body
+  authority:**` note, the offer is `plan governs`, `amend plan: …; fix
+  it: …` or a further escalation, never a bare `fix it` and never
+  `accept`; on a Critical, never `accept` and never `plan governs`.
+- **Tests and guide.** Six wording assertions in
+  `tests/in-run-rulings/run-tests.sh` pin the template line, the slot
+  rule and the four sentences of the new paragraph. The guide's stop and
+  resume paragraphs describe the slots and the option rule.
+- **Worklist.** Closes rows 19 and 24 of `docs/orchestration-issues.md`.
+
 ## v7.14.0 — the Execution readiness pass
 
 **Problem.** Conflicts findable from the plan and the spec alone reached the
