@@ -141,7 +141,9 @@ review ran one reviewer per round without saying so.
 **Change.** The three interactive review gates — spec, plan and
 whole-branch code review — now ask for M in the same question batch as N,
 defaulting to the session tag's value, and pass both as explicit
-`N=<n> M=<m>` tokens. Both review skills parse `N=<n>`.
+`N=<n> M=<m>` tokens. Both review skills parse `N=<n>`. This release also
+carries the marker-window change merged on 2026-09-07 (second section
+below).
 
 **Effect.** You choose the reviewer count at each gate, with its cost
 stated. One extra question per gate. Reinstall the plugin; nothing else to
@@ -169,6 +171,60 @@ Details:
   values by their own rule and ask nothing. A new suite,
   `tests/review-gates/run-tests.sh`, pins each of those paths, and compares
   the shared default definition across the four files that carry it.
+
+### Also in v7.12.0 — the report marker may stand within the first 10 non-blank lines
+
+Merged to main at `d8c320b` on 2026-09-07 (the `marker-position-tolerance`
+run) without a version bump, so v7.12.0 was the first release to contain
+it. This section was written on 2026-09-13.
+
+**Problem.** A controller return or a reviewer report counted only when
+its very first line was the report marker. Controllers often write a
+sentence above it: five recorded occurrences, each costing a retry or a
+`BLOCKED` return.
+
+**Change.** Every receiver now searches the first 10 non-blank lines for
+the marker: the guard hook exempts on a prefix match over all three
+markers, the orchestrator accepts a line equal to its own marker and
+ignores everything above it, and the two review skills accept a report
+whose marker starts one of those lines.
+
+**Effect.** A short preamble above the marker no longer costs a retry.
+Nothing to migrate.
+
+Details:
+
+- **Two predicates over one window.** The hook keeps a prefix match over
+  all three markers, because its wrong answer sends a controller on a redo
+  turn. The orchestrator uses whole-line equality over its own marker
+  only, because it must know exactly which line carries the leading token.
+  What the hook exempts is always a superset of what the orchestrator
+  accepts. Blank lines are skipped and do not consume the window; a
+  trailing `\r` is removed, so a message with CRLF line endings behaves
+  like one with LF endings.
+- **Reading rules for the orchestrator.** With more than one marker line
+  in the window, the first begins the report and the orchestration log
+  records `note: return carried <n> marker lines; parsed from the first`.
+  A consumed field (`tasks=`, `rounds=`, `outcome=`, `unresolved=`,
+  `user_decision=`, `fixes=`) is read only from the marker line and the 14
+  lines below it, first occurrence wins, and the leading token is searched
+  in that same block. Exceeding the 15-line cap is no longer a malformed
+  condition; the malformed list stays closed. A fork's reviewer return is
+  read by the same rules with its own 25-line cap.
+- **The review skills.** `multi-code-review` and `multi-doc-review` treat a
+  report as usable when a line among the first 10 non-blank lines starts
+  with `<!-- multi-review report -->` and a Verdict block stands below it;
+  a report whose marker line is its last non-blank line is unusable.
+  `researching-prior-art` keeps its first-line rules.
+- **Accepted residual.** A message that quotes a bare marker line at the
+  start of one of its first 10 non-blank lines is exempt from the guard
+  for its whole length. This is recorded next to `MARKER_SEARCH_LINES` in
+  `hooks/subagent-guard.js` and in the fix-dispatch step of
+  `multi-code-review`.
+- **Tests.** `tests/codex/test-subagent-guard.js` covers the window, the
+  CRLF case and the single `MARKER_SEARCH_LINES` declaration;
+  `tests/orchestrating-development/run-tests.sh` and
+  `tests/reviewer-templates/run-tests.sh` pin the receiver wording.
 
 ## v7.11.0 — a user's own plan amendment now backs its marker
 
