@@ -8,6 +8,63 @@
 > (`REPOZY/superpowers-optimized`) and are kept unchanged as history; any
 > testing they describe was not done here.
 
+## v7.19.0 — the orchestrator recovers its skill text after a compaction
+
+**Problem.** After an auto-compaction Claude Code re-attaches only the first
+5,000 tokens of a skill: for the 55,000-token orchestrator skill, the
+dispatch rules and nothing else. A compacted session held no ruling rule
+and no sentence telling it to recover.
+
+**Change.** A recovery paragraph at the top of the orchestrator skill makes a
+session that opens on a compaction summary re-read the section it is
+executing by paged Read, then run the incomplete-ruling scan. The
+secrets-hook probe paragraph moves into the surviving prefix, and two wrong
+sentences about the Read tool's limit are corrected.
+
+**Effect.** A compacted orchestrator can recover its procedure; the manual
+probe in `tests/claude-code/compaction-probe.md` is still owed. Reinstall
+the plugin; nothing else to migrate.
+
+Details:
+
+- **Why this and not a smaller skill.** Worklist row 13 asked for a scribe
+  subagent, then for a split of the skill body. A measure with
+  `tools/measure-context.js` on the four orchestrator transcripts of the two
+  most recent runs refuted both: all log writing is under a tenth of the
+  window; the skill body is 13.6 to 18.6 percent of peak, but every session
+  rules, so moving the rulings text to an on-demand file saves nothing, and
+  one Read call pages near 25,000 tokens in any case. No session compacted
+  on the 1M window; on the 200K default window each would have, one to
+  three times. Five independent lenses and a rebuttal round converged on
+  this guard as the only change the measure supports (issues-log Case 017
+  Follow-ups of 2026-09-13).
+- **The paragraph.** `## Required Start` of
+  `skills/orchestrating-development/SKILL.md`, lines 35 to 52: defines a
+  compaction summary, says why the paragraph sits at the top, names the four
+  sections a session may be executing, prescribes `grep -n '^## '` for the
+  section bounds and a Read with `offset` and `limit` paged on the PARTIAL
+  notice, then Resume step 1's incomplete-ruling scan before any controller
+  return is acted on.
+- **The probe paragraph.** The secrets-hook probe is now the last paragraph
+  of `## Controller Dispatch Rules` (lines 245 to 299), unchanged in wording
+  except that its two "table above" references now name the Major-Error
+  Stop Policy's table, which sits below it. No `##` heading moved.
+- **Read cap sentences.** `skills/multi-code-review/SKILL.md` (the prompt-file
+  cap rationale) and `skills/token-efficiency/SKILL.md` item 6 now state the
+  token cap and the PARTIAL notice. The cap already cuts subagent views of
+  the plan and the diff package on real runs; that is worklist row 26, not
+  changed here.
+- **Tests.** `tests/orchestrating-development/run-tests.sh` gains a Required
+  Start range, pins the recovery paragraph's sentences and its position at
+  or before line 60, and retargets the probe assertions to the Dispatch
+  Rules range with a negative on the old range (184 assertions);
+  `tests/reviewer-templates/run-tests.sh` item 18 pins both corrected Read
+  sentences (207 assertions).
+- **The probe.** `tests/claude-code/compaction-probe.md` is a manual
+  checklist: run an orchestration to Phase 4 with one ruling, `/compact`,
+  observe the next controller return; pass and fail criteria; what to
+  record. Row 13 closes when its result is recorded.
+
 ## v7.18.0 — the decisions addendum's re-review gets a heading and a fix cycle
 
 **Problem.** After a `fix it` ruling, the code-review controller ran one
