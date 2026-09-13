@@ -696,7 +696,7 @@ Items: [<id>] <forced|design> — <answer>
 Items: [<id>] escalated (<spec wrong|scope|irreversible|secret|chain>) — <summary>
 Detail: <topic folder>/plans/<slug>-open-decisions.md
 Forks: none | <k> of <planned> (<lens>, <lens>[, <lens>]) — contradiction: none | settled | unsettled
-Re-dispatch: phase <p>, in-run resume <r> of 3
+Re-dispatch: phase <p>, in-run resume <r> of 3, return <t> of 6
 ```
 
 One `Items:` line per item of the return: the first shape for a decided
@@ -2022,7 +2022,7 @@ Items: [<id>] <forced|design> — <answer>
 Items: [<id>] escalated (<spec wrong|scope|irreversible|secret|chain>) — <summary>
 Detail: <topic folder>/plans/<slug>-open-decisions.md
 Forks: none | <k> of <planned> (<lens>, <lens>[, <lens>]) — contradiction: none | settled | unsettled
-Re-dispatch: phase <p>, in-run resume <r> of 3
+Re-dispatch: phase <p>, in-run resume <r> of 3, return <t> of 6
 ```
 
 One `Items:` line per item of the return, in the two shapes of the
@@ -2090,41 +2090,46 @@ explicit path under the Major-Error Stop Policy's rule for a `stopped`
 commit: the tree still holds the blocked task's uncommitted work, so
 `git add -A` and `git commit -a` are forbidden there.
 
-**The cap.** In-run resumes of one phase are capped at 3 per unit: the
-phase itself in Phase 4, the task in Phase 3. On the `Re-dispatch:` line,
-`<r>` **includes the entry being written**, so the first ruling of a unit
-writes `in-run resume 1 of 3` and the third writes `3 of 3`; `<r>` is
-never a count of the resumes that came before. The count is the number of
-`## RULING` entries of the same phase — and, in Phase 3, of the same task
-number, counted on an `Items:` line naming that task in either form,
+**The cap.** In-run resumes of one phase are capped at 3 per unit: the phase
+itself in Phase 4, the task in Phase 3. Two figures stand on the `Re-dispatch:`
+line, `in-run resume <r> of 3, return <t> of 6`, and both **include the entry
+being written**; neither is ever a count of the resumes that came before. A
+**plan ruling** is a `## RULING` entry at least one of whose `Items:` answers
+begins `amend plan` or `plan governs` — the orchestrator ruled on the plan, and a
+new whole-branch invocation follows; a **fix-only** entry is one none of whose
+answers begins that way (every answer begins `fix it` or `accept`). `<r>` is the
+number of plan rulings of the unit, so the first plan ruling of a unit writes
+`in-run resume 1 of 3`; a fix-only entry does not consume a resume: it repeats
+the current `<r>` and advances `<t>` only. `<t>` is the number of all the unit's
+entries, plan ruling and fix-only alike, so the first entry of a unit writes
+`return 1 of 6`. A return is classified before either figure is known: the
+answers its items would receive decide whether it is a plan ruling. Both figures
+count the `## RULING` entries of the same phase — and, in Phase 3, of the same
+task number, counted on an `Items:` line naming that task in either form,
 `[task <n>]` or `[task <n>/<k>]`, matched as the whole bracketed token —
-`[task <n>]` exactly, or `[task <n>/` as a prefix, so that task 1 counts
-no `[task 12/1]` and no `[task 10]` line — whose `Re-dispatch:` value
-does not start with `none` — the test is on the value's opening word, so
-that an escalated entry, whose line is written
-`Re-dispatch: none — escalated`, is not counted: its value starts with
-`none` exactly as a bare `none` does — written after the
-**later** of the orchestration log's latest `_Invocation` line and its
-latest `## STOPPED` entry, so that a resume after a stop starts from
-zero. The latest `_Invocation` line for this purpose is never one that
-ends `— resumed_`: Resume step 5's per-parameter override answers no
-open item, so it must not move the anchor — only a first invocation line
-and a `## STOPPED` entry do. Phase 3
-counts per task because one long plan legitimately produces several
-unrelated blocked tasks; only a chain on the same task is the pathology.
-The fourth open return of the same unit is a stop: every open item is
-listed as `escalated (chain)`, and no further ruling is made. Recording is
-not a ruling: that return still gets its `## RULING` entry with
-`Re-dispatch: none — escalated` and one ruling-record entry per item, each
-with the class `escalated (chain)`, written and committed before the
-`## STOPPED` entry — Resume step 3 rebuilds a missing `## STOPPED` entry
-from those entries together with the unit's earlier non-escalated
-rulings. A new review
-invocation started by an `amend plan` ruling is the re-dispatch that
-ruling's `## RULING` entry already counts here; it adds no second resume
-to the count. Together with multi-code-review's loop-side rule for
-verification cycles, this bounds the chain of repeated open returns on
-one unit that motivated the cap.
+`[task <n>]` exactly, or `[task <n>/` as a prefix, so that task 1 counts no
+`[task 12/1]` and no `[task 10]` line — whose `Re-dispatch:` value does not start
+with `none` — the test is on the value's opening word, so that an escalated
+entry, whose line is written `Re-dispatch: none — escalated`, is not counted: its
+value starts with `none` exactly as a bare `none` does — written after the
+**later** of the orchestration log's latest `_Invocation` line and its latest
+`## STOPPED` entry, so that a resume after a stop starts from zero. The latest
+`_Invocation` line for this purpose is never one that ends `— resumed_`: Resume
+step 5's per-parameter override answers no open item, so it must not move the
+anchor — only a first invocation line and a `## STOPPED` entry do. Phase 3 counts
+per task because one long plan legitimately produces several unrelated blocked
+tasks; only a chain on the same task is the pathology. The return that would
+write `4 of 3` or `return 7 of 6` is a stop: every open item is listed as
+`escalated (chain)`, and no further ruling is made. Recording is not a ruling:
+that return still gets its `## RULING` entry with `Re-dispatch: none — escalated`
+and one ruling-record entry per item, each with the class `escalated (chain)`,
+written and committed before the `## STOPPED` entry — Resume step 3 rebuilds a
+missing `## STOPPED` entry from those entries together with the unit's earlier
+non-escalated rulings. A new review invocation started by an `amend plan` ruling
+is the re-dispatch that ruling's `## RULING` entry already counts here; it adds
+no second resume to the count. Together with multi-code-review's loop-side rule
+for verification cycles, this bounds the chain of repeated open returns on one
+unit that motivated the cap.
 
 **Idempotence of an in-run resume after a crash.** Phase 4 is idempotent
 by the loop's existing rule (an id already carrying a `decided (…)` line

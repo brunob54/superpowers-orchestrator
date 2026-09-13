@@ -8,6 +8,56 @@
 > (`REPOZY/superpowers-optimized`) and are kept unchanged as history; any
 > testing they describe was not done here.
 
+## v7.17.0 — the in-run resume cap counts plan rulings
+
+**Problem.** The in-run resume cap counted every open return of a phase,
+whatever the ruling answered. A run whose four returns were all `fix it`
+on leftovers of spent verification cycles was stopped and escalated as
+`chain` (issues-log Case 024), though the orchestrator had ruled on nothing.
+
+**Change.** A `## RULING` entry consumes a resume (`<r> of 3`) only when it
+is a plan ruling: an `Items:` answer begins `amend plan` or `plan governs`.
+A fix-only entry does not. Every entry still counts on a total ceiling,
+`return <t> of 6`, on the same line.
+
+**Effect.** Fix-only returns continue to the sixth; plan rulings stop at
+the fourth as before. Reinstall the plugin; nothing else to migrate.
+
+Details:
+
+- **The rule.** The `**The cap.**` paragraph of
+  `skills/orchestrating-development/SKILL.md` defines *plan ruling* and
+  *fix-only entry* and the two figures. The `Re-dispatch:` line of the
+  `## RULING` template reads `phase <p>, in-run resume <r> of 3, return
+  <t> of 6`; both figures include the entry being written; a fix-only entry
+  repeats the current `<r>` and advances `<t>` only. The stop is the return
+  that would write `4 of 3` or `return 7 of 6`; anchors (latest first
+  `_Invocation` line, latest `## STOPPED` entry) are unchanged, and so is
+  Resume step 3's rebuild of a missing `## STOPPED` entry.
+- **Why plan rulings.** On the two recorded stops, every `amend plan`
+  ruling forced a whole new review invocation, while a `fix it` ruling
+  re-dispatched as one verification cycle. Case 023's returns 1 to 3 each
+  carried `amend plan`, so the new count reproduces its stop at return 4,
+  including the one item the user overturned with `amend plan`. Case 024's
+  returns 2 to 6 were all `fix it`, so the run closes at return 6 with no
+  stop. No run that the old cap let through stops earlier.
+- **How it was chosen.** Five independent perspectives (loop safety, plan
+  author, implementer, cost, root cause) evaluated six candidate measures
+  item by item against the five escalated items of Cases 023 and 024, then
+  a rebuttal round changed four of five votes to this measure. Rejected:
+  severity ceilings (every open item was Important), self-written-wording
+  and anchor-reset rules (unbounded on a wording flip), fix-count trends
+  and per-item repeat caps (no such field or identity in the log).
+- **Tests.** `tests/in-run-rulings/run-tests.sh` pins the new template
+  line in both places, the plan-ruling definition, the fix-only sentence,
+  the two stop figures and the counter base, and asserts that the old
+  undifferentiated count is gone (527 assertions).
+- **Issues log.** Worklist row 17 is closed. The deliberation also found
+  the source of Case 024's leftovers in `multi-code-review`: the decisions
+  addendum's verification re-review runs outside the three-cycle rule with
+  no fix cycle after it. That is filed as worklist row 25, not changed
+  here.
+
 ## v7.16.0 — a plan review's spec deviation reaches the user
 
 **Problem.** A plan review may leave the plan contradicting the spec on
