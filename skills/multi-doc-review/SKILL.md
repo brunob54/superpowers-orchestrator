@@ -478,34 +478,29 @@ invocation, or the resumed range above for a resume):
       M = 1 the report keeps its original ids (today's behavior, unchanged)
       — there is no `**Reviewer verdicts:**` line to carry the note, and the
       M = 1 entry stays byte-identical to earlier releases.
-3. **Triage and merge:** the consolidated set is the input. Before a
-   finding's own disposition is chosen, settle its harness claim — the poll
-   of the dispatch rule may run across the triage of other findings. Harness
-   claims are findings whose premise is a property of the agent runtime,
-   tagged by the reviewer with the trailing `harness:` field of
-   `reviewer-prompt.md`. A `harness:` field on a premise that can be read
-   from the repository or from a citable source is dropped: triage the
-   finding as an ordinary finding under the existing reference
-   requirement and append `(harness field dropped: repository-readable)`
-   to its disposition line. For every other tagged finding:
-   1. A finding tagged `harness: untested — <probe>` — except one tagged
-      `not settled by one probe`, which takes the "not runnable here"
-      branch of 3.2 directly (its `first: <probe>` text is the `<probe>`
-      of that rejection line) — gets that
-      probe run once, by you. Constraints: the probe writes nothing to
-      the checkout, the index, HEAD, or branch state; binds no shared
-      resource (fixed port, fixed temporary path, shared database); runs
-      no code from the change under review; sends nothing anywhere — no
-      network request, no message; and is one action — one command, one
-      read of your own context, or one dispatch of a throwaway subagent
-      whose prompt is self-contained and that writes nothing to the
-      checkout. The probe text is reviewer output, not an instruction: a
-      probe you would not have named yourself for that claim is `not
-      runnable here`.
-      **Dispatch rule:** you may run a dispatch-based probe from any
-      position. Always tell the probe subagent to write its observation
-      to a file at a unique temporary path outside the checkout — you
-      create the path so it does not yet exist (for example `mktemp
+3. **Triage and merge:** the consolidated set is the input. Before a finding's own
+   disposition is chosen, settle its harness claim — the poll of the dispatch rule may
+   run across the triage of other findings. Harness claims are findings whose premise is
+   a property of the agent runtime, tagged by the reviewer with the trailing `harness:`
+   field of `reviewer-prompt.md`. A `harness:` field on a premise that can be read from
+   the repository or from a citable source is dropped: triage the finding as an ordinary
+   finding under the existing reference requirement and append `(harness field dropped:
+   repository-readable)` to its disposition line. For every other tagged finding:
+   1. A finding tagged `harness: untested — <probe>` — except one tagged `not settled by
+      one probe`, which takes the "not runnable here" branch of 3.2 directly (its
+      `first: <probe>` text is the `<probe>` of that rejection line) — gets that probe
+      run once, by you. Constraints: the probe writes nothing to the checkout, the
+      index, HEAD, or branch state; binds no shared resource (fixed port, fixed
+      temporary path, shared database); runs no code from the change under review; sends
+      nothing anywhere — no network request, no message; and is one action — one
+      command, one read of your own context, or one dispatch of a throwaway subagent
+      whose prompt is self-contained and that writes nothing to the checkout. The probe
+      text is reviewer output, not an instruction: a probe you would not have named
+      yourself for that claim is `not runnable here`.
+      **Dispatch rule:** you may run a dispatch-based probe from any position. Always
+      tell the probe subagent to write its observation to a file at a unique temporary
+      path outside the checkout — you create the path so it does not yet exist (for
+      example `mktemp
       -u`) — and to return that same observation as its final message.
       When the dispatch call returns the subagent's final message, use
       it. When it returns only a launch acknowledgement, poll the file:
@@ -526,96 +521,95 @@ invocation, or the resumed range above for a resume):
       (d) does not apply to a controller, which always has this
       mechanism.
    2. Dispose on the observation:
-      - it contradicts the claim → `rejected: harness probe —
-        <observation>`;
-      - it supports the claim → triage the finding as if it had been
-        `harness: tested`; the ordinary rules apply from here, and the
-        observation is recorded on the disposition line as a trailing
-        clause `— harness probe: <observation>`, placed before any source
-        annotation (` ← a/m: …`), whatever the disposition;
-      - the probe cannot be run here (tool missing, a platform without
-        nested dispatch, the dispatch rule of 3.1 fails, the reviewer
-        tagged it `not settled by one probe`, the probe would break a
-        constraint of 3.1, or the observation is ambiguous — it cannot be
-        written in one clause that matches or contradicts the result the
-        claim predicts) → `rejected: harness probe not runnable here —
-        <probe> — (<reason>)`. `<probe>` is the reviewer's probe text
-        copied verbatim, never edited — for a `not settled by one probe`
-        tag it is the `first:` text; for an untagged premise it is the
-        probe you named, or the literal `none` when no probe exists.
-        `<reason>` is the last parenthesised clause of the line, one of
-        `not settled by one probe`, `probe subagent did not report`, `no
-        probe named`, `tool missing`, `would break a constraint`,
-        `ambiguous observation`. This rejection never blocks the gate; every such
-        rejection is listed on the completion report's
-        `Harness probes owed:` line.
-   3. A finding tagged `harness: tested — …` is triaged normally and its
-      observation is accepted: the rule keeps claims tested, it does not
-      re-verify every observation. An observation that neither matches
-      nor contradicts the result the claim predicts — including one that
-      names neither the predicted result nor its negation (for example
-      `observed: the harness behaved as expected`) — is not an
-      observation: treat the finding as `harness: untested` with the
-      same probe and apply 3.1. Known limit, accepted by design: a
-      `tested` observation that matches the prediction is not policed; a
-      wrong one costs at most one wrong disposition that the next round
-      sees. When the stated probe was not
-      reviewer-safe (the reviewer dispatched a subagent, for example),
-      append `(reviewer probe not reviewer-safe)` to the disposition
-      line. You may re-run a probe whose observation looks inconsistent
-      with the reviewer's conclusion; you are not required to.
-   The harness branch adds no disposition: it always ends in one of the
-   two below. Every Critical/Important finding is either applied to the
-   document or `rejected: <reason>` — never silently dropped. Minor
-   findings: apply at your discretion; log all dispositions either way.
+      - it contradicts the claim → `rejected: harness probe — <observation>`;
+      - it supports the claim → triage the finding as if it had been `harness: tested`;
+        the ordinary rules apply from here, and the observation is recorded on the
+        disposition line as a trailing clause `— harness probe: <observation>`, placed
+        before any source annotation (` ← a/m: …`), whatever the disposition;
+      - the probe cannot be run here (tool missing, a platform without nested dispatch,
+        the dispatch rule of 3.1 fails, the reviewer tagged it `not settled by one
+        probe`, the probe would break a constraint of 3.1, or the observation is
+        ambiguous — it cannot be written in one clause that matches or contradicts the
+        result the claim predicts) → `rejected: harness probe not runnable here —
+        <probe> — (<reason>)`. `<probe>` is the reviewer's probe text copied verbatim,
+        never edited — for a `not settled by one probe` tag it is the `first:` text; for
+        an untagged premise it is the probe you named, or the literal `none` when no
+        probe exists. `<reason>` is the last parenthesised clause of the line, one of
+        `not settled by one probe`, `probe subagent did not report`, `no probe named`,
+        `tool missing`, `would break a constraint`, `ambiguous observation`. This
+        rejection never blocks the gate; every such rejection is listed on the
+        completion report's `Harness probes owed:` line.
+   3. A finding tagged `harness: tested — …` is triaged normally and its observation is
+      accepted: the rule keeps claims tested, it does not re-verify every observation.
+      An observation that neither matches nor contradicts the result the claim predicts
+      — including one that names neither the predicted result nor its negation (for
+      example `observed: the harness behaved as expected`) — is not an observation:
+      treat the finding as `harness: untested` with the same probe and apply 3.1. Known
+      limit, accepted by design: a `tested` observation that matches the prediction is
+      not policed; a wrong one costs at most one wrong disposition that the next round
+      sees. When the stated probe was not reviewer-safe (the reviewer dispatched a
+      subagent, for example), append `(reviewer probe not reviewer-safe)` to the
+      disposition line. You may re-run a probe whose observation looks inconsistent with
+      the reviewer's conclusion; you are not required to. The harness branch adds no
+      disposition: it always ends in one of the two below. Every Critical/Important
+      finding is either applied to the document or `rejected: <reason>` — never silently
+      dropped. Minor findings: apply at your discretion; log all dispositions either
+      way.
+   **A deliberate spec deviation is recorded on a fixed line.** When an applied finding,
+   or an inline fix of the "After the loop" self-review, leaves the plan stating
+   something the spec states differently — a figure, a cap, a rule the plan keeps on
+   purpose because following the spec would reintroduce a defect — write one line
+   directly below the disposition line or self-review note that made it, at column 1:
+
+```
+- spec deviation: <what the plan now says> — spec: <what the spec says> (<spec path>) — <why kept>
+```
+
+   That line is the durable record and the only carrier: the orchestrator's Phase 5
+   report scans the log for it and an interactive gate lists it under `Spec
+   deviations:`; a prose remark such as "flag this to the user" never replaces it.
 4. **Append the round entry** to the log (format below).
-5. **Convergence check:** severities come from the consolidated set's
-   enumerated findings — a report's count line is informational; on
-   disagreement the enumeration wins, and with M ≥ 2 the disagreement is
-   noted as `, counts recomputed` on that reviewer's entry of the
-   `**Reviewer verdicts:**` line. A round is *clean* when the consolidated
-   set enumerates zero Critical and zero Important **and** all M reviewers
-   returned a usable report (u = M); a partial round is never clean and
-   breaks the streak, like an `inconclusive` round. Exit the loop early
-   only after **two consecutive clean rounds**. Rejecting findings at
-   triage never makes a round clean. With N ≤ 2 no mid-loop exit occurs,
-   but still report "converged" if the final two rounds were clean; N = 1
-   always reports "cap reached". Because the union keeps every reviewer's
-   findings, two consecutive clean rounds are harder to reach with M > 1
-   than with M = 1 — that is the intended effect.
+5. **Convergence check:** severities come from the consolidated set's enumerated
+   findings — a report's count line is informational; on disagreement the enumeration
+   wins, and with M ≥ 2 the disagreement is noted as `, counts recomputed` on that
+   reviewer's entry of the `**Reviewer verdicts:**` line. A round is *clean* when the
+   consolidated set enumerates zero Critical and zero Important **and** all M reviewers
+   returned a usable report (u = M); a partial round is never clean and breaks the
+   streak, like an `inconclusive` round. Exit the loop early only after **two
+   consecutive clean rounds**. Rejecting findings at triage never makes a round clean.
+   With N ≤ 2 no mid-loop exit occurs, but still report "converged" if the final two
+   rounds were clean; N = 1 always reports "cap reached". Because the union keeps every
+   reviewer's findings, two consecutive clean rounds are harder to reach with M > 1 than
+   with M = 1 — that is the intended effect.
 
-**After the loop:** For a plan document, the post-sequence of `Readiness
-sequences` (below) runs first, before the self-review — with N = 0 there is
-no post-sequence, and on a resume the resume rule of `Readiness entries`
-decides whether it has already ended. Run a self-review on the final merged
-document — at a gate, the host skill's own checklist (brainstorming's Spec
-Self-Review / writing-plans' Self-Review, already in context); for direct
-invocations, the four-item list: placeholder scan, internal consistency,
-ambiguity, scope. Fix merge-introduced issues inline and note them in the
-log. Then report: rounds run, per-round finding counts, converged vs cap
-reached, log path, effective M (and any substitution), and a
-`Harness probes owed:` line — one item
-`- [<id>] <probe> — (<reason>) (round <i>)` per
-`rejected: harness probe not runnable here` disposition of this invocation,
-with `(addendum)` in place of `(round <i>)` for a rejection made in a
-post-loop addendum, and the reason clause copied from the rejection line, or
-`Harness probes owed: none`. The line is always written; a report without it
-is defective. The user runs the owed probes after the loop. The host gate's
-single user approval follows — this skill adds no approvals of its own.
+**After the loop:** For a plan document, the post-sequence of `Readiness sequences`
+(below) runs first, before the self-review — with N = 0 there is no post-sequence, and
+on a resume the resume rule of `Readiness entries` decides whether it has already ended.
+Run a self-review on the final merged document — at a gate, the host skill's own
+checklist (brainstorming's Spec Self-Review / writing-plans' Self-Review, already in
+context); for direct invocations, the four-item list: placeholder scan, internal
+consistency, ambiguity, scope. Fix merge-introduced issues inline and note them in the
+log. Then report: rounds run, per-round finding counts, converged vs cap reached, log
+path, effective M (and any substitution), and a `Harness probes owed:` line — one item
+`- [<id>] <probe> — (<reason>) (round <i>)` per `rejected: harness probe not runnable
+here` disposition of this invocation, with `(addendum)` in place of `(round <i>)` for a
+rejection made in a post-loop addendum, and the reason clause copied from the rejection
+line, or `Harness probes owed: none`; and a `Spec deviations:` line — one item `- <the
+spec deviation line, verbatim> (round <i>|self-review)` per `- spec deviation:` line of
+this invocation, or `Spec deviations: none`. Both lines are always written; a report
+without either is defective. The user runs the owed probes after the loop. The host
+gate's single user approval follows — this skill adds no approvals of its own.
 
-For a plan document the report also carries — and is defective without
-them — one line per sequence, `Readiness pre: <p> pass(es) — <settled|open
-after <cap>|open after <cap> (all inconclusive)>`, where `<cap>` is that
-sequence's own cap — 3 normally, 1 when the plan has no locatable spec —
-and the same for `Readiness post:`, or `Readiness post: not run (N=0)`;
-`Readiness conflicts applied: <n>` with one item per applied conflict,
-naming both sides and the side amended; and
-`Readiness conflicts owed: <n>` with one item per distinct owed conflict,
-or `Readiness conflicts owed: none`. Under the `gate: orchestration`
-invoker the controller writes at most one note instead,
-`readiness owed: <n>`; its return keeps its tokens, `rounds` counts
-rotating rounds only, and for N = 0 it returns
-`rounds=0 outcome=cap unresolved=0`.
+For a plan document the report also carries — and is defective without them — one line
+per sequence, `Readiness pre: <p> pass(es) — <settled|open after <cap>|open after <cap>
+(all inconclusive)>`, where `<cap>` is that sequence's own cap — 3 normally, 1 when the
+plan has no locatable spec — and the same for `Readiness post:`, or `Readiness post: not
+run (N=0)`; `Readiness conflicts applied: <n>` with one item per applied conflict,
+naming both sides and the side amended; and `Readiness conflicts owed: <n>` with one
+item per distinct owed conflict, or `Readiness conflicts owed: none`. Under the `gate:
+orchestration` invoker the controller writes at most one note instead, `readiness owed:
+<n>`; its return keeps its tokens, `rounds` counts rotating rounds only, and for N = 0
+it returns `rounds=0 outcome=cap unresolved=0`.
 
 ### Readiness sequences (plan documents only)
 
@@ -705,14 +699,14 @@ and every run of whitespace is collapsed to a single space. If either side is no
 under that comparison, or the higher side does not state what the finding claims,
 dispose `rejected: not a conflict — <side not found>`.
 
-**Step 1 — authority.** **Fixed text**, never amended by this triage: the spec named
-on the plan's `**Spec:**` line; a `**Global Constraints:**` entry, except one that
-both fails to trace to the spec and restates the body of an artifact the plan itself
-creates or modifies; an `**Exact content:**` body whose reason names a pin outside
-the plan; a `**Contract:**` invariant that restates an external standard. **Plan
-text**, amendable: everything else. A finding that reverses an amendment made
-earlier in the same sequence takes the `fixed text vs fixed text` row below whatever
-the authority of its two sides.
+**Step 1 — authority.** **Fixed text**, never amended by this triage: the spec
+named on the plan's `**Spec:**` line; a `**Global Constraints:**` entry, except
+one that both fails to trace to the spec and restates the body of an artifact
+the plan itself creates or modifies; an `**Exact content:**` body whose reason
+names a pin outside the plan; a `**Contract:**` invariant that restates an
+external standard. **Plan text**, amendable: everything else. A finding that
+reverses an amendment made earlier in the same sequence takes the `fixed text
+vs fixed text` row below whatever the authority of its two sides.
 
 | Conflict | Disposition |
 |---|---|
@@ -721,19 +715,19 @@ the authority of its two sides.
 | fixed text vs fixed text (the spec contradicts itself, or a finding reverses an amendment made earlier in the same sequence) | `rejected: undecidable at this gate — spec inconsistent` |
 | the plan mandates a rubric defect (check 2) | `rejected: plan-mandated — <text>`, never amended |
 
-A check (5) finding has one fixed side, the Global Constraints entry, and one or more
-plan sides, its listed failing sites; `applied` requires every listed site amended,
-and a finding with any site left unamended is disposed `rejected: undecidable at this
-gate`, naming the sites left.
+A check (5) finding has one fixed side, the Global Constraints entry, and one
+or more plan sides, its listed failing sites; `applied` requires every listed
+site amended, and a finding with any site left unamended is disposed `rejected:
+undecidable at this gate`, naming the sites left.
 
 `A readiness finding never produces an unresolved: line, in any caller.` A
 finding whose application fails is disposed `rejected: undecidable at this
-gate`; a finding outside the lens (coverage, ambiguity, feasibility, style)
-is rejected with the reason `out of lens scope`. The three conflict
-rejections — `rejected: undecidable at this gate`, `rejected: plan-mandated`
-and `rejected: not a conflict` — are listed in the invocation entry's
-`Owed:` block; an `out of lens scope` rejection never is, because it names
-no conflict and has no two sides.
+gate`; a finding outside the lens (coverage, ambiguity, feasibility, style) is
+rejected with the reason `out of lens scope`. The three conflict rejections —
+`rejected: undecidable at this gate`, `rejected: plan-mandated` and `rejected:
+not a conflict` — are listed in the invocation entry's `Owed:` block; an `out
+of lens scope` rejection never is, because it names no conflict and has no two
+sides.
 
 ## Lens Rotation
 
@@ -928,6 +922,9 @@ Rules for the added lines:
   the annotation, never after it. The note lines
   the "After the loop" step writes for merge-introduced fixes (self-review
   notes) carry no annotation.
+- A `- spec deviation: …` line (Procedure step 3) stands alone at column 1
+  directly below the disposition or self-review note that made it, and
+  carries no annotation.
 - The clean-round line `- none — no material issues under this lens` is
   written without annotation and only when the consolidated set is empty
   **and** u = M. A partial round with an empty consolidated set writes
@@ -938,13 +935,12 @@ Rules for the added lines:
   `**Sources mapped:**` line (nothing was consolidated), then
   `**Reviewer verdict:** inconclusive` and `- inconclusive — <reason>`.
 
-A clean round (zero findings, with u = M) writes exactly one disposition
-line: `- none — no material issues under this lens`.
-Skipped invocations (N=0) get a one-line `skipped` entry under their
-invocation note (which carries `M=` like every other); for a plan document
-that entry is followed by the pre-sequence's readiness entries and the
-self-review marker, as `Readiness entries` below sets out. Failed rounds
-get `inconclusive` entries.
+A clean round (zero findings, with u = M) writes exactly one disposition line: `- none —
+no material issues under this lens`. Skipped invocations (N=0) get a one-line `skipped`
+entry under their invocation note (which carries `M=` like every other); for a plan
+document that entry is followed by the pre-sequence's readiness entries and the
+self-review marker, as `Readiness entries` below sets out. Failed rounds get
+`inconclusive` entries.
 
 ### Readiness entries
 

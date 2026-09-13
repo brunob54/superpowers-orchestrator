@@ -575,6 +575,19 @@ done
 # once in the file, so removing or rewording it turns this suite red.
 assert_folded_contains "multi-doc-review SKILL.md: sequence-end definition sentence is present" "$DOC_SKILL" 'A sequence **has ended** when its last pass reads'
 assert_folded_contains "multi-doc-review SKILL.md: completion report keeps the harness line" "$DOC_SKILL" 'Harness probes owed:'
+# Issues-log row 23: a deliberate spec deviation made by the plan review
+# reached the user only through excluded state. The controller now writes
+# one fixed line under the disposition or self-review note that made the
+# deviation, and the completion report always carries a `Spec deviations:`
+# line; the orchestrator's Phase 5 report scans the log for that shape.
+assert_file_has_line "multi-doc-review SKILL.md: the spec deviation line shape" "$DOC_SKILL" \
+  '- spec deviation: <what the plan now says> — spec: <what the spec says> (<spec path>) — <why kept>'
+assert_folded_contains "multi-doc-review SKILL.md: the spec deviation line is the only carrier" "$DOC_SKILL" \
+  'That line is the durable record and the only carrier'
+assert_folded_contains "multi-doc-review SKILL.md: a prose remark never replaces the line" "$DOC_SKILL" \
+  'a prose remark such as "flag this to the user" never replaces it'
+assert_folded_contains "multi-doc-review SKILL.md: completion report always carries Spec deviations:" "$DOC_SKILL" \
+  'or `Spec deviations: none`. Both lines are always written; a report without either is defective.'
 # The compact orchestration report shape, and the gate value it depends on,
 # carry no assertion elsewhere: pin both so the path this pipeline actually
 # runs (gate: orchestration) stays covered.
@@ -671,8 +684,9 @@ assert_folded_contains "multi-doc-review SKILL.md: a pre-release entry is decide
 bold "16. multi-doc-review SKILL.md stays inside its size budget"
 # The Phase 2 controller and the writing-plans host session read this file
 # whole. Measured: 788 lines before 7.14.0, the Execution readiness feature
-# added 291, and the file now stands at 1079 — one line of headroom left
-# under the 1080 maximum. Figure set by release 7.14.0; it supersedes the
+# added 291 (1079 lines); the spec-deviation line of 7.16.0 added 17 and
+# recovered 22 by reflowing Procedure step 3 at 88 columns, so the file
+# stands at 1075 under the 1080 maximum. Figure set by release 7.14.0; it supersedes the
 # 938 the design document names, because the plan review added five
 # corrections whose prose the smaller figure could not hold. A further
 # addition must first recover lines by reflowing, per the plan's Global
