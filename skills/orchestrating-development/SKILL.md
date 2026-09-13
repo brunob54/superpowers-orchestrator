@@ -32,6 +32,25 @@ dispatch). On platforms without it, refuse with one line —
 `orchestrating-development requires subagent dispatch (Agent tool), which
 this platform lacks` — and stop.
 
+**After a compaction summary.** A compaction summary is the text Claude Code
+writes in place of the earlier conversation when the context window fills.
+After it, only the first 5,000 tokens of this file are attached again, which
+is why this paragraph stands here near the top. The summary is never a
+substitute for skill text. When your context opens with one, then before you
+act on the next controller return or the next Resume step, re-read the
+section you are executing — `## Phase 3 — Implementation Batches`,
+`## Phase 4 — Final Code Review Loop`, `## In-run rulings` or `## Resume` —
+from `<base>/SKILL.md`, where `<base>` is the base directory the Skill tool
+printed for this skill. First run `grep -n '^## ' <base>/SKILL.md` as its own
+command to find the section's first line and the next `## ` line; then Read
+the file with `offset` at the section's first line and `limit` reaching its
+last line. One Read call returns about 25,000 tokens at most and then prints
+a PARTIAL notice naming the next `offset`; when that notice appears, Read
+again from that `offset` until the section's last line is in your context.
+Then, before acting on any controller return, run Resume step 1's
+incomplete-ruling scan on the ruling record, because a compaction can land
+between a ruling's write and its commit.
+
 ## Controller Dispatch Rules (apply to every phase)
 
 - Dispatch via the Agent tool, `general-purpose` type. Model: inherit the
@@ -222,6 +241,62 @@ this platform lacks` — and stop.
   → retry the identical dispatch once — the same pointer to the same file,
   no fill and no new file; second failure → major error → stop, logging
   `inconclusive controller: <phase/batch>`.
+
+**The secrets-hook probe.** This rule stands here in full so that this
+file needs no other skill's text. `hooks/safety/protect-secrets.js` scans
+the path of every Read, Edit and Write and the content of every Edit and
+Write for hardcoded secrets; `hooks/safety/block-dangerous-commands.js`
+and the secrets hook's own file-access patterns scan the whole Bash
+command string, a heredoc body included, and their refusals have no
+rewrite path. The value file is the one place answer text is written by
+a scanned tool — answer text quotes plan clauses and finding text, which
+may contain `$(...)`, backticks, or a line equal to a heredoc delimiter —
+so it is written with the Write tool and never with a heredoc of any
+kind; the fill command itself carries paths, integers and short tokens
+and matches no pattern. When `hooks/safety/protect-secrets.js` refuses a
+value-file Write, find the offending lines yourself: the hook's refusal
+names a credential kind — the kind of the first pattern that matched the
+whole content — and never a line. For each line of the file you tried to
+write, make ONE Write tool call of a throwaway file holding that one
+line, `<PROMPT_DIR>/dispatch-<k>-probe-<n>.txt`, `<n>` counting the probe
+Writes for value file `<k>` from 1, and remove it with `rm -- "<file>"`
+as its own command after the probe, when the Write succeeded — outcome
+(a) below; outcome (b) is a refused Write that left no file, so there is
+nothing to remove and no `rm` is run. The path in that `rm` is always
+inside double quotes:
+`hooks/safety/block-dangerous-commands.js` denies an `rm` whose path
+begins `/var` unquoted, and `mktemp -d` prints its directory under
+`/var` on macOS. The probe is a Write tool call and
+nothing else: never a Bash command, because
+`hooks/safety/block-dangerous-commands.js` would refuse a command that
+merely quotes a secret-shaped string, and never a hook path, because a
+path such as `hooks/safety/protect-secrets.js` resolves only inside this
+plugin's own checkout. Each probe is exactly one of three outcomes:
+(a) the Write succeeds — the line is allowed and stays as it is;
+(b) the Write is refused by `hooks/safety/protect-secrets.js`, whose
+refusal names the credential kind — the line is withheld;
+(c) the Write is refused for any other reason — a permission denial, a
+tool error, any refusal whose text does not come from
+`hooks/safety/protect-secrets.js`. That is a failure of the mechanism
+and not a refused line: stop with the `value file <name> could not be
+written` cause of the Major-Error Stop Policy's table. Never withhold a line on this
+outcome. When no single line is refused, probe each pair of consecutive
+lines the same way — one Write holding the two lines joined by one
+newline, under the next `<n>` — and withhold both lines of a refused
+pair: a pattern spans at most one line break, so pairs are enough.
+Replace every withheld line by a line that keeps its id, its tag and
+the ruling verb and non-secret answer text up to the quoted value, and
+carries the location after it instead of the value, in exactly this
+form:
+`[<id>] (<tag>): <verb and its text up to the quoted value> — <file:line> — secret-bearing finding, value withheld`
+— your own "Never reproduce a secret" rule imposes the location-only
+treatment on the value, not on the decision, so the ruling verb (fix
+it / plan governs / amend plan / accept) stays in the line and the
+controller still receives an actionable decision — and retry the
+Write once; a second refusal is fatal (the Major-Error Stop Policy's
+table). Apart from that one replacement, never alter answer text to pass
+a hook, and never retry the Write through a Bash command to get around a
+refusal.
 
 ## Phase 0 — Setup (the only interactive moment)
 
@@ -2323,61 +2398,6 @@ NOT failures of the mechanism (today's paths, unchanged):
 | The prompt directory's path is lost from your context | `mktemp -d` again and continue (Controller Dispatch Rules). |
 | A controller reads another file in the directory | Cannot be prevented by wording alone; the directory holds only this session's prompt and value files, and the pointer forbids it. Accepted. |
 | A stale directory from an earlier session is still on disk | Never reused (the path is recorded nowhere); the platform's temporary-directory cleaning removes it. Accepted. |
-
-**The secrets-hook probe.** This rule stands here in full so that this
-file needs no other skill's text. `hooks/safety/protect-secrets.js` scans
-the path of every Read, Edit and Write and the content of every Edit and
-Write for hardcoded secrets; `hooks/safety/block-dangerous-commands.js`
-and the secrets hook's own file-access patterns scan the whole Bash
-command string, a heredoc body included, and their refusals have no
-rewrite path. The value file is the one place answer text is written by
-a scanned tool — answer text quotes plan clauses and finding text, which
-may contain `$(...)`, backticks, or a line equal to a heredoc delimiter —
-so it is written with the Write tool and never with a heredoc of any
-kind; the fill command itself carries paths, integers and short tokens
-and matches no pattern. When `hooks/safety/protect-secrets.js` refuses a
-value-file Write, find the offending lines yourself: the hook's refusal
-names a credential kind — the kind of the first pattern that matched the
-whole content — and never a line. For each line of the file you tried to
-write, make ONE Write tool call of a throwaway file holding that one
-line, `<PROMPT_DIR>/dispatch-<k>-probe-<n>.txt`, `<n>` counting the probe
-Writes for value file `<k>` from 1, and remove it with `rm -- "<file>"`
-as its own command after the probe, when the Write succeeded — outcome
-(a) below; outcome (b) is a refused Write that left no file, so there is
-nothing to remove and no `rm` is run. The path in that `rm` is always
-inside double quotes:
-`hooks/safety/block-dangerous-commands.js` denies an `rm` whose path
-begins `/var` unquoted, and `mktemp -d` prints its directory under
-`/var` on macOS. The probe is a Write tool call and
-nothing else: never a Bash command, because
-`hooks/safety/block-dangerous-commands.js` would refuse a command that
-merely quotes a secret-shaped string, and never a hook path, because a
-path such as `hooks/safety/protect-secrets.js` resolves only inside this
-plugin's own checkout. Each probe is exactly one of three outcomes:
-(a) the Write succeeds — the line is allowed and stays as it is;
-(b) the Write is refused by `hooks/safety/protect-secrets.js`, whose
-refusal names the credential kind — the line is withheld;
-(c) the Write is refused for any other reason — a permission denial, a
-tool error, any refusal whose text does not come from
-`hooks/safety/protect-secrets.js`. That is a failure of the mechanism
-and not a refused line: stop with the `value file <name> could not be
-written` cause of the table above. Never withhold a line on this
-outcome. When no single line is refused, probe each pair of consecutive
-lines the same way — one Write holding the two lines joined by one
-newline, under the next `<n>` — and withhold both lines of a refused
-pair: a pattern spans at most one line break, so pairs are enough.
-Replace every withheld line by a line that keeps its id, its tag and
-the ruling verb and non-secret answer text up to the quoted value, and
-carries the location after it instead of the value, in exactly this
-form:
-`[<id>] (<tag>): <verb and its text up to the quoted value> — <file:line> — secret-bearing finding, value withheld`
-— your own "Never reproduce a secret" rule imposes the location-only
-treatment on the value, not on the decision, so the ruling verb (fix
-it / plan governs / amend plan / accept) stays in the line and the
-controller still receives an actionable decision — and retry the
-Write once; a second refusal is fatal (table above). Apart from that
-one replacement, never alter answer text to pass a hook, and never
-retry the Write through a Bash command to get around a refusal.
 
 ## Guard Interaction
 
