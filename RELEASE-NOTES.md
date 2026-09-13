@@ -21,7 +21,7 @@ orchestrator return per fixable item (issues-log Cases 007 to 024).
 after it, one more fix subagent and re-review 2 follow. What still stands
 is `unresolved: addendum re-review`.
 
-**Effect.** A fixable leftover closes inside the loop; the bound is two
+**Effect.** A fixable leftover closes inside the loop, bounded at two
 fixes and two re-reviews per addendum. Reinstall the plugin; nothing else
 to migrate.
 
