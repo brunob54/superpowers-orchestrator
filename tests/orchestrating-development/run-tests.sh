@@ -396,6 +396,10 @@ assert_folded_contains "phase 2: records the controller's readiness owed note in
 bold "10. Phase 5 reports readiness conflicts owed"
 assert_folded_contains "phase 5: readiness conflicts owed report item" "$PHASE5_RANGE" \
   "readiness conflicts owed — the plan-review log's \`Owed:\` block, listed verbatim, or \`none\`"
+# Issues-log row 23: a deliberate spec deviation recorded by the plan review
+# is carried to the user by the same scan that carries owed probes.
+assert_folded_contains "phase 5: spec deviations report item" "$PHASE5_RANGE" \
+  "spec deviations — every \`- spec deviation:\` line of the plan-review log, listed verbatim with its review log path, or \`none\`"
 
 echo
 bold "Results: $PASS passed, $FAIL failed"

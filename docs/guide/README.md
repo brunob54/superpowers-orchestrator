@@ -190,7 +190,12 @@ runs that probe once and decides from the observation. A claim nobody can
 test in the current environment is logged as
 `rejected: harness probe not runnable here — <probe> — (<reason>)` — never
 escalated to you — and the loop's completion report lists every such probe
-under `Harness probes owed:` so you can run it yourself afterwards.
+under `Harness probes owed:` so you can run it yourself afterwards. A plan
+review that deliberately leaves the plan in disagreement with the spec — a
+budget the spec's figure could not hold, say — writes a `- spec deviation:`
+line under the change that made it; the completion report lists those under
+`Spec deviations:`, and an orchestrated run repeats them in its Phase 5
+report, so the decision to amend the spec or the plan stays yours.
 
 When a design decision would add or change a dependency, depend on
 version-sensitive external API behavior, or select an external hosted

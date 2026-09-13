@@ -2784,6 +2784,13 @@ assert_in_range_folded_exact "an item against binding text is offered only plan 
   "$ORCH_SKILL" 'offer only `plan governs`, `amend plan: …; fix it: …` or a further escalation — never a bare `fix it` and never `accept`' \
   "$STOP_POLICY_LINE" "$STOP_POLICY_END"
 
+# Issues-log row 23: the Phase 5 scan may match the spec-deviation line shape
+# of the plan-review log, named in the read allowance beside the harness-probe
+# lines and the `Secrets found:` items.
+assert_in_range_folded "the Phase 5 read allowance names the spec deviation line shape" \
+  "$ORCH_SKILL" 'the `- spec deviation:` lines of the plan-review log' \
+  "$RULINGS_LINE" "$RULINGS_END"
+
 # --- end of checks ---
 
 echo
