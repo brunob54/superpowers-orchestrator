@@ -28,6 +28,7 @@ H_PHASE2='## Phase 2 — Plan Review Loop'
 H_PHASE3='## Phase 3 — Implementation Batches'
 H_PHASE4='## Phase 4 — Final Code Review Loop'
 H_PHASE5='## Phase 5 — Completion'
+H_ORCHLOG='## Orchestration Log Format'
 H_RESUME='## Resume'
 H_INRUN='## In-run rulings'
 H_MAJOR='## Major-Error Stop Policy'
@@ -185,6 +186,7 @@ PHASE1_RANGE="$WORK/phase1.txt"
 PHASE2_RANGE="$WORK/phase2.txt"
 PHASE3_RANGE="$WORK/phase3.txt"
 PHASE4_RANGE="$WORK/phase4.txt"
+PHASE5_RANGE="$WORK/phase5.txt"
 RESUME_RANGE="$WORK/resume.txt"
 INRUN_RANGE="$WORK/inrun.txt"
 MAJOR_RANGE="$WORK/major.txt"
@@ -199,6 +201,7 @@ extract_range "Phase 1" "$ORCH_SKILL" "$H_PHASE1" "$H_PHASE2" "$PHASE1_RANGE"
 extract_range "Phase 2" "$ORCH_SKILL" "$H_PHASE2" "$H_PHASE3" "$PHASE2_RANGE"
 extract_range "Phase 3" "$ORCH_SKILL" "$H_PHASE3" "$H_PHASE4" "$PHASE3_RANGE"
 extract_range "Phase 4" "$ORCH_SKILL" "$H_PHASE4" "$H_PHASE5" "$PHASE4_RANGE"
+extract_range "Phase 5" "$ORCH_SKILL" "$H_PHASE5" "$H_ORCHLOG" "$PHASE5_RANGE"
 extract_range "Resume" "$ORCH_SKILL" "$H_RESUME" "$H_INRUN" "$RESUME_RANGE"
 extract_range "In-run rulings" "$ORCH_SKILL" "$H_INRUN" "$H_MAJOR" "$INRUN_RANGE"
 extract_range "Major-Error Stop Policy" "$ORCH_SKILL" "$H_MAJOR" "$H_GUARD" "$MAJOR_RANGE"
@@ -322,7 +325,9 @@ bold "5b. Controllers that run commands read a background result through tail, n
 # controller's window, and in one controller that class was a single 125 KB
 # whole read of a background test-suite log — larger than every prompt the
 # controller was given. Only the two templates that run commands carry the
-# rule; the plan-writer and doc-review controllers run none.
+# rule; the plan-writer controller runs none, and the doc-review controller
+# runs only a read-only inspection command that prints a single line, so
+# nothing needs reading through tail.
 for t in batch-controller-prompt.md code-review-loop-prompt.md; do
   f="$ORCH_DIR/$t"
   assert_file_contains "$t: never reads a background command's output file whole" \
@@ -333,7 +338,7 @@ for t in batch-controller-prompt.md code-review-loop-prompt.md; do
     "$f" "grep -n 'FAIL"
 done
 for t in plan-writer-prompt.md doc-review-loop-prompt.md; do
-  assert_file_not_contains "$t: carries no background-read rule (it runs no commands)" \
+  assert_file_not_contains "$t: carries no background-read rule (its one command prints a single line)" \
     "$ORCH_DIR/$t" 'Never read the output file of a background command whole.'
 done
 
@@ -376,6 +381,21 @@ for needle in 'dispatch-<k>-answers.txt' "$NO_HEREDOC" 'the only channel' 'a new
               "\`'RESUME_ANSWER=@<PROMPT_DIR>/dispatch-<k>-answers.txt'\`"; do
   assert_folded_contains "in-run rulings: contains '$needle'" "$INRUN_RANGE" "$needle"
 done
+
+bold "9. Phase 2 dispatches the plan-review controller for every N_plan"
+assert_file_not_contains "phase 2: no N_plan=0 skip branch" "$PHASE2_RANGE" 'If N_plan = 0, log the skip'
+assert_folded_contains "phase 2: names the N_plan=0 log line" "$PHASE2_RANGE" \
+  '## Phase 2 — Plan review — rounds 0 (N_plan=0) — cap — unresolved 0'
+assert_folded_contains "phase 2: the controller is dispatched for every N_plan value, 0 included" "$PHASE2_RANGE" \
+  'The controller is dispatched for every `N_plan` value, 0 included'
+assert_folded_contains "phase 2: N_plan=0 returns rounds=0 outcome=cap unresolved=0" "$PHASE2_RANGE" \
+  'returns `rounds=0 outcome=cap unresolved=0`'
+assert_folded_contains "phase 2: records the controller's readiness owed note in the same log entry" "$PHASE2_RANGE" \
+  "When the controller's report carries a \`readiness owed: <n>\` note, Phase 2 records it in the same log entry."
+
+bold "10. Phase 5 reports readiness conflicts owed"
+assert_folded_contains "phase 5: readiness conflicts owed report item" "$PHASE5_RANGE" \
+  "readiness conflicts owed — the plan-review log's \`Owed:\` block, listed verbatim, or \`none\`"
 
 echo
 bold "Results: $PASS passed, $FAIL failed"

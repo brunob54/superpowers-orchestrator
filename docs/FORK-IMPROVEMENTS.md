@@ -107,7 +107,7 @@ The flow is automatic whenever subagent-driven-development executes a plan — e
 ### Summary
 
 - Runs up to **N independent review rounds** (default 3, cap 10) on a spec or plan document before its approval gate.
-- Each round dispatches **M clean-context reviewer subagents** (M = reviewers per lens, 1–5, default 1, since v7.4.0; identical prompts, run in parallel, reports consolidated before triage), none of which has ever seen the authoring conversation, the design rationale, or prior rounds' findings — under a **rotating lens**: correctness & completeness → ambiguity & testability → feasibility & architecture risk → adversarial failure modes.
+- Each round dispatches **M clean-context reviewer subagents** (M = reviewers per lens, 1–5, default 1, since v7.4.0; identical prompts, run in parallel, reports consolidated before triage), none of which has ever seen the authoring conversation, the design rationale, or prior rounds' findings — under a **rotating lens**: correctness & completeness → ambiguity & testability → feasibility & architecture risk → adversarial failure modes. Since v7.14.0 a plan document also gets an **Execution readiness** pass before the first round and after the last one — not part of the rotation, not counted in N — which reports the conflicts that would stop an executing agent.
 - Between rounds, every Critical/Important finding is **applied to the document or rejected with a written reason** — silent drops are forbidden — and every disposition is recorded in a sidecar audit log `<doc-basename>-review-log.md`.
 - The loop **exits early after two consecutive clean rounds**; brainstorming (spec gate) and writing-plans (plan gate) invoke it automatically, once per gate.
 

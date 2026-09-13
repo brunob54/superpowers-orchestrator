@@ -18,6 +18,8 @@ DOC_SKILL="$ROOT/skills/multi-doc-review/SKILL.md"
 CODE_SKILL="$ROOT/skills/multi-code-review/SKILL.md"
 FIX_PROMPT="$ROOT/skills/multi-code-review/fix-prompt.md"
 WP_SKILL="$ROOT/skills/writing-plans/SKILL.md"
+SDD_SKILL="$ROOT/skills/subagent-driven-development/SKILL.md"
+SDD_TASK_REVIEWER="$ROOT/skills/subagent-driven-development/task-reviewer-prompt.md"
 
 # Wording contracts asserted below. Each is one fixed string.
 RULE_HEADING='    ### Harness claims'
@@ -85,6 +87,9 @@ assert_file_not_contains() { # desc file needle
 }
 assert_file_has_line() { # desc file exact-line (whole-line match, fixed string)
   if grep -qxF -- "$3" "$2"; then ok "$1"; else bad "$1 (no line exactly: $3)"; fi
+}
+assert_eq() { # desc actual expected
+  if [ "$2" = "$3" ]; then ok "$1"; else bad "$1 (expected '$3', got '$2')"; fi
 }
 # Join the lines of file $1 into one line — each line trimmed of leading and
 # trailing blanks, lines separated by one space — so that a prose fragment
@@ -349,6 +354,358 @@ assert_folded_contains "multi-doc-review step 2: Verdict block must stand below 
 assert_folded_contains "multi-doc-review step 2: marker as last non-blank line is unusable" "$DOC_VALIDATE_RANGE" "$LAST_LINE_UNUSABLE"
 assert_folded_contains "multi-doc-review step 2: everything above the marker line is ignored" "$DOC_VALIDATE_RANGE" "$ABOVE_IGNORED"
 assert_folded_not_contains "multi-doc-review SKILL.md: pre-change first-line-only wording absent" "$DOC_SKILL" "$OLD_FIRST_LINE_RULE"
+
+bold "12. Execution readiness lens cell"
+# The cell is the last one in Lens Instructions, so the extractor stops at
+# the next top-level heading as well as at the next bold cell title.
+READINESS_CELL="$WORK/readiness-cell.txt"
+awk '
+  $0 == "**Execution readiness**" { inlens = 1; next }
+  inlens && /^\*\*/ { exit }
+  inlens && /^## / { exit }
+  inlens { print }
+' "$DOC_SKILL" > "$READINESS_CELL"
+if [ -s "$READINESS_CELL" ]; then
+  ok "multi-doc-review SKILL.md: Execution readiness cell extract is non-empty"
+else
+  bad "multi-doc-review SKILL.md: Execution readiness cell extract is empty"
+fi
+ADV_CELL_LINE="$(first_line_of "$DOC_SKILL" '**Adversarial failure modes**')"
+RDY_CELL_LINE="$(first_line_of "$DOC_SKILL" '**Execution readiness**')"
+LOG_FORMAT_LINE="$(first_line_of "$DOC_SKILL" '## Review Log Format')"
+if [ -n "$ADV_CELL_LINE" ] && [ -n "$RDY_CELL_LINE" ] && [ -n "$LOG_FORMAT_LINE" ] &&
+   [ "$RDY_CELL_LINE" -gt "$ADV_CELL_LINE" ] && [ "$RDY_CELL_LINE" -lt "$LOG_FORMAT_LINE" ]; then
+  ok "Execution readiness cell sits between the Adversarial cell and Review Log Format (line $RDY_CELL_LINE)"
+else
+  bad "Execution readiness cell is misplaced (adversarial='$ADV_CELL_LINE' readiness='$RDY_CELL_LINE' log-format='$LOG_FORMAT_LINE')"
+fi
+# The two strings the cell copies. Each is asserted in the cell AND in the
+# file it was copied from, so drift on either side turns this suite red.
+PREFLIGHT_CRITERION="tasks that contradict each other or the plan's Global Constraints"
+RUBRIC_PARENTHETICAL='(a test that asserts nothing, verbatim duplication of a logic block)'
+assert_folded_contains "Execution readiness cell: pre-flight criterion" "$READINESS_CELL" "$PREFLIGHT_CRITERION"
+assert_folded_contains "subagent-driven-development SKILL.md: still carries the pre-flight criterion" "$SDD_SKILL" "$PREFLIGHT_CRITERION"
+assert_folded_contains "Execution readiness cell: rubric-defect parenthetical" "$READINESS_CELL" "$RUBRIC_PARENTHETICAL"
+assert_folded_contains "subagent-driven-development SKILL.md: still carries the rubric-defect parenthetical" "$SDD_SKILL" "$RUBRIC_PARENTHETICAL"
+assert_folded_contains "task-reviewer-prompt.md: still carries the rubric-defect parenthetical" "$SDD_TASK_REVIEWER" "$RUBRIC_PARENTHETICAL"
+# The clause-removal table (section above this one, quoting the cell
+# verbatim as its removal anchors) names "the paragraph beginning `For
+# check (5) report ONE finding`" and "the sentence beginning `Coverage,
+# ambiguity, feasibility`" as the text a controller locates and removes.
+# Pin both anchors on the cell side, so a reword of either leaves the
+# removal instruction unable to find its target instead of passing silently.
+assert_folded_contains "Execution readiness cell: check (5) paragraph opening" "$READINESS_CELL" 'For check (5) report ONE finding'
+assert_folded_contains "Execution readiness cell: Coverage/ambiguity/feasibility closing sentence" "$READINESS_CELL" 'Coverage, ambiguity, feasibility and style belong to the other lenses'
+for numbered in '(1) tasks that contradict' \
+                '(2) anything the plan explicitly mandates' \
+                '(3) a task clause that contradicts' \
+                '(4) a mandated body' \
+                '(5) for each entry of the plan' \
+                'Run all the checks below'; do
+  assert_folded_contains "Execution readiness cell: numbered check '$numbered'" "$READINESS_CELL" "$numbered"
+done
+assert_folded_contains "Execution readiness cell: missing-number-was-removed-on-purpose clause" "$READINESS_CELL" 'a number missing from the list was removed on purpose for this plan — never reconstruct it'
+assert_folded_contains "Execution readiness cell: one finding per Global Constraints entry" "$READINESS_CELL" 'report ONE finding per Global Constraints entry'
+assert_folded_contains "Execution readiness cell: coverage line shape" "$READINESS_CELL" 'coverage: GC<k> — <n> sites checked'
+assert_folded_contains "Execution readiness cell: missing coverage line is discarded" "$READINESS_CELL" 'will be discarded'
+assert_folded_contains "Execution readiness cell: coverage block placement sentence" "$READINESS_CELL" 'Write that block as the last lines of your report'
+assert_file_contains "Execution readiness cell: spec line is not used" "$READINESS_CELL" '- spec: not used'
+assert_file_contains "Execution readiness cell: general line is not used" "$READINESS_CELL" '- general: not used'
+# Folded, not plain: the replacement wraps this phrase across a line break.
+assert_folded_contains "doc-review template: header sentence admits the readiness lens" "$DOC_PROMPT" 'or `Execution readiness` for a readiness pass'
+assert_file_contains "doc-review template: [LENS_NAME] note admits the readiness lens" "$DOC_PROMPT" "\`[LENS_NAME]\` — REQUIRED: lens name from SKILL.md's Lens Rotation, or \`Execution readiness\`"
+assert_file_contains "doc-review template: [ROUND] note admits a readiness label" "$DOC_PROMPT" '`[ROUND]` — REQUIRED: round number, or a readiness pass label (display only)'
+
+bold "13. Readiness sequences in the multi-doc-review procedure"
+for needle in 'a report that carries no `coverage:` line for some entry of the plan' \
+              'run the pre-sequence of `Readiness sequences` below before round 1' \
+              'with N = 0 there is no post-sequence, and on a resume the resume rule of `Readiness entries` decides whether it has already ended' \
+              'at most three passes' \
+              'Readiness passes are not counted in N and are not part of the two-consecutive-clean-rounds streak.' \
+              'The host self-review runs after the post-sequence.' \
+              'coverage:` line for any entry' \
+              '**Note:** clause-vs-spec check not run — no locatable spec' \
+              '**Note:** Global Constraints sweep not run — no block' \
+              '**Note:** Contract check not run — no Contract fields' \
+              'For a plan document, the Execution readiness pre-sequence still runs.' \
+              'run a **readiness sequence** before rotating round 1' \
+              'when N ≥ 1, a second after the last rotating round' \
+              'a re-run started by the `another pass requested` marker is a fresh invocation for this rule' \
+              'applied** no Critical and no Important finding and all M reviewers returned a usable report' \
+              'the cap is one instead of three when the plan has no locatable spec' \
+              '| no locatable spec | check (3) | `**Note:** clause-vs-spec check not run — no locatable spec` |' \
+              '| no `**Global Constraints:**` block | check (5) and the run of sentences from `For check (5) report ONE finding` up to, but not including, the sentence beginning `Coverage, ambiguity, feasibility`, which carries the `coverage: GC<k>` shape | `**Note:** Global Constraints sweep not run — no block` |' \
+              'the run of sentences that starts at `For check (5) report ONE finding` and runs up to, but not including, the sentence beginning `Coverage, ambiguity, feasibility`' \
+              '| no task carries `**Contract:**` | check (4) | `**Note:** Contract check not run — no Contract fields` |' \
+              'Removing a clause never renumbers the checks that remain: the numbers of the surviving checks are left exactly as they are' \
+              '1-based position among the plan'"'"'s `**Global Constraints:**` block'"'"'s top-level list items' \
+              'repeated or out-of-range `<k>` counts as a missing line for the position it skips' \
+              'A **readiness pass** is one review dispatched under the lens `Execution readiness`: M reviewers filled from `reviewer-prompt.md` with `[LENS_NAME]` = `Execution readiness`, `[LENS_INSTRUCTIONS]` = that lens'"'"'s `plan:` cell and `[ROUND]` = `readiness <pre|post> <p>`, every other placeholder as a rotating round fills it' \
+              'Invalid N (not an integer 0–10) → tier 2, else tier 3.' \
+              'N = 0 → skip the rotating loop, log;'; do
+  assert_folded_contains "multi-doc-review SKILL.md: procedure carries '$needle'" "$DOC_SKILL" "$needle"
+done
+assert_folded_contains "multi-doc-review SKILL.md: the N parameter keeps its N=0 sentence" "$DOC_SKILL" 'N = 0 skips the loop and logs a `skipped` entry.'
+# The After-the-loop step must trigger the post-sequence in place, symmetric
+# with the pre-sequence trigger at the round loop's firing site.
+assert_folded_contains "multi-doc-review SKILL.md: After-the-loop step triggers the readiness post-sequence" "$DOC_SKILL" 'For a plan document, the post-sequence of `Readiness sequences` (below) runs first, before the self-review'
+# The post-sequence trigger must carry the same resume guard as the
+# pre-sequence trigger — otherwise a resume after the post-sequence ended
+# re-runs it before falling into the self-review.
+assert_folded_contains "multi-doc-review SKILL.md: post-sequence trigger carries a resume guard" "$DOC_SKILL" 'no post-sequence, and on a resume the resume rule of `Readiness entries` decides whether it has already ended.'
+# The readiness prose must never spell the cell title in bold: section 12
+# resolves the cell by the first `**Execution readiness**` line in the file.
+READINESS_BOLD_COUNT="$(grep -cF -- '**Execution readiness**' "$DOC_SKILL" | tr -d ' ')"
+assert_eq "multi-doc-review SKILL.md: exactly one bold Execution readiness title (the lens cell)" "$READINESS_BOLD_COUNT" "1"
+# Position: the subsection must land in the Procedure, after the After-the-loop
+# step and before the Lens Rotation heading. Without this, a subsection dropped
+# into the wrong section passes every needle above.
+SEQ_LINE="$(first_line_of "$DOC_SKILL" '### Readiness sequences (plan documents only)')"
+AFTER_LOOP_LINE="$(first_line_of "$DOC_SKILL" '**After the loop:**')"
+LENS_ROT_LINE="$(first_line_of "$DOC_SKILL" '## Lens Rotation')"
+if [ -n "$SEQ_LINE" ] && [ -n "$AFTER_LOOP_LINE" ] && [ -n "$LENS_ROT_LINE" ] &&
+   [ "$SEQ_LINE" -gt "$AFTER_LOOP_LINE" ] && [ "$SEQ_LINE" -lt "$LENS_ROT_LINE" ]; then
+  ok "Readiness sequences subsection sits after **After the loop:** and before Lens Rotation (line $SEQ_LINE)"
+else
+  bad "Readiness sequences subsection is misplaced (after-loop='$AFTER_LOOP_LINE' seq='$SEQ_LINE' lens-rotation='$LENS_ROT_LINE')"
+fi
+# The Lens Rotation table must never gain an Execution readiness row: the
+# release's promise that the readiness pass is uncounted in N would break
+# with the suite still green.
+LENS_INSTR_LINE="$(first_line_of "$DOC_SKILL" '## Lens Instructions')"
+LENS_ROTATION_RANGE="$WORK/lens-rotation-table.txt"
+if [ -n "$LENS_ROT_LINE" ] && [ -n "$LENS_INSTR_LINE" ] && [ "$LENS_ROT_LINE" -lt "$LENS_INSTR_LINE" ]; then
+  extract_lines "$DOC_SKILL" "$LENS_ROT_LINE" "$LENS_INSTR_LINE" > "$LENS_ROTATION_RANGE"
+else
+  : > "$LENS_ROTATION_RANGE"
+  bad "multi-doc-review SKILL.md: Lens Rotation table range could not be resolved (lens-rotation='$LENS_ROT_LINE' lens-instructions='$LENS_INSTR_LINE')"
+fi
+assert_folded_not_contains "multi-doc-review SKILL.md: Lens Rotation table does not list Execution readiness" "$LENS_ROTATION_RANGE" 'Execution readiness'
+
+bold "14. Triage of a readiness finding"
+# Position: the triage subsection follows the sequences subsection and still
+# precedes the Lens Rotation heading.
+TRIAGE_LINE="$(first_line_of "$DOC_SKILL" '### Triage of a readiness finding')"
+SEQ_LINE_14="$(first_line_of "$DOC_SKILL" '### Readiness sequences (plan documents only)')"
+LENS_ROT_LINE_14="$(first_line_of "$DOC_SKILL" '## Lens Rotation')"
+if [ -n "$TRIAGE_LINE" ] && [ -n "$SEQ_LINE_14" ] && [ -n "$LENS_ROT_LINE_14" ] &&
+   [ "$TRIAGE_LINE" -gt "$SEQ_LINE_14" ] && [ "$TRIAGE_LINE" -lt "$LENS_ROT_LINE_14" ]; then
+  ok "Triage subsection sits after the sequences subsection and before Lens Rotation (line $TRIAGE_LINE)"
+else
+  bad "Triage subsection is misplaced (seq='$SEQ_LINE_14' triage='$TRIAGE_LINE' lens-rotation='$LENS_ROT_LINE_14')"
+fi
+# Scope the needle loop below to the triage subsection itself: without this,
+# a needle that also matches text elsewhere in the file stays green when the
+# subsection's own copy of that text is deleted.
+TRIAGE_RANGE="$WORK/triage-of-a-readiness-finding.txt"
+if [ -n "$TRIAGE_LINE" ] && [ -n "$LENS_ROT_LINE_14" ] && [ "$TRIAGE_LINE" -lt "$LENS_ROT_LINE_14" ]; then
+  extract_lines "$DOC_SKILL" "$TRIAGE_LINE" "$LENS_ROT_LINE_14" > "$TRIAGE_RANGE"
+else
+  : > "$TRIAGE_RANGE"
+  bad "multi-doc-review SKILL.md: Triage of a readiness finding range could not be resolved (triage='$TRIAGE_LINE' lens-rotation='$LENS_ROT_LINE_14')"
+fi
+for needle in 'rejected: not a conflict' \
+              'rejected: plan-mandated' \
+              'rejected: undecidable at this gate' \
+              'out of lens scope' \
+              'A readiness finding never produces an unresolved: line, in any caller.' \
+              'reverses an amendment made earlier in the same sequence' \
+              '`rejected: plan-mandated — <text>`, never amended' \
+              'amend the plan side, `applied`' \
+              'amend the side the spec decides against; failing that, the side the Global Constraints block decides against' \
+              'the spec contradicts itself' \
+              'without searching for a second side'; do
+  assert_folded_contains "multi-doc-review SKILL.md: Triage of a readiness finding subsection carries '$needle'" "$TRIAGE_RANGE" "$needle"
+done
+# These needles pin text that lives in the skill's Error Handling section,
+# not the triage subsection above; no narrower already-resolved range holds
+# them, so they stay asserted against the whole file.
+for needle in 'Readiness pass whose reports are all unusable (u = 0) → `inconclusive`, and the pass is open' \
+              'a readiness entry with a missing or malformed' \
+              'as a round is' \
+              'for a plan document the Execution readiness pre-sequence still runs'; do
+  assert_folded_contains "multi-doc-review SKILL.md: Error Handling section carries '$needle'" "$DOC_SKILL" "$needle"
+done
+
+bold "15. Readiness log entries, completeness, resume and the completion report"
+assert_file_has_line "multi-doc-review SKILL.md: readiness entry heading shape" "$DOC_SKILL" '## Readiness <pre|post> <p> — Execution readiness — <model>'
+assert_file_has_line "multi-doc-review SKILL.md: readiness entry result line" "$DOC_SKILL" '**Result:** <settled|open>'
+# The silent-failure guard the skill names for itself: keying completeness on
+# the absence of a `## Readiness` heading would misclassify an invocation
+# interrupted during pass 1 of its pre-sequence as pre-release, silently.
+assert_folded_contains "multi-doc-review SKILL.md: never key completeness on the absence of a Readiness heading" "$DOC_SKILL" \
+  '**Never use the absence of a `## Readiness` heading as that test.**'
+# Without this pinned, deleting the sentence would let a readiness entry take
+# the round-entry body including a `**Converged:**` line, and the
+# once-per-gate recognition rule (which counts `**Converged:** yes` at the
+# start of a line of a round entry) would then read a readiness entry as a
+# converged round entry.
+assert_folded_contains "multi-doc-review SKILL.md: readiness entry body carries no Converged line" "$DOC_SKILL" \
+  'The rest of the entry is the round-entry body above under the same rules, with no `**Converged:**` line.'
+# The plan variant of the invocation line must exist as its own whole line,
+# and the writing step must be told to emit the field: without both, the
+# plan-blob comparison is inert because no entry ever carries the field.
+assert_file_has_line "multi-doc-review SKILL.md: plan invocation-line shape carries plan-blob" "$DOC_SKILL" \
+  '_Invocation <k> — YYYY-MM-DD — N=<n> M=<m> — <invoker> — plan-blob <sha>_   <!-- plan documents -->'
+assert_file_has_line "multi-doc-review SKILL.md: the non-plan invocation-line shape is unchanged" "$DOC_SKILL" \
+  '_Invocation <k> — YYYY-MM-DD — N=<n> M=<m> — <invoker>_'
+for needle in '**Host self-review:** done' \
+              'r counts ## Round headings only.' \
+              'open (all inconclusive)' \
+              '`Owed:` block' \
+              'gains ` — superseded` at the end of its heading' \
+              'has ended' \
+              'compared as whole words' \
+              'Readiness pre:' \
+              'Readiness post:' \
+              'Readiness conflicts applied:' \
+              'Readiness conflicts owed:' \
+              'rounds=0 outcome=cap unresolved=0' \
+              'the invocation line, the one-line `skipped` entry, the readiness entries of the pre-sequence, then the self-review marker' \
+              'git hash-object' \
+              'the plan'"'"'s content hash as a trailing `plan-blob <sha>` field' \
+              'counts as changed, so it never blocks'; do
+  assert_folded_contains "multi-doc-review SKILL.md: log format carries '$needle'" "$DOC_SKILL" "$needle"
+done
+# The 'has ended' needle above is also matched by two unrelated sentences
+# ("its pre-sequence has ended and the self-review marker is present" /
+# "its pre-sequence has ended, its post-sequence has ended"), so it stays
+# green even if the sequence-end definition sentence itself is deleted or
+# reworded. Pin the definition sentence itself with a fragment that occurs
+# once in the file, so removing or rewording it turns this suite red.
+assert_folded_contains "multi-doc-review SKILL.md: sequence-end definition sentence is present" "$DOC_SKILL" 'A sequence **has ended** when its last pass reads'
+assert_folded_contains "multi-doc-review SKILL.md: completion report keeps the harness line" "$DOC_SKILL" 'Harness probes owed:'
+# The compact orchestration report shape, and the gate value it depends on,
+# carry no assertion elsewhere: pin both so the path this pipeline actually
+# runs (gate: orchestration) stays covered.
+assert_folded_contains "multi-doc-review SKILL.md: gate: orchestration writes the compact readiness-owed note" "$DOC_SKILL" \
+  'the controller writes at most one note instead, `readiness owed: <n>`'
+assert_folded_contains "multi-doc-review SKILL.md: invocation note admits the gate: orchestration invoker" "$DOC_SKILL" \
+  '`gate: writing-plans` | `gate: orchestration` | `direct`'
+# Position: the readiness-entries subsection is the last block of the Review
+# Log Format section, standing after the Skipped-invocations paragraph and
+# immediately before the Error Handling heading.
+RDY_ENTRIES_LINE="$(first_line_of "$DOC_SKILL" '### Readiness entries')"
+SKIPPED_LINE="$(first_line_of "$DOC_SKILL" 'Skipped invocations (N=0)')"
+ERR_HANDLING_LINE="$(first_line_of "$DOC_SKILL" '## Error Handling')"
+if [ -n "$RDY_ENTRIES_LINE" ] && [ -n "$SKIPPED_LINE" ] && [ -n "$ERR_HANDLING_LINE" ] &&
+   [ "$RDY_ENTRIES_LINE" -gt "$SKIPPED_LINE" ] && [ "$RDY_ENTRIES_LINE" -lt "$ERR_HANDLING_LINE" ]; then
+  ok "Readiness entries subsection sits after the Skipped-invocations paragraph and before Error Handling (line $RDY_ENTRIES_LINE)"
+else
+  bad "Readiness entries subsection is misplaced (skipped='$SKIPPED_LINE' entries='$RDY_ENTRIES_LINE' error-handling='$ERR_HANDLING_LINE')"
+fi
+# The once-per-gate N=0 sentence must be narrowed to spec/general documents,
+# so the file never carries two rules for the same input.
+assert_folded_contains "multi-doc-review SKILL.md: once-per-gate N=0 sentence is narrowed" "$DOC_SKILL" \
+  'For a `spec` or a `general` document, an entry whose recorded N is `0`'
+assert_folded_contains "multi-doc-review SKILL.md: once-per-gate defers a plan N=0 entry to Readiness entries" "$DOC_SKILL" \
+  'For a plan document a skipped run still ran the readiness pre-sequence'
+# The unnarrowed sentence must be gone, or the file carries two rules for one
+# input. Folded, because the sentence wraps across line breaks in the file.
+assert_folded_not_contains "multi-doc-review SKILL.md: the unnarrowed N=0 once-per-gate sentence is gone" "$DOC_SKILL" \
+  'An entry whose recorded N is `0` (a skipped entry) does not block'
+# The Otherwise entry condition must carry the same narrowing, or the file
+# states two rules for a plan resume with N=0.
+assert_folded_contains "multi-doc-review SKILL.md: Otherwise entry condition narrows the N=0 resume clause" "$DOC_SKILL" \
+  '`N=0` on a resume of a `spec` or a `general` document above'
+# The On-a-resume narrowing: a plan document treats N = 0 as an ordinary
+# value that continues under Readiness entries, rather than being abandoned
+# under Otherwise the way a spec or general document is. Without these
+# pinned, a later edit could revert the clause and a plan resume with N = 0
+# would fall through to Otherwise, appending a second invocation note and
+# re-running the whole pre-sequence.
+assert_folded_contains "multi-doc-review SKILL.md: On a resume narrows plan N=0 to an ordinary value" "$DOC_SKILL" \
+  'For a plan document N = 0 is an ordinary value'
+assert_folded_contains "multi-doc-review SKILL.md: On a resume routes plan N=0 under the resume order" "$DOC_SKILL" \
+  'continues the interrupted entry under the resume order'
+assert_folded_contains "multi-doc-review SKILL.md: On a resume keeps the narrowed spec-and-general form" "$DOC_SKILL" \
+  'For a `spec` or a `general` document, `N=0` abandons the interrupted entry instead of resuming it and is handled under **Otherwise** below (which logs the `skipped` entry), not here.'
+# The plan-blob rewrite must be ordered where the marker is written, because a
+# resume enters at On a resume and never reads the Otherwise branch.
+assert_folded_contains "multi-doc-review SKILL.md: the marker site orders the plan-blob rewrite" "$DOC_SKILL" \
+  'you rewrite the invocation line'"'"'s `plan-blob` value to what `git hash-object "<plan path>"`'
+# The marker site must restrict its subject the way the once-per-gate test and
+# the resume order already do. Unrestricted, a resume of a pre-release plan
+# entry stamps the marker and a new plan-blob field into an entry an earlier
+# release wrote, and the next invocation then reads that entry as one this
+# release wrote and runs a pre-sequence the plan never owed.
+assert_folded_contains "multi-doc-review SKILL.md: the marker site excludes a pre-release plan entry" "$DOC_SKILL" \
+  'For a plan document whose invocation line carries a `plan-blob` field, at that same moment you rewrite the invocation line'"'"'s `plan-blob` value to what `git hash-object "<plan path>"` prints then; a plan entry with no such field owes neither the field nor the marker'
+# The resume paragraph must not state that the whole invocation line is
+# frozen: the marker site rewrites one field of it, and a controller reads
+# the resume paragraph first.
+assert_folded_contains "multi-doc-review SKILL.md: the resume rule names the plan-blob exception" "$DOC_SKILL" \
+  'The `plan-blob` field is the one exception: it is rewritten once, at the marker'
+# A complete N = 0 plan entry must not block a later invocation that asks for
+# rotating rounds: without this clause the entry is complete, the once-per-gate
+# step refuses to re-run the loop, and a requested review is silently skipped.
+assert_folded_contains "multi-doc-review SKILL.md: a complete N=0 plan entry never blocks an N>=1 invocation" "$DOC_SKILL" \
+  'A complete N = 0 plan entry never blocks a later invocation whose N is 1 or more'
+# The once-per-gate interrupted test must carry the same (N >= 1) qualifier the
+# Resume paragraph uses. Without it, an N = 0 plan entry runs no post-sequence,
+# that sequence never "has ended", and the clause routes a complete entry to
+# On a resume — the opposite of the rule stated under Readiness entries.
+assert_folded_contains "multi-doc-review SKILL.md: the once-per-gate interrupted test qualifies the post-sequence with N>=1" "$DOC_SKILL" \
+  'whose post-sequence has not ended (N ≥ 1) or whose self-review marker is absent'
+# The subject of that same interrupted test must be restricted to entries
+# this release wrote. Without the restriction, a pre-release entry — which
+# never carries the self-review marker — is routed to On a resume and made to
+# run a host self-review the gate does not owe.
+assert_folded_contains "multi-doc-review SKILL.md: the once-per-gate interrupted test only classifies entries this release wrote" "$DOC_SKILL" \
+  'calls interrupted only an entry this release wrote (its invocation line carries a `plan-blob` field)'
+# ... and it must state the route for an entry without the field, or that
+# input has no route at all.
+assert_folded_contains "multi-doc-review SKILL.md: the once-per-gate interrupted test sends a pre-release plan entry to Readiness entries" "$DOC_SKILL" \
+  'An entry with no `plan-blob` field owes no marker, and `Readiness entries` decides it.'
+# The resume order must carry the same restriction as the once-per-gate test:
+# a pre-release plan entry owes no marker, so the marker-absent stage must not
+# make it run a host self-review and stamp a marker into an older entry.
+assert_folded_contains "multi-doc-review SKILL.md: the resume order restricts the marker-absent stage to entries this release wrote" "$DOC_SKILL" \
+  'marker absent on an entry whose invocation line carries a `plan-blob` field → the host self-review, then the marker. An entry with no such field skips that stage, because it owes no marker.'
+# A pre-release entry must not be described with the word the same paragraph
+# defines as a comparison, because that paragraph gives such an entry the
+# opposite outcome (it counts as changed).
+assert_folded_contains "multi-doc-review SKILL.md: a pre-release entry is decided by the pre-release rule, not called unchanged" "$DOC_SKILL" \
+  'the once-per-gate rule decides it, as that rule stood before this release.'
+
+bold "16. multi-doc-review SKILL.md stays inside its size budget"
+# The Phase 2 controller and the writing-plans host session read this file
+# whole. Measured: 788 lines before 7.14.0, the Execution readiness feature
+# added 291, and the file now stands at 1079 — one line of headroom left
+# under the 1080 maximum. Figure set by release 7.14.0; it supersedes the
+# 938 the design document names, because the plan review added five
+# corrections whose prose the smaller figure could not hold. A further
+# addition must first recover lines by reflowing, per the plan's Global
+# Constraint 1.
+MDR_MAX_LINES=1080
+MDR_LINES="$(awk 'END { print NR }' "$DOC_SKILL")"
+if [ "$MDR_LINES" -le "$MDR_MAX_LINES" ]; then
+  ok "multi-doc-review SKILL.md is $MDR_LINES lines (max $MDR_MAX_LINES)"
+else
+  bad "multi-doc-review SKILL.md is $MDR_LINES lines, over the $MDR_MAX_LINES-line budget"
+fi
+
+bold "17. The doc-review-loop controller template accepts N_PLAN = 0"
+DOC_LOOP_PROMPT="$ROOT/skills/orchestrating-development/doc-review-loop-prompt.md"
+assert_file_contains "doc-review-loop template: [N_PLAN] range starts at 0" "$DOC_LOOP_PROMPT" '`[N_PLAN]` — REQUIRED: integer 0–10'
+assert_folded_contains "doc-review-loop template: host self-review after the post-sequence" "$DOC_LOOP_PROMPT" 'The host self-review runs after the post-sequence.'
+assert_folded_contains "doc-review-loop template: counts rotating entries only" "$DOC_LOOP_PROMPT" 'count rotating entries only'
+assert_folded_contains "doc-review-loop template: defers to the skill's completeness rule" "$DOC_LOOP_PROMPT" "the skill's completeness rule"
+assert_folded_contains "doc-review-loop template: Deviation 3 is unchanged" "$DOC_LOOP_PROMPT" 'A Critical/Important finding is `unresolved` only when applying it was attempted and failed twice'
+assert_folded_contains "doc-review-loop template: controller may run read-only inspection commands" "$DOC_LOOP_PROMPT" "run the read-only inspection commands the skill's procedure names"
+# The background-read exemption elsewhere (its one command prints a single
+# line) holds only because the controller's read-only allowance is itself
+# restricted to one command. Pin that restriction so a later widening of the
+# allowed command set does not silently invalidate the exemption.
+assert_folded_contains "doc-review-loop template: the read-only allowance is restricted to one command" "$DOC_LOOP_PROMPT" \
+  'today that is one command, `git hash-object "<plan path>"`, and nothing else.'
+assert_folded_contains "doc-review-loop template: readiness finding disposed under triage, never logged as unresolved" "$DOC_LOOP_PROMPT" "A readiness finding is disposed under the skill's \"Triage of a readiness finding\", never logged as unresolved."
+assert_folded_contains "doc-review-loop template: appends the Loop complete line when it is absent" "$DOC_LOOP_PROMPT" 'and append the `_Loop complete_` line when it is absent.'
+# Deviation 2's completeness rule reaches an entry written by an earlier
+# release through one of its own clauses, not through a special case in this
+# template: pin that clause so deleting it from the template cannot leave
+# every suite green.
+assert_folded_contains "doc-review-loop template: the earlier-release clause of the completeness rule owes no post-sequence" "$DOC_LOOP_PROMPT" 'by whichever of its clauses applied, the clause for an entry written by an earlier release included, which owes no post-sequence'
 
 echo
 bold "Results: $PASS passed, $FAIL failed"

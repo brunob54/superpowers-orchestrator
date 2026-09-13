@@ -260,9 +260,20 @@ the same question batch below).
    two differently. This question is prose and stays prose: there is no
    option list, so "presented first" does not apply.
 
-   N=0 means you skip that phase yourself — no controller dispatched;
-   the log records `## Phase 2 — Plan review — skipped (N_plan=0)` /
-   `## Phase 4 — Code review — skipped (N_code=0)`. The same batch
+   N_code=0 means you skip Phase 4 yourself — no controller dispatched;
+   the log records `## Phase 4 — Code review — skipped (N_code=0)`.
+   N_plan=0 still dispatches the Phase 2 controller, which runs the plan's
+   Execution readiness pre-sequence and no rotating round; a
+   `skipped (N_plan=0)` line written by an earlier release still means
+   Phase 2 is complete.
+
+   For a plan, the Execution readiness pass runs even when N is 0.
+
+   For a plan, add 2 to 6 further passes of M reviewers for the readiness
+   sequences (1 to 3 when N is 0); on a platform without parallel dispatch
+   the reviewers of a pass run one after another.
+
+   The same batch
    carries two confirmations — this is the user's last interaction
    before hours of autonomy:
    - **Branch point:** state the current branch and HEAD sha the feature
@@ -449,9 +460,8 @@ commit the Phase 1 log entry.
 
 ## Phase 2 — Plan Review Loop
 
-If N_plan = 0, log the skip and go to Phase 3. Otherwise fill the
-plan-review prompt into the session's prompt directory, as one command
-(every `NAME=` argument single-quoted):
+Fill the plan-review prompt into the session's prompt directory, as one
+command (every `NAME=` argument single-quoted):
 
 ```bash
 node "<base>/../multi-code-review/scripts/fill-prompt.js" \
@@ -472,6 +482,15 @@ unresolved=<n>` or `BLOCKED: <reason>`. `unresolved > 0` → major error →
 stop. On success: commit the revised plan + its review log
 (`docs(plan): <slug> plan after review`), append and
 commit the Phase 2 log entry.
+
+The controller is dispatched for every `N_plan` value, 0 included: with
+`N_plan = 0` it runs the plan's Execution readiness pre-sequence, no
+rotating round, and returns `rounds=0 outcome=cap unresolved=0`. Its log
+entry keeps the phase's line shape and reads
+`## Phase 2 — Plan review — rounds 0 (N_plan=0) — cap — unresolved 0`, so a
+human and the Resume step can tell it from a controller that produced
+nothing. When the controller's report carries a `readiness owed: <n>`
+note, Phase 2 records it in the same log entry.
 
 ## Phase 3 — Implementation Batches
 
@@ -622,7 +641,9 @@ The open-decisions file is `<topic folder>/plans/<slug>-open-decisions.md`.
    code-review rounds/fixes/outcome, harness probes owed — every
    `rejected: harness probe not runnable here — <probe>` line of the
    code-review log and the plan-review log, listed verbatim with its
-   review log path, or `none` — rulings made in the run — the count of
+   review log path, or `none` — readiness conflicts owed — the
+   plan-review log's `Owed:` block, listed verbatim, or `none` —
+   rulings made in the run — the count of
    `## Ruling` entries in
    `<topic folder>/plans/<slug>-open-decisions.md`, and every entry whose
    Forks line records `contradiction: unsettled`, listed by ruling number,
@@ -706,9 +727,13 @@ escalation reason in parentheses, so the resume prompt can answer each
 open item by id, and one `Ruled:` line per item the orchestrator already
 decided, carried forward by Resume step 3; after them comes one `Owed
 probe: <verbatim line>` line for every `rejected: harness probe not
-runnable here — <probe>` line of the review log.) Skipped
-loops write the
-`skipped (N_x=0)` line shapes from Phase 0. Round-by-round detail lives
+runnable here — <probe>` line of the review log.) A skipped Phase 4
+writes the `skipped (N_code=0)` line shape from Phase 0; Phase 2 is never
+skipped. A `## Phase 2 — Plan review — skipped (N_plan=0)` line written
+by an earlier release still means Phase 2 is complete. This release
+writes `## Phase 2 — Plan review — rounds 0 (N_plan=0) — cap — unresolved
+0` in that case instead, so the `rounds <r>` field of a Phase 2 line may
+carry an `(N_plan=0)` parenthetical. Round-by-round detail lives
 in the sub-skills' own logs — never duplicate it here. Commit the log at
 every boundary: Phase 0, after Phases 1–2, after each batch, after
 Phase 4, and at completion/stop. Boundary commits use the subject

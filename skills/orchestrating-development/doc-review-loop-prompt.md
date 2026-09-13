@@ -17,7 +17,10 @@ Agent tool (general-purpose):
     - Do NOT invoke any skills from any plugin. Do NOT use the Skill tool.
     - Do NOT write `state.md`. Do NOT ask the user anything.
     - You MAY dispatch reviewer subagents via the Agent tool, edit the
-      plan (merging findings), and write the review log sidecar.
+      plan (merging findings), write the review log sidecar, and run the
+      read-only inspection commands the skill's procedure names — the
+      plan's content hash among them; today that is one command, `git
+      hash-object "<plan path>"`, and nothing else.
     - Waiting on a subagent: dispatch every subagent so that the dispatch
       call itself returns the subagent's final message — never in a
       background or asynchronous mode. NEVER end your turn while a
@@ -53,19 +56,25 @@ Agent tool (general-purpose):
     1. After the loop, run the "Self-Review" checklist from
        [WRITING_PLANS_SKILL_PATH] on the merged plan (that is the host
        checklist for plan documents); fix issues inline, note them in
-       the log.
-    2. When the loop finishes, append to the review log:
+       the log. The host self-review runs after the post-sequence. A
+       readiness finding is disposed under the skill's "Triage of a
+       readiness finding", never logged as unresolved.
+    2. Classify your own `gate: orchestration` invocation entry with the
+       skill's completeness rule, and continue from the stage its resume
+       rule names. When you count rounds, count rotating entries only.
+       As soon as that rule classifies the entry as complete — by whichever
+       of its clauses applied, the clause for an entry written by an earlier
+       release included, which owes no post-sequence — append to the review
+       log:
        `_Loop complete — YYYY-MM-DD — rounds <r>_`
-       If you find an existing `gate: orchestration` invocation entry
-       WITHOUT that line, it is your own interrupted loop: continue at
-       the next round (count existing `## Round` entries) — the
-       once-per-gate rule blocks re-running a completed loop, never
-       continuing an interrupted one. If instead you find your own
-       COMPLETED `gate: orchestration` entry (the `_Loop complete_` line
-       present), do not re-run anything: synthesize your REVIEW_DONE
-       return from the review log's recorded rounds and dispositions —
-       a retry dispatched after only the final message was lost must not
-       run the loop twice.
+       An entry the rule classifies as interrupted is your own interrupted
+       loop: continue it — the once-per-gate rule blocks re-running a
+       completed loop, never continuing an interrupted one. An entry the
+       rule classifies as complete is never re-run: synthesize your
+       REVIEW_DONE return from the review log's recorded rounds and
+       dispositions — a retry dispatched after only the final message was
+       lost must not run the loop twice — and append the `_Loop complete_`
+       line when it is absent.
     3. A Critical/Important finding is `unresolved` only when applying it
        was attempted and failed twice (the merge would contradict the
        spec or another applied finding); log it as
@@ -98,7 +107,8 @@ Agent tool (general-purpose):
   checklist)
 - `[PLAN_PATH]` — REQUIRED: absolute plan path
 - `[SPEC_PATH]` — REQUIRED: absolute spec path
-- `[N_PLAN]` — REQUIRED: integer 1–10
+- `[N_PLAN]` — REQUIRED: integer 0–10; 0 runs the plan's Execution
+  readiness pre-sequence and no rotating round
 - `[M_REVIEWERS]` — REQUIRED: integer 1–5, the Phase 0 M (reviewers per lens); the
   controller passes it to multi-doc-review as its M
 
