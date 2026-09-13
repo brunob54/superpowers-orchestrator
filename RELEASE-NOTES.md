@@ -8,6 +8,62 @@
 > (`REPOZY/superpowers-optimized`) and are kept unchanged as history; any
 > testing they describe was not done here.
 
+## v7.18.0 — the decisions addendum's re-review gets a heading and a fix cycle
+
+**Problem.** After a `fix it` ruling, the code-review controller ran one
+verification re-review with no heading of its own, no budget and no fix
+cycle. Three controllers behaved three ways under that text; two labelled
+every new Important `unresolved: verification cap` and sent it up, one
+orchestrator return per fixable item (issues-log Cases 007 to 024).
+
+**Change.** The re-review is logged as `## Round <i> addendum <n> re-review
+<c>`, runs at this controller's M, and when a Critical/Important stands
+after it, one more fix subagent and re-review 2 follow. What still stands
+is `unresolved: addendum re-review`.
+
+**Effect.** A fixable leftover closes inside the loop; the bound is two
+fixes and two re-reviews per addendum. Reinstall the plugin; nothing else
+to migrate.
+
+Details:
+
+- **The rule.** After the Loop in `skills/multi-code-review/SKILL.md`:
+  the addendum heading `### Post-loop addendum <n> — <date>` carries the
+  log's addendum ordinal; the re-review entry has the fields of a round,
+  reviews the regenerated package at this controller's M, and its
+  `**Reviewers:**` line ends `— verifies <sha>`, the fix commit it
+  reviews. It is never a `## Round <i> verification <c>` entry, so step 6's
+  cycle cap and the next-round index ignore it. A re-review is clean when
+  no Critical/Important stands after triage; a clean re-review ends the
+  addendum. A retry after a lost return never re-runs a re-review whose
+  heading stands, and never re-dispatches a fix whose commit is recorded.
+- **Side rules.** Step 6's "same M" sentence now binds in-loop cycles
+  only. The prompt-file table gains a reviewer row for the addendum
+  (`addendum-<n>-cycle-<c>-reviewer.md`); the second fix of one addendum
+  takes the next fix counter. The canonical disposition list names the
+  three `unresolved:` reasons. The controller template's Deviation 5 and
+  the orchestrator's answer-line rule name the addendum re-review, so an
+  answer can say which entry its item came from.
+- **Why one extra cycle.** On the execution-readiness run every addendum
+  re-review verified its fix clean and raised a new Important on text the
+  fix did not touch; seven of seven orchestrator or user answers on such
+  items were `fix it`. Under this rule that run closes at return 4 instead
+  of 6 with the same fix and reviewer work. A third cycle was rejected:
+  measured across 30 invocations, the third in-loop cycle almost never
+  closes anything. A fix-scoped re-review was rejected because it would
+  change what "reviewed" means at Phase 5.
+- **Explained.** The two cycle overruns the 2026-09-07 measurement called
+  unexplained (cycle 7 on `reviewer-harness-claims`, cycle 5 on
+  `plan-contracts-not-bodies`) were addendum re-reviews numbered as the
+  round's series.
+- **Tests.** `tests/in-run-rulings/run-tests.sh` section 8b pins the two
+  headings, the M source, the `verifies <sha>` suffix, the bound, the
+  label in the rule and in the canonical list, the prompt-table row, the
+  template's Deviation 5 and the orchestrator's answer clause, and asserts
+  the old undefined form is gone (545 assertions).
+- **Issues log.** Worklist row 25 is closed; Cases 007, 008, 010 and 024
+  carry a Follow-up.
+
 ## v7.17.0 — the in-run resume cap counts plan rulings
 
 **Problem.** The in-run resume cap counted every open return of a phase,
