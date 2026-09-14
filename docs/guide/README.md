@@ -885,6 +885,7 @@ and deletable by you:
 | `session-log.md` | What was decided, why, and what was *rejected* | "save state", or the end-of-session decision prompt |
 | `known-issues.md` | Errors already solved (symptom → cause → fix) | "save this fix", or after debugging resolves a recurring error |
 | `state.md` | Where mid-flight work stands right now | Batch handoffs (§3), "save state" |
+| `tmp/docs/<date>-handoff-<slug>.md` | A prompt that lets a fresh session continue the work without re-deriving this one's findings | `/handoff [slug]`, before you clear the context window |
 | `context-snapshot.json` | What changed just before this session | Automatically at session start |
 
 Recall is mostly automatic. At session start, the plugin reads `state.md`,
