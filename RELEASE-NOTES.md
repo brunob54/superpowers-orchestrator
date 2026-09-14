@@ -8,6 +8,46 @@
 > (`REPOZY/superpowers-optimized`) and are kept unchanged as history; any
 > testing they describe was not done here.
 
+## v7.20.0 — a `/handoff` skill writes the prompt for a fresh session
+
+**Problem.** Clearing the context window mid-work meant writing the
+continuation prompt by hand each time, and a prompt written from memory
+drops the facts, decisions and conventions the session had established.
+
+**Change.** A new manual-only skill, `/handoff [slug]`, collects those from
+the files the session left behind (`state.md`, `session-log.md`, the
+previous handoff, `CLAUDE.md`), writes
+`tmp/docs/<date>-handoff-<slug>.md` in a fixed four-part shape, saves state
+through `context-management`, and prints the prompt to copy.
+
+**Effect.** One command before `/clear`, and the next session starts from
+the same facts. Reinstall the plugin; nothing to migrate.
+
+Details:
+
+- **The skill.** `skills/handoff/SKILL.md`, `disable-model-invocation: true`
+  so Claude never triggers it on its own. Today's date, the branch, the
+  HEAD and the number of uncommitted files enter by inline shell
+  substitution, never from memory. Every fact source is optional, so the
+  skill runs in any project; `tmp/docs/` is created under the project root
+  when missing, and the reply says whether it is gitignored.
+- **The prompt's shape.** An opening paragraph (task, file and line,
+  branch, version, tree state); "What is already known (do not re-derive)"
+  with every figure sourced to a transcript id or file:line; "How to
+  proceed" as numbered steps naming the design step, the user's decision
+  point, the delivery shape and every fast suite; "Conventions that bit
+  us", carried forward from the previous handoff; closing reminders
+  (uncommitted files, running agents, a CLI restart owed, untracked files).
+  This is the shape that carried the three worklist rows of 2026-09-13
+  across sessions.
+- **Routing.** `hooks/skill-rules.json` gains a `handoff` rule (27 rules,
+  26 skills): keywords such as "clear the context", "fresh session",
+  "continuation prompt", and intent patterns for "clear the context
+  window" and "continue the work in a fresh session", so the activator
+  hint names the skill when the user asks in their own words.
+- **Docs.** The README skill list and the guide's memory-file table name
+  the skill and the handoff file.
+
 ## v7.19.0 — the orchestrator recovers its skill text after a compaction
 
 **Problem.** After an auto-compaction Claude Code re-attaches only the first
