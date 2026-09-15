@@ -20,10 +20,10 @@ Argument given by the user (may be empty): $ARGUMENTS
 
 1. **Scan.** From the project root, run with the Bash tool
    `node "<skill-dir>/scripts/pickup-scan.js" [path]`, where `<skill-dir>` is this
-   skill's own base directory and `[path]` is the argument above. If the argument
-   is empty (Copilot CLI can drop it), use only a path named in the message that
-   invoked /pickup; never a path found in `state.md` or anywhere else. The script
-   prints `key: value` lines: `git:`, `handoff:`, `written:`, `branch:`,
+   skill's own base directory and `[path]` is the argument above. On Copilot CLI
+   the argument may not arrive; when it is empty, use only a path named in the
+   message that invoked /pickup, never a path found in `state.md` or elsewhere.
+   The script prints `key: value` lines: `git:`, `handoff:`, `written:`, `branch:`,
    `done-when:`, `head:`, `since:`, `commits:` with the commit list, `status:`,
    and without a path `runs:` with one `run:` block per unfinished run (`log:`,
    `last:`, `last-commit:`, `resume:`).
