@@ -41,6 +41,10 @@ PATHSPEC="':(top,exclude)docs/superpowers-orchestrator/*/*-review-log.md'"
 READ_TOOL_NOT_SHELL='with the Read tool, not with a shell command'
 PAGE_UNTIL_NO_PARTIAL='until a result carries no PARTIAL notice'
 DIFF_ONCE_OLD='Read the diff file once'
+# The paging step's exit when the Read tool refuses a span for size, and the
+# rule for a file the prompt only passes on by path or takes one block from.
+HALVE_ON_REFUSAL='halving the limit when a call is refused for size'
+PASS_ON_BY_PATH='A file you only pass on by path'
 # Fix-template contracts (prompt-pointer-dispatch spec, "fix-prompt.md"): the
 # clause the wording test asserts for each rule of the fix subagent.
 FIX_RULE_CLAUSES=(
@@ -756,6 +760,8 @@ for f in "${PAGING_TEMPLATES[@]}"; do
   if [ -s "$body" ]; then ok "$name: prompt body extract is non-empty"; else bad "$name: prompt body extract is empty (no '$PROMPT_OPEN' block)"; fi
   assert_folded_contains "$name: prompt body names the Read tool and forbids a shell command" "$body" "$READ_TOOL_NOT_SHELL"
   assert_folded_contains "$name: prompt body pages until no PARTIAL notice remains" "$body" "$PAGE_UNTIL_NO_PARTIAL"
+  assert_folded_contains "$name: prompt body halves the limit when a call is refused for size" "$body" "$HALVE_ON_REFUSAL"
+  assert_folded_contains "$name: prompt body exempts a file only passed on by path" "$body" "$PASS_ON_BY_PATH"
 done
 for f in "$CODE_PROMPT" "$SDD_TASK_REVIEWER"; do
   assert_folded_not_contains "${f#"$ROOT"/skills/}: no longer says '$DIFF_ONCE_OLD'" "$f" "$DIFF_ONCE_OLD"
