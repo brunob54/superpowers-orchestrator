@@ -888,6 +888,17 @@ and deletable by you:
 | `tmp/docs/<date>-handoff-<slug>.md` | A prompt that lets a fresh session continue the work without re-deriving this one's findings | `/handoff [slug]`, before you clear the context window |
 | `context-snapshot.json` | What changed just before this session | Automatically at session start |
 
+To continue in the fresh session, type `/pickup`. With no argument it takes the
+newest handoff file and every unfinished orchestration run on a local feature
+branch; if it finds more than one, it lists them with the exact line to type
+and stops. `/pickup <handoff path>` takes that handoff. Before it follows a
+handoff, a scan checks whether the handoff is out of date: commits made since
+the handoff was written, uncommitted changes, or a different branch make it
+stop and show you what it found. A run is never resumed on its own: `/pickup`
+shows the run, asks you once, and on yes sends only the bare
+`Resume orchestration for <path>` line — the orchestrator then asks you for any
+open answers.
+
 Recall is mostly automatic. At session start, the plugin reads `state.md`,
 `known-issues.md`, and `project-map.md` (and detects a stale map via git).
 When you submit a prompt, hooks inject any `known-issues.md` and
