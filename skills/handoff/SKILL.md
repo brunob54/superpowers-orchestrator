@@ -11,7 +11,7 @@ session, which starts with zero memory of this one, continue the work without
 re-deriving anything this session established.
 
 Today's date and time: !`date +%FT%H:%M`
-Current branch and HEAD: !`git branch --show-current 2>/dev/null || echo none` at !`git rev-parse --short HEAD 2>/dev/null || echo none`
+Current branch and HEAD: !`git branch --show-current 2>/dev/null | grep . || echo none` at !`git rev-parse --short HEAD 2>/dev/null || echo none`
 Uncommitted files: !`git status --short 2>/dev/null | wc -l | tr -d ' '`
 Argument given by the user (may be empty): $ARGUMENTS
 
@@ -40,11 +40,12 @@ Argument given by the user (may be empty): $ARGUMENTS
    every technical term defined at first use, lines at most 88 columns:
 
    - **Header line.** The file's first line is exactly
-     `Handoff: written=<YYYY-MM-DD>T<HH:MM> branch=<name|none> head=<sha7|none>`,
-     with the date and time, branch and HEAD printed above (`none` for an empty
-     value). The /pickup skill reads it to find the newest handoff and the commits
-     made after it. When the next task has an end state that a commit may not show,
-     the second line is `Done when: <one checkable condition>`.
+     `Handoff: written=<YYYY-MM-DD>T<HH:MM> branch=<name|none> head=<short sha|none>`,
+     with the date and time, branch and HEAD printed above (`<short sha>` is the
+     short commit id; `none` for an empty value). The /pickup skill reads it to
+     find the newest handoff and the commits made after it. When the next task
+     has an end state that a commit may not show, the second line is
+     `Done when: <one checkable condition>`.
    - **Opening paragraph.** The task in one or two sentences, naming the row or
      feature and the file and line where it is described; the repository, the
      branch, the version, whether the tree is clean, and whether the installed
