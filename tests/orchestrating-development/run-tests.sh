@@ -70,6 +70,15 @@ RETURN_WINDOW='among the **first 10 non-blank lines**'
 RETURN_MARKER='<!-- orchestration report -->'
 RETURN_CAP_NOT_MALFORMED='a longer report is **not** malformed'
 NO_HEREDOC='never with a heredoc'
+# Paging-rule contracts (orchestration issue row 26): every controller
+# template hands its skill body over to the Read tool by name, forbids a shell
+# command such as `cat`, and ends the paging on a result that carries no
+# PARTIAL notice. The two templates that carry the background-output rule
+# also state that the rule governs background output files only.
+PROMPT_OPEN='  prompt: |'
+READ_TOOL_NOT_SHELL='with the Read tool, not with a shell command'
+PAGE_UNTIL_NO_PARTIAL='until a result carries no PARTIAL notice'
+BACKGROUND_RULE_SCOPE='That rule governs the output files of background commands only'
 PASTE='paste'
 FILL_DOT='Fill `./'
 READ_DOT='Read `./'
@@ -178,6 +187,12 @@ extract_range() { # label file start-heading end-heading out
 # environment so that no character of it is reinterpreted.
 line_below() { # file exact-line
   needle="$2" awk 'BEGIN { n = ENVIRON["needle"] } found { print; exit } $0 == n { found = 1 }' "$1"
+}
+
+# Write the prompt block of template $1 — the lines after its `  prompt: |`
+# line up to the closing fence — into file $2; empty when either is missing.
+extract_prompt_block() { # file out
+  open="$PROMPT_OPEN" awk 'BEGIN { o = ENVIRON["open"] } body && substr($0, 1, 3) == "```" { exit } body { print } $0 == o { body = 1 }' "$1" > "$2"
 }
 
 DISPATCH_RANGE="$WORK/dispatch.txt"
@@ -352,6 +367,27 @@ done
 for t in plan-writer-prompt.md doc-review-loop-prompt.md; do
   assert_file_not_contains "$t: carries no background-read rule (its one command prints a single line)" \
     "$ORCH_DIR/$t" 'Never read the output file of a background command whole.'
+done
+
+bold "5c. Every controller template pages its skill body with the Read tool until no PARTIAL notice remains"
+# Row 26 measured every controller opening its skill body with `cat`: all 21
+# outputs were persisted to a 2 KB preview, and 9 controllers then received
+# 67.6 to 96.2 percent of the sections their prompt names. The paging rule
+# stands inside each prompt block, directly after the hand-over sentence.
+for t in "${TEMPLATES[@]}"; do
+  block="$WORK/paging-block-$t.txt"
+  extract_prompt_block "$ORCH_DIR/$t" "$block"
+  if [ -s "$block" ]; then ok "$t: prompt block extract is non-empty"; else bad "$t: prompt block extract is empty (no '$PROMPT_OPEN' block)"; fi
+  assert_folded_contains "$t: prompt block names the Read tool and forbids a shell command" "$block" "$READ_TOOL_NOT_SHELL"
+  assert_folded_contains "$t: prompt block pages until no PARTIAL notice remains" "$block" "$PAGE_UNTIL_NO_PARTIAL"
+done
+for t in batch-controller-prompt.md code-review-loop-prompt.md; do
+  assert_folded_contains "$t: the background-read rule is scoped to background output files" \
+    "$ORCH_DIR/$t" "$BACKGROUND_RULE_SCOPE"
+done
+for t in plan-writer-prompt.md doc-review-loop-prompt.md; do
+  assert_file_not_contains "$t: carries no background-read scope sentence (it carries no background-read rule)" \
+    "$ORCH_DIR/$t" "$BACKGROUND_RULE_SCOPE"
 done
 
 bold "6. The Resume Answer section: heading without a parenthetical, the fixed sentence, the placeholder below it"

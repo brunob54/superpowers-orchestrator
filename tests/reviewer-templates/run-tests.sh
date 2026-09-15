@@ -32,6 +32,15 @@ OWED_LINE='Harness probes owed:'
 GUARD='never logged `user-decision` on the strength of an untested harness claim'
 MARKER='<!-- multi-review report -->'
 PATHSPEC="':(top,exclude)docs/superpowers-orchestrator/*/*-review-log.md'"
+# Paging-rule contracts (orchestration issue row 26): every reviewer template
+# hands its files over to the Read tool by name, forbids a shell command such
+# as `cat`, and ends the paging on a result that carries no PARTIAL notice.
+# `Read the diff file once` is the superseded hand-over wording of the two
+# diff templates: one Read call returns about 25,000 tokens at most, so a
+# large diff is never read "once".
+READ_TOOL_NOT_SHELL='with the Read tool, not with a shell command'
+PAGE_UNTIL_NO_PARTIAL='until a result carries no PARTIAL notice'
+DIFF_ONCE_OLD='Read the diff file once'
 # Fix-template contracts (prompt-pointer-dispatch spec, "fix-prompt.md"): the
 # clause the wording test asserts for each rule of the fix subagent.
 FIX_RULE_CLAUSES=(
@@ -733,6 +742,24 @@ assert_file_not_contains "multi-code-review: no 'at most 2000 lines' claim remai
 assert_folded_contains "token-efficiency: rule 6 names the PARTIAL notice and the next offset" "$TOKEN_EFFICIENCY_SKILL" \
   'prints a PARTIAL notice naming the next `offset`'
 assert_file_not_contains "token-efficiency: no '2,000 lines' claim remains" "$TOKEN_EFFICIENCY_SKILL" '2,000 lines'
+
+bold "19. Every reviewer template pages its files with the Read tool until no PARTIAL notice remains"
+# Row 26 measured 22 partial Read views on two transcripts, all by reviewers
+# or a code-review controller, and 21 of 21 controller `cat` calls persisted
+# to a 2 KB preview. The paging rule stands inside each prompt block (the only
+# part the fill script copies), directly after the hand-over sentence.
+PAGING_TEMPLATES=("$CODE_PROMPT" "$SDD_TASK_REVIEWER" "$DOC_PROMPT")
+for f in "${PAGING_TEMPLATES[@]}"; do
+  name="${f#"$ROOT"/skills/}"
+  body="$WORK/paging-body-$(echo "$name" | tr '/' '_').txt"
+  extract_prompt_body "$f" > "$body"
+  if [ -s "$body" ]; then ok "$name: prompt body extract is non-empty"; else bad "$name: prompt body extract is empty (no '$PROMPT_OPEN' block)"; fi
+  assert_folded_contains "$name: prompt body names the Read tool and forbids a shell command" "$body" "$READ_TOOL_NOT_SHELL"
+  assert_folded_contains "$name: prompt body pages until no PARTIAL notice remains" "$body" "$PAGE_UNTIL_NO_PARTIAL"
+done
+for f in "$CODE_PROMPT" "$SDD_TASK_REVIEWER"; do
+  assert_folded_not_contains "${f#"$ROOT"/skills/}: no longer says '$DIFF_ONCE_OLD'" "$f" "$DIFF_ONCE_OLD"
+done
 
 echo
 bold "Results: $PASS passed, $FAIL failed"
