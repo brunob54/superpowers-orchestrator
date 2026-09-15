@@ -154,6 +154,115 @@ node "$SCRIPT" >"$OUTF" 2>"$ERRF"; STATUS=$?
 assert_eq "no argument exits 2" "$STATUS" "2"
 assert_file_contains "no argument prints the usage line" "$ERRF" 'usage: node tools/measure-context.js'
 
+# --- Worklist row 27: file coverage over both hand-over routes, PARTIAL
+# notices, the model-visible denominator, and the skill body.
+#
+# The Read route: a Read call returns at most about 25,000 tokens, then a
+# notice "PARTIAL view — <path>: showing lines A-B of T total" names the
+# next offset. The cat route: a Bash `cat <file>` whose output exceeds
+# 30,000 characters is persisted to a file; the result holds a 2 KB
+# preview and the persisted path, which the agent may read back in ranges.
+FIX="$ROOT/tests/measure-context/fixtures"
+
+bold "7. Read route: a PARTIAL notice, then paged to the end by offset"
+run_json "$FIX/read-paged-to-end.jsonl"
+assert_eq "exits 0" "$STATUS" "0"
+assert_eq "one PARTIAL notice is counted, once, although the notice sits in an attachment and the Read result also says truncatedByTokenCap" "$(field partialNotices.count)" "1"
+assert_eq "the notice is classified as paged to the end" "$(field partialNotices.pagedToEnd)" "1"
+assert_eq "no notice is classified as paged short" "$(field partialNotices.pagedShort)" "0"
+assert_eq "no notice is classified as not paged" "$(field partialNotices.notPaged)" "0"
+assert_eq "no notice concerns a persisted output file" "$(field partialNotices.persistedThenRead)" "0"
+assert_eq "one file is listed: the one whose first read was cut" "$(field fileCoverage.length)" "1"
+assert_eq "the listed file is the cut one" "$(field fileCoverage.0.path)" "/tmp/mc-fixture/big.md"
+assert_eq "the first read's route is Read" "$(field fileCoverage.0.firstRoute)" "Read"
+assert_eq "total lines come from the notice" "$(field fileCoverage.0.totalLines)" "6"
+assert_eq "the two pages are merged into one received range" "$(field fileCoverage.0.receivedRanges)" "1-6"
+assert_eq "six lines were received" "$(field fileCoverage.0.receivedLines)" "6"
+assert_eq "coverage is complete" "$(field fileCoverage.0.coveragePercent)" "100"
+assert_eq "nothing is uncovered" "$(field fileCoverage.0.uncoveredRanges)" "none"
+assert_eq "the last line was reached" "$(field fileCoverage.0.lastLineReached)" "true"
+assert_eq "the small file read whole in one call is counted, not listed" "$(field fullyReceivedFiles)" "1"
+
+bold "8. Read route: paged short by one line, the notice inside the tool result"
+run_json "$FIX/read-paged-short.jsonl"
+assert_eq "a notice inside the tool_result text is found" "$(field partialNotices.count)" "1"
+assert_eq "the notice is classified as paged short" "$(field partialNotices.pagedShort)" "1"
+assert_eq "it is not classified as paged to the end" "$(field partialNotices.pagedToEnd)" "0"
+assert_eq "lines 1-5 of 6 were received" "$(field fileCoverage.0.receivedRanges)" "1-5"
+assert_eq "coverage is five sixths" "$(field fileCoverage.0.coveragePercent)" "83.3"
+assert_eq "the last line is the uncovered range" "$(field fileCoverage.0.uncoveredRanges)" "6"
+assert_eq "the last line was not reached" "$(field fileCoverage.0.lastLineReached)" "false"
+assert_eq "no file was fully received in one call" "$(field fullyReceivedFiles)" "0"
+
+bold "9. Read route: not paged at all (a later grep is not a read of lines)"
+run_json "$FIX/read-not-paged.jsonl"
+assert_eq "the notice is classified as not paged" "$(field partialNotices.notPaged)" "1"
+assert_eq "only the first page was received" "$(field fileCoverage.0.receivedRanges)" "1-3"
+assert_eq "coverage is one half" "$(field fileCoverage.0.coveragePercent)" "50"
+assert_eq "lines 4-6 are uncovered" "$(field fileCoverage.0.uncoveredRanges)" "4-6"
+assert_eq "the last line was not reached" "$(field fileCoverage.0.lastLineReached)" "false"
+
+bold "10. cat route: a persisted cat, then sed ranges and a Read leaving gaps"
+run_json "$FIX/cat-persisted-gaps.jsonl"
+assert_eq "no PARTIAL notice exists on the cat route" "$(field partialNotices.count)" "0"
+assert_eq "the file behind the persisted output is listed once" "$(field fileCoverage.length)" "1"
+assert_eq "it is listed under its own path, not the persisted path" "$(field fileCoverage.0.path)" "/tmp/mc-fixture/body.md"
+assert_eq "the first read's route is cat" "$(field fileCoverage.0.firstRoute)" "cat"
+assert_eq "total lines come from the later Read of the persisted path" "$(field fileCoverage.0.totalLines)" "12"
+# The preview holds two complete lines and a third cut in the middle; the
+# sed range goes through a shell variable that names the persisted path;
+# the `grep | sed -n '1,2p'` filters grep output and receives no file lines;
+# the Read of the persisted path is mapped back to the file.
+assert_eq "preview lines, sed range and Read range are united" "$(field fileCoverage.0.receivedRanges)" "1-2, 5-8, 10-12"
+assert_eq "nine lines were received" "$(field fileCoverage.0.receivedLines)" "9"
+assert_eq "coverage is three quarters" "$(field fileCoverage.0.coveragePercent)" "75"
+assert_eq "the gaps are named" "$(field fileCoverage.0.uncoveredRanges)" "3-4, 9"
+assert_eq "the last line was reached by the Read" "$(field fileCoverage.0.lastLineReached)" "true"
+
+bold "11. Skill body: the usage jump at the Skill call, and skill-directory reads"
+run_json "$FIX/skill-call.jsonl"
+assert_eq "one Skill call is counted" "$(field skillBody.calls)" "1"
+# The request that made the Skill call held 1000 context tokens; the next
+# request held 5000. The jump is the skill body plus whatever else arrived
+# with it, which is what the row asks for.
+assert_eq "the skill body is the context growth from the Skill call's request to the next" "$(field skillBody.tokens)" "4000"
+assert_eq "the Skill call is named" "$(field skillBody.perCall.0.skill)" "plug:foo"
+assert_eq "one read under a /skills/ path is counted" "$(field skillDirectoryReads)" "1"
+
+bold "12. Model-visible denominator: hook_success and prompt_snapshot are excluded"
+# The fixture's attachments: hook_success 52 bytes, prompt_snapshot 52 bytes,
+# one other attachment 30 bytes. Content over every record is 289 bytes.
+assert_eq "the existing table still counts every attachment record" "$(field totals.attachments)" "134"
+assert_eq "the existing content figure is unchanged" "$(field content)" "289"
+assert_eq "the model-visible content excludes the two record kinds" "$(field modelVisible.content)" "185"
+assert_eq "the model-visible attachments keep only what the model sees" "$(field modelVisible.totals.attachments)" "30"
+assert_eq "the excluded hook_success bytes are reported" "$(field modelVisible.excluded.hook_success)" "52"
+assert_eq "the excluded prompt_snapshot bytes are reported" "$(field modelVisible.excluded.prompt_snapshot)" "52"
+
+bold "13. The text report prints the new lines in a fixed format"
+run_text "$FIX/cat-persisted-gaps.jsonl"
+assert_eq "the text report exits 0" "$STATUS" "0"
+assert_file_contains "the existing prompt-material line is still printed" "$OUTF" 'agent-prompts + fill-commands + value-files'
+assert_file_contains "the two share tables are labelled" "$OUTF" 'Shares over every record'
+assert_file_contains "the model-visible table names what it excludes" "$OUTF" 'Model-visible shares (without hook_success and prompt_snapshot attachment records'
+assert_file_contains "the PARTIAL notices summary line" "$OUTF" 'PARTIAL notices: 0 (paged to the end: 0, paged short: 0, not paged: 0; of these on a persisted output file: 0)'
+assert_file_contains "the file coverage heading" "$OUTF" 'File coverage (files whose first read was cut; lines received over both routes):'
+assert_file_contains "one line per cut file" "$OUTF" '/tmp/mc-fixture/body.md | first read: cat, persisted | total lines: 12 (from a Read result) | received: 1-2, 5-8, 10-12 (9 lines) | coverage: 75.0% | uncovered: 3-4, 9 | last line reached: yes'
+assert_file_contains "the count of files fully received in one call" "$OUTF" 'Files fully received in one call: 0'
+run_text "$FIX/skill-call.jsonl"
+assert_file_contains "the skill body line" "$OUTF" 'Skill body: 4,000 tokens over 1 Skill call'
+assert_file_contains "the skill-directory reads count" "$OUTF" 'skill-directory reads: 1'
+run_text "$FIX/read-paged-to-end.jsonl"
+assert_file_contains "a Read-route line names the notice and the source of the total" "$OUTF" '/tmp/mc-fixture/big.md | first read: Read, cut by a PARTIAL notice | total lines: 6 (from a PARTIAL notice) | received: 1-6 (6 lines) | coverage: 100.0% | uncovered: none | last line reached: yes'
+assert_file_contains "the PARTIAL notices line counts the paged notice" "$OUTF" 'PARTIAL notices: 1 (paged to the end: 1, paged short: 0, not paged: 0; of these on a persisted output file: 0)'
+
+bold "14. The original fixture is unchanged by the new sections"
+run_json "$FIXTURE"
+assert_eq "no PARTIAL notice in the original fixture" "$(field partialNotices.count)" "0"
+assert_eq "no cut file in the original fixture" "$(field fileCoverage.length)" "0"
+assert_eq "no Skill call in the original fixture" "$(field skillBody.calls)" "0"
+assert_eq "a string attachment is model-visible" "$(field modelVisible.content)" "$EXP_CONTENT"
+
 echo
 bold "Results: $PASS passed, $FAIL failed"
 if [ "$FAIL" -gt 0 ]; then

@@ -1,0 +1,9 @@
+{"type": "assistant", "uuid": "a1", "requestId": "req-1", "message": {"id": "m1", "usage": {"input_tokens": 0, "cache_read_input_tokens": 1000, "cache_creation_input_tokens": 0}, "content": [{"type": "tool_use", "id": "s1", "name": "Skill", "input": {"skill": "plug:foo"}}]}}
+{"type": "user", "uuid": "u1", "message": {"content": [{"type": "tool_result", "tool_use_id": "s1", "content": "Launching skill: plug:foo"}]}}
+{"type": "attachment", "uuid": "h1", "attachment": {"type": "hook_success", "hookName": "PreToolUse:Read"}}
+{"type": "user", "uuid": "u2", "message": {"content": [{"type": "text", "text": "Base directory for this skill: /plug/skills/foo\nSKILL BODY"}]}}
+{"type": "attachment", "uuid": "p1", "attachment": {"type": "prompt_snapshot", "systemPrompt": ["SYSTEM"]}}
+{"type": "assistant", "uuid": "a2", "requestId": "req-2", "message": {"id": "m2", "usage": {"input_tokens": 0, "cache_read_input_tokens": 5000, "cache_creation_input_tokens": 0}, "content": [{"type": "tool_use", "id": "r1", "name": "Read", "input": {"file_path": "/plug/skills/foo/SKILL.md"}}]}}
+{"type": "user", "uuid": "u3", "message": {"content": [{"type": "tool_result", "tool_use_id": "r1", "content": "1\thello"}]}, "toolUseResult": {"type": "text", "file": {"filePath": "/plug/skills/foo/SKILL.md", "startLine": 1, "numLines": 1, "totalLines": 1}}}
+{"type": "attachment", "uuid": "o1", "attachment": {"type": "date", "text": "OTHER"}}
+{"type": "assistant", "uuid": "a3", "requestId": "req-3", "message": {"id": "m3", "usage": {"input_tokens": 0, "cache_read_input_tokens": 5200, "cache_creation_input_tokens": 0}, "content": [{"type": "text", "text": "done"}]}}
