@@ -796,7 +796,10 @@ Copy the cell for the doc type verbatim into `[LENS_INSTRUCTIONS]`.
   environment concerns it will hit in practice.
 - plan: Find: type, signature, and name inconsistencies across tasks; hidden
   inter-task dependencies; commands or file paths that do not exist in this
-  repository.
+  repository; a repository premise a task depends on that the plan asserts
+  but does not test — run the one command that tests it:
+  `git check-ignore -v <path>` for a file a task commits, `ls <path>`,
+  `command -v <name>`.
 - general: Find: practicality problems against the repository the document
   lives in.
 

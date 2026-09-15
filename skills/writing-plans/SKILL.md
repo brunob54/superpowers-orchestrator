@@ -116,6 +116,7 @@ This structure informs the task decomposition. Each task should produce self-con
 - Keep each step to one action (roughly 2-5 minutes).
 - Use exact file paths.
 - Include exact verification commands and expected outcomes.
+- Test every repository premise a task depends on before you write the task: whether a path is tracked or ignored by git (`git check-ignore -v <path>`), whether a file exists (`ls <path>`), whether a command exists (`command -v <name>`). Run the one command and write the task from its output; never assert the premise. A task that commits a git-ignored file fails at `git add`, and the run then stops for a plan ruling.
 - Use TDD ordering when code behavior changes.
 - For ambiguous features, ask clarifying questions before finalizing the plan rather than guessing.
 
