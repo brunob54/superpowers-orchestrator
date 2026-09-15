@@ -116,7 +116,10 @@ This structure informs the task decomposition. Each task should produce self-con
 - Keep each step to one action (roughly 2-5 minutes).
 - Use exact file paths.
 - Include exact verification commands and expected outcomes.
-- Test every repository premise a task depends on before you write the task. A premise is a fact about the repository as it is before the plan runs; a file or command that an earlier task creates is a dependency between tasks, not a premise. Test whether git tracks a path (`git ls-files --error-unmatch <path>`), whether git ignores it (`git check-ignore -v <path>` prints the matching rule only for an ignored path), whether a file exists (`ls <path>`) and whether a command exists (`command -v <name>`). Write the task from the command's output and exit status; never assert the premise. A task that commits a git-ignored file fails at `git add`, and execution stops. When a task must edit an ignored file, the task states that the edit stays on disk and does not ship with the branch.
+- Test every repository premise a task depends on before you write the task; never assert the premise.
+  - A premise is a fact about the repository as it is before the plan runs. A file or command that an earlier task creates is a dependency between tasks, not a premise.
+  - Test whether git tracks a path (`git ls-files --error-unmatch <path>`), whether git ignores it (`git check-ignore -v <path>` prints the matching rule only for an ignored path), whether a file exists (`ls <path>`) and whether a command exists (`command -v <name>`). Write the task from the command's output and exit status.
+  - A task that commits a git-ignored file fails at `git add`, and execution stops. When a task must edit an ignored file, the task leaves that file out of its commit step and states that the edit stays on disk and does not ship with the branch.
 - Use TDD ordering when code behavior changes.
 - For ambiguous features, ask clarifying questions before finalizing the plan rather than guessing.
 
