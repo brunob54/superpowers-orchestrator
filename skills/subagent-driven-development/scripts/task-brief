@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Extract one task's full text from an implementation plan into a file the
-# implementer reads in one call, so the task text never has to be pasted
+# implementer reads whole, so the task text never has to be pasted
 # through the controller's context.
 #
 # Usage: task-brief PLAN_FILE TASK_NUMBER [OUTFILE]

@@ -80,9 +80,19 @@ Agent tool (general-purpose):
 
     ## Target
 
-    Document: [DOC_PATH]
+    Document (read it whole, with the Read tool): [DOC_PATH]
     Document type: [DOC_TYPE]
     [SPEC_LINE]
+
+    Open every file this prompt names with the Read tool, not with a shell
+    command such as `cat`, even when your session tells you to prefer shell
+    commands: Bash output is cut at 30,000 characters by default, and a file
+    that size comes back as a 2 KB preview. One Read call returns about
+    25,000 tokens at most and then prints a PARTIAL notice naming the next
+    `offset` and a `limit`; Read again with the offset and the limit the
+    notice names, until a result carries no PARTIAL notice. Where this
+    prompt names sections of a file, this applies to those sections whole.
+    Never act from a first page or a preview alone.
 
     ## Lens (your ONLY focus in this review)
 

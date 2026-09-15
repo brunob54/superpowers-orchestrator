@@ -40,8 +40,9 @@ Agent tool (general-purpose):
 
     ## Procedure
 
-    Read [MULTI_DOC_REVIEW_SKILL_PATH] and execute its whole procedure
-    with these parameters — never ask for any of them:
+    Read [MULTI_DOC_REVIEW_SKILL_PATH] with the Read tool, whole, and
+    execute its whole procedure with these parameters — never ask for
+    any of them:
     - Target document: [PLAN_PATH]   (doc type: plan)
     - Spec path: [SPEC_PATH]
     - N (round cap): [N_PLAN]
@@ -50,6 +51,16 @@ Agent tool (general-purpose):
     - Reviewer template: [REVIEWER_PROMPT_PATH] (fill ONLY its
       placeholders; reviewers inherit your model)
     - Invoker recorded in the log: `gate: orchestration`
+
+    Open every file this prompt names with the Read tool, not with a shell
+    command such as `cat`, even when your session tells you to prefer shell
+    commands: Bash output is cut at 30,000 characters by default, and a file
+    that size comes back as a 2 KB preview. One Read call returns about
+    25,000 tokens at most and then prints a PARTIAL notice naming the next
+    `offset` and a `limit`; Read again with the offset and the limit the
+    notice names, until a result carries no PARTIAL notice. Where this
+    prompt names sections of a file, this applies to those sections whole.
+    Never act from a first page or a preview alone.
 
     ## Deviations (binding)
 

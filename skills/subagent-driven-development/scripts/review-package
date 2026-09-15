@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Generate a review package the reviewer reads in one call: commit list,
+# Generate a review package the reviewer reads whole: commit list,
 # stat summary, and the diff with extended context, written to a file.
 #
 # Range mode (sequential execution):

@@ -41,12 +41,15 @@ Agent tool (general-purpose):
       `grep -n 'FAIL\|Error' <path> | head -n 20`. A test-suite log can
       exceed 100 KB, and one whole read of it costs more of your context
       than every prompt you were given (measured: a single 125 KB read
-      was the largest item in a controller's window).
+      was the largest item in a controller's window). That rule governs
+      the output files of background commands only; the files this prompt
+      names are read whole.
 
     ## Procedure
 
-    Read [MULTI_CODE_REVIEW_SKILL_PATH] and execute its whole procedure
-    with these parameters — never ask for any of them:
+    Read [MULTI_CODE_REVIEW_SKILL_PATH] with the Read tool, whole, and
+    execute its whole procedure with these parameters — never ask for
+    any of them:
     - BASE: [BASE_SHA]   (the orchestration branch point; already
       verified an ancestor of HEAD)
     - N (round cap): [N_CODE]
@@ -63,6 +66,16 @@ Agent tool (general-purpose):
       heading of that name): never ask; plan-mandated/user-decision
       findings are journaled in the log and reported in your return,
       never presented interactively.
+
+    Open every file this prompt names with the Read tool, not with a shell
+    command such as `cat`, even when your session tells you to prefer shell
+    commands: Bash output is cut at 30,000 characters by default, and a file
+    that size comes back as a 2 KB preview. One Read call returns about
+    25,000 tokens at most and then prints a PARTIAL notice naming the next
+    `offset` and a `limit`; Read again with the offset and the limit the
+    notice names, until a result carries no PARTIAL notice. Where this
+    prompt names sections of a file, this applies to those sections whole.
+    Never act from a first page or a preview alone.
 
     ## Resume Answer
 

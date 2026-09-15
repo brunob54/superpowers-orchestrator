@@ -41,11 +41,12 @@ Task tool (general-purpose):
     **Head:** [HEAD_SHA]
     **Diff file:** [DIFF_FILE]
 
-    Read the diff file once — it contains the commit list, a stat summary,
-    and the full diff with surrounding context, and it is your view of the
-    change. The diff's context lines ARE the changed files: do not Read a
-    changed file separately unless a hunk you must judge is cut off
-    mid-function — and say so in your report. Do not re-run git commands.
+    Read the diff file whole, with the Read tool — it contains the commit
+    list, a stat summary, and the full diff with surrounding context, and
+    it is your view of the change. The diff's context lines ARE the changed
+    files: do not Read a changed file separately unless a hunk you must
+    judge is cut off mid-function — and say so in your report. Do not
+    re-run git commands.
     Only if the diff file is missing may you fetch the diff yourself:
     `git diff --stat [BASE_SHA]..[HEAD_SHA]` and `git diff [BASE_SHA]..[HEAD_SHA]`
     — this is a failure fallback, not an alternative workflow. If the Base/Head
@@ -58,6 +59,16 @@ Task tool (general-purpose):
     Cross-cutting changes are legitimate named risks: if the diff changes
     lock ordering, a function or API contract, or shared mutable state,
     checking the call sites is the right method.
+
+    Open every file this prompt names with the Read tool, not with a shell
+    command such as `cat`, even when your session tells you to prefer shell
+    commands: Bash output is cut at 30,000 characters by default, and a file
+    that size comes back as a 2 KB preview. One Read call returns about
+    25,000 tokens at most and then prints a PARTIAL notice naming the next
+    `offset` and a `limit`; Read again with the offset and the limit the
+    notice names, until a result carries no PARTIAL notice. Where this
+    prompt names sections of a file, this applies to those sections whole.
+    Never act from a first page or a preview alone.
 
     Your review is read-only on this checkout. Do not mutate the working
     tree, the index, HEAD, or branch state in any way.
