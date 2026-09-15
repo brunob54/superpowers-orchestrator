@@ -21,9 +21,9 @@ orchestrator runs (autonomous pipeline runs) stopped on unmerged branches,
 resumed only after asking. `/handoff` writes a header with time, time zone,
 branch and HEAD.
 
-**Effect.** A stale handoff stops before work starts. Restart the CLI after
-updating; nothing to migrate. Older handoffs, without a header, get a
-date-based check.
+**Effect.** A stale handoff stops before work starts. Restart the CLI
+(command-line interface) after updating; nothing to migrate. Older handoffs,
+without a header, get a date-based check.
 
 Details:
 
@@ -112,7 +112,10 @@ Details:
   on the same day, can sort behind an earlier one that has a header.
   `Done when:` is judged by the model; the scan only prints it. Delivery
   of the argument on Copilot CLI is untested, because Copilot is not
-  installed on the test machine.
+  installed on the test machine. A `written=` time later than the reading
+  machine's clock (a wrong clock or a hand-edited header) still gives FRESH
+  when the new work exists only on another branch; work reachable from HEAD
+  is always listed.
 - **Reinstall.** Nothing to migrate. Restart the CLI after updating the
   plugin: sessions read the installed copy under `~/.claude/plugins/cache/`.
   Handoffs written before this release have no header line; `/pickup` gives
