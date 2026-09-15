@@ -68,9 +68,11 @@ Details:
   to the Task Rules section; `tests/reviewer-templates` gains 4 (230 in
   total), scoped to the extracted Correctness plan cell through a new
   `extract_plan_cell` helper that the Ambiguity check now shares.
-- **Known limits.** A task that a later review fix or an `amend plan` ruling
-  adds after round 1 is not re-checked by a reviewer; no logged run has this
-  shape. A git worktree holds no copy of an ignored file, so an edit made
+- **Known limits.** A task that a review fix adds after round 1 is checked
+  again only when the correctness lens runs again: in round 5 when N is 5 or
+  more, and in round 9 when N is 9 or more. A task that an `amend plan` ruling
+  adds later in the run is not checked again by a reviewer. No logged run has
+  either shape. A git worktree holds no copy of an ignored file, so an edit made
   there is lost with the worktree; the rule does not cover this case.
 
 ## v7.23.0 — a `/pickup` skill resumes a handoff or an unfinished orchestrator run
