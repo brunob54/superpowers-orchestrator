@@ -110,10 +110,10 @@ Agent tool (general-purpose):
     **Head:** [HEAD_SHA]
     **Diff file:** [PACKAGE_FILE]
 
-    Read the diff file once — it contains the commit list, a stat
-    summary, and the full diff with surrounding context, and it is your
-    view of the change. Do not re-run git commands. Only if the diff
-    file is missing may you fetch the diff yourself:
+    Read the diff file whole, with the Read tool — it contains the commit
+    list, a stat summary, and the full diff with surrounding context, and
+    it is your view of the change. Do not re-run git commands. Only if
+    the diff file is missing may you fetch the diff yourself:
     `git diff --stat [BASE_SHA]..[HEAD_SHA] -- ':(top)' ':(top,exclude)docs/superpowers-orchestrator/*/*-review-log.md' ':(top,exclude)docs/superpowers-orchestrator/*/*-fix-reports.md' ':(top,exclude)docs/superpowers-orchestrator/*/*-orchestration-log.md' ':(top,exclude)docs/superpowers-orchestrator/*/*-open-decisions.md' ':(top,exclude)docs/specs/*-review-log.md' ':(top,exclude)docs/plans/*-review-log.md' ':(top,exclude)docs/plans/*-orchestration-log.md' ':(top,exclude)docs/plans/*-open-decisions.md'`
     and the same command without `--stat` — a failure fallback, not an
     alternative workflow. Keep the pathspecs: they exclude review material
@@ -121,6 +121,20 @@ Agent tool (general-purpose):
     code outside the diff only to evaluate a concrete risk you can
     name — one focused check per named risk, and name both the risk and
     what you checked in your report.
+
+    Open every file this prompt tells you to read with the Read tool, not
+    with a shell command such as `cat`, even when your session tells you to
+    prefer shell commands: Bash output is cut at 30,000 characters by
+    default, and a file that size comes back as a 2 KB preview. One Read
+    call returns about 25,000 tokens at most and then prints a PARTIAL
+    notice naming the next `offset` and a `limit`; Read again with the
+    offset and the limit the notice names, halving the limit when a call is
+    refused for size, until a result carries no PARTIAL notice. Each
+    section this prompt names is read whole. A file you only pass on by
+    path, or take one block from, is not read whole: find the block with
+    `grep -n` and Read it with offset and limit. On a platform without the
+    Read tool, use the tool that pages by offset. Never act from a first
+    page or a preview alone.
 
     ## Tests
 

@@ -36,10 +36,25 @@ Agent tool (general-purpose):
 
     ## Procedure
 
-    Read [WRITING_PLANS_SKILL_PATH] and follow it as your procedure —
-    the sections from "Output Path" through "Self-Review" inclusive.
-    SKIP its "Multi-Round Plan Review" and "Execution Handoff" sections
-    entirely: the orchestrator owns both. Skip any announcement lines.
+    Read [WRITING_PLANS_SKILL_PATH] with the Read tool, whole, and follow
+    it as your procedure — the sections from "Output Path" through
+    "Self-Review" inclusive. SKIP its "Multi-Round Plan Review" and
+    "Execution Handoff" sections entirely: the orchestrator owns both.
+    Skip any announcement lines.
+
+    Open every file this prompt tells you to read with the Read tool, not
+    with a shell command such as `cat`, even when your session tells you to
+    prefer shell commands: Bash output is cut at 30,000 characters by
+    default, and a file that size comes back as a 2 KB preview. One Read
+    call returns about 25,000 tokens at most and then prints a PARTIAL
+    notice naming the next `offset` and a `limit`; Read again with the
+    offset and the limit the notice names, halving the limit when a call is
+    refused for size, until a result carries no PARTIAL notice. Each
+    section this prompt names is read whole. A file you only pass on by
+    path, or take one block from, is not read whole: find the block with
+    `grep -n` and Read it with offset and limit. On a platform without the
+    Read tool, use the tool that pages by offset. Never act from a first
+    page or a preview alone.
 
     Deviation from that procedure: where it says to ask clarifying
     questions for ambiguous features, you instead derive the answer from
