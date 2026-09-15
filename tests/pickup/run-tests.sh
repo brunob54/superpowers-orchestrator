@@ -32,14 +32,15 @@ assert_eq() { # desc actual expected
 }
 # The scan output is held in $OUT; each line is matched whole with grep -x so
 # "commits: 1" never matches "commits: 13".
+out_dump() { printf '%s' "$OUT" | tr '\n' '|'; }
 assert_line() { # desc exact-line
-  if printf '%s\n' "$OUT" | grep -qxF -- "$2"; then ok "$1"; else bad "$1 (no line '$2' in: $(printf '%s' "$OUT" | tr '\n' '|'))"; fi
+  if printf '%s\n' "$OUT" | grep -qxF -- "$2"; then ok "$1"; else bad "$1 (no line '$2' in: $(out_dump))"; fi
 }
 assert_has() { # desc needle
-  if printf '%s\n' "$OUT" | grep -qF -- "$2"; then ok "$1"; else bad "$1 (missing '$2' in: $(printf '%s' "$OUT" | tr '\n' '|'))"; fi
+  if printf '%s\n' "$OUT" | grep -qF -- "$2"; then ok "$1"; else bad "$1 (missing '$2' in: $(out_dump))"; fi
 }
 assert_lacks() { # desc needle
-  if printf '%s\n' "$OUT" | grep -qF -- "$2"; then bad "$1 (must not contain '$2': $(printf '%s' "$OUT" | tr '\n' '|'))"; else ok "$1"; fi
+  if printf '%s\n' "$OUT" | grep -qF -- "$2"; then bad "$1 (must not contain '$2': $(out_dump))"; else ok "$1"; fi
 }
 assert_file_contains() { # desc file needle
   if grep -qF -- "$3" "$2" 2>/dev/null; then ok "$1"; else bad "$1 (missing: $3)"; fi
@@ -61,8 +62,11 @@ trap 'rm -rf "$TMP"' EXIT
 export GIT_CEILING_DIRECTORIES="$TMP"
 
 # Local dates, computed by node so the suite does not depend on BSD or GNU date.
-TODAY=$(node -e 'const d=new Date();const p=(n)=>String(n).padStart(2,"0");console.log(`${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}`)')
-YESTERDAY=$(node -e 'const d=new Date(Date.now()-864e5);const p=(n)=>String(n).padStart(2,"0");console.log(`${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}`)')
+local_date() { # days-ago
+  node -e 'const d=new Date(Date.now()-864e5*Number(process.argv[1]));const p=(n)=>String(n).padStart(2,"0");console.log(`${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}`)' "$1"
+}
+TODAY=$(local_date 0)
+YESTERDAY=$(local_date 1)
 LOG_ROOT="docs/superpowers-orchestrator"
 
 # new_repo <name> <branch>: an empty repository whose unborn branch is <branch>.
