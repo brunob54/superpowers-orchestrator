@@ -3,7 +3,7 @@
 [![AI Coding Agents](https://img.shields.io/badge/USE_WITH-Claude_Code_%7C_Copilot_CLI-white?style=for-the-badge)]()
 
 [![GitHub stars](https://img.shields.io/github/stars/brunob54/superpowers-orchestrator?style=for-the-badge&color=white)](https://github.com/brunob54/superpowers-orchestrator/stargazers)
-[![Version](https://img.shields.io/badge/version-7.22.0-white?style=for-the-badge)](RELEASE-NOTES.md)
+[![Version](https://img.shields.io/badge/version-7.23.0-white?style=for-the-badge)](RELEASE-NOTES.md)
 [![License: MIT](https://img.shields.io/badge/License-MIT-white?style=for-the-badge)](LICENSE)
 [![Install](https://img.shields.io/badge/install-now-white?style=for-the-badge&logo=claude)](https://github.com/brunob54/superpowers-orchestrator#installation)
 
@@ -19,9 +19,9 @@ This repository is a fork of [obra/superpowers](https://github.com/obra/superpow
 > **New to the plugin?** Start with the [User Guide](docs/guide/README.md) — the day-to-day operating manual: workflows, trigger phrases, autonomous runs, and recovery.
 
 > [!NOTE]
-> **Lineage & status:** this repository builds on two origins — the original [obra/superpowers](https://github.com/obra/superpowers) by Jesse Vincent and its optimized fork [REPOZY/superpowers-optimized](https://github.com/REPOZY/superpowers-optimized) (baseline v6.6.1). Full credit to both. The project was named *superpowers-optimized* through v6.15.1 and was renamed to **superpowers-orchestrator** at v7.0.0, to match its main feature: the autonomous orchestration pipeline. This fork's own additions (v6.7.0–v7.22.0) are **under testing and evaluation** — see [What this repo adds](#what-this-repo-adds).
+> **Lineage & status:** this repository builds on two origins — the original [obra/superpowers](https://github.com/obra/superpowers) by Jesse Vincent and its optimized fork [REPOZY/superpowers-optimized](https://github.com/REPOZY/superpowers-optimized) (baseline v6.6.1). Full credit to both. The project was named *superpowers-optimized* through v6.15.1 and was renamed to **superpowers-orchestrator** at v7.0.0, to match its main feature: the autonomous orchestration pipeline. This fork's own additions (v6.7.0–v7.23.0) are **under testing and evaluation** — see [What this repo adds](#what-this-repo-adds).
 >
-> **How this fork is built:** every release of this fork (v6.7.0–v7.22.0) was designed, implemented, and reviewed end-to-end by Claude Fable 5 running in Claude Code — with the plugin itself driving its own development. (Batched implementation dispatches task subagents on smaller Claude models where the plugin's model-selection rules call for it; design, orchestration, and review stayed on Fable 5.) The fork bootstraps on its own releases: v6.7.0 was built under the parent fork plugin (baseline v6.6.1), and each release since was built with the fork's *previous* release installed. Every workflow described below was used, under real conditions, to build the version you're reading about.
+> **How this fork is built:** every release of this fork (v6.7.0–v7.23.0) was designed, implemented, and reviewed end-to-end by Claude Fable 5 running in Claude Code — with the plugin itself driving its own development. (Batched implementation dispatches task subagents on smaller Claude models where the plugin's model-selection rules call for it; design, orchestration, and review stayed on Fable 5.) The fork bootstraps on its own releases: v6.7.0 was built under the parent fork plugin (baseline v6.6.1), and each release since was built with the fork's *previous* release installed. Every workflow described below was used, under real conditions, to build the version you're reading about.
 
 ## What this repo adds
 
@@ -34,7 +34,7 @@ Eighteen releases beyond the REPOZY v6.6.1 baseline. The six main additions — 
 - **orchestrating-development (v6.14.0)** — fully autonomous spec-to-merge-gate pipeline: from an approved design spec, runs plan writing, N plan-review rounds, batched implementation, and N code-review rounds via fresh-context controller subagents, stopping only on major errors and ending before merge/PR; one interactive Phase 0 collects review counts, batch cap, and branch/permission confirmations, then say "orchestrate development of docs/superpowers-orchestrator/<date>-<slug>/specs/<slug>-design.md". [Details](docs/FORK-IMPROVEMENTS.md#5-orchestrating-development--autonomous-spec-to-merge-gate-pipeline-v6140)
 - **researching-prior-art (v7.2.0)** — prior-art research gate for technology decisions: when a design decision would add or change a dependency, depend on version-sensitive external API behavior, or select a hosted service, brainstorming asks how many read-only research subagents to dispatch; findings are verified, merged into one evidence report, cached under `docs/research/`, and recorded in the spec's "Prior art and alternatives" section. Details in [RELEASE-NOTES.md](RELEASE-NOTES.md).
 
-The remaining releases — `multi-doc-review` rename (v6.11.0), plan-scoped SDD workspace (v6.12.0), fresh-session plan handoff (v6.13.0), cap-only batch boundary (v6.15.0), statusline bridge installer (v6.15.1), the rename to superpowers-orchestrator (v7.0.0), the spec gate's fresh-session orchestration route (v7.0.1), slug-stamped commit messages (v7.1.0), the per-topic artifact layout (v7.3.0), M reviewers per lens (v7.4.0), blocking controller dispatch (v7.5.0), tested harness claims in reviews (v7.6.0), plan contracts instead of literal bodies (v7.7.0), in-run rulings (v7.8.0), prompt-pointer dispatch in the code review loop (v7.9.0), prompt-pointer dispatch of the orchestrator's own controllers (v7.10.0), a user's plan amendment backing its marker (v7.11.0), review gates that ask for M (v7.12.0), the `<superpowers-defaults>` session block (v7.13.0), the Execution readiness pass at the plan review gate (v7.14.0), the stop report's answer-slot resume prompt (v7.15.0), the spec-deviation line of the plan review (v7.16.0), the plan-ruling count of the in-run resume cap (v7.17.0), the fix cycle of the decisions addendum's re-review (v7.18.0), the orchestrator's compaction recovery paragraph (v7.19.0), the `handoff` skill (v7.20.0), the whole-file hand-over rule (v7.21.0), and the batch controller's filled worker templates (v7.22.0) — are covered in [RELEASE-NOTES.md](RELEASE-NOTES.md).
+The remaining releases — `multi-doc-review` rename (v6.11.0), plan-scoped SDD workspace (v6.12.0), fresh-session plan handoff (v6.13.0), cap-only batch boundary (v6.15.0), statusline bridge installer (v6.15.1), the rename to superpowers-orchestrator (v7.0.0), the spec gate's fresh-session orchestration route (v7.0.1), slug-stamped commit messages (v7.1.0), the per-topic artifact layout (v7.3.0), M reviewers per lens (v7.4.0), blocking controller dispatch (v7.5.0), tested harness claims in reviews (v7.6.0), plan contracts instead of literal bodies (v7.7.0), in-run rulings (v7.8.0), prompt-pointer dispatch in the code review loop (v7.9.0), prompt-pointer dispatch of the orchestrator's own controllers (v7.10.0), a user's plan amendment backing its marker (v7.11.0), review gates that ask for M (v7.12.0), the `<superpowers-defaults>` session block (v7.13.0), the Execution readiness pass at the plan review gate (v7.14.0), the stop report's answer-slot resume prompt (v7.15.0), the spec-deviation line of the plan review (v7.16.0), the plan-ruling count of the in-run resume cap (v7.17.0), the fix cycle of the decisions addendum's re-review (v7.18.0), the orchestrator's compaction recovery paragraph (v7.19.0), the `handoff` skill (v7.20.0), the whole-file hand-over rule (v7.21.0), the batch controller's filled worker templates (v7.22.0), and the `pickup` skill (v7.23.0) — are covered in [RELEASE-NOTES.md](RELEASE-NOTES.md).
 
 ## Inherited from the parent projects
 
@@ -65,7 +65,7 @@ See [Installation](#installation) for install, update, and uninstall commands on
 ---
 
 > [!IMPORTANT]
-> **Compatibility note:** this plugin ships a workflow router and 28 skills covering debugging, planning, code review, TDD, and execution.
+> **Compatibility note:** this plugin ships a workflow router and 30 skills covering debugging, planning, code review, TDD, and execution.
 >
 > Other plugins or custom skills/agents in your `.claude/skills/` and `.claude/agents/` folders can interfere when they cover the same domains: duplicate skills cause trigger conflicts and contradictory instructions, and every extra skill adds text to the model's context. If you see conflicting behavior, disable the overlapping plugins or skill files.
 
@@ -102,7 +102,7 @@ flowchart TD
     subgraph SA["UserPromptSubmit — skill-activator.js"]
         Q1{"Micro task?"} -->|yes| Z1["no routing — zero overhead<br/>(e.g. fix typo on line 42)"]
         Q1 -->|no| PG["context-pressure gate: plan-execution starts<br/>blocked at ≥60% of the real model window<br/>(statusline bridge cache when installed)"]
-        PG --> SCORE["score against 26 skill rules →<br/>inject skill suggestions + matching<br/>session-log / known-issues memory"]
+        PG --> SCORE["score against 27 skill rules →<br/>inject skill suggestions + matching<br/>session-log / known-issues memory"]
     end
 
     SA --> RT
@@ -217,7 +217,7 @@ Generate once with "map this project". After that, the session-start hook inject
 _Generated: 2026-03-20 14:32 | Git: a4b9c2d_
 
 ## Directory Structure
-skills/ — 28 skills, each in skills/<name>/SKILL.md
+skills/ — 30 skills, each in skills/<name>/SKILL.md
 hooks/ — 10 hooks (JS) + hooks.json registry + skill-rules.json
 
 ## Key Files
@@ -327,7 +327,7 @@ With this stack, sessions start with full context and zero re-discovery overhead
 ---
 
 
-## Skills Library (28 skills)
+## Skills Library (30 skills)
 
 ### Core Workflow
 - **using-superpowers** — Mandatory workflow router with 3-tier complexity classification (micro/lightweight/full) and instruction priority hierarchy
@@ -335,6 +335,7 @@ With this stack, sessions start with full context and zero re-discovery overhead
 - **context-management** — Four-file memory stack: `project-map.md` (structure + key files + critical constraints, git-hash staleness detection), `session-log.md` (decision history, manually written via `context-management` — [saved] entries only), `state.md` (ephemeral current-task snapshot), `known-issues.md` (error→solution map)
 
 - **handoff** — `/handoff [slug]`: writes a continuation prompt for a fresh session into `tmp/docs/<date>-handoff-<slug>.md` (what is already known, how to proceed, the conventions that cost time), saves state through `context-management`, and prints the prompt to copy; manual invocation only
+- **pickup** — `/pickup [handoff path]`: resumes work in a fresh session from the newest or a named handoff, after a scan lists the commits and uncommitted changes made since the handoff was written (FRESH, CHECK or UNKNOWN), or from an unfinished orchestration run on a local feature branch, which it offers only after asking, with the bare `Resume orchestration for <path>` line; manual invocation only
 - **premise-check** — Validates whether proposed work should exist before investing in it; triggers reassessment when new evidence changes the original motivation
 
 ### Design & Planning

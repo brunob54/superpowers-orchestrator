@@ -8,6 +8,119 @@
 > (`REPOZY/superpowers-optimized`) and are kept unchanged as history; any
 > testing they describe was not done here.
 
+## v7.23.0 — a `/pickup` skill resumes a handoff or an unfinished orchestrator run
+
+**Problem.** A fresh session had no command to continue work. Nothing
+checked whether a handoff (the continuation prompt `/handoff` writes) was
+stale, its task already done: the row-26 handoff was followed again after
+v7.21.0 shipped that task.
+
+**Change.** A manual `/pickup [handoff path]` skill runs a scan: commits and
+uncommitted changes since the handoff (status FRESH, CHECK or UNKNOWN), and
+orchestrator runs (autonomous pipeline runs) stopped on unmerged branches,
+resumed only after asking. `/handoff` writes a header with time, time zone,
+branch and HEAD.
+
+**Effect.** A stale handoff stops before work starts. Restart the CLI
+(command-line interface) after updating; nothing to migrate. Older handoffs,
+without a header, get a date-based check.
+
+Details:
+
+- **The case that started it.** Only one handoff file existed,
+  `tmp/docs/2026-09-14-handoff-row-26-read-cap.md`. Session `62deafa9`
+  followed it on 2026-09-14 and shipped row 26 as v7.21.0. Session
+  `410da8d6` followed the same file again on 2026-09-15, although VERSION
+  was 7.22.0 and row 26 had left the worklist. Both times the user named the
+  path, so only a check of the named file itself would have caught it.
+- **The skill** (`skills/pickup/SKILL.md`, 80 lines,
+  `disable-model-invocation: true`, `argument-hint: "[handoff path]"`).
+  Without an argument the candidates are the newest handoff plus every
+  unfinished run; with two or more it lists each with the exact line to type
+  (`/pickup <path>` with the handoff's status and commit counts, or
+  `Resume orchestration for <path>`) and stops, never ranking one against
+  the other. Handoff mode reads the handoff whole, tests its `Done when:`
+  line, then acts on the status: FRESH → follow it; CHECK → compare the
+  commits, the uncommitted changes and the branch with the task, and stop
+  when the task looks done or the model is unsure; UNKNOWN → ask. Run mode
+  shows the run (last log heading, age of the last commit), asks once,
+  and on yes sends exactly `Resume orchestration for <path>` with nothing
+  appended; the orchestrator's own Resume step asks for open answers. A
+  run whose slug has two logs, or with neither plan nor spec, is reported
+  as needing a human look. A path inside `docs/superpowers-orchestrator/`
+  is not treated as a handoff: the user is told to type the Resume line.
+  Text that is not a path (for example `with N_code=1 M=1`) is never sent to
+  the orchestrator; the user is told to type it after the Resume line.
+- **The scan** (`skills/pickup/scripts/pickup-scan.js`, Node.js 16 or later,
+  no dependencies, git called with argument arrays and no shell, exit
+  status 0 on every normal outcome). It prints `key: value` lines. Two
+  commit lists: `commits-self`, every commit on HEAD after the handoff's
+  head, merges included and whatever its date; `commits-other`, commits on
+  other local branches made after the handoff's written time (passed to
+  `--since` with its time-zone offset). `dirty` counts uncommitted changes,
+  leaving out `tmp/docs`, `state.md` and `session-log.md`, which `/handoff`
+  itself writes. FRESH needs both lists empty, a clean tree and the same
+  branch; CHECK is any of those; UNKNOWN is no git work tree, no commit, or
+  no head and no date. When the head is not in the repository, the window
+  starts at 00:00 of the handoff date (a bare `--since=<date>` means that
+  date at the current time of day: 0 against 17 commits measured). The
+  header is validated (a commit id of 7-40 hex characters, a real date and
+  time, an offset from -1200 to +1400). Runs: local `feature/*` branches
+  not merged into the LOCAL default branch (origin/HEAD's local branch,
+  else `main`, else `master`), with the log
+  `<date>-<slug>/<slug>-orchestration-log.md` read from the branch, not the
+  working tree; a single completed log is skipped; the resume path is the
+  plan, else the spec.
+- **The `/handoff` change** (`skills/handoff/SKILL.md`). The file's first
+  line is now
+  `Handoff: written=<YYYY-MM-DD>T<HH:MM><+hhmm> branch=<name|none> head=<short sha|none>`,
+  from `date +%FT%H:%M%z` and the git lines; an optional second line
+  `Done when: <one checkable condition>` covers a task that a commit may
+  not show. A failing inline `!` command cancels the whole skill with zero
+  turns (probed with `claude -p`), so `/handoff` used to abort outside git
+  and in a repository with no commit. The branch and HEAD lines now end in
+  `2>/dev/null || echo none`, and the branch line pipes through `grep .`
+  so a detached HEAD prints `none` instead of an empty value.
+- **No `hooks/skill-rules.json` entry.** The skill is manual only, and it
+  can start work that another session is already doing, so an automatic
+  hint has no use: a hint to a manual-only skill turns into "ask the user
+  to type /pickup" (probed). Its natural words are also owned already:
+  "pick up later" by context-management, "resume the plan" by
+  subagent-driven-development, "resume orchestration" by
+  orchestrating-development. The rule count stays 27.
+- **How it was designed.** Five independent lenses (design, evidence,
+  implementation, adversarial, premise) plus a rebuttal round, then the
+  user's decisions; fixture tests first; a red-team, a code review and a
+  behaviour walk-through, whose findings were fixed in round 1; one
+  verification round (a second red-team and behaviour pass), fixed in
+  round 2. The reports live under `tmp/docs/`, which is local and
+  untracked.
+- **Tests.** `tests/pickup/run-tests.sh` is new: fixture git repositories
+  under `mktemp -d` with the user's git configuration switched off, 198
+  assertions. It includes the four failure shapes of the first prototype
+  (no HEAD comparison, a bare `--since` date, `commits: 0` outside git,
+  origin/main as the merge base). All eleven fast suites are green: pickup
+  198, orchestrating-development 212, reviewer-templates 226,
+  measure-context 143, in-run-rulings 545, review-gates 134, writing-plans
+  15, smart-compress 87, fill-prompt 166, sdd-scripts 193, and the 11 codex
+  suites. Commits `028f38c`, `89d218c`, `36d3cc7`, `e14825f`, `19810b9`,
+  `903b0bf`, `87c8587`.
+- **Known limits.** Work that exists only on a fetched remote branch, or
+  only on a detached HEAD in another linked worktree, is not listed. The
+  `--source` label on a commit names the ref the walk came from, not the
+  branch where the commit was made. A handoff with no header, written later
+  on the same day, can sort behind an earlier one that has a header.
+  `Done when:` is judged by the model; the scan only prints it. Delivery
+  of the argument on Copilot CLI is untested, because Copilot is not
+  installed on the test machine. A `written=` time later than the reading
+  machine's clock (a wrong clock or a hand-edited header) still gives FRESH
+  when the new work exists only on another branch; work reachable from HEAD
+  is always listed.
+- **Reinstall.** Nothing to migrate. Restart the CLI after updating the
+  plugin: sessions read the installed copy under `~/.claude/plugins/cache/`.
+  Handoffs written before this release have no header line; `/pickup` gives
+  them the date-based check (commits since 00:00 of the file-name date).
+
 ## v7.22.0 — batch controllers read and fill the worker templates
 
 **Problem.** On the `execution-readiness-pass` run, one batch controller of
