@@ -767,6 +767,15 @@ for f in "$CODE_PROMPT" "$SDD_TASK_REVIEWER"; do
   assert_folded_not_contains "${f#"$ROOT"/skills/}: no longer says '$DIFF_ONCE_OLD'" "$f" "$DIFF_ONCE_OLD"
 done
 
+bold "20. The SDD per-task flow names both worker templates in the steps that dispatch them"
+# Row 28: the implementer step named no template while the reviewer step did,
+# so a batch controller composed the implementer prompt from scratch. Both
+# dispatch steps now name the template file the controller must fill.
+assert_folded_contains "subagent-driven-development SKILL.md: the implementer step names implementer-prompt.md" \
+  "$SDD_SKILL" 'dispatch the implementer (`./implementer-prompt.md`)'
+assert_folded_contains "subagent-driven-development SKILL.md: the reviewer step still names task-reviewer-prompt.md" \
+  "$SDD_SKILL" 'dispatch the single task reviewer (`./task-reviewer-prompt.md`)'
+
 echo
 bold "Results: $PASS passed, $FAIL failed"
 if [ "$FAIL" -gt 0 ]; then
