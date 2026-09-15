@@ -16,6 +16,8 @@ state.md
 known-issues.md
 
 *.txt
+# Fixture files read from disk by tests/measure-context (the suite counts their lines)
+!tests/measure-context/fixtures/*.txt
 docs/plugin-overview.txt
 plugin.universal.old.yaml
 
