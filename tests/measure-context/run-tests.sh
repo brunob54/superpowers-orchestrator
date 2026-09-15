@@ -79,6 +79,9 @@ assert_eq() { # desc actual expected
 assert_file_contains() { # desc file needle
   if grep -qF -- "$3" "$2"; then ok "$1"; else bad "$1 (missing: $3)"; fi
 }
+assert_file_has_line() { # desc file line (the whole line, byte-exact)
+  if grep -qxF -- "$3" "$2"; then ok "$1"; else bad "$1 (no such line: $3)"; fi
+}
 assert_file_not_contains() { # desc file needle
   if grep -qF -- "$3" "$2"; then bad "$1 (must not contain: $3)"; else ok "$1"; fi
 }
@@ -286,6 +289,10 @@ assert_file_contains "the skill-directory reads count" "$OUTF" 'skill-directory 
 run_text "$FIX_PAGED_TO_END"
 assert_file_contains "a Read-route line names the notice and the source of the total" "$OUTF" '/tmp/mc-fixture/big.md | first read: Read, cut by a PARTIAL notice | total lines: 6 (from a PARTIAL notice) | received: 1-6 (6 lines) | coverage: 100.0% | uncovered: none | last line reached: yes'
 assert_file_contains "the PARTIAL notices line counts the paged notice" "$OUTF" "$(partial_line 1 1 0 0 0)"
+# Row 28: a file a controller never opened cannot appear in this list, so a
+# maintainer checks that a named template was opened by reading the list.
+assert_file_contains "the count of files fully received in one call is one" "$OUTF" 'Files fully received in one call: 1'
+assert_file_has_line "each file received whole is listed on its own line under the count" "$OUTF" '    /tmp/mc-fixture/small.md'
 
 bold "14. The original fixture is unchanged by the new sections"
 run_json "$FIXTURE"

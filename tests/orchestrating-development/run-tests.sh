@@ -399,6 +399,24 @@ for t in plan-writer-prompt.md doc-review-loop-prompt.md; do
     "$ORCH_DIR/$t" "$BACKGROUND_RULE_SCOPE"
 done
 
+bold "5d. The batch controller reads each worker template whole and fills it, never composes a prompt"
+# Row 28: on a real run, batch controller 4 never opened the implementer
+# template. The template list was a verb-less fragment, and the SDD section
+# that names the templates ("Prompt Templates") was not in the list of
+# sections the controller is told to follow. The instruction now carries the
+# verb "Read" (so the hand-over paragraph covers the two templates), lists
+# the section, and says that every worker prompt IS the template filled.
+BATCH_BLOCK="$WORK/worker-template-block.txt"
+extract_prompt_block "$ORCH_DIR/batch-controller-prompt.md" "$BATCH_BLOCK"
+assert_folded_contains "batch-controller-prompt.md: the section list names \"Prompt Templates\"" \
+  "$BATCH_BLOCK" '"Hard Rules", "Prompt Templates"'
+assert_folded_contains "batch-controller-prompt.md: each worker template is read whole before its first dispatch" \
+  "$BATCH_BLOCK" 'Read each one whole before its first dispatch'
+assert_folded_contains "batch-controller-prompt.md: a worker prompt is never composed from scratch" \
+  "$BATCH_BLOCK" 'never into a prompt composed from scratch'
+assert_folded_not_contains "batch-controller-prompt.md: the verb-less template fragment is gone" \
+  "$BATCH_BLOCK" '[TASK_REVIEWER_PROMPT_PATH]. Scripts'
+
 bold "6. The Resume Answer section: heading without a parenthetical, the fixed sentence, the placeholder below it"
 for t in "${RESUME_TEMPLATES[@]}"; do
   f="$ORCH_DIR/$t"

@@ -1055,6 +1055,10 @@ function report(file, m) {
       `last line reached: ${orUnknown(f.lastLineReached, (r) => (r ? 'yes' : 'no'))}`);
   }
   console.log(`  Files fully received in one call: ${m.fullyReceivedFiles}`);
+  // List each of these paths. A file the controller never opened cannot
+  // appear here, so this list is how a maintainer checks that a named
+  // template (for example a worker prompt template) was opened.
+  for (const path of m.fullyReceivedPaths) console.log(`    ${path}`);
 
   if (m.thinkingBlocks > 0 && !m.thinkingTextStored) {
     console.log('');
