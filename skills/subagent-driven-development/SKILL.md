@@ -65,7 +65,7 @@ digraph sdd_process {
 2. Create task tracking for all tasks. Run the Pre-Flight Plan Review (below) before dispatching Task 1.
 3. For each task:
 - Record BASE: `git rev-parse HEAD` before dispatching.
-- Run `scripts/task-brief PLAN_FILE N` and dispatch the implementer with the brief path, a report-file path (`task-N-report.md` beside the brief), and an explicit model.
+- Run `scripts/task-brief PLAN_FILE N` and dispatch the implementer (`./implementer-prompt.md`) with the brief path, a report-file path (`task-N-report.md` beside the brief), and an explicit model.
 - Resolve implementer questions before coding.
 - Require the implementer's ≤15-line status return; the detail lives in its report file.
 - Run `scripts/review-package BASE HEAD` (never `HEAD~1` — it silently drops all but the last commit of a multi-commit task) and dispatch the single task reviewer (`./task-reviewer-prompt.md`) with the brief, report, and package paths.

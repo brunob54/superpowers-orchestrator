@@ -56,12 +56,19 @@ Agent tool (general-purpose):
     Batched Autonomous Mode, "Handling Implementer Status", "File
     Handoffs", "Handling Reviewer ⚠️ Items", "Constructing Reviewer
     Prompts", "Durable Progress", "Model Selection for Agent Tool Calls",
-    "Subagent Skill Leakage Prevention", "Hard Rules". Worker templates:
-    [IMPLEMENTER_PROMPT_PATH] and [TASK_REVIEWER_PROMPT_PATH]. Scripts
-    (run from [SDD_SCRIPTS_DIR]): `sdd-workspace PLAN_FILE` once at
-    start (idempotent for the same plan), `task-brief PLAN_FILE N` per
-    task, `review-package BASE HEAD` per review (BASE = the HEAD you
-    record before dispatching that task's implementer).
+    "Subagent Skill Leakage Prevention", "Hard Rules", "Prompt
+    Templates". Worker templates: [IMPLEMENTER_PROMPT_PATH] and
+    [TASK_REVIEWER_PROMPT_PATH] — Read each one whole before its first
+    dispatch. Every implementer prompt IS the implementer template with
+    ONLY its placeholders filled, and every task-reviewer prompt IS the
+    task-reviewer template with ONLY its placeholders filled; the five
+    items "File Handoffs" lists for a dispatch go into the template's
+    Context block and its brief-file and report-file placeholders, never
+    into a prompt composed from scratch. Scripts (run from
+    [SDD_SCRIPTS_DIR]): `sdd-workspace PLAN_FILE` once at start
+    (idempotent for the same plan), `task-brief PLAN_FILE N` per task,
+    `review-package BASE HEAD` per review (BASE = the HEAD you record
+    before dispatching that task's implementer).
 
     Open every file this prompt tells you to read with the Read tool, not
     with a shell command such as `cat`, even when your session tells you to
