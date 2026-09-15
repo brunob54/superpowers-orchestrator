@@ -791,6 +791,8 @@ bold "21. The Correctness plan cell tests a repository premise instead of trusti
 # 16 ran only two rounds and never reached the Feasibility lens.
 CORR_PLAN_CELL="$WORK/correctness-plan-cell.txt"
 extract_plan_cell "Correctness & completeness" "$CORR_PLAN_CELL"
+assert_folded_contains "Correctness plan cell: names a task that commits a path" \
+  "$CORR_PLAN_CELL" 'a task that commits a path'
 assert_folded_contains "Correctness plan cell: names the tracked-file test command" \
   "$CORR_PLAN_CELL" 'git ls-files --error-unmatch'
 assert_folded_contains "Correctness plan cell: names the ignored-file test command" \

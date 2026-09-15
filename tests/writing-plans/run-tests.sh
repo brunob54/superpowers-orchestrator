@@ -44,6 +44,8 @@ FRAG_PREMISE_TRACKED_CMD='git ls-files --error-unmatch'
 FRAG_PREMISE_IGNORED_CMD='git check-ignore -v'
 FRAG_PREMISE_NEVER='never assert the premise'
 FRAG_PREMISE_SCOPE='a file or command that an earlier task creates is a dependency between tasks, not a premise'
+FRAG_PREMISE_NO_COMMIT='leaves that file out of its commit step'
+FRAG_PREMISE_NO_SHIP='does not ship with the branch'
 
 PASS=0
 FAIL=0
@@ -188,6 +190,10 @@ assert_in_range "task rule forbids asserting a premise '$FRAG_PREMISE_NEVER'" \
   "$FRAG_PREMISE_NEVER" "$TASK_RULES_LINE" "$CONTRACTS_HEADING_LINE" fragment
 assert_in_range "task rule scopes a premise to the repository before the plan runs" \
   "$FRAG_PREMISE_SCOPE" "$TASK_RULES_LINE" "$CONTRACTS_HEADING_LINE" fragment
+assert_in_range "task rule keeps an ignored file out of the commit step" \
+  "$FRAG_PREMISE_NO_COMMIT" "$TASK_RULES_LINE" "$CONTRACTS_HEADING_LINE" fragment
+assert_in_range "task rule states that an ignored-file edit does not ship" \
+  "$FRAG_PREMISE_NO_SHIP" "$TASK_RULES_LINE" "$CONTRACTS_HEADING_LINE" fragment
 
 echo
 bold "Results: $PASS passed, $FAIL failed"
