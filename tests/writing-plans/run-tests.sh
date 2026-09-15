@@ -40,8 +40,10 @@ FRAG_CHECK5_SCOPE='plan-header content is out of scope'
 # Row 8 of the orchestration issues: a task must test a repository premise
 # (tracked or ignored, file exists, command exists) instead of asserting it.
 TASK_RULES_HEADING='## Task Rules'
-FRAG_PREMISE_CMD='git check-ignore -v'
+FRAG_PREMISE_TRACKED_CMD='git ls-files --error-unmatch'
+FRAG_PREMISE_IGNORED_CMD='git check-ignore -v'
 FRAG_PREMISE_NEVER='never assert the premise'
+FRAG_PREMISE_SCOPE='a file or command that an earlier task creates is a dependency between tasks, not a premise'
 
 PASS=0
 FAIL=0
@@ -178,10 +180,14 @@ assert_in_range "self-review scoping statement '$FRAG_CHECK5_SCOPE' (check 5)" \
   "$FRAG_CHECK5_SCOPE" "$SELF_REVIEW_5_LINE" "$SELF_REVIEW_5_END_LINE" fragment
 
 bold "5. Task Rules: test a repository premise (orchestration issue row 8)"
-assert_in_range "task rule names the premise test command '$FRAG_PREMISE_CMD'" \
-  "$FRAG_PREMISE_CMD" "$TASK_RULES_LINE" "$CONTRACTS_HEADING_LINE" exact
+for premise_cmd in "$FRAG_PREMISE_TRACKED_CMD" "$FRAG_PREMISE_IGNORED_CMD"; do
+  assert_in_range "task rule names the premise test command '$premise_cmd'" \
+    "$premise_cmd" "$TASK_RULES_LINE" "$CONTRACTS_HEADING_LINE" exact
+done
 assert_in_range "task rule forbids asserting a premise '$FRAG_PREMISE_NEVER'" \
   "$FRAG_PREMISE_NEVER" "$TASK_RULES_LINE" "$CONTRACTS_HEADING_LINE" fragment
+assert_in_range "task rule scopes a premise to the repository before the plan runs" \
+  "$FRAG_PREMISE_SCOPE" "$TASK_RULES_LINE" "$CONTRACTS_HEADING_LINE" fragment
 
 echo
 bold "Results: $PASS passed, $FAIL failed"
