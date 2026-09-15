@@ -119,6 +119,18 @@ assert_folded_not_contains() { # desc file needle (fixed string, matched across 
   if fold_file "$2" | grep -qF -- "$3"; then bad "$1 (must not contain: $3)"; else ok "$1"; fi
 }
 
+# Write the `- plan:` cell of the lens named $1 in multi-doc-review's Lens
+# Instructions to file $2 (empty when the lens or its plan cell is absent).
+extract_plan_cell() { # lens-name out-file
+  awk -v heading="**$1**" '
+    $0 == heading { inlens = 1; next }
+    inlens && /^\*\*/ { exit }
+    inlens && /^- plan:/ { incell = 1; print; next }
+    incell && /^- / { incell = 0 }
+    incell { print }
+  ' "$DOC_SKILL" > "$2"
+}
+
 # Line number of the first line containing the fixed string $2 in file $1;
 # empty when absent.
 first_line_of() { grep -nF -- "$2" "$1" | head -n 1 | cut -d: -f1; }
@@ -217,13 +229,7 @@ assert_file_contains "doc-review template: report marker instruction" "$DOC_PROM
 
 bold "7. Ambiguity & testability plan-cell contract targets"
 AMB_PLAN_CELL="$WORK/ambiguity-plan-cell.txt"
-awk '
-  $0 == "**Ambiguity & testability**" { inlens = 1; next }
-  inlens && /^\*\*/ { exit }
-  inlens && /^- plan:/ { incell = 1; print; next }
-  incell && /^- / { incell = 0 }
-  incell { print }
-' "$DOC_SKILL" > "$AMB_PLAN_CELL"
+extract_plan_cell "Ambiguity & testability" "$AMB_PLAN_CELL"
 if [ -s "$AMB_PLAN_CELL" ]; then
   ok "multi-doc-review SKILL.md: Ambiguity plan-cell extract is non-empty"
 else
@@ -775,6 +781,17 @@ assert_folded_contains "subagent-driven-development SKILL.md: the implementer st
   "$SDD_SKILL" 'dispatch the implementer (`./implementer-prompt.md`)'
 assert_folded_contains "subagent-driven-development SKILL.md: the reviewer step still names task-reviewer-prompt.md" \
   "$SDD_SKILL" 'dispatch the single task reviewer (`./task-reviewer-prompt.md`)'
+
+bold "21. The Feasibility plan cell tests a repository premise instead of trusting it"
+# Row 8: three plan rulings in twelve runs came from a task that relied on
+# CLAUDE.md being tracked by git, while `.gitignore` ignores it. Plan
+# reviewers read that task and did not run the one command that tests it.
+FEAS_PLAN_CELL="$WORK/feasibility-plan-cell.txt"
+extract_plan_cell "Feasibility & architecture risk" "$FEAS_PLAN_CELL"
+assert_folded_contains "Feasibility plan cell: finds a premise the plan asserts but does not test" \
+  "$FEAS_PLAN_CELL" 'asserts but does not test'
+assert_folded_contains "Feasibility plan cell: names the git ignore test command" \
+  "$FEAS_PLAN_CELL" 'git check-ignore -v'
 
 echo
 bold "Results: $PASS passed, $FAIL failed"
