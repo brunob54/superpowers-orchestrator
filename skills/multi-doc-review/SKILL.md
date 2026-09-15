@@ -748,7 +748,10 @@ Copy the cell for the doc type verbatim into `[LENS_INSTRUCTIONS]`.
   failure paths the design will hit but does not specify.
 - plan: Find: spec-coverage gaps — spec requirements with no implementing
   task (read the spec listed under Target); contradictions between tasks;
-  failure paths the tasks will hit but never handle.
+  failure paths the tasks will hit but never handle, including a task that
+  commits a path or relies on git tracking or ignoring it — run
+  `git ls-files --error-unmatch <path>` or `git check-ignore -v <path>`,
+  and report the task only when the output contradicts the plan.
 - general: Find: internal incorrectness, contradictions, and missing
   sections the document's stated purpose implies.
 

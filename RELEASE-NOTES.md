@@ -8,6 +8,71 @@
 > (`REPOZY/superpowers-optimized`) and are kept unchanged as history; any
 > testing they describe was not done here.
 
+## v7.24.0 — plans test a repository premise instead of asserting it
+
+**Problem.** In three of twelve orchestrated runs, a plan task relied on the
+git-ignored `CLAUDE.md` being tracked. Execution stopped or the change did
+not ship, and the two later runs each spent one of their three in-run
+resumes on a plan ruling. Plan reviewers read that step and did not test it.
+
+**Change.** `writing-plans` tells the plan writer to test each repository
+premise with one command (`git ls-files --error-unmatch`, `git check-ignore
+-v`, `ls`, `command -v`). The round-1 plan-review lens runs the git commands
+and reports a contradiction.
+
+**Effect.** The false premise is caught when the plan is written or
+reviewed, not during execution. Update the plugin; nothing to migrate.
+
+Details:
+
+- **The cases** (orchestration issue row 8). `git check-ignore -v CLAUDE.md`
+  prints `.gitignore:7` in this repository. 2026-08-30,
+  `reviewer-harness-claims`: Task 6 ran `git add CLAUDE.md` and the batch
+  stopped `BLOCKED`. 2026-09-05, `prompt-pointer-dispatch`: Task 4 ran the
+  same command, ruling 1 spent in-run resume 1 of 3. 2026-09-08,
+  `review-gate-m-question`: Task 5 had to convey a line in `CLAUDE.md`; the
+  plan review applied two findings on that step without testing whether the
+  file is tracked, and the code review then found that the line never ships
+  (`[CF4]`, resume 1 of 3).
+- **The rule** (`skills/writing-plans/SKILL.md`, Task Rules). A premise is a
+  fact about the repository before the plan runs; a file or command an
+  earlier task creates is a dependency between tasks, not a premise. The
+  writer tests whether git tracks a path (`git ls-files --error-unmatch`),
+  whether git ignores it (`git check-ignore -v` prints a rule only for an
+  ignored path), whether a file exists and whether a command exists, and
+  writes the task from the output and exit status. A task that must edit an
+  ignored file leaves it out of its commit step and states that the edit
+  does not ship with the branch. The git facts were probed on four file
+  states in a scratch repository: `git add` exits 1 only for the ignored,
+  untracked file.
+- **The reviewer clause** (`skills/multi-doc-review/SKILL.md`, the
+  `Correctness & completeness` plan cell). A task that commits a path or
+  relies on git tracking or ignoring it: the reviewer runs the command and
+  reports the task only when the output contradicts the plan. It sits in the
+  round-1 lens, not the `Feasibility & architecture risk` lens, because 7 of
+  the 16 committed plan review logs ran N=2 and never reached round 3, while
+  all 16 ran round 1. The `Execution readiness` pass was rejected as the
+  place: its clause-removal table removes check (5) together with the text
+  up to `Coverage, ambiguity, feasibility`, so a check (6) there would be
+  removed with it. The file is 1078 lines, under its 1080-line budget.
+- **How the item was chosen.** Three lenses (impact, feasibility, skeptic)
+  and a rebuttal round; round 2 changed all three votes. Row 8 had two votes,
+  rows 4 and 11 merged had one.
+- **Review.** Three independent reviewers (evidence fit, adversarial,
+  consistency) and one verification round. Round 1 found that
+  `git check-ignore` cannot show a tracked path (two reviewers), that the
+  rule had no scope, and that the Feasibility lens missed two of the three
+  cases. The verification round found that the commit step would still run
+  `git add` on the ignored file.
+- **Tests.** `tests/writing-plans` gains 6 assertions (21 in total), scoped
+  to the Task Rules section; `tests/reviewer-templates` gains 4 (230 in
+  total), scoped to the extracted Correctness plan cell through a new
+  `extract_plan_cell` helper that the Ambiguity check now shares.
+- **Known limits.** A task that a later review fix or an `amend plan` ruling
+  adds after round 1 is not re-checked by a reviewer; no logged run has this
+  shape. A git worktree holds no copy of an ignored file, so an edit made
+  there is lost with the worktree; the rule does not cover this case.
+
 ## v7.23.0 — a `/pickup` skill resumes a handoff or an unfinished orchestrator run
 
 **Problem.** A fresh session had no command to continue work. Nothing

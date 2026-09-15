@@ -37,6 +37,15 @@ FRAG_RESIDUE='Everything else is reference'
 FRAG_NOTE_NOT_CONFLICT='is never a plan conflict: record it against the plan-writing skill'
 FRAG_NOTE_SCOPE_GUARD="covers the note's own text alone"
 FRAG_CHECK5_SCOPE='plan-header content is out of scope'
+# Row 8 of the orchestration issues: a task must test a repository premise
+# (tracked or ignored, file exists, command exists) instead of asserting it.
+TASK_RULES_HEADING='## Task Rules'
+FRAG_PREMISE_TRACKED_CMD='git ls-files --error-unmatch'
+FRAG_PREMISE_IGNORED_CMD='git check-ignore -v'
+FRAG_PREMISE_NEVER='never assert the premise'
+FRAG_PREMISE_SCOPE='a file or command that an earlier task creates is a dependency between tasks, not a premise'
+FRAG_PREMISE_NO_COMMIT='leaves that file out of its commit step'
+FRAG_PREMISE_NO_SHIP='does not ship with the branch'
 
 PASS=0
 FAIL=0
@@ -129,6 +138,7 @@ RULE5_LINE="$(line_starting_with_after '5. **A self-pin never justifies the mark
 RULE6_LINE="$(line_starting_with_after '6. **Boundaries.**' "$RULE5_LINE")"
 SELF_REVIEW_5_LINE="$(line_starting_with_after '**5. Contract audit:**' "$CONTRACTS_HEADING_LINE")"
 SELF_REVIEW_5_END_LINE="$(line_starting_with_after 'If you find issues, fix them inline.' "$SELF_REVIEW_5_LINE")"
+TASK_RULES_LINE="$(first_line_of "$TASK_RULES_HEADING")"
 
 bold "1. Contracts and Literal Bodies section (R1)"
 if [ -n "$CONTRACTS_HEADING_LINE" ]; then
@@ -170,6 +180,20 @@ assert_in_range "self-review fragment '$FRAG_FALSIFIABLE' (check 5)" \
   "$FRAG_FALSIFIABLE" "$SELF_REVIEW_5_LINE" "$SELF_REVIEW_5_END_LINE" fragment
 assert_in_range "self-review scoping statement '$FRAG_CHECK5_SCOPE' (check 5)" \
   "$FRAG_CHECK5_SCOPE" "$SELF_REVIEW_5_LINE" "$SELF_REVIEW_5_END_LINE" fragment
+
+bold "5. Task Rules: test a repository premise (orchestration issue row 8)"
+for premise_cmd in "$FRAG_PREMISE_TRACKED_CMD" "$FRAG_PREMISE_IGNORED_CMD"; do
+  assert_in_range "task rule names the premise test command '$premise_cmd'" \
+    "$premise_cmd" "$TASK_RULES_LINE" "$CONTRACTS_HEADING_LINE" exact
+done
+assert_in_range "task rule forbids asserting a premise '$FRAG_PREMISE_NEVER'" \
+  "$FRAG_PREMISE_NEVER" "$TASK_RULES_LINE" "$CONTRACTS_HEADING_LINE" fragment
+assert_in_range "task rule scopes a premise to the repository before the plan runs" \
+  "$FRAG_PREMISE_SCOPE" "$TASK_RULES_LINE" "$CONTRACTS_HEADING_LINE" fragment
+assert_in_range "task rule keeps an ignored file out of the commit step" \
+  "$FRAG_PREMISE_NO_COMMIT" "$TASK_RULES_LINE" "$CONTRACTS_HEADING_LINE" fragment
+assert_in_range "task rule states that an ignored-file edit does not ship" \
+  "$FRAG_PREMISE_NO_SHIP" "$TASK_RULES_LINE" "$CONTRACTS_HEADING_LINE" fragment
 
 echo
 bold "Results: $PASS passed, $FAIL failed"

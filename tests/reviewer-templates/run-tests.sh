@@ -119,6 +119,18 @@ assert_folded_not_contains() { # desc file needle (fixed string, matched across 
   if fold_file "$2" | grep -qF -- "$3"; then bad "$1 (must not contain: $3)"; else ok "$1"; fi
 }
 
+# Write the `- plan:` cell of the lens named $1 in multi-doc-review's Lens
+# Instructions to file $2 (empty when the lens or its plan cell is absent).
+extract_plan_cell() { # lens-name out-file
+  awk -v heading="**$1**" '
+    $0 == heading { inlens = 1; next }
+    inlens && /^\*\*/ { exit }
+    inlens && /^- plan:/ { incell = 1; print; next }
+    incell && /^- / { incell = 0 }
+    incell { print }
+  ' "$DOC_SKILL" > "$2"
+}
+
 # Line number of the first line containing the fixed string $2 in file $1;
 # empty when absent.
 first_line_of() { grep -nF -- "$2" "$1" | head -n 1 | cut -d: -f1; }
@@ -217,13 +229,7 @@ assert_file_contains "doc-review template: report marker instruction" "$DOC_PROM
 
 bold "7. Ambiguity & testability plan-cell contract targets"
 AMB_PLAN_CELL="$WORK/ambiguity-plan-cell.txt"
-awk '
-  $0 == "**Ambiguity & testability**" { inlens = 1; next }
-  inlens && /^\*\*/ { exit }
-  inlens && /^- plan:/ { incell = 1; print; next }
-  incell && /^- / { incell = 0 }
-  incell { print }
-' "$DOC_SKILL" > "$AMB_PLAN_CELL"
+extract_plan_cell "Ambiguity & testability" "$AMB_PLAN_CELL"
 if [ -s "$AMB_PLAN_CELL" ]; then
   ok "multi-doc-review SKILL.md: Ambiguity plan-cell extract is non-empty"
 else
@@ -699,7 +705,9 @@ bold "16. multi-doc-review SKILL.md stays inside its size budget"
 # whole. Measured: 788 lines before 7.14.0, the Execution readiness feature
 # added 291 (1079 lines); the spec-deviation line of 7.16.0 added 17 and
 # recovered 22 by reflowing Procedure step 3 at 88 columns, so the file
-# stands at 1075 under the 1080 maximum. Figure set by release 7.14.0; it supersedes the
+# stood at 1075 under the 1080 maximum; the repository-premise clause of the
+# Correctness plan cell (orchestration issue row 8) added 3, so it stands at
+# 1078. Figure set by release 7.14.0; it supersedes the
 # 938 the design document names, because the plan review added five
 # corrections whose prose the smaller figure could not hold. A further
 # addition must first recover lines by reflowing, per the plan's Global
@@ -775,6 +783,22 @@ assert_folded_contains "subagent-driven-development SKILL.md: the implementer st
   "$SDD_SKILL" 'dispatch the implementer (`./implementer-prompt.md`)'
 assert_folded_contains "subagent-driven-development SKILL.md: the reviewer step still names task-reviewer-prompt.md" \
   "$SDD_SKILL" 'dispatch the single task reviewer (`./task-reviewer-prompt.md`)'
+
+bold "21. The Correctness plan cell tests a repository premise instead of trusting it"
+# Row 8: three plan rulings in twelve runs came from a task that relied on
+# CLAUDE.md being tracked by git, while `.gitignore` ignores it. The check sits
+# in the round-1 lens because every logged plan review ran round 1, while 7 of
+# 16 ran only two rounds and never reached the Feasibility lens.
+CORR_PLAN_CELL="$WORK/correctness-plan-cell.txt"
+extract_plan_cell "Correctness & completeness" "$CORR_PLAN_CELL"
+assert_folded_contains "Correctness plan cell: names a task that commits a path" \
+  "$CORR_PLAN_CELL" 'a task that commits a path'
+assert_folded_contains "Correctness plan cell: names the tracked-file test command" \
+  "$CORR_PLAN_CELL" 'git ls-files --error-unmatch'
+assert_folded_contains "Correctness plan cell: names the ignored-file test command" \
+  "$CORR_PLAN_CELL" 'git check-ignore -v'
+assert_folded_contains "Correctness plan cell: reports a premise only on a contradicting output" \
+  "$CORR_PLAN_CELL" 'report the task only when the output contradicts the plan'
 
 echo
 bold "Results: $PASS passed, $FAIL failed"
