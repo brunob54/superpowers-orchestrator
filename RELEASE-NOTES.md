@@ -105,7 +105,7 @@ Details:
   the four controller templates and the scope sentence in the batch and
   code-review-loop templates only; the suite now runs 208 assertions.
 - **The measuring tool (row 27).** `tools/measure-context.js` gains what
-  the acceptance measure needs (commits <TOOL_SHAS>). A "File coverage"
+  the acceptance measure needs (commits a9d1064, 2aa8ae3, 4b26b67, 7b06cb6). A "File coverage"
   section prints one line per file whose first read was cut: the route of
   the first read, the total line count, the line ranges received, the
   coverage percentage, the uncovered ranges and the last line reached. A
@@ -116,7 +116,7 @@ Details:
   model actually saw. A "Skill body" line gives the tokens the Skill calls
   injected, plus the count of reads under `/skills/`.
   `tests/measure-context/run-tests.sh` covers the new output
-  (<TOOL_ASSERTIONS> assertions).
+  (141 assertions).
 - **Acceptance.** The fast suites accept the wording. Delivery is accepted
   by the coverage counter on the next real orchestrated run: the row
   reopens on a PARTIAL notice with no paged follow-up, or on a controller
