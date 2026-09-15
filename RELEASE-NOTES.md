@@ -8,6 +8,123 @@
 > (`REPOZY/superpowers-optimized`) and are kept unchanged as history; any
 > testing they describe was not done here.
 
+## v7.21.0 — subagents read every hand-over file whole, with the Read tool
+
+**Problem.** The Read tool returns about 25,000 tokens per call and prints a
+PARTIAL notice; a Bash `cat` above 30,000 characters returns a 2 KB preview.
+No subagent prompt named the tool or a paging rule. On the two measured
+runs all 21 controllers opened their skill body with `cat`, and 10 of them
+received only part of it.
+
+**Change.** Seven prompt files share one paragraph: open every file the
+prompt tells you to read with the Read tool, never `cat`, and page on the
+PARTIAL notice until it stops. The measuring tool reports per-file line
+coverage.
+
+**Effect.** Delivery is now measurable on the next real run. Reinstall the
+plugin; nothing to migrate.
+
+Details:
+
+- **The finding, corrected.** Worklist row 26 said that on the
+  `execution-readiness-pass` run 7 of 14 partial plan reads showed no
+  follow-up. That was a miscount. Re-measured on the same two runs
+  (`marker-position-tolerance` and `execution-readiness-pass`): 22 partial
+  Read views, 21 by reviewers and 1 by a code-review controller, and all 22
+  paged to the end of the file, 11 by a further Read with `offset` and 11
+  by Bash `sed -n`. One reviewer skipped diff lines 547 to 864 on purpose.
+  No wrong output was traced to a partial read.
+- **The controller route.** All 21 controllers of the two runs opened their
+  skill body with Bash `cat`, as bypass mode tells them to. Nineteen of
+  those outputs exceeded the 30,000-character Bash cap and came back as a
+  2 KB preview (37 to 46 lines) with the rest saved to a file; the two
+  others were under the cap. Eleven controllers then received the whole
+  body, by one Read of the saved file or by a sweep of adjacent `sed`
+  ranges. Ten received 67.6 to 96.2 percent: each took a heading outline
+  with `grep -n '^#'` and read the sections it judged relevant. Four of
+  the ten code-review controllers never received `## Error Handling`. No
+  error occurred in any of those sessions, so the harm is untested, not
+  absent. Status of the row at closure: risk without observed harm.
+- **Why the sentence names the tool.** The same eleven controllers of the
+  `execution-readiness-pass` run received two hand-over sentences. The
+  pointer sentence for the dispatch file, "Read that file once, with the
+  Read tool", was obeyed 11 of 11 times: one Read call, no `cat`. The bare
+  "Read [SKILL_PATH]" for the skill body was obeyed 0 of 11 times: every
+  controller used `cat`. Same agents, same bypass-mode instruction, two
+  outcomes. An explicit tool name wins over the harness preference for
+  shell commands; a bare verb does not. Five independent lenses and a
+  rebuttal round converged on this measure (issues-log Case 017 Follow-up
+  of 2026-09-15).
+- **The measure.** Seven prompt files gain, directly after their hand-over
+  sentence and inside the `prompt: |` block the fill script copies, one
+  identical paragraph: open every file this prompt tells you to read with
+  the Read tool, not with a shell command such as `cat`, even when the
+  session prefers shell commands; Bash output is cut at 30,000 characters
+  and a file that size comes back as a 2 KB preview; one Read call returns
+  about 25,000 tokens at most and then prints a PARTIAL notice naming the
+  next `offset` and a `limit`; Read again with those values, halving the
+  limit when a call is refused for size, until a result carries no PARTIAL
+  notice; each section the prompt names is read whole; a file the prompt
+  only passes on by path, or takes one block from, is not read whole (find
+  the block with `grep -n` and Read it with offset and limit); on a
+  platform without the Read tool, use the tool that pages by offset; never
+  act from a first page or a preview alone. The hand-over sentences
+  themselves now say "with the Read tool" and, where the whole file is
+  meant, "whole": the four controller templates of
+  `orchestrating-development` (`plan-writer-prompt.md`,
+  `doc-review-loop-prompt.md`, `batch-controller-prompt.md`,
+  `code-review-loop-prompt.md`), the two diff reviewer templates
+  (`multi-code-review/reviewer-prompt.md`,
+  `subagent-driven-development/task-reviewer-prompt.md`), where "Read the
+  diff file once" becomes "Read the diff file whole, with the Read tool",
+  and the document reviewer template (`multi-doc-review/reviewer-prompt.md`),
+  whose `Document:` line now says "(read it whole, with the Read tool)".
+  The batch controller's section list is unchanged: it is told to read the
+  named sections whole, not the whole skill. The wording shipped in four
+  commits: `a2c8c48`, `d7650c9`, `bb0fba6` and `b4bfb8a`; the last two came
+  from a review round, which widened the paragraph from "every file this
+  prompt names" to "every file this prompt tells you to read", added the
+  exit on a size refusal, and exempted files the prompt only passes on by
+  path.
+- **The scope sentence.** `batch-controller-prompt.md` and
+  `code-review-loop-prompt.md` carry a rule that caps background command
+  output. One sentence after it now says that the rule governs the output
+  files of background commands only, and that the files the prompt tells
+  the controller to read are read whole.
+- **Script comments.** The header comments of
+  `subagent-driven-development/scripts/task-brief` and
+  `scripts/review-package` said the implementer or reviewer "reads in one
+  call"; both now say "reads whole".
+- **Tests.** `tests/reviewer-templates/run-tests.sh` pins the paragraph in
+  the three reviewer templates through four needles ("with the Read tool,
+  not with a shell command", "until a result carries no PARTIAL notice",
+  "halving the limit when a call is refused for size", "A file you only
+  pass on by path") and asserts that "Read the diff file once" is gone
+  from the two diff templates; the suite now runs 224 assertions.
+  `tests/orchestrating-development/run-tests.sh` pins the same needles in
+  the four controller templates and the scope sentence in the batch and
+  code-review-loop templates only; the suite now runs 208 assertions.
+- **The measuring tool (row 27).** `tools/measure-context.js` gains what
+  the acceptance measure needs (commits <TOOL_SHAS>). A "File coverage"
+  section prints one line per file whose first read was cut: the route of
+  the first read, the total line count, the line ranges received, the
+  coverage percentage, the uncovered ranges and the last line reached. A
+  "PARTIAL notices" summary line gives the count of notices and how many
+  were paged to the end, paged short, not paged, or raised on a persisted
+  output file. A "Model-visible shares" table stands beside the unchanged
+  shares table, so every share can also be read as a share of what the
+  model actually saw. A "Skill body" line gives the tokens the Skill calls
+  injected, plus the count of reads under `/skills/`.
+  `tests/measure-context/run-tests.sh` covers the new output
+  (<TOOL_ASSERTIONS> assertions).
+- **Acceptance.** The fast suites accept the wording. Delivery is accepted
+  by the coverage counter on the next real orchestrated run: the row
+  reopens on a PARTIAL notice with no paged follow-up, or on a controller
+  whose coverage of the sections its prompt names is below 100 percent.
+- **Reinstall.** Nothing to migrate. Reinstall the plugin before any
+  behavioural run: sessions read the installed copy under
+  `~/.claude/plugins/cache/`, not this repository.
+
 ## v7.20.0 — a `/handoff` skill writes the prompt for a fresh session
 
 **Problem.** Clearing the context window mid-work meant writing the
