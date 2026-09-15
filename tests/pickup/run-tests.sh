@@ -9,6 +9,8 @@
 # it compared against the default branch but not HEAD, used a bare
 # --since=<date> (that date at the current time of day), printed
 # "commits: 0" outside git, and used origin/main as the merge base.
+# Cases marked "review 1" come from the first review round
+# (tmp/docs/2026-09-15-pickup-deliberation/review-fixes.md).
 
 set -u
 
@@ -30,8 +32,8 @@ bad() { red "  FAIL: $1"; ERRORS+=("$1"); FAIL=$((FAIL+1)); }
 assert_eq() { # desc actual expected
   if [ "$2" = "$3" ]; then ok "$1"; else bad "$1 (expected '$3', got '$2')"; fi
 }
-# The scan output is held in $OUT; each line is matched whole with grep -x so
-# "commits: 1" never matches "commits: 13".
+# The scan output is held in $OUT; assert_line matches a whole line with
+# grep -x, so "commits: 31" never matches "commits: 310".
 out_dump() { printf '%s' "$OUT" | tr '\n' '|'; }
 assert_line() { # desc exact-line
   if printf '%s\n' "$OUT" | grep -qxF -- "$2"; then ok "$1"; else bad "$1 (no line '$2' in: $(out_dump))"; fi
@@ -42,13 +44,14 @@ assert_has() { # desc needle
 assert_lacks() { # desc needle
   if printf '%s\n' "$OUT" | grep -qF -- "$2"; then bad "$1 (must not contain '$2': $(out_dump))"; else ok "$1"; fi
 }
+assert_exit0() { assert_eq "exit status is 0" "$CODE" "0"; }
 assert_file_contains() { # desc file needle
   if grep -qF -- "$3" "$2" 2>/dev/null; then ok "$1"; else bad "$1 (missing: $3)"; fi
 }
 
 # Isolation: the user's global and system git configuration must not change a
-# result (for example init.defaultBranch or a commit template). Commit
-# identities come from the environment, so no fixture needs a config write.
+# result (for example init.defaultBranch or color.ui). Commit identities come
+# from the environment, so no fixture needs a config write.
 export GIT_CONFIG_GLOBAL=/dev/null
 export GIT_CONFIG_NOSYSTEM=1
 export GIT_AUTHOR_NAME=t GIT_AUTHOR_EMAIL=t@t GIT_COMMITTER_NAME=t GIT_COMMITTER_EMAIL=t@t
@@ -61,13 +64,19 @@ trap 'rm -rf "$TMP"' EXIT
 # Git must never find a repository above a fixture directory.
 export GIT_CEILING_DIRECTORIES="$TMP"
 
-# Local dates, computed by node so the suite does not depend on BSD or GNU date.
-local_date() { # days-ago
-  node -e 'const d=new Date(Date.now()-864e5*Number(process.argv[1]));const p=(n)=>String(n).padStart(2,"0");console.log(`${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}`)' "$1"
-}
-TODAY=$(local_date 0)
-YESTERDAY=$(local_date 1)
+# Fixture times are fixed past dates, so no case depends on the time of day or
+# on a daylight-saving change. Only "tomorrow" is relative: it is computed from
+# the calendar date that `date +%F` prints, never by subtracting hours.
+BEFORE="2026-01-09T12:00:00"   # commits made before the handoff
+WRITTEN_DATE="2026-01-10"
+WRITTEN="${WRITTEN_DATE}T10:00"  # the handoff's written= value
+AFTER="2026-01-10T11:00:00"    # commits made after the handoff
+# after_minute <n>: a distinct time after the handoff, so commit order is certain.
+after_minute() { printf '2026-01-10T11:%02d:00' "$1"; }
+TODAY=$(date +%F)
+TOMORROW=$(node -e 'const [y,m,d]=process.argv[1].split("-").map(Number);const t=new Date(y,m-1,d+1);const p=(n)=>String(n).padStart(2,"0");console.log(`${t.getFullYear()}-${p(t.getMonth()+1)}-${p(t.getDate())}`)' "$TODAY")
 LOG_ROOT="docs/superpowers-orchestrator"
+ESC=$(printf '\033')
 
 # new_repo <name> <branch>: an empty repository whose unborn branch is <branch>.
 new_repo() {
@@ -79,12 +88,20 @@ new_repo() {
 }
 # commit <dir> <subject> [date]: one commit that appends a line to file.txt.
 commit() {
-  local date="${3:-${YESTERDAY}T12:00:00}"
+  local date="${3:-$BEFORE}"
   printf '%s\n' "$2" >> "$1/file.txt"
   git -C "$1" add file.txt
   GIT_AUTHOR_DATE="$date" GIT_COMMITTER_DATE="$date" git -C "$1" commit -q -m "$2"
 }
-short_head() { git -C "$1" rev-parse --short=7 HEAD; }
+# base_repo <name> [branch]: a repository with one "base" commit; sets D and H
+# (the base commit's short id).
+base_repo() {
+  D=$(new_repo "$1" "${2:-main}")
+  commit "$D" "base"
+  H=$(git -C "$D" rev-parse --short=7 HEAD)
+}
+# header <branch> <head> [written]: the first line /handoff writes.
+header() { printf 'Handoff: written=%s branch=%s head=%s' "${3:-$WRITTEN}" "$1" "$2"; }
 # handoff <dir> <file-name> <first-line> [second-line]
 handoff() {
   mkdir -p "$1/tmp/docs"
@@ -96,80 +113,135 @@ scan() {
   OUT=$(cd "$dir" && node "$SCRIPT" "$@" 2>&1)
   CODE=$?
 }
+HANDOFF_FILE="$WRITTEN_DATE-handoff-t.md"
 
 bold "1. Not a git work tree (prototype printed commits: 0 and exited 0)"
 D=$TMP/nogit
 mkdir -p "$D"
-handoff "$D" "$TODAY-handoff-a.md" "Handoff: written=${TODAY}T09:00 branch=main head=abcdef1"
+handoff "$D" "$HANDOFF_FILE" "$(header main abcdef1)"
 scan "$D"
-assert_eq "exit status is 0" "$CODE" "0"
+assert_exit0
 assert_line "git state is none" "git: none"
-assert_line "the handoff is still found" "handoff: tmp/docs/$TODAY-handoff-a.md"
+assert_line "the handoff is still found" "handoff: tmp/docs/$HANDOFF_FILE"
 assert_line "staleness is UNKNOWN" "status: UNKNOWN"
 assert_lacks "no commit count is printed" "commits:"
 
+bold "1b. A bare repository is not a work tree (review 1)"
+D=$TMP/bare.git
+git init -q --bare "$D" 2>/dev/null
+scan "$D"
+assert_exit0
+assert_line "git state is none" "git: none"
+
 bold "2. Repository with no commit"
 D=$(new_repo nocommit main)
-handoff "$D" "$TODAY-handoff-a.md" "Handoff: written=${TODAY}T09:00 branch=none head=none"
+handoff "$D" "$HANDOFF_FILE" "$(header none none)"
 scan "$D"
-assert_eq "exit status is 0" "$CODE" "0"
+assert_exit0
 assert_line "git state is no-commits" "git: no-commits"
 assert_line "staleness is UNKNOWN" "status: UNKNOWN"
 assert_lacks "no commit count is printed" "commits:"
 
 bold "3. Same-day handoffs are ordered by the header time"
-D=$(new_repo order main)
-commit "$D" "base"
-H=$(short_head "$D")
-handoff "$D" "$YESTERDAY-handoff-x.md" "Handoff: written=${YESTERDAY}T09:00 branch=main head=$H"
-handoff "$D" "$YESTERDAY-handoff-x-2.md" "Handoff: written=${YESTERDAY}T15:00 branch=main head=$H"
+base_repo order
+handoff "$D" "$WRITTEN_DATE-handoff-x.md" "$(header main "$H" "${WRITTEN_DATE}T09:00")"
+handoff "$D" "$WRITTEN_DATE-handoff-x-2.md" "$(header main "$H" "${WRITTEN_DATE}T15:00")"
 # x-2 gets the older modification time, so only the header can pick it.
-touch -t 202001010000 "$D/tmp/docs/$YESTERDAY-handoff-x-2.md"
+touch -t 202001010000 "$D/tmp/docs/$WRITTEN_DATE-handoff-x-2.md"
 scan "$D"
-assert_eq "exit status is 0" "$CODE" "0"
-assert_line "x-2 (header 15:00) is chosen over x (header 09:00)" "handoff: tmp/docs/$YESTERDAY-handoff-x-2.md"
-assert_line "the header time is printed" "written: ${YESTERDAY}T15:00"
+assert_exit0
+assert_line "x-2 (header 15:00) is chosen over x (header 09:00)" "handoff: tmp/docs/$WRITTEN_DATE-handoff-x-2.md"
+assert_line "the header time is printed" "written: ${WRITTEN_DATE}T15:00"
+
+bold "3b. Without a header: file-name date, then modification time (review 1)"
+base_repo nohead
+for f in 2026-01-05-handoff-p.md 2026-01-06-handoff-q.md 2026-01-06-handoff-r.md; do handoff "$D" "$f" "No header here."; done
+touch -t 202001010000 "$D/tmp/docs/2026-01-06-handoff-r.md"
+touch -t 202001020000 "$D/tmp/docs/2026-01-05-handoff-p.md"
+scan "$D"
+assert_line "the newer file-name date wins, and then the newer modification time" "handoff: tmp/docs/2026-01-06-handoff-q.md"
+assert_line "a file without a header says so" "header: none"
+
+bold "3c. An invalid written= value is ignored for sorting and for --since (review 1)"
+base_repo badwritten
+handoff "$D" "2026-01-01-handoff-old.md" "$(header main deadbee 2026-9-1T08:00)"
+handoff "$D" "$HANDOFF_FILE" "$(header main "$H")"
+scan "$D"
+assert_line "the valid newer handoff wins" "handoff: tmp/docs/$HANDOFF_FILE"
+scan "$D" tmp/docs/2026-01-01-handoff-old.md
+assert_line "the fallback uses the file-name date" "since: 2026-01-01 00:00"
 
 bold "4. A future-dated handoff is skipped"
-D=$(new_repo future main)
-commit "$D" "base"
-H=$(short_head "$D")
-handoff "$D" "2999-01-01-handoff-later.md" "Handoff: written=2999-01-01T09:00 branch=main head=$H"
-handoff "$D" "$TODAY-handoff-now.md" "Handoff: written=${TODAY}T00:00 branch=main head=$H"
+base_repo future
+handoff "$D" "$TOMORROW-handoff-later.md" "$(header main "$H" "${TOMORROW}T09:00")"
+handoff "$D" "$HANDOFF_FILE" "$(header main "$H")"
 scan "$D"
-assert_line "today's handoff is chosen" "handoff: tmp/docs/$TODAY-handoff-now.md"
-assert_lacks "the future file is never named" "2999-01-01"
+assert_line "the past handoff is chosen" "handoff: tmp/docs/$HANDOFF_FILE"
+assert_lacks "the future file is never named" "$TOMORROW"
 
-bold "5. No handoff, and a named handoff that is missing"
-D=$(new_repo nohandoff main)
-commit "$D" "base"
+bold "5. No handoff, a named handoff that is missing, and a path argument"
+base_repo nohandoff
 scan "$D"
-assert_eq "exit status is 0" "$CODE" "0"
+assert_exit0
 assert_line "handoff is none" "handoff: none"
 assert_line "runs are none" "runs: none"
 assert_lacks "no staleness without a handoff" "status:"
 scan "$D" tmp/docs/2026-01-01-handoff-gone.md
 assert_eq "exit status is 0 for a missing path" "$CODE" "0"
 assert_line "the missing path is named" "handoff: missing tmp/docs/2026-01-01-handoff-gone.md"
+assert_lacks "a path argument prints no runs line (review 1)" "runs:"
 
-bold "6. FRESH: no commit after the handoff head"
-D=$(new_repo fresh main)
-commit "$D" "base"
-H=$(short_head "$D")
-handoff "$D" "$TODAY-handoff-f.md" "Handoff: written=${TODAY}T10:00 branch=main head=$H"
+bold "5b. Unreadable entries never stop the scan (review 1)"
+base_repo unreadable
+handoff "$D" "$HANDOFF_FILE" "$(header main "$H")"
+mkdir -p "$D/tmp/docs/2026-01-12-handoff-dir.md"
+ln -s "$TMP/nonexistent" "$D/tmp/docs/2026-01-11-handoff-link.md" 2>/dev/null
+handoff "$D" "2026-01-01-handoff-locked.md" "$(header main "$H")"
+chmod 000 "$D/tmp/docs/2026-01-01-handoff-locked.md"
+scan "$D"
+assert_exit0
+assert_line "the readable handoff is chosen" "handoff: tmp/docs/$HANDOFF_FILE"
+assert_line "the run scan still runs" "runs: none"
+scan "$D" tmp/docs
+assert_exit0
+assert_line "a directory argument is unreadable" "handoff: unreadable tmp/docs"
+chmod 644 "$D/tmp/docs/2026-01-01-handoff-locked.md"
+
+bold "6. FRESH: no commit after the handoff head, clean tree, same branch"
+base_repo fresh
+handoff "$D" "$HANDOFF_FILE" "$(header main "$H")"
 scan "$D"
 assert_line "the head is found" "head: $H"
+assert_line "the current branch is printed" "current-branch: main"
+assert_line "the handoff file itself is not counted as dirty" "dirty: 0"
+assert_lacks "the branch does not differ" "branch-differs:"
 assert_line "zero commits are listed" "commits: 0"
 assert_line "status is FRESH" "status: FRESH"
+mkdir -p "$D/sub"
+scan "$D/sub"
+assert_line "from a subdirectory the handoff is still found (review 1)" "handoff: ../tmp/docs/$HANDOFF_FILE"
+
+bold "6b. Uncommitted work and a different branch make CHECK (review 1)"
+base_repo dirty
+handoff "$D" "$HANDOFF_FILE" "$(header main "$H")"
+printf 'work\n' > "$D/work.txt"
+scan "$D"
+assert_line "one dirty file is counted" "dirty: 1"
+assert_line "zero commits are listed" "commits: 0"
+assert_line "status is CHECK" "status: CHECK"
+base_repo otherbranchname
+git -C "$D" branch feature/x
+handoff "$D" "$HANDOFF_FILE" "$(header feature/x "$H")"
+scan "$D"
+assert_line "the branch difference is printed" "branch-differs: yes"
+assert_line "status is CHECK" "status: CHECK"
 
 bold "7. CHECK: a commit on an unmerged other branch while HEAD is on the default branch"
-D=$(new_repo otherbranch main)
-commit "$D" "base"
-H=$(short_head "$D")
+base_repo otherbranch
 git -C "$D" checkout -q -b feature/other
-commit "$D" "work on the other branch"
+commit "$D" "work on the other branch" "$AFTER"
 git -C "$D" checkout -q main
-handoff "$D" "$TODAY-handoff-o.md" "Handoff: written=${TODAY}T10:00 branch=main head=$H" "Done when: row 26 is closed"
+handoff "$D" "$HANDOFF_FILE" "$(header main "$H")" "Done when: row 26 is closed"
 scan "$D"
 assert_line "the Done when line is printed" "done-when: row 26 is closed"
 assert_line "one commit is listed" "commits: 1"
@@ -178,67 +250,115 @@ assert_has "the commit names its branch" "feature/other"
 assert_line "status is CHECK" "status: CHECK"
 
 bold "7b. CHECK: a commit on a detached HEAD (prototype compared the default branch only)"
-D=$(new_repo detached main)
-commit "$D" "base"
-H=$(short_head "$D")
+base_repo detached
 git -C "$D" checkout -q --detach
-commit "$D" "work on a detached head"
-handoff "$D" "$TODAY-handoff-d.md" "Handoff: written=${TODAY}T10:00 branch=main head=$H"
+commit "$D" "work on a detached head" "$AFTER"
+handoff "$D" "$HANDOFF_FILE" "$(header none "$H")"
 scan "$D"
+assert_line "the current branch is detached" "current-branch: detached"
 assert_line "one commit is listed" "commits: 1"
 assert_has "the detached commit is listed" "work on a detached head"
 assert_line "status is CHECK" "status: CHECK"
 
+bold "7c. Only commits after the handoff time are listed (review 1)"
+base_repo window
+git -C "$D" checkout -q -b feature/run
+commit "$D" "run work before the handoff" "2026-01-09T15:00:00"
+git -C "$D" checkout -q -b feature/later main
+commit "$D" "work after the handoff" "$AFTER"
+git -C "$D" checkout -q main
+handoff "$D" "$HANDOFF_FILE" "$(header main "$H")"
+scan "$D"
+assert_line "the window starts at the written time" "since: $WRITTEN_DATE 10:00"
+assert_lacks "an unmerged commit made before the handoff is not listed" "run work before the handoff"
+assert_has "a commit made after the handoff is listed" "work after the handoff"
+assert_line "one commit is listed" "commits: 1"
+
 bold "8. Head not found: the date fallback starts at 00:00 (prototype used a bare date)"
 D=$(new_repo midnight main)
-commit "$D" "yesterday work"
-commit "$D" "early today work" "${TODAY}T00:00:01"
-handoff "$D" "$TODAY-handoff-m.md" "Handoff: written=${TODAY}T23:00 branch=main head=deadbee"
+commit "$D" "previous day work"
+commit "$D" "early same-day work" "${WRITTEN_DATE}T00:00:01"
+handoff "$D" "$HANDOFF_FILE" "$(header main deadbee "${WRITTEN_DATE}T23:00")"
 scan "$D"
-assert_eq "exit status is 0" "$CODE" "0"
+assert_exit0
 assert_line "the head is reported not found" "head: not-found"
-assert_line "the fallback names midnight" "since: $TODAY 00:00"
+assert_line "the fallback names midnight" "since: $WRITTEN_DATE 00:00"
 assert_line "the earlier same-day commit is counted" "commits: 1"
-assert_has "the same-day commit is listed" "early today work"
-assert_lacks "yesterday's commit is not listed" "yesterday work"
+assert_has "the same-day commit is listed" "early same-day work"
+assert_lacks "the previous day's commit is not listed" "previous day work"
 assert_line "status is CHECK" "status: CHECK"
-handoff "$D" "$TODAY-handoff-n.md" "Handoff: written=${TODAY}T23:00 branch=none head=none"
-scan "$D" "tmp/docs/$TODAY-handoff-n.md"
+handoff "$D" "$WRITTEN_DATE-handoff-n.md" "$(header none none "${WRITTEN_DATE}T23:00")"
+scan "$D" "tmp/docs/$WRITTEN_DATE-handoff-n.md"
 assert_line "head=none is reported not found" "head: not-found"
 assert_line "head=none also counts the same-day commit" "commits: 1"
+for bad_head in HEAD main; do
+  handoff "$D" "$WRITTEN_DATE-handoff-$bad_head.md" "$(header main "$bad_head" "${WRITTEN_DATE}T23:00")"
+  scan "$D" "tmp/docs/$WRITTEN_DATE-handoff-$bad_head.md"
+  assert_line "head=$bad_head is not a commit id, so it is not found (review 1)" "head: not-found"
+done
+mkdir -p "$D/tmp"
+printf 'Notes without a header.\n' > "$D/tmp/notes.md"
+scan "$D" tmp/notes.md
+assert_line "no head and no date: since is none (review 1)" "since: none"
+assert_line "no head and no date: status is UNKNOWN (review 1)" "status: UNKNOWN"
 
-bold "9. More than 30 commits: first-parent display, status still CHECK"
-D=$(new_repo many main)
-commit "$D" "base"
-H=$(short_head "$D")
+bold "9. More than 30 commits: the first 30 and the first-parent list, both capped (review 1)"
+base_repo many
 git -C "$D" checkout -q -b side
-for i in $(seq 1 31); do commit "$D" "side commit $i"; done
+for i in $(seq 1 31); do commit "$D" "side commit $i" "$(after_minute "$i")"; done
 git -C "$D" checkout -q main
-git -C "$D" merge -q --no-ff -m "merge the side branch" side
-handoff "$D" "$TODAY-handoff-many.md" "Handoff: written=${TODAY}T10:00 branch=main head=$H"
+GIT_COMMITTER_DATE="$(after_minute 40)" git -C "$D" merge -q --no-ff -m "merge the side branch" side
+handoff "$D" "$HANDOFF_FILE" "$(header main "$H")"
 scan "$D"
-assert_has "the count is printed" "commits: 31"
-assert_has "the first-parent display is announced" "first-parent"
+assert_line "the count is printed" "commits: 31"
+assert_line "the first 30 are announced" "commits-listed: 30"
+assert_has "the oldest side commit is listed" "side commit 1"
+assert_lacks "the 31st side commit is not listed" "side commit 31"
+assert_line "the first-parent list is counted" "first-parent: 1"
 assert_has "the merge commit is listed" "merge the side branch"
-assert_lacks "the side commits are not listed" "side commit 17"
 assert_line "status is CHECK" "status: CHECK"
+base_repo manyunmerged
+git -C "$D" checkout -q -b work
+for i in $(seq 1 32); do commit "$D" "work commit $i" "$(after_minute "$i")"; done
+git -C "$D" checkout -q main
+handoff "$D" "$HANDOFF_FILE" "$(header main "$H")"
+scan "$D"
+assert_line "work on an unmerged branch is counted" "commits: 32"
+assert_has "its commits are listed although HEAD does not reach them" "work commit 30"
+assert_line "the first-parent list of HEAD is empty" "first-parent: 0"
+base_repo manyfirstparent
+for i in $(seq 1 31); do commit "$D" "main commit $i" "$(after_minute "$i")"; done
+handoff "$D" "$HANDOFF_FILE" "$(header main "$H")"
+scan "$D"
+assert_line "the first-parent list is counted" "first-parent: 31"
+assert_lacks "the first-parent list is capped at 30, oldest first" "main commit 31"
+
+bold "9b. color.ui=always puts no escape codes into the output (review 1)"
+base_repo color
+git -C "$D" config color.ui always
+commit "$D" "colored work" "$AFTER"
+handoff "$D" "$HANDOFF_FILE" "$(header main "$H")"
+scan "$D"
+assert_has "the commit is listed" "colored work"
+assert_lacks "no escape code is printed" "$ESC"
 
 bold "10. Runs on unmerged feature branches (default branch master)"
 D=$(new_repo runs master)
 commit "$D" "base"
-git -C "$D" init -q --bare "$TMP/runs-origin.git" 2>/dev/null
+git init -q --bare "$TMP/runs-origin.git" 2>/dev/null
 git -C "$D" remote add origin "$TMP/runs-origin.git"
 git -C "$D" push -q origin master 2>/dev/null
 git -C "$D" symbolic-ref refs/remotes/origin/HEAD refs/remotes/origin/master
 # add_file <dir> <path> <text>: writes and stages one file.
 add_file() { mkdir -p "$(dirname "$1/$2")"; printf '%b' "$3" > "$1/$2"; git -C "$1" add "$2"; }
-LOG_HEAD="# Orchestration Log — %s\n\n_Invocation 1 — 2026-09-01 — branch feature/%s_\n\n## Phase 1 — Plan — DONE — 2026-09-01\n"
+# run_log <slug>: the start of an orchestration log.
+run_log() { printf '# Orchestration Log — %s\n\n## Phase 1 — Plan — DONE — 2026-09-01\n' "$1"; }
 # alpha: a stopped run with a plan; also carries an older unfinished beta log.
 git -C "$D" checkout -q -b feature/alpha master
-add_file "$D" "$LOG_ROOT/2026-09-01-alpha/alpha-orchestration-log.md" "$(printf "$LOG_HEAD" alpha alpha)\n## STOPPED — 2026-09-02 — phase 2 — blocked\nOpen: [I1] escalated (scope) — x\n"
+add_file "$D" "$LOG_ROOT/2026-09-01-alpha/alpha-orchestration-log.md" "$(run_log alpha)\n## STOPPED — 2026-09-02 — phase 2 — blocked\nOpen: [I1] escalated (scope) — x\n"
 add_file "$D" "$LOG_ROOT/2026-09-01-alpha/plans/alpha.md" "# plan\n"
 add_file "$D" "$LOG_ROOT/2026-09-01-alpha/specs/alpha-design.md" "# spec\n"
-add_file "$D" "$LOG_ROOT/2026-08-01-beta/beta-orchestration-log.md" "$(printf "$LOG_HEAD" beta beta)"
+add_file "$D" "$LOG_ROOT/2026-08-01-beta/beta-orchestration-log.md" "$(run_log beta)"
 commit "$D" "alpha run"
 # epsilon: stopped in Phase 1, no plan yet.
 git -C "$D" checkout -q -b feature/epsilon master
@@ -247,55 +367,93 @@ add_file "$D" "$LOG_ROOT/2026-09-04-epsilon/specs/epsilon-design.md" "# spec\n"
 commit "$D" "epsilon run"
 # gamma: a completed run.
 git -C "$D" checkout -q -b feature/gamma master
-add_file "$D" "$LOG_ROOT/2026-09-03-gamma/gamma-orchestration-log.md" "$(printf "$LOG_HEAD" gamma gamma)\n_Completed — 2026-09-03 — HEAD abc1234_\n"
+add_file "$D" "$LOG_ROOT/2026-09-03-gamma/gamma-orchestration-log.md" "$(run_log gamma)\n_Completed — 2026-09-03 — HEAD abc1234_\n"
 commit "$D" "gamma run"
+# zeta: two unfinished logs for one slug (review 1).
+git -C "$D" checkout -q -b feature/zeta master
+add_file "$D" "$LOG_ROOT/2026-09-06-zeta/zeta-orchestration-log.md" "$(run_log zeta)"
+add_file "$D" "$LOG_ROOT/2026-09-07-zeta/zeta-orchestration-log.md" "$(run_log zeta)"
+add_file "$D" "$LOG_ROOT/2026-09-07-zeta/plans/zeta.md" "# plan\n"
+commit "$D" "zeta runs"
 # delta: unfinished log, merged into local master but not pushed.
 git -C "$D" checkout -q -b feature/delta master
-add_file "$D" "$LOG_ROOT/2026-09-05-delta/delta-orchestration-log.md" "$(printf "$LOG_HEAD" delta delta)"
+add_file "$D" "$LOG_ROOT/2026-09-05-delta/delta-orchestration-log.md" "$(run_log delta)"
 commit "$D" "delta run"
 git -C "$D" checkout -q master
 git -C "$D" merge -q --no-ff -m "merge delta" feature/delta
 # A completed alpha log in the working tree must not hide the branch's log.
 mkdir -p "$D/$LOG_ROOT/2026-09-01-alpha"
 printf '_Completed — 2026-09-09 — HEAD abc1234_\n' > "$D/$LOG_ROOT/2026-09-01-alpha/alpha-orchestration-log.md"
+assert_runs() { # the run assertions, shared by the root and the subdirectory scans
+  assert_exit0
+  assert_line "the default branch is master" "default-branch: master"
+  assert_line "three runs are found" "runs: 3"
+  assert_line "the stopped alpha run is found" "run: feature/alpha"
+  assert_line "the alpha log path is printed" "  log: $LOG_ROOT/2026-09-01-alpha/alpha-orchestration-log.md"
+  assert_line "the last heading is printed" "  last: ## STOPPED — 2026-09-02 — phase 2 — blocked"
+  assert_has "the age of the last commit is printed" "  last-commit: "
+  assert_line "alpha resumes from its plan" "  resume: $LOG_ROOT/2026-09-01-alpha/plans/alpha.md"
+  assert_line "epsilon resumes from its spec" "  resume: $LOG_ROOT/2026-09-04-epsilon/specs/epsilon-design.md"
+  assert_lacks "an older log under another slug is not offered" "beta-orchestration-log"
+  assert_lacks "a completed run is not offered" "feature/gamma"
+  assert_lacks "a branch merged locally (origin behind) is not offered" "feature/delta"
+}
 scan "$D"
-assert_eq "exit status is 0" "$CODE" "0"
-assert_line "the default branch is master" "default-branch: master"
-assert_line "two runs are found" "runs: 2"
-assert_line "the stopped alpha run is found" "run: feature/alpha"
-assert_line "the alpha log path is printed" "  log: $LOG_ROOT/2026-09-01-alpha/alpha-orchestration-log.md"
-assert_line "the last heading is printed" "  last: ## STOPPED — 2026-09-02 — phase 2 — blocked"
-assert_has "the age of the last commit is printed" "  last-commit: "
-assert_line "alpha resumes from its plan" "  resume: $LOG_ROOT/2026-09-01-alpha/plans/alpha.md"
-assert_line "epsilon resumes from its spec" "  resume: $LOG_ROOT/2026-09-04-epsilon/specs/epsilon-design.md"
-assert_lacks "an older log under another slug is not offered" "beta-orchestration-log"
-assert_lacks "a completed run is not offered" "feature/gamma"
-assert_lacks "a branch merged locally (origin behind) is not offered" "feature/delta"
+assert_runs
+assert_line "an ambiguous slug is one run block (review 1)" "run: feature/zeta"
+assert_line "it names its first log" "  log: $LOG_ROOT/2026-09-06-zeta/zeta-orchestration-log.md"
+assert_line "it names its second log" "  log: $LOG_ROOT/2026-09-07-zeta/zeta-orchestration-log.md"
+assert_line "it is marked ambiguous" "  ambiguous: yes"
+assert_eq "it has no resume path" "$(printf '%s\n' "$OUT" | sed -n '/^run: feature\/zeta$/,/^run: /p' | grep -c '^  resume: none$')" "1"
+bold "10b. Runs from a subdirectory (review 1)"
+scan "$D/$LOG_ROOT"
+assert_runs
+
+bold "10c. Default branch: origin/HEAD first, then unknown (review 1)"
+base_repo trunkrepo main
+git -C "$D" branch trunk
+git -C "$D" symbolic-ref refs/remotes/origin/HEAD refs/remotes/origin/trunk
+scan "$D"
+assert_line "origin/HEAD's local branch is chosen before main" "default-branch: trunk"
+base_repo devrepo dev
+scan "$D"
+assert_line "no origin/HEAD, main or master: unknown" "default-branch: unknown (no merge filter: every feature branch is scanned)"
 
 bold "11. skills/pickup/SKILL.md wording"
 assert_file_contains "name is pickup" "$PICKUP_SKILL" "name: pickup"
 assert_file_contains "manual only" "$PICKUP_SKILL" "disable-model-invocation: true"
 assert_file_contains "argument hint is quoted" "$PICKUP_SKILL" 'argument-hint: "[handoff path]"'
 assert_file_contains "the script is named" "$PICKUP_SKILL" "scripts/pickup-scan.js"
+assert_file_contains "the argument is quoted in the command (review 1)" "$PICKUP_SKILL" 'pickup-scan.js" "<argument>"'
 assert_file_contains "the bare trigger sentence" "$PICKUP_SKILL" 'with exactly `Resume orchestration for <path>` and nothing appended'
 assert_file_contains "run mode asks once" "$PICKUP_SKILL" "ask once"
+assert_file_contains "a failed script stops the skill (review 1)" "$PICKUP_SKILL" 'no `git:` line'
+assert_file_contains "a Resume line inside a handoff uses run mode (review 1)" "$PICKUP_SKILL" "inside the handoff"
+assert_file_contains "unresumable runs need a human look (review 1)" "$PICKUP_SKILL" "needs a human look"
 assert_file_contains "says why there is no skill-rules entry" "$PICKUP_SKILL" "hooks/skill-rules.json"
+for key in git default-branch handoff 'header: none' written branch done-when current-branch dirty branch-differs head since commits 'commits: not-listed' status runs run ambiguous resume 'handoff: unreadable'; do
+  case "$key" in *:*) needle="\`$key" ;; *) needle="\`$key:\`" ;; esac
+  assert_file_contains "the key list names $key (review 1)" "$PICKUP_SKILL" "$needle"
+done
 LINES=$(grep -c '' "$PICKUP_SKILL" 2>/dev/null || echo 0)
 if [ "$LINES" -ge 60 ] && [ "$LINES" -le 80 ]; then ok "SKILL.md has 60-80 lines ($LINES)"; else bad "SKILL.md has 60-80 lines (got $LINES)"; fi
+WIDE=$(awk 'length > 88 && FNR > 5 { print FNR }' "$PICKUP_SKILL" | tr '\n' ' ')
+assert_eq "SKILL.md body lines are at most 88 columns" "$WIDE" ""
 
 bold "12. skills/handoff/SKILL.md header and guards"
-assert_file_contains "the header format" "$HANDOFF_SKILL" 'Handoff: written=<YYYY-MM-DD>T<HH:MM> branch=<name|none> head=<sha7|none>'
+assert_file_contains "the header format" "$HANDOFF_SKILL" 'Handoff: written=<YYYY-MM-DD>T<HH:MM> branch=<name|none> head=<short sha|none>'
 assert_file_contains "the optional Done when line" "$HANDOFF_SKILL" 'Done when: <one checkable condition>'
 assert_file_contains "the date line carries the time" "$HANDOFF_SKILL" '!`date +%FT%H:%M`'
-# Every inline git command must not abort the skill outside git: a command
-# whose own exit status reaches the shell ends with "|| echo none"; a pipeline
-# ends in another command, whose exit status is the pipeline's, so it only
-# needs 2>/dev/null.
+assert_file_contains "a detached HEAD prints none (review 1)" "$HANDOFF_SKILL" '!`git branch --show-current 2>/dev/null | grep . || echo none`'
+# Every inline git command must not abort the skill outside git: it ends with
+# "|| echo none". The one exception is the uncommitted-file count, a pipeline
+# whose exit status is that of its last command, tr, which does not fail.
+WC_PIPELINE='!`git status --short 2>/dev/null | wc -l | tr -d '"' '"'`'
 GIT_CMDS=$(grep -oE '!`git [^`]*`' "$HANDOFF_SKILL")
 if [ -z "$GIT_CMDS" ]; then
   bad "the handoff skill has inline git commands"
 else
-  unguarded=$(printf '%s\n' "$GIT_CMDS" | grep -vF '2>/dev/null || echo none`' | grep -vF '2>/dev/null |')
+  unguarded=$(printf '%s\n' "$GIT_CMDS" | grep -vF '|| echo none`' | grep -vxF "$WC_PIPELINE")
   assert_eq "every inline git command is guarded" "$unguarded" ""
 fi
 
