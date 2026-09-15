@@ -8,6 +8,109 @@
 > (`REPOZY/superpowers-optimized`) and are kept unchanged as history; any
 > testing they describe was not done here.
 
+## v7.22.0 — batch controllers read and fill the worker templates
+
+**Problem.** On the `execution-readiness-pass` run, one batch controller of
+six wrote its implementer prompt from scratch and never opened
+`implementer-prompt.md`. Its implementer got none of the template's
+escalation rules, self-review checklist or report sections. The batch
+template named the two worker templates without a verb, and the
+implementer step of the subagent-driven-development (SDD) skill named no
+template.
+
+**Change.** The batch template now says: Read each worker template whole
+before its first dispatch; every worker prompt IS the template with only
+its placeholders filled. The SDD implementer step names its template. The
+measuring tool lists every file received whole.
+
+**Effect.** A skipped template is now visible as a missing line in the
+report. Reinstall the plugin; nothing to migrate.
+
+Details:
+
+- **The finding.** Worklist row 28 of the issues log. On the
+  `execution-readiness-pass` run (plugin 7.13.0), batch controller 4 of 6
+  composed its implementer prompt from scratch. Its transcript holds no
+  read of `implementer-prompt.md`; it opened only
+  `task-reviewer-prompt.md`, the one template its skill step named. The
+  sonnet implementer of task 10 therefore received none of the template's
+  escalation rules (permission to stop, the STOP triggers, the meaning of
+  each status word), none of its self-review checklist, not the rule to
+  re-test after findings, and not the report sections that carry the
+  test-driven-development evidence. Task 10 still passed its review
+  clean, so no defect is traced to the free-form prompt. The other five
+  batch controllers of the two measured runs opened both templates with
+  `cat`; four of the five did so on the verb-less fragment alone. Status
+  of the row: risk without observed harm.
+- **The three causes.** A five-lens deliberation with a rebuttal round
+  converged on them without dissent. First, `batch-controller-prompt.md`
+  named the two worker templates in a fragment with no verb ("Worker
+  templates: X and Y."), so the v7.21.0 hand-over paragraph, which covers
+  every file the prompt tells the controller to read, did not cover them.
+  Second, the per-task flow of `subagent-driven-development/SKILL.md`
+  named `./task-reviewer-prompt.md` in its reviewer step but no template
+  in its implementer step; batch 4 opened exactly the template its step
+  named. Third, the SDD section "## Prompt Templates", the only text that
+  says "Use: ./implementer-prompt.md", was absent from the list of
+  sections the batch template tells its controller to follow while
+  "skipping all others".
+- **The batch controller template** (commit `e4c8d09`). The fragment
+  became: "Worker templates: [IMPLEMENTER_PROMPT_PATH] and
+  [TASK_REVIEWER_PROMPT_PATH] — Read each one whole before its first
+  dispatch. Every implementer prompt IS the implementer template with
+  ONLY its placeholders filled, and every task-reviewer prompt IS the
+  task-reviewer template with ONLY its placeholders filled; the five
+  items "File Handoffs" lists for a dispatch go into the template's
+  Context block and its brief-file and report-file placeholders, never
+  into a prompt composed from scratch." The section list gained "Prompt
+  Templates" after "Hard Rules". The verb "Read" places both templates
+  under the v7.21.0 hand-over paragraph: Read tool, page on the PARTIAL
+  notice.
+- **The SDD skill** (same commit). Line 68, the implementer step, now
+  reads "dispatch the implementer (`./implementer-prompt.md`) with the
+  brief path, a report-file path (`task-N-report.md` beside the brief),
+  and an explicit model", the same shape line 71 already used for the
+  reviewer template.
+- **The measuring tool** (same commit). `tools/measure-context.js` prints,
+  under the existing line "Files fully received in one call: N", one
+  indented line per file received whole. A file the controller never
+  opened cannot appear there, so a `grep` of the report for a template
+  path answers whether that controller opened it.
+- **Tests** (commit `fd508c2`). `tests/orchestrating-development/run-tests.sh`
+  gains section 5d with 4 assertions: "Prompt Templates" is in the section
+  list, the instruction carries "Read each one whole before its first
+  dispatch", and both "IS the ... template with ONLY its placeholders
+  filled" sentences are present. `tests/reviewer-templates/run-tests.sh`
+  gains section 20 with 2 assertions: the SDD implementer step and reviewer
+  step each name their template. `tests/measure-context/run-tests.sh` gains
+  2 assertions and an `assert_file_has_line` helper for the printed list.
+  All ten fast suites are green: orchestrating-development 212,
+  reviewer-templates 226, measure-context 143, in-run-rulings 545,
+  review-gates 134, writing-plans 15, smart-compress 87, fill-prompt 166,
+  sdd-scripts 193, and the 11 codex suites.
+- **Rejected.** The row's own proposal, a "checked step" plus an
+  expected-file table with controller-kind classification inside
+  `measure-context.js`: no observer exists at run time, and the table
+  would bind the tool to the naming of dispatch files. Filling the worker
+  templates through `scripts/fill-prompt.js` as `multi-code-review` does:
+  `implementer-prompt.md` carries informal tokens (`Task N`,
+  `[task name]`, `[directory]`) the script does not fill, and the
+  pointer's "read nothing else there" sentence collides with the brief's
+  directory. An `--expect <path>` option on the tool: the same signal as
+  the printed list for 25 more lines. Closing the row: its reopen
+  condition, a defect traced to a free-form prompt, cannot be observed in
+  any log.
+- **Side finding.** SDD ships no template for a fix subagent, so every
+  fix prompt is free-form (10 on the measured run). Recorded as a new
+  worklist row; not part of this release.
+- **Acceptance.** The fast suites accept the wording. Delivery is
+  accepted on the next orchestrated run: every batch controller's
+  measure-context report lists both worker templates under the files
+  received whole. The row reopens on a report where one is missing.
+- **Reinstall.** Nothing to migrate. Reinstall the plugin before any
+  behavioural run: sessions read the installed copy under
+  `~/.claude/plugins/cache/`, not this repository.
+
 ## v7.21.0 — subagents read every hand-over file whole, with the Read tool
 
 **Problem.** The Read tool returns about 25,000 tokens per call and prints a
