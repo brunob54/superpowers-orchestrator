@@ -49,6 +49,12 @@
 //      A PARTIAL count alone cannot see the cat route, which is why the
 //      acceptance measure is the line coverage over both routes.
 //
+//      Line numbering. The Read tool counts the empty line after a file's
+//      final newline as a line of its own, so its total is one more than sed
+//      or wc count. Totals are taken from the file on disk when it still
+//      exists; otherwise the Read total is used minus that empty line, unless
+//      a page showed text on the last line (a file without a final newline).
+//
 // Usage:
 //   node tools/measure-context.js <transcript.jsonl> [--json]
 //
@@ -72,6 +78,8 @@ const FILL_COMMAND = 'fill-prompt.js';
 // Tool names that dispatch a subagent. `Task` is the older name for `Agent`.
 const AGENT_TOOLS = new Set(['Agent', 'Task']);
 const WRITE_TOOLS = new Set(['Write', 'Edit', 'NotebookEdit']);
+const READ_TOOL = 'Read';
+const BASH_TOOL = 'Bash';
 const SKILL_TOOL = 'Skill';
 // A path segment that marks a read of a skill directory.
 const SKILL_DIRECTORY = '/skills/';
@@ -101,36 +109,40 @@ const CLASSES = [
 const PROMPT_MATERIAL = ['agent-prompts', 'fill-commands', 'value-files'];
 
 // --- Hand-over patterns (row 27) ---
+// Shell commands the coverage engine understands. The two routes are named
+// after what made the first read: the Read tool, or the `cat` command.
+const SHELL = { CAT: 'cat', SED: 'sed', AWK: 'awk', HEAD: 'head', TAIL: 'tail', CD: 'cd' };
+const ROUTE_READ = READ_TOOL;
+const ROUTE_CAT = SHELL.CAT;
 // The notice the Read tool leaves when a file exceeds its token cap.
 const PARTIAL_NOTICE = /PARTIAL view — (\S+?): showing lines (\d+)-(\d+) of (\d+) total/g;
 // The marker in a Bash result whose output was too large and was persisted.
 const PERSISTED_OUTPUT = /Full output saved to: (\S+)/;
 // The preview text of a persisted result sits between these two markers; the
 // last preview line is usually cut in the middle, so only complete lines count.
-const PREVIEW_START = /Preview \(first [^)]*\):\n/;
-const PREVIEW_END = /\n\.\.\.\n?<\/persisted-output>\s*$/;
-// One line of a Read result: line number, a tab, then the text.
+const PREVIEW_START = /Preview \(first [^)]*\):\r?\n/;
+const PREVIEW_END = /\r?\n\.\.\.(?:\r?\n)?<\/persisted-output>\s*$/;
+const LINE_BREAK = /\r?\n/;
+// One line of a Read result: line number, a tab, then the text; and the same
+// line when the text is empty.
 const READ_LINE = /^\s*(\d+)\t/;
+const EMPTY_LAST_LINE = /^\s*(\d+)\t\r?$/;
 // A shell assignment `NAME=value` at the start of a command unit, so that a
 // later `$NAME` can be resolved to the path it names.
 const SHELL_ASSIGNMENT = /(?:^|[;&|\n]\s*)([A-Za-z_]\w*)=(["']?)([^\s"';|&]+)\2/g;
-// A command is split into units at `;`, `&&`, `||` and newlines, and a unit
-// into pipeline segments at `|`.
-const UNIT_SPLIT = /\s*(?:;|&&|\|\||\n)\s*/;
-const CD_UNIT = /^cd\s+(["']?)([^\s"']+)\1/;
-// A unit that is a plain `cat` of one file, nothing piped after it.
-const CAT_TARGET = /^cat\s+(?:-[a-zA-Z]+\s+)*(["']?)([^\s"'|;&<>]+)\1\s*$/;
-// The expression argument of sed and awk, quoted or bare.
-const SED_EXPRESSION = /\bsed\s+(?:-[a-zA-Z]+\s+)*(?:'([^']*)'|"([^"]*)"|(\S+))/;
-const AWK_EXPRESSION = /\bawk\s+(?:'([^']*)'|"([^"]*)")/;
-const HEAD_COUNT = /\bhead\s+(?:-n\s*)?-?(\d+)/;
-const TAIL_FROM = /\btail\s+(?:-n\s*)?\+(\d+)/;
-const TAIL_COUNT = /\btail\s+(?:-n\s*)?-?(\d+)/;
-// Where a file's total line count came from, in order of trust.
+// The start of a heredoc (`<<WORD`, `<<-WORD`, `<<'WORD'`): the lines that
+// follow, up to a line equal to WORD, are data the command writes.
+const HEREDOC_START = /^<<-?\s*(["']?)(\w+)\1/;
+// A trailing `{print}` on an awk program changes nothing about which lines
+// are printed.
+const AWK_PRINT = /\s*\{\s*print\s*\}\s*$/;
+// Where a file's total line count came from.
 const TOTAL_FROM_NOTICE = 'from a PARTIAL notice';
 const TOTAL_FROM_READ = 'from a Read result';
 const TOTAL_FROM_DISK = 'counted on disk';
 const UNKNOWN = 'unknown';
+// The end of a range that runs to the end of the file.
+const TO_END = Infinity;
 
 function bytes(value) {
   if (value === undefined || value === null) return 0;
@@ -168,114 +180,117 @@ function resultText(block) {
   return content.map((part) => (part && part.text) || '').join('\n');
 }
 
+function percent(part, whole) {
+  return whole ? (part * 100) / whole : 0;
+}
+
+// --- The measurement ---
+
 function measure(records) {
-  const totals = Object.fromEntries(CLASSES.map((c) => [c, 0]));
-  // Bytes of the attachment records the model never sees, by kind.
-  const excluded = Object.fromEntries(MODEL_INVISIBLE_ATTACHMENTS.map((k) => [k, 0]));
-  // tool_use id -> tool_use block, so a tool_result can be attributed to its
-  // tool and read with its input.
-  const toolUseById = new Map();
-  // requestId -> context tokens. A Map keyed on requestId is the deduplication.
-  const requests = new Map();
-  // requestId -> names of the skills called by that request.
-  const skillCallsByRequest = new Map();
-  let skillDirectoryReads = 0;
-  let assistantRecords = 0;
-  // Counted so the report can say when thinking text was not stored: the
-  // transcript keeps the signature and drops the text, so those bytes are
-  // missing from `content` and every share is an upper bound.
-  let thinkingBlocks = 0;
-  const coverage = newCoverage();
+  const state = {
+    totals: Object.fromEntries(CLASSES.map((c) => [c, 0])),
+    // Bytes of the attachment records the model never sees, by kind.
+    excluded: Object.fromEntries(MODEL_INVISIBLE_ATTACHMENTS.map((k) => [k, 0])),
+    // tool_use id -> tool_use block, so a tool_result can be attributed to its
+    // tool and read with its input.
+    toolUseById: new Map(),
+    // requestId -> context tokens. A Map keyed on requestId is the deduplication.
+    requests: new Map(),
+    // requestId -> names of the skills called by that request.
+    skillCallsByRequest: new Map(),
+    skillDirectoryReads: 0,
+    assistantRecords: 0,
+    // Counted so the report can say when thinking text was not stored: the
+    // transcript keeps the signature and drops the text, so those bytes are
+    // missing from `content` and every share is an upper bound.
+    thinkingBlocks: 0,
+    coverage: newCoverage(),
+  };
 
   records.forEach((rec, index) => {
-    if (rec.type === 'attachment') {
-      const size = bytes(rec.attachment);
-      totals.attachments += size;
-      const kind = rec.attachment && rec.attachment.type;
-      if (kind in excluded) excluded[kind] += size;
-      trackNoticeAttachment(coverage, rec, index);
-      return;
-    }
-
-    if (rec.type === 'assistant') {
-      assistantRecords += 1;
-      const msg = rec.message || {};
-      const key = rec.requestId || msg.id || `norequestid-${rec.uuid}`;
-      if (!requests.has(key)) requests.set(key, contextTokens(msg.usage));
-
-      for (const block of Array.isArray(msg.content) ? msg.content : []) {
-        if (block.type === 'thinking') {
-          thinkingBlocks += 1;
-          totals.thinking += bytes(block.thinking);
-        } else if (block.type === 'text') {
-          totals['assistant-text'] += bytes(block.text);
-        } else if (block.type === 'tool_use') {
-          classifyToolUse(block, totals, toolUseById);
-          if (block.name === SKILL_TOOL) {
-            if (!skillCallsByRequest.has(key)) skillCallsByRequest.set(key, []);
-            skillCallsByRequest.get(key).push((block.input || {}).skill || '?');
-          }
-          if (readsSkillDirectory(block)) skillDirectoryReads += 1;
-        }
-      }
-      return;
-    }
-
-    if (rec.type === 'user') {
-      const content = (rec.message || {}).content;
-      if (!Array.isArray(content)) {
-        totals['user-messages'] += bytes(content);
-        return;
-      }
-      for (const block of content) {
-        if (block.type === 'tool_result') {
-          const use = toolUseById.get(block.tool_use_id) || {};
-          const size = bytes(block.content);
-          if (use.name === 'Read') totals['read-results'] += size;
-          else if (use.name === 'Bash') totals['bash-results'] += size;
-          else if (AGENT_TOOLS.has(use.name)) totals['agent-reports'] += size;
-          else totals['other-results'] += size;
-          trackToolResult(coverage, rec, index, block, use);
-        } else if (block.type === 'text') {
-          totals['user-messages'] += bytes(block.text);
-        }
-      }
-    }
+    if (rec.type === 'attachment') measureAttachment(state, rec, index);
+    else if (rec.type === 'assistant') measureAssistant(state, rec);
+    else if (rec.type === 'user') measureUser(state, rec, index);
   });
 
+  const { totals, excluded, requests } = state;
   const content = CLASSES.reduce((sum, c) => sum + totals[c], 0);
   const promptMaterial = PROMPT_MATERIAL.reduce((sum, c) => sum + totals[c], 0);
   const peakTokens = requests.size ? Math.max(...requests.values()) : 0;
   const excludedBytes = Object.values(excluded).reduce((a, b) => a + b, 0);
-  const modelVisibleTotals = Object.assign({}, totals, {
-    attachments: totals.attachments - excludedBytes,
-  });
   const modelVisibleContent = content - excludedBytes;
 
-  return {
+  return Object.assign({
     totals,
     content,
     promptMaterial,
     promptMaterialPercent: percent(promptMaterial, content),
     peakTokens,
-    assistantRecords,
+    assistantRecords: state.assistantRecords,
     distinctRequests: requests.size,
-    thinkingBlocks,
+    thinkingBlocks: state.thinkingBlocks,
     thinkingTextStored: totals.thinking > 0,
     modelVisible: {
-      totals: modelVisibleTotals,
+      totals: Object.assign({}, totals, { attachments: totals.attachments - excludedBytes }),
       content: modelVisibleContent,
       excluded,
       promptMaterialPercent: percent(promptMaterial, modelVisibleContent),
     },
-    skillBody: skillBody(requests, skillCallsByRequest),
-    skillDirectoryReads,
-    ...finishCoverage(coverage),
-  };
+    skillBody: skillBody(requests, state.skillCallsByRequest),
+    skillDirectoryReads: state.skillDirectoryReads,
+  }, finishCoverage(state.coverage));
 }
 
-function percent(part, whole) {
-  return whole ? (part * 100) / whole : 0;
+function measureAttachment(state, rec, index) {
+  const size = bytes(rec.attachment);
+  state.totals.attachments += size;
+  const kind = rec.attachment && rec.attachment.type;
+  if (kind in state.excluded) state.excluded[kind] += size;
+  trackNoticeAttachment(state.coverage, rec, index);
+}
+
+function measureAssistant(state, rec) {
+  state.assistantRecords += 1;
+  const msg = rec.message || {};
+  const key = rec.requestId || msg.id || `norequestid-${rec.uuid}`;
+  if (!state.requests.has(key)) state.requests.set(key, contextTokens(msg.usage));
+
+  for (const block of Array.isArray(msg.content) ? msg.content : []) {
+    if (block.type === 'thinking') {
+      state.thinkingBlocks += 1;
+      state.totals.thinking += bytes(block.thinking);
+    } else if (block.type === 'text') {
+      state.totals['assistant-text'] += bytes(block.text);
+    } else if (block.type === 'tool_use') {
+      classifyToolUse(block, state.totals, state.toolUseById);
+      if (block.name === SKILL_TOOL) {
+        if (!state.skillCallsByRequest.has(key)) state.skillCallsByRequest.set(key, []);
+        state.skillCallsByRequest.get(key).push((block.input || {}).skill || '?');
+      }
+      if (readsSkillDirectory(block)) state.skillDirectoryReads += 1;
+    }
+  }
+}
+
+function measureUser(state, rec, index) {
+  const content = (rec.message || {}).content;
+  if (!Array.isArray(content)) {
+    state.totals['user-messages'] += bytes(content);
+    return;
+  }
+  for (const block of content) {
+    if (block.type === 'tool_result') {
+      const use = state.toolUseById.get(block.tool_use_id) || {};
+      const size = bytes(block.content);
+      if (use.name === READ_TOOL) state.totals['read-results'] += size;
+      else if (use.name === BASH_TOOL) state.totals['bash-results'] += size;
+      else if (AGENT_TOOLS.has(use.name)) state.totals['agent-reports'] += size;
+      else state.totals['other-results'] += size;
+      trackToolResult(state.coverage, rec, index, block, use);
+    } else if (block.type === 'text') {
+      state.totals['user-messages'] += bytes(block.text);
+    }
+  }
 }
 
 function classifyToolUse(block, totals, toolUseById) {
@@ -291,7 +306,7 @@ function classifyToolUse(block, totals, toolUseById) {
     return;
   }
 
-  if (name === 'Bash') {
+  if (name === BASH_TOOL) {
     const command = input.command || '';
     const size = bytes(command);
     if (command.includes(FILL_COMMAND)) totals['fill-commands'] += size;
@@ -316,8 +331,8 @@ function classifyToolUse(block, totals, toolUseById) {
 // A Read call, or a Bash command, that names a path under a skill directory.
 function readsSkillDirectory(block) {
   const input = block.input || {};
-  if (block.name === 'Read') return (input.file_path || '').includes(SKILL_DIRECTORY);
-  if (block.name === 'Bash') return (input.command || '').includes(SKILL_DIRECTORY);
+  if (block.name === READ_TOOL) return (input.file_path || '').includes(SKILL_DIRECTORY);
+  if (block.name === BASH_TOOL) return (input.command || '').includes(SKILL_DIRECTORY);
   return false;
 }
 
@@ -359,15 +374,16 @@ function fileFor(coverage, rawPath) {
   if (!coverage.files.has(filePath)) {
     coverage.files.set(filePath, {
       path: filePath,
-      firstRoute: null,     // 'Read' or 'cat'
-      cut: false,           // the first read did not deliver the whole file
-      whole: false,         // one call delivered the whole file
-      covered: new Set(),   // line numbers received
-      openRanges: [],       // starts of ranges that run to the end of the file
-      readTotal: null,      // total lines as the Read tool counts them
+      firstRoute: null,       // ROUTE_READ or ROUTE_CAT
+      cut: false,             // the first read did not deliver the whole file
+      whole: false,           // one call delivered the whole file
+      covered: new Set(),     // line numbers received
+      openRanges: [],         // starts of ranges that run to the end of the file
+      readTotal: null,        // total lines as the Read tool counts them
       totalSource: null,
-      phantom: false,       // the Read total counts an empty line after the final newline
-      lastRangeRecord: -1,  // index of the last record that delivered lines
+      lastLineHasText: null,  // true when a page showed text on the Read total's line
+      lastRangeRecord: -1,    // index of the last record that delivered lines
+      lastLineReached: null,
       events: [],
     });
   }
@@ -382,16 +398,17 @@ function firstRead(file, route, cut, whole) {
   if (whole) file.whole = true;
 }
 
+// Record delivered lines. A range to TO_END waits for the total; it still
+// counts as a delivery for the "paged" classification of a notice.
 function addRange(file, from, to, recordIndex, event) {
-  if (!(from >= 1)) return;
-  if (to === Infinity) {
+  if (!(from >= 1) || !(to >= from)) return;
+  file.lastRangeRecord = Math.max(file.lastRangeRecord, recordIndex);
+  if (to === TO_END) {
     file.openRanges.push(from);
     file.events.push(`${event} -> ${from}-end`);
     return;
   }
-  if (!(to >= from)) return;
   for (let line = from; line <= to; line += 1) file.covered.add(line);
-  file.lastRangeRecord = Math.max(file.lastRangeRecord, recordIndex);
   file.events.push(`${event} -> ${from}-${to}`);
 }
 
@@ -405,16 +422,30 @@ function setTotal(file, total, source) {
   }
 }
 
+// The file's total lines as sed and wc count them, with its source: the file
+// on disk when it still exists, else the Read tool's total minus the empty
+// line it counts after the final newline (kept when a page showed text there).
+function fileTotal(coverage, file) {
+  const disk = linesOnDisk(coverage, file);
+  if (disk) return { lines: disk.length, source: TOTAL_FROM_DISK };
+  if (file.readTotal === null) return null;
+  return { lines: file.readTotal - (file.lastLineHasText ? 0 : 1), source: file.totalSource };
+}
+
 function noticesIn(text) {
   return Array.from(text.matchAll(PARTIAL_NOTICE)).map((m) => ({
     path: m[1], from: Number(m[2]), to: Number(m[3]), total: Number(m[4]),
   }));
 }
 
-function registerNotice(coverage, key, notice) {
+// Count a notice for `file` once per tool call. `rawPath` is the path the
+// notice or the Read named, which is the persisted copy on the cat route.
+function registerFileNotice(coverage, file, key, notice, rawPath, recordIndex) {
   if (coverage.noticedToolUses.has(key)) return;
   coverage.noticedToolUses.add(key);
-  coverage.notices.push(notice);
+  coverage.notices.push(Object.assign({}, notice, {
+    path: file.path, persisted: rawPath !== file.path, recordIndex,
+  }));
 }
 
 // A notice carried by an attachment record (type read_truncation_notice).
@@ -425,16 +456,14 @@ function trackNoticeAttachment(coverage, rec, index) {
   for (const notice of noticesIn(text)) {
     const file = fileFor(coverage, notice.path);
     setTotal(file, notice.total, TOTAL_FROM_NOTICE);
-    firstRead(file, 'Read', true, false);
-    registerNotice(coverage, attachment.toolUseID || `${notice.path}:${notice.from}`, Object.assign(notice, {
-      path: file.path, persisted: notice.path !== file.path, recordIndex: index,
-    }));
+    firstRead(file, ROUTE_READ, true, false);
+    registerFileNotice(coverage, file, attachment.toolUseID || `${notice.path}:${notice.from}`, notice, notice.path, index);
   }
 }
 
 function trackToolResult(coverage, rec, index, block, use) {
-  if (use.name === 'Read') trackRead(coverage, rec, index, block, use.input || {});
-  else if (use.name === 'Bash') trackBash(coverage, rec, index, block, use.input || {});
+  if (use.name === READ_TOOL) trackRead(coverage, rec, index, block, use.input || {});
+  else if (use.name === BASH_TOOL) trackBash(coverage, rec, index, block, use.input || {});
 }
 
 function trackRead(coverage, rec, index, block, input) {
@@ -445,7 +474,7 @@ function trackRead(coverage, rec, index, block, input) {
   const info = (rec.toolUseResult || {}).file || {};
   // The harness's own record of what was returned is preferred; the line
   // numbers printed in the result text are the fallback.
-  const numbers = text.split('\n').map((l) => READ_LINE.exec(l)).filter(Boolean).map((m) => Number(m[1]));
+  const numbers = text.split(LINE_BREAK).map((l) => READ_LINE.exec(l)).filter(Boolean).map((m) => Number(m[1]));
   const start = info.startLine || (numbers.length ? numbers[0] : (input.offset || 1));
   const end = info.numLines ? start + info.numLines - 1 : (numbers.length ? numbers[numbers.length - 1] : start - 1);
   const inText = noticesIn(text);
@@ -454,22 +483,21 @@ function trackRead(coverage, rec, index, block, input) {
 
   if (info.totalLines) {
     setTotal(file, info.totalLines, TOTAL_FROM_READ);
-    // The Read tool numbers the empty line after the file's final newline as
-    // a line of its own, so its total is one more than sed or wc count. A
-    // result whose last line is that empty line proves the extra line exists.
-    const lastLine = text.slice(text.lastIndexOf('\n') + 1);
-    const m = /^\s*(\d+)\t$/.exec(lastLine);
-    if (m && Number(m[1]) === info.totalLines) file.phantom = true;
+    // A page that shows the Read total's own line says whether that line is
+    // the empty one after the final newline (then the total is one too many)
+    // or real text (a file without a final newline).
+    const lines = text.split(LINE_BREAK);
+    const lastLine = lines[lines.length - 1];
+    const shown = READ_LINE.exec(lastLine);
+    if (shown && Number(shown[1]) === info.totalLines) file.lastLineHasText = !EMPTY_LAST_LINE.test(lastLine);
   }
-  firstRead(file, 'Read', cut, !paged && !cut && start === 1);
-  const label = `Read${paged ? ` offset=${input.offset} limit=${input.limit}` : ''}${cut ? ' (cut)' : ''}`;
+  firstRead(file, ROUTE_READ, cut, !paged && !cut && start === 1);
+  const label = `${READ_TOOL}${paged ? ` offset=${input.offset} limit=${input.limit}` : ''}${cut ? ' (cut)' : ''}`;
   addRange(file, start, end, index, label);
   if (cut) {
     const notice = inText[0] || { from: start, to: end, total: info.totalLines || null };
     if (inText[0]) setTotal(file, notice.total, TOTAL_FROM_NOTICE);
-    registerNotice(coverage, block.tool_use_id, Object.assign(notice, {
-      path: file.path, persisted: rawPath !== file.path, recordIndex: index,
-    }));
+    registerFileNotice(coverage, file, block.tool_use_id, notice, rawPath, index);
   }
 }
 
@@ -487,9 +515,112 @@ function substituteShellVariables(command) {
   return out;
 }
 
+// Split a command into units (at an unquoted `;`, `&&`, `||` or newline) and
+// each unit into pipeline segments (at an unquoted `|`). Quotes stay in the
+// text. A heredoc body is dropped: it is data the command writes, not a read.
+function splitShell(command) {
+  const units = [];
+  let segments = [];
+  let current = '';
+  let quote = null;
+  let heredoc = null;
+  const endSegment = () => { segments.push(current.trim()); current = ''; };
+  const endUnit = () => { endSegment(); units.push(segments.filter(Boolean)); segments = []; };
+  let i = 0;
+  while (i < command.length) {
+    const ch = command[i];
+    if (quote) {
+      current += ch;
+      if (ch === quote) quote = null;
+      i += 1;
+    } else if (ch === "'" || ch === '"') {
+      quote = ch;
+      current += ch;
+      i += 1;
+    } else if (ch === '\\') {
+      current += command.slice(i, i + 2);
+      i += 2;
+    } else if (ch === '\n') {
+      endUnit();
+      i += 1;
+      if (heredoc) {
+        i = skipHeredocBody(command, i, heredoc);
+        heredoc = null;
+      }
+    } else if (ch === ';') {
+      endUnit();
+      i += 1;
+    } else if (ch === '&' && command[i + 1] === '&') {
+      endUnit();
+      i += 2;
+    } else if (ch === '|' && command[i + 1] === '|') {
+      endUnit();
+      i += 2;
+    } else if (ch === '|') {
+      endSegment();
+      i += 1;
+    } else if (ch === '<' && command[i + 1] === '<' && HEREDOC_START.test(command.slice(i))) {
+      const m = HEREDOC_START.exec(command.slice(i));
+      heredoc = m[2];
+      i += m[0].length;
+    } else {
+      current += ch;
+      i += 1;
+    }
+  }
+  endUnit();
+  return units.filter((u) => u.length);
+}
+
+// The index just after the heredoc body that starts at `from`: the lines up
+// to and including the one equal to `delimiter`.
+function skipHeredocBody(command, from, delimiter) {
+  let pos = from;
+  while (pos < command.length) {
+    let lineEnd = command.indexOf('\n', pos);
+    if (lineEnd === -1) lineEnd = command.length;
+    const line = command.slice(pos, lineEnd).trim();
+    pos = lineEnd + 1;
+    if (line === delimiter) break;
+  }
+  return Math.min(pos, command.length);
+}
+
+// The words of one segment, with the quotes removed.
+function shellWords(segment) {
+  const words = [];
+  let word = '';
+  let quote = null;
+  let inWord = false;
+  for (const ch of segment) {
+    if (quote) {
+      if (ch === quote) quote = null;
+      else word += ch;
+    } else if (ch === "'" || ch === '"') {
+      quote = ch;
+      inWord = true;
+    } else if (/\s/.test(ch)) {
+      if (inWord) words.push(word);
+      word = '';
+      inWord = false;
+    } else {
+      word += ch;
+      inWord = true;
+    }
+  }
+  if (inWord) words.push(word);
+  return words;
+}
+
+// The words of a segment that can be file operands: not flags, not
+// redirections.
+function fileWords(words) {
+  return words.slice(1).filter((w) => !/^(-|\d*[<>])/.test(w));
+}
+
 function absolutePath(p, cwd) {
-  if (path.isAbsolute(p) || !cwd) return p;
-  return path.join(cwd, p);
+  if (path.posix.isAbsolute(p) || !cwd) return p;
+  return path.posix.join(cwd, p);
 }
 
 // The complete lines in a persisted result's preview. The preview ends with a
@@ -498,7 +629,7 @@ function previewLineCount(text) {
   const start = PREVIEW_START.exec(text);
   if (!start) return 0;
   const preview = text.slice(start.index + start[0].length).replace(PREVIEW_END, '');
-  return preview.split('\n').length - 1;
+  return preview.split(LINE_BREAK).length - 1;
 }
 
 function trackBash(coverage, rec, index, block, input) {
@@ -507,84 +638,234 @@ function trackBash(coverage, rec, index, block, input) {
   const persisted = PERSISTED_OUTPUT.exec(text);
   let cwd = rec.cwd || '';
 
-  for (const unit of command.split(UNIT_SPLIT)) {
-    const cd = CD_UNIT.exec(unit);
-    if (cd) {
-      cwd = absolutePath(cd[2], cwd);
+  for (const unit of splitShell(command)) {
+    const words = shellWords(unit[0]);
+    if (words[0] === SHELL.CD && words[1]) {
+      cwd = absolutePath(words[1], cwd);
       continue;
     }
-    const cat = CAT_TARGET.exec(unit);
-    if (cat) {
-      const file = fileFor(coverage, absolutePath(cat[2], cwd));
+    // A plain `cat` of one file starts tracking that file, whether or not
+    // its output was persisted.
+    const operands = fileWords(words);
+    if (unit.length === 1 && words[0] === SHELL.CAT && operands.length === 1) {
+      const file = fileFor(coverage, absolutePath(operands[0], cwd));
       if (persisted) {
         coverage.aliases.set(persisted[1], file.path);
         const preview = previewLineCount(text);
-        firstRead(file, 'cat', true, false);
-        addRange(file, 1, preview, index, `cat persisted (${preview} complete preview lines)`);
-      } else {
-        firstRead(file, 'cat', false, true);
-        addRange(file, 1, Infinity, index, 'cat whole');
+        firstRead(file, ROUTE_CAT, true, false);
+        addRange(file, 1, preview, index, `${SHELL.CAT} persisted (${preview} complete preview lines)`);
+        continue;
       }
-      continue;
+      firstRead(file, ROUTE_CAT, false, true);
     }
-    const segments = unit.split('|');
-    segments.forEach((segment, i) => {
-      const file = trackedFileNamed(coverage, segment, cwd);
-      if (!file) return;
-      const cap = HEAD_COUNT.exec(segments.slice(i + 1).join('|'));
-      const ranges = capRanges(rangesOf(coverage, file, segment), cap ? Number(cap[1]) : null);
-      for (const [from, to] of ranges) addRange(file, from, to, index, segment.trim().slice(0, 60));
-    });
+    // A persisted output of anything else cannot be attributed to a file.
+    if (persisted) continue;
+    trackPipeline(coverage, unit, cwd, index);
   }
 }
 
-// The tracked file that a pipeline segment names, by absolute path, by the
-// path relative to the working directory, or by a persisted alias of it.
-function trackedFileNamed(coverage, segment, cwd) {
-  const names = Array.from(coverage.files.keys()).map((p) => [p, p])
-    .concat(Array.from(coverage.aliases.entries()));
-  for (const [name, filePath] of names) {
-    const candidates = [name];
-    if (cwd && name.startsWith(cwd + '/')) candidates.push(name.slice(cwd.length + 1));
-    for (const candidate of candidates) {
-      const token = new RegExp(`(^|[\\s"'=])${candidate.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?=$|[\\s"'|;&)])`);
-      if (token.test(segment)) return coverage.files.get(filePath);
+// A pipeline delivers lines of the first tracked file it names; every later
+// segment is a filter on that stream of lines. Ranges are kept as file line
+// numbers throughout, so a `head` after a `sed` selects among the lines the
+// `sed` let through.
+function trackPipeline(coverage, unit, cwd, index) {
+  let file = null;
+  let stream = null;
+  for (const segment of unit) {
+    const words = shellWords(segment);
+    const named = trackedFileNamed(coverage, words, cwd);
+    if (!file) {
+      if (!named) continue;
+      file = named;
+      stream = [[1, TO_END]];
+    } else if (named && named !== file) {
+      break;
     }
+    const filter = parseFilter(words);
+    if (!filter) {
+      file.events.push(`not a line read, nothing counted: ${segment.slice(0, 60)}`);
+      return;
+    }
+    stream = applyFilter(coverage, file, stream, filter);
+    if (!stream.length) return;
+  }
+  if (!file) return;
+  for (const [from, to] of stream) addRange(file, from, to, index, unit.join(' | ').slice(0, 60));
+}
+
+// The tracked file that a segment names, by absolute path, by a path relative
+// to the working directory, or by a persisted alias of it.
+function trackedFileNamed(coverage, words, cwd) {
+  for (const word of words) {
+    const candidate = absolutePath(word, cwd);
+    const filePath = coverage.aliases.get(candidate) || candidate;
+    if (coverage.files.has(filePath)) return coverage.files.get(filePath);
   }
   return null;
 }
 
-// The line ranges a segment delivers from the file it names. `Infinity` as
-// the end of a range means "to the end of the file", resolved when the total
-// is known.
-function rangesOf(coverage, file, segment) {
-  const out = [];
+// What a command lets through, as a filter: `items` are line selections
+// (numeric ranges, or pattern pairs resolved against the file), `lastLines`
+// is a `tail -n N`. Null means the command is not a line read (grep, wc, a
+// program that rewrites lines).
+function parseFilter(words) {
+  const command = words[0];
   let m;
-  const sed = SED_EXPRESSION.exec(segment);
-  if (sed) {
-    const expression = [sed[1], sed[2], sed[3]].find((e) => e !== undefined) || '';
-    for (const part of expression.split(';').map((p) => p.trim())) {
-      if ((m = /^(\d+),(\d+)p$/.exec(part))) out.push([Number(m[1]), Number(m[2])]);
-      else if ((m = /^(\d+)p$/.exec(part))) out.push([Number(m[1]), Number(m[1])]);
-      else if ((m = /^(\d+),\$p$/.exec(part))) out.push([Number(m[1]), Infinity]);
-      else if ((m = /^\/(.*)\/,(?:\/(.*)\/|(\$))p$/.exec(part))) out.push(...patternRanges(coverage, file, m[1], m[2]));
+  if (command === SHELL.CAT) return { items: [{ from: 1, to: TO_END }], lastLines: null };
+  if (command === SHELL.SED) return sedFilter(words);
+  if (command === SHELL.AWK) return awkFilter(words);
+  if (command === SHELL.HEAD) {
+    if ((m = lineCountOption(words))) return { items: [{ from: 1, to: Number(m[1]) }], lastLines: null };
+    return null;
+  }
+  if (command === SHELL.TAIL) {
+    if ((m = /^\+(\d+)$/.exec(tailOperand(words)))) return { items: [{ from: Number(m[1]), to: TO_END }], lastLines: null };
+    if ((m = lineCountOption(words))) return { items: [], lastLines: Number(m[1]) };
+    return null;
+  }
+  return null;
+}
+
+// `-n N`, `-nN`, `-N` or `--lines=N` on head and tail.
+function lineCountOption(words) {
+  const joined = words.slice(1).join(' ');
+  return /(?:^|\s)(?:-n\s*|-|--lines=)(\d+)(?=\s|$)/.exec(joined);
+}
+
+// The `+N` of `tail -n +N` or `tail +N`.
+function tailOperand(words) {
+  const joined = words.slice(1).join(' ');
+  const m = /(?:^|\s)(?:-n\s*)?(\+\d+)(?=\s|$)/.exec(joined);
+  return m ? m[1] : '';
+}
+
+// Every expression of a sed call: each `-e`, or the first non-flag word.
+function sedFilter(words) {
+  const expressions = [];
+  let sawExpressionFlag = false;
+  for (let i = 1; i < words.length; i += 1) {
+    const w = words[i];
+    if (w === '-e' || w === '--expression') {
+      expressions.push(words[i + 1] || '');
+      i += 1;
+      sawExpressionFlag = true;
+    } else if (w.startsWith('--expression=')) {
+      expressions.push(w.slice('--expression='.length));
+      sawExpressionFlag = true;
+    } else if (w.startsWith('-') && w.length > 1) {
+      // A combined flag ending in `e` (`-ne`) takes the next word.
+      if (!w.startsWith('--') && w.endsWith('e')) {
+        expressions.push(words[i + 1] || '');
+        i += 1;
+        sawExpressionFlag = true;
+      }
+    } else if (!sawExpressionFlag && expressions.length === 0) {
+      expressions.push(w);
     }
-    return out;
   }
-  const awk = AWK_EXPRESSION.exec(segment);
-  if (awk) {
-    const expression = (awk[1] !== undefined ? awk[1] : awk[2]).trim();
-    if ((m = /NR\s*>=\s*(\d+)\s*&&\s*NR\s*<=\s*(\d+)/.exec(expression))) out.push([Number(m[1]), Number(m[2])]);
-    else if ((m = /NR\s*==\s*(\d+)\s*,\s*NR\s*==\s*(\d+)/.exec(expression))) out.push([Number(m[1]), Number(m[2])]);
-    else if ((m = /^\/(.*)\/,(?:\/(.*)\/|(0))$/.exec(expression))) out.push(...patternRanges(coverage, file, m[1], m[2]));
-    return out;
+  const items = [];
+  for (const expression of expressions) {
+    for (const part of expression.split(/[;\n]/).map((p) => p.trim()).filter(Boolean)) {
+      const item = sedItem(part);
+      if (item) items.push(item);
+    }
   }
-  if ((m = TAIL_FROM.exec(segment))) out.push([Number(m[1]), Infinity]);
-  else if ((m = TAIL_COUNT.exec(segment))) {
-    const total = knownTotal(file);
-    if (total) out.push([Math.max(1, total - Number(m[1]) + 1), total]);
-  } else if ((m = HEAD_COUNT.exec(segment))) out.push([1, Number(m[1])]);
-  else if (/\bcat\b/.test(segment)) out.push([1, Infinity]);
+  return { items, lastLines: null };
+}
+
+// One sed selection: `A,Bp`, `Ap`, `A,$p`, `/A/,/B/p`, `/A/,$p`.
+function sedItem(part) {
+  let m;
+  if ((m = /^(\d+),(\d+)p$/.exec(part))) return { from: Number(m[1]), to: Number(m[2]) };
+  if ((m = /^(\d+)p$/.exec(part))) return { from: Number(m[1]), to: Number(m[1]) };
+  if ((m = /^(\d+),\$p$/.exec(part))) return { from: Number(m[1]), to: TO_END };
+  if ((m = /^\/(.*?)\/,\/(.*?)\/p$/.exec(part))) return { startPattern: m[1], endPattern: m[2] };
+  if ((m = /^\/(.*?)\/,\$p$/.exec(part))) return { startPattern: m[1], endPattern: null };
+  return null;
+}
+
+// The program of an awk call (after `-F x` and `-v x=y` options), when it
+// only selects lines by number or by pattern pair.
+function awkFilter(words) {
+  let program = null;
+  for (let i = 1; i < words.length && program === null; i += 1) {
+    const w = words[i];
+    if (w === '-F' || w === '-v' || w === '-f') i += 1;
+    else if (!w.startsWith('-')) program = w;
+  }
+  if (program === null) return null;
+  const selection = program.replace(AWK_PRINT, '').trim();
+  let m;
+  const one = (from, to) => ({ items: [{ from, to }], lastLines: null });
+  if ((m = /^NR\s*>=\s*(\d+)\s*&&\s*NR\s*<=\s*(\d+)$/.exec(selection))) return one(Number(m[1]), Number(m[2]));
+  if ((m = /^NR\s*==\s*(\d+)\s*,\s*NR\s*==\s*(\d+)$/.exec(selection))) return one(Number(m[1]), Number(m[2]));
+  if ((m = /^NR\s*>=\s*(\d+)$/.exec(selection))) return one(Number(m[1]), TO_END);
+  if ((m = /^NR\s*>\s*(\d+)$/.exec(selection))) return one(Number(m[1]) + 1, TO_END);
+  if ((m = /^NR\s*<=\s*(\d+)$/.exec(selection))) return one(1, Number(m[1]));
+  if ((m = /^NR\s*<\s*(\d+)$/.exec(selection))) return one(1, Number(m[1]) - 1);
+  if ((m = /^NR\s*==\s*(\d+)$/.exec(selection))) return one(Number(m[1]), Number(m[1]));
+  if ((m = /^\/(.*?)\/,\/(.*?)\/$/.exec(selection))) return { items: [{ startPattern: m[1], endPattern: m[2] }], lastLines: null };
+  if ((m = /^\/(.*?)\/,0$/.exec(selection))) return { items: [{ startPattern: m[1], endPattern: null }], lastLines: null };
+  return null;
+}
+
+// Apply a filter to a stream of file lines. Numeric selections are positions
+// in the stream; a pattern pair is resolved on the file, which is only
+// meaningful when the stream is still the whole file.
+function applyFilter(coverage, file, stream, filter) {
+  const wholeFile = stream.length === 1 && stream[0][0] === 1 && stream[0][1] === TO_END;
+  const positions = [];
+  for (const item of filter.items) {
+    if (item.from !== undefined) positions.push([item.from, item.to]);
+    else if (wholeFile) positions.push(...patternRanges(coverage, file, item.startPattern, item.endPattern));
+    else file.events.push(`pattern range /${item.startPattern}/ on piped text not resolved`);
+  }
+  let source = stream;
+  if (filter.lastLines !== null) {
+    if (!Number.isFinite(streamLength(source))) {
+      const total = fileTotal(coverage, file);
+      if (!total) {
+        file.events.push(`${SHELL.TAIL} -n ${filter.lastLines} not resolved: total lines unknown`);
+        return [];
+      }
+      source = source.map(([from, to]) => [from, Math.min(to, total.lines)]).filter(([from, to]) => to >= from);
+    }
+    const length = streamLength(source);
+    positions.push([Math.max(1, length - filter.lastLines + 1), length]);
+  }
+  return mergeRanges(selectPositions(source, positions));
+}
+
+function streamLength(stream) {
+  return stream.reduce((sum, [from, to]) => sum + (to - from + 1), 0);
+}
+
+// The file lines at the given positions of a stream of ranges.
+function selectPositions(stream, positions) {
+  const out = [];
+  for (const [a, b] of positions) {
+    let position = 1;
+    for (const [from, to] of stream) {
+      const end = position + (to - from);
+      const low = Math.max(a, position);
+      const high = Math.min(b, end);
+      if (low <= high) out.push([from + (low - position), from + (high - position)]);
+      if (!Number.isFinite(end)) break;
+      position = end + 1;
+    }
+  }
+  return out;
+}
+
+// Sorted ranges with overlaps and adjacent ranges joined.
+function mergeRanges(ranges) {
+  const sorted = ranges.slice().sort((x, y) => x[0] - y[0]);
+  const out = [];
+  for (const [from, to] of sorted) {
+    const last = out[out.length - 1];
+    if (last && from <= last[1] + 1) last[1] = Math.max(last[1], to);
+    else out.push([from, to]);
+  }
   return out;
 }
 
@@ -597,45 +878,30 @@ function patternRanges(coverage, file, startPattern, endPattern) {
     file.events.push(`pattern range /${startPattern}/ not resolved: file not on disk`);
     return [];
   }
-  const out = [];
   let startRe;
   let endRe;
   try {
     startRe = new RegExp(startPattern);
-    endRe = endPattern === undefined ? null : new RegExp(endPattern);
+    endRe = endPattern === null ? null : new RegExp(endPattern);
   } catch {
     file.events.push(`pattern range /${startPattern}/ not resolved: not a JavaScript regular expression`);
     return [];
   }
+  const out = [];
   let i = 0;
   while (i < lines.length) {
     if (!startRe.test(lines[i])) {
       i += 1;
       continue;
     }
-    let j = i + 1;
+    let j = lines.length;
     if (endRe) {
+      j = i + 1;
       while (j < lines.length && !endRe.test(lines[j])) j += 1;
       j = Math.min(j + 1, lines.length);
-    } else {
-      j = lines.length;
     }
     out.push([i + 1, j]);
     i = j;
-  }
-  return out;
-}
-
-// A `| head -n N` after a range keeps the first N lines the range emits.
-function capRanges(ranges, cap) {
-  if (cap === null) return ranges;
-  const out = [];
-  let left = cap;
-  for (const [from, to] of ranges) {
-    if (left <= 0) break;
-    const take = Math.min(to - from + 1, left);
-    out.push([from, from + take - 1]);
-    left -= take;
   }
   return out;
 }
@@ -649,8 +915,7 @@ function linesOnDisk(coverage, file) {
   let lines = null;
   for (const candidate of candidates) {
     try {
-      const text = fs.readFileSync(candidate, 'utf8');
-      lines = text.split('\n');
+      lines = fs.readFileSync(candidate, 'utf8').split(LINE_BREAK);
       if (lines.length && lines[lines.length - 1] === '') lines.pop();
       break;
     } catch {
@@ -659,11 +924,6 @@ function linesOnDisk(coverage, file) {
   }
   coverage.diskLines.set(file.path, lines);
   return lines;
-}
-
-// Total lines as sed and wc count them, when the transcript says.
-function knownTotal(file) {
-  return file.readTotal === null ? null : file.readTotal - (file.phantom ? 1 : 0);
 }
 
 function rangesToString(lines) {
@@ -681,40 +941,33 @@ function rangesToString(lines) {
 
 function finishCoverage(coverage) {
   const fileCoverage = [];
-  let fullyReceivedFiles = 0;
+  const fullyReceivedPaths = [];
   for (const file of coverage.files.values()) {
-    let total = knownTotal(file);
-    let totalSource = file.totalSource;
-    if (total === null && file.cut) {
-      const disk = linesOnDisk(coverage, file);
-      if (disk) {
-        total = disk.length;
-        totalSource = TOTAL_FROM_DISK;
-      }
-    }
-    if (total !== null) {
-      for (const from of file.openRanges) addRange(file, from, total, file.lastRangeRecord, 'to the end');
-      if (file.whole) addRange(file, 1, total, file.lastRangeRecord, 'whole file');
-    }
-    const received = total === null ? file.covered : new Set(Array.from(file.covered).filter((l) => l <= total));
-    const uncovered = [];
-    if (total !== null) for (let l = 1; l <= total; l += 1) if (!received.has(l)) uncovered.push(l);
-    const complete = file.whole || (total !== null && uncovered.length === 0);
-    file.lastLineReached = total !== null ? received.has(total) : (file.whole ? true : null);
-
     if (!file.cut) {
-      if (file.whole) fullyReceivedFiles += 1;
+      if (file.whole) fullyReceivedPaths.push(file.path);
       continue;
     }
+    const total = fileTotal(coverage, file);
+    const lines = total ? total.lines : null;
+    if (lines !== null) {
+      for (const from of file.openRanges) addRange(file, from, lines, file.lastRangeRecord, 'to the end');
+      if (file.whole) addRange(file, 1, lines, file.lastRangeRecord, 'whole file');
+    }
+    const received = lines === null ? file.covered : new Set(Array.from(file.covered).filter((l) => l <= lines));
+    const uncovered = [];
+    if (lines !== null) for (let l = 1; l <= lines; l += 1) if (!received.has(l)) uncovered.push(l);
+    const complete = file.whole || (lines !== null && uncovered.length === 0);
+    file.lastLineReached = lines !== null ? received.has(lines) : (file.whole ? true : null);
+
     fileCoverage.push({
       path: file.path,
       firstRoute: file.firstRoute,
-      totalLines: total,
-      totalLinesSource: total === null ? null : totalSource,
+      totalLines: lines,
+      totalLinesSource: total ? total.source : null,
       receivedRanges: rangesToString(received),
       receivedLines: received.size,
-      coveragePercent: total !== null ? Math.round(percent(received.size, total) * 10) / 10 : (complete ? 100 : null),
-      uncoveredRanges: total !== null ? rangesToString(uncovered) : (complete ? 'none' : null),
+      coveragePercent: lines !== null ? Math.round(percent(received.size, lines) * 10) / 10 : (complete ? 100 : null),
+      uncoveredRanges: lines !== null ? rangesToString(uncovered) : (complete ? 'none' : null),
       lastLineReached: file.lastLineReached,
       events: file.events,
     });
@@ -730,7 +983,7 @@ function finishCoverage(coverage) {
     else partialNotices.pagedShort += 1;
     if (notice.persisted) partialNotices.persistedThenRead += 1;
   }
-  return { fileCoverage, fullyReceivedFiles, partialNotices };
+  return { fileCoverage, fullyReceivedFiles: fullyReceivedPaths.length, fullyReceivedPaths, partialNotices };
 }
 
 // --- Report ---
@@ -756,9 +1009,9 @@ function printShares(totals, content, promptMaterial) {
     `(${PROMPT_MATERIAL.join(' + ')})`);
 }
 
-function yesNo(value) {
-  if (value === null || value === undefined) return UNKNOWN;
-  return value ? 'yes' : 'no';
+// A value the transcript could not establish prints as "unknown".
+function orUnknown(value, format) {
+  return value === null || value === undefined ? UNKNOWN : format(value);
 }
 
 function report(file, m) {
@@ -773,33 +1026,33 @@ function report(file, m) {
   console.log('Shares over every record (the table the issues log cites):');
   printShares(m.totals, m.content, m.promptMaterial);
 
-  const mv = m.modelVisible;
-  const excludedList = MODEL_INVISIBLE_ATTACHMENTS.map((k) => `${k} ${kb(mv.excluded[k])}`).join(', ');
+  const modelVisible = m.modelVisible;
+  const excludedList = MODEL_INVISIBLE_ATTACHMENTS.map((k) => `${k} ${kb(modelVisible.excluded[k])}`).join(', ');
   console.log('');
   console.log(`Model-visible shares (without ${MODEL_INVISIBLE_ATTACHMENTS.join(' and ')} ` +
-    `attachment records, which the model never sees): content ${kb(mv.content)}, ` +
+    `attachment records, which the model never sees): content ${kb(modelVisible.content)}, ` +
     `excluded ${excludedList}`);
-  printShares(mv.totals, mv.content, m.promptMaterial);
+  printShares(modelVisible.totals, modelVisible.content, m.promptMaterial);
 
   console.log('');
-  const sb = m.skillBody;
-  console.log(`Skill body: ${sb.tokens.toLocaleString('en-US')} tokens over ${sb.calls} ` +
-    `Skill call${sb.calls === 1 ? '' : 's'} (context tokens of the request after each ` +
+  const skill = m.skillBody;
+  console.log(`Skill body: ${skill.tokens.toLocaleString('en-US')} tokens over ${skill.calls} ` +
+    `Skill call${skill.calls === 1 ? '' : 's'} (context tokens of the request after each ` +
     `Skill call minus the request that made it); skill-directory reads: ` +
     `${m.skillDirectoryReads} (Read calls and Bash commands naming a path under ${SKILL_DIRECTORY})`);
-  const pn = m.partialNotices;
-  console.log(`PARTIAL notices: ${pn.count} (paged to the end: ${pn.pagedToEnd}, ` +
-    `paged short: ${pn.pagedShort}, not paged: ${pn.notPaged}; of these on a ` +
-    `persisted output file: ${pn.persistedThenRead})`);
+  const notices = m.partialNotices;
+  console.log(`PARTIAL notices: ${notices.count} (paged to the end: ${notices.pagedToEnd}, ` +
+    `paged short: ${notices.pagedShort}, not paged: ${notices.notPaged}; of these on a ` +
+    `persisted output file: ${notices.persistedThenRead})`);
   console.log('File coverage (files whose first read was cut; lines received over both routes):');
   for (const f of m.fileCoverage) {
-    const firstRead = f.firstRoute === 'cat' ? 'cat, persisted' : 'Read, cut by a PARTIAL notice';
-    const total = f.totalLines === null ? UNKNOWN : `${f.totalLines} (${f.totalLinesSource})`;
-    const pct = f.coveragePercent === null ? UNKNOWN : `${f.coveragePercent.toFixed(1)}%`;
-    console.log(`  ${f.path} | first read: ${firstRead} | total lines: ${total} | ` +
-      `received: ${f.receivedRanges} (${f.receivedLines} lines) | coverage: ${pct} | ` +
-      `uncovered: ${f.uncoveredRanges === null ? UNKNOWN : f.uncoveredRanges} | ` +
-      `last line reached: ${yesNo(f.lastLineReached)}`);
+    const firstReadLabel = f.firstRoute === ROUTE_CAT ? `${ROUTE_CAT}, persisted` : `${ROUTE_READ}, cut by a PARTIAL notice`;
+    console.log(`  ${f.path} | first read: ${firstReadLabel} | ` +
+      `total lines: ${orUnknown(f.totalLines, (n) => `${n} (${f.totalLinesSource})`)} | ` +
+      `received: ${f.receivedRanges} (${f.receivedLines} lines) | ` +
+      `coverage: ${orUnknown(f.coveragePercent, (p) => `${p.toFixed(1)}%`)} | ` +
+      `uncovered: ${orUnknown(f.uncoveredRanges, (u) => u)} | ` +
+      `last line reached: ${orUnknown(f.lastLineReached, (r) => (r ? 'yes' : 'no'))}`);
   }
   console.log(`  Files fully received in one call: ${m.fullyReceivedFiles}`);
 
