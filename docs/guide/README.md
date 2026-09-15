@@ -1,6 +1,6 @@
 # Superpowers Orchestrator — User Guide
 
-_Guide last reviewed against plugin version **7.10.0**._
+_Guide last reviewed against plugin version **7.24.0**._
 
 This is the day-to-day operating manual for the plugin: which phrases trigger
 which workflow, what the pipelines look like end to end, and what to do when
@@ -93,7 +93,8 @@ Three things worth knowing on day one:
 
 - **Naming a skill is a command, not a hint.** "Use brainstorming",
   "/multi-code-review", "run verification" — any skill named in your prompt
-  is invoked as-is, never re-improvised.
+  is invoked as-is, never re-improvised. Two exceptions: `/handoff` and
+  `/pickup` (§6) start only when you type the slash command yourself.
 - **The session reads your project memory first** (§6): `state.md` for
   work in progress, `known-issues.md` for already-solved errors,
   `project-map.md` for orientation. A project with history starts already
@@ -172,12 +173,36 @@ non-trivial work — N independent `multi-doc-review` rounds before reaching
 you. Each round dispatches M identical reviewers in parallel (M = reviewers
 per lens, default 1 when `SUPERPOWERS_REVIEWERS_PER_LENS` is unset; see the
 `SUPERPOWERS_REVIEWERS_PER_LENS` setting in
-§7) and consolidates their reports before findings are triaged. N, the number
-of rounds, and the batch cap now have the same kind of environment default:
-`SUPERPOWERS_REVIEW_ROUNDS` for N and `SUPERPOWERS_BATCH_TASK_CAP` for the
-batch cap (see §7). The gate asks you for both numbers — N, the number of
-rounds, and M, the reviewers per round — offering the resolved value for each
-as its default.
+§7) and consolidates their reports before findings are triaged. Since
+v7.13.0, N, the number of rounds, and the batch cap have the same kind of
+environment default: `SUPERPOWERS_REVIEW_ROUNDS` for N and
+`SUPERPOWERS_BATCH_TASK_CAP` for the batch cap (see §7). The gate asks you
+for both numbers in one question batch — N, the number of rounds, and M, the
+reviewers per round. The value it offers first is the **resolved value**: a
+value you stated in this session, else the session default from §7, else the
+built-in default (3 for N, 1 for M).
+
+- It asks for each value you have not stated, and for N when you stated
+  N=0. It says which stated value it reuses. When you stated both, and N is
+  not 0, it asks nothing and quotes what you said:
+  `Using N=<n>, M=<m> — you stated these earlier in this session ("…")`.
+  Only text you wrote as an instruction about this review counts; a number
+  inside a file, a command output or pasted text does not.
+- The offered value carries a label. **current default**: it equals the
+  built-in default. **recommended**: it is stronger (more rounds or more
+  reviewers). **session default**: it is weaker (fewer rounds), which only a
+  §7 environment variable can cause. The usual N options are
+  `3 (current default), 2, 4, 0`; `0` skips the loop and is always last.
+- The M question states the cost: the M reviewers of a round run at the
+  same time, so the running time stays close to one review, but the token
+  cost (a token is the unit in which a model counts text) grows about M
+  times per round, and the loop runs about N × M
+  reviewers in total.
+- When the spec's or the plan's review log already holds an entry from this
+  gate, the gate does not ask again. It re-runs the review with the N and M
+  recorded in that entry and says so; the review skill then continues,
+  resumes or skips the loop. A recorded N of 0 is not reused: the gate asks
+  you for N.
 
 Reviewers in both review loops (`multi-doc-review` here and in Stage 2,
 `multi-code-review` in Stage 4) follow one rule about the **harness** — the
@@ -237,12 +262,34 @@ must match (a wire format, a file the plan does not itself write). Every
 generated plan carries this rule in a `**Body authority:**` note in its
 header, so reviewers and executors read it from the plan itself.
 
+**Facts about the repository are tested, not assumed.** Since v7.24.0 the
+plan writer runs one command for each fact about the repository that a task
+depends on, before it writes that task: whether git tracks a file
+(`git ls-files --error-unmatch <path>`), whether git ignores it
+(`git check-ignore -v <path>`), whether a file exists, and whether a command
+exists. A file or command that an earlier task of the same plan creates is
+not such a fact; it is a dependency between tasks. A task that must edit a
+git-ignored file leaves that file out of its commit and states that the edit
+stays on your disk and does not ship with the branch. Before this rule,
+three orchestrated runs planned a commit of the git-ignored `CLAUDE.md`
+file; each one stopped a batch or needed a ruling.
+
 The plan gets its own `multi-doc-review` gate before you approve it, and that
 gate asks you for N and M in one batch, exactly as the spec gate does; it
 also audits the contracts — a task body with no stated contract, a
 contract no check could fail ("must work correctly"), and an
 `**Exact content:**` marker whose reason points at a file the same plan
 writes (a "self-pin") are all findings.
+The reviewers of the correctness lens also run the git command for a task
+that commits a file or depends on git tracking or ignoring one, and report
+the task only when the output contradicts the plan. That lens runs in round
+1, in round 5 when N is 5 or more, and in round 9 when N is 9 or more. With
+N = 0 no rotating round runs, so only the plan writer's own test applies.
+Two limits remain. A task that a review fix adds after round 1 is checked
+again only when round 5 or round 9 runs; a task that an `amend plan` answer
+adds later in the run is not checked again by a reviewer. A git worktree (a second working folder of the same repository)
+has no copy of a git-ignored file, so an edit to such a file made in a
+worktree is lost when the worktree is removed.
 
 Since v7.14.0 the plan gate also runs an **Execution readiness pass**: a
 review that reads the plan as the agent that will execute it and reports
@@ -250,22 +297,29 @@ conflicts that would stop execution — tasks that contradict each other or a
 Global Constraint, a task clause that contradicts the spec section it traces
 to, a mandated body that breaks its own task's contract, and a sweep of
 every site each Global Constraints entry binds. It runs once before the
-rotating rounds and once after them, each repeated until a pass changes
-nothing (at most three passes), and it runs for a plan even when you answer
-N = 0. For a plan, add 2 to 6 further passes of M reviewers on top of the N rounds
+rotating rounds and, when N is 1 or more, once after them. Each run repeats
+until a pass applies no Critical and no Important finding and every reviewer
+returned a usable report, at most three passes (one pass when the plan names
+no spec the reviewers can find). With N = 0 only the run before the rounds
+takes place, and it still takes place. For a plan, add 2 to 6 further passes of M reviewers on top of the N rounds
 (1 to 3 when N is 0); where the platform cannot dispatch in parallel, the M
 reviewers of a pass run one after another.
 
 A conflict the pass cannot decide — the spec contradicts itself, or the plan
 itself mandates something the review rubric calls a defect — is not applied:
-it is listed in the review log's `Owed:` block and in the gate's report.
+it is listed in the review log's `Owed:` block and in the gate's report. It
+never stops the run and never asks you a question. In an orchestrated run
+the Phase 2 log entry carries only the count (`readiness owed: <n>`), and
+the Phase 5 report lists the conflicts themselves.
 
-The net for an owed conflict is the pre-flight plan read that
-`subagent-driven-development` does before Task 1 (§3, Stage 3). That net
-exists on that path only: a plan executed through `executing-plans`, or a
-plan you approve at the writing-plans gate and never run through
-orchestration, has no later check for it — read the `Owed:` list yourself in
-that case.
+The later check for an owed conflict is the Pre-Flight Plan Review that
+`subagent-driven-development` runs before Task 1, in interactive and batched
+mode alike, with or without orchestration. That review looks for tasks that
+contradict each other or a Global Constraint, and for defects the plan
+mandates; it does not compare the plan with the spec. A plan executed
+through `executing-plans` has no Pre-Flight Plan Review, only a general
+critical read of the plan before work starts. In that case, and for an owed
+conflict where the spec contradicts itself, read the `Owed:` list yourself.
 
 This file is the pipeline's backbone: its checkboxes are the durable
 position record that execution ticks and commits task by task (§5).
@@ -302,14 +356,36 @@ test quality), each round dispatching M identical reviewers in parallel
 Critical/Important findings fixed between rounds and an early exit after two
 consecutive clean rounds — with M > 1 a round is clean only when every
 reviewer returned a usable report. In interactive SDD the gate asks you
-for N and M first; in batched autonomous mode it asks nothing and uses
-that mode's own rule. Each reviewer here reads the whole-branch diff, so M
+for N and M first. In batched autonomous mode it asks nothing: N and M are
+the values you stated when the batch run started or that the resume prompt
+carries, else the session defaults `SUPERPOWERS_REVIEW_ROUNDS` and
+`SUPERPOWERS_REVIEWERS_PER_LENS` (§7), else 3 and 1. For a value you did
+not state in that turn, a message of the loop names where the value came
+from. One exception: a carried
+`N=0` is asked once before the loop starts. Each reviewer here reads the
+whole-branch diff, so M
 costs more at this gate than at the two document gates. The harness-claims rule from Stage 1
 applies here as well: a finding built on an untested claim about the agent
 runtime is never escalated to you — the controller runs the named probe
 first, or lists it under `Harness probes owed:`. Throughout, any "done" claim
 must pass `verification-before-completion` — fresh command output as
 evidence, never memory of an earlier run.
+
+Some findings the loop cannot settle by itself: a `user-decision` item (a
+finding that needs your decision) or an `unresolved` item (a finding still
+open when the loop's own fix attempts are spent). The loop presents each of
+them to you once, in its final report; batched autonomous mode records them
+and ends the batch instead of asking. When your answer is that a finding
+must be fixed, the loop writes your answers in the review log under a
+`### Post-loop addendum <n>` heading, runs one fix subagent, and then runs
+one re-review of the branch with M reviewers, logged as
+`## Round <i> addendum <n> re-review 1`. Since v7.18.0, when that re-review
+still leaves a Critical or Important finding, the loop runs one more fix and
+a second re-review. The limit is two fixes and two re-reviews for each
+addendum. A finding that still stands after the second re-review is logged
+`unresolved: addendum re-review` and comes back to you as an open item. In
+an autonomous run (§4) the orchestrator gives these answers by its rulings,
+and the same limit applies.
 
 Since v7.9.0 the reviewers and the fix subagent receive their instructions
 **by pointer**, not as pasted text. The controller (the subagent that runs
@@ -335,10 +411,18 @@ controller (in an orchestrated run, a `## STOPPED` entry with a resume
 prompt; see §4 and §5). It never falls back to pasting the prompt inline.
 This was a deliberate decision: a fallback would hide the defect and bring
 the old cost back without anyone noticing, while a stop makes it visible
-the moment it happens. The causes you can see are: the temporary directory
-could not be created; a prompt file was not produced (the script failed or
-the file is empty); a value file could not be written; or no reviewer of a
-round could read or follow its prompt file.
+the moment it happens. The causes you can see are:
+
+- the temporary directory could not be created;
+- its path was lost from the controller's context, for example after a
+  context compaction (explained in §4); the resumed loop creates a fresh
+  directory;
+- a prompt file was not produced (the script failed or the file is empty);
+- a value file could not be written, or was refused twice by the plugin's
+  secrets hook;
+- the line-by-line secrets probe (described in the first item below) could
+  not run;
+- no reviewer of a round could read or follow its prompt file.
 
 Four bounded cases are handled inside the loop instead of stopping it:
 
@@ -384,9 +468,14 @@ any existing plan:
 implement the next 5 tasks of docs/superpowers-orchestrator/2026-08-04-my-feature/plans/my-feature.md
 ```
 
-A batch executes up to the **task cap** (your stated count, else 3) fully
+A batch executes up to the **task cap** (your stated count; else the
+`SUPERPOWERS_BATCH_TASK_CAP` setting, see §7; else 3) fully
 autonomously — sequentially, never asking questions mid-batch; a blocker
-ends the batch early with the question journaled instead of guessed at. At
+ends the batch early with the question journaled instead of guessed at.
+When the cap comes from the setting, or from the `X=<x>` of a pasted
+resume prompt, the batch's first message says so: `Batch cap <c> — the
+session default from the <superpowers-defaults> block.` or `Batch cap <c>
+— carried by the resume prompt.` At
 the boundary it writes a handoff into `state.md` (position, decisions, open
 issues, and the exact resume prompt), tells you to `/clear`, and you paste:
 
@@ -397,10 +486,11 @@ Resume the plan at docs/superpowers-orchestrator/2026-08-04-my-feature/plans/my-
 `X=<x>`, `N=<n>` and `M=<m>` appear only when you stated that value when
 the batch run started — omit whichever you did not state.
 
-Fresh session, cached-context costs gone, next batch begins. A context-
-pressure gate (§7) also blocks *starting* a batch mid-session when the
-window is already too full to finish one. Recovery semantics — including
-crashes mid-batch — are §5's batched-execution case.
+Fresh session, cached-context costs gone, next batch begins. The
+context-pressure gate of §7 checks only prompts that name plan execution,
+such as "execute the plan"; it does not check the batched-mode prompts
+shown above, so start each batch in a fresh session. Recovery semantics —
+including crashes mid-batch — are §5's batched-execution case.
 
 ### `/clear` between the gates — and why it costs you nothing
 
@@ -437,7 +527,7 @@ These are the actual dialogs:
 **Execution handoff** (end of `writing-plans`, after plan approval):
 
 > Plan saved to `docs/superpowers-orchestrator/<date>-<slug>/plans/<slug>.md`. Ready to execute with
-> **[Subagent-Driven / Inline Execution]** (`<N>` tasks).
+> **[Subagent-Driven / Inline Execution]** (`<N>` tasks[, `<one-word reason>`]).
 >
 > Recommended: start execution in a fresh session (`/clear` in Claude Code)
 > — this session's planning context is no longer needed for execution and
@@ -450,9 +540,14 @@ These are the actual dialogs:
 > Or reply here to execute in this session, or say "inline" / "subagent"
 > to switch.
 
+When Subagent-Driven is selected, the message also offers the interactive
+prompt `Use subagents to implement docs/superpowers-orchestrator/<date>-<slug>/plans/<slug>.md`,
+after the batched one. When Inline is selected, the prompt is
+`Execute the plan at docs/superpowers-orchestrator/<date>-<slug>/plans/<slug>.md`.
+
 **Batch boundary** (end of each batch in batched autonomous mode):
 
-> Batch complete (N tasks). Context at P%. To continue: run `/clear`, then
+> Batch complete (`<t>` tasks). Context at P%. To continue: run `/clear`, then
 > paste:
 > "Resume the plan at `<plan-path>` (batched autonomous mode, X=<x>, N=<n>, M=<m>)"
 >
@@ -485,13 +580,13 @@ flowchart TD
     A["orchestrate the development of docs/superpowers-orchestrator/&lt;date&gt;-&lt;slug&gt;/specs/&lt;slug&gt;-design.md"] --> P0
 
     subgraph INT1["🧑 Interactive — your only conversation"]
-        P0["Phase 0 — one question batch:<br/>N_plan, N_code, batch cap,<br/>branch point + permissions confirm"]
+        P0["Phase 0 — one question batch:<br/>N_plan, N_code, M, batch cap,<br/>branch point + permissions confirm"]
     end
 
     P0 --> P1
 
     subgraph AUTO["🤖 Unattended — hours, zero questions"]
-        P1["Phase 1 — write plan<br/>from the spec"] --> P2["Phase 2 — readiness pass,<br/>N_plan rounds, readiness pass"]
+        P1["Phase 1 — write plan<br/>from the spec"] --> P2["Phase 2 — readiness pass,<br/>N_plan rounds, readiness pass<br/>(the second one only when N_plan ≥ 1)"]
         P2 --> P3["Phase 3 — implementation batch<br/>(≤ cap tasks; checkbox + commit per task)"]
         P3 -->|tasks remain| P3
         P3 --> P4["Phase 4 — N_code whole-branch<br/>review rounds, fixes committed"]
@@ -522,9 +617,10 @@ Authoritative detail:
   a "Prior art and alternatives" section, or the exact sentence "No
   decision in this design matched the prior-art trigger predicate."
   Missing both stops Phase 0 before planning starts.
-- **Claude Code only.** The pipeline needs nested subagent dispatch (the
-  orchestrator spawns controllers, which spawn workers). On other platforms
-  the skill refuses with one line.
+- **Nested subagent dispatch.** The pipeline needs nested subagent dispatch
+  (the orchestrator spawns controllers, which spawn workers). Claude Code
+  provides it. On a platform without the Agent tool, the skill refuses with
+  one line.
 - **A clean working tree**, except the spec and its review-log sidecar
   (brainstorming leaves those uncommitted; orchestration commits them for
   you). Any other dirt stops setup — it will not touch your unrelated changes.
@@ -557,6 +653,11 @@ thing you hear is completion or a stop.
 
 One `SUPERPOWERS_REVIEW_ROUNDS` value supplies the offered default for both
 `N_plan` and `N_code`; you may still answer the two questions differently.
+Each offered value carries the same label as at the review gates (§3,
+Stage 1): **current default**, **recommended** or **session default**. For
+the batch cap the direction is reversed, because a smaller cap gives you
+more checkpoints between batches: a cap below 3 is **recommended**, and a
+cap above 3 is **session default**.
 
 The same batch asks for two confirmations:
 
@@ -582,7 +683,7 @@ The same batch asks for two confirmations:
 | Phase | What it does | Artifact |
 | --- | --- | --- |
 | 1 — Plan | Writes the implementation plan from the spec | `docs/superpowers-orchestrator/<date>-<slug>/plans/<slug>.md` |
-| 2 — Plan review | An Execution readiness pass, N independent review rounds with findings applied between rounds, then a second readiness pass | plan review-log sidecar |
+| 2 — Plan review | An Execution readiness pass, N independent review rounds with findings applied between rounds, then a second readiness pass when N is 1 or more | plan review-log sidecar |
 | 3 — Implementation | Tasks in batches of ≤ cap; each task test-driven, reviewed, and committed with its checkbox ticked | commits on `feature/<slug>` |
 | 4 — Code review | N whole-branch review rounds with fixes applied | `<topic>/implementation/<slug>-review-log.md`, committed |
 | 5 — Completion | Verifies every checkbox and a clean tree, then hands over | final report |
@@ -609,6 +710,20 @@ The directory's path is never written to the log or to `state.md`; if the
 orchestrator loses it (after a context compaction, typically) it creates a
 new directory and continues — that is not a failure.
 
+A **context compaction** happens when a session's context window fills:
+Claude Code replaces the earlier conversation with a short summary. After a
+compaction, Claude Code attaches again only the first 5,000 tokens of a
+skill's text, and the orchestrator skill was about 55,000 tokens long when
+this was measured for v7.19.0. Since
+v7.19.0 the top of the skill tells an orchestrator session that continues
+from a compaction summary to re-read, from the installed skill file, the
+section it was executing (Phase 3, Phase 4, the in-run rulings, or Resume).
+It then checks the ruling record for a ruling that was written but not
+committed, before it acts on the next controller return. You may see these
+reads in the terminal; they are expected. This recovery has not yet been
+tested on a real compaction: its manual probe,
+`tests/claude-code/compaction-probe.md`, was still owed at v7.19.0.
+
 ### Watching progress
 
 The orchestration log is the run's visible record:
@@ -629,6 +744,12 @@ plan: docs/superpowers-orchestrator/2026-08-04-my-feature/plans/my-feature.md �
 - Task 1: complete — added parser with regression tests
 ```
 
+With `N_plan = 0` the Phase 2 line reads
+`## Phase 2 — Plan review — rounds 0 (N_plan=0) — cap — unresolved 0`,
+because the Execution readiness pass still ran (since v7.14.0). A log
+written by an earlier release shows `## Phase 2 — Plan review — skipped
+(N_plan=0)` instead; both shapes mean Phase 2 is complete.
+
 The plan's task checkboxes are the other live signal — each tick is committed
 the moment its task completes.
 
@@ -641,6 +762,14 @@ re-dispatched. The full reasoning is in
 `docs/superpowers-orchestrator/<date>-<slug>/plans/<slug>-open-decisions.md`,
 one `## Ruling <n>` entry per item, committed together with the log entry
 before the phase continues.
+
+Since v7.17.0 the `Re-dispatch:` line of a `## RULING` entry shows the two
+limits described in "When it stops instead of finishing" below:
+`Re-dispatch: phase <p>, in-run resume <r> of 3, return <t> of 6`. Both
+numbers include the entry itself. A fix-only ruling (every answer begins
+`fix it` or `accept`) repeats the previous `<r>` and adds one to `<t>`. When
+at least one item of a return is escalated to you, the entry reads
+`Re-dispatch: none — escalated`.
 
 ### When it stops instead of finishing
 
@@ -685,8 +814,18 @@ reviews under distinct lenses. An item reaches you only when its correct
 resolution would change the spec (`spec wrong`), grow the work beyond the
 spec (`scope`), need an irreversible or outward-facing action
 (`irreversible`), concern an exposed credential (`secret`), or when the
-same phase has already been re-dispatched three times on rulings
-(`chain`). A Critical is never rejected by a ruling, and a decision you
+same unit has already been re-dispatched too many times on rulings
+(`chain`). The unit is the phase in Phase 4 and the task in Phase 3.
+Since v7.17.0 two limits apply to each unit. A *plan ruling* — a ruling
+in which at least one answer begins `amend plan` or `plan governs` — uses
+one of 3 in-run resumes. Every ruling that re-dispatches the unit, a plan
+ruling or a *fix-only* ruling (every answer begins `fix it` or `accept`),
+uses one of 6 returns. The return that would be the fourth plan ruling or
+the seventh return is not ruled on: its open items are escalated as
+`chain` and the run stops. Before v7.17.0 every ruling used one of the 3
+resumes, so a series of `fix it` rulings stopped the run at the fourth
+return. Both counts start again from zero when you resume a stopped run.
+A Critical is never rejected by a ruling, and a decision you
 made earlier in the run is never overturned by one. Since v7.11.0 that
 second guarantee holds whichever line of the ruling record carries your
 answer: an `amend plan` answer you gave to an escalated item is appended
@@ -713,11 +852,19 @@ missing section or sentence to the spec and re-run orchestration.
 
 ### On completion
 
-You get a summary (tasks, batches, review rounds and outcomes, the rulings
-made in the run with a pointer to the ruling record, the harness probes
-owed by the plan and code review loops — or `none` — the `Secrets found:`
-items of the code review loop — or `none` — and the three log paths), and
-`finishing-a-development-branch` takes over interactively — merge, PR,
+You get a summary with these items. An empty list reads `none`.
+
+- tasks, batches, review rounds and outcomes;
+- the harness probes owed by the plan and code review loops;
+- the readiness conflicts owed by the plan review (its log's `Owed:` block);
+- every `- spec deviation:` line of the plan review log;
+- the rulings made in the run: their count, each ruling whose forked
+  reviews left a contradiction unsettled, and each ruling whose answer
+  begins `accept:`, with a pointer to the ruling record;
+- the `Secrets found:` items of the code review loop;
+- the three log paths.
+
+Then `finishing-a-development-branch` takes over interactively — merge, PR,
 keep, or discard is yours to decide.
 
 ## 5. "My run was interrupted" — resuming and recovering
@@ -771,11 +918,18 @@ cap=2`) answers nothing and the run stops again on the same question.
 Every option the stop report offers is one the loop will accept: an item
 whose clause names binding plan text is offered `plan governs`,
 `amend plan: …; fix it: …` or a further escalation, never a bare `fix it`
-or `accept`. Two open items of one review
-invocation can carry the same id (`[I1]`), because ids restart in every
-round: when that happens, begin your answer with a short parenthesis
-naming the round it is for — `(this answers the round 4 item on …)` — so
-it is applied to the right finding. The `Ruled:` lines are decisions the
+or `accept`; a Critical item is never offered `accept` or `plan governs`.
+The same rules apply to an answer you write yourself. Two open items of one
+review invocation can carry the same id (`[I1]`), because ids restart in
+every round, in every fix-verification cycle (an extra review of fixes that
+no later round has reviewed; at most three per round) and, since v7.18.0, in
+every
+addendum re-review (§3, Stage 4). When that happens, begin your answer with
+a short parenthesis naming the entry it is for — the round, as in
+`(this answers the round 4 item on …)`, or the addendum re-review, as in
+`(this answers the round 8 addendum 2 re-review 1 item on …)` — so it is
+applied to the right finding. Writing the parenthesis when no ids collide
+does no harm. The `Ruled:` lines are decisions the
 orchestrator already made and recorded — resume carries them forward as
 they are. If you disagree with one, answer that id yourself in the resume
 prompt: the run then reverts that ruling, and the change made under it,
@@ -843,9 +997,11 @@ than redoing (or half-redoing) done work. A blocking question recorded in
 `## Open Issues` stops resume until you answer it — the run never executes
 past an unanswered blocker.
 
-One safety rule to know: resume refuses a `state.md` that names a
-*different* plan than your prompt does — you're asked to resolve the
-mismatch, never silently switched.
+One safety rule to know: when `state.md` names a *different* plan than
+your prompt does, or its plan file no longer exists, resume treats
+`state.md` as stale. It asks you nothing: it ignores that file, starts from
+the plan your prompt names, and overwrites `state.md` at the end of the
+batch. It never resumes from a `state.md` that points at another plan.
 
 ### Ordinary sessions
 
@@ -853,19 +1009,30 @@ The same file-based durability serves everyday work:
 
 - Ending a session mid-task? Say **`save state`** — `state.md` gets the
   current goal, decisions, and resume instructions for the next session.
+- Clearing the context window mid-task? Type **`/handoff`** first. Since
+  v7.20.0 it saves state (when the session made decisions) and prints a
+  prompt that the fresh session can
+  follow without re-deriving what this session found (§6).
 - Decisions and rejected approaches accumulate in `session-log.md`, and
   solved errors in `known-issues.md` — both are recalled automatically in
   future sessions (§6).
 - A plan being executed non-batched still has its committed checkboxes; a
   fresh session pointed at the plan picks up from the first unchecked task.
 
-### Two caveats that apply everywhere
+### Two caveats
 
-1. **A dirty tree blocks resume.** If the interruption left uncommitted
-   changes (a task died mid-edit), resume stops and reports rather than
-   guessing what the half-done work meant. Inspect the diff yourself, then
-   commit or discard it before resuming. This is deliberate: recovery never
-   silently reconciles your working tree.
+1. **A dirty tree can block an orchestration resume.** If a crash left
+   uncommitted changes (a task died mid-edit), resume stops and reports
+   rather than guessing what the half-done work meant. Inspect the diff
+   yourself, then commit or discard it before resuming. This is deliberate:
+   recovery never silently reconciles your working tree. There are two
+   exceptions. When the log ends with a `## STOPPED` or `## RULING` entry,
+   the check is skipped, because the tree may hold the blocked task's work
+   on purpose. Uncommitted files under the topic's `implementation/` folder
+   or in `plans/<slug>-open-decisions.md` never block, because the resumed
+   run commits or repairs them. Batched plan execution and `executing-plans`
+   have no clean-tree check at resume, so look at `git status` yourself
+   before you paste the resume prompt.
 2. **`state.md` and `.superpowers/` are git-excluded.** They survive a crash
    on the same machine, but not a fresh clone or `git clean -fdx`. The
    committed artifacts (plan, checkboxes, the orchestration log, and — for a
@@ -876,28 +1043,83 @@ The same file-based durability serves everyday work:
 ## 6. "How does it remember?" — the memory system
 
 Sessions start with zero conversational memory. Everything that persists does
-so through five plain-text files at your project root — readable, editable,
-and deletable by you:
+so through plain-text files — five at your project root, plus the handoff
+files under `tmp/docs/` — readable, editable, and deletable by you:
 
 | File | Answers | Written when |
 | --- | --- | --- |
 | `project-map.md` | What exists, key files, critical constraints | You say "map this project"; refreshed when flagged stale |
-| `session-log.md` | What was decided, why, and what was *rejected* | "save state", or the end-of-session decision prompt |
+| `session-log.md` | What was decided, why, and what was *rejected* | "save state", `/handoff`, or the end-of-session decision prompt |
 | `known-issues.md` | Errors already solved (symptom → cause → fix) | "save this fix", or after debugging resolves a recurring error |
-| `state.md` | Where mid-flight work stands right now | Batch handoffs (§3), "save state" |
+| `state.md` | Where mid-flight work stands right now | Batch handoffs (§3), "save state", `/handoff` |
 | `tmp/docs/<date>-handoff-<slug>.md` | A prompt that lets a fresh session continue the work without re-deriving this one's findings | `/handoff [slug]`, before you clear the context window |
 | `context-snapshot.json` | What changed just before this session | Automatically at session start |
 
-To continue in the fresh session, type `/pickup`. With no argument it takes the
-newest handoff file and every unfinished orchestration run on a local feature
-branch; if it finds more than one, it lists them with the exact line to type
-and stops. `/pickup <handoff path>` takes that handoff. Before it follows a
-handoff, a scan checks whether the handoff is out of date: commits made since
-the handoff was written, uncommitted changes, or a different branch make it
-stop and show you what it found. A run is never resumed on its own: `/pickup`
-shows the run, asks you once, and on yes sends only the bare
-`Resume orchestration for <path>` line — the orchestrator then asks you for any
-open answers.
+Before you clear the context window in the middle of work, type `/handoff`
+(since v7.20.0). It writes a continuation prompt: a prompt that a fresh
+session, with no memory of this one, can follow to continue the work.
+`/handoff <slug>` sets the end of the file name (a short lower-case name
+with hyphens, such as `row-28`); without it, the skill derives one. The
+skill takes the facts from files, not from memory: `state.md`, the last two
+saved entries of `session-log.md`, and the previous handoff file, or
+`CLAUDE.md` when there is no previous handoff. It writes
+`tmp/docs/<date>-handoff-<slug>.md` and never overwrites a file (a taken
+name gets `-2`). When the session made decisions, it also saves state. It
+replies with the file path and the whole prompt in one code block. It
+commits nothing, and it tells you when git does not ignore `tmp/docs/`.
+Claude never starts this skill by itself: when you write "clear the
+context", the router (§2) suggests the skill, but you type the command.
+
+Since v7.23.0 the first line of a handoff file is a header, for example
+`Handoff: written=2026-09-15T16:40+0200 branch=main head=e431ae9`: the time
+the file was written with its time-zone offset, the branch, and the short id
+of the last commit (`none` when there is no branch or no commit). `/handoff`
+can add a second line, `Done when: <condition>`, when a commit alone would
+not show that the task is finished. `/pickup` reads both lines. A handoff
+written before v7.23.0 has no header, so `/pickup` counts only the commits
+made since 00:00 of the date in its file name.
+
+Since v7.23.0, to continue in the fresh session, type `/pickup`. With no
+argument it takes the newest handoff file and every unfinished orchestration
+run on a local feature branch; if it finds more than one, it lists them with
+the exact line to type and stops. `/pickup <handoff path>` takes that
+handoff. Before it follows a handoff, a scan compares the repository with
+the moment the handoff was written and prints one status. `FRESH` means no
+commit since the handoff, no uncommitted change, and the same branch:
+`/pickup` follows the handoff. `CHECK` means at least one of those differs:
+`/pickup` then compares the new commits, the uncommitted changes and the
+branch with the handoff's task. If the task looks done or partly done, or
+`/pickup` is not sure, it stops and shows you what it found; otherwise it
+follows the handoff. `UNKNOWN` means the scan could not decide (for example, the
+folder is not a git repository): `/pickup` tells you what is unknown and
+asks whether to continue. The files that `/handoff` itself writes
+(`tmp/docs/`, `state.md`, `session-log.md`) do not count as uncommitted
+changes. When the handoff has a `Done when:` line, `/pickup` tests that
+condition first and stops if it is already true. A run is never resumed on
+its own: `/pickup` shows the run, asks you once, and on yes sends only the
+bare `Resume orchestration for <path>` line — the orchestrator then asks you
+for any open answers.
+
+When there is nothing to continue, `/pickup` says so. A run that it cannot
+resume safely — two orchestration logs for the same name, or neither a plan
+nor a spec — is shown as "needs a human look" with its log paths, and
+`/pickup` asks nothing. `/pickup` takes only a handoff path: if you give it
+a plan or spec path, or extra text such as `with M=1` or `[I2]: yes`, it
+sends nothing to the orchestrator and tells you to type
+`Resume orchestration for <path>` yourself, followed by your text if you
+gave any.
+
+Known limits of `/pickup`. It finds runs only on local `feature/*` branches
+that are not merged into your local default branch. The default branch is
+the local branch that `origin/HEAD` names, else `main`, else `master`; when
+none exists, every feature branch is scanned. A run that exists only on a
+remote branch is not listed, and a run merged on the remote is still listed
+until you update your local default branch. A
+handoff without a header can be sorted behind an older handoff that has
+one. The `Done when:` condition is judged by the model, not by the scan. If
+a handoff's `written=` time is later than your machine's clock, new commits
+on other branches are not counted. On GitHub Copilot CLI the argument may
+not arrive (untested); write the handoff path in the same message.
 
 Recall is mostly automatic. At session start, the plugin reads `state.md`,
 `known-issues.md`, and `project-map.md` (and detects a stale map via git).
@@ -934,13 +1156,21 @@ is*, as a percentage. An empty session is at 0%; at 100% nothing more fits.
 You will see the term in the plugin's messages, which is why it has a name
 at all.
 
-**What the plugin does about it.** Before it *starts* an autonomous batch
-(§3), it checks the pressure. If the session is already past the threshold
-(default **60%** full), it refuses to start and asks you to run `/clear`
-first — starting a long batch with little free memory means the batch dies
-in the middle, which is worse than restarting cleanly. This check happens
-only at the *start* of a batch; how a batch *ends* is decided by the task
-cap (§3), not by pressure.
+**What the plugin does about it.** When you submit a prompt that starts
+plan execution — one that contains a phrase such as "execute the plan",
+"implement the plan", "run the plan", "follow the plan" or "start
+implementing" — the plugin checks the pressure. If the session is already
+past the threshold (default **60%** full), the hook tells Claude not to
+start yet: Claude must first save `state.md`, tell you that it is
+compacting, and run `/compact`. Starting a long batch with little free
+memory means the batch dies in the middle, which is worse than restarting
+cleanly. The check runs only when a prompt is submitted;
+how a batch *ends* is decided by the task cap (§3), not by pressure.
+
+Known limit: the batched-mode prompts of §3 ("implement the next N tasks
+of …", "Use subagents in batched autonomous mode on …", "Resume the plan
+at …") contain none of these phrases, so the check does not run for them.
+Start each batch in a fresh session, as the dialogs recommend.
 
 You can change the threshold in your `settings.json` (a percentage, 10–90):
 
@@ -952,7 +1182,8 @@ The number of reviewers per lens — M, the identical reviewer subagents each
 `multi-doc-review` / `multi-code-review` round dispatches in parallel — is set
 the same way (an integer 1–5, default 1; restart the CLI after changing it;
 an invalid value silently falls back to 1). Honored on Claude Code;
-not verified on Cursor; no block is emitted on Codex or OpenCode:
+not verified on GitHub Copilot CLI or Cursor; no block is emitted on Codex
+or OpenCode:
 
 ```json
 { "env": { "SUPERPOWERS_REVIEWERS_PER_LENS": "3" } }
@@ -966,18 +1197,34 @@ Beside it, two more variables are set the same way. `SUPERPOWERS_REVIEW_ROUNDS`
 sets N, the number of review rounds each review loop runs (an integer 1–10,
 default 3; restart the CLI after changing it; an invalid value silently
 falls back to 3). `0` is deliberately not accepted here: it would silently
-disable spec review, plan review and whole-branch code review on every
+disable spec review, the plan's rotating review rounds and whole-branch
+code review on every
 future session — N = 0 stays available only where you state it and see its
 effect, in an invocation or at a gate question. `SUPERPOWERS_BATCH_TASK_CAP`
 sets how many tasks one Batched Autonomous Mode batch implements before it
 stops and writes its handoff (an integer 1–5, default 3; restart the CLI
 after changing it; an invalid value silently falls back to 3). Both are
-honored on Claude Code; not verified on Cursor; no block is emitted on
-Codex or OpenCode:
+honored on Claude Code; not verified on GitHub Copilot CLI or Cursor; no
+block is emitted on Codex or OpenCode:
 
 ```json
 { "env": { "SUPERPOWERS_REVIEW_ROUNDS": "5", "SUPERPOWERS_BATCH_TASK_CAP": "2" } }
 ```
+
+At session start the plugin's start-up hook reads these three variables and
+adds one short text section to Claude's context: the
+**`<superpowers-defaults>` block**. The block always lists all three values,
+with the built-in default in place of an unset or invalid variable. A plugin
+message that names "the session default from the
+`<superpowers-defaults>` block" means the value came from one of these
+variables. Whenever a skill uses such a value without asking you, it says
+so in its first or last message.
+
+A value that a running skill has already chosen is kept for the rest of that
+run, even after `/clear` or a compaction. On Codex and OpenCode no block
+exists (read from the code; not run on those platforms): a value you state in the command still wins, and otherwise the
+built-in default applies (1 reviewer per lens, 3 rounds, a cap of 3),
+whatever these variables say.
 
 **One complication: the plugin has to guess how big the memory is.**
 Different Claude models have different context-window sizes (some 200
@@ -1017,11 +1264,13 @@ installer after each plugin update (§1).
 
 **On other platforms there is no fix yet.** Codex, OpenCode, and Cursor
 have no statusline mechanism, so the true memory numbers cannot be read
-there at all — do not try to install the bridge on those platforms. The
-plugin knows this and falls back to a deliberately cautious behavior
-(fixed small batch sizes instead of a measured gate), which is safe but not
-tunable. If a future platform version exposes the numbers, bridge support
-can follow.
+there — do not try to install the bridge on those platforms. Without those
+numbers the gate has nothing to measure, so it does not block anything
+there (on Cursor the prompt hook that runs the gate is not wired at all).
+Batches still end at the task cap (§3), as on Claude Code. This is derived
+from the code; it has not been observed, because none of these platforms
+has been run. If a future platform version exposes the numbers, bridge
+support can follow.
 
 ## 8. Phrase cheat-sheet
 
@@ -1042,7 +1291,9 @@ handled by the router (§2) — just describe what you want.
 | "save state" / "compress context" | Snapshot to `state.md` + decision log entry | §6 |
 | "map this project" | Generate `project-map.md` | §6 |
 | "save this fix" | Record symptom → cause → fix in `known-issues.md` | §6 |
-| "use `<skill>`" / `/<skill>` | Direct invocation of any skill by name | §2 |
+| `/handoff [slug]` (type it; Claude never starts it by itself) | Before you clear the context window: writes a continuation prompt to `tmp/docs/<date>-handoff-<slug>.md`, saves state when the session made decisions, and prints the prompt to copy | §6 |
+| `/pickup [handoff path]` (type it; Claude never starts it by itself) | In a fresh session: continues from the newest handoff or a named one after checking that it is still current, or lists unfinished orchestration runs and asks before resuming one | §6 |
+| "use `<skill>`" / `/<skill>` | Direct invocation of a skill by name; `/handoff` and `/pickup` start only as slash commands | §2 |
 
 (This table is release-maintained — if a phrase here doesn't work, your
 installed plugin version and guide version have probably diverged; check §1.)
@@ -1078,10 +1329,12 @@ actually installed: the plugin's install path and its `VERSION` file must
 both show the expected version; if not, re-run both update steps and check
 the marketplace entry points at the right repo.
 
-**"Context pressure" blocks me from starting a batch.** The §7 start gate.
-If the session genuinely is full: compact or `/clear` first. If you're on a
-large-window model and the number looks absurd, the gate is likely falling
-back to a 200K assumption — install the statusline bridge (§7).
+**"Context pressure" blocks me from starting plan execution.** The §7
+gate. It checks only prompts that name plan execution, such as "execute the
+plan", never the batched-mode prompts. When it fires, Claude saves
+`state.md` and runs `/compact` before it starts. If you're on a large-window
+model and the number looks absurd, the gate is likely falling back to a 200K
+assumption — install the statusline bridge (§7).
 
 **A review report says `Harness probes owed:` with one or more items.** A
 reviewer made a claim about the agent runtime that nobody could test in that
@@ -1090,14 +1343,16 @@ Stage 1). Run the named probe yourself; if it confirms the claim, reopen the
 finding by hand — nothing in the run is waiting on it.
 
 **My run stopped with `BLOCKED: prompt file ... not produced` (or
-`prompt directory could not be created`, `value file ... could not be
-written`, `no reviewer of round <i> could use its prompt file`).** The
+`prompt directory could not be created`, `prompt directory path lost from
+the controller's context`, `value file ... could not be written`,
+`value file ... refused twice by protect-secrets`, `secrets probe could not
+run`, `no reviewer of round <i> could use its prompt file`).** The
 code review loop could not hand a prompt to its reviewers or fix subagent
 through the temporary directory it uses since v7.9.0, and it stops instead
 of pasting the prompt inline by design (§3, "When the review loop's prompt
 delivery fails"). Check the cause text: a missing or unwritable temporary
 location, Node not runnable, or a permission dialog on a write or read
-outside the repository (§4, Prerequisites). Fix the environment, then
+outside the repository (§4, Phase 0, Permissions). Fix the environment, then
 resume (§5); the completed rounds and their fix commits are kept.
 
 **My orchestration log ends with `## STOPPED` and a cause that begins
