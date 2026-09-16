@@ -5,7 +5,7 @@
  * Bash Output Optimizer — executes a command and compresses its output.
  *
  * Called by bash-compress-hook.js via PreToolUse command rewriting.
- * Usage: node bash-optimizer.js <base64-encoded-command> <rule-type>
+ * Usage: node bash-optimizer.js <base64-encoded-command> <rule-type> [<call-time-out-ms>]
  *
  * Cross-platform:
  *   - macOS:   uses /bin/bash (always available, ships with macOS)
@@ -17,15 +17,30 @@
  *   - Exit codes are always preserved from the original command
  *   - stderr is always passed through uncompressed
  *   - Compressed output includes a transparency marker
+ *   - A command still running at the Bash call's time-out gets raw output:
+ *     Claude Code then moves the call to the background and does not end it,
+ *     so the optimizer writes the output it holds and passes later output
+ *     through unchanged, the same as for a command that was not rewritten
  */
 
-const { spawnSync } = require('child_process');
+const { spawn, spawnSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 const { RULES, MIN_OUTPUT_LENGTH } = require('./compression-rules');
 
 const b64Command = process.argv[2];
 const ruleType = process.argv[3];
+
+// Time-out of the Bash tool call in milliseconds (ms). The hook passes it when
+// the call sets one. Otherwise Claude Code uses its default: 120000 ms, or the
+// value of the environment variable BASH_DEFAULT_TIMEOUT_MS.
+const DEFAULT_CALL_TIMEOUT_MS = 120000;
+const callTimeoutMs = Number(process.argv[4])
+  || Number(process.env.BASH_DEFAULT_TIMEOUT_MS)
+  || DEFAULT_CALL_TIMEOUT_MS;
+
+// Largest amount of output held for compression; more output is written raw
+const MAX_HELD_BYTES = 10 * 1024 * 1024; // 10 MB (megabytes)
 
 if (!b64Command) {
   process.stderr.write('[smart-compress] Error: no command argument\n');
@@ -77,42 +92,77 @@ function getShell() {
 const rule = RULES.find(r => r.type === ruleType);
 
 /**
- * Run the command and output results (raw or compressed).
- * Wrapped in a function for clean error handling with fail-open.
+ * Run the command. Hold its output for compression until it ends, or write
+ * the output raw from the call's time-out (or from MAX_HELD_BYTES) onwards.
  */
 function run() {
-  const shell = getShell();
-  const result = spawnSync(shell, ['-c', cmd], {
-    encoding: 'utf8',
-    maxBuffer: 10 * 1024 * 1024, // 10MB
-    // No time-out here: the time-out of the Bash tool call applies, the same
-    // as for a command that this hook does not rewrite.
+  const child = spawn(getShell(), ['-c', cmd], {
     stdio: ['inherit', 'pipe', 'pipe'],
     cwd: process.cwd(),
   });
+  const heldStdout = [];
+  const heldStderr = [];
+  let heldBytes = 0;
+  let raw = false;
 
-  // Handle spawn errors (shell not found, buffer exceeded)
-  if (result.error) {
-    process.stderr.write(`[smart-compress] Execution error: ${result.error.message}\n`);
-    if (result.stdout) process.stdout.write(result.stdout);
-    if (result.stderr) process.stderr.write(result.stderr);
-    process.exit(result.status != null ? result.status : 1);
-    return;
+  // Write the held output unchanged; later output is written as it arrives
+  function switchToRaw() {
+    if (raw) return;
+    raw = true;
+    process.stdout.write(Buffer.concat(heldStdout));
+    process.stderr.write(Buffer.concat(heldStderr));
   }
 
-  // Handle signals (SIGTERM, etc.)
-  if (result.signal) {
-    process.stderr.write(`[smart-compress] Command killed by ${result.signal}\n`);
-    if (result.stdout) process.stdout.write(result.stdout);
-    if (result.stderr) process.stderr.write(result.stderr);
+  function onOutput(held, stream) {
+    return chunk => {
+      if (raw) {
+        stream.write(chunk);
+        return;
+      }
+      held.push(chunk);
+      heldBytes += chunk.length;
+      if (heldBytes > MAX_HELD_BYTES) switchToRaw();
+    };
+  }
+
+  child.stdout.on('data', onOutput(heldStdout, process.stdout));
+  child.stderr.on('data', onOutput(heldStderr, process.stderr));
+  const timer = setTimeout(switchToRaw, callTimeoutMs);
+
+  // The shell could not be started
+  child.on('error', e => {
+    clearTimeout(timer);
+    process.stderr.write(`[smart-compress] Execution error: ${e.message}\n`);
+    switchToRaw();
     process.exit(1);
-    return;
-  }
+  });
 
+  child.on('close', (status, signal) => {
+    clearTimeout(timer);
+    // A signal from another process stopped the command
+    if (signal) {
+      switchToRaw();
+      process.stderr.write(`[smart-compress] Command killed by ${signal}\n`);
+      process.exitCode = 1;
+      return;
+    }
+    if (raw) {
+      process.exitCode = status;
+      return;
+    }
+    writeResult(Buffer.concat(heldStdout).toString('utf8'), Buffer.concat(heldStderr).toString('utf8'), status);
+  });
+}
+
+/**
+ * Write the output of a command that ended before the switch to raw output:
+ * compressed when the rule allows it, raw otherwise.
+ */
+function writeResult(rawStdout, rawStderr, status) {
   // Normalize line endings (Windows CRLF -> LF)
-  const stdout = (result.stdout || '').replace(/\r\n/g, '\n');
-  const stderr = (result.stderr || '').replace(/\r\n/g, '\n');
-  const exitCode = result.status != null ? result.status : 0;
+  const stdout = rawStdout.replace(/\r\n/g, '\n');
+  const stderr = rawStderr.replace(/\r\n/g, '\n');
+  const exitCode = status != null ? status : 0;
 
   // No matching rule — pass through raw (shouldn't happen, but fail-open)
   if (!rule) {

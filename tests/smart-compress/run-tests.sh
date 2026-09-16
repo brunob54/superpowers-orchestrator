@@ -455,8 +455,9 @@ result=$(node -e "
 ")
 assert "hook passes the call's time-out to the optimizer" "$result" "ok"
 
-# A background call is not rewritten (Case 026): the optimizer holds all
-# output until the command ends, so a background output file would stay empty.
+# A background call is not rewritten. Claude Code writes the output of a
+# background call to a file while the command runs; the optimizer holds output
+# for compression, so that file would stay empty until the command ends.
 assert "background call passes through as {}" \
   "$(run_hook 'git status' "bg-$$-$RANDOM" ',"run_in_background":true')" "{}"
 assert "call with run_in_background false is still rewritten" \

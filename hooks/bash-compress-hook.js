@@ -10,6 +10,7 @@
  * enters Claude's context.
  *
  * Non-compressible commands pass through unchanged (returns {}).
+ * Background calls (run_in_background: true) also pass through unchanged.
  * Fail-open: any error results in the original command running unmodified.
  *
  * Disable mechanisms:
@@ -91,8 +92,9 @@ async function main() {
     }
 
     // ── Background calls ──
-    // The optimizer holds all output until the command ends, so the output
-    // file of a background call would stay empty while the command runs.
+    // Claude Code writes the output of a background call to a file while the
+    // command runs. The optimizer holds output for compression, so that file
+    // would stay empty until the command ends.
     if (tool_input.run_in_background === true) {
       process.stdout.write('{}');
       return;
@@ -137,7 +139,10 @@ async function main() {
     // Use forward slashes for all platforms (bash on Windows handles them)
     const optimizerPath = path.join(__dirname, 'bash-optimizer.js').replace(/\\/g, '/');
     const b64 = Buffer.from(cmd).toString('base64');
-    const rewrittenCmd = `node "${optimizerPath}" "${b64}" "${rule.type}"`;
+    // Pass the call's time-out: from that time the optimizer writes raw output,
+    // because Claude Code moves the call to the background and does not end it
+    const timeoutArg = Number.isFinite(tool_input.timeout) ? ` "${tool_input.timeout}"` : '';
+    const rewrittenCmd = `node "${optimizerPath}" "${b64}" "${rule.type}"${timeoutArg}`;
 
     // Preserve all original tool_input fields, only replace the command
     const updatedInput = { ...tool_input, command: rewrittenCmd };
