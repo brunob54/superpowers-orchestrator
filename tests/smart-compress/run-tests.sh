@@ -65,14 +65,16 @@ assert_not_contains() {
   fi
 }
 
-# Run the PreToolUse hook for a Bash command, return its stdout
+# Run the PreToolUse hook for a Bash command, return its stdout.
+# Optional third argument: more tool_input fields as a JSON fragment that
+# starts with a comma, for example ',"run_in_background":true'.
 run_hook() {
-  local cmd="$1" session="${2:-test-$$}"
+  local cmd="$1" session="${2:-test-$$}" extra_fields="${3:-}"
   local tmpfile
   tmpfile=$(mktmp)
   # Write JSON input to a temp file, then feed it via stdin redirect
-  printf '{"session_id":"%s","tool_name":"Bash","tool_input":{"command":"%s"},"cwd":"%s"}' \
-    "$session" "$cmd" "$PLUGIN_ROOT" > "$tmpfile"
+  printf '{"session_id":"%s","tool_name":"Bash","tool_input":{"command":"%s"%s},"cwd":"%s"}' \
+    "$session" "$cmd" "$extra_fields" "$PLUGIN_ROOT" > "$tmpfile"
   node "$PLUGIN_ROOT/hooks/bash-compress-hook.js" < "$tmpfile"
 }
 
@@ -377,6 +379,23 @@ exit_code=$(node -e "
 ")
 assert "optimizer handles invalid base64 without crashing" "$exit_code" "handled"
 
+# No time limit of its own (Case 026): a command that runs longer than any
+# limit the optimizer gives to spawnSync must still finish. The preload file
+# shortens every spawnSync time-out to 1 second, so a 2-second command shows
+# the difference without a 5-minute wait.
+preload=$(mktmp)
+cat > "$preload" <<'PRELOAD'
+const cp = require('child_process');
+const original = cp.spawnSync;
+cp.spawnSync = (file, args, options) => original(file, args,
+  options && options.timeout ? { ...options, timeout: 1000 } : options);
+PRELOAD
+long_cmd='sleep 2; echo long-step-finished'
+b64=$(printf '%s' "$long_cmd" | base64 -w 0 2>/dev/null || printf '%s' "$long_cmd" | base64)
+output=$(node --require "$preload" "$PLUGIN_ROOT/hooks/bash-optimizer.js" "$b64" "git-status" 2>/dev/null; echo "exit=$?")
+assert_contains "optimizer: a command longer than any internal limit runs to its end" "$output" "long-step-finished"
+assert_contains "optimizer: a command longer than any internal limit keeps exit code 0" "$output" "exit=0"
+
 # ═══════════════════════════════════════════════════════
 bold "\n6. HOOK I/O PROTOCOL"
 # ═══════════════════════════════════════════════════════
@@ -415,6 +434,13 @@ result=$(node -e "
   console.log(u && u.description === 'my desc' && u.timeout === 60000 ? 'ok' : 'fields-not-preserved');
 ")
 assert "hook preserves all original tool_input fields alongside rewritten command" "$result" "ok"
+
+# A background call is not rewritten (Case 026): the optimizer holds all
+# output until the command ends, so a background output file would stay empty.
+assert "background call passes through as {}" \
+  "$(run_hook 'git status' "bg-$$-$RANDOM" ',"run_in_background":true')" "{}"
+assert "call with run_in_background false is still rewritten" \
+  "$(is_rewritten "$(run_hook 'git status' "fg-$$-$RANDOM" ',"run_in_background":false')")" "yes"
 
 # Non-Bash tool → passthrough
 inp2='{"session_id":"x","tool_name":"Read","tool_input":{"file_path":"/tmp/test"},"cwd":"'"$PLUGIN_ROOT"'"}'
