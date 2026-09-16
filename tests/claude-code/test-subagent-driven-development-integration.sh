@@ -25,9 +25,11 @@ echo ""
 # Create test project
 TEST_PROJECT=$(create_test_project)
 echo "Test project: $TEST_PROJECT"
+# Claude runs in its own empty work folder, never in the plugin repository.
+CLAUDE_WORKDIR=$(create_claude_workdir)
 
 # Trap to cleanup
-trap "cleanup_test_project $TEST_PROJECT" EXIT
+trap "cleanup_test_project '$TEST_PROJECT' '$CLAUDE_WORKDIR'" EXIT
 
 # Set up minimal Node.js project
 cd "$TEST_PROJECT"
@@ -136,7 +138,6 @@ EOF
 
 # Note: We use a longer timeout since this is integration testing
 # Use --allowed-tools to enable tool usage in headless mode
-# IMPORTANT: Run from superpowers directory so local dev skills are available
 PROMPT="Change to directory $TEST_PROJECT and then execute the implementation plan at docs/superpowers-orchestrator/2026-08-25-implementation-plan/plans/implementation-plan.md using the subagent-driven-development skill.
 
 IMPORTANT: Follow the skill exactly. I will be verifying that you:
@@ -152,10 +153,11 @@ Begin now. Execute the plan."
 # The path is ~/.claude/projects/<escaped-cwd>/<session-id>.jsonl, where
 # <escaped-cwd> is the ABSOLUTE path of the directory claude runs in with every
 # character that is not a letter or a digit replaced by "-". The leading "/"
-# becomes a leading "-", and "_" becomes "-" as well. The path must be resolved
-# first: "$SCRIPT_DIR/../.." still contains the literal "..".
-PLUGIN_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
-WORKING_DIR_ESCAPED=$(echo "$PLUGIN_ROOT" | sed 's/[^a-zA-Z0-9]/-/g')
+# becomes a leading "-", and "_" becomes "-" as well. The path must be the
+# physical path (symbolic links resolved): on macOS the temporary folder
+# /var/... is a link to /private/var/..., and Claude Code uses /private/var/...
+# create_claude_workdir already prints the physical path.
+WORKING_DIR_ESCAPED=$(echo "$CLAUDE_WORKDIR" | sed 's/[^a-zA-Z0-9]/-/g')
 SESSION_DIR="$HOME/.claude/projects/$WORKING_DIR_ESCAPED"
 
 # List the transcripts that already exist, so the one this run creates can be
@@ -169,7 +171,7 @@ find "$SESSION_DIR" -name "*.jsonl" -type f ! -name "agent-*" 2>/dev/null | sort
 
 echo "Running Claude (output will be shown below and saved to $OUTPUT_FILE)..."
 echo "================================================================================"
-cd "$SCRIPT_DIR/../.." && timeout 1800 claude -p "$PROMPT" --allowed-tools=all --add-dir "$TEST_PROJECT" --permission-mode bypassPermissions 2>&1 | tee "$OUTPUT_FILE" || {
+( cd "$CLAUDE_WORKDIR" && timeout 1800 claude -p "$PROMPT" --allowed-tools=all --add-dir "$TEST_PROJECT" --permission-mode bypassPermissions ) 2>&1 | tee "$OUTPUT_FILE" || {
     echo ""
     echo "================================================================================"
     echo "EXECUTION FAILED (exit code: $?)"

@@ -15,7 +15,6 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-PLUGIN_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
 source "$SCRIPT_DIR/../lib/timeout-shim.sh"
 source "$SCRIPT_DIR/test-helpers.sh"
 
@@ -27,7 +26,8 @@ echo ""
 
 # --- Setup ---
 TEST_PROJECT=$(create_test_project)
-trap "cleanup_test_project '$TEST_PROJECT'" EXIT
+CLAUDE_WORKDIR=$(create_claude_workdir)
+trap "cleanup_test_project '$TEST_PROJECT' '$CLAUDE_WORKDIR'" EXIT
 
 LOG_DIR="$HOME/.claude/hooks-logs"
 TODAY=$(date +%Y-%m-%d)
@@ -66,9 +66,9 @@ PROMPT_PRETOOL="You MUST dispatch a subagent using the Agent tool with these EXA
 
 IMPORTANT: Do NOT run the command yourself. You MUST use the Agent tool to dispatch a subagent to run it. After the subagent returns, report: (1) whether the subagent said the command was blocked, and (2) what the subagent's response was."
 
-cd "$PLUGIN_DIR" && timeout 120 claude -p "$PROMPT_PRETOOL" \
+( cd "$CLAUDE_WORKDIR" && timeout 120 claude -p "$PROMPT_PRETOOL" \
     --permission-mode bypassPermissions \
-    --add-dir "$TEST_PROJECT" \
+    --add-dir "$TEST_PROJECT" ) \
     2>&1 | tee "$TEST_PROJECT/output-pretool.txt" || true
 
 echo ""
@@ -90,9 +90,9 @@ PROMPT_POSTTOOL="You MUST dispatch a subagent using the Agent tool with these EX
 
 IMPORTANT: Do NOT create the file yourself. You MUST use the Agent tool to dispatch a subagent. After the subagent returns, confirm the file was created."
 
-cd "$PLUGIN_DIR" && timeout 120 claude -p "$PROMPT_POSTTOOL" \
+( cd "$CLAUDE_WORKDIR" && timeout 120 claude -p "$PROMPT_POSTTOOL" \
     --permission-mode bypassPermissions \
-    --add-dir "$TEST_PROJECT" \
+    --add-dir "$TEST_PROJECT" ) \
     2>&1 | tee "$TEST_PROJECT/output-posttool.txt" || true
 
 echo ""

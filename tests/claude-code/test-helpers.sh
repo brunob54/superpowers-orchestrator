@@ -3,13 +3,16 @@
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")/../lib" && pwd)/timeout-shim.sh"
 
-# Run Claude Code with a prompt and capture output
+# Run Claude Code with a prompt and capture output. Claude runs in a fresh
+# empty work folder (see create_claude_workdir), which is removed afterwards.
 # Usage: run_claude "prompt text" [timeout_seconds] [allowed_tools]
 run_claude() {
     local prompt="$1"
     local timeout="${2:-60}"
     local allowed_tools="${3:-}"
     local output_file=$(mktemp)
+    local workdir
+    workdir=$(create_claude_workdir)
 
     # Build command
     local cmd="claude -p \"$prompt\""
@@ -17,15 +20,18 @@ run_claude() {
         cmd="$cmd --allowed-tools=$allowed_tools"
     fi
 
-    # Run Claude in headless mode with timeout
-    if timeout "$timeout" bash -c "$cmd" > "$output_file" 2>&1; then
+    # Run Claude in headless mode with timeout. The subshell changes into the
+    # work folder, so the caller's working directory does not change.
+    if (cd "$workdir" && timeout "$timeout" bash -c "$cmd") > "$output_file" 2>&1; then
         cat "$output_file"
         rm -f "$output_file"
+        cleanup_test_project "$workdir"
         return 0
     else
         local exit_code=$?
         cat "$output_file" >&2
         rm -f "$output_file"
+        cleanup_test_project "$workdir"
         return $exit_code
     fi
 }
@@ -131,13 +137,44 @@ create_test_project() {
     echo "$test_dir"
 }
 
-# Cleanup test project
-# Usage: cleanup_test_project "$test_dir"
-cleanup_test_project() {
-    local test_dir="$1"
-    if [ -d "$test_dir" ]; then
-        rm -rf "$test_dir"
+# Create an empty folder for one `claude -p` run and print its physical path
+# (symbolic links resolved). Claude Code names the transcript folder after the
+# physical path: on macOS mktemp returns /var/..., which is a link to
+# /private/var/... The folder is outside the plugin repository and outside the
+# test project, so a skill that writes into its working directory is caught by
+# assert_workdir_empty, and the session does not load this repository's
+# CLAUDE.md or workspace files. Run claude in a subshell,
+# `( cd "$CLAUDE_WORKDIR" && claude -p ... )`, so that the script itself never
+# stands inside the folder when its EXIT trap removes it.
+# Usage: CLAUDE_WORKDIR=$(create_claude_workdir)
+create_claude_workdir() {
+    (cd "$(mktemp -d)" && pwd -P)
+}
+
+# Fail when a run wrote anything into its working directory (a misanchored
+# skill). The folder is disposable, so there is nothing to recover: the
+# failure message lists its content for inspection.
+# Usage: assert_workdir_empty "<assertion label>" "$CLAUDE_WORKDIR"
+assert_workdir_empty() {
+    local label="$1"
+    local dir="$2"
+    if [ -n "$(ls -A "$dir")" ]; then
+        echo "FAIL($label): the run wrote into its working directory $dir (misanchored skill?)"
+        ls -la "$dir"
+        return 1
     fi
+    return 0
+}
+
+# Cleanup test project and work folders: removes every folder given
+# Usage: cleanup_test_project "$test_dir" ["$other_dir" ...]
+cleanup_test_project() {
+    local test_dir
+    for test_dir in "$@"; do
+        if [ -d "$test_dir" ]; then
+            rm -rf "$test_dir"
+        fi
+    done
 }
 
 # Create a simple plan file for testing
@@ -194,12 +231,12 @@ EOF
 }
 
 # [I2] Detect any of the superpowers session-default variables set in the
-# `env` block of a settings file that applies to a `claude -p` run started
-# from $plugin_dir: a user-level ~/.claude/settings.json, a user-level
+# `env` block of a settings file that applies to a `claude -p` run whose
+# working directory is $workdir: a user-level ~/.claude/settings.json, a user-level
 # ${CLAUDE_CONFIG_DIR:-$HOME/.claude}/settings.json or settings.local.json
 # (relevant only when CLAUDE_CONFIG_DIR points somewhere other than
-# ~/.claude), a project-level $plugin_dir/.claude/settings.json or
-# $plugin_dir/.claude/settings.local.json, or the enterprise
+# ~/.claude), a project-level $workdir/.claude/settings.json or
+# $workdir/.claude/settings.local.json, or the enterprise
 # managed-settings.json (macOS: /Library/Application Support/ClaudeCode/;
 # Linux: /etc/claude-code/), which has the highest precedence of all of them.
 # README.md and docs/guide/README.md tell users to set these that way; Claude
@@ -208,9 +245,9 @@ EOF
 # them reaching hooks/session-start changes the <superpowers-defaults> block
 # the session is given, which is what the default cases in these tests
 # depend on. Tolerates a missing file. Uses plain grep — no jq dependency.
-# Usage: check_no_superpowers_defaults_setting "$PLUGIN_DIR"
+# Usage: check_no_superpowers_defaults_setting "$CLAUDE_WORKDIR"
 check_no_superpowers_defaults_setting() {
-    local plugin_dir="$1"
+    local workdir="$1"
     local config_dir="${CLAUDE_CONFIG_DIR:-$HOME/.claude}"
     local var f
     for var in SUPERPOWERS_REVIEWERS_PER_LENS SUPERPOWERS_REVIEW_ROUNDS SUPERPOWERS_BATCH_TASK_CAP; do
@@ -218,8 +255,8 @@ check_no_superpowers_defaults_setting() {
                  "$HOME/.claude/settings.local.json" \
                  "$config_dir/settings.json" \
                  "$config_dir/settings.local.json" \
-                 "$plugin_dir/.claude/settings.json" \
-                 "$plugin_dir/.claude/settings.local.json" \
+                 "$workdir/.claude/settings.json" \
+                 "$workdir/.claude/settings.local.json" \
                  "/Library/Application Support/ClaudeCode/managed-settings.json" \
                  "/etc/claude-code/managed-settings.json"; do
             if [ -f "$f" ] && grep -qE "\"$var\"[[:space:]]*:" "$f"; then
@@ -241,6 +278,8 @@ export -f assert_count
 export -f assert_order
 export -f create_test_project
 export -f cleanup_test_project
+export -f create_claude_workdir
+export -f assert_workdir_empty
 export -f create_test_plan
 export -f check_no_superpowers_defaults_setting
 

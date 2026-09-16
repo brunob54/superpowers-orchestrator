@@ -10,7 +10,8 @@
 #       quoted snippet of 25+ characters INSIDE its "Findings per candidate"
 #       section
 #   (d) it contains a "Sources fetched" section
-#   (e) the plugin dev repo is unmutated (HEAD + status snapshot)
+#   (e) the run did not write into its working directory (an empty work
+#       folder)
 #   (f) the run was not killed by the timeout
 #   (g) its "Version facts" section names the version the fixture pins
 #   (h) the durable cache entry docs/research/npm-ms.md exists, its commit
@@ -29,7 +30,6 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-PLUGIN_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
 source "$SCRIPT_DIR/../lib/timeout-shim.sh"
 source "$SCRIPT_DIR/test-helpers.sh"
 
@@ -57,7 +57,8 @@ section_of() {
 }
 
 TEST_PROJECT=$(create_test_project)
-trap "cleanup_test_project '$TEST_PROJECT'" EXIT
+CLAUDE_WORKDIR=$(create_claude_workdir)
+trap "cleanup_test_project '$TEST_PROJECT' '$CLAUDE_WORKDIR'" EXIT
 
 cd "$TEST_PROJECT"
 git init --quiet
@@ -85,41 +86,13 @@ git add "$UNRELATED_FILE"
 
 PROMPT="Invoke the superpowers-orchestrator:researching-prior-art skill on the git repository at $TEST_PROJECT. Decision: verify that the npm package ms (pinned at $PINNED_VERSION in package.json) still fits this project's duration-parsing needs — this decision depends on version-sensitive external API behavior. Candidates: ms (npm, canonical name ms). N=2. Topic slug: ms-duration. Do not ask me any questions — proceed to completion."
 
-# Safety net: a misanchored run must not mutate the dev repo.
-# --ignored=matching makes git status also report ignored paths that match
-# an ignore rule, as `!!` entries, instead of leaving them out. .superpowers/
-# (self-.gitignore, written in Task 1 Step 0) and state.md (committed
-# .gitignore) are ignored paths, and they are exactly the paths the skill
-# under test writes — so this flag is what makes a mutation to them show up
-# in the before/after snapshot comparison below.
-#
-# The hash EXCLUDES the plugin's own session-artifact entries. The plugin's
-# session-start hooks write git-ignored session state (.omc/, .superpowers/,
-# context-snapshot.json, and the memory-stack files) into whatever repo the
-# CLI starts in. On a checkout whose first claude session is this test's
-# headless run — a fresh git worktree, for example — those entries appear
-# MID-RUN and would fail assertion (e) with no misanchored write having
-# happened (observed 2026-08-24). Excluding them does not weaken the check:
-# writes INSIDE an already-listed ignored directory were never visible to
-# this snapshot anyway (a `!!` entry does not change when the directory's
-# content does — the documented blind spot), so the filter only removes the
-# environment-dependent appearance of the entries themselves. Tracked-file
-# changes never match the `^!! ` prefix and always count.
-plugin_repo_snapshot() {
-    git -C "$PLUGIN_DIR" status --porcelain --ignored=matching \
-        | awk '!/^!! (\.omc\/|\.superpowers\/|context-snapshot\.json|state\.md|session-log\.md|known-issues\.md|project-map\.md)$/' \
-        | shasum | cut -d' ' -f1
-}
-PLUGIN_HEAD_BEFORE=$(git -C "$PLUGIN_DIR" rev-parse HEAD)
-PLUGIN_STATUS_BEFORE=$(plugin_repo_snapshot)
-
 # Inner budget (1700s) sits below the runner's outer --timeout 1800 so a hang
 # is killed here first: the timeout assertion can fire and the keep-project
 # trap still runs (the outer timeout would kill this whole script instead).
 CLAUDE_STATUS=0
-cd "$PLUGIN_DIR" && timeout 1700 claude -p "$PROMPT" \
+( cd "$CLAUDE_WORKDIR" && timeout 1700 claude -p "$PROMPT" \
     --permission-mode bypassPermissions \
-    --add-dir "$TEST_PROJECT" \
+    --add-dir "$TEST_PROJECT" ) \
     2>&1 | tee "$TEST_PROJECT/output.txt" || CLAUDE_STATUS=${PIPESTATUS[0]}
 
 cd "$TEST_PROJECT"
@@ -131,13 +104,9 @@ if [ "$CLAUDE_STATUS" -eq 124 ] || [ "$CLAUDE_STATUS" -eq 143 ]; then
     FAILURES=$((FAILURES+1))
 fi
 
-PLUGIN_HEAD_AFTER=$(git -C "$PLUGIN_DIR" rev-parse HEAD)
-PLUGIN_STATUS_AFTER=$(plugin_repo_snapshot)
-if [ "$PLUGIN_HEAD_AFTER" != "$PLUGIN_HEAD_BEFORE" ] || [ "$PLUGIN_STATUS_AFTER" != "$PLUGIN_STATUS_BEFORE" ]; then
-    echo "FAIL(e): the run mutated the plugin dev repo (misanchored skill?)"
-    echo "  Inspect: git -C $PLUGIN_DIR status --porcelain; git -C $PLUGIN_DIR diff"
-    FAILURES=$((FAILURES+1))
-fi
+# (e) blast radius: a misanchored run writes into its working directory
+#     instead of the test project.
+assert_workdir_empty e "$CLAUDE_WORKDIR" || FAILURES=$((FAILURES+1))
 
 REPORT="$TEST_PROJECT/.superpowers/research/ms-duration-research-report.md"
 if [ ! -f "$REPORT" ]; then
@@ -221,6 +190,6 @@ if [ "$FAILURES" -eq 0 ]; then
     echo "PASS: researching-prior-art behavioral test"
 else
     trap - EXIT
-    echo "FAILED: $FAILURES assertion(s); project kept for debugging: $TEST_PROJECT (transcript in output.txt — clean up manually)"
+    echo "FAILED: $FAILURES assertion(s); project kept for debugging: $TEST_PROJECT (transcript in output.txt), work folder kept: $CLAUDE_WORKDIR — clean up manually"
     exit 1
 fi

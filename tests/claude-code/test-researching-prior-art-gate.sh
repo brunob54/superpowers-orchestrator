@@ -9,7 +9,8 @@
 #   (c) the bracketed reversibility sentence is absent (the seeded decision
 #       commits no public interface, stored format, or wire protocol)
 #   (d) no research dispatch happens before the N answer
-#   (e) the plugin dev repo is unmutated
+#   (e) the run did not write into its working directory (an empty work
+#       folder)
 #
 # Requires the INSTALLED plugin to include the updated brainstorming skill —
 # run tools/sync-dev-install.sh after editing skills/ before running this.
@@ -17,12 +18,12 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-PLUGIN_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
 source "$SCRIPT_DIR/../lib/timeout-shim.sh"
 source "$SCRIPT_DIR/test-helpers.sh"
 
 TEST_PROJECT=$(create_test_project)
-trap "cleanup_test_project '$TEST_PROJECT'" EXIT
+CLAUDE_WORKDIR=$(create_claude_workdir)
+trap "cleanup_test_project '$TEST_PROJECT' '$CLAUDE_WORKDIR'" EXIT
 
 cd "$TEST_PROJECT"
 git init --quiet
@@ -41,16 +42,13 @@ git commit --quiet -m "base: empty fixture"
 
 PROMPT="Use the brainstorming skill on the project at $TEST_PROJECT to design this feature: add HTTP request retry logic using one of the npm packages got or axios (this will add a new dependency to package.json). Assume sensible defaults instead of asking clarifying questions. When you reach the research gate, present the gate message and then stop — I have not chosen N yet, so do not pick one and do not dispatch any research."
 
-PLUGIN_HEAD_BEFORE=$(git -C "$PLUGIN_DIR" rev-parse HEAD)
-PLUGIN_STATUS_BEFORE=$(git -C "$PLUGIN_DIR" status --porcelain --ignored=matching | shasum | cut -d' ' -f1)
-
 # Inner budget (1700s) sits below the runner's outer --timeout 1800 so a hang
 # is killed here first: the timeout assertion can fire and the keep-project
 # trap still runs (the outer timeout would kill this whole script instead).
 CLAUDE_STATUS=0
-cd "$PLUGIN_DIR" && timeout 1700 claude -p "$PROMPT" \
+( cd "$CLAUDE_WORKDIR" && timeout 1700 claude -p "$PROMPT" \
     --permission-mode bypassPermissions \
-    --add-dir "$TEST_PROJECT" \
+    --add-dir "$TEST_PROJECT" ) \
     2>&1 | tee "$TEST_PROJECT/output.txt" || CLAUDE_STATUS=${PIPESTATUS[0]}
 
 cd "$TEST_PROJECT"
@@ -61,12 +59,7 @@ if [ "$CLAUDE_STATUS" -eq 124 ] || [ "$CLAUDE_STATUS" -eq 143 ]; then
     FAILURES=$((FAILURES+1))
 fi
 
-PLUGIN_HEAD_AFTER=$(git -C "$PLUGIN_DIR" rev-parse HEAD)
-PLUGIN_STATUS_AFTER=$(git -C "$PLUGIN_DIR" status --porcelain --ignored=matching | shasum | cut -d' ' -f1)
-if [ "$PLUGIN_HEAD_AFTER" != "$PLUGIN_HEAD_BEFORE" ] || [ "$PLUGIN_STATUS_AFTER" != "$PLUGIN_STATUS_BEFORE" ]; then
-    echo "FAIL(e): the run mutated the plugin dev repo (misanchored skill?)"
-    FAILURES=$((FAILURES+1))
-fi
+assert_workdir_empty e "$CLAUDE_WORKDIR" || FAILURES=$((FAILURES+1))
 
 OUT="$TEST_PROJECT/output.txt"
 
@@ -118,6 +111,6 @@ if [ "$FAILURES" -eq 0 ]; then
     echo "PASS: research-gate behavioral test"
 else
     trap - EXIT
-    echo "FAILED: $FAILURES assertion(s); project kept for debugging: $TEST_PROJECT (transcript in output.txt — clean up manually)"
+    echo "FAILED: $FAILURES assertion(s); project kept for debugging: $TEST_PROJECT (transcript in output.txt), work folder kept: $CLAUDE_WORKDIR — clean up manually"
     exit 1
 fi

@@ -6,8 +6,9 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 source "$SCRIPT_DIR/test-helpers.sh"
 
-# Path to skill file (relative to this script's directory)
-SKILL_FILE="../../skills/subagent-driven-development/SKILL.md"
+# Absolute path to the skill file: claude runs in an empty work folder, so a
+# path relative to the working directory would not resolve
+SKILL_FILE="$SCRIPT_DIR/../../skills/subagent-driven-development/SKILL.md"
 
 echo "=== Test: subagent-driven-development skill ==="
 echo ""

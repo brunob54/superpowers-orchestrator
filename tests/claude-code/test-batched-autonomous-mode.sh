@@ -6,7 +6,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 source "$SCRIPT_DIR/test-helpers.sh"
 
-SKILL_FILE="../../skills/subagent-driven-development/SKILL.md"
+SKILL_FILE="$SCRIPT_DIR/../../skills/subagent-driven-development/SKILL.md"
 
 echo "=== Test: batched autonomous mode ==="
 echo ""
