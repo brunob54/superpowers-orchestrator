@@ -544,6 +544,51 @@ test('Does NOT trigger on null', () => {
   assert.strictEqual(isExecutionTrigger(null), false);
 });
 
+console.log('\nContext pressure gate — prompts the skills tell the user to paste');
+
+const REPO_ROOT = path.join(__dirname, '..', '..');
+const SDD_SKILL = fs.readFileSync(
+  path.join(REPO_ROOT, 'skills', 'subagent-driven-development', 'SKILL.md'), 'utf8');
+const WRITING_PLANS_SKILL = fs.readFileSync(
+  path.join(REPO_ROOT, 'skills', 'writing-plans', 'SKILL.md'), 'utf8');
+const INLINE_APPROACH = 'Inline';
+
+// Rows of the writing-plans handoff table: | Approach | `paste prompt` | Behavior |
+const handoffPrompts = [...WRITING_PLANS_SKILL.matchAll(/^\| ([^|]+?) \| `([^`]+)` \|/gm)]
+  .map(m => ({ approach: m[1], prompt: m[2] }));
+// Resume prompts of the batch handoff; a prompt may wrap onto the next line.
+const resumePrompts = [...SDD_SKILL.replace(/\s+/g, ' ').matchAll(/"(Resume the plan at [^"]+)"/g)]
+  .map(m => m[1]);
+const SHORT_REPLIES = ['subagent', 'inline', 'go', 'yes'];
+
+test('The writing-plans handoff table has paste prompts, one of them Inline', () => {
+  assert.ok(handoffPrompts.length > 0, 'no paste prompt extracted from writing-plans');
+  assert.ok(handoffPrompts.some(p => p.approach === INLINE_APPROACH),
+    `no Inline row in: ${JSON.stringify(handoffPrompts)}`);
+});
+test('The SDD skill has resume prompts', () => {
+  assert.ok(resumePrompts.length > 0, 'no resume prompt extracted from SDD');
+});
+test('The gate fires on the Inline paste prompt only', () => {
+  for (const { approach, prompt } of handoffPrompts) {
+    assert.strictEqual(isExecutionTrigger(prompt), approach === INLINE_APPROACH, prompt);
+  }
+});
+test('The gate does not fire on resume prompts or short replies', () => {
+  for (const prompt of [...resumePrompts, ...SHORT_REPLIES]) {
+    assert.strictEqual(isExecutionTrigger(prompt), false, prompt);
+  }
+});
+test('The gate fires on "execute the plan in batches"', () => {
+  assert.strictEqual(isExecutionTrigger('execute the plan in batches'), true);
+});
+test('SDD states what the gate covers, not that it catches mid-session starts', () => {
+  const sdd = SDD_SKILL.replace(/\s+/g, ' ');
+  assert.ok(!sdd.includes('catches mid-session starts'), 'false claim still present');
+  assert.ok(sdd.includes('fires only on a prompt that names plan execution'),
+    'corrected sentence missing');
+});
+
 console.log('\nContext pressure gate — cwdToProjectDir');
 
 test('Windows path with spaces encodes correctly', () => {
