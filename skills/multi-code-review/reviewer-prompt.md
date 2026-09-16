@@ -189,11 +189,10 @@ Agent tool (general-purpose):
     #### Minor
     - [M1] ...
 
-    ### Checks Run
-    - <named risk> → <what was checked outside the diff, if anything>
-
     ### Carried Findings Triage   <!-- include ONLY when a carried list was provided -->
     - <carried finding> → recommend: fix-before-merge | ship-as-is | user-decision, <one-line reason>
+
+    Full report: <the path mktemp printed>
 
     Every finding must carry a file:line reference into the diff. Use
     "No material issues under this lens." only with zero findings of any
@@ -206,6 +205,24 @@ Agent tool (general-purpose):
     `| harness: untested — <the one probe the controller should run>`.
     Findings about the diff itself carry no `harness:` field. A probe you
     ran is also listed under Checks Run.
+
+    **The Checks Run section goes to a file, not into your final message.**
+    The controller never reads that section, and leaving it out of the
+    final message keeps the controller's context small. Before your final
+    message, run `mktemp` as its own command with no arguments: it creates
+    an empty file outside the checkout and prints the file's path. Write
+    the full report to that path with the Write tool: the marker line and
+    every section of the final message, plus this section between
+    Findings and Carried Findings Triage:
+
+    ### Checks Run
+    - <named risk> → <what was checked outside the diff, if anything>
+
+    That file is the only write you make, and it is not in the checkout.
+    The `Full report:` line of your final message names its path. If
+    `mktemp` fails, write no file and put the Checks Run section in your
+    final message instead, after Findings, with the last line
+    `Full report: not written — mktemp failed`.
 ```
 
 **Placeholders:**
@@ -243,9 +260,10 @@ Agent tool (general-purpose):
 rounds' findings, fix reports, and the review log are never passed.
 
 **Reviewer returns:** marker line, Verdict counts, findings by severity
-with file:line references, checks run, and (round 1 only) carried-finding
-triage recommendations — recommendations only; the controller decides and
-logs dispositions.
+with file:line references, (round 1 only) carried-finding triage
+recommendations — recommendations only; the controller decides and logs
+dispositions — and the path of the full report file. That file also holds
+the Checks Run section, which the controller never reads.
 
 ## Shared checkout — read-only inspection only
 
