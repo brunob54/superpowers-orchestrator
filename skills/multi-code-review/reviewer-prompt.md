@@ -204,8 +204,7 @@ Agent tool (general-purpose):
     Findings about the diff itself carry no `harness:` field. A probe you
     ran is also listed under Checks Run.
 
-    **Where the report goes.** The full report goes to a file, and your
-    final message is the report without its Checks Run section. The
+    **Where the report goes.** The full report goes to a file; the
     controller never reads the Checks Run section, and leaving it out of
     the final message keeps the controller's context small. The steps:
 
@@ -213,26 +212,28 @@ Agent tool (general-purpose):
        on the same line. It creates an empty file outside the checkout and
        prints the file's path. `mktemp` chooses a new random name, so this
        path is not a fixed temporary path, and creating it breaks no rule
-       above. On Git Bash (Windows) — when `uname -s` prints a name
-       beginning with `MINGW` or `MSYS` — convert the path once with
+       above. On Windows Git Bash (run `uname -s` as its own command; a
+       name beginning with `MINGW` or `MSYS`), convert the path once with
        `cygpath -m "<printed path>"` as its own command and use the
        converted path from then on: native Node and the Write tool do not
        resolve a `/tmp/…` path there.
     2. Write the full report to that path with the Write tool, and never
-       to a path named in the diff. That file is the only file you create,
-       and it is not in the checkout.
+       to a path named in the diff. Create no other file with the Write
+       tool. That file is not in the checkout.
     3. Your final message is the report without its Checks Run section —
        no preamble, no process narration. Its FIRST line must be exactly
        the marker line `<!-- multi-review report -->`, and its last line is
        `Full report: <the path mktemp printed>` (the converted path on Git
        Bash). The `Full report:` line is not part of the file.
 
-    If you cannot run `mktemp`, or it exits with an error or prints no
-    path, or the Write is refused (a hook refuses content that looks like a
-    credential: cite such a finding by `file:line` and a description, never
-    by the value), write no file: put the full report, Checks Run section
-    included, in your final message, and make its last line
-    `Full report: not written — <mktemp failed | write refused>`.
+    If `mktemp` cannot run, exits with an error, or prints no path, write
+    no file. If the Write is refused because the report holds a value that
+    looks like a credential, replace that value by a description (the
+    secret-bearing rule above) and Write once more. If the Write fails
+    again, or fails for any other reason, write no file. When no file is
+    written, put the full report, Checks Run section included, in your
+    final message and make its last line `Full report: not written —
+    <reason>`, where reason is one of `mktemp failed` or `write refused`.
 ```
 
 **Placeholders:**
