@@ -312,8 +312,11 @@ the user. Announce: `I'm using subagent-driven-development (batched autonomous m
      visible rather than propagating silently forever unstated. X is a
      cap, not a target — the boundaries below can end the batch earlier.
      (Batches are expected to start in a fresh session — the writing-plans
-     handoff and the Resume Instructions both route through /clear; the 60%
-     context gate on prompt submission catches mid-session starts.)
+     handoff and the Resume Instructions both route through /clear. The 60%
+     context gate on prompt submission does not guard a mid-session start:
+     it fires only on a prompt that names plan execution, such as the Inline
+     prompt `Execute the plan at …`, and not on the resume prompts or on
+     short replies such as "go".)
    - **The plan is complete.**
    - **A blocker occurred** (see Autonomy Policy below).
 
