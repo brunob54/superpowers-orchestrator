@@ -27,7 +27,8 @@ echo ""
 # --- Setup ---
 CLAUDE_WORKDIR=$(create_claude_workdir) || exit 1
 TEST_PROJECT=$(create_test_project)
-trap "cleanup_claude_workdir '$CLAUDE_WORKDIR'; cleanup_test_project '$TEST_PROJECT'" EXIT
+TRANSCRIPT_DIR=$(create_transcript_dir) || exit 1
+trap "finish_transcript_dir \$? '$TRANSCRIPT_DIR'; cleanup_claude_workdir '$CLAUDE_WORKDIR'; cleanup_test_project '$TEST_PROJECT'" EXIT
 
 LOG_DIR="$HOME/.claude/hooks-logs"
 TODAY=$(date +%Y-%m-%d)
@@ -69,7 +70,7 @@ IMPORTANT: Do NOT run the command yourself. You MUST use the Agent tool to dispa
 run_claude_in_workdir "$CLAUDE_WORKDIR" 120 -p "$PROMPT_PRETOOL" \
     --permission-mode bypassPermissions \
     --add-dir "$TEST_PROJECT" \
-    2>&1 | tee "$TEST_PROJECT/output-pretool.txt" || true
+    2>&1 | tee "$TRANSCRIPT_DIR/output-pretool.txt" || true
 
 echo ""
 
@@ -93,7 +94,7 @@ IMPORTANT: Do NOT create the file yourself. You MUST use the Agent tool to dispa
 run_claude_in_workdir "$CLAUDE_WORKDIR" 120 -p "$PROMPT_POSTTOOL" \
     --permission-mode bypassPermissions \
     --add-dir "$TEST_PROJECT" \
-    2>&1 | tee "$TEST_PROJECT/output-posttool.txt" || true
+    2>&1 | tee "$TRANSCRIPT_DIR/output-posttool.txt" || true
 
 echo ""
 
@@ -176,15 +177,15 @@ echo ""
 
 # Also check the output for signs of hook blocking
 echo "--- Output analysis ---"
-PRETOOL_OUTPUT=$(cat "$TEST_PROJECT/output-pretool.txt" 2>/dev/null || echo "")
+PRETOOL_OUTPUT=$(cat "$TRANSCRIPT_DIR/output-pretool.txt" 2>/dev/null || echo "")
 if echo "$PRETOOL_OUTPUT" | grep -qi "blocked\|denied\|permission.*deny\|cannot.*echo"; then
     echo "  [INFO] Subagent output mentions blocking — hook likely fired"
 elif echo "$PRETOOL_OUTPUT" | grep -qi "HOOK_TEST_API_KEY"; then
     echo "  [INFO] Subagent echoed the var name — command ran unblocked (hook did NOT fire)"
 else
     echo "  [INFO] Output inconclusive — review manually:"
-    echo "    $TEST_PROJECT/output-pretool.txt"
-    echo "    $TEST_PROJECT/output-posttool.txt"
+    echo "    $TRANSCRIPT_DIR/output-pretool.txt"
+    echo "    $TRANSCRIPT_DIR/output-posttool.txt"
 fi
 
 echo ""

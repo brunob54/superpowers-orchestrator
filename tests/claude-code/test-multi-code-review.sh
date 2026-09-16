@@ -81,29 +81,27 @@ unset SUPERPOWERS_REVIEWERS_PER_LENS SUPERPOWERS_REVIEW_ROUNDS SUPERPOWERS_BATCH
 CLAUDE_WORKDIR=$(create_claude_workdir) || exit 1
 CLAUDE_WORKDIR2=$(create_claude_workdir) || exit 1
 TEST_PROJECT=$(create_test_project)
+TRANSCRIPT_DIR=$(create_transcript_dir) || exit 1
 # The trap is set before the settings check, so an abort there removes the
 # folders too.
-trap "cleanup_claude_workdir '$CLAUDE_WORKDIR' '$CLAUDE_WORKDIR2'; cleanup_test_project '$TEST_PROJECT'" EXIT
+trap "finish_transcript_dir \$? '$TRANSCRIPT_DIR'; cleanup_claude_workdir '$CLAUDE_WORKDIR' '$CLAUDE_WORKDIR2'; cleanup_test_project '$TEST_PROJECT'" EXIT
 check_no_superpowers_defaults_setting "$CLAUDE_WORKDIR" || exit 1
 
-# Uncommitted changes in the test project, transcripts excluded. The project
-# is a bare `mktemp -d` + `git init` with no .gitignore, and both cases write
-# their `claude -p` transcript into it (`output.txt`, `output-pipeline.txt`).
-# Those transcripts are test scaffolding, not a product of the loop, so a
-# check that counted them would fail on every run whatever the skill does.
+# Uncommitted changes in the test project. The `claude -p` transcripts are
+# written to $TRANSCRIPT_DIR, outside the project, so they are not counted.
 project_dirt() {
-    git status --porcelain -- ':(top)' ':(top,exclude,glob)output*.txt'
+    git status --porcelain -- ':(top)'
 }
 
 # Print the summary and exit. On failure the EXIT trap is disarmed first, so
-# the project and its transcripts survive for debugging.
+# the project and the transcript folder survive for debugging.
 finish() {
     if [ "$FAILURES" -eq 0 ]; then
         echo "PASS: multi-code-review behavioral test"
         exit 0
     fi
     trap - EXIT
-    echo "FAILED: $FAILURES assertion(s); project kept for debugging: $TEST_PROJECT (transcripts in output.txt and output-pipeline.txt), work folders kept: $CLAUDE_WORKDIR $CLAUDE_WORKDIR2 — clean up manually"
+    echo "FAILED: $FAILURES assertion(s); project kept for debugging: $TEST_PROJECT (transcripts in $TRANSCRIPT_DIR/output.txt and $TRANSCRIPT_DIR/output-pipeline.txt), work folders kept: $CLAUDE_WORKDIR $CLAUDE_WORKDIR2 — clean up manually"
     exit 1
 }
 
@@ -150,7 +148,7 @@ CLAUDE_STATUS=0
 run_claude_in_workdir "$CLAUDE_WORKDIR" 1800 -p "$PROMPT" \
     --permission-mode bypassPermissions \
     --add-dir "$TEST_PROJECT" \
-    2>&1 | tee "$TEST_PROJECT/output.txt" || CLAUDE_STATUS=${PIPESTATUS[0]}
+    2>&1 | tee "$TRANSCRIPT_DIR/output.txt" || CLAUDE_STATUS=${PIPESTATUS[0]}
 
 cd "$TEST_PROJECT"
 FAILURES=0
@@ -294,7 +292,7 @@ CLAUDE_STATUS2=0
 run_claude_in_workdir "$CLAUDE_WORKDIR2" 1800 -p "$PIPE_PROMPT" \
     --permission-mode bypassPermissions \
     --add-dir "$TEST_PROJECT" \
-    2>&1 | tee "$TEST_PROJECT/output-pipeline.txt" || CLAUDE_STATUS2=${PIPESTATUS[0]}
+    2>&1 | tee "$TRANSCRIPT_DIR/output-pipeline.txt" || CLAUDE_STATUS2=${PIPESTATUS[0]}
 
 # (f2) same timeout-kill check as (f), repeated for Case 2.
 if [ "$CLAUDE_STATUS2" -eq 124 ] || [ "$CLAUDE_STATUS2" -eq 143 ]; then

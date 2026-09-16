@@ -26,10 +26,11 @@ echo ""
 CLAUDE_WORKDIR=$(create_claude_workdir) || exit 1
 # Create test project
 TEST_PROJECT=$(create_test_project)
+TRANSCRIPT_DIR=$(create_transcript_dir) || exit 1
 echo "Test project: $TEST_PROJECT"
 
 # Trap to cleanup
-trap "cleanup_claude_workdir '$CLAUDE_WORKDIR'; cleanup_test_project '$TEST_PROJECT'" EXIT
+trap "finish_transcript_dir \$? '$TRANSCRIPT_DIR'; cleanup_claude_workdir '$CLAUDE_WORKDIR'; cleanup_test_project '$TEST_PROJECT'" EXIT
 
 # Set up minimal Node.js project
 cd "$TEST_PROJECT"
@@ -120,10 +121,10 @@ echo ""
 
 # Run Claude with subagent-driven-development
 # Capture full output to analyze
-OUTPUT_FILE="$TEST_PROJECT/claude-output.txt"
+OUTPUT_FILE="$TRANSCRIPT_DIR/claude-output.txt"
 
 # Create prompt file
-cat > "$TEST_PROJECT/prompt.txt" <<'EOF'
+cat > "$TRANSCRIPT_DIR/prompt.txt" <<'EOF'
 I want you to execute the implementation plan at docs/superpowers-orchestrator/2026-08-25-implementation-plan/plans/implementation-plan.md using the subagent-driven-development skill.
 
 IMPORTANT: Follow the skill exactly. I will be verifying that you:

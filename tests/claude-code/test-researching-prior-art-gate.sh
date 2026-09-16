@@ -23,7 +23,8 @@ source "$SCRIPT_DIR/test-helpers.sh"
 
 CLAUDE_WORKDIR=$(create_claude_workdir) || exit 1
 TEST_PROJECT=$(create_test_project)
-trap "cleanup_claude_workdir '$CLAUDE_WORKDIR'; cleanup_test_project '$TEST_PROJECT'" EXIT
+TRANSCRIPT_DIR=$(create_transcript_dir) || exit 1
+trap "finish_transcript_dir \$? '$TRANSCRIPT_DIR'; cleanup_claude_workdir '$CLAUDE_WORKDIR'; cleanup_test_project '$TEST_PROJECT'" EXIT
 
 cd "$TEST_PROJECT"
 git init --quiet
@@ -49,7 +50,7 @@ CLAUDE_STATUS=0
 run_claude_in_workdir "$CLAUDE_WORKDIR" 1700 -p "$PROMPT" \
     --permission-mode bypassPermissions \
     --add-dir "$TEST_PROJECT" \
-    2>&1 | tee "$TEST_PROJECT/output.txt" || CLAUDE_STATUS=${PIPESTATUS[0]}
+    2>&1 | tee "$TRANSCRIPT_DIR/output.txt" || CLAUDE_STATUS=${PIPESTATUS[0]}
 
 cd "$TEST_PROJECT"
 FAILURES=0
@@ -61,7 +62,7 @@ fi
 
 assert_workdir_empty e "$CLAUDE_WORKDIR" || FAILURES=$((FAILURES+1))
 
-OUT="$TEST_PROJECT/output.txt"
+OUT="$TRANSCRIPT_DIR/output.txt"
 
 # (a) fixed gate-message lines, exact substrings
 if ! grep -qF "Research gate: this decision triggers prior-art research." "$OUT"; then
@@ -111,6 +112,6 @@ if [ "$FAILURES" -eq 0 ]; then
     echo "PASS: research-gate behavioral test"
 else
     trap - EXIT
-    echo "FAILED: $FAILURES assertion(s); project kept for debugging: $TEST_PROJECT (transcript in output.txt), work folder kept: $CLAUDE_WORKDIR — clean up manually"
+    echo "FAILED: $FAILURES assertion(s); project kept for debugging: $TEST_PROJECT (transcript in $TRANSCRIPT_DIR/output.txt), work folder kept: $CLAUDE_WORKDIR — clean up manually"
     exit 1
 fi

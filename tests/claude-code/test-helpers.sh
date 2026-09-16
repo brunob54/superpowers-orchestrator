@@ -248,6 +248,34 @@ cleanup_claude_workdir() {
     return $status
 }
 
+# Create the folder for the `claude -p` transcripts of one test script and
+# print its physical path. The folder is made like a work folder
+# (create_claude_workdir): new, empty, outside the plugin repository. Keep
+# transcripts out of two other folders:
+# - the test project: it is the fixture git repository that the skill under
+#   test inspects, and an untracked transcript there makes its working tree
+#   not clean (multi-code-review then stops before any fix);
+# - the work folder: assert_workdir_empty requires it to stay empty.
+# Remove the folder with finish_transcript_dir in the EXIT trap.
+# Usage: TRANSCRIPT_DIR=$(create_transcript_dir) || exit 1
+create_transcript_dir() {
+    create_claude_workdir
+}
+
+# Handle the transcript folder when the test script exits. After a success
+# (exit status 0) remove it with cleanup_claude_workdir. After a failure keep
+# it for debugging and print its path.
+# Usage: trap "finish_transcript_dir \$? '$TRANSCRIPT_DIR'; ..." EXIT
+finish_transcript_dir() {
+    local exit_status="$1"
+    local dir="$2"
+    if [ "$exit_status" -eq 0 ]; then
+        cleanup_claude_workdir "$dir"
+    else
+        echo "Transcripts kept for debugging: $dir — clean up manually"
+    fi
+}
+
 # Create a simple plan file for testing
 # Usage: create_test_plan "$project_dir" "$plan_name"
 create_test_plan() {
@@ -354,6 +382,8 @@ export -f create_claude_workdir
 export -f is_safe_workdir
 export -f cleanup_claude_workdir
 export -f assert_workdir_empty
+export -f create_transcript_dir
+export -f finish_transcript_dir
 export -f create_test_plan
 export -f check_no_superpowers_defaults_setting
 

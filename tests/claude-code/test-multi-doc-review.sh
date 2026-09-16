@@ -55,9 +55,10 @@ unset SUPERPOWERS_REVIEWERS_PER_LENS SUPERPOWERS_REVIEW_ROUNDS SUPERPOWERS_BATCH
 CLAUDE_WORKDIR=$(create_claude_workdir) || exit 1
 CLAUDE_WORKDIR2=$(create_claude_workdir) || exit 1
 TEST_PROJECT=$(create_test_project)
+TRANSCRIPT_DIR=$(create_transcript_dir) || exit 1
 # The trap is set before the settings check, so an abort there removes the
 # folders too.
-trap "cleanup_claude_workdir '$CLAUDE_WORKDIR' '$CLAUDE_WORKDIR2'; cleanup_test_project '$TEST_PROJECT'" EXIT
+trap "finish_transcript_dir \$? '$TRANSCRIPT_DIR'; cleanup_claude_workdir '$CLAUDE_WORKDIR' '$CLAUDE_WORKDIR2'; cleanup_test_project '$TEST_PROJECT'" EXIT
 check_no_superpowers_defaults_setting "$CLAUDE_WORKDIR" || exit 1
 
 FAILURES=0
@@ -97,7 +98,7 @@ CLAUDE_STATUS=0
 run_claude_in_workdir "$CLAUDE_WORKDIR" 1800 -p "$PROMPT" \
     --permission-mode bypassPermissions \
     --add-dir "$TEST_PROJECT" \
-    2>&1 | tee "$TEST_PROJECT/output.txt" || CLAUDE_STATUS=${PIPESTATUS[0]}
+    2>&1 | tee "$TRANSCRIPT_DIR/output.txt" || CLAUDE_STATUS=${PIPESTATUS[0]}
 
 # (f) the run must not have been killed by the timeout: GNU timeout reports
 #     124, the tests/lib/timeout-shim.sh fallback reports 143 (SIGTERM).
@@ -180,7 +181,7 @@ CLAUDE_STATUS2=0
 run_claude_in_workdir "$CLAUDE_WORKDIR2" 1800 -p "$PROMPT2" \
     --permission-mode bypassPermissions \
     --add-dir "$TEST_PROJECT" \
-    2>&1 | tee "$TEST_PROJECT/output-m1.txt" || CLAUDE_STATUS2=${PIPESTATUS[0]}
+    2>&1 | tee "$TRANSCRIPT_DIR/output-m1.txt" || CLAUDE_STATUS2=${PIPESTATUS[0]}
 
 # (f2) same timeout check as (f), for the Case 2 run.
 if [ "$CLAUDE_STATUS2" -eq 124 ] || [ "$CLAUDE_STATUS2" -eq 143 ]; then
@@ -258,6 +259,6 @@ fi
 if [ "$FAILURES" -eq 0 ]; then
     echo "PASS: multi-doc-review behavioral test"
 else
-    echo "FAILED: $FAILURES assertion(s); transcripts in $TEST_PROJECT/output.txt and $TEST_PROJECT/output-m1.txt"
+    echo "FAILED: $FAILURES assertion(s); transcripts in $TRANSCRIPT_DIR/output.txt and $TRANSCRIPT_DIR/output-m1.txt"
     exit 1
 fi
