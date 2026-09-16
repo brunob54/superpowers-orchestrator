@@ -22,12 +22,15 @@ echo ""
 echo "WARNING: This test may take 10-30 minutes to complete."
 echo ""
 
+# Claude runs in its own empty work folder, never in the plugin repository.
+CLAUDE_WORKDIR=$(create_claude_workdir) || exit 1
 # Create test project
 TEST_PROJECT=$(create_test_project)
+TRANSCRIPT_DIR=$(create_transcript_dir) || exit 1
 echo "Test project: $TEST_PROJECT"
 
 # Trap to cleanup
-trap "cleanup_test_project $TEST_PROJECT" EXIT
+trap "finish_transcript_dir \$? '$TRANSCRIPT_DIR'; cleanup_claude_workdir '$CLAUDE_WORKDIR'; cleanup_test_project '$TEST_PROJECT'" EXIT
 
 # Set up minimal Node.js project
 cd "$TEST_PROJECT"
@@ -118,10 +121,10 @@ echo ""
 
 # Run Claude with subagent-driven-development
 # Capture full output to analyze
-OUTPUT_FILE="$TEST_PROJECT/claude-output.txt"
+OUTPUT_FILE="$TRANSCRIPT_DIR/claude-output.txt"
 
 # Create prompt file
-cat > "$TEST_PROJECT/prompt.txt" <<'EOF'
+cat > "$TRANSCRIPT_DIR/prompt.txt" <<'EOF'
 I want you to execute the implementation plan at docs/superpowers-orchestrator/2026-08-25-implementation-plan/plans/implementation-plan.md using the subagent-driven-development skill.
 
 IMPORTANT: Follow the skill exactly. I will be verifying that you:
@@ -136,7 +139,6 @@ EOF
 
 # Note: We use a longer timeout since this is integration testing
 # Use --allowed-tools to enable tool usage in headless mode
-# IMPORTANT: Run from superpowers directory so local dev skills are available
 PROMPT="Change to directory $TEST_PROJECT and then execute the implementation plan at docs/superpowers-orchestrator/2026-08-25-implementation-plan/plans/implementation-plan.md using the subagent-driven-development skill.
 
 IMPORTANT: Follow the skill exactly. I will be verifying that you:
@@ -152,27 +154,30 @@ Begin now. Execute the plan."
 # The path is ~/.claude/projects/<escaped-cwd>/<session-id>.jsonl, where
 # <escaped-cwd> is the ABSOLUTE path of the directory claude runs in with every
 # character that is not a letter or a digit replaced by "-". The leading "/"
-# becomes a leading "-", and "_" becomes "-" as well. The path must be resolved
-# first: "$SCRIPT_DIR/../.." still contains the literal "..".
-PLUGIN_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
-WORKING_DIR_ESCAPED=$(echo "$PLUGIN_ROOT" | sed 's/[^a-zA-Z0-9]/-/g')
+# becomes a leading "-", and "_" becomes "-" as well. The path must be the
+# physical path (symbolic links resolved): on macOS the temporary folder
+# /var/... is a link to /private/var/..., and Claude Code uses /private/var/...
+# create_claude_workdir already prints the physical path.
+WORKING_DIR_ESCAPED=$(echo "$CLAUDE_WORKDIR" | sed 's/[^a-zA-Z0-9]/-/g')
 SESSION_DIR="$HOME/.claude/projects/$WORKING_DIR_ESCAPED"
 
 # List the transcripts that already exist, so the one this run creates can be
-# identified afterwards by difference. Picking the newest file instead would be
-# wrong whenever an interactive session is open in this same repository: that
-# session writes to the same directory continuously and would always look
-# newest. Subagent transcripts (agent-*.jsonl) are excluded — the main session
-# transcript is the one the assertions read.
+# identified afterwards by difference. The work folder has a new random name,
+# so this transcript folder is normally new and holds only this run. Claude
+# Code never removes transcript folders, however, and mktemp can reuse a name
+# of a removed folder; the comparison then still ignores the older
+# transcripts. Subagent transcripts (agent-*.jsonl) are excluded — the main
+# session transcript is the one the assertions read.
 SESSION_SNAPSHOT=$(mktemp)
 find "$SESSION_DIR" -name "*.jsonl" -type f ! -name "agent-*" 2>/dev/null | sort > "$SESSION_SNAPSHOT" || true
 
 echo "Running Claude (output will be shown below and saved to $OUTPUT_FILE)..."
 echo "================================================================================"
-cd "$SCRIPT_DIR/../.." && timeout 1800 claude -p "$PROMPT" --allowed-tools=all --add-dir "$TEST_PROJECT" --permission-mode bypassPermissions 2>&1 | tee "$OUTPUT_FILE" || {
+run_claude_in_workdir "$CLAUDE_WORKDIR" 1800 -p "$PROMPT" --allowed-tools=all --add-dir "$TEST_PROJECT" --permission-mode bypassPermissions 2>&1 | tee "$OUTPUT_FILE" || {
+    CLAUDE_STATUS=${PIPESTATUS[0]}
     echo ""
     echo "================================================================================"
-    echo "EXECUTION FAILED (exit code: $?)"
+    echo "EXECUTION FAILED (exit code: $CLAUDE_STATUS)"
     exit 1
 }
 echo "================================================================================"

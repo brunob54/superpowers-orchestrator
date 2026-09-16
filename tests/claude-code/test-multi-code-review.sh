@@ -9,6 +9,8 @@
 #       vocabulary (fixed / rejected: / user-decision / unresolved:)
 #   (c) a fix commit exists OR no disposition claims "fixed"
 #   (d) fix commits (if any) use generic subjects — no finding text
+#   (e) the run did not write into its work folder (an empty folder made for
+#       this run, which is the working directory of `claude`)
 #   (f) the run was not killed by the timeout
 #   (g)/(h) the loop ran Round 2 and wrote its completion marker
 #   (i) the invocation line records N and M
@@ -19,9 +21,8 @@
 #
 # Case 2 (pipeline mode, TOPIC_DIR) repeats the setup on a second branch and
 # adds:
-#   (e2) same blast-radius check as (e): the Case 2 run did not mutate the
-#        plugin dev repo, using a plugin-repo snapshot taken fresh right
-#        before the Case 2 agent call
+#   (e2) same work folder write check as (e): the Case 2 run did not write
+#        into its own work folder, a second empty folder made for Case 2
 #   (p1) the pipeline-mode review log is created under TOPIC_DIR/implementation
 #   (p1b) the direct-mode sidecar log was NOT also written — TOPIC_DIR must
 #        select pipeline mode exclusively, not run both modes
@@ -75,29 +76,32 @@ source "$SCRIPT_DIR/test-helpers.sh"
 # and aborts before any `claude -p` call, instead of letting Case 2's M=1
 # default silently resolve to a different M.
 unset SUPERPOWERS_REVIEWERS_PER_LENS SUPERPOWERS_REVIEW_ROUNDS SUPERPOWERS_BATCH_TASK_CAP
-check_no_superpowers_defaults_setting "$PLUGIN_DIR" || exit 1
-
+# One fresh empty work folder per `claude -p` run: a Case 1 leftover cannot be
+# reported as a Case 2 failure.
+CLAUDE_WORKDIR=$(create_claude_workdir) || exit 1
+CLAUDE_WORKDIR2=$(create_claude_workdir) || exit 1
 TEST_PROJECT=$(create_test_project)
-trap "cleanup_test_project '$TEST_PROJECT'" EXIT
+TRANSCRIPT_DIR=$(create_transcript_dir) || exit 1
+# The trap is set before the settings check, so an abort there removes the
+# folders too.
+trap "finish_transcript_dir \$? '$TRANSCRIPT_DIR'; cleanup_claude_workdir '$CLAUDE_WORKDIR' '$CLAUDE_WORKDIR2'; cleanup_test_project '$TEST_PROJECT'" EXIT
+check_no_superpowers_defaults_setting "$CLAUDE_WORKDIR" || exit 1
 
-# Uncommitted changes in the test project, transcripts excluded. The project
-# is a bare `mktemp -d` + `git init` with no .gitignore, and both cases write
-# their `claude -p` transcript into it (`output.txt`, `output-pipeline.txt`).
-# Those transcripts are test scaffolding, not a product of the loop, so a
-# check that counted them would fail on every run whatever the skill does.
+# Uncommitted changes in the test project. The `claude -p` transcripts are
+# written to $TRANSCRIPT_DIR, outside the project, so they are not counted.
 project_dirt() {
-    git status --porcelain -- ':(top)' ':(top,exclude,glob)output*.txt'
+    git status --porcelain -- ':(top)'
 }
 
 # Print the summary and exit. On failure the EXIT trap is disarmed first, so
-# the project and its transcripts survive for debugging.
+# the project and the transcript folder survive for debugging.
 finish() {
     if [ "$FAILURES" -eq 0 ]; then
         echo "PASS: multi-code-review behavioral test"
         exit 0
     fi
     trap - EXIT
-    echo "FAILED: $FAILURES assertion(s); project kept for debugging: $TEST_PROJECT (transcripts in output.txt and output-pipeline.txt — clean up manually)"
+    echo "FAILED: $FAILURES assertion(s); project kept for debugging: $TEST_PROJECT (transcripts in $TRANSCRIPT_DIR/output.txt and $TRANSCRIPT_DIR/output-pipeline.txt), work folders kept: $CLAUDE_WORKDIR $CLAUDE_WORKDIR2 — clean up manually"
     exit 1
 }
 
@@ -140,18 +144,11 @@ SEEDED_HEAD_SHA=$(git rev-parse HEAD)
 
 PROMPT="Invoke the superpowers-orchestrator:multi-code-review skill on the git repository at $TEST_PROJECT (review its current branch feature-under-review) with BASE $BASE_SHA, N=2 and M=2. Do not ask me any questions — use N=2 and M=2 and proceed to completion, treating any finding that would need my decision as user-decision in the log."
 
-# Safety net: the skill commits; a misanchored run must not mutate the dev repo.
-# --ignored=matching is included because .superpowers/ and state.md/known-issues.md/*.txt
-# are gitignored in this repo — exactly the paths the skill under test writes — so a
-# plain --porcelain diff would miss a misanchored run landing its review log or journal here.
-PLUGIN_HEAD_BEFORE=$(git -C "$PLUGIN_DIR" rev-parse HEAD)
-PLUGIN_STATUS_BEFORE=$(git -C "$PLUGIN_DIR" status --porcelain --ignored=matching | shasum | cut -d' ' -f1)
-
 CLAUDE_STATUS=0
-cd "$PLUGIN_DIR" && timeout 1800 claude -p "$PROMPT" \
+run_claude_in_workdir "$CLAUDE_WORKDIR" 1800 -p "$PROMPT" \
     --permission-mode bypassPermissions \
     --add-dir "$TEST_PROJECT" \
-    2>&1 | tee "$TEST_PROJECT/output.txt" || CLAUDE_STATUS=${PIPESTATUS[0]}
+    2>&1 | tee "$TRANSCRIPT_DIR/output.txt" || CLAUDE_STATUS=${PIPESTATUS[0]}
 
 cd "$TEST_PROJECT"
 FAILURES=0
@@ -163,14 +160,10 @@ if [ "$CLAUDE_STATUS" -eq 124 ] || [ "$CLAUDE_STATUS" -eq 143 ]; then
     FAILURES=$((FAILURES+1))
 fi
 
-PLUGIN_HEAD_AFTER=$(git -C "$PLUGIN_DIR" rev-parse HEAD)
-PLUGIN_STATUS_AFTER=$(git -C "$PLUGIN_DIR" status --porcelain --ignored=matching | shasum | cut -d' ' -f1)
-if [ "$PLUGIN_HEAD_AFTER" != "$PLUGIN_HEAD_BEFORE" ] || [ "$PLUGIN_STATUS_AFTER" != "$PLUGIN_STATUS_BEFORE" ]; then
-    echo "FAIL(e): the run mutated the plugin dev repo (misanchored skill?)"
-    echo "  Inspect: git -C $PLUGIN_DIR status --porcelain; git -C $PLUGIN_DIR diff"
-    echo "  Only after confirming that tree held nothing else of value, recover with: git -C $PLUGIN_DIR reset --hard $PLUGIN_HEAD_BEFORE (this discards ALL uncommitted work in that repo)"
-    FAILURES=$((FAILURES+1))
-fi
+# (e) work folder write check: the skill commits; a run that writes relative
+#     to its working directory, instead of the test project, writes into its
+#     work folder.
+assert_workdir_empty e "$CLAUDE_WORKDIR" || FAILURES=$((FAILURES+1))
 
 LOG=$(ls .superpowers/reviews/*-review-log.md 2>/dev/null | head -1 || true)
 
@@ -295,20 +288,11 @@ PKG_COUNT_BEFORE=$(ls .superpowers/sdd/review-*.diff 2>/dev/null | wc -l | tr -d
 # needs the actual NEW filenames, not just how many there are.
 PKGS_BEFORE=$(ls .superpowers/sdd/review-*.diff 2>/dev/null || true)
 
-# Safety net (Case 2): re-snapshot the plugin repository immediately before
-# this case's agent call, same as assertion (e) does for Case 1. Case 1's
-# PLUGIN_HEAD_BEFORE/PLUGIN_STATUS_BEFORE only cover Case 1 — without a fresh
-# snapshot here, a Case 2 run that writes its topic folder or its commit into
-# the developer's own checkout instead of the test project would leave this
-# suite green.
-PLUGIN_HEAD_BEFORE2=$(git -C "$PLUGIN_DIR" rev-parse HEAD)
-PLUGIN_STATUS_BEFORE2=$(git -C "$PLUGIN_DIR" status --porcelain --ignored=matching | shasum | cut -d' ' -f1)
-
 CLAUDE_STATUS2=0
-cd "$PLUGIN_DIR" && timeout 1800 claude -p "$PIPE_PROMPT" \
+run_claude_in_workdir "$CLAUDE_WORKDIR2" 1800 -p "$PIPE_PROMPT" \
     --permission-mode bypassPermissions \
     --add-dir "$TEST_PROJECT" \
-    2>&1 | tee "$TEST_PROJECT/output-pipeline.txt" || CLAUDE_STATUS2=${PIPESTATUS[0]}
+    2>&1 | tee "$TRANSCRIPT_DIR/output-pipeline.txt" || CLAUDE_STATUS2=${PIPESTATUS[0]}
 
 # (f2) same timeout-kill check as (f), repeated for Case 2.
 if [ "$CLAUDE_STATUS2" -eq 124 ] || [ "$CLAUDE_STATUS2" -eq 143 ]; then
@@ -316,15 +300,9 @@ if [ "$CLAUDE_STATUS2" -eq 124 ] || [ "$CLAUDE_STATUS2" -eq 143 ]; then
     FAILURES=$((FAILURES+1))
 fi
 
-# (e2) same blast-radius check as assertion (e), repeated for Case 2.
-PLUGIN_HEAD_AFTER2=$(git -C "$PLUGIN_DIR" rev-parse HEAD)
-PLUGIN_STATUS_AFTER2=$(git -C "$PLUGIN_DIR" status --porcelain --ignored=matching | shasum | cut -d' ' -f1)
-if [ "$PLUGIN_HEAD_AFTER2" != "$PLUGIN_HEAD_BEFORE2" ] || [ "$PLUGIN_STATUS_AFTER2" != "$PLUGIN_STATUS_BEFORE2" ]; then
-    echo "FAIL(e2): the Case 2 run mutated the plugin dev repo (misanchored skill?)"
-    echo "  Inspect: git -C $PLUGIN_DIR status --porcelain; git -C $PLUGIN_DIR diff"
-    echo "  Only after confirming that tree held nothing else of value, recover with: git -C $PLUGIN_DIR reset --hard $PLUGIN_HEAD_BEFORE2 (this discards ALL uncommitted work in that repo)"
-    FAILURES=$((FAILURES+1))
-fi
+# (e2) same work folder write check as assertion (e), repeated for Case 2 in
+#      its own work folder.
+assert_workdir_empty e2 "$CLAUDE_WORKDIR2" || FAILURES=$((FAILURES+1))
 
 cd "$TEST_PROJECT"
 PIPE_LOG="$TOPIC_DIR/implementation/sum-fix-review-log.md"

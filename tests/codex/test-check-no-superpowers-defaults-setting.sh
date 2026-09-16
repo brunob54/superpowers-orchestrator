@@ -65,25 +65,25 @@ skip_if_polluted() {
   return 0
 }
 
-# run_helper <plugin_dir> <home_dir> <config_dir>: calls the function under
+# run_helper <workdir> <home_dir> <config_dir>: calls the function under
 # test with HOME and CLAUDE_CONFIG_DIR pinned to the given temporary
 # directories for this one call only. Sets the globals HELPER_STATUS and
 # HELPER_OUTPUT.
 run_helper() {
-  local plugin_dir="$1" home_dir="$2" config_dir="$3"
-  HELPER_OUTPUT="$(HOME="$home_dir" CLAUDE_CONFIG_DIR="$config_dir" check_no_superpowers_defaults_setting "$plugin_dir" 2>&1)" && HELPER_STATUS=0 || HELPER_STATUS=$?
+  local workdir="$1" home_dir="$2" config_dir="$3"
+  HELPER_OUTPUT="$(HOME="$home_dir" CLAUDE_CONFIG_DIR="$config_dir" check_no_superpowers_defaults_setting "$workdir" 2>&1)" && HELPER_STATUS=0 || HELPER_STATUS=$?
 }
 
-# One fixture per variable, at the plugin-relative settings path.
+# One fixture per variable, at the work-folder-relative settings path.
 for var in SUPERPOWERS_REVIEWERS_PER_LENS SUPERPOWERS_REVIEW_ROUNDS SUPERPOWERS_BATCH_TASK_CAP; do
   home_dir=$(mktemp -d)
   config_dir=$(mktemp -d)
-  plugin_dir=$(mktemp -d)
-  mkdir -p "$plugin_dir/.claude"
-  fixture="$plugin_dir/.claude/settings.json"
+  workdir=$(mktemp -d)
+  mkdir -p "$workdir/.claude"
+  fixture="$workdir/.claude/settings.json"
   printf '{"env": {"%s": "3"}}\n' "$var" > "$fixture"
 
-  run_helper "$plugin_dir" "$home_dir" "$config_dir"
+  run_helper "$workdir" "$home_dir" "$config_dir"
 
   if [ "$HELPER_STATUS" -ne 1 ]; then
     bad "$var set in $fixture: expected exit 1, got $HELPER_STATUS"
@@ -103,29 +103,29 @@ for var in SUPERPOWERS_REVIEWERS_PER_LENS SUPERPOWERS_REVIEW_ROUNDS SUPERPOWERS_
     bad "$var set in $fixture: message does not name the fixture path ($HELPER_OUTPUT)"
   fi
 
-  rm -rf "$home_dir" "$config_dir" "$plugin_dir"
+  rm -rf "$home_dir" "$config_dir" "$workdir"
 done
 
 # One fixture per RELATIVE settings path the helper checks
 # (tests/claude-code/test-helpers.sh): the outer variable loop above only
-# ever writes to the plugin path, so a path dropped from the helper's inner
+# ever writes to the work folder path, so a path dropped from the helper's inner
 # loop would otherwise go uncaught.
 for path_case in "HOME/.claude/settings.json" "HOME/.claude/settings.local.json" \
                   "CONFIG_DIR/settings.json" "CONFIG_DIR/settings.local.json" \
-                  "PLUGIN_DIR/.claude/settings.json" "PLUGIN_DIR/.claude/settings.local.json"; do
+                  "WORKDIR/.claude/settings.json" "WORKDIR/.claude/settings.local.json"; do
   home_dir=$(mktemp -d)
   config_dir=$(mktemp -d)
-  plugin_dir=$(mktemp -d)
-  mkdir -p "$home_dir/.claude" "$plugin_dir/.claude"
+  workdir=$(mktemp -d)
+  mkdir -p "$home_dir/.claude" "$workdir/.claude"
 
   case "$path_case" in
     HOME/*) fixture="$home_dir/${path_case#HOME/}" ;;
     CONFIG_DIR/*) fixture="$config_dir/${path_case#CONFIG_DIR/}" ;;
-    PLUGIN_DIR/*) fixture="$plugin_dir/${path_case#PLUGIN_DIR/}" ;;
+    WORKDIR/*) fixture="$workdir/${path_case#WORKDIR/}" ;;
   esac
   printf '{"env": {"SUPERPOWERS_REVIEWERS_PER_LENS": "3"}}\n' > "$fixture"
 
-  run_helper "$plugin_dir" "$home_dir" "$config_dir"
+  run_helper "$workdir" "$home_dir" "$config_dir"
 
   if [ "$HELPER_STATUS" -ne 1 ]; then
     bad "$path_case: expected exit 1, got $HELPER_STATUS"
@@ -139,23 +139,23 @@ for path_case in "HOME/.claude/settings.json" "HOME/.claude/settings.local.json"
     bad "$path_case: message does not name the fixture path ($HELPER_OUTPUT)"
   fi
 
-  rm -rf "$home_dir" "$config_dir" "$plugin_dir"
+  rm -rf "$home_dir" "$config_dir" "$workdir"
 done
 
 # Clean case: no fixture anywhere under the temporary HOME, CLAUDE_CONFIG_DIR
-# or plugin directory. Proves the helper returns 0 when nothing pollutes any
+# or work folder. Proves the helper returns 0 when nothing pollutes any
 # of the six relative paths.
 if skip_if_polluted "no fixture anywhere"; then
   home_dir=$(mktemp -d)
   config_dir=$(mktemp -d)
-  plugin_dir=$(mktemp -d)
-  run_helper "$plugin_dir" "$home_dir" "$config_dir"
+  workdir=$(mktemp -d)
+  run_helper "$workdir" "$home_dir" "$config_dir"
   if [ "$HELPER_STATUS" -eq 0 ]; then
     ok "no fixture anywhere: exits 0"
   else
     bad "no fixture anywhere: expected exit 0, got $HELPER_STATUS ($HELPER_OUTPUT)"
   fi
-  rm -rf "$home_dir" "$config_dir" "$plugin_dir"
+  rm -rf "$home_dir" "$config_dir" "$workdir"
 fi
 
 # The only case above asserting "returns 0" used empty directories, so the
@@ -167,17 +167,17 @@ fi
 if skip_if_polluted "settings file with an unrelated key"; then
   home_dir=$(mktemp -d)
   config_dir=$(mktemp -d)
-  plugin_dir=$(mktemp -d)
-  mkdir -p "$plugin_dir/.claude"
-  fixture="$plugin_dir/.claude/settings.json"
+  workdir=$(mktemp -d)
+  mkdir -p "$workdir/.claude"
+  fixture="$workdir/.claude/settings.json"
   printf '{"env": {"SOMETHING_ELSE": "1"}}\n' > "$fixture"
-  run_helper "$plugin_dir" "$home_dir" "$config_dir"
+  run_helper "$workdir" "$home_dir" "$config_dir"
   if [ "$HELPER_STATUS" -eq 0 ]; then
     ok "settings file with an unrelated key: exits 0"
   else
     bad "settings file with an unrelated key: expected exit 0, got $HELPER_STATUS ($HELPER_OUTPUT)"
   fi
-  rm -rf "$home_dir" "$config_dir" "$plugin_dir"
+  rm -rf "$home_dir" "$config_dir" "$workdir"
 fi
 
 # This case names one of the three variables OUTSIDE the "env" block. The
@@ -193,17 +193,17 @@ fi
 # absolute enterprise path, so it is found first regardless of pollution.
 home_dir=$(mktemp -d)
 config_dir=$(mktemp -d)
-plugin_dir=$(mktemp -d)
-mkdir -p "$plugin_dir/.claude"
-fixture="$plugin_dir/.claude/settings.json"
+workdir=$(mktemp -d)
+mkdir -p "$workdir/.claude"
+fixture="$workdir/.claude/settings.json"
 printf '{"other": {"SUPERPOWERS_REVIEWERS_PER_LENS": "3"}}\n' > "$fixture"
-run_helper "$plugin_dir" "$home_dir" "$config_dir"
+run_helper "$workdir" "$home_dir" "$config_dir"
 if [ "$HELPER_STATUS" -eq 1 ]; then
   ok "variable named outside the env block: exits 1 (message overstates: claims the env block)"
 else
   bad "variable named outside the env block: expected exit 1, got $HELPER_STATUS ($HELPER_OUTPUT)"
 fi
-rm -rf "$home_dir" "$config_dir" "$plugin_dir"
+rm -rf "$home_dir" "$config_dir" "$workdir"
 
 echo ""
 echo "Results: ${PASS} passed, ${FAIL} failed"

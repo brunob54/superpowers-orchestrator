@@ -36,7 +36,6 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-PLUGIN_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
 source "$SCRIPT_DIR/../lib/timeout-shim.sh"
 source "$SCRIPT_DIR/test-helpers.sh"
 
@@ -51,10 +50,16 @@ source "$SCRIPT_DIR/test-helpers.sh"
 # and aborts before any `claude -p` call, instead of letting Case 2's M=1
 # default silently resolve to a different M.
 unset SUPERPOWERS_REVIEWERS_PER_LENS SUPERPOWERS_REVIEW_ROUNDS SUPERPOWERS_BATCH_TASK_CAP
-check_no_superpowers_defaults_setting "$PLUGIN_DIR" || exit 1
-
+# One fresh empty work folder per `claude -p` run: a Case 1 leftover cannot be
+# reported as a Case 2 failure.
+CLAUDE_WORKDIR=$(create_claude_workdir) || exit 1
+CLAUDE_WORKDIR2=$(create_claude_workdir) || exit 1
 TEST_PROJECT=$(create_test_project)
-trap "cleanup_test_project '$TEST_PROJECT'" EXIT
+TRANSCRIPT_DIR=$(create_transcript_dir) || exit 1
+# The trap is set before the settings check, so an abort there removes the
+# folders too.
+trap "finish_transcript_dir \$? '$TRANSCRIPT_DIR'; cleanup_claude_workdir '$CLAUDE_WORKDIR' '$CLAUDE_WORKDIR2'; cleanup_test_project '$TEST_PROJECT'" EXIT
+check_no_superpowers_defaults_setting "$CLAUDE_WORKDIR" || exit 1
 
 FAILURES=0
 
@@ -89,18 +94,11 @@ PROMPT="Invoke the superpowers-orchestrator:multi-doc-review skill on the docume
 # text — there is nothing in it a grep could key on to confirm "spec" was
 # actually inferred rather than assumed.
 
-# Safety net: the skill commits; a misanchored run must not mutate the dev repo.
-# --ignored=matching is included because .superpowers/ and state.md/known-issues.md/*.txt
-# are gitignored in this repo — exactly the paths the skill under test writes — so a
-# plain --porcelain diff would miss a misanchored run landing its review log or journal here.
-PLUGIN_HEAD_BEFORE=$(git -C "$PLUGIN_DIR" rev-parse HEAD)
-PLUGIN_STATUS_BEFORE=$(git -C "$PLUGIN_DIR" status --porcelain --ignored=matching | shasum | cut -d' ' -f1)
-
 CLAUDE_STATUS=0
-cd "$PLUGIN_DIR" && timeout 1800 claude -p "$PROMPT" \
+run_claude_in_workdir "$CLAUDE_WORKDIR" 1800 -p "$PROMPT" \
     --permission-mode bypassPermissions \
     --add-dir "$TEST_PROJECT" \
-    2>&1 | tee "$TEST_PROJECT/output.txt" || CLAUDE_STATUS=${PIPESTATUS[0]}
+    2>&1 | tee "$TRANSCRIPT_DIR/output.txt" || CLAUDE_STATUS=${PIPESTATUS[0]}
 
 # (f) the run must not have been killed by the timeout: GNU timeout reports
 #     124, the tests/lib/timeout-shim.sh fallback reports 143 (SIGTERM).
@@ -109,14 +107,10 @@ if [ "$CLAUDE_STATUS" -eq 124 ] || [ "$CLAUDE_STATUS" -eq 143 ]; then
     FAILURES=$((FAILURES+1))
 fi
 
-PLUGIN_HEAD_AFTER=$(git -C "$PLUGIN_DIR" rev-parse HEAD)
-PLUGIN_STATUS_AFTER=$(git -C "$PLUGIN_DIR" status --porcelain --ignored=matching | shasum | cut -d' ' -f1)
-if [ "$PLUGIN_HEAD_AFTER" != "$PLUGIN_HEAD_BEFORE" ] || [ "$PLUGIN_STATUS_AFTER" != "$PLUGIN_STATUS_BEFORE" ]; then
-    echo "FAIL(e): the run mutated the plugin dev repo (misanchored skill?)"
-    echo "  Inspect: git -C $PLUGIN_DIR status --porcelain; git -C $PLUGIN_DIR diff"
-    echo "  Only after confirming that tree held nothing else of value, recover with: git -C $PLUGIN_DIR reset --hard $PLUGIN_HEAD_BEFORE (this discards ALL uncommitted work in that repo)"
-    FAILURES=$((FAILURES+1))
-fi
+# (e) work folder write check: the skill commits; a run that writes relative
+#     to its working directory, instead of the test project, writes into its
+#     work folder.
+assert_workdir_empty e "$CLAUDE_WORKDIR" || FAILURES=$((FAILURES+1))
 
 LOG="$TOPIC_DIR/specs/test-feature-design-review-log.md"
 
@@ -183,20 +177,11 @@ PROMPT2="Invoke the superpowers-orchestrator:multi-doc-review skill on the docum
 # platform that emits no block. Gate invocations now carry an explicit
 # `M=<m>`; see the (m1) checks below.
 
-# Safety net (Case 2): re-snapshot the plugin repository immediately before
-# this case's agent call, same as assertion (e) does for Case 1. Case 1's
-# PLUGIN_HEAD_BEFORE/PLUGIN_STATUS_BEFORE only cover Case 1 — without a fresh
-# snapshot here, a Case 2 run that writes its topic folder or its commit into
-# the developer's own checkout instead of the test project would leave this
-# suite green.
-PLUGIN_HEAD_BEFORE2=$(git -C "$PLUGIN_DIR" rev-parse HEAD)
-PLUGIN_STATUS_BEFORE2=$(git -C "$PLUGIN_DIR" status --porcelain --ignored=matching | shasum | cut -d' ' -f1)
-
 CLAUDE_STATUS2=0
-cd "$PLUGIN_DIR" && timeout 1800 claude -p "$PROMPT2" \
+run_claude_in_workdir "$CLAUDE_WORKDIR2" 1800 -p "$PROMPT2" \
     --permission-mode bypassPermissions \
     --add-dir "$TEST_PROJECT" \
-    2>&1 | tee "$TEST_PROJECT/output-m1.txt" || CLAUDE_STATUS2=${PIPESTATUS[0]}
+    2>&1 | tee "$TRANSCRIPT_DIR/output-m1.txt" || CLAUDE_STATUS2=${PIPESTATUS[0]}
 
 # (f2) same timeout check as (f), for the Case 2 run.
 if [ "$CLAUDE_STATUS2" -eq 124 ] || [ "$CLAUDE_STATUS2" -eq 143 ]; then
@@ -204,15 +189,9 @@ if [ "$CLAUDE_STATUS2" -eq 124 ] || [ "$CLAUDE_STATUS2" -eq 143 ]; then
     FAILURES=$((FAILURES+1))
 fi
 
-# (e2) same blast-radius check as assertion (e), repeated for Case 2.
-PLUGIN_HEAD_AFTER2=$(git -C "$PLUGIN_DIR" rev-parse HEAD)
-PLUGIN_STATUS_AFTER2=$(git -C "$PLUGIN_DIR" status --porcelain --ignored=matching | shasum | cut -d' ' -f1)
-if [ "$PLUGIN_HEAD_AFTER2" != "$PLUGIN_HEAD_BEFORE2" ] || [ "$PLUGIN_STATUS_AFTER2" != "$PLUGIN_STATUS_BEFORE2" ]; then
-    echo "FAIL(e2): the Case 2 run mutated the plugin dev repo (misanchored skill?)"
-    echo "  Inspect: git -C $PLUGIN_DIR status --porcelain; git -C $PLUGIN_DIR diff"
-    echo "  Only after confirming that tree held nothing else of value, recover with: git -C $PLUGIN_DIR reset --hard $PLUGIN_HEAD_BEFORE2 (this discards ALL uncommitted work in that repo)"
-    FAILURES=$((FAILURES+1))
-fi
+# (e2) same work folder write check as assertion (e), repeated for Case 2 in
+#      its own work folder.
+assert_workdir_empty e2 "$CLAUDE_WORKDIR2" || FAILURES=$((FAILURES+1))
 
 LOG2="$TOPIC_DIR2/specs/test-feature-design-review-log.md"
 
@@ -280,6 +259,6 @@ fi
 if [ "$FAILURES" -eq 0 ]; then
     echo "PASS: multi-doc-review behavioral test"
 else
-    echo "FAILED: $FAILURES assertion(s); transcripts in $TEST_PROJECT/output.txt and $TEST_PROJECT/output-m1.txt"
+    echo "FAILED: $FAILURES assertion(s); transcripts in $TRANSCRIPT_DIR/output.txt and $TRANSCRIPT_DIR/output-m1.txt"
     exit 1
 fi

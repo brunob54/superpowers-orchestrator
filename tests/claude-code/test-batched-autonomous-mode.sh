@@ -6,7 +6,9 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 source "$SCRIPT_DIR/test-helpers.sh"
 
-SKILL_FILE="../../skills/subagent-driven-development/SKILL.md"
+# Absolute path to the skill file: claude runs in an empty work folder, so a
+# path relative to the working directory would not resolve
+SKILL_FILE="$(cd "$SCRIPT_DIR/../../skills/subagent-driven-development" && pwd)/SKILL.md"
 
 echo "=== Test: batched autonomous mode ==="
 echo ""
