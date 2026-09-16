@@ -21,9 +21,9 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 source "$SCRIPT_DIR/../lib/timeout-shim.sh"
 source "$SCRIPT_DIR/test-helpers.sh"
 
+CLAUDE_WORKDIR=$(create_claude_workdir) || exit 1
 TEST_PROJECT=$(create_test_project)
-CLAUDE_WORKDIR=$(create_claude_workdir)
-trap "cleanup_test_project '$TEST_PROJECT' '$CLAUDE_WORKDIR'" EXIT
+trap "cleanup_claude_workdir '$CLAUDE_WORKDIR'; cleanup_test_project '$TEST_PROJECT'" EXIT
 
 cd "$TEST_PROJECT"
 git init --quiet
@@ -46,9 +46,9 @@ PROMPT="Use the brainstorming skill on the project at $TEST_PROJECT to design th
 # is killed here first: the timeout assertion can fire and the keep-project
 # trap still runs (the outer timeout would kill this whole script instead).
 CLAUDE_STATUS=0
-( cd "$CLAUDE_WORKDIR" && timeout 1700 claude -p "$PROMPT" \
+run_claude_in_workdir "$CLAUDE_WORKDIR" 1700 -p "$PROMPT" \
     --permission-mode bypassPermissions \
-    --add-dir "$TEST_PROJECT" ) \
+    --add-dir "$TEST_PROJECT" \
     2>&1 | tee "$TEST_PROJECT/output.txt" || CLAUDE_STATUS=${PIPESTATUS[0]}
 
 cd "$TEST_PROJECT"

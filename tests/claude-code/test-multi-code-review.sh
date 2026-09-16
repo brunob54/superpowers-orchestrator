@@ -9,6 +9,8 @@
 #       vocabulary (fixed / rejected: / user-decision / unresolved:)
 #   (c) a fix commit exists OR no disposition claims "fixed"
 #   (d) fix commits (if any) use generic subjects — no finding text
+#   (e) the run did not write into its work folder (an empty folder made for
+#       this run, which is the working directory of `claude`)
 #   (f) the run was not killed by the timeout
 #   (g)/(h) the loop ran Round 2 and wrote its completion marker
 #   (i) the invocation line records N and M
@@ -19,8 +21,8 @@
 #
 # Case 2 (pipeline mode, TOPIC_DIR) repeats the setup on a second branch and
 # adds:
-#   (e2) same blast-radius check as (e): the Case 2 run did not write into
-#        its working directory, a second empty work folder made for Case 2
+#   (e2) same work folder write check as (e): the Case 2 run did not write
+#        into its own work folder, a second empty folder made for Case 2
 #   (p1) the pipeline-mode review log is created under TOPIC_DIR/implementation
 #   (p1b) the direct-mode sidecar log was NOT also written — TOPIC_DIR must
 #        select pipeline mode exclusively, not run both modes
@@ -76,12 +78,13 @@ source "$SCRIPT_DIR/test-helpers.sh"
 unset SUPERPOWERS_REVIEWERS_PER_LENS SUPERPOWERS_REVIEW_ROUNDS SUPERPOWERS_BATCH_TASK_CAP
 # One fresh empty work folder per `claude -p` run: a Case 1 leftover cannot be
 # reported as a Case 2 failure.
-CLAUDE_WORKDIR=$(create_claude_workdir)
-CLAUDE_WORKDIR2=$(create_claude_workdir)
-check_no_superpowers_defaults_setting "$CLAUDE_WORKDIR" || exit 1
-
+CLAUDE_WORKDIR=$(create_claude_workdir) || exit 1
+CLAUDE_WORKDIR2=$(create_claude_workdir) || exit 1
 TEST_PROJECT=$(create_test_project)
-trap "cleanup_test_project '$TEST_PROJECT' '$CLAUDE_WORKDIR' '$CLAUDE_WORKDIR2'" EXIT
+# The trap is set before the settings check, so an abort there removes the
+# folders too.
+trap "cleanup_claude_workdir '$CLAUDE_WORKDIR' '$CLAUDE_WORKDIR2'; cleanup_test_project '$TEST_PROJECT'" EXIT
+check_no_superpowers_defaults_setting "$CLAUDE_WORKDIR" || exit 1
 
 # Uncommitted changes in the test project, transcripts excluded. The project
 # is a bare `mktemp -d` + `git init` with no .gitignore, and both cases write
@@ -144,9 +147,9 @@ SEEDED_HEAD_SHA=$(git rev-parse HEAD)
 PROMPT="Invoke the superpowers-orchestrator:multi-code-review skill on the git repository at $TEST_PROJECT (review its current branch feature-under-review) with BASE $BASE_SHA, N=2 and M=2. Do not ask me any questions — use N=2 and M=2 and proceed to completion, treating any finding that would need my decision as user-decision in the log."
 
 CLAUDE_STATUS=0
-( cd "$CLAUDE_WORKDIR" && timeout 1800 claude -p "$PROMPT" \
+run_claude_in_workdir "$CLAUDE_WORKDIR" 1800 -p "$PROMPT" \
     --permission-mode bypassPermissions \
-    --add-dir "$TEST_PROJECT" ) \
+    --add-dir "$TEST_PROJECT" \
     2>&1 | tee "$TEST_PROJECT/output.txt" || CLAUDE_STATUS=${PIPESTATUS[0]}
 
 cd "$TEST_PROJECT"
@@ -159,8 +162,9 @@ if [ "$CLAUDE_STATUS" -eq 124 ] || [ "$CLAUDE_STATUS" -eq 143 ]; then
     FAILURES=$((FAILURES+1))
 fi
 
-# (e) blast radius: the skill commits; a misanchored run writes into its
-#     working directory instead of the test project.
+# (e) work folder write check: the skill commits; a run that writes relative
+#     to its working directory, instead of the test project, writes into its
+#     work folder.
 assert_workdir_empty e "$CLAUDE_WORKDIR" || FAILURES=$((FAILURES+1))
 
 LOG=$(ls .superpowers/reviews/*-review-log.md 2>/dev/null | head -1 || true)
@@ -287,9 +291,9 @@ PKG_COUNT_BEFORE=$(ls .superpowers/sdd/review-*.diff 2>/dev/null | wc -l | tr -d
 PKGS_BEFORE=$(ls .superpowers/sdd/review-*.diff 2>/dev/null || true)
 
 CLAUDE_STATUS2=0
-( cd "$CLAUDE_WORKDIR2" && timeout 1800 claude -p "$PIPE_PROMPT" \
+run_claude_in_workdir "$CLAUDE_WORKDIR2" 1800 -p "$PIPE_PROMPT" \
     --permission-mode bypassPermissions \
-    --add-dir "$TEST_PROJECT" ) \
+    --add-dir "$TEST_PROJECT" \
     2>&1 | tee "$TEST_PROJECT/output-pipeline.txt" || CLAUDE_STATUS2=${PIPESTATUS[0]}
 
 # (f2) same timeout-kill check as (f), repeated for Case 2.
@@ -298,8 +302,8 @@ if [ "$CLAUDE_STATUS2" -eq 124 ] || [ "$CLAUDE_STATUS2" -eq 143 ]; then
     FAILURES=$((FAILURES+1))
 fi
 
-# (e2) same blast-radius check as assertion (e), repeated for Case 2 in its
-#      own work folder.
+# (e2) same work folder write check as assertion (e), repeated for Case 2 in
+#      its own work folder.
 assert_workdir_empty e2 "$CLAUDE_WORKDIR2" || FAILURES=$((FAILURES+1))
 
 cd "$TEST_PROJECT"

@@ -42,12 +42,17 @@ This test suite verifies that skills are loaded correctly and Claude follows the
 
 ### test-helpers.sh
 Common functions for skills testing:
-- `run_claude "prompt" [timeout]` - Run Claude with prompt
+- `run_claude "prompt" [timeout] [allowed_tools]` - Run Claude with prompt in a fresh empty work folder, removed afterwards (a prompt must use absolute paths)
+- `run_claude_in_workdir "$CLAUDE_WORKDIR" timeout claude_args...` - Run `claude` inside a work folder and return its exit status; every direct `claude` call of a suite must use it (`tests/codex/test-claude-code-workdir.sh` checks this)
+- `create_claude_workdir` - Create an empty work folder and print its physical path; fails when `mktemp` fails
+- `assert_workdir_empty label dir` - Fail when the run wrote into its work folder, or when the folder does not exist
+- `cleanup_claude_workdir dir...` - Remove work folders; refuses an empty path, `/`, the home folder, the current directory and the plugin repository
 - `assert_contains output pattern name` - Verify pattern exists
 - `assert_not_contains output pattern name` - Verify pattern absent
 - `assert_count output pattern count name` - Verify exact count
 - `assert_order output pattern_a pattern_b name` - Verify order
 - `create_test_project` - Create temp test directory
+- `cleanup_test_project dir...` - Remove every directory given
 - `create_test_plan project_dir` - Create sample plan file
 
 ### Test Files

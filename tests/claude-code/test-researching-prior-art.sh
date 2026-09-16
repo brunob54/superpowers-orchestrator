@@ -56,9 +56,9 @@ section_of() {
     ' "$1"
 }
 
+CLAUDE_WORKDIR=$(create_claude_workdir) || exit 1
 TEST_PROJECT=$(create_test_project)
-CLAUDE_WORKDIR=$(create_claude_workdir)
-trap "cleanup_test_project '$TEST_PROJECT' '$CLAUDE_WORKDIR'" EXIT
+trap "cleanup_claude_workdir '$CLAUDE_WORKDIR'; cleanup_test_project '$TEST_PROJECT'" EXIT
 
 cd "$TEST_PROJECT"
 git init --quiet
@@ -90,9 +90,9 @@ PROMPT="Invoke the superpowers-orchestrator:researching-prior-art skill on the g
 # is killed here first: the timeout assertion can fire and the keep-project
 # trap still runs (the outer timeout would kill this whole script instead).
 CLAUDE_STATUS=0
-( cd "$CLAUDE_WORKDIR" && timeout 1700 claude -p "$PROMPT" \
+run_claude_in_workdir "$CLAUDE_WORKDIR" 1700 -p "$PROMPT" \
     --permission-mode bypassPermissions \
-    --add-dir "$TEST_PROJECT" ) \
+    --add-dir "$TEST_PROJECT" \
     2>&1 | tee "$TEST_PROJECT/output.txt" || CLAUDE_STATUS=${PIPESTATUS[0]}
 
 cd "$TEST_PROJECT"
@@ -104,8 +104,8 @@ if [ "$CLAUDE_STATUS" -eq 124 ] || [ "$CLAUDE_STATUS" -eq 143 ]; then
     FAILURES=$((FAILURES+1))
 fi
 
-# (e) blast radius: a misanchored run writes into its working directory
-#     instead of the test project.
+# (e) work folder write check: a run that writes relative to its working
+#     directory, instead of the test project, writes into its work folder.
 assert_workdir_empty e "$CLAUDE_WORKDIR" || FAILURES=$((FAILURES+1))
 
 REPORT="$TEST_PROJECT/.superpowers/research/ms-duration-research-report.md"

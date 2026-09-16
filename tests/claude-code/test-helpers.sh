@@ -3,6 +3,11 @@
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")/../lib" && pwd)/timeout-shim.sh"
 
+# Absolute physical path of the plugin repository (two folders above this
+# file). A work folder must never be this repository or be inside it.
+HELPERS_PLUGIN_REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd -P)"
+export HELPERS_PLUGIN_REPO_DIR
+
 # Run Claude Code with a prompt and capture output. Claude runs in a fresh
 # empty work folder (see create_claude_workdir), which is removed afterwards.
 # Usage: run_claude "prompt text" [timeout_seconds] [allowed_tools]
@@ -10,30 +15,45 @@ run_claude() {
     local prompt="$1"
     local timeout="${2:-60}"
     local allowed_tools="${3:-}"
-    local output_file=$(mktemp)
     local workdir
-    workdir=$(create_claude_workdir)
+    workdir=$(create_claude_workdir) || return 1
+    local output_file=$(mktemp)
 
-    # Build command
-    local cmd="claude -p \"$prompt\""
+    local claude_args=(-p "$prompt")
     if [ -n "$allowed_tools" ]; then
-        cmd="$cmd --allowed-tools=$allowed_tools"
+        claude_args+=("--allowed-tools=$allowed_tools")
     fi
 
-    # Run Claude in headless mode with timeout. The subshell changes into the
-    # work folder, so the caller's working directory does not change.
-    if (cd "$workdir" && timeout "$timeout" bash -c "$cmd") > "$output_file" 2>&1; then
+    local exit_code=0
+    run_claude_in_workdir "$workdir" "$timeout" "${claude_args[@]}" > "$output_file" 2>&1 || exit_code=$?
+    if [ "$exit_code" -eq 0 ]; then
         cat "$output_file"
-        rm -f "$output_file"
-        cleanup_test_project "$workdir"
-        return 0
     else
-        local exit_code=$?
         cat "$output_file" >&2
-        rm -f "$output_file"
-        cleanup_test_project "$workdir"
-        return $exit_code
     fi
+    rm -f "$output_file"
+    cleanup_claude_workdir "$workdir"
+    return $exit_code
+}
+
+# Run the `claude` command inside a work folder and return claude's exit status
+# (timeout returns 124, or 143 from the tests/lib/timeout-shim.sh fallback).
+# The command runs in a subshell, so the caller's working directory does not
+# change, and the calling script never stands inside the work folder when its
+# EXIT trap removes that folder. Every `claude` call of the suites goes through
+# this function: tests/codex/test-claude-code-workdir.sh fails on a suite
+# script that runs `claude` directly. The function refuses a work folder that
+# is_safe_workdir rejects, and then does not call `claude`.
+# Usage: run_claude_in_workdir "$CLAUDE_WORKDIR" <timeout_seconds> <claude arguments...>
+run_claude_in_workdir() {
+    local workdir="$1"
+    local timeout_seconds="$2"
+    shift 2
+    if ! is_safe_workdir "$workdir"; then
+        echo "run_claude_in_workdir: '$workdir' is not a usable work folder; claude was not run" >&2
+        return 1
+    fi
+    (cd "$workdir" && timeout "$timeout_seconds" claude "$@")
 }
 
 # Check if output contains a pattern
@@ -137,36 +157,70 @@ create_test_project() {
     echo "$test_dir"
 }
 
-# Create an empty folder for one `claude -p` run and print its physical path
-# (symbolic links resolved). Claude Code names the transcript folder after the
-# physical path: on macOS mktemp returns /var/..., which is a link to
-# /private/var/... The folder is outside the plugin repository and outside the
-# test project, so a skill that writes into its working directory is caught by
-# assert_workdir_empty, and the session does not load this repository's
-# CLAUDE.md or workspace files. Run claude in a subshell,
-# `( cd "$CLAUDE_WORKDIR" && claude -p ... )`, so that the script itself never
-# stands inside the folder when its EXIT trap removes it.
-# Usage: CLAUDE_WORKDIR=$(create_claude_workdir)
+# Create an empty work folder for one `claude -p` run and print its physical
+# path (symbolic links resolved). "Work folder" is the name these tests use for
+# this folder; the folder becomes the working directory of the `claude`
+# process. Claude Code names the transcript folder after the physical path: on
+# macOS mktemp returns /var/..., which is a link to /private/var/... The folder
+# is outside the plugin repository and outside the test project, so a skill
+# that writes into its working directory is caught by assert_workdir_empty,
+# and the session does not load this repository's CLAUDE.md or workspace
+# files. Run claude in it with run_claude_in_workdir.
+# The function fails and prints nothing when mktemp fails: `cd ""` succeeds
+# without moving, so without this check the caller's own working directory
+# would be printed as the work folder, and later removed.
+# Usage: CLAUDE_WORKDIR=$(create_claude_workdir) || exit 1
 create_claude_workdir() {
-    (cd "$(mktemp -d)" && pwd -P)
+    local dir physical
+    dir=$(mktemp -d) || return 1
+    physical=$([ -n "$dir" ] && cd "$dir" && pwd -P) || return 1
+    [ -n "$physical" ] || return 1
+    printf '%s\n' "$physical"
 }
 
-# Fail when a run wrote anything into its working directory (a misanchored
-# skill). The folder is disposable, so there is nothing to recover: the
-# failure message lists its content for inspection.
+# Return 0 when <path> is an existing folder that may be used and removed as a
+# work folder. Refused: an empty path, a path that is not a folder, the root
+# folder /, the home folder, the current working directory, the plugin
+# repository, a folder inside it, and a folder that contains it.
+# Usage: is_safe_workdir "$CLAUDE_WORKDIR"
+is_safe_workdir() {
+    local physical protected
+    physical=$([ -n "$1" ] && cd "$1" 2>/dev/null && pwd -P) || return 1
+    for protected in / "$(cd "$HOME" 2>/dev/null && pwd -P)" "$(pwd -P)"; do
+        [ "$physical" = "$protected" ] && return 1
+    done
+    case "$HELPERS_PLUGIN_REPO_DIR/" in
+        "$physical"/*) return 1 ;;
+    esac
+    case "$physical/" in
+        "$HELPERS_PLUGIN_REPO_DIR"/*) return 1 ;;
+    esac
+    return 0
+}
+
+# Fail when a run wrote anything into its work folder, for example a skill
+# that writes relative to its working directory instead of the target
+# repository it was given. Also fail when the path is empty or the folder does
+# not exist: such a check would examine nothing. The folder is disposable, so
+# there is nothing to recover: the failure message lists its content for
+# inspection.
 # Usage: assert_workdir_empty "<assertion label>" "$CLAUDE_WORKDIR"
 assert_workdir_empty() {
     local label="$1"
     local dir="$2"
+    if [ -z "$dir" ] || [ ! -d "$dir" ]; then
+        echo "FAIL($label): the work folder '$dir' does not exist"
+        return 1
+    fi
     if [ -n "$(ls -A "$dir")" ]; then
-        echo "FAIL($label): the run wrote into its working directory $dir (misanchored skill?)"
+        echo "FAIL($label): the run wrote into its work folder $dir (a skill wrote relative to its working directory instead of the target repository?)"
         ls -la "$dir"
         return 1
     fi
     return 0
 }
 
-# Cleanup test project and work folders: removes every folder given
+# Cleanup test project: removes every folder given
 # Usage: cleanup_test_project "$test_dir" ["$other_dir" ...]
 cleanup_test_project() {
     local test_dir
@@ -175,6 +229,23 @@ cleanup_test_project() {
             rm -rf "$test_dir"
         fi
     done
+}
+
+# Remove work folders. A path that is_safe_workdir rejects is not removed: the
+# function prints a message and returns 1. This protects the caller's folders
+# if a work folder path is ever wrong.
+# Usage: cleanup_claude_workdir "$CLAUDE_WORKDIR" ["$CLAUDE_WORKDIR2" ...]
+cleanup_claude_workdir() {
+    local workdir status=0
+    for workdir in "$@"; do
+        if is_safe_workdir "$workdir"; then
+            cleanup_test_project "$workdir"
+        else
+            echo "cleanup_claude_workdir: refusing to remove '$workdir'" >&2
+            status=1
+        fi
+    done
+    return $status
 }
 
 # Create a simple plan file for testing
@@ -272,6 +343,7 @@ check_no_superpowers_defaults_setting() {
 
 # Export functions for use in tests
 export -f run_claude
+export -f run_claude_in_workdir
 export -f assert_contains
 export -f assert_not_contains
 export -f assert_count
@@ -279,6 +351,8 @@ export -f assert_order
 export -f create_test_project
 export -f cleanup_test_project
 export -f create_claude_workdir
+export -f is_safe_workdir
+export -f cleanup_claude_workdir
 export -f assert_workdir_empty
 export -f create_test_plan
 export -f check_no_superpowers_defaults_setting
