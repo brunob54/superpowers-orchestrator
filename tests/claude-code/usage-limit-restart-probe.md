@@ -17,11 +17,11 @@ run that hits one.
 
 ## Scope
 
-- Covered by this probe: account usage limits. They were 22 of the 28 recorded
-  restart events (Case 009, Follow-up of 2026-09-15).
+- Covered by this probe: account usage limits. They were 23 of the 29 recorded
+  restart events (Case 009, Follow-up of 2026-09-15, second entry).
 - Not covered: the other 6 events — 4 machine sleeps, 1 `529 Overloaded`, and 1
-  time-out. The setting names usage limits only. Those stay open in row 12
-  step (b).
+  request time-out. The setting names usage limits only. Those stay open in row 12
+  step (c).
 
 ## Preconditions
 
@@ -74,9 +74,9 @@ run that hits one.
 ## Record in docs/orchestration-issues.md
 
 - On a pass: in row 12, mark the usage-limit half closed, naming this probe's
-  date, the run slug and the transcript id. Keep step (b) for the remaining 6
-  events (sleep, 529, time-out) or close the row when those are judged too rare
-  to fix.
+  date, the run slug and the transcript id. Keep step (c) for the remaining 6
+  events (sleep, 529, time-out), or close that half when those are judged too
+  rare to fix.
 - On a fail: keep row 12 open and add the observed behaviour as a new line, with
   the transcript id and the times.
 - Either way: add a `**Follow-up — <date> — usage-limit restart probe.**`
