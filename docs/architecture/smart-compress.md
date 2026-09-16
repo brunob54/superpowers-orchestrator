@@ -130,7 +130,7 @@ These commands always pass through with raw, unmodified output — regardless of
 |---|---|
 | `git diff` (any variant) | Every line is signal for code review and debugging |
 | `cat`, `head`, `tail`, `less`, `bat` | Claude explicitly requested file content |
-| Commands with pipes (`\| grep`, `\| awk`, `\| sed`) | User already applied their own filter |
+| Compound commands: two or more commands joined by `&&`, `\|\|`, `;`, `\|`, a new line or a background `&` | A rule matches only the first command, so it would remove the output of the later commands. A pipe also means the user already applied their own filter. Redirects such as `2>&1` do not count. Quotes are not parsed, so a `;` inside a quoted message also stops compression. |
 | Commands with `--verbose` or `--debug` flags | User explicitly asked for detail |
 | `curl`, `wget`, `httpie` | API responses should not be truncated |
 | `echo`, `printf` | User is constructing specific output |

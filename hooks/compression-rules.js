@@ -23,8 +23,14 @@ const NEVER_COMPRESS = [
   // File reading — user/Claude explicitly wants file content
   /^\s*(cat|head|tail|less|bat|more|type)\s+/,
 
-  // User already applied their own filter — respect it
-  /\|\s*(grep|rg|awk|sed|sort|uniq|wc|cut|tr|jq|yq)\b/,
+  // Compound commands — a rule matches only the first command, so compressing
+  // the whole output can remove the output of the later commands. Separators:
+  // ';', '|' (this also covers '||' and a pipe into the user's own filter),
+  // a new line, '&&', and a single '&' that runs a command in the background.
+  // An '&' next to '<' or '>' is a redirect ('2>&1', '&>file', '<&0') and is
+  // not a separator. Quotes are not parsed: a separator inside a quoted
+  // string also stops compression, which only leaves that output uncompressed.
+  /[;|\n]|&&|(?<![<>&])&(?![<>&])/,
 
   // Verbose/debug flags — user explicitly wants detail
   /\s--(verbose|debug)\b/,
