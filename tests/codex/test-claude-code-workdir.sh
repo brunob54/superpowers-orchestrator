@@ -43,6 +43,15 @@
 #      cleanup_claude_workdir removes a work folder and refuses an empty
 #      path, /, the home folder, the current working directory, and a folder
 #      inside the plugin repository.
+#   8. Static: no shell script under tests/claude-code/ (subfolders
+#      included) except test-helpers.sh writes a `claude -p` transcript into
+#      the test project. The test project is the fixture git repository that
+#      the skill under test inspects: an untracked transcript there makes the
+#      working tree not clean, and a skill such as multi-code-review then
+#      stops. The rule and its limits are described at the check.
+#   9. Unit: create_transcript_dir prints an empty folder outside the plugin
+#      repository; finish_transcript_dir removes it after a success (exit
+#      status 0) and keeps it and prints its path after a failure.
 #
 # Every fake command (claude, mktemp, rm) is placed first on PATH, and the
 # test stops before the call when the shell does not resolve the command to
@@ -420,6 +429,126 @@ refuses "the home folder" "$HOME"
 refuses "the current working directory" "$victim" "$victim"
 refuses "the plugin repository" "$REPO_ROOT"
 refuses "a folder inside the plugin repository" "$REPO_ROOT/tests"
+
+echo "8. no suite script writes a transcript into the test project"
+# The rule. A line is reported when a path starts with $TEST_PROJECT/ or
+# ${TEST_PROJECT}/ (quoted or not) and one of these is true:
+#   a. the path is an argument of `tee`. The suites use `tee` only to keep a
+#      copy of a session's output, never to build the fixture.
+#   b. the path is the target of `>` or `>>` and the file name ends in .txt.
+#      Fixture setup writes code and documents (.js, .json, .md), so
+#      `cat > "$TEST_PROJECT/sum.js"` stays allowed; a .txt file in the test
+#      project is a transcript or a prompt copy.
+#   c. the file name contains "output" and ends in .txt, in any use. This
+#      catches a transcript path stored in a variable first
+#      (OUTPUT_FILE="$TEST_PROJECT/claude-output.txt" ... tee "$OUTPUT_FILE")
+#      and later reads or messages that name such a file.
+# Limit: a transcript written through a variable whose value has another
+# name, or after `cd "$TEST_PROJECT"` with a relative path, is not detected.
+# Whole comment lines are skipped, as in check 1.
+PROJECT_PATH='"?\$(TEST_PROJECT|\{TEST_PROJECT\})/'
+NAME_CHAR='[^[:space:]"'"${SQ}"'/]'
+TEE_INTO_PROJECT_RE="${NOT_WORD}tee([[:space:]]+-[^[:space:]]+)*[[:space:]]+${PROJECT_PATH}"
+TXT_REDIRECT_INTO_PROJECT_RE=">>?[[:space:]]*${PROJECT_PATH}([^[:space:]\"${SQ}]*/)?${NAME_CHAR}*\.txt"
+OUTPUT_TXT_IN_PROJECT_RE="${PROJECT_PATH}([^[:space:]\"${SQ}]*/)?${NAME_CHAR}*output${NAME_CHAR}*\.txt"
+TRANSCRIPT_IN_PROJECT_RE="(${TEE_INTO_PROJECT_RE})|(${TXT_REDIRECT_INTO_PROJECT_RE})|(${OUTPUT_TXT_IN_PROJECT_RE})"
+
+# scan_project_transcripts <dir>: print "<file>:<line>:<text>" for every line
+# that writes or names a transcript inside the test project.
+scan_project_transcripts() {
+  local file
+  list_shell_scripts "$1" | while IFS= read -r file; do
+    logical_lines "$file" | grep -E "$TRANSCRIPT_IN_PROJECT_RE" | sed "s|^|$file:|" || true
+  done
+}
+
+new_scratch
+TRANSCRIPT_FIXTURE_DIR="$LAST_SCRATCH"
+mkdir -p "$TRANSCRIPT_FIXTURE_DIR/sub"
+TRANSCRIPT_BAD_CASES=(
+  't1-tee.sh|run_claude_in_workdir "$CLAUDE_WORKDIR" 10 -p "x" 2>&1 | tee "$TEST_PROJECT/output.txt" || true'
+  't2-tee-braces-append.sh|claude_run 2>&1 | tee -a "${TEST_PROJECT}/output-m1.txt"'
+  't3-tee-unquoted.sh|claude_run | tee $TEST_PROJECT/log.md'
+  't4-redirect-txt.sh|cat > "$TEST_PROJECT/prompt.txt" <<'"'EOF'"'
+x
+EOF'
+  't5-append-txt.sh|claude_run >> "$TEST_PROJECT/notes/run.txt"'
+  't6-variable.sh|OUTPUT_FILE="$TEST_PROJECT/claude-output.txt"'
+  't7-read.sh|OUT=$(cat "$TEST_PROJECT/output-pretool.txt")'
+  'sub/t8-subfolder.sh|claude_run | tee "$TEST_PROJECT/output-pipeline.txt"'
+)
+TRANSCRIPT_GOOD_FILE="fixture-setup.sh"
+cat > "$TRANSCRIPT_FIXTURE_DIR/$TRANSCRIPT_GOOD_FILE" <<'EOF'
+#!/usr/bin/env bash
+# claude_run | tee "$TEST_PROJECT/output.txt" (only a comment)
+cat > "$TEST_PROJECT/sum.js" <<'JS'
+module.exports = {};
+JS
+cat > "${TEST_PROJECT}/docs/spec.md" <<'MD'
+# Spec
+MD
+echo '{}' >> "$TEST_PROJECT/package.json"
+MARKER_FILE="$TEST_PROJECT/subagent-hook-test-marker.txt"
+run_claude_in_workdir "$CLAUDE_WORKDIR" 10 -p "x" 2>&1 | tee "$TRANSCRIPT_DIR/output.txt"
+OUTPUT_FILE="$TRANSCRIPT_DIR/claude-output.txt"
+if cd "$TEST_PROJECT" && npm test > /dev/null 2>&1; then echo ok; fi
+EOF
+for bad_case in "${TRANSCRIPT_BAD_CASES[@]}"; do
+  printf '%s\n' "${bad_case#*|}" > "$TRANSCRIPT_FIXTURE_DIR/${bad_case%%|*}"
+done
+transcript_fixture_report="$(scan_project_transcripts "$TRANSCRIPT_FIXTURE_DIR")"
+for bad_case in "${TRANSCRIPT_BAD_CASES[@]}"; do
+  check "the scan reports ${bad_case%%|*}" grep -qF "$TRANSCRIPT_FIXTURE_DIR/${bad_case%%|*}:" <<EOF
+$transcript_fixture_report
+EOF
+done
+if grep -F "$TRANSCRIPT_FIXTURE_DIR/$TRANSCRIPT_GOOD_FILE:" <<EOF
+$transcript_fixture_report
+EOF
+then
+  bad "the scan reports no line of $TRANSCRIPT_GOOD_FILE (fixture setup and transcripts outside the project)"
+else
+  ok "the scan reports no line of $TRANSCRIPT_GOOD_FILE (fixture setup and transcripts outside the project)"
+fi
+suite_transcript_report="$(scan_project_transcripts "$SUITE_DIR")"
+if [ -z "$suite_transcript_report" ]; then
+  ok "no suite script outside $HELPERS_NAME writes a transcript into the test project"
+else
+  bad "suite scripts write a transcript into the test project:"
+  printf '%s\n' "$suite_transcript_report"
+fi
+
+echo "9. create_transcript_dir and finish_transcript_dir"
+# transcript_dir_or_empty: call create_transcript_dir; print nothing when the
+# helper is missing or fails, so the checks below fail instead of the script.
+transcript_dir_or_empty() {
+  create_transcript_dir 2>/dev/null || true
+}
+# is_folder <path>: return 0 when <path> is non-empty and an existing folder.
+is_folder() {
+  [ -n "$1" ] && [ -d "$1" ]
+}
+kept_dir="$(transcript_dir_or_empty)"
+[ -n "$kept_dir" ] && SCRATCH+=("$kept_dir")
+check "create_transcript_dir prints an existing folder ('$kept_dir')" is_folder "$kept_dir"
+check "the transcript folder is empty" [ -z "$(ls -A "${kept_dir:-/nonexistent}" 2>/dev/null || echo missing)" ]
+case "$kept_dir/" in
+  "$REPO_ROOT"/*|/) bad "the transcript folder is outside the plugin repository ('$kept_dir')" ;;
+  *) ok "the transcript folder is outside the plugin repository" ;;
+esac
+set +e
+kept_output="$(finish_transcript_dir 1 "$kept_dir" 2>&1)"
+set -e
+check "finish_transcript_dir keeps the folder after a failure" is_folder "$kept_dir"
+check "finish_transcript_dir prints the folder path after a failure" grep -qF "${kept_dir:-no folder}" <<EOF
+$kept_output
+EOF
+removed_dir="$(transcript_dir_or_empty)"
+[ -n "$removed_dir" ] && SCRATCH+=("$removed_dir")
+set +e
+finish_transcript_dir 0 "$removed_dir" >/dev/null 2>&1
+set -e
+check "finish_transcript_dir removes the folder after a success" is_removed "$removed_dir"
 
 echo ""
 echo "claude-code work folder: ${PASS} passed, ${FAIL} failed"
