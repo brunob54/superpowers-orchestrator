@@ -90,6 +90,14 @@ async function main() {
       return;
     }
 
+    // ── Background calls ──
+    // The optimizer holds all output until the command ends, so the output
+    // file of a background call would stay empty while the command runs.
+    if (tool_input.run_in_background === true) {
+      process.stdout.write('{}');
+      return;
+    }
+
     // ── Project-level disable ──
     const projectDir = cwd || process.cwd();
     try {

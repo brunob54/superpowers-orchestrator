@@ -85,12 +85,13 @@ function run() {
   const result = spawnSync(shell, ['-c', cmd], {
     encoding: 'utf8',
     maxBuffer: 10 * 1024 * 1024, // 10MB
-    timeout: 300000,              // 5 minutes (Claude Code's max is 10 min)
+    // No time-out here: the time-out of the Bash tool call applies, the same
+    // as for a command that this hook does not rewrite.
     stdio: ['inherit', 'pipe', 'pipe'],
     cwd: process.cwd(),
   });
 
-  // Handle spawn errors (shell not found, timeout, buffer exceeded)
+  // Handle spawn errors (shell not found, buffer exceeded)
   if (result.error) {
     process.stderr.write(`[smart-compress] Execution error: ${result.error.message}\n`);
     if (result.stdout) process.stdout.write(result.stdout);
@@ -99,7 +100,7 @@ function run() {
     return;
   }
 
-  // Handle signals (timeout SIGTERM, etc.)
+  // Handle signals (SIGTERM, etc.)
   if (result.signal) {
     process.stderr.write(`[smart-compress] Command killed by ${result.signal}\n`);
     if (result.stdout) process.stdout.write(result.stdout);
