@@ -78,12 +78,15 @@ run_hook() {
   node "$PLUGIN_ROOT/hooks/bash-compress-hook.js" < "$tmpfile"
 }
 
+# Base64-encode a string on one line (GNU base64 needs -w 0; macOS has no -w)
+b64_encode() {
+  printf '%s' "$1" | base64 -w 0 2>/dev/null || printf '%s' "$1" | base64
+}
+
 # Run the optimizer directly (executes real command + compresses)
 run_optimizer() {
   local cmd="$1" type="$2"
-  local b64
-  b64=$(printf '%s' "$cmd" | base64 -w 0 2>/dev/null || printf '%s' "$cmd" | base64)
-  node "$PLUGIN_ROOT/hooks/bash-optimizer.js" "$b64" "$type" 2>/dev/null
+  node "$PLUGIN_ROOT/hooks/bash-optimizer.js" "$(b64_encode "$cmd")" "$type" 2>/dev/null
 }
 
 # Parse JSON hook output to check if it contains updatedInput (i.e., was rewritten)
@@ -379,22 +382,33 @@ exit_code=$(node -e "
 ")
 assert "optimizer handles invalid base64 without crashing" "$exit_code" "handled"
 
-# No time limit of its own (Case 026): a command that runs longer than any
-# limit the optimizer gives to spawnSync must still finish. The preload file
-# shortens every spawnSync time-out to 1 second, so a 2-second command shows
-# the difference without a 5-minute wait.
-preload=$(mktmp)
-cat > "$preload" <<'PRELOAD'
-const cp = require('child_process');
-const original = cp.spawnSync;
-cp.spawnSync = (file, args, options) => original(file, args,
-  options && options.timeout ? { ...options, timeout: 1000 } : options);
-PRELOAD
-long_cmd='sleep 2; echo long-step-finished'
-b64=$(printf '%s' "$long_cmd" | base64 -w 0 2>/dev/null || printf '%s' "$long_cmd" | base64)
-output=$(node --require "$preload" "$PLUGIN_ROOT/hooks/bash-optimizer.js" "$b64" "git-status" 2>/dev/null; echo "exit=$?")
-assert_contains "optimizer: a command longer than any internal limit runs to its end" "$output" "long-step-finished"
-assert_contains "optimizer: a command longer than any internal limit keeps exit code 0" "$output" "exit=0"
+# A command still running at the Bash call's time-out: Claude Code moves the
+# call to the background and does not end it. At that time the optimizer must
+# write the output it holds, then pass later output through unchanged, as a
+# command that the hook did not rewrite would do. The third argument lowers
+# the time-out to 1 second; the command runs for 3 seconds.
+switch_cmd='git status; echo part-before-time-out; sleep 3; echo part-after-time-out'
+switch_result=$(SWITCH_B64="$(b64_encode "$switch_cmd")" OPTIMIZER="$PLUGIN_ROOT/hooks/bash-optimizer.js" node -e "
+  const { spawn } = require('child_process');
+  const started = Date.now();
+  const child = spawn('node', [process.env.OPTIMIZER, process.env.SWITCH_B64, 'git-status', '1000']);
+  let stdout = '';
+  let firstPartMs = null;
+  child.stdout.on('data', chunk => {
+    stdout += chunk;
+    if (firstPartMs === null && stdout.includes('part-before-time-out')) firstPartMs = Date.now() - started;
+  });
+  child.on('close', code => {
+    const early = firstPartMs !== null && firstPartMs < 2500;
+    const complete = stdout.includes('part-after-time-out');
+    const raw = !stdout.includes('[compressed:');
+    console.log('early=' + early + ' complete=' + complete + ' raw=' + raw + ' exit=' + code);
+  });
+")
+assert_contains "optimizer: output held at the time-out is written before the command ends" "$switch_result" "early=true"
+assert_contains "optimizer: output after the time-out still arrives"                       "$switch_result" "complete=true"
+assert_contains "optimizer: output after the time-out is not compressed"                   "$switch_result" "raw=true"
+assert_contains "optimizer: a command past the time-out keeps its exit code"               "$switch_result" "exit=0"
 
 # ═══════════════════════════════════════════════════════
 bold "\n6. HOOK I/O PROTOCOL"
@@ -434,6 +448,12 @@ result=$(node -e "
   console.log(u && u.description === 'my desc' && u.timeout === 60000 ? 'ok' : 'fields-not-preserved');
 ")
 assert "hook preserves all original tool_input fields alongside rewritten command" "$result" "ok"
+result=$(node -e "
+  const d = JSON.parse(require('fs').readFileSync('$tmpf2','utf8'));
+  const u = d.hookSpecificOutput && d.hookSpecificOutput.updatedInput;
+  console.log(u && u.command.endsWith(' \"60000\"') ? 'ok' : 'time-out-not-passed: ' + (u && u.command));
+")
+assert "hook passes the call's time-out to the optimizer" "$result" "ok"
 
 # A background call is not rewritten (Case 026): the optimizer holds all
 # output until the command ends, so a background output file would stay empty.
@@ -506,9 +526,7 @@ measure() {
   raw=$(bash -c "$cmd" 2>&1)
   raw_tok=$(( ${#raw} / 4 ))
 
-  local b64
-  b64=$(printf '%s' "$cmd" | base64 -w 0 2>/dev/null || printf '%s' "$cmd" | base64)
-  compressed=$(node "$PLUGIN_ROOT/hooks/bash-optimizer.js" "$b64" "$type" 2>/dev/null)
+  compressed=$(run_optimizer "$cmd" "$type")
   comp_tok=$(( ${#compressed} / 4 ))
 
   if [ "${#raw}" -le 200 ]; then
