@@ -487,9 +487,9 @@ Resume the plan at docs/superpowers-orchestrator/2026-08-04-my-feature/plans/my-
 the batch run started — omit whichever you did not state.
 
 Fresh session, cached-context costs gone, next batch begins. The
-context-pressure gate of §7 checks only prompts that name plan execution,
-such as "execute the plan"; it does not check the batched-mode prompts
-shown above, so start each batch in a fresh session. Recovery semantics —
+context-pressure gate of §7 checks only prompts that match its execution
+patterns, such as "execute the plan"; it does not check the batched-mode
+prompts shown above, so start each batch in a fresh session. Recovery semantics —
 including crashes mid-batch — are §5's batched-execution case.
 
 ### `/clear` between the gates — and why it costs you nothing

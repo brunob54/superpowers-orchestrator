@@ -551,23 +551,28 @@ const SDD_SKILL = fs.readFileSync(
   path.join(REPO_ROOT, 'skills', 'subagent-driven-development', 'SKILL.md'), 'utf8');
 const WRITING_PLANS_SKILL = fs.readFileSync(
   path.join(REPO_ROOT, 'skills', 'writing-plans', 'SKILL.md'), 'utf8');
+// Whitespace is collapsed so that a prompt or a sentence wrapped over lines still matches.
+const SDD_TEXT = SDD_SKILL.replace(/\s+/g, ' ');
 const INLINE_APPROACH = 'Inline';
+const HANDOFF_APPROACHES = ['Subagent-Driven, batched', 'Subagent-Driven, interactive', INLINE_APPROACH];
+const RESUME_PROMPT_START = 'Resume the plan at';
 
 // Rows of the writing-plans handoff table: | Approach | `paste prompt` | Behavior |
 const handoffPrompts = [...WRITING_PLANS_SKILL.matchAll(/^\| ([^|]+?) \| `([^`]+)` \|/gm)]
   .map(m => ({ approach: m[1], prompt: m[2] }));
-// Resume prompts of the batch handoff; a prompt may wrap onto the next line.
-const resumePrompts = [...SDD_SKILL.replace(/\s+/g, ' ').matchAll(/"(Resume the plan at [^"]+)"/g)]
+// Resume prompts of the batch handoff, written in double quotes.
+const resumePrompts = [...SDD_TEXT.matchAll(new RegExp(`"(${RESUME_PROMPT_START} [^"]+)"`, 'g'))]
   .map(m => m[1]);
 const SHORT_REPLIES = ['subagent', 'inline', 'go', 'yes'];
 
-test('The writing-plans handoff table has paste prompts, one of them Inline', () => {
-  assert.ok(handoffPrompts.length > 0, 'no paste prompt extracted from writing-plans');
-  assert.ok(handoffPrompts.some(p => p.approach === INLINE_APPROACH),
-    `no Inline row in: ${JSON.stringify(handoffPrompts)}`);
+test('Every row of the writing-plans handoff table is extracted', () => {
+  assert.deepStrictEqual(handoffPrompts.map(p => p.approach), HANDOFF_APPROACHES);
 });
-test('The SDD skill has resume prompts', () => {
+test('Every resume prompt of the SDD skill is extracted', () => {
+  const mentions = SDD_TEXT.split(RESUME_PROMPT_START).length - 1;
   assert.ok(resumePrompts.length > 0, 'no resume prompt extracted from SDD');
+  assert.strictEqual(resumePrompts.length, mentions,
+    `extracted ${resumePrompts.length} of ${mentions} resume prompts`);
 });
 test('The gate fires on the Inline paste prompt only', () => {
   for (const { approach, prompt } of handoffPrompts) {
@@ -583,9 +588,8 @@ test('The gate fires on "execute the plan in batches"', () => {
   assert.strictEqual(isExecutionTrigger('execute the plan in batches'), true);
 });
 test('SDD states what the gate covers, not that it catches mid-session starts', () => {
-  const sdd = SDD_SKILL.replace(/\s+/g, ' ');
-  assert.ok(!sdd.includes('catches mid-session starts'), 'false claim still present');
-  assert.ok(sdd.includes('fires only on a prompt that names plan execution'),
+  assert.ok(!SDD_TEXT.includes('catches mid-session starts'), 'false claim still present');
+  assert.ok(SDD_TEXT.includes('fires only on a prompt that matches its execution patterns'),
     'corrected sentence missing');
 });
 

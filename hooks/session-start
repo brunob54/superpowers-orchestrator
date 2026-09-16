@@ -432,11 +432,12 @@ fi
 # "3.0" exactly. Any other value (unset, empty, 0, 11, a word) falls back to
 # the hardcoded default, silently — an invalid value is never an error.
 #
-# 0 is deliberately not accepted for SUPERPOWERS_REVIEW_ROUNDS: N=0 skips a
-# review loop, and a variable set once and then forgotten would disable spec
-# review, the plan's rotating review rounds and whole-branch code review on
-# every future session with no message anywhere. N=0 stays reachable per invocation and per gate
-# question, where the user sees its consequence.
+# 0 is deliberately not accepted for SUPERPOWERS_REVIEW_ROUNDS: N=0 skips
+# every rotating review round, and a variable set once and then forgotten
+# would disable spec review, the plan's rotating review rounds and
+# whole-branch code review on every future session with no message anywhere.
+# A plan still gets its Execution readiness pass at N=0. N=0 stays reachable
+# per invocation and per gate question, where the user sees its consequence.
 #
 # The block is always complete — every line is emitted even on the fallback
 # path — and it is appended AFTER every embedded workspace file

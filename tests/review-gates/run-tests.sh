@@ -586,21 +586,23 @@ bold "17. The reason for rejecting SUPERPOWERS_REVIEW_ROUNDS=0 names the plan's 
 # Target the sentence about 0 only: the plain list "spec review, plan review,
 # whole-branch code review" (with commas) is correct where it names the gates.
 N0_WRONG_REASON='disable spec review, plan review and whole-branch code review'
-N0_RIGHT_REASON="the plan's rotating review rounds"
-SESSION_START="$ROOT/hooks/session-start"
-README_FILE="$ROOT/README.md"
+N0_RIGHT_REASON="disable spec review, the plan's rotating review rounds and whole-branch code review"
 # hooks/session-start states the reason in a shell comment: remove the comment
 # markers before normalizing, so a sentence that wraps over lines still matches.
 SS_UNCOMMENTED="$WORK/session-start-uncommented.txt"
-sed 's/^[[:space:]]*#[[:space:]]\{0,1\}//' "$SESSION_START" > "$SS_UNCOMMENTED"
-# Each entry is "<label>=<file>"; a label contains no "=".
-for n0_entry in "multi-doc-review=$MDR" "session-start=$SS_UNCOMMENTED" "README=$README_FILE"; do
-  n0_name="${n0_entry%%=*}"
-  n0_file="${n0_entry#*=}"
-  n0_norm="$WORK/n0-$n0_name-norm.txt"
-  normalize_to "$n0_file" "$n0_norm"
-  assert_not_icontains "$n0_name does not say 0 disables plan review" "$n0_norm" "$N0_WRONG_REASON"
-  assert_icontains "$n0_name names the plan's rotating review rounds" "$n0_norm" "$N0_RIGHT_REASON"
+sed 's/^[[:space:]]*#[[:space:]]\{0,1\}//' "$ROOT/hooks/session-start" > "$SS_UNCOMMENTED"
+SS_NORM="$WORK/n0-session-start.txt"
+normalize_to "$SS_UNCOMMENTED" "$SS_NORM"
+README_NORM="$WORK/n0-readme.txt"
+normalize_to "$ROOT/README.md" "$README_NORM"
+GUIDE_NORM="$WORK/n0-guide.txt"
+normalize_to "$ROOT/docs/guide/README.md" "$GUIDE_NORM"
+for pair in "multi-doc-review:$MDR_NORM" "session-start:$SS_NORM" \
+            "README:$README_NORM" "guide:$GUIDE_NORM"; do
+  name="${pair%%:*}"
+  norm="${pair#*:}"
+  assert_not_icontains "$name does not say 0 disables plan review" "$norm" "$N0_WRONG_REASON"
+  assert_icontains "$name names the plan's rotating review rounds" "$norm" "$N0_RIGHT_REASON"
 done
 
 echo
