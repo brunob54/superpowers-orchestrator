@@ -385,30 +385,57 @@ assert "optimizer handles invalid base64 without crashing" "$exit_code" "handled
 # A command still running at the Bash call's time-out: Claude Code moves the
 # call to the background and does not end it. At that time the optimizer must
 # write the output it holds, then pass later output through unchanged, as a
-# command that the hook did not rewrite would do. The third argument lowers
-# the time-out to 1 second; the command runs for 3 seconds.
-switch_cmd='git status; echo part-before-time-out; sleep 3; echo part-after-time-out'
-switch_result=$(SWITCH_B64="$(b64_encode "$switch_cmd")" OPTIMIZER="$PLUGIN_ROOT/hooks/bash-optimizer.js" node -e "
-  const { spawn } = require('child_process');
-  const started = Date.now();
-  const child = spawn('node', [process.env.OPTIMIZER, process.env.SWITCH_B64, 'git-status', '1000']);
-  let stdout = '';
-  let firstPartMs = null;
-  child.stdout.on('data', chunk => {
-    stdout += chunk;
-    if (firstPartMs === null && stdout.includes('part-before-time-out')) firstPartMs = Date.now() - started;
-  });
-  child.on('close', code => {
-    const early = firstPartMs !== null && firstPartMs < 2500;
-    const complete = stdout.includes('part-after-time-out');
-    const raw = !stdout.includes('[compressed:');
-    console.log('early=' + early + ' complete=' + complete + ' raw=' + raw + ' exit=' + code);
-  });
-")
+# command that the hook did not rewrite would do.
+#
+# run_past_time_out <sleep-seconds> <time-out-argument> [VARIABLE=value ...]
+# runs a command that prints one line, sleeps, and prints a second line. It
+# prints "early=true" when the first line arrived at least 1 second before the
+# command ended, plus complete=, raw= and exit= results.
+run_past_time_out() {
+  local sleep_seconds="$1" time_out_arg="$2"
+  shift 2
+  local cmd="git status; echo part-before-time-out; sleep $sleep_seconds; echo part-after-time-out"
+  env "$@" SWITCH_B64="$(b64_encode "$cmd")" OPTIMIZER="$PLUGIN_ROOT/hooks/bash-optimizer.js" \
+    TIME_OUT_ARG="$time_out_arg" SLEEP_MS="$((sleep_seconds * 1000))" node -e "
+    const { spawn } = require('child_process');
+    const started = Date.now();
+    const child = spawn('node', [process.env.OPTIMIZER, process.env.SWITCH_B64, 'git-status', process.env.TIME_OUT_ARG]);
+    let stdout = '';
+    let firstPartMs = null;
+    child.stdout.on('data', chunk => {
+      stdout += chunk;
+      if (firstPartMs === null && stdout.includes('part-before-time-out')) firstPartMs = Date.now() - started;
+    });
+    child.on('close', code => {
+      const early = firstPartMs !== null && firstPartMs < Number(process.env.SLEEP_MS) - 1000;
+      const complete = stdout.includes('part-after-time-out');
+      const raw = !stdout.includes('[compressed:');
+      console.log('early=' + early + ' complete=' + complete + ' raw=' + raw + ' exit=' + code);
+    });
+  "
+}
+
+# The time-out argument lowers the time-out to 1 second; the command runs 3 seconds
+switch_result=$(run_past_time_out 3 1000)
 assert_contains "optimizer: output held at the time-out is written before the command ends" "$switch_result" "early=true"
 assert_contains "optimizer: output after the time-out still arrives"                       "$switch_result" "complete=true"
 assert_contains "optimizer: output after the time-out is not compressed"                   "$switch_result" "raw=true"
 assert_contains "optimizer: a command past the time-out keeps its exit code"               "$switch_result" "exit=0"
+
+# Claude Code lowers a time-out above its maximum (BASH_MAX_TIMEOUT_MS, and
+# never below the default) to that maximum, so the optimizer must do the same
+switch_result=$(run_past_time_out 3 1800000 BASH_DEFAULT_TIMEOUT_MS=500 BASH_MAX_TIMEOUT_MS=1000)
+assert_contains "optimizer: a time-out above the maximum is lowered to the maximum" "$switch_result" "early=true"
+
+# CLAUDE_CODE_AUTO_BACKGROUND_TIMEOUT_MS moves a call to the background earlier,
+# but never before 2000 ms
+switch_result=$(run_past_time_out 4 60000 CLAUDE_CODE_AUTO_BACKGROUND_TIMEOUT_MS=100)
+assert_contains "optimizer: the automatic background time-out applies, at 2000 ms or more" "$switch_result" "early=true"
+
+# Output written raw must arrive whole through a pipe. On macOS, process.exit()
+# right after a large write to a pipe ends the process before the write ends.
+large_bytes=$(node "$PLUGIN_ROOT/hooks/bash-optimizer.js" "$(b64_encode "head -c 200000 /dev/zero | tr '\\0' a")" "no-such-rule" | wc -c | tr -d ' ')
+assert "optimizer: 200000 bytes of raw output arrive whole through a pipe" "$large_bytes" "200000"
 
 # ═══════════════════════════════════════════════════════
 bold "\n6. HOOK I/O PROTOCOL"
