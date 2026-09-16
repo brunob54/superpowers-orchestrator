@@ -580,6 +580,31 @@ assert_icontains "Log Format keeps the earlier-release skipped (N_plan=0) except
 assert_icontains "Log Format names the (N_plan=0) parenthetical of the rounds field" "$ORCH_LOGFMT_NORM" \
   'rounds 0 (N_plan=0) — cap — unresolved 0'
 
+bold "17. The reason for rejecting SUPERPOWERS_REVIEW_ROUNDS=0 names the plan's rotating rounds"
+# N = 0 skips every rotating review round, but a plan still gets its Execution
+# readiness pass, so the reason must not say that plan review is disabled.
+# Target the sentence about 0 only: the plain list "spec review, plan review,
+# whole-branch code review" (with commas) is correct where it names the gates.
+N0_WRONG_REASON='disable spec review, plan review and whole-branch code review'
+N0_RIGHT_REASON="disable spec review, the plan's rotating review rounds and whole-branch code review"
+# hooks/session-start states the reason in a shell comment: remove the comment
+# markers before normalizing, so a sentence that wraps over lines still matches.
+SS_UNCOMMENTED="$WORK/session-start-uncommented.txt"
+sed 's/^[[:space:]]*#[[:space:]]\{0,1\}//' "$ROOT/hooks/session-start" > "$SS_UNCOMMENTED"
+SS_NORM="$WORK/n0-session-start.txt"
+normalize_to "$SS_UNCOMMENTED" "$SS_NORM"
+README_NORM="$WORK/n0-readme.txt"
+normalize_to "$ROOT/README.md" "$README_NORM"
+GUIDE_NORM="$WORK/n0-guide.txt"
+normalize_to "$ROOT/docs/guide/README.md" "$GUIDE_NORM"
+for pair in "multi-doc-review:$MDR_NORM" "session-start:$SS_NORM" \
+            "README:$README_NORM" "guide:$GUIDE_NORM"; do
+  name="${pair%%:*}"
+  norm="${pair#*:}"
+  assert_not_icontains "$name does not say 0 disables plan review" "$norm" "$N0_WRONG_REASON"
+  assert_icontains "$name names the plan's rotating review rounds" "$norm" "$N0_RIGHT_REASON"
+done
+
 echo
 bold "Results: $PASS passed, $FAIL failed"
 if [ "$FAIL" -gt 0 ]; then

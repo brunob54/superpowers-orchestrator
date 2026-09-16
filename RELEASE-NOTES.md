@@ -8,6 +8,67 @@
 > (`REPOZY/superpowers-optimized`) and are kept unchanged as history; any
 > testing they describe was not done here.
 
+## v7.26.0 — correct statements about the context gate and about N = 0
+
+**Problem.** Two statements were false. The subagent-driven-development skill
+said the 60% context gate catches mid-session batch starts; it fires on none of
+the batched or resume prompts. Three places said `SUPERPOWERS_REVIEW_ROUNDS=0`
+would disable plan review; a plan still gets its readiness pass.
+
+**Change.** Both statements are corrected in the skills, the hook comment, the
+README, the guide and `docs/FORK-IMPROVEMENTS.md`. Fast tests feed the skills'
+real paste prompts to the gate and pin both sentences.
+
+**Effect.** The documents now match the code. Behaviour does not change.
+Nothing to migrate.
+
+Terms used below:
+
+- **Context gate:** a check in the prompt-submission hook
+  (`hooks/skill-activator.js`). When a prompt matches one of its execution
+  patterns and the context window is fuller than a threshold (60% by
+  default), it blocks the prompt and asks Claude to save state and compact
+  first.
+- **Paste prompt:** a prompt that a skill tells the user to copy into a new
+  session, for example `Execute the plan at …` or `Resume the plan at …`.
+- **Rotating review round:** one round of a review loop, run under one of the
+  lenses that change from round to round.
+- **Execution readiness pass:** the plan review pass that still runs when N
+  is 0 (since v7.14.0).
+
+Details:
+
+- **The gate sentence** (orchestration issue row 30). The skill said "the 60%
+  context gate on prompt submission catches mid-session starts". The gate
+  runs only when `isExecutionTrigger` matches the prompt. Of the prompts the
+  plugin tells users to paste, only the Inline prompt `Execute the plan at …`
+  matches; the two Subagent-Driven prompts, the two resume prompts and short
+  replies ("subagent", "inline", "go", "yes") do not. The phrase "execute the
+  plan in batches" also matches. The skill now says this. Widening the
+  patterns was rejected on 2026-09-15 and is not part of this release: without
+  the statusline bridge the hook divides by a fixed 200K window, so on a 1M
+  window a wider trigger would block at 120K tokens.
+- **The N = 0 reason** (row 34). `skills/multi-doc-review/SKILL.md`,
+  `hooks/session-start` and `README.md` gave as the reason for refusing
+  `SUPERPOWERS_REVIEW_ROUNDS=0` that it would disable "spec review, plan review
+  and whole-branch code review". They now say "the plan's rotating review
+  rounds", the phrase the guide already used, and add that a plan still gets
+  its Execution readiness pass.
+- **Tests.** `tests/codex/test-skill-activator.js` reads the paste prompts from
+  the writing-plans handoff table and the resume prompts from the SDD skill,
+  requires all three table rows and every resume prompt, and checks that only
+  the Inline prompt fires the gate. `tests/review-gates/run-tests.sh` section
+  17 checks that the wrong reason is absent and the corrected clause is present
+  in the skill, the hook comment, the README and the guide.
+- **Review.** Four independent reviewers (correctness, adversarial on the
+  tests, plain English, code quality). Three Important findings were applied:
+  the readiness pass was not stated, and a paste prompt or a resume prompt
+  could drop out of the test's extraction while every test still passed. The
+  adversarial reviewer also found the same false gate claim in
+  `docs/FORK-IMPROVEMENTS.md`.
+- **Known limits.** The absence checks match fixed strings, so a paraphrase of
+  a false claim (for example "catches a mid-session start") is not detected.
+
 ## v7.25.0 — behavioural suites run in an empty work folder
 
 **Problem.** Behavioural suites under `tests/claude-code/` ran `claude -p`

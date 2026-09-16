@@ -125,12 +125,13 @@ the values this section resolves for N, for M and for the batch task cap.
 | `SUPERPOWERS_REVIEW_ROUNDS` | `review-rounds` | `1` through `10` | `3` |
 | `SUPERPOWERS_BATCH_TASK_CAP` | `batch-task-cap` | `1` `2` `3` `4` `5` | `3` |
 
-`0` is not accepted for `SUPERPOWERS_REVIEW_ROUNDS`. N = 0 skips a review
-loop, and a variable set once and then forgotten would silently disable
-spec review, plan review and whole-branch code review on every future
-session, with no message anywhere. N = 0 stays available where the user
-states it and sees its consequence: in an invocation, and as an option at
-every gate question.
+`0` is not accepted for `SUPERPOWERS_REVIEW_ROUNDS`. N = 0 skips every
+rotating review round, and a variable set once and then forgotten would
+silently disable spec review, the plan's rotating review rounds and
+whole-branch code review on every future session, with no message anywhere.
+A plan still gets its Execution readiness pass at N = 0. N = 0 stays
+available where the user states it and sees its consequence: in an
+invocation, and as an option at every gate question.
 
 ### The block
 
