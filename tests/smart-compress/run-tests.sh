@@ -65,23 +65,28 @@ assert_not_contains() {
   fi
 }
 
-# Run the PreToolUse hook for a Bash command, return its stdout
+# Run the PreToolUse hook for a Bash command, return its stdout.
+# Optional third argument: more tool_input fields as a JSON fragment that
+# starts with a comma, for example ',"run_in_background":true'.
 run_hook() {
-  local cmd="$1" session="${2:-test-$$}"
+  local cmd="$1" session="${2:-test-$$}" extra_fields="${3:-}"
   local tmpfile
   tmpfile=$(mktmp)
   # Write JSON input to a temp file, then feed it via stdin redirect
-  printf '{"session_id":"%s","tool_name":"Bash","tool_input":{"command":"%s"},"cwd":"%s"}' \
-    "$session" "$cmd" "$PLUGIN_ROOT" > "$tmpfile"
+  printf '{"session_id":"%s","tool_name":"Bash","tool_input":{"command":"%s"%s},"cwd":"%s"}' \
+    "$session" "$cmd" "$extra_fields" "$PLUGIN_ROOT" > "$tmpfile"
   node "$PLUGIN_ROOT/hooks/bash-compress-hook.js" < "$tmpfile"
+}
+
+# Base64-encode a string on one line (GNU base64 needs -w 0; macOS has no -w)
+b64_encode() {
+  printf '%s' "$1" | base64 -w 0 2>/dev/null || printf '%s' "$1" | base64
 }
 
 # Run the optimizer directly (executes real command + compresses)
 run_optimizer() {
   local cmd="$1" type="$2"
-  local b64
-  b64=$(printf '%s' "$cmd" | base64 -w 0 2>/dev/null || printf '%s' "$cmd" | base64)
-  node "$PLUGIN_ROOT/hooks/bash-optimizer.js" "$b64" "$type" 2>/dev/null
+  node "$PLUGIN_ROOT/hooks/bash-optimizer.js" "$(b64_encode "$cmd")" "$type" 2>/dev/null
 }
 
 # Parse JSON hook output to check if it contains updatedInput (i.e., was rewritten)
@@ -377,6 +382,61 @@ exit_code=$(node -e "
 ")
 assert "optimizer handles invalid base64 without crashing" "$exit_code" "handled"
 
+# A command still running at the Bash call's time-out: Claude Code moves the
+# call to the background and does not end it. At that time the optimizer must
+# write the output it holds, then pass later output through unchanged, as a
+# command that the hook did not rewrite would do.
+#
+# run_past_time_out <sleep-seconds> <time-out-argument> [VARIABLE=value ...]
+# runs a command that prints one line, sleeps, and prints a second line. It
+# prints "early=true" when the first line arrived at least 1 second before the
+# command ended, plus complete=, raw= and exit= results.
+run_past_time_out() {
+  local sleep_seconds="$1" time_out_arg="$2"
+  shift 2
+  local cmd="git status; echo part-before-time-out; sleep $sleep_seconds; echo part-after-time-out"
+  env "$@" SWITCH_B64="$(b64_encode "$cmd")" OPTIMIZER="$PLUGIN_ROOT/hooks/bash-optimizer.js" \
+    TIME_OUT_ARG="$time_out_arg" SLEEP_MS="$((sleep_seconds * 1000))" node -e "
+    const { spawn } = require('child_process');
+    const started = Date.now();
+    const child = spawn('node', [process.env.OPTIMIZER, process.env.SWITCH_B64, 'git-status', process.env.TIME_OUT_ARG]);
+    let stdout = '';
+    let firstPartMs = null;
+    child.stdout.on('data', chunk => {
+      stdout += chunk;
+      if (firstPartMs === null && stdout.includes('part-before-time-out')) firstPartMs = Date.now() - started;
+    });
+    child.on('close', code => {
+      const early = firstPartMs !== null && firstPartMs < Number(process.env.SLEEP_MS) - 1000;
+      const complete = stdout.includes('part-after-time-out');
+      const raw = !stdout.includes('[compressed:');
+      console.log('early=' + early + ' complete=' + complete + ' raw=' + raw + ' exit=' + code);
+    });
+  "
+}
+
+# The time-out argument lowers the time-out to 1 second; the command runs 3 seconds
+switch_result=$(run_past_time_out 3 1000)
+assert_contains "optimizer: output held at the time-out is written before the command ends" "$switch_result" "early=true"
+assert_contains "optimizer: output after the time-out still arrives"                       "$switch_result" "complete=true"
+assert_contains "optimizer: output after the time-out is not compressed"                   "$switch_result" "raw=true"
+assert_contains "optimizer: a command past the time-out keeps its exit code"               "$switch_result" "exit=0"
+
+# Claude Code lowers a time-out above its maximum (BASH_MAX_TIMEOUT_MS, and
+# never below the default) to that maximum, so the optimizer must do the same
+switch_result=$(run_past_time_out 3 1800000 BASH_DEFAULT_TIMEOUT_MS=500 BASH_MAX_TIMEOUT_MS=1000)
+assert_contains "optimizer: a time-out above the maximum is lowered to the maximum" "$switch_result" "early=true"
+
+# CLAUDE_CODE_AUTO_BACKGROUND_TIMEOUT_MS moves a call to the background earlier,
+# but never before 2000 ms
+switch_result=$(run_past_time_out 4 60000 CLAUDE_CODE_AUTO_BACKGROUND_TIMEOUT_MS=100)
+assert_contains "optimizer: the automatic background time-out applies, at 2000 ms or more" "$switch_result" "early=true"
+
+# Output written raw must arrive whole through a pipe. On macOS, process.exit()
+# right after a large write to a pipe ends the process before the write ends.
+large_bytes=$(node "$PLUGIN_ROOT/hooks/bash-optimizer.js" "$(b64_encode "head -c 200000 /dev/zero | tr '\\0' a")" "no-such-rule" | wc -c | tr -d ' ')
+assert "optimizer: 200000 bytes of raw output arrive whole through a pipe" "$large_bytes" "200000"
+
 # ═══════════════════════════════════════════════════════
 bold "\n6. HOOK I/O PROTOCOL"
 # ═══════════════════════════════════════════════════════
@@ -415,6 +475,20 @@ result=$(node -e "
   console.log(u && u.description === 'my desc' && u.timeout === 60000 ? 'ok' : 'fields-not-preserved');
 ")
 assert "hook preserves all original tool_input fields alongside rewritten command" "$result" "ok"
+result=$(node -e "
+  const d = JSON.parse(require('fs').readFileSync('$tmpf2','utf8'));
+  const u = d.hookSpecificOutput && d.hookSpecificOutput.updatedInput;
+  console.log(u && u.command.endsWith(' \"60000\"') ? 'ok' : 'time-out-not-passed: ' + (u && u.command));
+")
+assert "hook passes the call's time-out to the optimizer" "$result" "ok"
+
+# A background call is not rewritten. Claude Code writes the output of a
+# background call to a file while the command runs; the optimizer holds output
+# for compression, so that file would stay empty until the command ends.
+assert "background call passes through as {}" \
+  "$(run_hook 'git status' "bg-$$-$RANDOM" ',"run_in_background":true')" "{}"
+assert "call with run_in_background false is still rewritten" \
+  "$(is_rewritten "$(run_hook 'git status' "fg-$$-$RANDOM" ',"run_in_background":false')")" "yes"
 
 # Non-Bash tool → passthrough
 inp2='{"session_id":"x","tool_name":"Read","tool_input":{"file_path":"/tmp/test"},"cwd":"'"$PLUGIN_ROOT"'"}'
@@ -480,9 +554,7 @@ measure() {
   raw=$(bash -c "$cmd" 2>&1)
   raw_tok=$(( ${#raw} / 4 ))
 
-  local b64
-  b64=$(printf '%s' "$cmd" | base64 -w 0 2>/dev/null || printf '%s' "$cmd" | base64)
-  compressed=$(node "$PLUGIN_ROOT/hooks/bash-optimizer.js" "$b64" "$type" 2>/dev/null)
+  compressed=$(run_optimizer "$cmd" "$type")
   comp_tok=$(( ${#compressed} / 4 ))
 
   if [ "${#raw}" -le 200 ]; then

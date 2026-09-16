@@ -180,6 +180,28 @@ This tracking is session-scoped (stored in a temp file) and automatically cleane
 
 ---
 
+## Long and Background Commands
+
+The optimizer holds a command's output until the command ends, because a rule compresses the whole output at once. Two cases would otherwise hide that output:
+
+| Case | Behavior | Reasoning |
+|---|---|---|
+| Call with `run_in_background: true` | Not rewritten; runs raw | Claude Code writes a background call's output to a file while the command runs. Held output would leave that file empty. |
+| Command still running at the Bash call's time-out | From that time, output is raw (held output first, then later output as it arrives) | Claude Code moves the call to the background and does not stop the command. |
+| More than 10 MB of held output | From that time, output is raw | Limits the memory the optimizer uses. |
+
+The optimizer sets no time limit of its own. Before v7.27.0 it stopped every command at 300 seconds and reported a failure.
+
+The time-out is the call's `timeout` field, lowered the way Claude Code lowers it. Claude Code does not document these rules; they were read from Claude Code 2.1.273:
+
+- The default is `BASH_DEFAULT_TIMEOUT_MS`, or 120000 ms (milliseconds) when it is not set.
+- The maximum is `BASH_MAX_TIMEOUT_MS`, or 600000 ms when it is not set, and never less than the default.
+- `CLAUDE_CODE_AUTO_BACKGROUND_TIMEOUT_MS`, when set, moves the call to the background earlier, but never before 2000 ms.
+
+If a later Claude Code version changes these rules, the switch to raw output can come too late. A switch that comes too early only loses compression.
+
+---
+
 ## Token Savings
 
 ### Measured (verified by test suite)
@@ -294,9 +316,10 @@ hooks/
 │                             decides whether to compress, rewrites the
 │                             command to run through the optimizer
 │
-├── bash-optimizer.js         Executes the original command via spawnSync,
+├── bash-optimizer.js         Executes the original command via spawn,
 │                             applies compression, outputs result with
-│                             transparency marker, preserves exit codes
+│                             transparency marker, preserves exit codes;
+│                             writes raw output from the call's time-out on
 │
 └── compression-rules.js      Rule definitions — command patterns, tier
                               classification, compression functions,

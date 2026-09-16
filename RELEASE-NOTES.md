@@ -8,6 +8,80 @@
 > (`REPOZY/superpowers-optimized`) and are kept unchanged as history; any
 > testing they describe was not done here.
 
+## v7.27.0 — smart-compress no longer stops long Bash commands
+
+**Problem.** The smart-compress hook ran every matched Bash command through an
+optimizer that stopped it at 300 seconds and reported a failure, also in the
+background. The optimizer also held all output until the end, so a call that
+Claude Code moved to the background showed an empty output file.
+
+**Change.** Background calls are not rewritten. The optimizer has no limit of
+its own; at the call's time-out, lowered as Claude Code 2.1.273 lowers it, it
+writes raw output. Raw output through a macOS pipe was cut at 65,536 bytes; it
+now arrives whole.
+
+**Effect.** Long commands finish and show progress. Update the plugin. Nothing
+to migrate.
+
+Terms used below:
+
+- **Optimizer:** `hooks/bash-optimizer.js`. The hook `hooks/bash-compress-hook.js`
+  rewrites a matched command into `node bash-optimizer.js <command> <rule>
+  [<time-out>]`; the optimizer runs the command and compresses its output.
+- **Raw output:** output written unchanged, without compression.
+- **Time-out:** the `timeout` field of a Bash tool call, in milliseconds (ms).
+
+### What was wrong
+
+Case 026 (2026-09-16): a behavioural suite started with `git status` in the
+background. The optimizer ran it with `spawnSync` and `timeout: 300000`, so the
+suite was reported as failed after exactly 300 seconds, although it passed at
+389 seconds. The steps after it never ran.
+
+The review of the first fix found a second problem. When a Bash call passes its
+time-out, Claude Code does not stop the command: it moves the call to the
+background (message: "Command did not complete within its 5s timeout and was
+moved to the background"). The optimizer held the output, so that background
+output file stayed empty until the command ended, and a watch-mode test command
+(for example `npx vitest`) showed no output at all.
+
+### What changed
+
+- `hooks/bash-compress-hook.js` returns `{}` (no rewrite) for a call with
+  `run_in_background: true`, and adds the call's `timeout` to the rewritten
+  command when it is a number.
+- `hooks/bash-optimizer.js` runs the command with `spawn`. It holds output for
+  compression until the command ends. When the command is still running at the
+  time-out, or holds more than 10 MB (megabytes) of output, it writes the held
+  output raw and passes later output through as it arrives.
+- The time-out follows the rules read from the Claude Code 2.1.273 binary; they
+  are not documented. The default is `BASH_DEFAULT_TIMEOUT_MS` or 120000 ms. The
+  maximum is `BASH_MAX_TIMEOUT_MS` or 600000 ms, never below the default.
+  `CLAUDE_CODE_AUTO_BACKGROUND_TIMEOUT_MS`, when set, lowers the time-out, never
+  below 2000 ms. A switch that comes too early only loses compression.
+- Raw output is written with `process.exitCode` instead of `process.exit()`.
+  On macOS, `process.exit()` right after a large write to a pipe cut the output
+  at 65,536 bytes; this also happened on v7.26.0.
+- An error inside the optimizer's `close` callback writes the held output raw.
+
+### Verification
+
+- `tests/smart-compress/run-tests.sh`: 97 passed. Each new test failed before
+  its fix: background pass-through, output written at the time-out, the maximum
+  and automatic background time-outs, and 200,000 bytes through a pipe.
+- A live `claude -p` run with a 5-second time-out: the first line was in the
+  background output file about 8 seconds before the command ended.
+- Two review rounds (seven reviewers) and one pass that re-ran every
+  reproduction.
+
+### Known limits
+
+- If a later Claude Code version changes its time-out rules, the switch to raw
+  output can come too late.
+- Only the first command of a compound command selects the rule, so
+  `git add … && git commit … && sed …` is compressed as `git add`. This is a new
+  open row in the local issues log.
+
 ## v7.26.0 — correct statements about the context gate and about N = 0
 
 **Problem.** Two statements were false. The subagent-driven-development skill
