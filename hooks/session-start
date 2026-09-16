@@ -434,8 +434,8 @@ fi
 #
 # 0 is deliberately not accepted for SUPERPOWERS_REVIEW_ROUNDS: N=0 skips a
 # review loop, and a variable set once and then forgotten would disable spec
-# review, plan review and whole-branch code review on every future session
-# with no message anywhere. N=0 stays reachable per invocation and per gate
+# review, the plan's rotating review rounds and whole-branch code review on
+# every future session with no message anywhere. N=0 stays reachable per invocation and per gate
 # question, where the user sees its consequence.
 #
 # The block is always complete — every line is emitted even on the fallback
