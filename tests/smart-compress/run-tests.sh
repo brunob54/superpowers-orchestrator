@@ -170,6 +170,7 @@ assert "; chain passes through"             "$(check_never 'git status; git log'
 assert "pipe into tail passes through"      "$(check_never 'git push origin main | tail -5')" "no"
 assert "new-line chain passes through"      "$(check_never 'git add .\ngit log')"      "no"
 assert "background & passes through"        "$(check_never 'npm install & wait')"      "no"
+assert "background & before < passes through" "$(check_never 'npm install &<in wait')"  "no"
 assert "--verbose passes through"           "$(check_never 'npm install --verbose')"    "no"
 assert "--debug passes through"             "$(check_never 'cargo build --debug')"      "no"
 assert "node -e passes through"             "$(check_never 'node -e console.log(1)')"  "no"
