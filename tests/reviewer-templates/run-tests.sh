@@ -800,6 +800,27 @@ assert_folded_contains "Correctness plan cell: names the ignored-file test comma
 assert_folded_contains "Correctness plan cell: reports a premise only on a contradicting output" \
   "$CORR_PLAN_CELL" 'report the task only when the output contradicts the plan'
 
+bold "17. Code reviewer: the Checks Run section goes to a file, not into the final message (row 14 fix 3)"
+# The returned report is what fills the controller's context; the Checks Run
+# section is never read by the controller, so it lives in a file the reviewer
+# creates with a bare `mktemp` and names on the last line of its final message.
+CHECKS_TO_FILE='The Checks Run section goes to a file, not into your final message'
+MKTEMP_OWN_COMMAND='run `mktemp` as its own command with no arguments'
+WRITE_WITH_WRITE_TOOL='Write the full report to that path with the Write tool'
+FULL_REPORT_LINE='Full report: <the path mktemp printed>'
+MKTEMP_FALLBACK='If `mktemp` fails, write no file and put the Checks Run section in your final message'
+CODE_BODY="$WORK/code-body.txt"
+extract_prompt_body "$CODE_PROMPT" > "$CODE_BODY"
+if [ -s "$CODE_BODY" ]; then ok "code-review template: prompt body extract is non-empty"; else bad "code-review template: prompt body extract is empty"; fi
+assert_folded_contains "code-review template: Checks Run leaves the final message" "$CODE_BODY" "$CHECKS_TO_FILE"
+assert_folded_contains "code-review template: the report file is created by a bare mktemp" "$CODE_BODY" "$MKTEMP_OWN_COMMAND"
+assert_folded_contains "code-review template: the full report is written with the Write tool" "$CODE_BODY" "$WRITE_WITH_WRITE_TOOL"
+assert_folded_contains "code-review template: the final message ends with the report path" "$CODE_BODY" "$FULL_REPORT_LINE"
+assert_folded_contains "code-review template: a failed mktemp keeps Checks Run in the final message" "$CODE_BODY" "$MKTEMP_FALLBACK"
+assert_folded_contains "code-review template: the file still holds a Checks Run section" "$CODE_BODY" '### Checks Run'
+assert_folded_contains "code-review template: the returns legend names the report file" "$CODE_PROMPT" 'the path of the full report file'
+assert_folded_not_contains "code-review template: the returns legend no longer lists checks run" "$CODE_PROMPT" 'with file:line references, checks run,'
+
 echo
 bold "Results: $PASS passed, $FAIL failed"
 if [ "$FAIL" -gt 0 ]; then
