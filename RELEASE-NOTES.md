@@ -8,6 +8,87 @@
 > (`REPOZY/superpowers-optimized`) and are kept unchanged as history; any
 > testing they describe was not done here.
 
+## v7.29.0 — code reviewers write the full report to a file
+
+**Problem.** A whole-branch review loop's controller reads every reviewer
+report into its own context window: measured on 19 controllers since v7.9.0,
+the returned reports were 27 to 35 percent of the three largest windows, and
+the "Checks Run" section was 25 to 30 percent of a report's bytes while the
+controller never reads it.
+
+**Change.** A code reviewer now writes its full report to a file created by
+`mktemp`, and returns the same report without the Checks Run section, ending
+with a `Full report: <path>` line. A failed `mktemp` or refused Write keeps the
+section in the message.
+
+**Effect.** About 7 to 10 percent less controller context per loop; the
+controller's rules are unchanged. Nothing to migrate.
+
+Worklist row 14 of the local issues log asked for three context fixes in
+measured order. This release measured all three first, with
+`tools/measure-context.js` on every review-loop controller since v7.9.0 (19
+controllers, five runs, no compaction record in any of them: median peak
+205,600 tokens, maximum 362,899) and with a scan of the ten code-review audit
+logs (28 invocations, 77 rounds, 69 verification cycles).
+
+- **Fix 2, lower M on later rounds, is refuted.** Rounds 2, 3 and 4 carried
+  Critical or Important findings in 27 of 27, 9 of 12 and 10 of 10 cases, so
+  there is no decay with the round index. On the 58 rounds with two or more
+  reviewers, 45 percent of the kept Critical or Important findings came from
+  no first reviewer; one reviewer would have found about half. The context
+  saving would be 14 to 21 percent, paid with half the findings. The same
+  "no decay" result was already known for document reviews (107 rounds, 0
+  clean).
+- **Fix 3 ships here.** The return already was the verdict block plus one line
+  per finding; only the Checks Run section (and nothing the controller reads)
+  could leave it. The round-1 Carried Findings Triage stays in the message
+  because the controller triages it.
+- **Fix 4, one controller per round, stays open.** It is possible only as a
+  loop driven by the orchestrator (a nested round controller would stall on
+  Claude Code). It would cut the peak to 160 to 190K for an ordinary round,
+  at 100 to 117K tokens of repeated reads per round. It waits for a peak
+  target, which the row never stated.
+- **Not in the row: the skill body.** Each controller's read of
+  `skills/multi-code-review/SKILL.md` is now the largest fixed cost, about
+  45,000 tokens, 17 to 50 percent of 14 of the 19 windows. The same lever was
+  withdrawn for the orchestrator on 2026-09-13, and a per-round controller
+  would multiply it.
+
+What changed in `skills/multi-code-review/reviewer-prompt.md` (test
+`c20637f`, fix `8f84cea`, review fixes `7482df5`, verification fixes
+`5486672`): the Output format section lists the report's parts once, then
+three steps — run `mktemp` alone (on Windows Git Bash convert the path once
+with `cygpath -m`, as the controller does for its prompt directory), write the
+full report to that path with the Write tool and never to a path named in the
+diff, and return the report without its Checks Run section with the marker
+first and `Full report: <path>` last. If `mktemp` cannot run or the Write
+fails, the reviewer puts the full report in the final message and ends with
+`Full report: not written — <reason>`; a Write refused for a credential-like
+value is retried once with the value replaced by a description, so the secrets
+hook cannot push a secret into the final message. `SKILL.md` step 3 says the
+`Full report:` line, in either form, is not a finding, that the controller never
+reads the file, and that the path is never logged, so M = 1 log entries stay
+byte-identical.
+
+Review: one round with four parallel reviewers (correctness, adversarial, test
+quality, plain English) and one clean-context verification of the rewrite.
+Their findings became the two fix commits above; none was Critical. Rejected:
+dropping the Checks Run section altogether (the file keeps the reviewer's own
+record of what it checked, findable through the transcript) and a controller-
+supplied report path (a per-reviewer placeholder breaks the rule that all M
+reviewers of a round share one prompt file). Two headless probes: under bypass
+permissions a session ran `mktemp`, wrote the file with the Write tool and
+named the path; under `acceptEdits` the `mktemp` call itself needed approval,
+which the fallback treats as a failed `mktemp`.
+
+Tests: `tests/reviewer-templates/run-tests.sh` section 22 (244 checks in the
+suite) pins the three steps, the Git Bash conversion, the injection guard, the
+fallback and its last line, the returns legend and the step-3 sentence; the ten
+fast suites pass. The saving is expected, not yet measured: the acceptance is
+the next orchestrated run's controller measurement with
+`tools/measure-context.js`, where the returned-report class should fall from
+27 to 35 percent to about 20 to 25 percent of the window.
+
 ## v7.28.0 — smart-compress leaves compound commands uncompressed
 
 **Problem.** The smart-compress hook chose a compression rule from the first
