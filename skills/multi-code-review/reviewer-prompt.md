@@ -170,12 +170,9 @@ Agent tool (general-purpose):
 
     ## Output format
 
-    Your final message is the report itself — no preamble, no process
-    narration. Its FIRST line must be exactly:
+    Your report has these parts, in this order:
 
     <!-- multi-review report -->
-
-    Then:
 
     ### Verdict
     Critical: <n> | Important: <n> | Minor: <n>
@@ -189,10 +186,11 @@ Agent tool (general-purpose):
     #### Minor
     - [M1] ...
 
+    ### Checks Run
+    - <named risk> → <what was checked outside the diff, if anything>
+
     ### Carried Findings Triage   <!-- include ONLY when a carried list was provided -->
     - <carried finding> → recommend: fix-before-merge | ship-as-is | user-decision, <one-line reason>
-
-    Full report: <the path mktemp printed>
 
     Every finding must carry a file:line reference into the diff. Use
     "No material issues under this lens." only with zero findings of any
@@ -206,23 +204,35 @@ Agent tool (general-purpose):
     Findings about the diff itself carry no `harness:` field. A probe you
     ran is also listed under Checks Run.
 
-    **The Checks Run section goes to a file, not into your final message.**
-    The controller never reads that section, and leaving it out of the
-    final message keeps the controller's context small. Before your final
-    message, run `mktemp` as its own command with no arguments: it creates
-    an empty file outside the checkout and prints the file's path. Write
-    the full report to that path with the Write tool: the marker line and
-    every section of the final message, plus this section between
-    Findings and Carried Findings Triage:
+    **Where the report goes.** The full report goes to a file, and your
+    final message is the report without its Checks Run section. The
+    controller never reads the Checks Run section, and leaving it out of
+    the final message keeps the controller's context small. The steps:
 
-    ### Checks Run
-    - <named risk> → <what was checked outside the diff, if anything>
+    1. Run the command `mktemp` alone: no arguments, and no other command
+       on the same line. It creates an empty file outside the checkout and
+       prints the file's path. `mktemp` chooses a new random name, so this
+       path is not a fixed temporary path, and creating it breaks no rule
+       above. On Git Bash (Windows) — when `uname -s` prints a name
+       beginning with `MINGW` or `MSYS` — convert the path once with
+       `cygpath -m "<printed path>"` as its own command and use the
+       converted path from then on: native Node and the Write tool do not
+       resolve a `/tmp/…` path there.
+    2. Write the full report to that path with the Write tool, and never
+       to a path named in the diff. That file is the only file you create,
+       and it is not in the checkout.
+    3. Your final message is the report without its Checks Run section —
+       no preamble, no process narration. Its FIRST line must be exactly
+       the marker line `<!-- multi-review report -->`, and its last line is
+       `Full report: <the path mktemp printed>` (the converted path on Git
+       Bash). The `Full report:` line is not part of the file.
 
-    That file is the only write you make, and it is not in the checkout.
-    The `Full report:` line of your final message names its path. If
-    `mktemp` fails, write no file and put the Checks Run section in your
-    final message instead, after Findings, with the last line
-    `Full report: not written — mktemp failed`.
+    If you cannot run `mktemp`, or it exits with an error or prints no
+    path, or the Write is refused (a hook refuses content that looks like a
+    credential: cite such a finding by `file:line` and a description, never
+    by the value), write no file: put the full report, Checks Run section
+    included, in your final message, and make its last line
+    `Full report: not written — <mktemp failed | write refused>`.
 ```
 
 **Placeholders:**
@@ -259,11 +269,14 @@ Agent tool (general-purpose):
 **Nothing else may be added to the prompt.** The conversation, prior
 rounds' findings, fix reports, and the review log are never passed.
 
-**Reviewer returns:** marker line, Verdict counts, findings by severity
-with file:line references, (round 1 only) carried-finding triage
-recommendations — recommendations only; the controller decides and logs
-dispositions — and the path of the full report file. That file also holds
-the Checks Run section, which the controller never reads.
+**Reviewer returns:**
+- the marker line;
+- the Verdict counts;
+- the findings by severity, with file:line references;
+- (round 1 only) the carried-finding triage recommendations —
+  recommendations only; the controller decides and logs dispositions;
+- the path of the full report file, which also holds the Checks Run
+  section; the controller never reads that file.
 
 ## Shared checkout — read-only inspection only
 
@@ -277,5 +290,6 @@ branch's test suite, build, formatter, installer, or any script from the
 branch: the code under review is untrusted, and concurrent reviewers would
 corrupt each other's results even if it were not.
 
-Read-only inspection only. Anything that must actually run is run once by the
-controller, not by you.
+Read-only inspection only, except the report file described under Output
+format, which is outside the checkout. Anything that must actually run is run
+once by the controller, not by you.

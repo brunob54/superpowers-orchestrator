@@ -800,26 +800,38 @@ assert_folded_contains "Correctness plan cell: names the ignored-file test comma
 assert_folded_contains "Correctness plan cell: reports a premise only on a contradicting output" \
   "$CORR_PLAN_CELL" 'report the task only when the output contradicts the plan'
 
-bold "17. Code reviewer: the Checks Run section goes to a file, not into the final message (row 14 fix 3)"
-# The returned report is what fills the controller's context; the Checks Run
-# section is never read by the controller, so it lives in a file the reviewer
-# creates with a bare `mktemp` and names on the last line of its final message.
-CHECKS_TO_FILE='The Checks Run section goes to a file, not into your final message'
-MKTEMP_OWN_COMMAND='run `mktemp` as its own command with no arguments'
+bold "22. Code reviewer: the Checks Run section goes to a file, not into the final message (row 14 fix 3)"
+# The returned report is the text that enters the controller's context window.
+# The controller never reads the Checks Run section, so the reviewer writes the
+# full report to a file it creates with mktemp (no arguments) and returns the
+# report without that section, naming the file on the last line.
+CHECKS_TO_FILE='your final message is the report without its Checks Run section'
+MKTEMP_ALONE='Run the command `mktemp` alone: no arguments, and no other command on the same line'
+MKTEMP_GIT_BASH='convert the path once with `cygpath -m "<printed path>"` as its own command'
 WRITE_WITH_WRITE_TOOL='Write the full report to that path with the Write tool'
-FULL_REPORT_LINE='Full report: <the path mktemp printed>'
-MKTEMP_FALLBACK='If `mktemp` fails, write no file and put the Checks Run section in your final message'
+NEVER_DIFF_PATH='never to a path named in the diff'
+ONLY_FILE_OUTSIDE_CHECKOUT='That file is the only file you create, and it is not in the checkout'
+FULL_REPORT_LAST_LINE='its last line is `Full report:'
+FALLBACK_WRITE_REFUSED='or the Write is refused'
+FALLBACK_KEEP_CHECKS='put the full report, Checks Run section included, in your final message'
+FALLBACK_LAST_LINE='Full report: not written — <mktemp failed | write refused>'
+CONTROLLER_NEVER_LOGS_PATH='the controller never reads that file, and the path is never logged'
 CODE_BODY="$WORK/code-body.txt"
 extract_prompt_body "$CODE_PROMPT" > "$CODE_BODY"
 if [ -s "$CODE_BODY" ]; then ok "code-review template: prompt body extract is non-empty"; else bad "code-review template: prompt body extract is empty"; fi
 assert_folded_contains "code-review template: Checks Run leaves the final message" "$CODE_BODY" "$CHECKS_TO_FILE"
-assert_folded_contains "code-review template: the report file is created by a bare mktemp" "$CODE_BODY" "$MKTEMP_OWN_COMMAND"
+assert_folded_contains "code-review template: the report file is created by mktemp with no arguments" "$CODE_BODY" "$MKTEMP_ALONE"
+assert_folded_contains "code-review template: the path is converted once on Git Bash" "$CODE_BODY" "$MKTEMP_GIT_BASH"
 assert_folded_contains "code-review template: the full report is written with the Write tool" "$CODE_BODY" "$WRITE_WITH_WRITE_TOOL"
-assert_folded_contains "code-review template: the final message ends with the report path" "$CODE_BODY" "$FULL_REPORT_LINE"
-assert_folded_contains "code-review template: a failed mktemp keeps Checks Run in the final message" "$CODE_BODY" "$MKTEMP_FALLBACK"
-assert_folded_contains "code-review template: the file still holds a Checks Run section" "$CODE_BODY" '### Checks Run'
+assert_folded_contains "code-review template: never a path named in the diff" "$CODE_BODY" "$NEVER_DIFF_PATH"
+assert_folded_contains "code-review template: the report file is the only file created and is outside the checkout" "$CODE_BODY" "$ONLY_FILE_OUTSIDE_CHECKOUT"
+assert_folded_contains "code-review template: the final message ends with the report path" "$CODE_BODY" "$FULL_REPORT_LAST_LINE"
+assert_folded_contains "code-review template: a refused Write is covered by the fallback" "$CODE_BODY" "$FALLBACK_WRITE_REFUSED"
+assert_folded_contains "code-review template: the fallback keeps Checks Run in the final message" "$CODE_BODY" "$FALLBACK_KEEP_CHECKS"
+assert_folded_contains "code-review template: the fallback last line is pinned" "$CODE_BODY" "$FALLBACK_LAST_LINE"
 assert_folded_contains "code-review template: the returns legend names the report file" "$CODE_PROMPT" 'the path of the full report file'
 assert_folded_not_contains "code-review template: the returns legend no longer lists checks run" "$CODE_PROMPT" 'with file:line references, checks run,'
+assert_folded_contains "multi-code-review step 3: the Full report line is not a finding and its path is never logged" "$CODE_VALIDATE_RANGE" "$CONTROLLER_NEVER_LOGS_PATH"
 
 echo
 bold "Results: $PASS passed, $FAIL failed"
