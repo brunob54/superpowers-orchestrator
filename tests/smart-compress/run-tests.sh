@@ -159,6 +159,18 @@ assert "echo passes through"                "$(check_never 'echo hello')"       
 assert "printf passes through"              "$(check_never 'printf hello')"             "no"
 assert "piped grep passes through"          "$(check_never 'git log | grep fix')"       "no"
 assert "piped awk passes through"           "$(check_never 'cat file | awk NF')"        "no"
+
+# A compound command runs several commands, and a rule matches only the first
+# one, so compressing it can remove the output of the later commands (row 36).
+# In '\n' below, run_hook writes a backslash and n into the JSON input, which
+# the hook reads as a new line.
+assert "&& chain passes through"            "$(check_never 'git add . && git commit -m msg && git log --oneline -1')" "no"
+assert "|| chain passes through"            "$(check_never 'git log || true')"         "no"
+assert "; chain passes through"             "$(check_never 'git status; git log')"     "no"
+assert "pipe into tail passes through"      "$(check_never 'git push origin main | tail -5')" "no"
+assert "new-line chain passes through"      "$(check_never 'git add .\ngit log')"      "no"
+assert "background & passes through"        "$(check_never 'npm install & wait')"      "no"
+assert "background & before < passes through" "$(check_never 'npm install &<in wait')"  "no"
 assert "--verbose passes through"           "$(check_never 'npm install --verbose')"    "no"
 assert "--debug passes through"             "$(check_never 'cargo build --debug')"      "no"
 assert "node -e passes through"             "$(check_never 'node -e console.log(1)')"  "no"
@@ -207,6 +219,10 @@ assert "ls-large rule"                       "$(check_rule       'ls')"         
 assert "cargo build → compressed"            "$(check_compressed 'cargo build')"        "yes"
 assert "eslint → compressed"                 "$(check_compressed 'eslint src/')"        "yes"
 assert "docker build → compressed"           "$(check_compressed 'docker build .')"     "yes"
+# Redirects contain '&' but join no commands, so they do not stop compression.
+assert "npm test 2>&1 → compressed"          "$(check_compressed 'npm test 2>&1')"      "yes"
+assert "npm test &>file → compressed"        "$(check_compressed 'npm test &>test.log')" "yes"
+assert "npm test <&0 → compressed"           "$(check_compressed 'npm test <&0')"       "yes"
 
 # ═══════════════════════════════════════════════════════
 bold "\n4. COMPRESSION QUALITY (unit tests on compress functions)"

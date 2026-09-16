@@ -81,7 +81,7 @@ With smart compress:
 ║   - ^git\s+diff\b                         
 ║   - ^diff\b                               
 ║   - ^\s*(cat|head|tail|less|bat|more|type)\ 
-║   - \|\s*(grep|rg|awk|sed|sort|uniq|wc|cut| 
+║   - [;|\n]|&&|(?<![<>])&(?!>)             
 ║   - \s--(verbose|debug)\b                 
 ║   - ^\s*(curl|wget|httpie|http)\s+        
 ║   - ^\s*(vim|nano|emacs|vi)\s+            
@@ -130,7 +130,7 @@ These commands always pass through with raw, unmodified output — regardless of
 |---|---|
 | `git diff` (any variant) | Every line is signal for code review and debugging |
 | `cat`, `head`, `tail`, `less`, `bat` | Claude explicitly requested file content |
-| Commands with pipes (`\| grep`, `\| awk`, `\| sed`) | User already applied their own filter |
+| Compound commands: commands joined by `&&`, `\|\|`, `;`, `\|` or a new line, and any command run in the background with `&` | A rule matches only the first command, so it would remove the output of the later commands. A pipe also means the user already applied their own filter. Redirects such as `2>&1` do not count. Quotes and escapes are not parsed, so a `;` inside a quoted message, the `\;` of `find -exec` and the `>\|` redirect also stop compression. |
 | Commands with `--verbose` or `--debug` flags | User explicitly asked for detail |
 | `curl`, `wget`, `httpie` | API responses should not be truncated |
 | `echo`, `printf` | User is constructing specific output |

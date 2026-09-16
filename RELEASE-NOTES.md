@@ -8,6 +8,89 @@
 > (`REPOZY/superpowers-optimized`) and are kept unchanged as history; any
 > testing they describe was not done here.
 
+## v7.28.0 — smart-compress leaves compound commands uncompressed
+
+**Problem.** The smart-compress hook chose a compression rule from the first
+command only, so `git add … && git commit … && git log` returned just `ok`. In
+one month of transcripts, 1,112 of the 1,344 matched calls were compound, and
+221 compressed ones lost the output of later commands.
+
+**Change.** A command that contains `&&`, `||`, `;`, `|` or a new line, or
+that runs a command in the background with `&`, is never compressed.
+Redirects such as `2>&1` do not count.
+
+**Effect.** Every command in a chain shows its output, on Claude Code and
+Codex. About 660 lines a month stay uncompressed. Update the plugin. Nothing
+to migrate.
+
+Terms used below:
+
+- **Compound command:** two or more commands in one Bash call, joined by a
+  separator (`&&`, `||`, `;`, `|`, a new line), or a command run in the
+  background with `&`.
+- **Redirect:** an operator that sends a command's output or input to another
+  place, such as `2>&1` (standard error into standard output), `&>file` or
+  `<&0`. A redirect does not start a second command.
+- **`NEVER_COMPRESS`:** the list of patterns in `hooks/compression-rules.js`.
+  A command that matches one pattern is never compressed.
+
+### What was wrong
+
+`hooks/bash-compress-hook.js` tested each rule on the whole command text, and
+every rule's pattern starts at the beginning of the text. So the first command
+selected the rule, and that rule compressed the combined output of all the
+commands. Evidence from 2026-09-16:
+`git add … && git commit … && git log --oneline -1 && sed -n …` returned only
+`ok` and `[compressed: 17->1 lines | git-add]`. The commit succeeded, but the
+`git log` and `sed` output never reached the model.
+
+A measurement over 31,438 Bash calls in 1,854 transcripts (2026-08-15 to
+2026-09-16) showed the size of the problem:
+
+- The hook would rewrite 1,344 calls, and 1,112 of them (83%) were compound.
+- 119 compressed compound calls had all their output reduced to one line
+  (`git-add` 98, `git-commit` 18, `git-fetch` 2, `git-push` 1).
+- 82 were cut after the first 30 to 60 lines by `git-log`, `ls-large` or
+  `find-large`. The cut part was the output of the later commands.
+- Of the 4,913 lines that compression removed from compound calls, about 4,250
+  were output the model had asked for. The real saving was about 660 lines.
+
+The Codex PostToolUse adapter (`hooks/codex/posttool-bash-compress-adapter.js`)
+chose the rule in the same way, so Codex had the same problem.
+
+### What changed
+
+- In `NEVER_COMPRESS`, the pattern for a pipe into a filter (`| grep`, `| awk`
+  and others) is replaced by one pattern for every separator:
+  `/[;|\n]|&&|(?<![<>])&(?!>)/`. There are still 9 patterns.
+- An `&` after `<` or `>`, or before `>`, is a redirect and is not matched.
+- Both the Claude Code hook and the Codex adapter read `NEVER_COMPRESS`, so both
+  get the change.
+- `docs/architecture/smart-compress.md` and `README.md` describe the new rule.
+  The tip "add `| cat` to get raw output" is now true for every command; before,
+  `cat` was not in the filter list.
+
+### Verification
+
+- `tests/smart-compress/run-tests.sh`: 107 passed. The seven new pass-through
+  tests (`&&`, `||`, `;`, a pipe into `tail`, a new line, `&`, `&<`) failed
+  before the fix. Three redirect tests (`2>&1`, `&>file`, `<&0`) check that
+  these commands are still compressed.
+- `tests/codex/run-unit-tests.sh`: a new test checks that the Codex adapter
+  leaves a compound command unchanged; it failed before the fix.
+- One review round with four reviewers (correctness, adversarial, test quality,
+  documentation). All findings were Minor. The review found that `cmd &<in
+  other` runs `cmd` in the background; the pattern now matches it.
+
+### Known limits
+
+- Quotes and escapes are not parsed. A separator inside a quoted string (for
+  example `git commit -m "a; b"`), the `\;` of `find -exec` and the `>|`
+  redirect also stop compression. This only leaves that output uncompressed.
+- A command substitution such as `$(…)` is not a separator. If its inner
+  command writes to standard error, that text is mixed into the compressed
+  output and can be removed. Agents rarely write such commands.
+
 ## v7.27.0 — smart-compress no longer stops long Bash commands
 
 **Problem.** The smart-compress hook ran every matched Bash command through an
