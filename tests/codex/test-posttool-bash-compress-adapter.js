@@ -86,6 +86,14 @@ test('User-filtered command with pipe → allow', () => {
   }));
 });
 
+test('Compound command → allow', () => {
+  isAllowed(evaluatePayload({
+    tool_name: 'Bash',
+    tool_input: { command: 'git add . && git log --oneline -80' },
+    tool_response: { stdout: longLines('abc1234 commit', 80), stderr: '', exit_code: 0 },
+  }));
+});
+
 test('Short output → allow', () => {
   isAllowed(evaluatePayload({
     tool_name: 'Bash',
