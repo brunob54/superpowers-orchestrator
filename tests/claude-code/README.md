@@ -53,6 +53,8 @@ Common functions for skills testing:
 - `assert_order output pattern_a pattern_b name` - Verify order
 - `create_test_project` - Create temp test directory
 - `cleanup_test_project dir...` - Remove every directory given
+- `create_transcript_dir` - Create a folder for session transcripts, outside the test project and the work folder (an untracked transcript in the test project makes its git working tree not clean)
+- `finish_transcript_dir status dir` - In the EXIT trap: remove the transcript folder after a success, keep it and print its path after a failure
 - `create_test_plan project_dir` - Create sample plan file
 
 ### Test Files
@@ -132,7 +134,7 @@ Brainstorming presents the research-gate message verbatim and dispatches nothing
 
 1. Create new test file: `test-<skill-name>.sh`
 2. Source test-helpers.sh
-3. Write tests using `run_claude` and assertions
+3. Write tests using `run_claude` (or `run_claude_in_workdir`) and assertions; never call `claude` directly, never `cd` into the plugin repository, and write transcripts with `tee` into a `create_transcript_dir` folder, not into the test project
 4. Add to test list in `run-skill-tests.sh`
 5. Make executable: `chmod +x test-<skill-name>.sh`
 

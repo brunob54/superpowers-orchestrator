@@ -8,6 +8,101 @@
 > (`REPOZY/superpowers-optimized`) and are kept unchanged as history; any
 > testing they describe was not done here.
 
+## v7.25.0 — behavioural suites run in an empty work folder
+
+**Problem.** Behavioural suites under `tests/claude-code/` ran `claude -p`
+inside the plugin repository. A commit made in the clone during a run failed
+checks (e)/(e2), whose message printed a `git reset --hard` that would destroy
+that work. Test sessions also read the repository's `CLAUDE.md` and `state.md`.
+
+**Change.** Each `claude` call runs in its own empty work folder through one
+helper. (e)/(e2) now test that this folder stays empty. Session transcripts are
+written outside the fixture repository.
+
+**Effect.** A slow run of `test-multi-code-review.sh` passed in 389 s while a
+commit was made in the clone. Only maintainers who run behavioural suites see
+a change. Nothing to migrate.
+
+Terms used below:
+
+- **Behavioural suite:** a test script under `tests/claude-code/` that starts
+  the real `claude` command in headless mode (`claude -p`, no interactive
+  prompt) and checks what the session did.
+- **Work folder:** a new, empty folder made by `mktemp -d` for one `claude -p`
+  call. The call uses it as its working directory (the folder a process
+  starts in).
+- **Fixture repository:** the throwaway git repository that a suite builds
+  for the skill under test (`$TEST_PROJECT`).
+- **Transcript:** the text output of one `claude -p` session, saved by the
+  suite to a file with `tee`.
+- **(e)/(e2):** the checks of `test-multi-code-review.sh` and
+  `test-multi-doc-review.sh` that fail when a run wrote somewhere it must not
+  write. The two research suites have the same check.
+
+Details:
+
+- **The cases** (orchestration issue row 4, Case 004 and the 7.6.0 suite
+  run). (e)/(e2) compared the developer's clone before and after the run
+  (`HEAD` and `git status`). A review loop that committed in the clone at the
+  same time made them fail, and the printed recovery command
+  `git reset --hard <sha>` would have removed that loop's commits. In the
+  7.6.0 suite run, a fixture session loaded the repository's `CLAUDE.md` and
+  added a case about its throwaway fixture to the local issues log. The
+  investigation found a third effect of the same cause: the plugin's hooks
+  read `state.md`, `session-log.md` and `known-issues.md` from the working
+  directory, so every test session received the developer's own files.
+- **One call helper** (`tests/claude-code/test-helpers.sh`). The 9 direct
+  `claude` calls in 6 suites and the helper `run_claude` (13 calls in 2
+  suites) all go through `run_claude_in_workdir`. It runs `claude` inside the
+  given work folder in a subshell and returns the exit status of `claude`.
+  Every call gets a new folder (`create_claude_workdir`). The two
+  `run_claude` suites now give the model an absolute `SKILL_FILE` path.
+- **The checks.** (e), (e2) and the checks of the two research suites now
+  call `assert_workdir_empty`. It fails when the folder holds any entry, and
+  also when the folder is missing or the path is empty. The failure prints a
+  listing of the folder. It prints no recovery command: the folder is
+  disposable. A commit in the clone no longer affects any check.
+  `check_no_superpowers_defaults_setting` now receives the work folder.
+- **Safe creation and cleanup.** Review round 1 found that a failed
+  `mktemp -d` left the path empty, `cd ""` did not move, and the helper
+  printed the caller's own folder. The cleanup would then have removed that
+  folder — the whole clone when a suite runs from the repository root. The
+  reviewer reproduced this on a scratch copy. Now `create_claude_workdir`
+  fails and prints nothing when `mktemp -d` fails, and every caller stops.
+  `cleanup_claude_workdir` refuses an empty path, `/`, `$HOME`, the current
+  folder and any path inside the plugin repository.
+- **Transcripts outside the fixture repository.** This defect already existed
+  on `main`. The suites wrote transcripts with `tee` into `$TEST_PROJECT`. The
+  untracked file made the fixture's working tree not clean, and the
+  multi-code-review skill stopped before its fix step. Slow run 1 on this
+  branch failed 4 assertions for this reason (g, h, m, p1). Transcripts now
+  go to a separate folder (`create_transcript_dir`). The EXIT trap removes it
+  after a success and keeps it, with its path printed, after a failure
+  (`finish_transcript_dir`).
+- **Static check** (`tests/codex/test-claude-code-workdir.sh`, run by
+  `tests/codex/run-unit-tests.sh`, 78 assertions). It rejects a `claude`
+  command word outside `test-helpers.sh`, a `tee` of a transcript into
+  `$TEST_PROJECT`, and any `reset --hard` under `tests/claude-code/`. It also
+  tests the helpers: a failed `mktemp`, a planted file in the work folder,
+  the refused cleanup paths, and `run_claude_in_workdir` with a fake
+  `claude`.
+- **Review.** Three independent reviewers (correctness, adversarial, tests
+  and documentation). Two of them found the `mktemp` failure (one rated it
+  Critical, one Important). They also found that the first static check
+  passed the spellings it was meant to reject (a line break before `-p`,
+  `--print`, a call after a closed subshell).
+- **Acceptance.** Slow run 2 of `test-multi-code-review.sh` passed in 389 s,
+  with a commit made in the plugin clone during the run. Only this one slow
+  suite was run. The other 7 changed suites were checked with `bash -n` and
+  the static check only.
+- **Known limits.** When `GIT_DIR` is set in the environment, the
+  `context-engine.js` hook treats the work folder as a git repository and
+  writes two files into it, so (e) fails with no skill at fault. Each
+  `claude -p` call creates a transcript folder under `~/.claude/projects/`,
+  and nothing removes these folders. A write into the clone by absolute path
+  is no longer detected by any check; the reviewers judged this unlikely,
+  because a test session no longer receives the clone path.
+
 ## v7.24.0 — plans test a repository premise instead of asserting it
 
 **Problem.** In three of twelve orchestrated runs, a plan task relied on the
