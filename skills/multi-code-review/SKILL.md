@@ -652,7 +652,13 @@ code has been revised since, so a re-pass is meaningful):
    marker line is its last non-blank line is unusable. The first such
    marker line begins the report; everything above that line is ignored,
    and the Verdict block and the enumerated findings are read only from
-   that line downward. Each unusable report →
+   that line downward. A `Full report:` line at the end of the message
+   either names the file that holds the reviewer's full report with its
+   Checks Run section, or reads `Full report: not written — <reason>`, in
+   which case the Checks Run section is in the message; either form is not
+   a finding, the controller never reads that file, and the path is never
+   logged (it never appears in a log entry). Each
+   unusable report →
    retry the identical dispatch once, keeping the same reviewer number; the
    retries of one round may go out together in one message. After the
    retries, *u* = the number of usable
