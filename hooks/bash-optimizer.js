@@ -5,7 +5,7 @@
  * Bash Output Optimizer — executes a command and compresses its output.
  *
  * Called by bash-compress-hook.js via PreToolUse command rewriting.
- * Usage: node bash-optimizer.js <base64-encoded-command> <rule-type> [<call-time-out-ms>]
+ * Usage: node bash-optimizer.js <base64-encoded-command> <rule-type> [<call-time-out-in-milliseconds>]
  *
  * Cross-platform:
  *   - macOS:   uses /bin/bash (always available, ships with macOS)
@@ -17,10 +17,9 @@
  *   - Exit codes are always preserved from the original command
  *   - stderr is always passed through uncompressed
  *   - Compressed output includes a transparency marker
- *   - A command still running at the Bash call's time-out gets raw output:
- *     Claude Code then moves the call to the background and does not end it,
- *     so the optimizer writes the output it holds and passes later output
- *     through unchanged, the same as for a command that was not rewritten
+ *   - At the Bash call's time-out, Claude Code moves the call to the
+ *     background. It does not stop the command. From then on the optimizer
+ *     writes output raw (not compressed), as for a command it did not rewrite.
  */
 
 const { spawn, spawnSync } = require('child_process');
@@ -31,15 +30,36 @@ const { RULES, MIN_OUTPUT_LENGTH } = require('./compression-rules');
 const b64Command = process.argv[2];
 const ruleType = process.argv[3];
 
-// Time-out of the Bash tool call in milliseconds (ms). The hook passes it when
-// the call sets one. Otherwise Claude Code uses its default: 120000 ms, or the
-// value of the environment variable BASH_DEFAULT_TIMEOUT_MS.
+// Time-out of the Bash tool call, in milliseconds (ms). The hook passes the
+// call's timeout field when it has one. Claude Code does not document how it
+// computes the time-out; these rules were read from Claude Code 2.1.273:
+//   - The default is BASH_DEFAULT_TIMEOUT_MS, or 120000 ms when it is not set.
+//   - The maximum is BASH_MAX_TIMEOUT_MS, or 600000 ms when it is not set, and
+//     never less than the default. A larger time-out is lowered to it.
+//   - CLAUDE_CODE_AUTO_BACKGROUND_TIMEOUT_MS, when set, moves the call to the
+//     background earlier, but never before 2000 ms. Claude Code applies it to
+//     the main agent only. The optimizer applies it always, because a switch
+//     to raw output that comes too early only loses compression.
 const DEFAULT_CALL_TIMEOUT_MS = 120000;
-const callTimeoutMs = Number(process.argv[4])
-  || Number(process.env.BASH_DEFAULT_TIMEOUT_MS)
-  || DEFAULT_CALL_TIMEOUT_MS;
+const MAX_CALL_TIMEOUT_MS = 600000;
+const MIN_AUTO_BACKGROUND_MS = 2000;
 
-// Largest amount of output held for compression; more output is written raw
+// The number in a text value when it is above 0; otherwise undefined
+function positiveNumber(text) {
+  const value = Number(text);
+  return value > 0 ? value : undefined;
+}
+
+const defaultTimeoutMs = positiveNumber(process.env.BASH_DEFAULT_TIMEOUT_MS) ?? DEFAULT_CALL_TIMEOUT_MS;
+const maxTimeoutMs = Math.max(positiveNumber(process.env.BASH_MAX_TIMEOUT_MS) ?? MAX_CALL_TIMEOUT_MS, defaultTimeoutMs);
+const autoBackgroundMs = positiveNumber(process.env.CLAUDE_CODE_AUTO_BACKGROUND_TIMEOUT_MS);
+const callTimeoutMs = Math.min(
+  positiveNumber(process.argv[4]) ?? defaultTimeoutMs,
+  maxTimeoutMs,
+  autoBackgroundMs === undefined ? Infinity : Math.max(autoBackgroundMs, MIN_AUTO_BACKGROUND_MS),
+);
+
+// When held output passes this size, the optimizer writes all output raw
 const MAX_HELD_BYTES = 10 * 1024 * 1024; // 10 MB (megabytes)
 
 if (!b64Command) {
@@ -139,18 +159,25 @@ function run() {
 
   child.on('close', (status, signal) => {
     clearTimeout(timer);
-    // A signal from another process stopped the command
-    if (signal) {
+    try {
+      // A signal stopped the command
+      if (signal) {
+        switchToRaw();
+        process.stderr.write(`[smart-compress] Command killed by ${signal}\n`);
+        process.exitCode = 1;
+        return;
+      }
+      if (raw) {
+        process.exitCode = status;
+        return;
+      }
+      writeResult(Buffer.concat(heldStdout).toString('utf8'), Buffer.concat(heldStderr).toString('utf8'), status);
+    } catch (e) {
+      // The top-level try/catch below does not reach this callback: fail open here
+      process.stderr.write(`[smart-compress] Fatal error: ${e.message}, writing raw output\n`);
       switchToRaw();
-      process.stderr.write(`[smart-compress] Command killed by ${signal}\n`);
       process.exitCode = 1;
-      return;
     }
-    if (raw) {
-      process.exitCode = status;
-      return;
-    }
-    writeResult(Buffer.concat(heldStdout).toString('utf8'), Buffer.concat(heldStderr).toString('utf8'), status);
   });
 }
 
@@ -166,18 +193,14 @@ function writeResult(rawStdout, rawStderr, status) {
 
   // No matching rule — pass through raw (shouldn't happen, but fail-open)
   if (!rule) {
-    process.stdout.write(stdout);
-    process.stderr.write(stderr);
-    process.exit(exitCode);
+    writeRaw(stdout, stderr, exitCode);
     return;
   }
 
   // If output is too short, compression isn't worth it
   const totalOutput = stdout + stderr;
   if (totalOutput.length < MIN_OUTPUT_LENGTH) {
-    process.stdout.write(stdout);
-    process.stderr.write(stderr);
-    process.exit(exitCode);
+    writeRaw(stdout, stderr, exitCode);
     return;
   }
 
@@ -192,9 +215,7 @@ function writeResult(rawStdout, rawStderr, status) {
 
   // Rule declined to compress (returned null) — pass through raw
   if (compressed == null) {
-    process.stdout.write(stdout);
-    process.stderr.write(stderr);
-    process.exit(exitCode);
+    writeRaw(stdout, stderr, exitCode);
     return;
   }
 
@@ -212,7 +233,18 @@ function writeResult(rawStdout, rawStderr, status) {
 
   // Always pass stderr through uncompressed — errors must be seen in full
   process.stderr.write(stderr);
-  process.exit(exitCode);
+  process.exitCode = exitCode;
+}
+
+/**
+ * Write output unchanged and set the exit code. The process ends by itself
+ * after the writes: on macOS, process.exit() right after a large write to a
+ * pipe ends the process before the write ends, and output is lost.
+ */
+function writeRaw(stdout, stderr, exitCode) {
+  process.stdout.write(stdout);
+  process.stderr.write(stderr);
+  process.exitCode = exitCode;
 }
 
 // Execute with top-level fail-open safety net

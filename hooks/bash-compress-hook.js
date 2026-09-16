@@ -139,8 +139,10 @@ async function main() {
     // Use forward slashes for all platforms (bash on Windows handles them)
     const optimizerPath = path.join(__dirname, 'bash-optimizer.js').replace(/\\/g, '/');
     const b64 = Buffer.from(cmd).toString('base64');
-    // Pass the call's time-out: from that time the optimizer writes raw output,
-    // because Claude Code moves the call to the background and does not end it
+    // Pass the call's timeout field (in milliseconds). At the time-out, Claude
+    // Code moves the call to the background, and the optimizer then writes raw
+    // output. When the call has no timeout field, the optimizer uses Claude
+    // Code's default.
     const timeoutArg = Number.isFinite(tool_input.timeout) ? ` "${tool_input.timeout}"` : '';
     const rewrittenCmd = `node "${optimizerPath}" "${b64}" "${rule.type}"${timeoutArg}`;
 
