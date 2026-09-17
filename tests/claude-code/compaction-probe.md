@@ -36,12 +36,15 @@ permissions, the mode that skips every permission prompt).
   sentence `No decision in this design matched the prior-art trigger
   predicate.` The spec used by the first run is in the appendix at the end
   of this file.
-- The plugin's session-start hook (a script Claude Code runs when a session
-  starts) writes a `.gitignore` entry (`context-snapshot.json` under `# AI
-  assistant artifacts`) into any repository it runs in. The fixture's first
-  commit must include that file, because Phase 0's clean-tree check fails on
-  an untracked `.gitignore`. Run one short `claude -p` call in the fixture
-  first, then commit the file.
+- The plugin's context-engine hook (a script Claude Code runs when a session
+  starts) writes `context-snapshot.json` into the repository and adds it to
+  the repository's local exclude file (`git rev-parse --git-path
+  info/exclude`). Git never commits that file, so the working tree stays
+  clean and the fixture needs no extra commit. Plugin versions before 7.32.0
+  wrote a `.gitignore` entry instead: with such a version, run one short
+  `claude -p` call in the fixture first, then commit `.gitignore`, because
+  Phase 0's check that the working tree is clean fails on an untracked
+  `.gitignore`.
 - The installed plugin is the version under test:
   `cat ~/.claude/plugins/cache/superpowers-orchestrator/superpowers-orchestrator/*/VERSION`
   prints `7.19.0` or a later version.
