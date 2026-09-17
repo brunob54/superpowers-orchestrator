@@ -29,7 +29,19 @@
 // The script supports a probe of a skill rule: after a compaction summary,
 // before acting on the next subagent return, the session must run
 // `grep -n '^## ' <path>/SKILL.md` and then Read the section it is executing
-// with `offset` and `limit`.
+// with `offset` and `limit` (or, under a mode that prefers shell commands,
+// print the same line range with `sed -n '<first>,<last>p'`).
+//
+// Marks printed after a tool call, so a reader can judge the rule:
+//   <-- grep '^## '        the grep of section headings
+//   <-- PARTIAL            a Read that was cut short (the notice is either in
+//                          the result text or in a separate "attachment"
+//                          record of type "read_truncation_notice")
+//   <-- SKILL.md sed a-b   a sed read of lines a to b of a SKILL.md file
+//   <-- ruling/log write   an Edit, a Write, or a Bash redirect (">" or ">>",
+//                          for example a heredoc append) to the orchestration
+//                          log or the open-decisions file
+//   <-- Agent dispatch     an Agent call (it does not end the list)
 
 const fs = require('fs');
 const path = require('path');
@@ -37,13 +49,27 @@ const path = require('path');
 const DEFAULT_AFTER = 30;
 const SUMMARY_PREVIEW_CHARS = 200;
 const BASH_COMMAND_MAX_CHARS = 140;
-const MIN_ITEMS_BEFORE_AGENT_STOP = 3;
 const SKILL_INJECTION_MARKER = 'Base directory for this skill';
 const SKILL_BASE_DIRECTORY_PATTERN = /Base directory for this skill:\s*(\S+)/;
 const PARTIAL_MARKER = 'PARTIAL';
 const GREP_HEADINGS_PATTERNS = [`grep -n '^## '`, `grep -n "^## "`];
 const RULING_LOG_BASENAMES = ['orchestration-log.md', 'open-decisions.md'];
 const HEADING_PATTERN = /^## (RULING|STOPPED)\b.*$/gm;
+// A Bash command is trimmed to its first and last part, so the file name at
+// the end of a long path stays visible.
+const BASH_COMMAND_HEAD_CHARS = 100;
+const BASH_COMMAND_TAIL_CHARS = 40;
+const BASH_COMMAND_GAP = ' … ';
+// `sed -n '<first>,<last>p' <...>SKILL.md`, with single or double quotes.
+const SED_SKILL_READ_PATTERN = /sed -n ['"](\d+),(\d+)p['"]\s+(\S*SKILL\.md)/;
+// A shell redirect (">" or ">>") into a file: the path that follows it.
+const REDIRECT_TARGET_PATTERN = />>?\s*(\S+)/g;
+const ATTACHMENT_READ_TRUNCATION_NOTICE = 'read_truncation_notice';
+const MARK_GREP_HEADINGS = ` <-- grep '^## '`;
+const MARK_PARTIAL = ' <-- PARTIAL';
+const MARK_RULING_LOG_WRITE = ' <-- ruling/log write';
+const MARK_AGENT_DISPATCH = ' <-- Agent dispatch';
+const MARK_SKILL_SED_PREFIX = ' <-- SKILL.md sed ';
 
 // Re-attachment records are looked for in this many records after a
 // compact_boundary record. Measured on a 10-compaction transcript
@@ -94,15 +120,24 @@ function fail(message) {
 }
 
 function readRecords(file) {
-  const text = fs.readFileSync(file, 'utf8');
+  let text;
+  try {
+    text = fs.readFileSync(file, 'utf8');
+  } catch (err) {
+    fail(`cannot read transcript ${file}: ${err.message}`);
+  }
   const records = [];
   text.split('\n').forEach((line, lineIndex) => {
     if (!line.trim()) return;
+    let rec;
     try {
-      records.push({ index: lineIndex, rec: JSON.parse(line) });
+      rec = JSON.parse(line);
     } catch (err) {
       process.stderr.write(`line ${lineIndex}: JSON that cannot be parsed, skipped\n`);
+      return;
     }
+    // A line such as `null` is valid JSON but not a record.
+    if (rec && typeof rec === 'object') records.push({ index: lineIndex, rec });
   });
   return records;
 }
@@ -144,8 +179,24 @@ function shortPath(filePath) {
 function trimCommand(command) {
   const oneLine = String(command).replace(/\r?\n/g, '\\n');
   return oneLine.length > BASH_COMMAND_MAX_CHARS
-    ? oneLine.slice(0, BASH_COMMAND_MAX_CHARS) + '…'
+    ? oneLine.slice(0, BASH_COMMAND_HEAD_CHARS) + BASH_COMMAND_GAP + oneLine.slice(-BASH_COMMAND_TAIL_CHARS)
     : oneLine;
+}
+
+function isRulingLogBasename(base) {
+  return RULING_LOG_BASENAMES.some((suffix) => base.endsWith(suffix));
+}
+
+// True when a Bash command redirects (">" or ">>") into a ruling/log file,
+// for example a heredoc append of a ruling entry.
+function bashWritesRulingLog(command) {
+  return [...command.matchAll(REDIRECT_TARGET_PATTERN)].some((m) => isRulingLogBasename(baseName(m[1])));
+}
+
+function collectHeadings(text, index, headings) {
+  for (const m of text.matchAll(HEADING_PATTERN)) {
+    headings.push({ index, heading: m[0].trim() });
+  }
 }
 
 function baseName(filePath) {
@@ -198,6 +249,7 @@ function analyze(records) {
   const apiCallByRequestId = new Map();
   const toolCalls = []; // every tool_use block, in record order
   const resultTextByToolUseId = new Map();
+  const truncatedToolUseIds = new Set(); // Reads cut short, reported by an attachment record
   const compactions = [];
   const skillInjections = [];
   const headings = [];
@@ -220,6 +272,9 @@ function analyze(records) {
     if (rec.type === RECORD_TYPE_ATTACHMENT) {
       const attachmentType = rec.attachment && rec.attachment.type;
       if (attachmentType === ATTACHMENT_INVOKED_SKILLS) invokedSkillsAttachmentCount++;
+      if (attachmentType === ATTACHMENT_READ_TRUNCATION_NOTICE && rec.attachment.toolUseID) {
+        truncatedToolUseIds.add(rec.attachment.toolUseID);
+      }
       const last = compactions[compactions.length - 1];
       if (last && index - last.index <= REATTACHMENT_WINDOW_RECORDS) {
         const described = describeReattachment(rec);
@@ -285,9 +340,10 @@ function analyze(records) {
         const written = typeof input.new_string === 'string' ? input.new_string
           : typeof input.content === 'string' ? input.content : '';
         if (written && (block.name === TOOL_EDIT || block.name === TOOL_WRITE)) {
-          for (const m of written.matchAll(HEADING_PATTERN)) {
-            headings.push({ index, heading: m[0].trim() });
-          }
+          collectHeadings(written, index, headings);
+        }
+        if (block.name === TOOL_BASH && bashWritesRulingLog(String(input.command || ''))) {
+          collectHeadings(String(input.command), index, headings);
         }
       }
     }
@@ -297,6 +353,7 @@ function analyze(records) {
     apiCalls,
     toolCalls,
     resultTextByToolUseId,
+    truncatedToolUseIds,
     compactions,
     skillInjections,
     headings,
@@ -307,14 +364,17 @@ function analyze(records) {
 
 // ---- formatting -----------------------------------------------------------
 
-function describeToolCall(call, resultTextByToolUseId) {
+function describeToolCall(call, resultTextByToolUseId, truncatedToolUseIds) {
   const { name, input } = call;
   let detail = '';
   let mark = '';
   if (name === TOOL_BASH) {
     const command = String(input.command || '');
     detail = trimCommand(command);
-    if (GREP_HEADINGS_PATTERNS.some((p) => command.includes(p))) mark = ` <-- grep '^## '`;
+    const sedRead = command.match(SED_SKILL_READ_PATTERN);
+    if (GREP_HEADINGS_PATTERNS.some((p) => command.includes(p))) mark = MARK_GREP_HEADINGS;
+    else if (sedRead) mark = `${MARK_SKILL_SED_PREFIX}${sedRead[1]}-${sedRead[2]}`;
+    else if (bashWritesRulingLog(command)) mark = MARK_RULING_LOG_WRITE;
   } else if (name === TOOL_READ) {
     detail = shortPath(input.file_path);
     const range = [];
@@ -322,13 +382,14 @@ function describeToolCall(call, resultTextByToolUseId) {
     if (input.limit !== undefined) range.push(`limit=${input.limit}`);
     if (range.length) detail += ` (${range.join(', ')})`;
     const result = resultTextByToolUseId.get(call.id);
-    if (result && result.includes(PARTIAL_MARKER)) mark = ' <-- PARTIAL';
+    if ((result && result.includes(PARTIAL_MARKER)) || truncatedToolUseIds.has(call.id)) mark = MARK_PARTIAL;
   } else if (name === TOOL_EDIT || name === TOOL_WRITE) {
     const base = baseName(input.file_path);
     detail = base;
-    if (RULING_LOG_BASENAMES.some((suffix) => base.endsWith(suffix))) mark = ' <-- ruling/log write';
+    if (isRulingLogBasename(base)) mark = MARK_RULING_LOG_WRITE;
   } else if (name === TOOL_AGENT) {
     detail = `${input.name || '(unnamed)'} — ${input.description || ''}`;
+    mark = MARK_AGENT_DISPATCH;
   } else if (name === TOOL_SKILL) {
     detail = String(input.skill || '');
   }
@@ -365,6 +426,7 @@ function printReport(file, records, analysis, after) {
     apiCalls,
     toolCalls,
     resultTextByToolUseId,
+    truncatedToolUseIds,
     compactions,
     skillInjections,
     headings,
@@ -408,23 +470,13 @@ function printReport(file, records, analysis, after) {
     out.push(`summary${comp.summaryIndex !== null ? ` (record ${comp.summaryIndex})` : ' (none found)'}: ${preview}`);
     out.push(...formatReattachments(comp.reattachments));
     const nextBoundary = c + 1 < compactions.length ? compactions[c + 1].index : Infinity;
-    const nextCalls = toolCalls.filter((t) => t.index > comp.index && t.index < nextBoundary);
-    const listed = [];
-    let endedAtAgent = false;
-    for (const call of nextCalls) {
-      if (call.name === TOOL_AGENT && listed.length >= MIN_ITEMS_BEFORE_AGENT_STOP) {
-        listed.push(call);
-        endedAtAgent = true;
-        break;
-      }
-      listed.push(call);
-      if (listed.length >= after) break;
-    }
+    // Up to N calls, and never past the next compaction: the calls between a
+    // dispatch and the ruling that follows it must stay visible.
+    const listed = toolCalls.filter((t) => t.index > comp.index && t.index < nextBoundary).slice(0, after);
     out.push(`next ${listed.length} tool call${listed.length === 1 ? '' : 's'}:`);
     listed.forEach((call, k) => {
-      out.push(`  ${k + 1}. ${describeToolCall(call, resultTextByToolUseId)}`);
+      out.push(`  ${k + 1}. ${describeToolCall(call, resultTextByToolUseId, truncatedToolUseIds)}`);
     });
-    if (endedAtAgent) out.push('  (list ended at an Agent dispatch)');
     if (listed.length === 0) out.push('  (no tool calls after this compaction)');
   }
 
