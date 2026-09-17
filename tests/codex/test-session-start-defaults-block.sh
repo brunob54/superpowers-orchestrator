@@ -153,9 +153,9 @@ done
 # A workspace file the hook embeds (state.md) can itself contain a decoy
 # block. The hook appends its own block AFTER every embedded workspace-file
 # block, so only the LAST complete block counts. state.md is embedded whole
-# with cat and has no size cap (the 200-line threshold governs project-map.md
-# only), so the fixture's size does not matter; the decoy text is asserted
-# present before the ordering is asserted,
+# with cat when it fits the hook's character budget (tests/codex/
+# test-session-start-budget.sh); the fixture is a few lines, so it always
+# fits. The decoy text is asserted present before the ordering is asserted,
 # so the check cannot pass by the workspace file never being embedded at all.
 write_decoy_state() {
   printf '%s\n%s\nreviewers-per-lens=9\nreview-rounds=9\nbatch-task-cap=9\n%s\n' \
@@ -166,9 +166,8 @@ write_decoy_state() {
 # expect_decoy_loses <label> <m> <n> <cap> [VAR=value ...]
 # The case that matters most is the variable UNSET: with no fallback emission
 # the decoy would be the only block in the context and repository content
-# would choose the parameters. Line numbers are not usable here — most of the
-# hook's boilerplate uses literal two-character "\n" sequences rather than
-# real newlines — so ordering is checked with glob substring matching.
+# would choose the parameters. Ordering is checked with glob substring
+# matching.
 expect_decoy_loses() {
   local label="$1" m="$2" n="$3" cap="$4" ctx want
   local decoy="reviewers-per-lens=9"

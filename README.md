@@ -210,7 +210,7 @@ state.md               ← current task snapshot (never lose mid-work progress)
 
 ### project-map.md — What exists and what it does
 
-Generate once with "map this project". After that, the session-start hook injects its content directly into every session — no instruction-following required. The AI has the map before your first message arrives.
+Generate once with "map this project". After that, the session-start hook injects its content directly into every session when it fits the hook's 10,000-character output budget (see **session-start** under Hooks below) — no instruction-following required. When it does not fit, the hook names the file in a `<not-injected>` line and the AI reads it with the Read tool.
 
 ```markdown
 # Project Map
@@ -270,7 +270,7 @@ An optional, manually-maintained record of decisions, rejected approaches, and k
 ## 2026-03-15 10:04 [saved]
 Goal: Add cross-session memory to the plugin
 Decisions:
-- project-map.md injected by the session-start hook directly — makes it unconditional, not dependent on Claude following instructions
+- project-map.md injected by the session-start hook directly when it fits the output budget — not dependent on Claude following instructions
 - session-log.md is manual-only; auto-entries were low-signal noise, all derivable from git log
 Approaches rejected: Auto-appending a [auto] entry on every Stop event — produced 30 near-identical entries per session with no decisions or reasoning, just file lists
 Key facts: hooks.json requires \" not ' around ${CLAUDE_PLUGIN_ROOT} — single quotes break variable expansion on Linux
@@ -394,7 +394,7 @@ The remaining three are read by hook code directly and never reach a skill.
 This is the full cross-platform hook inventory for the plugin. Claude Code gets the full set. Codex ships adapters for the smaller `SessionStart` / `UserPromptSubmit` / `PreToolUse(Bash)` / `PostToolUse(Bash)` / `Stop` subset in `hooks/codex/*`, subject to Codex platform limits. These have not been confirmed live.
 
 - **context-engine** (SessionStart) — Runs git commands on every session start and writes `context-snapshot.json`: changed files, blast radius (which other files reference each changed file, filtered to actual import/require references), recent commits, and change stats. Uses per-project watermarks (md5 of cwd) so multiple projects don't interfere, and cross-session diff base so "what changed" reflects changes since your last session, not just the last commit. Zero dependencies. Silent no-op on non-git projects
-- **session-start** (SessionStart) — Injects using-superpowers routing into every session; injects `project-map.md` content directly if it exists (full content ≤200 lines, Critical Constraints + Hot Files only above that); checks for available plugin update
+- **session-start** (SessionStart) — Injects the first part of the using-superpowers skill into every session (the part above the marker line in its SKILL.md; the Skill tool loads the rest); injects the workspace files in priority order (state.md, the project-map staleness note, session-log.md, known-issues.md, context-snapshot.json, project-map.md — full content ≤200 lines, Critical Constraints + Hot Files only above that), each whole while the output stays under 10,000 characters, and names the ones left out in one `<not-injected>` line. Claude Code keeps a hook's output in context only up to 10,000 characters; above that it stores the text in a file and keeps a 2,000-character preview, so this budget is what makes the injection reach the model. Also checks for an available plugin update
 - **skill-activator** (UserPromptSubmit) — Context pressure gate: blocks plan-execution triggers when context ≥60% of the model window (fires compact-first instruction instead of skill hints; threshold overridable via `SUPERPOWERS_PRESSURE_THRESHOLD`). Window size comes from the opt-in statusline bridge (`hooks/statusline-context-cache.js`, true 200K/1M size, installed to a stable path by `tools/install-statusline-bridge.sh`) when configured, else from session-JSONL parsing against a 200K default. Also: micro-task detection + confidence-threshold skill matching + weighted memory recall from session-log.md and known-issues.md (70% keyword density + 30% recency scoring)
 - **track-edits** (PostToolUse: Edit/Write) — Logs file changes for TDD reminders; auto-adds AI workspace artifacts (`project-map.md`, `session-log.md`, `state.md`) to `.gitignore` on first write
 - **track-session-stats** (PostToolUse: Skill) — Tracks skill invocations for progress visibility

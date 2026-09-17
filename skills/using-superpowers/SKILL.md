@@ -58,38 +58,11 @@ Technical execution includes code edits, debugging, planning, review, test statu
    - The user's request contains creation/build intent: any of "build", "create", "make", "implement", "scaffold", "set up", "write", "generate", "develop", "start"
    - Run a filesystem check: `ls project-map.md 2>/dev/null` — gate only fires if the file does **not** exist
 
-   If both are true, **pause before proceeding** and tell the user exactly this:
-
-   > Before I start: this directory has no memory files set up yet. That matters for how well I perform across sessions.
-   >
-   > **Without setup, every future session on this project starts from scratch:**
-   > - I re-explore the project structure even if I mapped it last session
-   > - I re-read files I already understood
-   > - I may re-propose approaches that were already tried and rejected
-   > - I lose the "why" behind every decision the moment the session ends
-   >
-   > **A ~30-second setup changes that permanently:**
-   > - `git init` — enables staleness tracking so I only re-read files that actually changed *(creates `.git` only, nothing else)*
-   > - `project-map.md` — I read this at every future session start instead of re-exploring blind
-   > - `session-log.md` — auto-captures what was built and decided, so future sessions start with: *"I see from last session that X was rejected because Y — building with that constraint already applied"* instead of rediscovering it
-   >
-   > **Set this up before we build, or start immediately?**
-
-   Wait for the user's answer before continuing.
-   - **If they confirm:** run `git init --quiet` directly (do not ask again — the user just confirmed), then invoke `context-management` for map generation only. Return to step 3 when done. Note: `context-snapshot.json` will not be created in this session — the context-engine hook already ran at session start before git existed. It will be created on the next session start, provided the session is opened from this project's root directory. If no commits exist yet it will be mostly empty; it populates fully after the first commit.
-   - **If they decline:** proceed to step 3.
-
-   **Step 2b — Existing project memory check** (runs only when step 2 did NOT fire):
-   If the user's request is non-trivial (not micro) AND `project-map.md` does not exist AND the project has 10+ files:
-   - Mention once (do not block): *"Note: this project has no project-map.md. I'll work fine without it, but if you want faster orientation in future sessions, I can generate one after this task. Just say 'map this project'."*
-   - Do not repeat this notice in subsequent tasks within the same session.
-
+   If both are true, load this skill with the `Skill` tool (`superpowers-orchestrator:using-superpowers`) and follow its section **Fresh project gate** before continuing: it holds the exact message to show the user and the steps for each answer. When the gate does not fire, apply **step 2b** from the same section (a one-time note when a non-trivial task runs in a project of 10+ files that has no `project-map.md`).
 3. Classify the task as **micro**, **lightweight**, or **full** (see Complexity Classification below).
 4. If resuming work from a prior session, read `state.md` if it exists. Before ending any session where significant decisions were made (design choices, rejected approaches, non-obvious constraints discovered), invoke `context-management` to write a `[saved]` entry — even if the work is complete. This is the only mechanism that preserves the "why" across sessions.
 5. If `known-issues.md` exists at the project root, read it to avoid rediscovering known error→solution mappings.
-6. If `project-map.md` exists at the project root, read it to orient to the project structure without re-globbing or re-reading known files. The map tells you what exists and where — when you need a file's actual content (for modification, comparison, or debugging), read it directly with the Read tool. Staleness is detected automatically by the session-start hook: if the map is stale, a `<project-map-stale>` tag is injected into session context with the mismatched hashes. When you see that tag:
-   - **With git:** run `git diff --name-only <map_hash> HEAD` to find changed files. Re-read only those; everything else in the map is still valid. Update the corresponding Key Files entries in `project-map.md` and refresh the git hash and date in the header.
-   - **Without git:** compare the map's generation timestamp to the modification time of files listed in the map's Hot Files section. Re-read any that are newer than the map. Then update their Key Files entries and refresh the generation timestamp in the header.
+6. If `project-map.md` exists at the project root, read it to orient to the project structure without re-globbing or re-reading known files. The map tells you what exists and where — when you need a file's actual content (for modification, comparison, or debugging), read it directly with the Read tool. Staleness is detected automatically by the session-start hook: if the map is stale, a `<project-map-stale>` tag is injected into session context with the mismatched hashes. When you see that tag, load this skill with the `Skill` tool and follow its section **Project map staleness update**.
 7. Follow the path for the classified complexity level.
 
 ## Complexity Classification
@@ -127,7 +100,43 @@ All of these must be true:
 ### Full (complete pipeline)
 Anything that doesn't qualify as micro or lightweight.
 
-**Action:** Follow the Routing Guide below for the full skill pipeline.
+**Action:** Follow the Routing Guide for the full skill pipeline. The guide is in the second part of this skill: when only the first part is in context (the session-start injection), load the whole skill with the `Skill` tool first.
+
+<!-- session-start-injection-ends. hooks/session-start injects only the text above this line into every session, so that its whole output stays under Claude Code's 10,000-character limit for hook output (above the limit the text goes to a file and only a 2,000-character preview stays in context). The Skill tool loads the whole file. Keep the text above this line at or under 6,400 characters: tests/codex/test-session-start-budget.sh pins it. -->
+
+## Fresh project gate (Entry Sequence step 2, full text)
+
+When both conditions of Entry Sequence step 2 are true, **pause before proceeding** and tell the user exactly this:
+
+> Before I start: this directory has no memory files set up yet. That matters for how well I perform across sessions.
+>
+> **Without setup, every future session on this project starts from scratch:**
+> - I re-explore the project structure even if I mapped it last session
+> - I re-read files I already understood
+> - I may re-propose approaches that were already tried and rejected
+> - I lose the "why" behind every decision the moment the session ends
+>
+> **A ~30-second setup changes that permanently:**
+> - `git init` — enables staleness tracking so I only re-read files that actually changed *(creates `.git` only, nothing else)*
+> - `project-map.md` — I read this at every future session start instead of re-exploring blind
+> - `session-log.md` — auto-captures what was built and decided, so future sessions start with: *"I see from last session that X was rejected because Y — building with that constraint already applied"* instead of rediscovering it
+>
+> **Set this up before we build, or start immediately?**
+
+Wait for the user's answer before continuing.
+- **If they confirm:** run `git init --quiet` directly (do not ask again — the user just confirmed), then invoke `context-management` for map generation only. Return to step 3 when done. Note: `context-snapshot.json` will not be created in this session — the context-engine hook already ran at session start before git existed. It will be created on the next session start, provided the session is opened from this project's root directory. If no commits exist yet it will be mostly empty; it populates fully after the first commit.
+- **If they decline:** proceed to step 3.
+
+**Step 2b — Existing project memory check** (runs only when step 2 did NOT fire):
+If the user's request is non-trivial (not micro) AND `project-map.md` does not exist AND the project has 10+ files:
+- Mention once (do not block): *"Note: this project has no project-map.md. I'll work fine without it, but if you want faster orientation in future sessions, I can generate one after this task. Just say 'map this project'."*
+- Do not repeat this notice in subsequent tasks within the same session.
+
+## Project map staleness update (Entry Sequence step 6, full text)
+
+When the `<project-map-stale>` tag is in the session context:
+- **With git:** run `git diff --name-only <map_hash> HEAD` to find changed files. Re-read only those; everything else in the map is still valid. Update the corresponding Key Files entries in `project-map.md` and refresh the git hash and date in the header.
+- **Without git:** compare the map's generation timestamp to the modification time of files listed in the map's Hot Files section. Re-read any that are newer than the map. Then update their Key Files entries and refresh the generation timestamp in the header.
 
 ## EnterPlanMode Intercept
 
