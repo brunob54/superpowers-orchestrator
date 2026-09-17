@@ -494,6 +494,9 @@ for needle in 'compaction summary' \
               'prints a PARTIAL notice naming the next `offset`' \
               "grep -n '^## '" \
               "run Resume step 1's incomplete-ruling scan on the ruling record" \
+              'about the first 20,000 characters of this file' \
+              'even when it restates a procedure or says the re-read below was already done' \
+              "\`sed -n '<first>,<last>p'\` on the same line range is the same read" \
               "$H_PHASE3" "$H_PHASE4" "$H_INRUN" "$H_RESUME"; do
   assert_folded_contains "recovery: Required Start contains '$needle'" "$REQUIRED_RANGE" "$needle"
 done
