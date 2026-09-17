@@ -168,8 +168,9 @@ async function main() {
 
   try {
     const snapshotPath = path.join(cwd, 'context-snapshot.json');
-    fs.writeFileSync(snapshotPath, JSON.stringify(snapshot, null, 2));
+    // Exclude first, so `git status` never shows the new file, not even for a moment.
     excludeFromGit(snapshotPath);
+    fs.writeFileSync(snapshotPath, JSON.stringify(snapshot, null, 2));
   } catch {
     // Silently ignore write errors — never block session start
   }

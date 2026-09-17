@@ -25,8 +25,8 @@ const AI_ARTIFACTS = ['project-map.md', 'session-log.md', 'state.md', 'known-iss
 
 /**
  * Keep an AI artifact file out of `git status` without editing a tracked file.
- * Called whenever Claude writes one of these files, so `git status` never
- * shows it as an untracked file.
+ * Called after every Edit or Write; it acts only when the file name is in
+ * AI_ARTIFACTS.
  */
 function excludeArtifact(filePath) {
   if (!AI_ARTIFACTS.includes(path.basename(filePath))) return;
