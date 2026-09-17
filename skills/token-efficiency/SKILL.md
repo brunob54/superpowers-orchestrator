@@ -75,7 +75,7 @@ Do not wait for context to auto-compress mid-task. Break proactively at logical 
 
 **Break context by:** invoking `context-management` to write `state.md` with discovered facts, then starting fresh with only `state.md` as input. Always save to `state.md` *before* compacting — never after.
 
-**What survives compaction** (re-injected automatically by the session-start hook):
+**What survives compaction** (re-injected automatically by the session-start hook, each file while the hook's output stays under Claude Code's 10,000-character limit for hook output; a file that does not fit is named in a `<not-injected>` line and must be read with the Read tool):
 
 | Survives | Lost |
 |---|---|
@@ -85,7 +85,7 @@ Do not wait for context to auto-compress mid-task. Break proactively at logical 
 | `state.md` (if written before compacting) | Multi-step conversation context |
 | Git state, files on disk | Variable names, paths, facts not saved to `state.md` |
 
-**Why this matters:** Auto-compaction at 95% context fill destroys the most recent content — exactly the variable names, discovered paths, and evidence gathered just before implementation. A proactive break at 50% preserves all of it. And because project-map.md and session-log entries survive automatically, you only need to save task-specific working state to `state.md` — not the entire project context.
+**Why this matters:** Auto-compaction at 95% context fill destroys the most recent content — exactly the variable names, discovered paths, and evidence gathered just before implementation. A proactive break at 50% preserves all of it. And because project-map.md and session-log entries are re-injected automatically when they fit, you only need to save task-specific working state to `state.md` — not the entire project context.
 
 ## Context Rules
 

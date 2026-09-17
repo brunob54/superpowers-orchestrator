@@ -93,7 +93,7 @@ flowchart TD
 
     subgraph SS["SessionStart — runs before your first message"]
         CE["context-engine.js<br/>git diff → changed files + blast radius +<br/>recent commits → context-snapshot.json<br/>(silent no-op if not a git repo)"]
-        SST["session-start<br/>injects using-superpowers routing +<br/>project-map.md content; checks for updates"]
+        SST["session-start<br/>injects the first part of using-superpowers +<br/>workspace files while they fit 10,000 characters;<br/>checks for updates"]
     end
 
     SS --> PROMPT([You send a prompt])
@@ -277,7 +277,7 @@ Key facts: hooks.json requires \" not ' around ${CLAUDE_PLUGIN_ROOT} — single 
 Open: Monitor whether [saved] entries get used in practice; if not, consider folding key facts into project-map.md Critical Constraints instead
 ```
 
-Write an entry by invoking `context-management`. Only the most recent entries are injected at session start — older entries are lookup-only, surfaced via keyword grep when a task touches the same area. **Entry size directly affects your per-session token cost** — the stop-hook monitors this and warns when entries exceed budget. Keep entries under 115 words.
+Write an entry by invoking `context-management`. Only the most recent entries are injected at session start, and only while they fit the session-start hook's 10,000-character output budget — older entries are lookup-only, surfaced via keyword grep when a task touches the same area. **Entry size directly affects your per-session token cost** — the stop-hook monitors this and warns when entries exceed budget. Keep entries under 115 words.
 
 ### known-issues.md — Error memory
 
@@ -394,7 +394,7 @@ The remaining three are read by hook code directly and never reach a skill.
 This is the full cross-platform hook inventory for the plugin. Claude Code gets the full set. Codex ships adapters for the smaller `SessionStart` / `UserPromptSubmit` / `PreToolUse(Bash)` / `PostToolUse(Bash)` / `Stop` subset in `hooks/codex/*`, subject to Codex platform limits. These have not been confirmed live.
 
 - **context-engine** (SessionStart) — Runs git commands on every session start and writes `context-snapshot.json`: changed files, blast radius (which other files reference each changed file, filtered to actual import/require references), recent commits, and change stats. Uses per-project watermarks (md5 of cwd) so multiple projects don't interfere, and cross-session diff base so "what changed" reflects changes since your last session, not just the last commit. Zero dependencies. Silent no-op on non-git projects
-- **session-start** (SessionStart) — Injects the first part of the using-superpowers skill into every session (the part above the marker line in its SKILL.md; the Skill tool loads the rest); injects the workspace files in priority order (state.md, the project-map staleness note, session-log.md, known-issues.md, context-snapshot.json, project-map.md — full content ≤200 lines, Critical Constraints + Hot Files only above that), each whole while the output stays under 10,000 characters, and names the ones left out in one `<not-injected>` line. Claude Code keeps a hook's output in context only up to 10,000 characters; above that it stores the text in a file and keeps a 2,000-character preview, so this budget is what makes the injection reach the model. Also checks for an available plugin update
+- **session-start** (SessionStart) — Injects the first part of the using-superpowers skill into every session (the part above the marker line in its SKILL.md; the Skill tool loads the rest); injects the workspace files in priority order (state.md, the project-map staleness note, session-log.md, known-issues.md, context-snapshot.json, project-map.md — full content ≤200 lines, Critical Constraints + Hot Files only above that), each whole while the output stays under 10,000 characters, and names the ones left out in one `<not-injected>` line. Claude Code keeps a hook's output in context only up to 10,000 characters; above that it stores the text in a file and keeps a 2,000-character preview. The budget keeps the whole injection in context. Also checks for an available plugin update
 - **skill-activator** (UserPromptSubmit) — Context pressure gate: blocks plan-execution triggers when context ≥60% of the model window (fires compact-first instruction instead of skill hints; threshold overridable via `SUPERPOWERS_PRESSURE_THRESHOLD`). Window size comes from the opt-in statusline bridge (`hooks/statusline-context-cache.js`, true 200K/1M size, installed to a stable path by `tools/install-statusline-bridge.sh`) when configured, else from session-JSONL parsing against a 200K default. Also: micro-task detection + confidence-threshold skill matching + weighted memory recall from session-log.md and known-issues.md (70% keyword density + 30% recency scoring)
 - **track-edits** (PostToolUse: Edit/Write) — Logs file changes for TDD reminders; auto-adds AI workspace artifacts (`project-map.md`, `session-log.md`, `state.md`) to `.gitignore` on first write
 - **track-session-stats** (PostToolUse: Skill) — Tracks skill invocations for progress visibility

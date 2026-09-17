@@ -120,9 +120,10 @@ cannot answer a permission prompt). Keep the session id:
 Known limits of a headless run. The `fork` agent type (a subagent that
 inherits the whole conversation) does not exist there: the first fork round
 fails at once and the skill retries with `general-purpose`. The plugin's
-session-start hook re-runs after every compaction, and its output is too
-large to stay in context: Claude Code writes it to a file and keeps only a
-2,000-character preview.
+session-start hook re-runs after every compaction; before v7.31.0 its output
+was too large to stay in context (Claude Code wrote it to a file and kept
+only a 2,000-character preview), and since v7.31.0 the hook keeps its output
+under 10,000 characters.
 
 ## Manual procedure
 

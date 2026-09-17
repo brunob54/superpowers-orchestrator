@@ -58,11 +58,11 @@ Technical execution includes code edits, debugging, planning, review, test statu
    - The user's request contains creation/build intent: any of "build", "create", "make", "implement", "scaffold", "set up", "write", "generate", "develop", "start"
    - Run a filesystem check: `ls project-map.md 2>/dev/null` — gate only fires if the file does **not** exist
 
-   If both are true, load this skill with the `Skill` tool (`superpowers-orchestrator:using-superpowers`) and follow its section **Fresh project gate** before continuing: it holds the exact message to show the user and the steps for each answer. When the gate does not fire, apply **step 2b** from the same section (a one-time note when a non-trivial task runs in a project of 10+ files that has no `project-map.md`).
+   If both are true, follow the section **Fresh project gate** of this skill before continuing (load the whole skill with the `Skill` tool if only its first part is in context): it holds the exact message to show the user and the steps for each answer. When the gate does not fire, apply **step 2b** from the same section (a one-time note when a non-trivial task runs in a project of 10+ files that has no `project-map.md`).
 3. Classify the task as **micro**, **lightweight**, or **full** (see Complexity Classification below).
 4. If resuming work from a prior session, read `state.md` if it exists. Before ending any session where significant decisions were made (design choices, rejected approaches, non-obvious constraints discovered), invoke `context-management` to write a `[saved]` entry — even if the work is complete. This is the only mechanism that preserves the "why" across sessions.
 5. If `known-issues.md` exists at the project root, read it to avoid rediscovering known error→solution mappings.
-6. If `project-map.md` exists at the project root, read it to orient to the project structure without re-globbing or re-reading known files. The map tells you what exists and where — when you need a file's actual content (for modification, comparison, or debugging), read it directly with the Read tool. Staleness is detected automatically by the session-start hook: if the map is stale, a `<project-map-stale>` tag is injected into session context with the mismatched hashes. When you see that tag, load this skill with the `Skill` tool and follow its section **Project map staleness update**.
+6. If `project-map.md` exists at the project root, read it to orient to the project structure without re-globbing or re-reading known files. The map tells you what exists and where — when you need a file's actual content (for modification, comparison, or debugging), read it directly with the Read tool. Staleness is detected automatically by the session-start hook: if the map is stale, a `<project-map-stale>` tag is injected into session context with the mismatched hashes. When you see that tag, follow the section **Project map staleness update** of this skill (load the whole skill with the `Skill` tool if only its first part is in context).
 7. Follow the path for the classified complexity level.
 
 ## Complexity Classification
@@ -100,9 +100,9 @@ All of these must be true:
 ### Full (complete pipeline)
 Anything that doesn't qualify as micro or lightweight.
 
-**Action:** Follow the Routing Guide for the full skill pipeline. The guide is in the second part of this skill: when only the first part is in context (the session-start injection), load the whole skill with the `Skill` tool first.
+**Action:** Follow the Routing Guide for the full skill pipeline. The guide is in the second part of this skill; if only the first part is in context (this skill arrived through the session-start hook), load the whole skill with the `Skill` tool first.
 
-<!-- session-start-injection-ends. hooks/session-start injects only the text above this line into every session, so that its whole output stays under Claude Code's 10,000-character limit for hook output (above the limit the text goes to a file and only a 2,000-character preview stays in context). The Skill tool loads the whole file. Keep the text above this line at or under 6,400 characters: tests/codex/test-session-start-budget.sh pins it. -->
+<!-- session-start-injection-ends. On Claude Code, hooks/session-start injects only the text above this line into every session. This keeps the hook's whole output under Claude Code's 10,000-character limit for hook output; above that limit Claude Code writes the text to a file and keeps only a 2,000-character preview in context. The Skill tool loads the whole file, and the Codex adapter embeds the whole file. Keep the text above this line at or under 6,400 characters: tests/codex/test-session-start-budget.sh asserts it. -->
 
 ## Fresh project gate (Entry Sequence step 2, full text)
 

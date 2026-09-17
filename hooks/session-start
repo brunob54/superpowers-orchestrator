@@ -7,9 +7,9 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PLUGIN_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 # A real newline byte for building multi-line text. A bash double-quoted "\n"
-# is the two characters backslash and n, which escape_for_json (below) then
-# doubles, so the model would receive the two characters instead of a line
-# break. Every section built in this file uses ${nl}.
+# is the two characters backslash and n; the JSON escaping at the end of this
+# file would keep them as two characters, so the model would receive them
+# instead of a line break. Every section built in this file uses ${nl}.
 nl=$'\n'
 # Longest release summary injected by the update notice, in characters.
 WHATS_NEW_MAX=1200
@@ -141,8 +141,8 @@ check_for_updates() {
                 # heading to the end of its "**Effect.**" paragraph (every entry from
                 # v6.7.0 on carries one), stopping at "## v{old_version}" in any case.
                 # The summary is near 100 words, so the notice stays small enough for
-                # the character budget at the end of this file; the cap below guards
-                # an entry without a summary.
+                # the character budget at the end of this file; the cap below limits
+                # the notice when an entry has no summary.
                 whats_new=$(awk -v new="## v${new_version}" -v old="## v${old_version}" '
                     $0 ~ new { found=1; next }
                     found && $0 ~ old { exit }
@@ -461,11 +461,11 @@ fi
 # the parameters. The character budget below always reserves room for it.
 #
 # IMPORTANT: printf puts REAL newline bytes in the variable. A bash
-# double-quoted "\n" is the two characters backslash and n, and
-# escape_for_json below doubles the backslash first, so the model would
-# receive one physical line instead of a block. Command substitution strips
-# trailing newlines only, and this string ends with the closing delimiter, so
-# the two leading newlines survive unchanged.
+# double-quoted "\n" is the two characters backslash and n, which the JSON
+# escaping at the end of this file keeps as two characters, so the model
+# would receive one physical line instead of a block. Command substitution
+# strips trailing newlines only, and this string ends with the closing
+# delimiter, so the two leading newlines survive unchanged.
 reviewers_per_lens=1
 case "${SUPERPOWERS_REVIEWERS_PER_LENS:-}" in
   1|2|3|4|5) reviewers_per_lens="${SUPERPOWERS_REVIEWERS_PER_LENS}" ;;
@@ -482,8 +482,8 @@ defaults_content=$(printf '\n\n<superpowers-defaults>\nreviewers-per-lens=%s\nre
   "$reviewers_per_lens" "$review_rounds" "$batch_task_cap")
 
 # ── Load the first part of the using-superpowers skill ────────────────────────
-# Only the text above the marker line is injected. The whole skill is 12,000
-# characters and would by itself push this output over the limit described
+# Only the text above the marker line is injected. The whole skill is about
+# 13,000 characters and would alone make this output exceed the limit described
 # under "Assembly" below; the model loads the whole file with the Skill tool
 # when it needs the second part. tests/codex/test-session-start-budget.sh
 # pins the size of the injected part.
@@ -496,17 +496,6 @@ index($0, marker) { exit }
 { print }
 ' "${PLUGIN_ROOT}/skills/using-superpowers/SKILL.md" 2>/dev/null || echo "Error reading using-superpowers skill")
 
-# ── JSON escaping ──────────────────────────────────────────────────────────────
-escape_for_json() {
-    local s="$1"
-    s="${s//\\/\\\\}"
-    s="${s//\"/\\\"}"
-    s="${s//$'\n'/\\n}"
-    s="${s//$'\r'/\\r}"
-    s="${s//$'\t'/\\t}"
-    printf '%s' "$s"
-}
-
 # ── Assembly under the character budget ───────────────────────────────────────
 # Claude Code keeps a hook's additionalContext in the model's context only up
 # to 10,000 characters. From 10,001 it writes the text to a file and keeps a
@@ -515,54 +504,44 @@ escape_for_json() {
 # happens after every compaction, because this hook also runs on the
 # "compact" event.
 #
-# The fixed part (header, injected skill part, notices, closing tag) and the
-# defaults block always go in. The workspace sections are added in priority
-# order, each whole when it fits the remaining budget; the ones left out are
-# named in one <not-injected> line so the model can read the file itself.
-#
-# BUDGET is 200 below the limit: ${#var} counts characters under a UTF-8
-# locale and bytes under the C locale, while Claude Code counts UTF-16 code
-# units. Bytes are never fewer than code units; characters can be fewer only
-# for symbols outside the Basic Multilingual Plane (one character, two code
-# units), and the margin absorbs those.
-BUDGET=9800
-POINTER_RESERVE=350
+# hooks/session-start-assemble.js does the assembly: it measures every part in
+# the unit Claude Code counts (bash's ${#var} counts bytes or code points
+# depending on the locale), adds the workspace sections in the priority order
+# below while they fit, names the ones left out in one <not-injected> line,
+# keeps the defaults block last, and escapes the whole text once with
+# JSON.stringify, which also covers control characters. The parts travel
+# through files in a temporary directory: an environment variable has a size
+# limit on Linux, and /dev/stdin is not available on Windows Git Bash.
 header=$(printf '%s\n' \
   '<EXTREMELY_IMPORTANT>' \
   'You have superpowers-orchestrator.' \
   '' \
-  '**The first part of the `superpowers-orchestrator:using-superpowers` skill is loaded below. Its second part (fresh project gate, project map staleness update, EnterPlanMode intercept, Routing Guide) and every other skill load with the `Skill` tool.**' \
+  '**The first part of the `superpowers-orchestrator:using-superpowers` skill is loaded below. Its second part (fresh project gate, project map staleness update, EnterPlanMode intercept, Routing Guide and the closing sections) and every other skill load with the `Skill` tool.**' \
   '' \
   '**MANDATORY FIRST ACTIONS — before ANY tool calls beyond reading files:**' \
   '1. Silently activate token-efficiency (its rules apply immediately)' \
   '2. Classify the task complexity (micro/lightweight/full) per the Entry Sequence below' \
   '3. If the user names a specific skill (e.g. use brainstorming, use context management), that IS a Skill tool invocation — call `Skill` with that skill name. Do NOT re-implement the skill'"'"'s purpose with ad-hoc agents or manual steps.')
-head_part="${header}${nl}${nl}${using_superpowers_content}${warning_message}${update_notice}${git_notice}${nl}</EXTREMELY_IMPORTANT>"
-remaining=$(( BUDGET - ${#head_part} - ${#defaults_content} - POINTER_RESERVE ))
-workspace_part=""
-not_injected=""
-# add_section <file name> <content>: appends the section when it fits the
-# remaining budget, otherwise records its name and size for the pointer line.
-add_section() {
-    local name="$1" content="$2"
-    [ -n "$content" ] || return 0
-    if [ "${#content}" -le "$remaining" ]; then
-        workspace_part="${workspace_part}${content}"
-        remaining=$(( remaining - ${#content} ))
-    else
-        not_injected="${not_injected}${not_injected:+, }${name} (${#content} characters)"
-    fi
+parts_dir=$(mktemp -d)
+trap 'rm -rf "$parts_dir"' EXIT
+printf '%s' "$header" > "${parts_dir}/header"
+printf '%s' "$using_superpowers_content" > "${parts_dir}/skill"
+printf '%s' "${warning_message}${update_notice}${git_notice}" > "${parts_dir}/notices"
+printf '%s' "$defaults_content" > "${parts_dir}/defaults"
+section_count=0
+# write_section <name> <content>: the next workspace section in priority order.
+write_section() {
+    section_count=$(( section_count + 1 ))
+    printf '%s' "$1" > "${parts_dir}/name${section_count}"
+    printf '%s' "$2" > "${parts_dir}/text${section_count}"
 }
-add_section "state.md" "$state_content"
-add_section "project-map.md staleness note" "$project_map_stale_content"
-add_section "session-log.md" "$session_log_content"
-add_section "known-issues.md" "$known_issues_content"
-add_section "context-snapshot.json" "$context_snapshot_content"
-add_section "project-map.md" "$project_map_content"
-if [ -n "$not_injected" ]; then
-    workspace_part="${workspace_part}${nl}${nl}<not-injected>Not injected, to keep this hook output under 10,000 characters: ${not_injected}. Read a file with the Read tool when the task needs it.</not-injected>"
-fi
-session_context=$(escape_for_json "${head_part}${workspace_part}${defaults_content}")
+write_section "state.md" "$state_content"
+write_section "project-map-stale note" "$project_map_stale_content"
+write_section "session-log.md" "$session_log_content"
+write_section "known-issues.md" "$known_issues_content"
+write_section "context-snapshot.json" "$context_snapshot_content"
+write_section "project-map.md" "$project_map_content"
+session_context=$(node "${SCRIPT_DIR}/session-start-assemble.js" "$parts_dir")
 
 # ── Output ─────────────────────────────────────────────────────────────────────
 # Uses printf instead of heredoc (cat <<EOF) to work around a bash 5.3+
