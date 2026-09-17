@@ -8,6 +8,99 @@
 > (`REPOZY/superpowers-optimized`) and are kept unchanged as history; any
 > testing they describe was not done here.
 
+## v7.31.0 — the session-start hook keeps its output under 10,000 characters
+
+**Problem.** Claude Code keeps a hook's output in context only up to 10,000
+characters; above that only a 2,000-character preview stays. The session-start
+hook printed 12,926 characters on an empty directory and 40,424 on this
+repository, so the Entry Sequence, the workspace files and the
+`<superpowers-defaults>` block never reached the model.
+
+**Change.** The hook injects only the first part of the using-superpowers
+skill, adds the workspace files in priority order while they fit, and names the
+rest in one `<not-injected>` line; a Node script measures and escapes the text.
+
+**Effect.** The whole injection reaches the model: 7,652 characters on an empty
+directory, 9,613 on this repository. The three `SUPERPOWERS_*` variables now
+take effect. Reinstall the plugin; nothing else to migrate.
+
+The session-start hook is the script Claude Code runs when a session starts,
+after `/clear` and after every compaction (the moment Claude Code replaces the
+earlier conversation with a summary). Its output was measured on 2026-09-17
+(worklist row 37, opened by the compaction probe of v7.30.0). The limit was
+measured with a probe hook: the text stays in context in full up to exactly
+10,000 characters and goes to a file from 10,001, with the first 2,000
+characters as a preview. The old output crossed the limit on every repository,
+because the whole 11,776-character skill body plus the header was 12,447
+characters before any workspace file. The preview ended inside the skill's
+third section. Six skills tell the model to read the last
+`<superpowers-defaults>` block of this injection; that block was the last
+section of the output, so the three environment variables it carries never
+reached a Claude Code session, and the skills fell back to the built-in
+defaults.
+
+What the hook does now:
+
+- **Skill part.** `skills/using-superpowers/SKILL.md` is reordered so that the
+  trigger conditions, the named-skill rule, the Entry Sequence and the
+  complexity rules come first, above a marker comment
+  (`session-start-injection-ends`); the hook injects only that part (6,352
+  characters, at most 6,400 by a test). The fresh project gate text, the
+  staleness update steps, the EnterPlanMode intercept, the Routing Guide and
+  the closing sections sit below the marker, and Entry Sequence steps 2 and 6
+  and the Full action say: load the whole skill with the Skill tool if only
+  its first part is in context. A full task therefore costs one Skill tool
+  call for the Routing Guide; before, the guide was never in context at all.
+- **Workspace files.** state.md, the project-map staleness note,
+  session-log.md (last two saved entries), known-issues.md (last five open
+  entries), context-snapshot.json and project-map.md are added in that order,
+  each whole when it fits the remaining budget. The ones left out are named
+  with their sizes in one `<not-injected>` line, and the model reads them with
+  the Read tool when the task needs them. On this repository state.md and the
+  staleness note go in; the other four are named.
+- **Defaults block.** Always last, room always reserved.
+- **Update notice.** Carries the release's three-line summary instead of 30
+  lines of release notes, capped at 1,200 characters.
+- **Assembly in Node.** `hooks/session-start-assemble.js` measures every part
+  as the larger of its UTF-16 length and its UTF-8 byte length, escapes the
+  whole text once with `JSON.stringify`, charges the room for the pointer
+  line only when a section is left out, and cuts the skill part at 6,400
+  characters when the marker is missing. The parts travel through files in a
+  temporary directory.
+
+Two older defects went with the change. Every workspace wrapper was built
+with a bash `"\n"`, which reached the model as the two characters backslash
+and n instead of a line break (24 occurrences on this repository). Any control
+character other than tab, newline and carriage return in a workspace file
+made the whole hook output invalid JSON.
+
+Review, four independent lenses plus a verification round: the adversarial
+lens found that bash counted 2,150 emoji as 2,150 characters where Claude Code
+counts 4,300 (an 11,573-character output under a UTF-8 locale), which moved
+the measuring into Node; the test lens found that the oversized fixture never
+exercised the priority order (13 mutants, 7 survived) and added the cases that
+kill them (12 of 13 killed; the survivor is the slack constant, which is not
+an observable behaviour); the figures lens corrected a mixed baseline and the
+count of skills that read the block; the wording lens found two documents that
+stated the old behaviour as current fact (the token-efficiency skill's
+compaction table and the compaction probe checklist).
+
+Tests: `tests/codex/test-session-start-budget.sh` (91 checks, registered in
+`tests/codex/run-unit-tests.sh`) runs the real hook on an empty directory, on
+a directory where every file fits, on a priority-order fixture, on oversized
+files, on 2,150 emoji under two locales and on control characters; it failed
+on the old hook in 18 of 34 checks. The 133 checks of the defaults-block suite
+still pass. The Codex adapter (`hooks/codex/session-start-adapter.js`) is a
+separate implementation, embeds the whole skill and is unchanged; the marker
+comment says so.
+
+Behavioural check before the release: `tests/skill-triggering/run-all.sh`
+(nine naive prompts, one per skill, each run with `claude -p` and the plugin
+loaded from the checkout through `--plugin-dir`) on 2026-09-17: 9 of 9 skills
+routed, each session's transcript between 58 and 243 KB, so every session
+really ran. This is the first release whose router change was checked by that
+suite before the merge.
+
 ## v7.30.0 — the compaction probe runs headlessly; the guard names summary claims
 
 **Problem.** The compaction recovery guard of v7.19.0 was never tested: its

@@ -6,6 +6,13 @@ set -euo pipefail
 # Determine plugin root directory
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PLUGIN_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+# A real newline byte for building multi-line text. A bash double-quoted "\n"
+# is the two characters backslash and n; the JSON escaping at the end of this
+# file would keep them as two characters, so the model would receive them
+# instead of a line break. Every section built in this file uses ${nl}.
+nl=$'\n'
+# Longest release summary injected by the update notice, in characters.
+WHATS_NEW_MAX=1200
 
 # ── Update check ──────────────────────────────────────────────────────────────
 # Two paths depending on install type:
@@ -130,26 +137,28 @@ check_for_updates() {
         if [ -n "$old_version" ] && [ -n "$new_version" ] && [ "$old_version" != "$new_version" ]; then
             local whats_new=""
             if [ -f "${PLUGIN_ROOT}/RELEASE-NOTES.md" ]; then
-                # Extract content between ## v{new_version} and ## v{old_version} (or EOF)
+                # Extract the release's three-line summary: from the "## v{new_version}"
+                # heading to the end of its "**Effect.**" paragraph (every entry from
+                # v6.7.0 on carries one), stopping at "## v{old_version}" in any case.
+                # The summary is near 100 words, so the notice stays small enough for
+                # the character budget at the end of this file; the cap below limits
+                # the notice when an entry has no summary.
                 whats_new=$(awk -v new="## v${new_version}" -v old="## v${old_version}" '
                     $0 ~ new { found=1; next }
                     found && $0 ~ old { exit }
+                    found && /^\*\*Effect\.\*\*/ { in_effect=1 }
+                    found && in_effect && /^$/ { exit }
                     found { print }
                 ' "${PLUGIN_ROOT}/RELEASE-NOTES.md" 2>/dev/null || echo "")
-
-                # Trim to 30 lines if longer
-                local line_count
-                line_count=$(printf '%s' "$whats_new" | wc -l)
-                if [ "$line_count" -gt 30 ]; then
-                    whats_new=$(printf '%s' "$whats_new" | head -30)
-                    whats_new="${whats_new}
+                if [ "${#whats_new}" -gt "$WHATS_NEW_MAX" ]; then
+                    whats_new="${whats_new:0:$WHATS_NEW_MAX}
 ...
 
 See RELEASE-NOTES.md for full details."
                 fi
             fi
 
-            update_notice="\n\n<important-reminder>IN YOUR FIRST REPLY AFTER SEEING THIS MESSAGE YOU MUST TELL THE USER:
+            update_notice="${nl}${nl}<important-reminder>IN YOUR FIRST REPLY AFTER SEEING THIS MESSAGE YOU MUST TELL THE USER:
 
 **Superpowers Orchestrator has been updated to v${new_version}** (was v${old_version})
 
@@ -215,7 +224,7 @@ ${whats_new}</important-reminder>"
             local l="${local_parts[$i]:-0}"
             local r="${remote_parts[$i]:-0}"
             if [ "$r" -gt "$l" ]; then
-                update_notice="\n\n<important-reminder>IN YOUR FIRST REPLY AFTER SEEING THIS MESSAGE YOU MUST TELL THE USER: 🔄 **Superpowers Orchestrator v${remote_version} is available** (you have v${local_version}). Run \`/plugin update superpowers-orchestrator\` which opens the plugin manager UI. From there:
+                update_notice="${nl}${nl}<important-reminder>IN YOUR FIRST REPLY AFTER SEEING THIS MESSAGE YOU MUST TELL THE USER: 🔄 **Superpowers Orchestrator v${remote_version} is available** (you have v${local_version}). Run \`/plugin update superpowers-orchestrator\` which opens the plugin manager UI. From there:
 
 Marketplaces tab → select brunob54/superpowers-orchestrator → Update marketplace (refreshes the version catalog)
 Installed tab → select superpowers-orchestrator → Update now
@@ -238,27 +247,30 @@ check_for_updates 2>/dev/null || true
 # announcing it verbally on every session start (no <important-reminder> tag).
 git_notice=""
 if ! git rev-parse --git-dir > /dev/null 2>&1; then
-    git_notice="\n\n<project-git-status>No git repository detected in the current working directory. When the user generates or updates project-map.md, offer to run 'git init' (creates a .git folder, touches no user files). If they decline, use file timestamps for staleness detection instead. Do not announce this proactively — only act on it when project-map.md is relevant.</project-git-status>"
+    git_notice="${nl}${nl}<project-git-status>No git repository detected in the current working directory. When the user generates or updates project-map.md, offer to run 'git init' (creates a .git folder, touches no user files). If they decline, use file timestamps for staleness detection instead. Do not announce this proactively — only act on it when project-map.md is relevant.</project-git-status>"
 fi
 
 # ── Legacy skills warning ──────────────────────────────────────────────────────
 warning_message=""
 legacy_skills_dir="${HOME}/.config/superpowers/skills"
 if [ -d "$legacy_skills_dir" ]; then
-    warning_message="\n\n<important-reminder>IN YOUR FIRST REPLY AFTER SEEING THIS MESSAGE YOU MUST TELL THE USER:⚠️ **WARNING:** Superpowers now uses Claude Code's skills system. Custom skills in ~/.config/superpowers/skills will not be read. Move custom skills to ~/.claude/skills instead. To make this message go away, remove ~/.config/superpowers/skills</important-reminder>"
+    warning_message="${nl}${nl}<important-reminder>IN YOUR FIRST REPLY AFTER SEEING THIS MESSAGE YOU MUST TELL THE USER:⚠️ **WARNING:** Superpowers now uses Claude Code's skills system. Custom skills in ~/.config/superpowers/skills will not be read. Move custom skills to ~/.claude/skills instead. To make this message go away, remove ~/.config/superpowers/skills</important-reminder>"
 fi
 
 # ── Project map injection ─────────────────────────────────────────────────────
-# If project-map.md exists in the current working directory, inject its content
-# directly into session context so Claude has it from turn 1 — unconditionally,
-# without relying on Claude following the entry sequence instruction to read it.
-# ≤200 lines: inject full content. >200 lines: inject Critical Constraints and
-# Hot Files only (highest-value sections), with a note pointing to the full file.
+# If project-map.md exists in the current working directory, prepare its content
+# for injection so Claude has it from turn 1 — without relying on Claude
+# following the entry sequence instruction to read it. Whether it is injected
+# is decided by the character budget below (it is the last section in
+# priority order, so it is the first one left out).
+# ≤200 lines: full content. >200 lines: Critical Constraints and Hot Files only
+# (highest-value sections), with a note pointing to the full file.
 #
 # Staleness check: extracts the git hash from the map header and compares it to
-# the current HEAD. If they differ, injects a <project-map-stale> warning so the
-# AI sees it immediately — no AI compliance with entry sequence step 6 required.
+# the current HEAD. If they differ, a <project-map-stale> warning is prepared
+# as its own section, so it can be injected even when the map itself is not.
 project_map_content=""
+project_map_stale_content=""
 if [ -f "project-map.md" ]; then
     line_count=$(wc -l < "project-map.md" 2>/dev/null || echo "0")
     if [ "$line_count" -le 200 ]; then
@@ -275,14 +287,14 @@ ${project_map_raw}"
         fi
     fi
     if [ -n "$project_map_raw" ]; then
-        project_map_content="\n\n<project-map>\n${project_map_raw}\n</project-map>"
+        project_map_content="${nl}${nl}<project-map>${nl}${project_map_raw}${nl}</project-map>"
     fi
 
     # Staleness check — compare map header hash to current git HEAD
     map_hash=$(grep -oE 'Git: [a-f0-9]+' "project-map.md" 2>/dev/null | head -1 | awk '{print $2}' || echo "")
     current_hash=$(git rev-parse --short HEAD 2>/dev/null || echo "")
     if [ -n "$map_hash" ] && [ -n "$current_hash" ] && [ "$map_hash" != "$current_hash" ]; then
-        project_map_content="${project_map_content}\n\n<project-map-stale>project-map.md is stale — map records Git: ${map_hash} but current HEAD is ${current_hash}. Run the staleness update (using-superpowers entry sequence step 6) before making any recommendations about project structure or file locations.</project-map-stale>"
+        project_map_stale_content="${nl}${nl}<project-map-stale>project-map.md is stale — map records Git: ${map_hash} but current HEAD is ${current_hash}. Run the staleness update (using-superpowers entry sequence step 6) before making any recommendations about project structure or file locations.</project-map-stale>"
     fi
 fi
 
@@ -302,7 +314,7 @@ if [ -f "session-log.md" ]; then
               for (i = start; i <= n; i++) print saved_entries[i] }
     ' "session-log.md" 2>/dev/null || echo "")
     if [ -n "$saved_raw" ]; then
-        session_log_content="\n\n<session-log>\n*(Last saved decisions from session-log.md — full history searchable at session-log.md)*\n${saved_raw}\n</session-log>"
+        session_log_content="${nl}${nl}<session-log>${nl}*(Last saved decisions from session-log.md — full history searchable at session-log.md)*${nl}${saved_raw}${nl}</session-log>"
     fi
 fi
 
@@ -331,13 +343,13 @@ if [ -f "state.md" ]; then
 
         if echo "$goal_line" | grep -qi "no active task"; then
             # Explicitly cleared — inject with soft framing so AI doesn't "resume"
-            state_content="\n\n<state>\n*(state.md exists but indicates no active task — review before treating as a resume point)*\n${state_raw}\n</state>"
+            state_content="${nl}${nl}<state>${nl}*(state.md exists but indicates no active task — review before treating as a resume point)*${nl}${state_raw}${nl}</state>"
         elif [ "$state_age_days" -ge 7 ] && [ "$last_commit_time" -gt "$state_mtime" ]; then
             # Stale: old + commits have landed since it was written
-            state_content="\n\n<state>\n**state.md may be stale** (written ${state_age_days} days ago; newer commits exist). Confirm the task is still active before resuming — do not treat this as a guaranteed resume point:\n${state_raw}\n</state>"
+            state_content="${nl}${nl}<state>${nl}**state.md may be stale** (written ${state_age_days} days ago; newer commits exist). Confirm the task is still active before resuming — do not treat this as a guaranteed resume point:${nl}${state_raw}${nl}</state>"
         else
             # Active: recent or no newer commits — normal injection
-            state_content="\n\n<state>\n**ACTIVE TASK STATE — resume from here, do not start fresh:**\n${state_raw}\n</state>"
+            state_content="${nl}${nl}<state>${nl}**ACTIVE TASK STATE — resume from here, do not start fresh:**${nl}${state_raw}${nl}</state>"
         fi
     fi
 fi
@@ -375,7 +387,7 @@ if [ -f "known-issues.md" ]; then
         } catch(e) {}
     " 2>/dev/null || echo "")
     if [ -n "$known_raw" ]; then
-        known_issues_content="\n\n<known-issues>\n${known_raw}\n</known-issues>"
+        known_issues_content="${nl}${nl}<known-issues>${nl}${known_raw}${nl}</known-issues>"
     fi
 fi
 
@@ -413,7 +425,7 @@ if [ -f "context-snapshot.json" ]; then
         } catch(e) {}
     " 2>/dev/null || echo "")
     if [ -n "$changed" ]; then
-        context_snapshot_content="\n\n<context-snapshot>\n${changed}\n</context-snapshot>"
+        context_snapshot_content="${nl}${nl}<context-snapshot>${nl}${changed}${nl}</context-snapshot>"
     fi
 fi
 
@@ -446,14 +458,14 @@ fi
 # injection, so the block emitted here always wins. Emitting nothing on the
 # fallback path would leave a block planted in any one of those repository
 # files as the only block in the context, letting repository content choose
-# the parameters.
+# the parameters. The character budget below always reserves room for it.
 #
 # IMPORTANT: printf puts REAL newline bytes in the variable. A bash
-# double-quoted "\n" is the two characters backslash and n, and
-# escape_for_json below doubles the backslash first, so the model would
-# receive one physical line instead of a block. Command substitution strips
-# trailing newlines only, and this string ends with the closing delimiter, so
-# the two leading newlines survive unchanged.
+# double-quoted "\n" is the two characters backslash and n, which the JSON
+# escaping at the end of this file keeps as two characters, so the model
+# would receive one physical line instead of a block. Command substitution
+# strips trailing newlines only, and this string ends with the closing
+# delimiter, so the two leading newlines survive unchanged.
 reviewers_per_lens=1
 case "${SUPERPOWERS_REVIEWERS_PER_LENS:-}" in
   1|2|3|4|5) reviewers_per_lens="${SUPERPOWERS_REVIEWERS_PER_LENS}" ;;
@@ -469,36 +481,67 @@ esac
 defaults_content=$(printf '\n\n<superpowers-defaults>\nreviewers-per-lens=%s\nreview-rounds=%s\nbatch-task-cap=%s\n</superpowers-defaults>' \
   "$reviewers_per_lens" "$review_rounds" "$batch_task_cap")
 
-# ── Load using-superpowers skill body ─────────────────────────────────────────
-using_superpowers_content=$(awk '
+# ── Load the first part of the using-superpowers skill ────────────────────────
+# Only the text above the marker line is injected. The whole skill is about
+# 13,000 characters and would alone make this output exceed the limit described
+# under "Assembly" below; the model loads the whole file with the Skill tool
+# when it needs the second part. tests/codex/test-session-start-budget.sh
+# pins the size of the injected part.
+INJECTION_MARKER="session-start-injection-ends"
+using_superpowers_content=$(awk -v marker="$INJECTION_MARKER" '
 NR == 1 && $0 == "---" { in_frontmatter = 1; next }
 in_frontmatter && $0 == "---" { in_frontmatter = 0; next }
-!in_frontmatter { print }
+in_frontmatter { next }
+index($0, marker) { exit }
+{ print }
 ' "${PLUGIN_ROOT}/skills/using-superpowers/SKILL.md" 2>/dev/null || echo "Error reading using-superpowers skill")
 
-# ── JSON escaping ──────────────────────────────────────────────────────────────
-escape_for_json() {
-    local s="$1"
-    s="${s//\\/\\\\}"
-    s="${s//\"/\\\"}"
-    s="${s//$'\n'/\\n}"
-    s="${s//$'\r'/\\r}"
-    s="${s//$'\t'/\\t}"
-    printf '%s' "$s"
+# ── Assembly under the character budget ───────────────────────────────────────
+# Claude Code keeps a hook's additionalContext in the model's context only up
+# to 10,000 characters. From 10,001 it writes the text to a file and keeps a
+# 2,000-character preview, so everything past the preview is never read
+# (measured 2026-09-17, docs/orchestration-issues.md row 37). The same
+# happens after every compaction, because this hook also runs on the
+# "compact" event.
+#
+# hooks/session-start-assemble.js does the assembly: it measures every part in
+# the unit Claude Code counts (bash's ${#var} counts bytes or code points
+# depending on the locale), adds the workspace sections in the priority order
+# below while they fit, names the ones left out in one <not-injected> line,
+# keeps the defaults block last, and escapes the whole text once with
+# JSON.stringify, which also covers control characters. The parts travel
+# through files in a temporary directory: an environment variable has a size
+# limit on Linux, and /dev/stdin is not available on Windows Git Bash.
+header=$(printf '%s\n' \
+  '<EXTREMELY_IMPORTANT>' \
+  'You have superpowers-orchestrator.' \
+  '' \
+  '**The first part of the `superpowers-orchestrator:using-superpowers` skill is loaded below. Its second part (fresh project gate, project map staleness update, EnterPlanMode intercept, Routing Guide and the closing sections) and every other skill load with the `Skill` tool.**' \
+  '' \
+  '**MANDATORY FIRST ACTIONS — before ANY tool calls beyond reading files:**' \
+  '1. Silently activate token-efficiency (its rules apply immediately)' \
+  '2. Classify the task complexity (micro/lightweight/full) per the Entry Sequence below' \
+  '3. If the user names a specific skill (e.g. use brainstorming, use context management), that IS a Skill tool invocation — call `Skill` with that skill name. Do NOT re-implement the skill'"'"'s purpose with ad-hoc agents or manual steps.')
+parts_dir=$(mktemp -d)
+trap 'rm -rf "$parts_dir"' EXIT
+printf '%s' "$header" > "${parts_dir}/header"
+printf '%s' "$using_superpowers_content" > "${parts_dir}/skill"
+printf '%s' "${warning_message}${update_notice}${git_notice}" > "${parts_dir}/notices"
+printf '%s' "$defaults_content" > "${parts_dir}/defaults"
+section_count=0
+# write_section <name> <content>: the next workspace section in priority order.
+write_section() {
+    section_count=$(( section_count + 1 ))
+    printf '%s' "$1" > "${parts_dir}/name${section_count}"
+    printf '%s' "$2" > "${parts_dir}/text${section_count}"
 }
-
-using_superpowers_escaped=$(escape_for_json "$using_superpowers_content")
-warning_escaped=$(escape_for_json "$warning_message")
-update_escaped=$(escape_for_json "$update_notice")
-git_escaped=$(escape_for_json "$git_notice")
-project_map_escaped=$(escape_for_json "$project_map_content")
-session_log_escaped=$(escape_for_json "$session_log_content")
-state_escaped=$(escape_for_json "$state_content")
-known_issues_escaped=$(escape_for_json "$known_issues_content")
-context_snapshot_escaped=$(escape_for_json "$context_snapshot_content")
-defaults_escaped=$(escape_for_json "$defaults_content")
-
-session_context="<EXTREMELY_IMPORTANT>\nYou have superpowers-orchestrator.\n\n**The \`superpowers-orchestrator:using-superpowers\` guidance is loaded below. For all other skills, use the \`Skill\` tool.**\n\n**MANDATORY FIRST ACTIONS — before ANY tool calls beyond reading files:**\n1. Silently activate token-efficiency (its rules apply immediately)\n2. Classify the task complexity (micro/lightweight/full) per the Entry Sequence below\n3. If the user names a specific skill (e.g. use brainstorming, use context management), that IS a Skill tool invocation — call \`Skill\` with that skill name. Do NOT re-implement the skill's purpose with ad-hoc agents or manual steps.\n\n${using_superpowers_escaped}\n\n${warning_escaped}${update_escaped}${git_escaped}\n</EXTREMELY_IMPORTANT>${project_map_escaped}${session_log_escaped}${state_escaped}${known_issues_escaped}${context_snapshot_escaped}${defaults_escaped}"
+write_section "state.md" "$state_content"
+write_section "project-map-stale note" "$project_map_stale_content"
+write_section "session-log.md" "$session_log_content"
+write_section "known-issues.md" "$known_issues_content"
+write_section "context-snapshot.json" "$context_snapshot_content"
+write_section "project-map.md" "$project_map_content"
+session_context=$(node "${SCRIPT_DIR}/session-start-assemble.js" "$parts_dir")
 
 # ── Output ─────────────────────────────────────────────────────────────────────
 # Uses printf instead of heredoc (cat <<EOF) to work around a bash 5.3+

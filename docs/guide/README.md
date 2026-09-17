@@ -58,8 +58,8 @@ refuse there (not observed, since neither has been run). See
 
 ## 2. Quick start — your first session
 
-When a session starts, the plugin loads its workflow router
-(`using-superpowers`). You don't invoke anything — you just describe what you
+When a session starts, the plugin loads the first part of its workflow router
+(`using-superpowers`; the rest loads on demand through the Skill tool). You don't invoke anything — you just describe what you
 want, and every technical request is classified into one of three tiers
 before any work begins:
 
@@ -1125,8 +1125,14 @@ a handoff's `written=` time is later than your machine's clock, new commits
 on other branches are not counted. On GitHub Copilot CLI the argument may
 not arrive (untested); write the handoff path in the same message.
 
-Recall is mostly automatic. At session start, the plugin reads `state.md`,
-`known-issues.md`, and `project-map.md` (and detects a stale map via git).
+Recall is mostly automatic. At session start, the plugin adds `state.md`, the
+last two saved `session-log.md` entries, `known-issues.md`, and
+`project-map.md` to the context, in that priority order, while its output
+stays under 10,000 characters (Claude Code keeps a hook's output in context
+only up to that size). A file that does not fit is named in one
+`<not-injected>` line, and Claude reads it with the Read tool when the task
+needs it. A stale map is detected via git, and that notice is always small
+enough to be added.
 When you submit a prompt, hooks inject any `known-issues.md` and
 `session-log.md` entries matching it — so a bug you fixed in March resurfaces
 as context the moment you hit it again in August, without you asking.
