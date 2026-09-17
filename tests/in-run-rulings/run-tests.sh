@@ -1220,17 +1220,18 @@ assert_absent_in_range_folded_nobacktick "orchestrator's binding-text definition
 # merely annotated — an annotation would leave the binding clause in force
 # and the next review would raise the same finding again.
 assert_in_range_folded "plan amendment step 1 replaces the binding clause in place" \
-  "$ORCH_SKILL" '**Edit the binding clause in place** — replace the Global Constraints entry, the Exact-content block, the contradicted `**Contract:**` text, or a pre-note plan'"'"'s mandated sentence, with the amended text' \
+  "$ORCH_SKILL" '**Edit the binding clause in place** — replace the Global Constraints entry, the Exact-content block, the contradicted `**Contract:**` text, or a mandated sentence in a plan whose header has no `**Body authority:**` note, with the amended text' \
   "$ANSWERS_LINE" "$ANSWERS_END"
 # Amendment 21 (R14): the decided-wording marker is bounded to match — it is
 # written ONLY onto a Global Constraints entry or an Exact-content block, so
-# an amended Contract (or a pre-note plan's amended mandated sentence) never
+# an amended Contract (or an amended mandated sentence in a plan with no
+# Body authority note) never
 # becomes decided wording and stays open to a later finding.
 assert_in_range_folded "amended-clause marker is bounded to Global Constraints or Exact-content only" \
   "$ORCH_SKILL" 'The `(amended by ruling <n>)` marker is then appended ONLY when the edited clause is a Global Constraints entry or an Exact-content block' \
   "$ANSWERS_LINE" "$ANSWERS_END"
 assert_in_range_folded "an amended Contract gets no marker and never becomes decided wording" \
-  "$ORCH_SKILL" 'an amended `**Contract:**`, and a pre-note plan'"'"'s amended mandated sentence, get no marker and so never become decided wording' \
+  "$ORCH_SKILL" 'an amended `**Contract:**`, and an amended mandated sentence in a plan whose header has no `**Body authority:**` note, get no marker and so never become decided wording' \
   "$ANSWERS_LINE" "$ANSWERS_END"
 # Plan amendment step 2: the audit note's placement — immediately after the
 # block that holds the edited clause — is what lets the resume path's revert
@@ -1921,12 +1922,138 @@ assert_in_range_folded "a ruling-record entry is logged when a RULING entry's It
 assert_in_range_folded "one RULING entry covers every ruling-record entry its return wrote, not only its own numbered heading" \
   "$ORCH_SKILL" "one \`## RULING\` entry covers every ruling-record entry its return wrote, not only the one whose number the \`## RULING\` heading itself carries" \
   "$RESUME_LINE" "$RULINGS_LINE"
-assert_in_range_folded "resume verifies the amendment landed before acting on an amend plan ruling" \
-  "$ORCH_SKILL" 'the clause that ruling names must carry `(amended by ruling <n>)` and its `**Amendment <n>` note must stand' \
+assert_in_range_folded "resume verifies the amendment was applied before acting on an amend plan ruling" \
+  "$ORCH_SKILL" 'check the third write. Its `**Amendment <n>` note must stand.' \
   "$RESUME_LINE" "$RULINGS_LINE"
 assert_in_range_folded "an amend plan answer is never re-sent for a plan that was never amended" \
   "$ORCH_SKILL" 'Never send `amend plan: …; fix it: …` for a plan that was never amended' \
   "$RESUME_LINE" "$RULINGS_LINE"
+
+# Issues-log row 39. The amendment procedure places the
+# `(amended by ruling <n>)` marker only on a Global Constraints entry or an
+# Exact-content block, but it always inserts the `**Amendment <n>` note. A
+# step that looks for an amendment by its marker alone therefore never
+# finds an amended `**Contract:**` or a mandated sentence in a plan with no
+# Body authority note. The three steps (the Resume check, the override
+# revert and the retry) must use the note, or the plan text before the
+# ruling, for such a clause.
+assert_in_range_folded "row 39: the Resume check names the two clause kinds that get a marker" \
+  "$ORCH_SKILL" 'marker only on two clause kinds: a Global Constraints entry or an Exact-content block' \
+  "$RESUME_LINE" "$RULINGS_LINE"
+assert_in_range_folded "row 39: the Resume check uses the standing note as the evidence for any other clause" \
+  "$ORCH_SKILL" 'For such a clause the standing `**Amendment <n>` note is the evidence, because the procedure always edits the clause before it inserts the note' \
+  "$RESUME_LINE" "$RULINGS_LINE"
+assert_absent_in_range_folded "row 39: the Resume check no longer requires the marker on every amended clause" \
+  "$ORCH_SKILL" 'the clause that ruling names must carry `(amended by ruling <n>)` and its' \
+  "$RESUME_LINE" "$RULINGS_LINE" fragment
+# Row 39, crash between the clause edit and the note: an unmarked clause is
+# compared with the plan text before the ruling, and only the note is added.
+assert_in_range_folded "row 39: the Resume check reads the change to an unmarked clause from a diff of the plan file" \
+  "$ORCH_SKILL" 'For an unmarked clause, read the change from a diff of the plan file: `git diff HEAD -- <plan path>` when the ruling commit is not made yet, or the ruling commit'"'"'s own diff, `git show <ruling commit> -- <plan path>`, once it is' \
+  "$RESUME_LINE" "$RULINGS_LINE"
+assert_in_range_folded "row 39: the Resume check treats a change to the named clause in that diff as the clause edit" \
+  "$ORCH_SKILL" 'When that diff shows a change to the clause the ruling names, the clause edit was made' \
+  "$RESUME_LINE" "$RULINGS_LINE"
+assert_absent_in_range_folded "row 39: the Resume check no longer compares with the plan before the ruling commit" \
+  "$ORCH_SKILL" 'or `git show <ruling commit>^:<plan path>` once it is' \
+  "$RESUME_LINE" "$RULINGS_LINE" fragment
+# Row 39: the "no target" exit runs before the ruling commit, so it makes
+# that commit first, without a plan edit.
+assert_in_range_folded "row 39: the no-target exit makes the ruling commit without a plan edit before it stops" \
+  "$ORCH_SKILL" 'first make the normal `chore(orchestration): <slug> ruling <n>` commit without any plan edit — it holds the `## RULING` entry and the ruling-record entries — and only then present the blocking question and stop' \
+  "$RESUME_LINE" "$RULINGS_LINE"
+assert_in_range_folded "row 39: the Resume check inserts only the missing note when the clause edit was made" \
+  "$ORCH_SKILL" 'insert only the missing note, and never edit the clause again' \
+  "$RESUME_LINE" "$RULINGS_LINE"
+assert_in_range_folded "row 39: for a marked clause the marker still decides" \
+  "$ORCH_SKILL" 'the marker decides: a standing marker shows the edit was made, so insert only the missing note' \
+  "$RESUME_LINE" "$RULINGS_LINE"
+# Row 39: a missing ruling commit is made only after the amendment is
+# complete, so that the plan edit is inside the ruling commit.
+assert_in_range_folded "row 39: the repair runs the third-write check before it makes the ruling commit" \
+  "$ORCH_SKILL" 'Before you make that commit, run the third-write check below' \
+  "$RESUME_LINE" "$RULINGS_LINE"
+assert_in_range_folded "row 39: the repaired plan edit is inside the ruling commit" \
+  "$ORCH_SKILL" 'so that the plan edit is inside the `chore(orchestration): <slug> ruling <n>` commit' \
+  "$RESUME_LINE" "$RULINGS_LINE"
+assert_in_range_folded "row 39: the override revert finds an unmarked clause in the ruling commit diff" \
+  "$ORCH_SKILL" 'find such a clause in the ruling commit'"'"'s diff of the plan file, `git show <ruling commit> -- <plan path>`' \
+  "$RESUME_LINE" "$RULINGS_LINE"
+assert_absent_in_range_folded "row 39: the override revert no longer finds the clause by its marker alone" \
+  "$ORCH_SKILL" 'find the edited clause by its `(amended by ruling <n>)` marker' \
+  "$RESUME_LINE" "$RULINGS_LINE" fragment
+assert_in_range_folded "row 39: the permitted reads include the ruling commit diff of the plan file" \
+  "$ORCH_SKILL" '`git show <ruling commit>^:<plan path>`, `git show <ruling commit> -- <plan path>`,' \
+  "$READ_EXCEPTION_LINE" "$READ_EXCEPTION_END"
+assert_in_range_folded "row 39: the permitted reads include the uncommitted diff of the plan file" \
+  "$ORCH_SKILL" '`git diff HEAD -- <plan path>`, and a scan of the whole plan' \
+  "$READ_EXCEPTION_LINE" "$READ_EXCEPTION_END"
+assert_in_range_folded "row 39: a retry finds the clause by its marker only when step 1 placed one" \
+  "$ORCH_SKILL" 'and the clause by its marker only when step 1 placed one' \
+  "$ANSWERS_LINE" "$ANSWERS_END"
+assert_in_range_folded "row 39: on a retry the standing audit note shows the amendment was applied" \
+  "$ORCH_SKILL" 'For an unmarked clause, the standing audit note alone shows that the amendment was applied' \
+  "$ANSWERS_LINE" "$ANSWERS_END"
+assert_in_range_folded "row 39: a retry reads the change to an unmarked clause from a diff of the plan file" \
+  "$ORCH_SKILL" 'For an unmarked clause, read the change from a diff of the plan file (`git diff HEAD -- <plan path>` before the ruling commit, `git show <ruling commit> -- <plan path>` after it).' \
+  "$ANSWERS_LINE" "$ANSWERS_END"
+assert_in_range_folded "row 39: a retry inserts only the missing note when the diff shows a change to the clause" \
+  "$ORCH_SKILL" 'When that diff shows a change to the clause, insert only the missing note' \
+  "$ANSWERS_LINE" "$ANSWERS_END"
+assert_absent_in_range_folded "row 39: the retry no longer finds every clause by its marker" \
+  "$ORCH_SKILL" 'and the clause by its marker, and never apply' \
+  "$ANSWERS_LINE" "$ANSWERS_END" fragment
+assert_in_range_folded "row 39: the amendment procedure does step 1 before step 2" \
+  "$ORCH_SKILL" 'do two things, in this order. Step 1 is always done before step 2, so a standing audit note shows that the clause edit was made. The two things are:' \
+  "$ANSWERS_LINE" "$ANSWERS_END"
+# Row 39: only an `amend plan` answer lets a ruling commit edit the plan.
+for phrase in '**In a ruling commit, only an `amend plan` answer edits the plan file.**' \
+              'This rule holds for the Phase 3 and the Phase 4 answers above' \
+              'only by the amendment procedure below' \
+              'In the ruling commit that records them, a `plan governs` answer, a `fix it` answer, an `accept` answer and a plain-text answer never edit the plan file' \
+              'never edit the plan file, not even its reference text' \
+              'Two kinds of plan edit are outside this rule.' \
+              'The first is the amendment revert and the checkbox untick of Resume step 3.' \
+              'The second is a fix commit that the code-review loop makes.'; do
+  assert_in_range_folded "row 39: the plan-edit rule states '$phrase'" \
+    "$ORCH_SKILL" "$phrase" "$ANSWERS_LINE" "$ANSWERS_END"
+done
+# Row 39: the probe run copied the whole disposition line into the
+# `**Item:**` field. The Phase 4 step names the record shape, and the ruling
+# record states the source of each part of the field.
+assert_in_range_folded "row 39: Phase 4 names the ruling-record shape when it records the rulings" \
+  "$ORCH_SKILL" 'record the rulings (each entry in the shape of `### The ruling record`; a Phase 4 `**Item:**` field starts `[<id> inv <i>] <severity> <file:line>`)' \
+  "$PHASE4_LINE" "$PHASE5_LINE"
+for phrase in 'Where each part of a Phase 4 `**Item:**` field comes from' \
+              'An item with no disposition line — an item of an environment stop (below) — writes `n/a n/a — <the stop'"'"'s own reason>`' \
+              '`<severity>` is `Critical` for a C id and `Important` for an I id' \
+              'Write `n/a` when the first letter of the id is neither C nor I, or when the item has no review finding behind it (a controller malformed or failed twice' \
+              '`<file:line>` is the location that follows `— at ` on the disposition line; write `n/a` when the line has none' \
+              '`<finding summary, verbatim>` is the finding summary only: the text after `user-decision — ` or after `unresolved: <reason> — `' \
+              'before the first ` — at`, without ` (plan-mandated)`' \
+              '`verification cap`, `addendum re-review`, `fix contradicts binding text` and `withheld finding, no credential at the location`' \
+              'For any other `unresolved:` line, the text after `unresolved: ` and before the first ` — at` is the `<reason>`, and the `<reason>` is written as the summary' \
+              'For an item that carries a secret, write the location only' \
+              'Never copy the whole disposition line into this field'; do
+  assert_in_range_folded "row 39: ruling record states '$phrase'" \
+    "$ORCH_SKILL" "$phrase" "$RECORD_LINE" "$RECORD_END"
+done
+assert_in_range "row 39: ruling record gives an example Phase 4 Item line" \
+  "$ORCH_SKILL" '- **Item:** [I1 inv 1] Important cli.js:52 — catch block exits with status 0 on a parse error' \
+  "$RECORD_LINE" "$RECORD_END" exact
+# Row 39: the ruling step names the shape of the `Rulings:` line it rewrites.
+assert_in_range_folded "row 39: the ruling step rewrites the Rulings line in its state.md shape" \
+  "$ORCH_SKILL" 'Then rewrite `state.md`'"'"'s `Rulings:` line in the shape that `## state.md Section` gives, `Rulings: <count> (last: ruling <n>, phase <p>)`' \
+  "$LOG_ENTRY_LINE" "$LOG_ENTRY_END"
+assert_in_range_folded "row 39: the Rulings line's <n> is the highest ruling number written so far" \
+  "$ORCH_SKILL" '`<n>` is the highest ruling number written so far' \
+  "$LOG_ENTRY_LINE" "$LOG_ENTRY_END"
+assert_in_range_folded "row 39: the Rulings line text says what <n> means in the RULING entry" \
+  "$ORCH_SKILL" 'In the `## RULING` entry above, `<n>` means the first ruling number of the return instead.' \
+  "$LOG_ENTRY_LINE" "$LOG_ENTRY_END"
+assert_in_range_folded "row 39: the Rulings line's <count> is the number of Ruling entries" \
+  "$ORCH_SKILL" '`<count>` is the number of `## Ruling` entries in the ruling record' \
+  "$LOG_ENTRY_LINE" "$LOG_ENTRY_END"
 # Reverting the amendment without reverting the fix it authorised leaves the
 # branch contradicting the clause the user reinstated.
 assert_in_range_folded "reverting a plan amendment also reverts the fix it authorised" \
