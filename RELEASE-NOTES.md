@@ -8,6 +8,73 @@
 > (`REPOZY/superpowers-optimized`) and are kept unchanged as history; any
 > testing they describe was not done here.
 
+## v7.33.0 — ruling records in a shape the stop path reads, and plan edits only under amend plan
+
+**Problem.** On the compaction probe run, Phase 4 ruling records lacked the
+`[<id> inv <i>] <severity> <file:line>` shape that a stop and a resume read.
+A `plan governs` ruling edited the plan. Resume looked for a marker that an amended `**Contract:**` never gets.
+
+**Change.** The Phase 4 step names the record shape, and each field's source
+is written out. Only an `amend plan` answer edits the plan in a ruling commit.
+An amendment edits the clause before its note, and Resume checks an unmarked
+clause through a git diff.
+
+**Effect.** A resume no longer re-applies an amendment that was already made.
+Reinstall the plugin; nothing to migrate.
+
+Row 39 of the worklist listed three deviations in the ruling records of the
+v7.30.0 compaction probe run. Three read-only investigations of the run's
+transcript classified each one before any change:
+
+- **The `**Item:**` field.** Rulings 3 to 9 wrote `[I1] invocation 1, round 1
+  (<lens>) — <the whole disposition line>`. Two compactions had removed the
+  template from context, and the re-reads that followed skipped it. The
+  wording also had a gap: `<severity>` had no named source. The Phase 4 step
+  in `skills/orchestrating-development/SKILL.md` now names the shape, and a
+  new paragraph says where each part comes from: `Critical` or `Important`
+  from the first letter of the id (`n/a` otherwise, or for an item with no
+  finding behind it), the location after `— at`, and the finding summary only.
+  It gives one example line.
+- **A plan edit under `plan governs`.** Ruling 2 removed words from reference
+  text in the plan and recorded the answer as `plan governs`. The rule is now
+  explicit: in a ruling commit, only an `amend plan` answer edits the plan
+  file, and only by the amendment procedure. The Resume revert, the checkbox
+  untick and a fix commit of the code-review loop are outside this rule.
+  Forcing `amend plan` onto every such edit was rejected: it would use one of
+  the three in-run resumes, force a new review invocation, and stop on an item
+  with `clause: none`.
+- **`state.md`.** The row said `state.md` was not rewritten at the Phase 1 and
+  Phase 2 boundaries. The transcript shows it was (two `sed -i` edits), so that
+  half was false. The `Rulings:` line lacked `(last: ruling <n>, phase <p>)`;
+  the ruling step now names that shape and says what `<count>` and `<n>` mean.
+
+**The marker.** The amendment procedure places `(amended by ruling <n>)` only
+on a Global Constraints entry or an Exact-content block. The Resume check, the
+override revert and the retry check looked for it on every clause, so on
+`main` a resume after an amended `**Contract:**` re-applied the amendment. Now
+the procedure edits the clause before it inserts the `**Amendment <n>` note, so
+a standing note shows the edit was made. For an unmarked clause with no note,
+Resume reads the change from `git diff HEAD -- <plan path>` before the ruling
+commit, or from `git show <ruling commit> -- <plan path>` after it, and inserts
+only the missing note when the clause already changed. When the ruling commit
+is missing, the amendment is completed before the repair commit, so the edit
+is inside `ruling <n>`. When the re-apply finds no target, the ruling commit is
+made without a plan edit and the run stops. Both git forms are on the
+permitted-read list. `docs/guide/README.md` now gives decided-wording
+authority only to a marked clause.
+
+**Tests.** `tests/in-run-rulings/run-tests.sh` now has 591 checks (545 before).
+With the skill text of `main`, 48 of them fail. A four-lens review (correctness, adversarial, test
+quality, plain English) ran twice. Its first round found the crash window
+between the clause edit and the note, the unscoped plan-edit rule, and a
+missing permitted read; each was reproduced in the skill text and fixed. In
+the second round, all 13 mutants of the skill text were caught.
+
+**Known limits.** Resume finds a ruling commit by the ruling's own number, but
+one commit per return carries only the first ruling number of that return. An
+override of a later ruling in the same return therefore stops as a major error
+(worklist row 40); it never reverts the wrong text.
+
 ## v7.32.0 — hooks keep their files out of git status without editing .gitignore
 
 **Problem.** Two hooks appended entries to `.gitignore`, a tracked file, in the
