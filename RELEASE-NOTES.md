@@ -8,6 +8,68 @@
 > (`REPOZY/superpowers-optimized`) and are kept unchanged as history; any
 > testing they describe was not done here.
 
+## v7.32.0 — hooks keep their files out of git status without editing .gitignore
+
+**Problem.** Two hooks appended entries to `.gitignore`, a tracked file, in the
+repository a session runs in. The uncommitted change stopped an orchestration
+run at its clean-tree check, and the orchestrator restored `.gitignore` twice
+on one run.
+
+**Change.** Both hooks now write the entry to git's local exclude file, which
+git never commits. They write nothing for a tracked file, an already ignored
+file, or a folder outside a git repository.
+
+**Effect.** A session no longer changes any tracked file to hide its own
+files. Old `.gitignore` entries stay as they are; remove them yourself if you
+want. Reinstall the plugin; nothing else to migrate.
+
+`hooks/track-edits.js` runs after every Edit or Write. When the written file is
+`state.md`, `session-log.md`, `project-map.md` or `known-issues.md`, it appended
+the file name to a `.gitignore` in the file's own folder, also outside git.
+`hooks/context-engine.js` runs at session start and appended
+`context-snapshot.json` to the `.gitignore` of its working folder. On the
+compaction probe run of v7.30.0 the fixture's first orchestration call stopped
+at Phase 0 on the untracked `.gitignore`, and later the orchestrator ran
+`git restore -- .gitignore` twice before a commit (worklist row 38).
+
+Both hooks now call the new module `hooks/git-exclude.js`:
+
+- It asks git whether the file is tracked (`git ls-files --error-unmatch`) or
+  already ignored by any source (`git check-ignore`). In both cases it writes
+  nothing. An entry for a tracked file would hide that file without a message
+  once the user untracks it.
+- Otherwise it appends one line to `$(git rev-parse --git-path info/exclude)`.
+  The line starts with `/` and holds the file's path from the repository root,
+  with the gitignore pattern characters `\ * ? [` escaped, so it matches that
+  one file only. A linked worktree uses the exclude file that all worktrees of
+  the repository share. A line that is already present is not added again.
+- It resolves symbolic links in the folder path first, does nothing inside the
+  `.git` folder, and does nothing for a path that holds a newline.
+- `context-engine.js` adds the entry before it writes the snapshot, so
+  `git status` does not show the file even while the hook runs.
+
+The orchestrator skill already used the exclude file for `state.md`, so the
+hooks and the skill now follow one rule. `context-engine.js` also runs under
+Cursor and under the Codex adapter, so the change reaches them too; only
+Claude Code ran it for this release.
+
+**Tests.** `tests/codex/test-git-exclude-hooks.js` (17 tests, now part of
+`tests/codex/run-unit-tests.sh`) runs each hook as a separate process on a
+temporary repository and checks `git status`. 7 of its first 10 tests failed
+on the old hooks. A four-lens review (correctness, adversarial, test quality,
+plain English) found the tracked-file, symbolic-link, `.git`-folder and
+newline defects above in the first version; each was reproduced, fixed and
+given a test, and the reviewers then re-ran their reproductions. 15 mutants
+were applied to the code, and after the review all the ones that had survived
+were killed.
+
+**Known limits.** A folder name that holds a newline still shows its file in
+`git status`: a gitignore pattern is one line and cannot contain a newline.
+Hooks that write the same file at the same moment can add a duplicate line; the
+lines stay valid. An inherited `GIT_DIR` variable sends the entry to that
+repository; Claude Code starts hooks, not git, so a hook does not normally see
+one.
+
 ## v7.31.0 — the session-start hook keeps its output under 10,000 characters
 
 **Problem.** Claude Code keeps a hook's output in context only up to 10,000
