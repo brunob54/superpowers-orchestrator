@@ -1962,7 +1962,7 @@ for pin in 'Where each part of a Phase 4 `**Item:**` field comes from' \
            'Write `n/a` when the id has neither letter' \
            '`<file:line>` is the `— at <file:line>` part of the disposition line; write `n/a` when the line has none' \
            'before the first ` — at`, without ` (plan-mandated)`' \
-           'Never paste the whole disposition line into this field'; do
+           'Never copy the whole disposition line into this field'; do
   assert_in_range_folded "row 39: ruling record states '$pin'" \
     "$ORCH_SKILL" "$pin" "$RECORD_LINE" "$RECORD_END"
 done

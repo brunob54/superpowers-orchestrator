@@ -698,7 +698,9 @@ Expected return:
 user_decision=<n>` or `BLOCKED: <reason>`. `unresolved > 0` or
 `user_decision > 0` → `## In-run rulings`: classify each open item by its
 review-log id, rule on every item the predicate does not escalate, record
-the rulings, and re-dispatch this phase with the answers in
+the rulings (each entry in the shape of `### The ruling record`; a
+Phase 4 `**Item:**` field starts `[<id> inv <i>] <severity> <file:line>`),
+and re-dispatch this phase with the answers in
 `[RESUME_ANSWER]`. Only an escalated item stops the run on the strength
 of its content (the environment stops of the Major-Error Stop Policy —
 `fork review unavailable`, a controller malformed twice — apply as
@@ -968,9 +970,13 @@ Trigger: `Resume orchestration for <plan-or-spec path>`.
    cap, which counts `## RULING` entries, and to the Phase 5 report,
    which counts `## Ruling` entries. And before you act on a `## RULING`
    entry one of whose items has a `**Resolution:**` beginning
-   `amend plan`, check the third write: the clause that ruling names must
-   carry `(amended by ruling <n>)` and its `**Amendment <n>` note must
-   stand. When they do not, the session died before the plan amendment —
+   `amend plan`, check the third write: its `**Amendment <n>` note must
+   stand, and the clause that ruling names must carry
+   `(amended by ruling <n>)` only when the amendment procedure places a
+   marker on it — a Global Constraints entry or an Exact-content block;
+   for any other clause the standing `**Amendment <n>` note is the
+   evidence. When that evidence is missing, the session died before the
+   plan amendment —
    re-apply it now by the amendment procedure (`## In-run rulings`,
    "Plan amendment"), and when that procedure finds no target for it,
    discard the ruling rather than re-dispatching its answer: present it
@@ -1022,8 +1028,12 @@ Trigger: `Resume orchestration for <plan-or-spec path>`.
    task line, replaces it — the user's answer, tagged `(user)`, is sent
    instead of the ruled one; when the ruling that line recorded had
    amended the plan, revert that amendment in the same resume commit —
-   find the edited clause by its `(amended by ruling <n>)` marker and the
-   audit note by its `**Amendment <n>` label, restore the clause to its
+   find the audit note by its `**Amendment <n>` label and a marked clause
+   by its `(amended by ruling <n>)` marker; a clause the amendment
+   procedure leaves unmarked is found through the ruling's own commit
+   diff of the plan file, `git show <ruling commit> -- <plan path>`
+   (`<ruling commit>` is found as stated below), which also shows the
+   old text. Restore the clause to its
    pre-amendment text — recovered verbatim from the ruling's own commit,
    never from the audit note,
    whose prose is not required to quote the original — and delete the
@@ -1718,6 +1728,30 @@ earlier invocation. A Phase 3 entry carries no `<i>`: its
 `[task <n>/<k>]` id already names the task and needs no invocation
 qualifier.
 
+**Where each part of a Phase 4 `**Item:**` field comes from.** Each part
+is read from the item's disposition line in the review log:
+
+- `<severity>` is `Critical` for a C id and `Important` for an I id. Only
+  Critical and Important findings can be `user-decision` or `unresolved`
+  (multi-code-review, "Canonical dispositions"). Write `n/a` when the id
+  has neither letter: for example, an id kept as the reviewer wrote it
+  (with M = 1 a report keeps its original ids), or an entry with no
+  review finding behind it (a controller malformed twice, a checkbox
+  cross-check mismatch; see the environment stops below).
+- `<file:line>` is the `— at <file:line>` part of the disposition line;
+  write `n/a` when the line has none.
+- `<finding summary, verbatim>` is the finding summary only: the text
+  after `user-decision — ` or after `unresolved: <reason> — `, and
+  before the first ` — at`, without ` (plan-mandated)`. When no summary
+  stands there, as in `unresolved: <cause> — at …`, write the `<cause>`.
+  Never copy the whole disposition line into this field.
+
+An example of a Phase 4 field line:
+
+```markdown
+- **Item:** [I1 inv 1] Important cli.js:52 — catch block exits with status 0 on a parse error
+```
+
 **Never reproduce a secret.** For an item classified `escalated (secret)`,
 and for any item whose text carries a credential, every line written about
 it names the location only (`file:line`, or the report section that holds
@@ -2031,6 +2065,13 @@ conflict no answered line matches. Without this, one settled conflict
 would come back under a new number on every re-dispatch and burn the
 per-task cap.
 
+**Only an `amend plan` answer edits the plan file.** This rule holds for
+the Phase 3 and the Phase 4 answers above. A ruling commit changes the
+plan file only under an `amend plan` answer, and only by the amendment
+procedure below. A `plan governs` answer, a `fix it` answer, an `accept`
+answer and a plain-text answer never edit the plan file, not even its
+reference text.
+
 **Plan amendment.** A plan conflict is a collision with text the plan's
 `**Body authority:**` note — a block the plan-writing skill,
 `../writing-plans/SKILL.md`, puts in every plan header — calls binding:
@@ -2073,8 +2114,9 @@ things:
 
 Both edits go into the single `chore(orchestration): <slug> ruling <n>`
 commit (below), never into a commit of their own. On a retry, find the
-audit note by its label and the clause by its marker, and
-never apply the amendment twice.
+audit note by its label, and the clause by its marker only when step 1
+placed one; for an unmarked clause the standing audit note alone shows
+that the amendment was applied. Never apply the amendment twice.
 
 **No match is never an edit by guess.** When no sentence and no list
 entry of the named location matches the quote under that rule, the
@@ -2138,8 +2180,9 @@ same paths on the command line, `git commit -m "…" -- <the staged
 paths>`, under the Major-Error Stop Policy's rule for a commit made over
 a dirty tree — and the re-dispatched controller's
 mid-task recovery (its Deviation 4) reviews the leftover work together
-with the task's completion. Then rewrite `state.md` (its `Rulings:` line)
-and re-dispatch the phase's controller with the answers in
+with the task's completion. Then rewrite `state.md`'s `Rulings:` line in
+its `## state.md Section` shape, `Rulings: <count> (last: ruling <n>,
+phase <p>)`, and re-dispatch the phase's controller with the answers in
 `[RESUME_ANSWER]` — the only channel. In Phase 3 the answers are the full
 set defined above, not only the newest return's. The re-dispatch is a new
 fill under the next `<k>`: write the answer lines with the Write tool to
