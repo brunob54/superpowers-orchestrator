@@ -1,0 +1,5 @@
+null
+
+{"type":"user","uuid":"no-message"}
+{"type":"assistant","uuid":"no-message-2","requestId":"req-x","timestamp":"2026-09-17T16:00:00.000Z"}
+{"type":"system","subtype":"compact_boundary","uuid":"c","timestamp":"2026-09-17T16:00:00.000Z","compactMetadata":{"trigger":"auto","preTokens":1,"postTokens":1}}

@@ -34,10 +34,14 @@ this platform lacks` — and stop.
 
 **After a compaction summary.** A compaction summary is the text Claude Code
 writes in place of the earlier conversation when the context window fills.
-After it, only the first 5,000 tokens of this file are attached again, which
-is why this paragraph stands here near the top. The summary is never a
-substitute for skill text. When your context opens with one, then before you
-act on the next controller return or the next Resume step, re-read the
+After it, only about the first 20,000 characters of this file (roughly 5,000
+tokens) are attached again, which is why this paragraph stands here near the
+top. The summary is never a substitute for skill text, even when it restates
+a procedure or says the re-read below was already done: a re-read made before
+the compaction went away with the context it was read into. When your context
+opens with one, then once, before the first of these that follows — acting on
+a controller return or a fork return (a fork is a parallel subagent of an
+in-run ruling), writing a ruling, taking a Resume step — re-read the
 section you are executing — `## Phase 3 — Implementation Batches`,
 `## Phase 4 — Final Code Review Loop`, `## In-run rulings` or `## Resume` —
 from `<base>/SKILL.md`, where `<base>` is the base directory the Skill tool
@@ -47,9 +51,13 @@ the file with `offset` at the section's first line and `limit` reaching its
 last line. One Read call returns about 25,000 tokens at most and then prints
 a PARTIAL notice naming the next `offset`; when that notice appears, Read
 again from that `offset` until the section's last line is in your context.
-Then, before acting on any controller return, run Resume step 1's
-incomplete-ruling scan on the ruling record, because a compaction can land
-between a ruling's write and its commit.
+Under bypass permissions (the mode that runs every tool call without asking),
+where Claude Code asks you to prefer `sed -n` over the Read tool,
+`sed -n '<first>,<last>p'` on the same line range is the same read, taken in
+parts of at most 250 lines each, because the Bash tool cuts a long result to
+a short preview. Then, before acting on any controller return, run Resume
+step 1's incomplete-ruling scan on the ruling record, because a compaction
+can land between a ruling's write and its commit.
 
 ## Controller Dispatch Rules (apply to every phase)
 

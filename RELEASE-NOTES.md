@@ -8,6 +8,76 @@
 > (`REPOZY/superpowers-optimized`) and are kept unchanged as history; any
 > testing they describe was not done here.
 
+## v7.30.0 — the compaction probe runs headlessly; the guard names summary claims
+
+**Problem.** The compaction recovery guard of v7.19.0 was never tested: its
+probe needed a person typing `/compact` in a live orchestration. Worklist row
+13 stayed open since v7.19.0 (2026-09-13).
+
+**Change.** The probe now runs with `claude -p`: `--autocompact 120k` compacts
+automatically, and a resumed `/compact` call runs a manual compaction.
+`tools/analyze-compaction.js` reads the session transcript (Claude Code's file
+for one session) and reports the session's actions after each compaction. The
+guard says a summary's claim of a done re-read never counts, and a `sed -n`
+read of the same line range does.
+
+**Effect.** Row 13 is closed on a recorded run: 10 compactions, and both
+rulings written after one were complete and committed. Nothing to migrate.
+
+A compaction is the moment Claude Code replaces the earlier conversation with
+a summary because the context window is nearly full. The guard shipped in
+v7.19.0 on 2026-09-13 without a run that compacted. The probe ran on
+2026-09-16 on a throwaway fixture repository (a small test repository created
+only for this run) whose spec holds two hard constraints inserted on purpose
+so that every reviewer reports them, with plugin 7.29.0, the default model
+with the 1,000,000-token context window, and permission prompts switched off
+(bypass permissions mode). Findings, from three independent evaluators
+(checklist, outcome, adversarial); they agreed on every fact except the
+placement of the completion marker, which a re-check settled:
+
+- **Every compaction attaches again the first 20,000 characters of the
+  skill** (an `invoked_skills` attachment record, reaching line 320 of
+  `SKILL.md`), so the guard paragraph was in context all ten times. The
+  guard's former "first 5,000 tokens" is the same size; the text now gives
+  the character figure.
+- **The session followed the guard after two compactions, followed it in
+  part after one, and skipped it after four.** After the Phase 4 return the
+  session read most of the `## In-run rulings` section with the Read tool and
+  with `sed -n`, without the heading grep, and left the section's first 37
+  and last 102 lines unread. In the skipped cases the compaction summary
+  restated the ruling templates almost verbatim, and twice it said the
+  re-reads were already done; the session trusted it. The three other
+  compactions had nothing pending. Under bypass permissions Claude Code asks
+  the model to prefer `sed -n` over the Read tool; the guard now says which
+  `sed -n` read counts.
+- **No compaction caused a defect.** Both `## RULING` entries carry every
+  required line. They are numbered by the first ruling number of their
+  return. They were committed after the record and the log entry. No compaction
+  lost the prompt directory: `mktemp -d` ran once and eight of the ten
+  summaries carried its path. The
+  completion marker and the Phase 5 hand-off were correct. The realistic case
+  under the 1,000,000-token window, one manual `/compact` before a resume,
+  was handled exactly as the guard says.
+- **Re-invoking the skill after a compaction injects the full body again**
+  (153,780 bytes), which itself triggered another compaction.
+
+Three findings unrelated to the guard became worklist rows 37 to 39:
+
+- The plugin's session-start hook (a script Claude Code runs when a session
+  starts) prints 12 to 39 KB. Above 10,000 characters Claude Code writes the
+  output to a file and keeps only a 2,000-character preview in context, at
+  session start and after every compaction.
+- Two hooks append to `.gitignore` in the repository a session runs in, which
+  left an uncommitted change in the fixture's working tree during the run.
+- Three deviations in the ruling records, made by the run itself and none
+  caused by a compaction.
+
+Tests: three new checks that pin the exact guard wording in
+`tests/orchestrating-development/run-tests.sh` failed before the wording
+change and pass after it (217 checks). The probe checklist
+`tests/claude-code/compaction-probe.md` holds the headless procedure, the
+corrected fix number, and the run's result block.
+
 ## v7.29.0 — code reviewers write the full report to a file
 
 **Problem.** A whole-branch review loop's controller reads every reviewer
