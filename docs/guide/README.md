@@ -833,9 +833,12 @@ A Critical is never rejected by a ruling, and a decision you
 made earlier in the run is never overturned by one. Since v7.11.0 that
 second guarantee holds whichever line of the ruling record carries your
 answer: an `amend plan` answer you gave to an escalated item is appended
-as a `**Follow-up:**` line, and the clause it amends keeps its
-decided-wording authority just as if it stood on the `**Resolution:**`
-line. Before v7.11.0 only the Resolution line was read, so a finding
+as a `**Follow-up:**` line. When the amended clause carries the
+`(amended by ruling <n>)` marker (a Global Constraints entry or an
+Exact-content block), it keeps its decided-wording authority just as if
+the answer stood on the `**Resolution:**` line. An amended `**Contract:**`
+gets no marker, so a later finding against it is triaged as ordinary
+text. Before v7.11.0 only the Resolution line was read, so a finding
 against a clause you had amended could be dropped as ordinary text.
 
 A Phase 3 or Phase 4 stop entry therefore lists two kinds of items: each

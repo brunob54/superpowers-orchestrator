@@ -930,7 +930,11 @@ Trigger: `Resume orchestration for <plan-or-spec path>`.
    `ruling <n> follow-up` subject and, for ruling 1, a `ruling 10`
    subject: compare each printed subject with the full expected string
    and accept only an exact match. When it does
-   not, the session died between the writes and the commit: stage the
+   not, the session died between the writes and the commit. Before you
+   make that commit, run the third-write check below for each item whose
+   `**Resolution:**` begins `amend plan`, and complete any missing
+   amendment, so that the plan edit is inside the
+   `chore(orchestration): <slug> ruling <n>` commit. Then stage the
    orchestration log, the ruling record and the plan file when that
    ruling amended it, each by explicit path, and make that commit now
    naming those same paths on the command line, `git commit -m "…" --
@@ -970,13 +974,25 @@ Trigger: `Resume orchestration for <plan-or-spec path>`.
    cap, which counts `## RULING` entries, and to the Phase 5 report,
    which counts `## Ruling` entries. And before you act on a `## RULING`
    entry one of whose items has a `**Resolution:**` beginning
-   `amend plan`, check the third write: its `**Amendment <n>` note must
-   stand, and the clause that ruling names must carry
-   `(amended by ruling <n>)` only when the amendment procedure places a
-   marker on it — a Global Constraints entry or an Exact-content block;
-   for any other clause the standing `**Amendment <n>` note is the
-   evidence. When that evidence is missing, the session died before the
-   plan amendment —
+   `amend plan`, check the third write. Its `**Amendment <n>` note must
+   stand. The amendment procedure places the `(amended by ruling <n>)`
+   marker only on two clause kinds: a Global Constraints entry or an
+   Exact-content block. A clause of those two kinds must also carry the
+   marker. Any other clause gets no marker: an amended `**Contract:**`,
+   or a mandated sentence in a plan whose header has no
+   `**Body authority:**` note. For such a clause the standing
+   `**Amendment <n>` note is the evidence, because the procedure always
+   edits the clause before it inserts the note. When the note is
+   missing, first check whether the clause edit was already made. For a
+   marked clause, the marker decides: a standing marker shows the edit
+   was made. For an unmarked clause, compare the clause the ruling names
+   with the plan as it stood before the ruling:
+   `git diff HEAD -- <plan path>` when the ruling commit is not made yet,
+   or `git show <ruling commit>^:<plan path>` once it is. When the clause
+   already differs from that older text, the clause edit was made:
+   insert only the missing note, and never edit the clause again. When
+   the clause edit was not made, the session died before the plan
+   amendment —
    re-apply it now by the amendment procedure (`## In-run rulings`,
    "Plan amendment"), and when that procedure finds no target for it,
    discard the ruling rather than re-dispatching its answer: present it
@@ -1027,13 +1043,13 @@ Trigger: `Resume orchestration for <plan-or-spec path>`.
    answer for an id that stands on a `Ruled:` line, or on such a ruled
    task line, replaces it — the user's answer, tagged `(user)`, is sent
    instead of the ruled one; when the ruling that line recorded had
-   amended the plan, revert that amendment in the same resume commit —
-   find the audit note by its `**Amendment <n>` label and a marked clause
-   by its `(amended by ruling <n>)` marker; a clause the amendment
-   procedure leaves unmarked is found through the ruling's own commit
-   diff of the plan file, `git show <ruling commit> -- <plan path>`
-   (`<ruling commit>` is found as stated below), which also shows the
-   old text. Restore the clause to its
+   amended the plan, revert that amendment in the same resume commit.
+   Find the audit note by its `**Amendment <n>` label. Find a marked
+   clause by its `(amended by ruling <n>)` marker. The amendment
+   procedure leaves some clauses unmarked; find such a clause in the
+   ruling commit's diff of the plan file,
+   `git show <ruling commit> -- <plan path>`, which also shows the old
+   text (`<ruling commit>` is found as stated below). Restore the clause to its
    pre-amendment text — recovered verbatim from the ruling's own commit,
    never from the audit note,
    whose prose is not required to quote the original — and delete the
@@ -1403,7 +1419,9 @@ you and your forks may read exactly:
    spellings that step uses (`-F --format=%s` for the commit-landed check,
    `-F --format="%H %s"` when an amendment must be reverted; `-F` belongs to
    the permitted form and is never dropped),
-   `git show <ruling commit>^:<plan path>`, and a scan of the whole plan
+   `git show <ruling commit>^:<plan path>`,
+   `git show <ruling commit> -- <plan path>`,
+   `git diff HEAD -- <plan path>`, and a scan of the whole plan
    file for an orphan `(amended by ruling <n>)` marker and its
    `**Amendment <n>` note.
 5. Your own ruling record for this run,
@@ -1728,23 +1746,30 @@ earlier invocation. A Phase 3 entry carries no `<i>`: its
 `[task <n>/<k>]` id already names the task and needs no invocation
 qualifier.
 
-**Where each part of a Phase 4 `**Item:**` field comes from.** Each part
-is read from the item's disposition line in the review log:
+**Where each part of a Phase 4 `**Item:**` field comes from.** For an
+item with a disposition line in the review log, each part is read from
+that line. An item with no disposition line — an item of an environment
+stop (below) — writes `n/a n/a — <the stop's own reason>` after its id.
 
 - `<severity>` is `Critical` for a C id and `Important` for an I id. Only
   Critical and Important findings can be `user-decision` or `unresolved`
   (multi-code-review, "Canonical dispositions"). Write `n/a` when the id
-  has neither letter: for example, an id kept as the reviewer wrote it
-  (with M = 1 a report keeps its original ids), or an entry with no
-  review finding behind it (a controller malformed twice, a checkbox
-  cross-check mismatch; see the environment stops below).
-- `<file:line>` is the `— at <file:line>` part of the disposition line;
-  write `n/a` when the line has none.
+  has neither letter, or when the item has no review finding behind it
+  (a controller malformed or failed twice, a checkbox cross-check
+  mismatch).
+- `<file:line>` is the location that follows `— at ` on the disposition
+  line; write `n/a` when the line has none.
 - `<finding summary, verbatim>` is the finding summary only: the text
   after `user-decision — ` or after `unresolved: <reason> — `, and
-  before the first ` — at`, without ` (plan-mandated)`. When no summary
-  stands there, as in `unresolved: <cause> — at …`, write the `<cause>`.
-  Never copy the whole disposition line into this field.
+  before the first ` — at`, without ` (plan-mandated)`. The
+  `unresolved: <reason> — ` prefix is recognised only for the reasons
+  multi-code-review names: `verification cap`, `addendum re-review`,
+  `fix contradicts binding text` and
+  `withheld finding, no credential at the location`. For any other
+  `unresolved:` line, the whole text before the first ` — at` is the
+  `<reason>`, and the `<reason>` is written as the summary. For an item
+  that carries a secret, write the location only (see "Never reproduce
+  a secret"). Never copy the whole disposition line into this field.
 
 An example of a Phase 4 field line:
 
@@ -2068,9 +2093,12 @@ per-task cap.
 **Only an `amend plan` answer edits the plan file.** This rule holds for
 the Phase 3 and the Phase 4 answers above. A ruling commit changes the
 plan file only under an `amend plan` answer, and only by the amendment
-procedure below. A `plan governs` answer, a `fix it` answer, an `accept`
-answer and a plain-text answer never edit the plan file, not even its
-reference text.
+procedure below. In the ruling commit that records them, a
+`plan governs` answer, a `fix it` answer, an `accept` answer and a
+plain-text answer never edit the plan file, not even its reference
+text. Two plan edits are outside this rule: the amendment revert and
+the checkbox untick of Resume step 3, and a fix commit that the
+code-review loop makes.
 
 **Plan amendment.** A plan conflict is a collision with text the plan's
 `**Body authority:**` note — a block the plan-writing skill,
@@ -2084,7 +2112,8 @@ review would raise the same finding. So, using the plan location the
 disposition line names (`— clause: Global Constraints` or
 `— clause: Task <n>`) or the task report names — and finding the clause
 inside it by the prefix rule above, never by a byte-equal match — do two
-things:
+things, always in this order: step 1 is done before step 2. So a
+standing audit note shows that the clause edit was made:
 
 1. **Edit the binding clause in place** — replace the Global Constraints
    entry, the Exact-content block, the contradicted `**Contract:**` text,
@@ -2115,8 +2144,13 @@ things:
 Both edits go into the single `chore(orchestration): <slug> ruling <n>`
 commit (below), never into a commit of their own. On a retry, find the
 audit note by its label, and the clause by its marker only when step 1
-placed one; for an unmarked clause the standing audit note alone shows
-that the amendment was applied. Never apply the amendment twice.
+placed one. For an unmarked clause, the standing audit note alone shows
+that the amendment was applied. When the note is missing, a marked
+clause is decided by its marker. An unmarked clause is compared with the
+plan as it stood before the ruling (`git diff HEAD -- <plan path>`
+before the ruling commit, `git show <ruling commit>^:<plan path>` after
+it): when the clause already differs from that older text, insert only
+the missing note. Never apply the amendment twice.
 
 **No match is never an edit by guess.** When no sentence and no list
 entry of the named location matches the quote under that rule, the
@@ -2181,8 +2215,12 @@ paths>`, under the Major-Error Stop Policy's rule for a commit made over
 a dirty tree — and the re-dispatched controller's
 mid-task recovery (its Deviation 4) reviews the leftover work together
 with the task's completion. Then rewrite `state.md`'s `Rulings:` line in
-its `## state.md Section` shape, `Rulings: <count> (last: ruling <n>,
-phase <p>)`, and re-dispatch the phase's controller with the answers in
+the shape that `## state.md Section` gives,
+`Rulings: <count> (last: ruling <n>, phase <p>)`. In that line,
+`<count>` is the number of `## Ruling` entries in the ruling record, and
+`<n>` is the highest ruling number written so far (not the first ruling
+number of the return, which `<n>` means in the entry above). Then
+re-dispatch the phase's controller with the answers in
 `[RESUME_ANSWER]` — the only channel. In Phase 3 the answers are the full
 set defined above, not only the newest return's. The re-dispatch is a new
 fill under the next `<k>`: write the answer lines with the Write tool to
