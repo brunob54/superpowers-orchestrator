@@ -911,8 +911,8 @@ Trigger: `Resume orchestration for <plan-or-spec path>`.
    entry preceded the ruling, never with the ruling itself.
 2. Log ends with `_Completed_` → report that and stop.
 3. Log ends with a `## RULING <n>` entry: before you act on it, check that
-   its own commit landed —
-   `git log -F --format=%s --grep "<slug> ruling <n>" <BASE>..HEAD`
+   its own commit exists on this branch —
+   `git log --first-parent -F --format=%s --grep "<slug> ruling <n>" <BASE>..HEAD`
    must print, as a whole line, exactly the subject
    `chore(orchestration): <slug> ruling <n>`. **`-F` is mandatory in both
    spellings of this lookup**: without it `--grep` reads its pattern as a
@@ -928,8 +928,13 @@ Trigger: `Resume orchestration for <plan-or-spec path>`.
    a slug holding `$(…)` or a backtick is expanded by the shell before git
    ever sees the pattern.
    Every search for a ruling commit by its subject runs over `<BASE>..HEAD`
-   only: the commits after the recorded branch point. So a commit with the
-   same subject from an earlier run on the same slug is never found.
+   with `--first-parent`. `<BASE>..HEAD` keeps only the commits after the
+   recorded branch point. `--first-parent` makes git skip the commits that
+   a merge brought in: at each merge commit, git follows only the first
+   parent, the earlier tip of the branch that received the merge. So the
+   search reads only this branch's own line of commits after the recorded
+   branch point. A commit with the same subject that reaches this branch
+   through a merge, for example from `main`, is not found.
    `--grep` stays unanchored, so its output also holds a
    `ruling <n> follow-up` subject and, for ruling 1, a `ruling 10`
    subject: compare each printed subject with the full expected string
@@ -979,7 +984,11 @@ Trigger: `Resume orchestration for <plan-or-spec path>`.
    which counts `## Ruling` entries. And before you act on a `## RULING`
    entry one of whose items has a `**Resolution:**` beginning
    `amend plan`, check the third write. Its `**Amendment <n>` note must
-   stand. The amendment procedure places the `(amended by ruling <n>)`
+   stand. In this check, `<n>` is that item's own ruling number: the
+   number of its `## Ruling <n>` entry in the ruling record. That number
+   can be higher than the number of the `## RULING` entry. The note and
+   the `(amended by ruling <n>)` marker both carry the item's own number.
+   The amendment procedure places the `(amended by ruling <n>)`
    marker only on two clause kinds: a Global Constraints entry or an
    Exact-content block. A clause of those two kinds must also carry the
    marker. Any other clause gets no marker: an amended `**Contract:**`,
@@ -993,7 +1002,9 @@ Trigger: `Resume orchestration for <plan-or-spec path>`.
    read the change from a diff of the plan file:
    `git diff HEAD -- <plan path>` when the ruling commit is not made yet,
    or the ruling commit's own diff, `git show <ruling commit> -- <plan path>`,
-   once it is. When that diff shows a change to the clause the ruling
+   once it is. Here the ruling commit is the commit of the `## RULING`
+   entry, and its subject carries the number of that entry, not the
+   item's own number. When that diff shows a change to the clause the ruling
    names, the clause edit was made: insert only the missing note, and
    never edit the clause again. When the clause edit was not made, the
    session died before the plan amendment —
@@ -1057,13 +1068,30 @@ Trigger: `Resume orchestration for <plan-or-spec path>`.
    Find the audit note by its `**Amendment <m>` label. Find a marked
    clause by its `(amended by ruling <m>)` marker. The amendment
    procedure leaves some clauses unmarked; find such a clause in the plan
-   by the opening words that its audit note quotes. Then find the change
-   to that clause in the ruling commit's diff of the plan file,
-   `git show <ruling commit> -- <plan path>`, which also shows the old
-   text (`<ruling commit>` is found as stated below). One return can amend
-   several unmarked clauses, so that diff can hold several changes:
-   take only the change whose new text starts with the quoted words, with
-   line wraps ignored. Restore the clause to its
+   by the opening words that its audit note quotes. Search for the quote
+   outside audit notes only, with line wraps ignored, and let a `'` in
+   the quote match either `'` or `"` in the plan. When the quote matches
+   no clause or more than one clause, this is a major error — stop and
+   report it, never guess a clause. When the audit note quotes no opening
+   words, because an older version of this skill wrote it, this is also a
+   major error — stop and report it, never guess a clause.
+   Then find the change to that clause in the ruling commit's diff of the
+   plan file, `git show <ruling commit> -- <plan path>`
+   (`<ruling commit>` is found as stated below). Use that diff only to see
+   which lines of this clause changed. Git compares whole lines: a changed
+   line can hold other text next to the clause, and one hunk (one block of
+   changed lines) can hold the changes to several clauses of one return.
+   Take the old text of the clause from
+   `git show <ruling commit>^:<plan path>`, which prints the plan as it
+   stood before the ruling. Restore only that one clause's own text, never
+   a whole hunk, and never another clause's text, even when the two
+   clauses share a line or a hunk. When the old text of the clause cannot
+   be told apart from another ruling's change, this is a major error —
+   stop and report it, never guess. Before you write the plan file,
+   compare the restored clause with the same clause in the output of
+   `git show <ruling commit>^:<plan path>`: both must hold the same words,
+   with line wraps ignored, and a difference is a major error — stop and
+   report it. Restore the clause to its
    pre-amendment text — recovered verbatim from the ruling's own commit,
    never from the audit note,
    whose prose is not required to quote the original — and delete the
@@ -1139,11 +1167,11 @@ Trigger: `Resume orchestration for <plan-or-spec path>`.
    the overturned ruling `<m>` can carry a lower number than `<m>`. Find
    the `## RULING` entry that covers `<m>`: the `## RULING` entry in the
    orchestration log with the largest number that is not above `<m>`.
-   That entry's return wrote ruling `<m>`. In the command below, `<n>` is
-   the number of that covering entry, never `<m>`. For example, when one
-   return wrote rulings 5, 6 and 7, the commit of ruling 6 has the subject
-   `chore(orchestration): <slug> ruling 5`.
-   `git log -F --format="%H %s" --grep "<slug> ruling <n>" <BASE>..HEAD`
+   That entry's return wrote ruling `<m>`. In the command below and in the
+   subject filter after it, `<n>` is the number of that covering entry,
+   never `<m>`. For example, when one return wrote rulings 5, 6 and 7, the
+   commit of ruling 6 has the subject `chore(orchestration): <slug> ruling 5`.
+   `git log --first-parent -F --format="%H %s" --grep "<slug> ruling <n>" <BASE>..HEAD`
    prints one
    `<hash> <subject>` line per match — `-F` for the same reason as in the
    commit-landed check above, so that a slug holding a regular-expression
@@ -1439,10 +1467,12 @@ you and your forks may read exactly:
    or to 40 lines on each side, whichever is smaller, and
    `git log --oneline <BASE>..HEAD`. You alone — never a fork — may also
    make the `## RULING` entry checks of Resume step 3: the landed check
-   `git log -F --grep "<slug> ruling <n>" <BASE>..HEAD` in either of the
-   two `--format` spellings that step uses (`-F --format=%s` for the commit-landed check,
+   `git log --first-parent -F --grep "<slug> ruling <n>" <BASE>..HEAD` in
+   either of the two `--format` spellings that step uses
+   (`-F --format=%s` for the commit-landed check,
    `-F --format="%H %s"` when an amendment must be reverted; `-F` belongs to
-   the permitted form and is never dropped),
+   the permitted form and is never dropped, and the same holds for
+   `--first-parent` and `<BASE>..HEAD`),
    `git show <ruling commit>^:<plan path>`,
    `git show <ruling commit> -- <plan path>`,
    `git diff HEAD -- <plan path>`, and a scan of the whole plan
@@ -2169,24 +2199,36 @@ are:
    ```
 
    `<opening words of the amended clause>` quotes the clause as it reads
-   after step 1: at least its first eight words, more words when eight
-   words are not unique in the plan, or the whole clause when it is
-   shorter. One ruling commit can hold changes to several unmarked
-   clauses. The quote lets the revert of Resume step 3 find the clause in
-   the plan and its change in that commit's diff.
+   after step 1, without its marker. The quote never includes the
+   `(amended by ruling <n>)` marker. Quote at least the first eight words
+   of the clause. Add words until no other place in the plan outside audit
+   notes holds the quote, with line wraps ignored. Check this before you
+   insert the note. Quote the whole clause when it has fewer than eight
+   words. The quote starts at the first word after any list marker, such
+   as `- ` or `1. `. When the clause starts with a bold label such as
+   `**Contract:**`, that label is part of the quote. Write each double
+   quote character (`"`) of the clause as a single quote character (`'`),
+   so that the quote ends only at the closing `"` of the note. One ruling
+   commit can hold changes to several unmarked clauses. The quote lets the
+   revert of Resume step 3 find the clause in the plan.
 
-Both edits go into the single `chore(orchestration): <slug> ruling <n>`
-commit (below), never into a commit of their own. On a retry, find the
-audit note by its label, and the clause by its marker only when step 1
-placed one, or else by the opening words the note quotes. For an
-unmarked clause, the standing audit note alone shows
+Both edits go into the single ruling commit of this return (below),
+never into a commit of their own. That commit's subject is
+`chore(orchestration): <slug> ruling <first ruling number of the return>`,
+while the note and the marker carry the item's own ruling number.
+On a retry, find the audit note by its label. Find the clause by its
+marker when step 1 placed one. Otherwise, find the clause by the opening
+words that the note quotes. When a retry must find an unmarked clause
+and its note quotes no opening words, because an older version of this
+skill wrote it, this is a major error — stop and report it, never guess
+the clause. For an unmarked clause, the standing audit note alone shows
 that the amendment was applied. When the note is missing, a marked
 clause is decided by its marker. For an unmarked clause, read the
 change from a diff of the plan file (`git diff HEAD -- <plan path>`
 before the ruling commit, `git show <ruling commit> -- <plan path>`
 after it). When that diff shows a change to the clause, insert only the
 missing note. The inserted note quotes the opening words of the clause
-as the plan holds it now. Never apply the amendment twice.
+as that clause reads in the plan now. Never apply the amendment twice.
 
 **No match is never an edit by guess.** When no sentence and no list
 entry of the named location matches the quote under that rule, the

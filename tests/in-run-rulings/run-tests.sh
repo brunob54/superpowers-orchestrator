@@ -1838,7 +1838,7 @@ assert_in_range_folded "resume compares the printed subject with the full expect
 # pattern outright -- which reads back as "the ruling commit did not land".
 # Both spellings of the lookup carry `-F`, and the text says why.
 assert_in_range "resume commit-landed lookup matches the slug as a fixed string" \
-  "$ORCH_SKILL" 'git log -F --format=%s --grep "<slug> ruling <n>"' \
+  "$ORCH_SKILL" '-F --format=%s --grep "<slug> ruling <n>"' \
   "$RESUME_LINE" "$RULINGS_LINE" exact
 assert_in_range_folded "resume states -F is mandatory in both spellings of the lookup" \
   "$ORCH_SKILL" '**`-F` is mandatory in both spellings of this lookup**' \
@@ -1890,7 +1890,7 @@ fi
 # exact-subject filter as the landed-check, and copies only the clause out of
 # the printed file.
 assert_in_range "resume ruling-commit lookup prints the hash" \
-  "$ORCH_SKILL" 'git log -F --format="%H %s" --grep "<slug> ruling <n>"' \
+  "$ORCH_SKILL" '-F --format="%H %s" --grep "<slug> ruling <n>"' \
   "$RESUME_LINE" "$RULINGS_LINE" exact
 assert_in_range_folded "resume ruling-commit lookup keeps exactly one subject" \
   "$ORCH_SKILL" 'Exactly one line must survive' "$RESUME_LINE" "$RULINGS_LINE"
@@ -1991,8 +1991,8 @@ assert_in_range_folded "row 39: the permitted reads include the ruling commit di
 assert_in_range_folded "row 39: the permitted reads include the uncommitted diff of the plan file" \
   "$ORCH_SKILL" '`git diff HEAD -- <plan path>`, and a scan of the whole plan' \
   "$READ_EXCEPTION_LINE" "$READ_EXCEPTION_END"
-assert_in_range_folded "row 39: a retry finds the clause by its marker only when step 1 placed one" \
-  "$ORCH_SKILL" 'and the clause by its marker only when step 1 placed one' \
+assert_in_range_folded "row 39: a retry finds the clause by its marker when step 1 placed one" \
+  "$ORCH_SKILL" 'Find the clause by its marker when step 1 placed one.' \
   "$ANSWERS_LINE" "$ANSWERS_END"
 assert_in_range_folded "row 39: on a retry the standing audit note shows the amendment was applied" \
   "$ORCH_SKILL" 'For an unmarked clause, the standing audit note alone shows that the amendment was applied' \
@@ -3039,9 +3039,10 @@ assert_in_range_folded "the Phase 5 read allowance names the spec deviation line
 # covers the overturned ruling, not for the overturned ruling's own number.
 # One ruling commit can hold changes to several unmarked clauses, so the audit
 # note quotes the opening words of the amended clause, and the revert uses
-# them. Every search for a ruling commit by subject runs over <BASE>..HEAD.
-assert_in_range_folded_exact "row 40: the override revert names the overturned ruling's number <m>" \
-  "$ORCH_SKILL" 'In this revert, `<m>` is the number of the overturned ruling.' \
+# them. Every search for a ruling commit by subject runs over <BASE>..HEAD
+# with --first-parent.
+assert_in_range_folded "row 40: the override revert names the overturned ruling's number <m>" \
+  "$ORCH_SKILL" '`<m>` is the number of the overturned ruling' \
   "$RESUME_LINE" "$RULINGS_LINE"
 assert_in_range_folded_exact "row 40: the override revert finds the audit note and the marker by <m>" \
   "$ORCH_SKILL" 'Find the audit note by its `**Amendment <m>` label. Find a marked clause by its `(amended by ruling <m>)` marker.' \
@@ -3049,44 +3050,178 @@ assert_in_range_folded_exact "row 40: the override revert finds the audit note a
 assert_in_range_folded_exact "row 40: one return writes one RULING entry and one ruling commit, numbered with its first ruling" \
   "$ORCH_SKILL" 'one return writes one `## RULING` entry and one ruling commit, both numbered with the first ruling number of that return.' \
   "$RESUME_LINE" "$RULINGS_LINE"
-assert_in_range_folded_exact "row 40: the covering entry is the RULING entry with the largest number not above <m>" \
-  "$ORCH_SKILL" 'Find the `## RULING` entry that covers `<m>`: the `## RULING` entry in the orchestration log with the largest number that is not above `<m>`. That entry'"'"'s return wrote ruling `<m>`.' \
+# The covering-entry rule and the sentence that says which number the search
+# uses are checked as one folded text, so that moving either one away from
+# the other fails.
+assert_in_range_folded "row 40: the covering entry rule is followed by the rule that the command and the subject filter use its number" \
+  "$ORCH_SKILL" 'Find the `## RULING` entry that covers `<m>`: the `## RULING` entry in the orchestration log with the largest number that is not above `<m>`. That entry'"'"'s return wrote ruling `<m>`. In the command below and in the subject filter after it, `<n>` is the number of that covering entry, never `<m>`.' \
   "$RESUME_LINE" "$RULINGS_LINE"
-assert_in_range_folded_exact "row 40: the search uses the covering entry's number <n>, never <m>" \
-  "$ORCH_SKILL" 'In the command below, `<n>` is the number of that covering entry, never `<m>`.' \
+assert_in_range_folded "row 40: a worked example names a return that wrote rulings 5, 6 and 7" \
+  "$ORCH_SKILL" 'when one return wrote rulings 5, 6 and 7' \
   "$RESUME_LINE" "$RULINGS_LINE"
-assert_in_range_folded_exact "row 40: a worked example shows ruling 6 of a return found under ruling 5" \
-  "$ORCH_SKILL" 'For example, when one return wrote rulings 5, 6 and 7, the commit of ruling 6 has the subject `chore(orchestration): <slug> ruling 5`.' \
+assert_in_range_folded "row 40: a worked example shows ruling 6 of a return found under ruling 5" \
+  "$ORCH_SKILL" 'the commit of ruling 6 has the subject `chore(orchestration): <slug> ruling 5`' \
   "$RESUME_LINE" "$RULINGS_LINE"
+assert_absent_in_range_folded "row 40: no ruling-commit search in Resume uses the overturned ruling's number <m>" \
+  "$ORCH_SKILL" '--grep "<slug> ruling <m>"' \
+  "$RESUME_LINE" "$RULINGS_LINE" exact
 assert_in_range_folded_exact "row 40: the override revert finds an unmarked clause in the plan by the quoted opening words" \
   "$ORCH_SKILL" 'find such a clause in the plan by the opening words that its audit note quotes.' \
   "$RESUME_LINE" "$RULINGS_LINE"
-assert_in_range_folded_exact "row 40: the override revert takes only the diff change that starts with the quoted words" \
-  "$ORCH_SKILL" 'take only the change whose new text starts with the quoted words, with line wraps ignored.' \
+
+# Row 40, review round 1, finding A. Git compares whole lines, and one hunk
+# can hold the changes to several clauses. The revert therefore takes the
+# old text of the clause from the plan before the ruling, restores only that
+# clause, and compares the result before it writes the plan.
+assert_absent_in_range_folded "row 40: the override revert no longer takes a whole diff change by its first words" \
+  "$ORCH_SKILL" 'take only the change whose new text starts with the quoted words' \
+  "$RESUME_LINE" "$RULINGS_LINE" fragment
+assert_in_range_folded "row 40: the override revert searches for the quote outside audit notes only" \
+  "$ORCH_SKILL" 'Search for the quote outside audit notes only, with line wraps ignored' \
   "$RESUME_LINE" "$RULINGS_LINE"
-assert_in_range_folded_exact "row 40: the commit-landed search runs over <BASE>..HEAD" \
-  "$ORCH_SKILL" '`git log -F --format=%s --grep "<slug> ruling <n>" <BASE>..HEAD`' \
+assert_in_range_folded "row 40: a quote that matches no clause or several clauses is a major error" \
+  "$ORCH_SKILL" 'When the quote matches no clause or more than one clause, this is a major error — stop and report it, never guess a clause.' \
   "$RESUME_LINE" "$RULINGS_LINE"
-assert_in_range_folded_exact "row 40: the override revert search runs over <BASE>..HEAD" \
-  "$ORCH_SKILL" '`git log -F --format="%H %s" --grep "<slug> ruling <n>" <BASE>..HEAD`' \
+assert_in_range_folded "row 40: the override revert uses the ruling commit diff only to see which lines of the clause changed" \
+  "$ORCH_SKILL" 'Use that diff only to see which lines of this clause changed.' \
   "$RESUME_LINE" "$RULINGS_LINE"
-assert_in_range_folded_exact "row 40: Resume states that every ruling-commit search runs over <BASE>..HEAD only" \
-  "$ORCH_SKILL" 'Every search for a ruling commit by its subject runs over `<BASE>..HEAD` only' \
+assert_in_range_folded "row 40: the override revert takes the old clause text from the plan before the ruling" \
+  "$ORCH_SKILL" 'Take the old text of the clause from `git show <ruling commit>^:<plan path>`' \
   "$RESUME_LINE" "$RULINGS_LINE"
-assert_in_range_folded_exact "row 40: the permitted reads name the ruling-commit search over <BASE>..HEAD" \
-  "$ORCH_SKILL" '`git log -F --grep "<slug> ruling <n>" <BASE>..HEAD`' \
+assert_in_range_folded "row 40: the override revert restores only that one clause, never a whole hunk" \
+  "$ORCH_SKILL" 'Restore only that one clause'"'"'s own text, never a whole hunk, and never another clause'"'"'s text, even when the two clauses share a line or a hunk.' \
+  "$RESUME_LINE" "$RULINGS_LINE"
+assert_in_range_folded "row 40: old clause text that cannot be told apart from another ruling's change is a major error" \
+  "$ORCH_SKILL" 'When the old text of the clause cannot be told apart from another ruling'"'"'s change, this is a major error — stop and report it, never guess.' \
+  "$RESUME_LINE" "$RULINGS_LINE"
+assert_in_range_folded "row 40: the override revert compares the restored clause with the plan before the ruling before it writes" \
+  "$ORCH_SKILL" 'Before you write the plan file, compare the restored clause with the same clause in the output of `git show <ruling commit>^:<plan path>`' \
+  "$RESUME_LINE" "$RULINGS_LINE"
+# Finding D: a note written by v7.33.0 carries no quote.
+assert_in_range_folded "row 40: the override revert stops when the audit note quotes no opening words" \
+  "$ORCH_SKILL" 'When the audit note quotes no opening words, because an older version of this skill wrote it, this is also a major error — stop and report it, never guess a clause.' \
+  "$RESUME_LINE" "$RULINGS_LINE"
+# Finding B, revert side: a single quote character in the quote stands for
+# either quote character of the plan.
+assert_in_range_folded "row 40: the override revert lets a single quote character in the quote match either quote character" \
+  "$ORCH_SKILL" 'let a `'"'"'` in the quote match either `'"'"'` or `"` in the plan' \
+  "$RESUME_LINE" "$RULINGS_LINE"
+
+# Row 40, review round 1, finding E: in the third-write check the note and the
+# marker carry the item's own ruling number, while the ruling commit is the
+# commit of the `## RULING` entry.
+assert_in_range_folded "row 40: in the third-write check <n> is the item's own ruling number" \
+  "$ORCH_SKILL" 'In this check, `<n>` is that item'"'"'s own ruling number: the number of its `## Ruling <n>` entry in the ruling record' \
+  "$RESUME_LINE" "$RULINGS_LINE"
+assert_in_range_folded "row 40: in the third-write check the note and the marker carry the item's own number" \
+  "$ORCH_SKILL" 'The note and the `(amended by ruling <n>)` marker both carry the item'"'"'s own number.' \
+  "$RESUME_LINE" "$RULINGS_LINE"
+assert_in_range_folded "row 40: in the third-write check the ruling commit is the commit of the RULING entry" \
+  "$ORCH_SKILL" 'Here the ruling commit is the commit of the `## RULING` entry' \
+  "$RESUME_LINE" "$RULINGS_LINE"
+
+# Row 40, review round 1, finding F. After main is merged into the feature
+# branch, a commit with the same subject from main is inside <BASE>..HEAD;
+# --first-parent leaves it out.
+assert_in_range_folded_exact "row 40: the commit-landed search follows the first parent over <BASE>..HEAD" \
+  "$ORCH_SKILL" '`git log --first-parent -F --format=%s --grep "<slug> ruling <n>" <BASE>..HEAD`' \
+  "$RESUME_LINE" "$RULINGS_LINE"
+assert_in_range_folded_exact "row 40: the override revert search follows the first parent over <BASE>..HEAD" \
+  "$ORCH_SKILL" '`git log --first-parent -F --format="%H %s" --grep "<slug> ruling <n>" <BASE>..HEAD`' \
+  "$RESUME_LINE" "$RULINGS_LINE"
+assert_in_range_folded "row 40: Resume states that every ruling-commit search runs over <BASE>..HEAD with --first-parent" \
+  "$ORCH_SKILL" 'Every search for a ruling commit by its subject runs over `<BASE>..HEAD` with `--first-parent`.' \
+  "$RESUME_LINE" "$RULINGS_LINE"
+assert_in_range_folded "row 40: Resume explains --first-parent in plain words" \
+  "$ORCH_SKILL" '`--first-parent` makes git skip the commits that a merge brought in' \
+  "$RESUME_LINE" "$RULINGS_LINE"
+assert_in_range_folded "row 40: Resume says a same-subject commit that reaches the branch through a merge is not found" \
+  "$ORCH_SKILL" 'A commit with the same subject that reaches this branch through a merge, for example from `main`, is not found.' \
+  "$RESUME_LINE" "$RULINGS_LINE"
+assert_absent_in_range_folded "row 40: Resume no longer promises that an earlier run's commit is never found" \
+  "$ORCH_SKILL" 'from an earlier run on the same slug is never found' \
+  "$RESUME_LINE" "$RULINGS_LINE" fragment
+assert_in_range_folded_exact "row 40: the permitted reads name the ruling-commit search with --first-parent over <BASE>..HEAD" \
+  "$ORCH_SKILL" '`git log --first-parent -F --grep "<slug> ruling <n>" <BASE>..HEAD`' \
   "$READ_EXCEPTION_LINE" "$READ_EXCEPTION_END"
+assert_in_range_folded "row 40: the permitted reads never drop --first-parent or <BASE>..HEAD" \
+  "$ORCH_SKILL" 'the same holds for `--first-parent` and `<BASE>..HEAD`' \
+  "$READ_EXCEPTION_LINE" "$READ_EXCEPTION_END"
+
+# Every ruling-commit search in a range carries both --first-parent and
+# <BASE>..HEAD: the number of searches must equal the number of searches with
+# the range and the number of `git log --first-parent -F` commands. A new or
+# edited search that drops either part makes the counts differ.
+assert_ruling_searches_complete() { # desc start end
+  local desc="$1" start="$2" end="$3"
+  local folded all with_range with_first_parent
+  if [ -z "$start" ] || [ -z "$end" ] || [ "$start" -ge "$end" ]; then
+    bad "$desc (the range $start..$end of ${ORCH_SKILL#$ROOT/} is missing, empty or inverted)"
+    return
+  fi
+  folded="$(fold_range "$ORCH_SKILL" "$start" "$end")"
+  all="$(count_occurrences "$folded" '--grep "<slug> ruling <n>"')"
+  with_range="$(count_occurrences "$folded" '--grep "<slug> ruling <n>" <BASE>..HEAD')"
+  with_first_parent="$(count_occurrences "$folded" 'git log --first-parent -F ')"
+  if [ "$all" -gt 0 ] && [ "$all" = "$with_range" ] && [ "$all" = "$with_first_parent" ]; then
+    ok "$desc ($all searches, range $start..$end)"
+  else
+    bad "$desc ($all searches, $with_range with <BASE>..HEAD, $with_first_parent with --first-parent, range $start..$end)"
+  fi
+}
+assert_ruling_searches_complete "row 40: every ruling-commit search in Resume carries --first-parent and <BASE>..HEAD" \
+  "$RESUME_LINE" "$RULINGS_LINE"
+assert_ruling_searches_complete "row 40: every ruling-commit search in the permitted reads carries --first-parent and <BASE>..HEAD" \
+  "$READ_EXCEPTION_LINE" "$READ_EXCEPTION_END"
+
+# Row 40, the audit note and its quote (findings B, C, D, E of review round 1).
 assert_in_range "row 40: the audit note template keeps its label and quotes the opening words of the clause" \
   "$ORCH_SKILL" '> **Amendment <n> (orchestrator ruling):** clause "<opening words of the amended clause>" — <what changed, from what, and why — one paragraph>' \
   "$ANSWERS_LINE" "$ANSWERS_END" exact
-assert_in_range_folded_exact "row 40: the amendment procedure says how many opening words the note quotes" \
-  "$ORCH_SKILL" '`<opening words of the amended clause>` quotes the clause as it reads after step 1: at least its first eight words, more words when eight words are not unique in the plan, or the whole clause when it is shorter.' \
+assert_absent_in_range_folded "row 40: the quote rule no longer asks for uniqueness in the whole plan" \
+  "$ORCH_SKILL" 'more words when eight words are not unique in the plan' \
+  "$ANSWERS_LINE" "$ANSWERS_END" fragment
+assert_in_range_folded "row 40: the quote is the clause as it reads after step 1, without its marker" \
+  "$ORCH_SKILL" '`<opening words of the amended clause>` quotes the clause as it reads after step 1, without its marker.' \
   "$ANSWERS_LINE" "$ANSWERS_END"
-assert_in_range_folded_exact "row 40: a retry finds an unmarked clause by the opening words the note quotes" \
-  "$ORCH_SKILL" 'and the clause by its marker only when step 1 placed one, or else by the opening words the note quotes.' \
+assert_in_range_folded "row 40: the quote never includes the marker" \
+  "$ORCH_SKILL" 'The quote never includes the `(amended by ruling <n>)` marker.' \
   "$ANSWERS_LINE" "$ANSWERS_END"
-assert_in_range_folded_exact "row 40: a retry's inserted note quotes the clause as the plan holds it now" \
-  "$ORCH_SKILL" 'The inserted note quotes the opening words of the clause as the plan holds it now.' \
+assert_in_range_folded "row 40: the quote has at least eight words" \
+  "$ORCH_SKILL" 'Quote at least the first eight words of the clause.' \
+  "$ANSWERS_LINE" "$ANSWERS_END"
+assert_in_range_folded "row 40: the quote is unique outside audit notes" \
+  "$ORCH_SKILL" 'Add words until no other place in the plan outside audit notes holds the quote, with line wraps ignored.' \
+  "$ANSWERS_LINE" "$ANSWERS_END"
+assert_in_range_folded "row 40: uniqueness is checked before the note is inserted" \
+  "$ORCH_SKILL" 'Check this before you insert the note.' \
+  "$ANSWERS_LINE" "$ANSWERS_END"
+assert_in_range_folded "row 40: a clause of fewer than eight words is quoted whole" \
+  "$ORCH_SKILL" 'Quote the whole clause when it has fewer than eight words.' \
+  "$ANSWERS_LINE" "$ANSWERS_END"
+assert_in_range_folded "row 40: the quote starts after any list marker" \
+  "$ORCH_SKILL" 'The quote starts at the first word after any list marker' \
+  "$ANSWERS_LINE" "$ANSWERS_END"
+assert_in_range_folded "row 40: a leading bold label is part of the quote" \
+  "$ORCH_SKILL" 'that label is part of the quote' \
+  "$ANSWERS_LINE" "$ANSWERS_END"
+assert_in_range_folded "row 40: a double quote character in the clause is written as a single quote character" \
+  "$ORCH_SKILL" 'Write each double quote character (`"`) of the clause as a single quote character (`'"'"'`)' \
+  "$ANSWERS_LINE" "$ANSWERS_END"
+assert_in_range_folded "row 40: the ruling commit of a return carries the first ruling number of that return" \
+  "$ORCH_SKILL" 'Both edits go into the single ruling commit of this return (below), never into a commit of their own. That commit'"'"'s subject is `chore(orchestration): <slug> ruling <first ruling number of the return>`' \
+  "$ANSWERS_LINE" "$ANSWERS_END"
+assert_in_range_folded "row 40: the note and the marker carry the item's own ruling number" \
+  "$ORCH_SKILL" 'the note and the marker carry the item'"'"'s own ruling number' \
+  "$ANSWERS_LINE" "$ANSWERS_END"
+assert_in_range_folded_exact "row 40: a retry finds the note by its label and the clause by its marker or its quote" \
+  "$ORCH_SKILL" 'On a retry, find the audit note by its label. Find the clause by its marker when step 1 placed one. Otherwise, find the clause by the opening words that the note quotes.' \
+  "$ANSWERS_LINE" "$ANSWERS_END"
+assert_in_range_folded "row 40: a retry stops when the note of an unmarked clause quotes no opening words" \
+  "$ORCH_SKILL" 'its note quotes no opening words, because an older version of this skill wrote it, this is a major error — stop and report it, never guess the clause.' \
+  "$ANSWERS_LINE" "$ANSWERS_END"
+assert_in_range_folded_exact "row 40: a retry's inserted note quotes the clause as it reads in the plan now" \
+  "$ORCH_SKILL" 'The inserted note quotes the opening words of the clause as that clause reads in the plan now.' \
   "$ANSWERS_LINE" "$ANSWERS_END"
 
 # --- end of checks ---
