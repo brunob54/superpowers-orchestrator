@@ -1976,8 +1976,11 @@ assert_in_range_folded "row 39: the repair runs the third-write check before it 
 assert_in_range_folded "row 39: the repaired plan edit is inside the ruling commit" \
   "$ORCH_SKILL" 'so that the plan edit is inside the `chore(orchestration): <slug> ruling <n>` commit' \
   "$RESUME_LINE" "$RULINGS_LINE"
+# Row 40 changed this sentence: the revert first finds the clause in the plan
+# by the opening words its audit note quotes, then finds the change to that
+# clause in the ruling commit diff.
 assert_in_range_folded "row 39: the override revert finds an unmarked clause in the ruling commit diff" \
-  "$ORCH_SKILL" 'find such a clause in the ruling commit'"'"'s diff of the plan file, `git show <ruling commit> -- <plan path>`' \
+  "$ORCH_SKILL" 'find the change to that clause in the ruling commit'"'"'s diff of the plan file, `git show <ruling commit> -- <plan path>`' \
   "$RESUME_LINE" "$RULINGS_LINE"
 assert_absent_in_range_folded "row 39: the override revert no longer finds the clause by its marker alone" \
   "$ORCH_SKILL" 'find the edited clause by its `(amended by ruling <n>)` marker' \
@@ -3029,6 +3032,62 @@ assert_in_range_folded_exact "an item against binding text is offered only plan 
 assert_in_range_folded "the Phase 5 read allowance names the spec deviation line shape" \
   "$ORCH_SKILL" 'the `- spec deviation:` lines of the plan-review log' \
   "$RULINGS_LINE" "$RULINGS_END"
+
+# Issues-log row 40. One return writes one `## RULING` entry and one ruling
+# commit, both numbered with the first ruling number of that return. The
+# override revert must search for the number of the `## RULING` entry that
+# covers the overturned ruling, not for the overturned ruling's own number.
+# One ruling commit can hold changes to several unmarked clauses, so the audit
+# note quotes the opening words of the amended clause, and the revert uses
+# them. Every search for a ruling commit by subject runs over <BASE>..HEAD.
+assert_in_range_folded_exact "row 40: the override revert names the overturned ruling's number <m>" \
+  "$ORCH_SKILL" 'In this revert, `<m>` is the number of the overturned ruling.' \
+  "$RESUME_LINE" "$RULINGS_LINE"
+assert_in_range_folded_exact "row 40: the override revert finds the audit note and the marker by <m>" \
+  "$ORCH_SKILL" 'Find the audit note by its `**Amendment <m>` label. Find a marked clause by its `(amended by ruling <m>)` marker.' \
+  "$RESUME_LINE" "$RULINGS_LINE"
+assert_in_range_folded_exact "row 40: one return writes one RULING entry and one ruling commit, numbered with its first ruling" \
+  "$ORCH_SKILL" 'one return writes one `## RULING` entry and one ruling commit, both numbered with the first ruling number of that return.' \
+  "$RESUME_LINE" "$RULINGS_LINE"
+assert_in_range_folded_exact "row 40: the covering entry is the RULING entry with the largest number not above <m>" \
+  "$ORCH_SKILL" 'Find the `## RULING` entry that covers `<m>`: the `## RULING` entry in the orchestration log with the largest number that is not above `<m>`. That entry'"'"'s return wrote ruling `<m>`.' \
+  "$RESUME_LINE" "$RULINGS_LINE"
+assert_in_range_folded_exact "row 40: the search uses the covering entry's number <n>, never <m>" \
+  "$ORCH_SKILL" 'In the command below, `<n>` is the number of that covering entry, never `<m>`.' \
+  "$RESUME_LINE" "$RULINGS_LINE"
+assert_in_range_folded_exact "row 40: a worked example shows ruling 6 of a return found under ruling 5" \
+  "$ORCH_SKILL" 'For example, when one return wrote rulings 5, 6 and 7, the commit of ruling 6 has the subject `chore(orchestration): <slug> ruling 5`.' \
+  "$RESUME_LINE" "$RULINGS_LINE"
+assert_in_range_folded_exact "row 40: the override revert finds an unmarked clause in the plan by the quoted opening words" \
+  "$ORCH_SKILL" 'find such a clause in the plan by the opening words that its audit note quotes.' \
+  "$RESUME_LINE" "$RULINGS_LINE"
+assert_in_range_folded_exact "row 40: the override revert takes only the diff change that starts with the quoted words" \
+  "$ORCH_SKILL" 'take only the change whose new text starts with the quoted words, with line wraps ignored.' \
+  "$RESUME_LINE" "$RULINGS_LINE"
+assert_in_range_folded_exact "row 40: the commit-landed search runs over <BASE>..HEAD" \
+  "$ORCH_SKILL" '`git log -F --format=%s --grep "<slug> ruling <n>" <BASE>..HEAD`' \
+  "$RESUME_LINE" "$RULINGS_LINE"
+assert_in_range_folded_exact "row 40: the override revert search runs over <BASE>..HEAD" \
+  "$ORCH_SKILL" '`git log -F --format="%H %s" --grep "<slug> ruling <n>" <BASE>..HEAD`' \
+  "$RESUME_LINE" "$RULINGS_LINE"
+assert_in_range_folded_exact "row 40: Resume states that every ruling-commit search runs over <BASE>..HEAD only" \
+  "$ORCH_SKILL" 'Every search for a ruling commit by its subject runs over `<BASE>..HEAD` only' \
+  "$RESUME_LINE" "$RULINGS_LINE"
+assert_in_range_folded_exact "row 40: the permitted reads name the ruling-commit search over <BASE>..HEAD" \
+  "$ORCH_SKILL" '`git log -F --grep "<slug> ruling <n>" <BASE>..HEAD`' \
+  "$READ_EXCEPTION_LINE" "$READ_EXCEPTION_END"
+assert_in_range "row 40: the audit note template keeps its label and quotes the opening words of the clause" \
+  "$ORCH_SKILL" '> **Amendment <n> (orchestrator ruling):** clause "<opening words of the amended clause>" — <what changed, from what, and why — one paragraph>' \
+  "$ANSWERS_LINE" "$ANSWERS_END" exact
+assert_in_range_folded_exact "row 40: the amendment procedure says how many opening words the note quotes" \
+  "$ORCH_SKILL" '`<opening words of the amended clause>` quotes the clause as it reads after step 1: at least its first eight words, more words when eight words are not unique in the plan, or the whole clause when it is shorter.' \
+  "$ANSWERS_LINE" "$ANSWERS_END"
+assert_in_range_folded_exact "row 40: a retry finds an unmarked clause by the opening words the note quotes" \
+  "$ORCH_SKILL" 'and the clause by its marker only when step 1 placed one, or else by the opening words the note quotes.' \
+  "$ANSWERS_LINE" "$ANSWERS_END"
+assert_in_range_folded_exact "row 40: a retry's inserted note quotes the clause as the plan holds it now" \
+  "$ORCH_SKILL" 'The inserted note quotes the opening words of the clause as the plan holds it now.' \
+  "$ANSWERS_LINE" "$ANSWERS_END"
 
 # --- end of checks ---
 
