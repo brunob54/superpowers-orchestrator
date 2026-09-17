@@ -712,17 +712,21 @@ new directory and continues — that is not a failure.
 
 A **context compaction** happens when a session's context window fills:
 Claude Code replaces the earlier conversation with a short summary. After a
-compaction, Claude Code attaches again only the first 5,000 tokens of a
-skill's text, and the orchestrator skill was about 55,000 tokens long when
-this was measured for v7.19.0. Since
-v7.19.0 the top of the skill tells an orchestrator session that continues
-from a compaction summary to re-read, from the installed skill file, the
-section it was executing (Phase 3, Phase 4, the in-run rulings, or Resume).
-It then checks the ruling record for a ruling that was written but not
-committed, before it acts on the next controller return. You may see these
-reads in the terminal; they are expected. This recovery has not yet been
-tested on a real compaction: its manual probe,
-`tests/claude-code/compaction-probe.md`, was still owed at v7.19.0.
+compaction, Claude Code attaches again only the first 20,000 characters
+(about 5,000 tokens) of a skill's text, and the orchestrator skill is about
+153,000 characters long. Since v7.19.0 the top of the skill tells an
+orchestrator session that continues from a compaction summary to re-read,
+from the installed skill file, the section it was executing (Phase 3, Phase
+4, the in-run rulings, or Resume). It then checks the ruling record (the file
+in which the orchestrator writes each ruling) for a ruling that was written
+but not committed, before it acts on the next controller return. You may see
+these reads in the terminal; they are expected. This recovery was tested on
+2026-09-16 with `tests/claude-code/compaction-probe.md`, which runs without a
+person: ten compactions in one run, and every ruling written after one was
+complete and committed in the right order. The session skipped the re-read
+after four of them, trusting summaries that restated the procedure or said
+the re-read was already done, so since v7.30.0 the guard says such a claim
+never counts.
 
 ### Watching progress
 
