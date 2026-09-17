@@ -985,19 +985,24 @@ Trigger: `Resume orchestration for <plan-or-spec path>`.
    edits the clause before it inserts the note. When the note is
    missing, first check whether the clause edit was already made. For a
    marked clause, the marker decides: a standing marker shows the edit
-   was made. For an unmarked clause, compare the clause the ruling names
-   with the plan as it stood before the ruling:
+   was made, so insert only the missing note. For an unmarked clause,
+   read the change from a diff of the plan file:
    `git diff HEAD -- <plan path>` when the ruling commit is not made yet,
-   or `git show <ruling commit>^:<plan path>` once it is. When the clause
-   already differs from that older text, the clause edit was made:
-   insert only the missing note, and never edit the clause again. When
-   the clause edit was not made, the session died before the plan
-   amendment —
+   or the ruling commit's own diff, `git show <ruling commit> -- <plan path>`,
+   once it is. When that diff shows a change to the clause the ruling
+   names, the clause edit was made: insert only the missing note, and
+   never edit the clause again. When the clause edit was not made, the
+   session died before the plan amendment —
    re-apply it now by the amendment procedure (`## In-run rulings`,
    "Plan amendment"), and when that procedure finds no target for it,
    discard the ruling rather than re-dispatching its answer: present it
    as a blocking question and stop, the exit "No match is never an edit
-   by guess" already gives an `amend plan` answer with no target. Never
+   by guess" already gives an `amend plan` answer with no target. When
+   this "no target" exit is taken before the ruling commit is made,
+   first make the normal `chore(orchestration): <slug> ruling <n>`
+   commit without any plan edit — it holds the `## RULING` entry and the
+   ruling-record entries — and only then present the blocking question
+   and stop. Never
    send `amend plan: …; fix it: …` for a plan that was never amended —
    the loop takes it on the finding-governs path believing the amendment
    landed, and the fix lands against a binding clause still in force.
@@ -1753,8 +1758,8 @@ stop (below) — writes `n/a n/a — <the stop's own reason>` after its id.
 
 - `<severity>` is `Critical` for a C id and `Important` for an I id. Only
   Critical and Important findings can be `user-decision` or `unresolved`
-  (multi-code-review, "Canonical dispositions"). Write `n/a` when the id
-  has neither letter, or when the item has no review finding behind it
+  (multi-code-review, "Canonical dispositions"). Write `n/a` when the
+  first letter of the id is neither C nor I, or when the item has no review finding behind it
   (a controller malformed or failed twice, a checkbox cross-check
   mismatch).
 - `<file:line>` is the location that follows `— at ` on the disposition
@@ -1766,8 +1771,8 @@ stop (below) — writes `n/a n/a — <the stop's own reason>` after its id.
   multi-code-review names: `verification cap`, `addendum re-review`,
   `fix contradicts binding text` and
   `withheld finding, no credential at the location`. For any other
-  `unresolved:` line, the whole text before the first ` — at` is the
-  `<reason>`, and the `<reason>` is written as the summary. For an item
+  `unresolved:` line, the text after `unresolved: ` and before the first
+  ` — at` is the `<reason>`, and the `<reason>` is written as the summary. For an item
   that carries a secret, write the location only (see "Never reproduce
   a secret"). Never copy the whole disposition line into this field.
 
@@ -2090,15 +2095,16 @@ conflict no answered line matches. Without this, one settled conflict
 would come back under a new number on every re-dispatch and burn the
 per-task cap.
 
-**Only an `amend plan` answer edits the plan file.** This rule holds for
+**In a ruling commit, only an `amend plan` answer edits the plan file.**
+This rule holds for
 the Phase 3 and the Phase 4 answers above. A ruling commit changes the
 plan file only under an `amend plan` answer, and only by the amendment
 procedure below. In the ruling commit that records them, a
 `plan governs` answer, a `fix it` answer, an `accept` answer and a
 plain-text answer never edit the plan file, not even its reference
-text. Two plan edits are outside this rule: the amendment revert and
-the checkbox untick of Resume step 3, and a fix commit that the
-code-review loop makes.
+text. Two kinds of plan edit are outside this rule. The first is the
+amendment revert and the checkbox untick of Resume step 3. The second is
+a fix commit that the code-review loop makes.
 
 **Plan amendment.** A plan conflict is a collision with text the plan's
 `**Body authority:**` note — a block the plan-writing skill,
@@ -2112,16 +2118,18 @@ review would raise the same finding. So, using the plan location the
 disposition line names (`— clause: Global Constraints` or
 `— clause: Task <n>`) or the task report names — and finding the clause
 inside it by the prefix rule above, never by a byte-equal match — do two
-things, always in this order: step 1 is done before step 2. So a
-standing audit note shows that the clause edit was made:
+things, in this order. Step 1 is always done before step 2, so a
+standing audit note shows that the clause edit was made. The two things
+are:
 
 1. **Edit the binding clause in place** — replace the Global Constraints
    entry, the Exact-content block, the contradicted `**Contract:**` text,
-   or a pre-note plan's mandated sentence, with the amended text. **The
+   or a mandated sentence in a plan whose header has no
+   `**Body authority:**` note, with the amended text. **The
    `(amended by ruling <n>)` marker is then appended ONLY when the edited
    clause is a Global Constraints entry or an Exact-content block** — an
-   amended `**Contract:**`, and a pre-note plan's amended mandated
-   sentence, get no marker and so never become decided wording
+   amended `**Contract:**`, and an amended mandated sentence in a plan
+   whose header has no `**Body authority:**` note, get no marker and so never become decided wording
    (multi-code-review, "Decided wording in a verification cycle"): a
    later finding against that same text is triaged by the ordinary rules,
    exactly as against reference text. When the clause is a fenced code
@@ -2146,11 +2154,11 @@ commit (below), never into a commit of their own. On a retry, find the
 audit note by its label, and the clause by its marker only when step 1
 placed one. For an unmarked clause, the standing audit note alone shows
 that the amendment was applied. When the note is missing, a marked
-clause is decided by its marker. An unmarked clause is compared with the
-plan as it stood before the ruling (`git diff HEAD -- <plan path>`
-before the ruling commit, `git show <ruling commit>^:<plan path>` after
-it): when the clause already differs from that older text, insert only
-the missing note. Never apply the amendment twice.
+clause is decided by its marker. For an unmarked clause, read the
+change from a diff of the plan file (`git diff HEAD -- <plan path>`
+before the ruling commit, `git show <ruling commit> -- <plan path>`
+after it). When that diff shows a change to the clause, insert only the
+missing note. Never apply the amendment twice.
 
 **No match is never an edit by guess.** When no sentence and no list
 entry of the named location matches the quote under that rule, the
@@ -2218,8 +2226,9 @@ with the task's completion. Then rewrite `state.md`'s `Rulings:` line in
 the shape that `## state.md Section` gives,
 `Rulings: <count> (last: ruling <n>, phase <p>)`. In that line,
 `<count>` is the number of `## Ruling` entries in the ruling record, and
-`<n>` is the highest ruling number written so far (not the first ruling
-number of the return, which `<n>` means in the entry above). Then
+`<n>` is the highest ruling number written so far. In the `## RULING`
+entry above, `<n>` means the first ruling number of the return instead.
+Then
 re-dispatch the phase's controller with the answers in
 `[RESUME_ANSWER]` — the only channel. In Phase 3 the answers are the full
 set defined above, not only the newest return's. The re-dispatch is a new
