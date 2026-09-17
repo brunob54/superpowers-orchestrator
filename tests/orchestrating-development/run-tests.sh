@@ -497,6 +497,8 @@ for needle in 'compaction summary' \
               'about the first 20,000 characters of this file' \
               'even when it restates a procedure or says the re-read below was already done' \
               "\`sed -n '<first>,<last>p'\` on the same line range is the same read" \
+              'once, before the first of these that follows' \
+              'in parts of at most 250 lines' \
               "$H_PHASE3" "$H_PHASE4" "$H_INRUN" "$H_RESUME"; do
   assert_folded_contains "recovery: Required Start contains '$needle'" "$REQUIRED_RANGE" "$needle"
 done
