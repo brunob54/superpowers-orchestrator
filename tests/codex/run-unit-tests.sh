@@ -53,6 +53,7 @@ run_test "skill-activator (UserPromptSubmit)" "${SCRIPT_DIR}/test-skill-activato
 run_test "statusline-context-cache" "${SCRIPT_DIR}/test-statusline-cache.js"
 run_test "subagent-guard (SubagentStop)" "${SCRIPT_DIR}/test-subagent-guard.js"
 run_test "protect-secrets (PreToolUse Bash)" "${SCRIPT_DIR}/test-protect-secrets.js"
+run_test "track-edits and context-engine (git ignore entries)" "${SCRIPT_DIR}/test-git-exclude-hooks.js"
 
 echo "=================================================="
 echo " Results: ${PASS} suites passed, ${FAIL} suites failed"
