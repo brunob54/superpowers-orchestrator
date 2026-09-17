@@ -8,7 +8,8 @@
  *   - Recent commit history and change statistics
  *
  * Writes context-snapshot.json to the project root.
- * Auto-adds context-snapshot.json to .gitignore on first write.
+ * Keeps context-snapshot.json out of `git status` through the local exclude
+ * file (see git-exclude.js); no tracked file is edited.
  * Fails silently on any error — never blocks session start.
  *
  * Input:  stdin JSON with { cwd, ... } (falls back to process.cwd())
@@ -19,6 +20,7 @@ const { execSync } = require('child_process');
 const { createHash } = require('crypto');
 const fs = require('fs');
 const path = require('path');
+const { excludeFromGit } = require('./git-exclude');
 
 const MAX_FILES = 10;    // cap blast radius queries to avoid slowness on large diffs
 const MIN_NAME_LEN = 3;  // skip very short filenames to avoid false-positive grep hits
@@ -46,29 +48,6 @@ function run(cmd, cwd) {
     return execSync(cmd, { encoding: 'utf8', timeout: TIMEOUT_MS, cwd }).trim();
   } catch {
     return '';
-  }
-}
-
-function ensureGitignored(cwd) {
-  try {
-    const gitignorePath = path.join(cwd, '.gitignore');
-    let content = fs.existsSync(gitignorePath)
-      ? fs.readFileSync(gitignorePath, 'utf8')
-      : '';
-
-    const lines = content.split('\n').map(l => l.trim());
-    if (lines.includes('context-snapshot.json')) return; // already present
-
-    const prefix = content.length > 0 && !content.endsWith('\n') ? '\n' : '';
-    const hasSection = content.includes('# AI assistant artifacts');
-
-    if (!hasSection) {
-      fs.appendFileSync(gitignorePath, `${prefix}\n# AI assistant artifacts\ncontext-snapshot.json\n`);
-    } else {
-      fs.appendFileSync(gitignorePath, `${prefix}context-snapshot.json\n`);
-    }
-  } catch {
-    // Silently ignore — never block session start
   }
 }
 
@@ -188,11 +167,9 @@ async function main() {
   };
 
   try {
-    fs.writeFileSync(
-      path.join(cwd, 'context-snapshot.json'),
-      JSON.stringify(snapshot, null, 2)
-    );
-    ensureGitignored(cwd);
+    const snapshotPath = path.join(cwd, 'context-snapshot.json');
+    fs.writeFileSync(snapshotPath, JSON.stringify(snapshot, null, 2));
+    excludeFromGit(snapshotPath);
   } catch {
     // Silently ignore write errors — never block session start
   }
