@@ -1164,10 +1164,14 @@ Trigger: `Resume orchestration for <plan-or-spec path>`.
    `git show <ruling commit>^:<plan path>`, which prints the plan as it
    stood before the ruling. That output does not hold the note, because
    the note is written in the ruling commit itself. Search that output
-   inside the block whose heading matches the note's block, and nowhere
-   else: a clause of the same wording can stand in another task of the
-   older plan. When more than one clause inside that block matches, this
-   is a major error — stop and report it, never guess a clause.
+   inside the block that matches the note's block — the block with the
+   same heading, or that same `**Global Constraints:**` block — and
+   nowhere else: a clause of the same wording can stand in another task of
+   the older plan. When more than one clause inside that block matches,
+   this is a major error — stop and report it, never guess a clause. When
+   no clause inside that block matches, whatever the cause, take the
+   clause from the removed lines of the ruling commit's diff, as the next
+   sentence states; never widen this search.
    When the amendment changed the clause's
    opening words, the quoted words are not in that output. In that case,
    use the removed lines of the ruling commit's diff of the plan file —

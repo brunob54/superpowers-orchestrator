@@ -3594,13 +3594,26 @@ assert_absent_in_range_folded "row 46: no copy of the fence rule closes on any b
 # paragraph alone, not over the whole Resume range: pinned to the wide range,
 # the two sentences could be moved to another search and still pass.
 PRE_RULING_LINE="$(line_containing_after "$ORCH_SKILL" 'Take the old text of the clause from' "$RESUME_LINE")"
-PRE_RULING_END=$((PRE_RULING_LINE + 14))
+PRE_RULING_END=$((PRE_RULING_LINE + 12))
 assert_in_range_folded "row 46: the pre-ruling output holds no note, and the rule says so" \
   "$ORCH_SKILL" 'That output does not hold the note, because the note is written in the ruling commit itself.' \
   "$PRE_RULING_LINE" "$PRE_RULING_END"
 assert_in_range_folded "row 46: the pre-ruling search is held to the matching block" \
-  "$ORCH_SKILL" 'Search that output inside the block whose heading matches the note'"'"'s block, and nowhere else' \
+  "$ORCH_SKILL" 'Search that output inside the block that matches the note'"'"'s block — the block with the same heading, or that same `**Global Constraints:**` block — and nowhere else' \
   "$PRE_RULING_LINE" "$PRE_RULING_END"
+# Verification cycle 3, I1. The zero-match branch was keyed to one cause, so
+# a zero match from any other cause reached no rule at all.
+assert_in_range_folded "row 46: the pre-ruling search routes every zero match to the diff" \
+  "$ORCH_SKILL" 'When no clause inside that block matches, whatever the cause, take the clause from the removed lines of the ruling commit'"'"'s diff' \
+  "$PRE_RULING_LINE" "$PRE_RULING_END"
+# Verification cycle 3, I2. Every check on this paragraph was positive, so
+# reinstating the whole-output fallback passed them all.
+assert_in_range_folded "row 46: the pre-ruling search is never widened" \
+  "$ORCH_SKILL" 'never widen this search' \
+  "$PRE_RULING_LINE" "$PRE_RULING_END"
+assert_absent_in_range_folded "row 46: no whole-output fallback returns to the pre-ruling search" \
+  "$ORCH_SKILL" 'search the whole of that output' \
+  "$PRE_RULING_LINE" "$PRE_RULING_END" fragment
 assert_in_range_folded "row 46: the pre-ruling search says why it takes no match elsewhere" \
   "$ORCH_SKILL" 'a clause of the same wording can stand in another task of the older plan' \
   "$PRE_RULING_LINE" "$PRE_RULING_END"
