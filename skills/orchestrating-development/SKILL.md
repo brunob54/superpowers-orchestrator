@@ -1111,7 +1111,7 @@ Trigger: `Resume orchestration for <plan-or-spec path>`.
    `### Task <n>` section, up to the line before the next line that begins
    with a `#` character outside a fenced code block. A fenced code block
    runs from a line that opens with three or more backtick characters to
-   the line that closes it. A line inside such a fence never ends the
+   the next line that opens with at least as many backtick characters. A line inside such a fence never ends the
    section, because a plan step often shows a script whose lines begin
    with `#`.
    When exactly one clause inside that block matches, that clause is the
@@ -1162,7 +1162,11 @@ Trigger: `Resume orchestration for <plan-or-spec path>`.
    changed lines) can hold the changes to several clauses of one return.
    Take the old text of the clause from
    `git show <ruling commit>^:<plan path>`, which prints the plan as it
-   stood before the ruling. When the amendment changed the clause's
+   stood before the ruling. Search that output inside the note's block
+   too, as defined above, and search the whole of it only when that block
+   holds no match. When more than one clause matches, this is a major
+   error — stop and report it, never guess a clause.
+   When the amendment changed the clause's
    opening words, the quoted words are not in that output. In that case,
    use the removed lines of the ruling commit's diff of the plan file —
    the lines that start with `-` — to see which lines of the earlier
@@ -2360,8 +2364,8 @@ are:
    that follows a task heading line, it is that `### Task <n>` section,
    up to the line before the next line that begins with a `#` character
    outside a fenced code block. A fenced code block runs from a line that
-   opens with three or more backtick characters to the line that closes
-   it. A line inside such a fence never ends the section, because a plan
+   opens with three or more backtick characters to the next line that
+   opens with at least as many backtick characters. A line inside such a fence never ends the section, because a plan
    step often shows a script whose lines begin with `#`.
    Check this before you insert the note. Uniqueness inside the note's
    block is enough, because the revert of Resume step 3 searches that

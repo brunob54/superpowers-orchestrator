@@ -3561,7 +3561,7 @@ assert_in_range_folded "row 46: the note's block is defined where the quote is b
 # block ends at that line, the uniqueness check covers a few lines only, and
 # row 46 comes back for every clause below a fence.
 assert_in_range_folded "row 46: a fenced line never ends the block, where the quote is built" \
-  "$ORCH_SKILL" 'A fenced code block runs from a line that opens with three or more backtick characters to the line that closes it. A line inside such a fence never ends the section' \
+  "$ORCH_SKILL" 'A fenced code block runs from a line that opens with three or more backtick characters to the next line that opens with at least as many backtick characters. A line inside such a fence never ends the section' \
   "$ANSWERS_LINE" "$ANSWERS_END"
 # The same definition must hold on the revert side, or the two scopes drift
 # apart and the quote is unique in one scope while searched in another.
@@ -3570,6 +3570,31 @@ assert_in_range_folded "row 46: the note's block is defined the same way for the
   "$RESUME_LINE" "$RULINGS_LINE"
 assert_in_range_folded "row 46: a fenced line never ends the block, for the revert" \
   "$ORCH_SKILL" 'a line inside such a fence never ends the section' \
+  "$RESUME_LINE" "$RULINGS_LINE"
+# Verification pass, finding 3. The sentence that defines a fence was pinned
+# on the amendment side only, so deleting the revert's copy passed all 726
+# checks. The two copies must say the same thing, or the two scopes differ.
+assert_in_range_folded "row 46: the fence itself is defined for the revert too" \
+  "$ORCH_SKILL" 'A fenced code block runs from a line that opens with three or more backtick characters to the next line that opens with at least as many backtick characters.' \
+  "$RESUME_LINE" "$RULINGS_LINE"
+# Verification pass, finding 1. A plan can hold a fence inside a fence. If the
+# closing line may carry fewer backticks, the inner opening line reads as the
+# close of the outer fence and C1 comes back for the lines between them.
+# Measured: 9 of 46 plan files hold such a nested fence with a `#` line.
+assert_in_range_folded "row 46: a nested fence does not close its outer fence, where the quote is built" \
+  "$ORCH_SKILL" 'to the next line that opens with at least as many backtick characters' \
+  "$ANSWERS_LINE" "$ANSWERS_END"
+assert_absent_in_range_folded "row 46: no copy of the fence rule closes on any backtick line" \
+  "$ORCH_SKILL" 'backtick characters to the line that closes it' \
+  "$RESUME_LINE" "$RULINGS_LINE" fragment
+# Verification pass, finding 2. The search over the plan before the ruling
+# assumed a quote unique in the whole plan. This branch makes the quote
+# unique inside the note's block only, so that search needs the same scope.
+assert_in_range_folded "row 46: the pre-ruling search uses the note's block too" \
+  "$ORCH_SKILL" 'Search that output inside the note'"'"'s block too, as defined above, and search the whole of it only when that block holds no match.' \
+  "$RESUME_LINE" "$RULINGS_LINE"
+assert_in_range_folded "row 46: the pre-ruling search stops when more than one clause matches" \
+  "$ORCH_SKILL" 'When more than one clause matches, this is a major error — stop and report it, never guess a clause.' \
   "$RESUME_LINE" "$RULINGS_LINE"
 # Review round 1, M5. More than one match inside the block had no branch of
 # its own and was reached only through the counts sentence.
