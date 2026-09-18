@@ -1105,15 +1105,21 @@ Trigger: `Resume orchestration for <plan-or-spec path>`.
    outside audit notes only, with line wraps ignored, and let a `'` in
    the quote match either `'` or `"` in the plan. An audit note is one
    block quote line that begins `> **Amendment ` — that line alone, never
-   the clause text around it. Search the note's block first: the
-   `**Global Constraints:**` block for a note that follows that block, and
-   the `### Task <n>` section for a note that follows a task heading line,
-   up to the line before the next line that begins with a `#` character.
+   the clause text around it. Search the note's block first. For a note
+   that follows the `**Global Constraints:**` block, it is that same
+   block. For a note that follows a task heading line, it is that
+   `### Task <n>` section, up to the line before the next line that begins
+   with a `#` character outside a fenced code block. A fenced code block
+   runs from a line that opens with three or more backtick characters to
+   the line that closes it. A line inside such a fence never ends the
+   section, because a plan step often shows a script whose lines begin
+   with `#`.
    When exactly one clause inside that block matches, that clause is the
    target. When no clause inside that block matches, search the whole plan
    the same way, because an older version of this skill could place the
-   note after another block. The counts in the sentence below are the
-   counts this search ends with. When the quote matches
+   note after another block. When more than one clause inside that block
+   matches, stop under the sentence below. The counts in the sentence
+   below are the counts this search ends with. When the quote matches
    no clause or more than one clause, this is a major error — stop and
    report it, never guess a clause. When the audit note quotes no opening
    words, because an older version of this skill wrote it, this is also a
@@ -1125,8 +1131,8 @@ Trigger: `Resume orchestration for <plan-or-spec path>`.
    wraps ignored and a `'` in the quote matching either `'` or `"`, exactly
    as above. Narrow that search to the note's block first, and fall back to
    the whole plan the same way. When the two searches end on clauses in
-   different blocks, this is a major error — stop and report it, never
-   guess a clause. The unit you read is the one step 1 of "Plan amendment" edits:
+   blocks with different headings, this is a major error — stop and report
+   it, never guess a clause. The unit you read is the one step 1 of "Plan amendment" edits:
    a Global Constraints entry, an `**Exact content:**` block, a
    `**Contract:**` text, or a mandated sentence. Compare that clause with
    the clause the plan holds now. The two
@@ -2349,10 +2355,14 @@ are:
    `(amended by ruling <n>)` marker. Quote at least the first eight words
    of the clause. Add words until no other place inside the note's block,
    outside audit notes, holds the quote, with line wraps ignored. The
-   note's block is the text the note stands in: the
-   `**Global Constraints:**` block for a note that follows that block, and
-   the `### Task <n>` section for a note that follows a task heading line,
-   up to the line before the next line that begins with a `#` character.
+   note's block is the text the note stands in. For a note that follows
+   the `**Global Constraints:**` block, it is that same block. For a note
+   that follows a task heading line, it is that `### Task <n>` section,
+   up to the line before the next line that begins with a `#` character
+   outside a fenced code block. A fenced code block runs from a line that
+   opens with three or more backtick characters to the line that closes
+   it. A line inside such a fence never ends the section, because a plan
+   step often shows a script whose lines begin with `#`.
    Check this before you insert the note. Uniqueness inside the note's
    block is enough, because the revert of Resume step 3 searches that
    block first. Quote the whole clause when it has fewer than eight
@@ -2375,7 +2385,10 @@ never into a commit of their own. That commit's subject is
 while the note and the marker carry the item's own ruling number.
 On a retry, find the audit note by its label. Find the clause by its
 marker when step 1 placed one. Otherwise, find the clause by the opening
-words that the note quotes. When a retry must find an unmarked clause
+words that the note quotes. Search the note's block first, as defined
+above, and search the whole plan only when that block holds no match.
+When more than one clause matches, this is a major error — stop and
+report it, never guess the clause. When a retry must find an unmarked clause
 and its note quotes no opening words, because an older version of this
 skill wrote it, this is a major error — stop and report it, never guess
 the clause. For an unmarked clause, the standing audit note alone shows
