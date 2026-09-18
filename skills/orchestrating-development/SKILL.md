@@ -1138,7 +1138,10 @@ Trigger: `Resume orchestration for <plan-or-spec path>`.
    another clause, or another sentence that this ruling did not amend.
    That text must read exactly as the plan held it before this revert
    started. The `git diff -- <plan path>` output you saved before
-   changing the plan shows what the plan held then. This part catches a
+   changing the plan shows what the plan held then. That output holds
+   only the lines that were already uncommitted; for every other line,
+   the committed text is what the plan held, and
+   `git show HEAD:<plan path>` prints it. This part catches a
    revert that also changed another clause's words on a line the two
    clauses share. A difference in either part is a major error — stop
    and report it, and do not commit.
@@ -1524,6 +1527,7 @@ you and your forks may read exactly:
    `git show <ruling commit>^:<plan path>`,
    `git show <ruling commit> -- <plan path>`,
    `git diff -- <plan path>`,
+   `git show HEAD:<plan path>`,
    `git diff HEAD -- <plan path>`, and a scan of the whole plan
    file for an orphan `(amended by ruling <n>)` marker and its
    `**Amendment <n>` note.

@@ -3178,6 +3178,12 @@ assert_in_range_folded "row 40: part 2 requires that text to read exactly as the
 assert_in_range_folded "row 40: part 2 uses the plan diff saved before the plan file was changed" \
   "$ORCH_SKILL" 'The `git diff -- <plan path>` output you saved before changing the plan shows what the plan held then.' \
   "$RESUME_LINE" "$RULINGS_LINE"
+assert_in_range_folded "row 40: part 2 names the committed text as the reference for a line that was not uncommitted" \
+  "$ORCH_SKILL" 'That output holds only the lines that were already uncommitted; for every other line, the committed text is what the plan held, and `git show HEAD:<plan path>` prints it.' \
+  "$RESUME_LINE" "$RULINGS_LINE"
+assert_in_range_folded "row 40: the permitted reads name the committed plan text command" \
+  "$ORCH_SKILL" '`git show HEAD:<plan path>`,' \
+  "$READ_EXCEPTION_LINE" "$READ_EXCEPTION_END"
 assert_in_range_folded "row 40: part 2 catches a revert that also changed another clause on a shared line" \
   "$ORCH_SKILL" 'This part catches a revert that also changed another clause'"'"'s words on a line the two clauses share.' \
   "$RESUME_LINE" "$RULINGS_LINE"
@@ -3308,7 +3314,7 @@ assert_in_range_folded "row 40: the permitted reads include the merge search ove
   "$ORCH_SKILL" '`git log --merges --format=%h <BASE>..HEAD`,' \
   "$READ_EXCEPTION_LINE" "$READ_EXCEPTION_END"
 assert_in_range_folded "row 40: the permitted reads include the plan diff against the index and HEAD" \
-  "$ORCH_SKILL" '`git diff -- <plan path>`, `git diff HEAD -- <plan path>`,' \
+  "$ORCH_SKILL" '`git diff -- <plan path>`, `git show HEAD:<plan path>`, `git diff HEAD -- <plan path>`,' \
   "$READ_EXCEPTION_LINE" "$READ_EXCEPTION_END"
 
 # Every ruling-commit search in a range carries both --first-parent and
