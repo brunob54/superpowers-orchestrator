@@ -1162,10 +1162,12 @@ Trigger: `Resume orchestration for <plan-or-spec path>`.
    changed lines) can hold the changes to several clauses of one return.
    Take the old text of the clause from
    `git show <ruling commit>^:<plan path>`, which prints the plan as it
-   stood before the ruling. Search that output inside the note's block
-   too, as defined above, and search the whole of it only when that block
-   holds no match. When more than one clause matches, this is a major
-   error — stop and report it, never guess a clause.
+   stood before the ruling. That output does not hold the note, because
+   the note is written in the ruling commit itself. Search that output
+   inside the block whose heading matches the note's block, and nowhere
+   else: a clause of the same wording can stand in another task of the
+   older plan. When more than one clause inside that block matches, this
+   is a major error — stop and report it, never guess a clause.
    When the amendment changed the clause's
    opening words, the quoted words are not in that output. In that case,
    use the removed lines of the ruling commit's diff of the plan file —

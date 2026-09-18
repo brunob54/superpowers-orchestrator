@@ -3587,15 +3587,32 @@ assert_in_range_folded "row 46: a nested fence does not close its outer fence, w
 assert_absent_in_range_folded "row 46: no copy of the fence rule closes on any backtick line" \
   "$ORCH_SKILL" 'backtick characters to the line that closes it' \
   "$RESUME_LINE" "$RULINGS_LINE" fragment
-# Verification pass, finding 2. The search over the plan before the ruling
-# assumed a quote unique in the whole plan. This branch makes the quote
-# unique inside the note's block only, so that search needs the same scope.
-assert_in_range_folded "row 46: the pre-ruling search uses the note's block too" \
-  "$ORCH_SKILL" 'Search that output inside the note'"'"'s block too, as defined above, and search the whole of it only when that block holds no match.' \
-  "$RESUME_LINE" "$RULINGS_LINE"
+# Verification pass, finding 2, and verification cycle 2, findings I1 to I3.
+# The search over the plan before the ruling assumed a quote unique in the
+# whole plan. This branch makes the quote unique inside the note's block
+# only, so that search needs the same scope. The checks below run over that
+# paragraph alone, not over the whole Resume range: pinned to the wide range,
+# the two sentences could be moved to another search and still pass.
+PRE_RULING_LINE="$(line_containing_after "$ORCH_SKILL" 'Take the old text of the clause from' "$RESUME_LINE")"
+PRE_RULING_END=$((PRE_RULING_LINE + 14))
+assert_in_range_folded "row 46: the pre-ruling output holds no note, and the rule says so" \
+  "$ORCH_SKILL" 'That output does not hold the note, because the note is written in the ruling commit itself.' \
+  "$PRE_RULING_LINE" "$PRE_RULING_END"
+assert_in_range_folded "row 46: the pre-ruling search is held to the matching block" \
+  "$ORCH_SKILL" 'Search that output inside the block whose heading matches the note'"'"'s block, and nowhere else' \
+  "$PRE_RULING_LINE" "$PRE_RULING_END"
+assert_in_range_folded "row 46: the pre-ruling search says why it takes no match elsewhere" \
+  "$ORCH_SKILL" 'a clause of the same wording can stand in another task of the older plan' \
+  "$PRE_RULING_LINE" "$PRE_RULING_END"
 assert_in_range_folded "row 46: the pre-ruling search stops when more than one clause matches" \
-  "$ORCH_SKILL" 'When more than one clause matches, this is a major error — stop and report it, never guess a clause.' \
-  "$RESUME_LINE" "$RULINGS_LINE"
+  "$ORCH_SKILL" 'When more than one clause inside that block matches, this is a major error — stop and report it, never guess a clause.' \
+  "$PRE_RULING_LINE" "$PRE_RULING_END"
+# Verification cycle 2, M1. The absent-check on the old fence wording ran in
+# the Resume range only, so the amendment copy could gain a contradicting
+# sentence and the two sides would compute different blocks.
+assert_absent_in_range_folded "row 46: no copy of the fence rule closes on any backtick line, where the quote is built" \
+  "$ORCH_SKILL" 'backtick characters to the line that closes it' \
+  "$ANSWERS_LINE" "$ANSWERS_END" fragment
 # Review round 1, M5. More than one match inside the block had no branch of
 # its own and was reached only through the counts sentence.
 assert_in_range_folded "row 46: more than one match inside the block stops the resume" \
