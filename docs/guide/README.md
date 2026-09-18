@@ -940,7 +940,14 @@ does no harm. The `Ruled:` lines are decisions the
 orchestrator already made and recorded — resume carries them forward as
 they are. If you disagree with one, answer that id yourself in the resume
 prompt: the run then reverts that ruling, and the change made under it,
-before continuing. A crash after a ruling was committed but before its
+before continuing. Since v7.35.0 the run first checks that the clause it
+is about to restore has not changed since that ruling: when a later
+ruling amended the same clause, the run stops and reports instead of
+restoring, because restoring would also remove the later amendment. A
+ruling you overturn a second time is recognised as already reverted and
+is skipped. When one resume prompt overturns several rulings, the run
+takes them from the highest ruling number down, and it undoes every plan
+change before it undoes any code change. A crash after a ruling was committed but before its
 re-dispatch completed is recovered the same way as any other: resume reads
 the trailing `## RULING` entry and re-dispatches the phase with the same
 answers.
@@ -1035,7 +1042,10 @@ The same file-based durability serves everyday work:
    recovery never silently reconciles your working tree. There are two
    exceptions. When the log ends with a `## STOPPED` or `## RULING` entry,
    the check is skipped, because the tree may hold the blocked task's work
-   on purpose. Uncommitted files under the topic's `implementation/` folder
+   on purpose. Since v7.35.0, a resume that has already changed the plan
+   file and then stops puts the replaced clause text back before it
+   stops, so the tree cannot hold a half-finished revert that the next
+   resume would commit as the blocked task's own work. Uncommitted files under the topic's `implementation/` folder
    or in `plans/<slug>-open-decisions.md` never block, because the resumed
    run commits or repairs them. Batched plan execution and `executing-plans`
    have no clean-tree check at resume, so look at `git status` yourself
