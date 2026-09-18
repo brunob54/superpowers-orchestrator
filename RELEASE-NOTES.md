@@ -8,6 +8,96 @@
 > (`REPOZY/superpowers-optimized`) and are kept unchanged as history; any
 > testing they describe was not done here.
 
+## v7.34.0 — find the ruling commit of a later ruling of a return
+
+**Problem.** A resume could not find the ruling commit of an overturned
+ruling that was not the first of its return. The search used the ruling's
+own number, found no line, and stopped the run.
+
+**Change.** The revert now finds the `## RULING` entry that covers the
+ruling and searches for that entry's number. The audit note quotes the
+amended clause's opening words, so a revert finds an unmarked clause and
+restores only that clause's text.
+
+**Effect.** An override of a later ruling of a return now works, and a
+revert no longer writes a wrong clause. Reinstall the plugin so a session
+reads the new text. Nothing to migrate.
+
+One return of a phase writes one `## RULING` entry and one commit, and that
+commit's subject carries only the first ruling number of the return. Resume
+step 3 searched `git log --grep "<slug> ruling <n>"` with the overturned
+ruling's own number and required exactly one line. When one return held
+rulings 5 and 6 and the user overturned ruling 6, the search found zero
+lines and the run stopped as a major error. The stop was safe — nothing was
+reverted wrongly — but the override could not be carried out. Since v7.33.0
+an amended clause that carries no `(amended by ruling <n>)` marker is found
+only through that commit's diff, so the same gap blocked the revert of such
+a clause (worklist row 40).
+
+**Finding the commit.** The revert now finds the `## RULING` entry that
+covers the overturned ruling: the entry in the orchestration log with the
+largest number that is not above the overturned ruling's number. The search
+uses that entry's number. Example: one return wrote rulings 5, 6 and 7, so
+the commit of ruling 6 has the subject
+`chore(orchestration): <slug> ruling 5`. The third-write check of Resume
+step 3 now says the opposite thing about its own `<n>`: there `<n>` is the
+item's own ruling number, which can be higher than the `## RULING` entry's
+number, because the audit note and the marker both carry the item's number.
+
+**Finding the clause.** The audit note now quotes the amended clause's
+opening words:
+`> **Amendment <n> (orchestrator ruling):** opening words "<opening words>" — <what changed, from what, and why>`.
+The label is unchanged. The quote leaves out the `(amended by ruling <n>)`
+marker, holds at least the first eight words of the clause, and is checked
+for uniqueness outside audit notes before the note is written. A revert of
+an unmarked clause searches the plan for that quote, reads from the ruling
+commit's diff which lines of the clause changed, takes the old text from the
+commit before the ruling commit, and restores only that one clause — never a
+whole hunk (one block of changed lines in a diff). A quote that matches no
+clause, a quote that matches more than one clause, a note with no quote, and
+a set of changed lines whose two rulings cannot be separated are each a major
+error.
+
+**Two checks after the plan file is written.** Before the resume commit, the
+run inspects `git diff -- <plan path>`. Every changed line must belong to
+this clause, to this clause's audit note, to another revert of the same
+resume, to a checkbox that this resume unticks, or to an edit that was
+already uncommitted when the revert started. Then a word check in two parts:
+every word the ruling commit removed from this clause must stand again in
+the plan in the same order, and any other text on those same lines must read
+exactly as the plan held it before the revert. A difference in either check
+is a major error — the run stops and makes no commit.
+
+**The search range.** Every search for a ruling commit by its subject now
+runs `git log --first-parent … <BASE>..HEAD`. `<BASE>..HEAD` keeps only the
+commits after the recorded branch point, and `--first-parent` makes git skip
+the commits a merge brought in, so a commit with the same subject from an
+earlier run is never matched. During a run nobody pulls into the feature
+branch and nobody merges another branch into it. When the search finds no
+exact match and `git log --merges --format=%h <BASE>..HEAD` prints a merge
+commit, the run stops as a major error instead of taking the recovery path,
+because a merge's second parent can hold a ruling commit the search did not
+read. The permitted-read list of Resume step 3 gained
+`git log --merges --format=%h <BASE>..HEAD`, `git diff -- <plan path>` and
+`git show HEAD:<plan path>`.
+
+**Tests.** `tests/in-run-rulings/run-tests.sh` now has 678 checks (591 in
+v7.33.0, 545 in v7.32.0). The change was reviewed in three rounds by
+independent reviewers under four lenses (correctness, adversarial, test
+quality and plain English); each round's findings were applied in a commit
+of their own. `tests/reviewer-templates/run-tests.sh` and
+`tests/orchestrating-development/run-tests.sh` pass unchanged.
+
+**Known limits.** The analysis of row 40 opened four more worklist rows,
+none of them fixed here and none observed in a run: a branch rewritten
+between a stop and a resume hides ruling commits from both subject searches
+(row 41); reverting an amendment of a clause that a later ruling also
+amended removes the later change and leaves its note standing (row 42); the
+same ruling can be overturned twice, and the second revert writes the
+pre-ruling text over the user's own amendment (row 43); and the skill does
+not say which commit holds a user's own `amend plan` answer at a resume
+(row 44).
+
 ## v7.33.0 — ruling records in a shape the stop path reads, and plan edits only under amend plan
 
 **Problem.** On the compaction probe run, Phase 4 ruling records lacked the
