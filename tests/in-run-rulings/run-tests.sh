@@ -3134,17 +3134,55 @@ assert_in_range_folded "row 40: the plan diff taken before the write tells the a
 # changed. A clause spread over two lines and restored on one of them, and a
 # revert that also rewrote another clause on a shared line, both pass it, so
 # the words themselves are compared as well.
-assert_in_range_folded "row 40: the restored clause is compared with the removed lines of the ruling commit diff" \
-  "$ORCH_SKILL" 'Then compare the restored clause in the plan file with the removed lines of the ruling commit'"'"'s diff for this clause — the lines that start with `-`.' \
+assert_in_range_folded "row 40: the override revert also checks the words themselves" \
+  "$ORCH_SKILL" 'Then check the words themselves.' \
   "$RESUME_LINE" "$RULINGS_LINE"
-assert_in_range_folded "row 40: the restored clause and those removed lines must hold the same words" \
-  "$ORCH_SKILL" 'Both must hold the same words, with line wraps ignored.' \
+# The word check is stated in two parts, not as an equality between the
+# clause and the removed lines. Git removes whole lines, so the two sets of
+# words differ in both directions: a clause that is one sentence inside a
+# longer line comes back in a removed line that holds the other sentence too,
+# and an amendment to one line of a multi-line clause removes fewer words
+# than the clause holds. An equality check would stop a correct revert as a
+# major error in both shapes.
+assert_in_range_folded "row 40: the reason for two parts is that git removes whole lines" \
+  "$ORCH_SKILL" 'Git removes whole lines, so the removed lines of the ruling commit'"'"'s diff and this clause do not always hold the same words' \
   "$RESUME_LINE" "$RULINGS_LINE"
-assert_in_range_folded "row 40: the word comparison names a part-restored clause and a shared line" \
-  "$ORCH_SKILL" 'one that restored only part of a clause spread over more than one line, and one that also changed another clause'"'"'s words on a line the two clauses share' \
+assert_in_range_folded "row 40: the word check has two parts" \
+  "$ORCH_SKILL" 'The check therefore has two parts.' \
   "$RESUME_LINE" "$RULINGS_LINE"
-assert_in_range_folded "row 40: a difference in those words is a major error and no commit is made" \
-  "$ORCH_SKILL" 'A difference is a major error — stop and report it, and do not commit.' \
+assert_absent_in_range_folded "row 40: the clause and those removed lines are no longer required to hold the same words" \
+  "$ORCH_SKILL" 'Both must hold the same words' \
+  "$RESUME_LINE" "$RULINGS_LINE" fragment
+assert_absent_in_range_folded "row 40: the removed lines are no longer required to contain the whole restored clause" \
+  "$ORCH_SKILL" 'must contain the words of the restored clause' \
+  "$RESUME_LINE" "$RULINGS_LINE" fragment
+# Both parts read the same two sets of lines.
+assert_in_range_folded "row 40: both parts read the clause's lines after the revert and the removed lines" \
+  "$ORCH_SKILL" 'Look only at the lines of the plan that hold this clause after the revert, and at the lines the ruling commit'"'"'s diff removed for this clause — the lines that start with `-`.' \
+  "$RESUME_LINE" "$RULINGS_LINE"
+# Part 1: every removed word of this clause stands again, in order.
+assert_in_range_folded "row 40: part 1 requires every removed word of the clause to stand again in the plan, in order" \
+  "$ORCH_SKILL" 'First, every word the ruling commit removed from this clause must stand again in the plan, in the same order as in those removed lines, with line wraps ignored.' \
+  "$RESUME_LINE" "$RULINGS_LINE"
+assert_in_range_folded "row 40: part 1 catches a clause restored only in part" \
+  "$ORCH_SKILL" 'This part catches a clause restored only in part.' \
+  "$RESUME_LINE" "$RULINGS_LINE"
+# Part 2: text on those lines that is not this clause must be untouched, and
+# the saved diff output is what says how the plan read before the revert.
+assert_in_range_folded "row 40: part 2 names the text on those lines that does not belong to this clause" \
+  "$ORCH_SKILL" 'Second, look at any text on those same lines that does not belong to this clause — another clause, or another sentence that this ruling did not amend.' \
+  "$RESUME_LINE" "$RULINGS_LINE"
+assert_in_range_folded "row 40: part 2 requires that text to read exactly as the plan held it before the revert" \
+  "$ORCH_SKILL" 'That text must read exactly as the plan held it before this revert started.' \
+  "$RESUME_LINE" "$RULINGS_LINE"
+assert_in_range_folded "row 40: part 2 uses the plan diff saved before the plan file was changed" \
+  "$ORCH_SKILL" 'The `git diff -- <plan path>` output you saved before changing the plan shows what the plan held then.' \
+  "$RESUME_LINE" "$RULINGS_LINE"
+assert_in_range_folded "row 40: part 2 catches a revert that also changed another clause on a shared line" \
+  "$ORCH_SKILL" 'This part catches a revert that also changed another clause'"'"'s words on a line the two clauses share.' \
+  "$RESUME_LINE" "$RULINGS_LINE"
+assert_in_range_folded "row 40: a difference in either part is a major error and no commit is made" \
+  "$ORCH_SKILL" 'A difference in either part is a major error — stop and report it, and do not commit.' \
   "$RESUME_LINE" "$RULINGS_LINE"
 
 # Row 40, review round 2, finding 2. An amendment that rewrote the clause's

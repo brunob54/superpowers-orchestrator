@@ -1123,13 +1123,24 @@ Trigger: `Resume orchestration for <plan-or-spec path>`.
    and keep its output; every line changed in it was already
    uncommitted. When any other line
    changed, this is a major error — stop, report it, and do not commit.
-   Then compare the restored clause in the plan file with the removed
-   lines of the ruling commit's diff for this clause — the lines that
-   start with `-`. Both must hold the same words, with line wraps
-   ignored. This second check catches two restores the line check alone
-   lets through: one that restored only part of a clause spread over
-   more than one line, and one that also changed another clause's words
-   on a line the two clauses share. A difference is a major error — stop
+   Then check the words themselves. Git removes whole lines, so the
+   removed lines of the ruling commit's diff and this clause do not
+   always hold the same words: a clause can be one sentence inside a
+   longer line, and an amendment can change only one line of a clause
+   that spans several lines. The check therefore has two parts. Look
+   only at the lines of the plan that hold this clause after the
+   revert, and at the lines the ruling commit's diff removed for this
+   clause — the lines that start with `-`. First, every word the ruling
+   commit removed from this clause must stand again in the plan, in the
+   same order as in those removed lines, with line wraps ignored. This
+   part catches a clause restored only in part. Second, look at any
+   text on those same lines that does not belong to this clause —
+   another clause, or another sentence that this ruling did not amend.
+   That text must read exactly as the plan held it before this revert
+   started. The `git diff -- <plan path>` output you saved before
+   changing the plan shows what the plan held then. This part catches a
+   revert that also changed another clause's words on a line the two
+   clauses share. A difference in either part is a major error — stop
    and report it, and do not commit.
    **Reverting the plan is only half of
    the revert.** Which half depends on the reverted ruling's phase: a
