@@ -1989,7 +1989,7 @@ assert_in_range_folded "row 39: the permitted reads include the ruling commit di
   "$ORCH_SKILL" '`git show <ruling commit>^:<plan path>`, `git show <ruling commit> -- <plan path>`,' \
   "$READ_EXCEPTION_LINE" "$READ_EXCEPTION_END"
 assert_in_range_folded "row 39: the permitted reads include the uncommitted diff of the plan file" \
-  "$ORCH_SKILL" '`git diff HEAD -- <plan path>`, and a scan of the whole plan' \
+  "$ORCH_SKILL" '`git diff HEAD -- <plan path>`, `git show <ruling commit>:<plan path>`,' \
   "$READ_EXCEPTION_LINE" "$READ_EXCEPTION_END"
 assert_in_range_folded "row 39: a retry finds the clause by its marker when step 1 placed one" \
   "$ORCH_SKILL" 'Find the clause by its marker when step 1 placed one.' \
@@ -3103,7 +3103,7 @@ assert_absent_in_range_folded "row 40: the override revert no longer compares th
   "$ORCH_SKILL" 'Before you write the plan file, compare the restored clause' \
   "$RESUME_LINE" "$RULINGS_LINE" fragment
 assert_in_range_folded "row 40: the override revert checks the written plan file with git diff before the resume commit" \
-  "$ORCH_SKILL" 'After you write the plan file, and before the resume commit, run `git diff -- <plan path>`.' \
+  "$ORCH_SKILL" 'After you write the plan file, and before the resume commit, run `git diff HEAD -- <plan path>`.' \
   "$RESUME_LINE" "$RULINGS_LINE"
 assert_in_range_folded "row 40: every changed line of that diff must belong to this clause" \
   "$ORCH_SKILL" 'Every changed line of that output must belong to this clause' \
@@ -3127,7 +3127,7 @@ assert_in_range_folded "row 40: step 0 is named as the rule that lets a resume b
   "$ORCH_SKILL" 'Step 0 above lets a resume begin over such an uncommitted edit' \
   "$RESUME_LINE" "$RULINGS_LINE"
 assert_in_range_folded "row 40: the plan diff taken before the write tells the already-uncommitted lines apart" \
-  "$ORCH_SKILL" 'run `git diff -- <plan path>` once before you change the plan file and keep its output; every line changed in it was already uncommitted.' \
+  "$ORCH_SKILL" 'Every line changed in that output was already uncommitted before this revert started.' \
   "$RESUME_LINE" "$RULINGS_LINE"
 
 # Row 40, review round 3, finding 2. The line check tests only WHICH lines
@@ -3176,10 +3176,10 @@ assert_in_range_folded "row 40: part 2 requires that text to read exactly as the
   "$ORCH_SKILL" 'That text must read exactly as the plan held it before this revert started.' \
   "$RESUME_LINE" "$RULINGS_LINE"
 assert_in_range_folded "row 40: part 2 uses the plan diff saved before the plan file was changed" \
-  "$ORCH_SKILL" 'The `git diff -- <plan path>` output you saved before changing the plan shows what the plan held then.' \
+  "$ORCH_SKILL" 'The `git diff HEAD -- <plan path>` output you saved before changing the plan shows what the plan held then.' \
   "$RESUME_LINE" "$RULINGS_LINE"
 assert_in_range_folded "row 40: part 2 names the committed text as the reference for a line that was not uncommitted" \
-  "$ORCH_SKILL" 'That output holds only the lines that were already uncommitted; for every other line, the committed text is what the plan held, and `git show HEAD:<plan path>` prints it.' \
+  "$ORCH_SKILL" 'That output holds every line that was already uncommitted; for every other line, the committed text is what the plan held, and `git show HEAD:<plan path>` prints it.' \
   "$RESUME_LINE" "$RULINGS_LINE"
 assert_in_range_folded "row 40: the permitted reads name the committed plan text command" \
   "$ORCH_SKILL" '`git show HEAD:<plan path>`,' \
@@ -3314,7 +3314,7 @@ assert_in_range_folded "row 40: the permitted reads include the merge search ove
   "$ORCH_SKILL" '`git log --merges --format=%h <BASE>..HEAD`,' \
   "$READ_EXCEPTION_LINE" "$READ_EXCEPTION_END"
 assert_in_range_folded "row 40: the permitted reads include the plan diff against the index and HEAD" \
-  "$ORCH_SKILL" '`git diff -- <plan path>`, `git show HEAD:<plan path>`, `git diff HEAD -- <plan path>`,' \
+  "$ORCH_SKILL" '`git show HEAD:<plan path>`, `git diff HEAD -- <plan path>`,' \
   "$READ_EXCEPTION_LINE" "$READ_EXCEPTION_END"
 
 # Every ruling-commit search in a range carries both --first-parent and
@@ -3398,6 +3398,131 @@ assert_in_range_folded "row 40: a retry stops when the note of an unmarked claus
 assert_in_range_folded_exact "row 40: a retry's inserted note quotes the clause as it reads in the plan now" \
   "$ORCH_SKILL" 'The inserted note quotes the opening words of the clause as that clause reads in the plan now.' \
   "$ANSWERS_LINE" "$ANSWERS_END"
+
+# Issues-log rows 41-44 and the red-team findings of 2026-09-18. The override
+# revert of Resume step 3 assumed that the ruling commit's change to a clause
+# was the last change made to it, wrote the plan file before it could detect
+# otherwise, and read baselines that cannot see the git index. These checks pin
+# the guards that replace those assumptions.
+
+# Row 43. A second resume carrying the same id must not revert twice. The first
+# revert deleted the note and the marker, so the test for "already reverted"
+# runs BEFORE the clause is located, not after.
+assert_in_range_folded "row 43: an absent note and an absent marker mean the amendment was already reverted" \
+  "$ORCH_SKILL" 'this amendment was already reverted by an earlier resume: make no plan edit for this ruling' \
+  "$RESUME_LINE" "$RULINGS_LINE"
+assert_in_range_folded "row 43: step 1's repair is named as the reason a missing note is not a missing amendment" \
+  "$ORCH_SKILL" 'a missing note here means the revert was made, not that the amendment was never applied' \
+  "$RESUME_LINE" "$RULINGS_LINE"
+
+# Row 42. A later ruling can amend the same clause. The revert must compare the
+# clause with the text the ruling left, and stop rather than remove the later
+# amendment.
+assert_in_range_folded "row 42: the revert checks that the clause did not change after the ruling" \
+  "$ORCH_SKILL" 'Before you restore anything, check that the clause did not change after the ruling.' \
+  "$RESUME_LINE" "$RULINGS_LINE"
+assert_in_range_folded "row 42: the revert reads the clause as the ruling commit left it" \
+  "$ORCH_SKILL" '`git show <ruling commit>:<plan path>` — the plan as the ruling commit left it' \
+  "$RESUME_LINE" "$RULINGS_LINE"
+assert_in_range_folded "row 42: the clause now and the clause the ruling left must hold the same words in order" \
+  "$ORCH_SKILL" 'must hold the same words in the same order, with line wraps ignored' \
+  "$RESUME_LINE" "$RULINGS_LINE"
+assert_in_range_folded "row 42: neither a checkbox marker nor a ruling marker is a word of the clause" \
+  "$ORCH_SKILL" 'Neither a task checkbox marker at the start of a line nor an `(amended by ruling <n>)` marker is a word of the clause.' \
+  "$RESUME_LINE" "$RULINGS_LINE"
+assert_in_range_folded "row 42: a clause changed after the ruling is a major error, never restored over" \
+  "$ORCH_SKILL" 'the clause changed after the ruling' \
+  "$RESUME_LINE" "$RULINGS_LINE"
+assert_in_range_folded "row 42: the revert never restores over the later text" \
+  "$ORCH_SKILL" 'never restore over the later text' \
+  "$RESUME_LINE" "$RULINGS_LINE"
+# The already-reverted branch must clear the authority it leaves behind: a
+# standing marker is read as decided wording on the marker alone.
+assert_in_range_folded "row 42: the already-reverted branch still deletes the note and the marker" \
+  "$ORCH_SKILL" 'delete the note and the `(amended by ruling <m>)` marker if either still stands' \
+  "$RESUME_LINE" "$RULINGS_LINE"
+
+# Rows 42 and 43, ordering. A revert requires that the clause still read as its
+# own ruling left it, so a later ruling must be undone before an earlier one.
+assert_in_range_folded "rows 42-43: one resume reverts its rulings in descending ruling number" \
+  "$ORCH_SKILL" 'take the rulings in descending ruling number' \
+  "$RESUME_LINE" "$RULINGS_LINE"
+
+
+
+# Red-team finding 2. A major-error stop after the plan file was written left a
+# half-written plan that the NEXT resume committed as the blocked task's own
+# work. A stop must leave the plan as the resume found it.
+assert_in_range_folded "finding 2: a failed post-write check puts back the text this resume replaced" \
+  "$ORCH_SKILL" 'put back the text this resume replaced, one clause at a time' \
+  "$RESUME_LINE" "$RULINGS_LINE"
+assert_in_range_folded "finding 2: the undo never writes a whole file over the plan" \
+  "$ORCH_SKILL" 'Never restore it by writing a whole file over the plan' \
+  "$RESUME_LINE" "$RULINGS_LINE"
+assert_in_range_folded "finding 2: the undo never uses checkout, reset --hard or clean" \
+  "$ORCH_SKILL" 'those three commands would delete the blocked task'"'"'s own uncommitted work' \
+  "$RESUME_LINE" "$RULINGS_LINE"
+
+# Red-team finding 3. `git diff -- <plan path>` compares the working tree with
+# the index, so a plan edit a task staged with `git add` was invisible to every
+# baseline. Step 0 skips the only index-aware check on exactly this path.
+assert_in_range_folded "finding 3: the pre-revert state is saved with git diff HEAD, which sees a staged change" \
+  "$ORCH_SKILL" 'Save the pre-revert state with `git diff HEAD -- <plan path>`, which compares the working tree with the last commit' \
+  "$RESUME_LINE" "$RULINGS_LINE"
+assert_in_range_folded "finding 3: the baseline is stated to show a change that was staged but not committed" \
+  "$ORCH_SKILL" 'also shows a change that was staged but not committed' \
+  "$RESUME_LINE" "$RULINGS_LINE"
+assert_absent_in_range_folded "finding 3: the old index-blind baseline sentence is gone" \
+  "$ORCH_SKILL" 'run `git diff -- <plan path>` once before you change the plan file and keep its output' \
+  "$RESUME_LINE" "$RULINGS_LINE" fragment
+
+# Red-team finding 4. Two clauses of one resume can share a line. Part 2 of the
+# word check compared that line with a state an earlier revert had already
+# changed, and stopped over two correct reverts.
+assert_in_range_folded "finding 4: text of another clause this resume reverts is excluded from part 2" \
+  "$ORCH_SKILL" 'Text that belongs to another clause this same resume reverts, or to a checkbox line this same resume unticks, is excluded from this comparison' \
+  "$RESUME_LINE" "$RULINGS_LINE"
+
+# Red-team finding 5. The revert was told to read three things the read
+# exception forbids. The widening is for the orchestrator alone: a fork's
+# `git show <sha>:<path>` form prints whole files.
+assert_in_range_folded_exact "finding 5: the permitted reads carry the four commands the revert runs, ending with the plan scan" \
+  "$ORCH_SKILL" '`git show <ruling commit>:<plan path>`, `git status --porcelain`, `git show --name-only --format= <sha>`, and a scan of the whole plan' \
+  "$READ_EXCEPTION_LINE" "$READ_EXCEPTION_END"
+assert_in_range_folded "finding 5: the porcelain output is never a source of file names to read" \
+  "$ORCH_SKILL" 'you never read a file name out of it' \
+  "$READ_EXCEPTION_LINE" "$READ_EXCEPTION_END"
+assert_in_range_folded "finding 5: the fix-commit line may be read by the orchestrator alone, never a fork" \
+  "$ORCH_SKILL" 'you alone — never a fork — may also read the `fixed — <summary> → <sha>` line' \
+  "$READ_EXCEPTION_LINE" "$READ_EXCEPTION_END"
+assert_in_range_folded "finding 5: a fork's git show form never takes the review log as its path" \
+  "$ORCH_SKILL" 'ever takes the review log as its path' \
+  "$READ_EXCEPTION_LINE" "$READ_EXCEPTION_END"
+
+# Mutation testing of review cycle 1 showed that the checks above hold each
+# rule's condition and leave its consequence free: a mutant could rename the
+# forbidden commands, turn a major error into "restore anyway", or replace the
+# stop with a commit, and no check failed. These hold the consequences.
+assert_in_range_folded "finding 2: the undo names the three commands it forbids" \
+  "$ORCH_SKILL" 'never run `git checkout` on the plan file, `git reset --hard` or `git clean`' \
+  "$RESUME_LINE" "$RULINGS_LINE"
+assert_in_range_folded "row 42: a clause changed after the ruling stops the resume" \
+  "$ORCH_SKILL" 'This is a major error — stop and report it, and never restore over the later text.' \
+  "$RESUME_LINE" "$RULINGS_LINE"
+assert_in_range_folded "finding 2: the undo restores the plan to what this resume found" \
+  "$ORCH_SKILL" 'so that the plan file reads as it did when this resume began' \
+  "$RESUME_LINE" "$RULINGS_LINE"
+assert_in_range_folded "finding 2: the undo ends in a stop, never in a commit" \
+  "$ORCH_SKILL" 'Only then stop and report.' \
+  "$RESUME_LINE" "$RULINGS_LINE"
+# The two post-write checks run per reverted clause, not once per resume.
+assert_in_range_folded "finding 2: the post-write checks run for each reverted clause" \
+  "$ORCH_SKILL" 'for each clause you revert, right after you write that clause, never once for the whole resume' \
+  "$RESUME_LINE" "$RULINGS_LINE"
+# An Exact-content block carries its whitespace into a produced file.
+assert_in_range_folded "row 42: an Exact content block is compared line by line" \
+  "$ORCH_SKILL" 'its whitespace is copied into a produced file, so a reindented block is a changed block' \
+  "$RESUME_LINE" "$RULINGS_LINE"
 
 # --- end of checks ---
 
