@@ -1103,7 +1103,17 @@ Trigger: `Resume orchestration for <plan-or-spec path>`.
    procedure leaves some clauses unmarked; find such a clause in the plan
    by the opening words that its audit note quotes. Search for the quote
    outside audit notes only, with line wraps ignored, and let a `'` in
-   the quote match either `'` or `"` in the plan. When the quote matches
+   the quote match either `'` or `"` in the plan. An audit note is one
+   block quote line that begins `> **Amendment ` — that line alone, never
+   the clause text around it. Search the note's block first: the
+   `**Global Constraints:**` block for a note that follows that block, and
+   the `### Task <n>` section for a note that follows a task heading line,
+   up to the line before the next line that begins with a `#` character.
+   When exactly one clause inside that block matches, that clause is the
+   target. When no clause inside that block matches, search the whole plan
+   the same way, because an older version of this skill could place the
+   note after another block. The counts in the sentence below are the
+   counts this search ends with. When the quote matches
    no clause or more than one clause, this is a major error — stop and
    report it, never guess a clause. When the audit note quotes no opening
    words, because an older version of this skill wrote it, this is also a
@@ -1113,7 +1123,10 @@ Trigger: `Resume orchestration for <plan-or-spec path>`.
    `git show <ruling commit>:<plan path>` — the plan as the ruling commit
    left it, with `<ruling commit>` found as stated below — by the same quote, searched outside audit notes, with line
    wraps ignored and a `'` in the quote matching either `'` or `"`, exactly
-   as above. The unit you read is the one step 1 of "Plan amendment" edits:
+   as above. Narrow that search to the note's block first, and fall back to
+   the whole plan the same way. When the two searches end on clauses in
+   different blocks, this is a major error — stop and report it, never
+   guess a clause. The unit you read is the one step 1 of "Plan amendment" edits:
    a Global Constraints entry, an `**Exact content:**` block, a
    `**Contract:**` text, or a mandated sentence. Compare that clause with
    the clause the plan holds now. The two
@@ -2334,11 +2347,22 @@ are:
    `<opening words of the amended clause>` quotes the clause as it reads
    after step 1, without its marker. The quote never includes the
    `(amended by ruling <n>)` marker. Quote at least the first eight words
-   of the clause. Add words until no other place in the plan outside audit
-   notes holds the quote, with line wraps ignored. Check this before you
-   insert the note. Quote the whole clause when it has fewer than eight
+   of the clause. Add words until no other place inside the note's block,
+   outside audit notes, holds the quote, with line wraps ignored. The
+   note's block is the text the note stands in: the
+   `**Global Constraints:**` block for a note that follows that block, and
+   the `### Task <n>` section for a note that follows a task heading line,
+   up to the line before the next line that begins with a `#` character.
+   Check this before you insert the note. Uniqueness inside the note's
+   block is enough, because the revert of Resume step 3 searches that
+   block first. Quote the whole clause when it has fewer than eight
    words. The quote starts at the first word after any list marker, such
-   as `- ` or `1. `. When the clause starts with a bold label such as
+   as `- ` or `1. `. A task checkbox — the box drawn at the start of a
+   step line, whatever character stands inside it — belongs to the list
+   marker and is never part of the quote, neither at the start of the
+   quote nor inside it. Resume step 3 states the same rule for its word
+   comparison: a task checkbox marker at the start of a line is not a word
+   of the clause. When the clause starts with a bold label such as
    `**Contract:**`, that label is part of the quote. Write each double
    quote character (`"`) of the clause as a single quote character (`'`),
    so that the quote ends only at the closing `"` of the note. One ruling

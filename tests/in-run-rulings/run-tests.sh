@@ -3365,9 +3365,8 @@ assert_in_range_folded "row 40: the quote never includes the marker" \
 assert_in_range_folded "row 40: the quote has at least eight words" \
   "$ORCH_SKILL" 'Quote at least the first eight words of the clause.' \
   "$ANSWERS_LINE" "$ANSWERS_END"
-assert_in_range_folded "row 40: the quote is unique outside audit notes" \
-  "$ORCH_SKILL" 'Add words until no other place in the plan outside audit notes holds the quote, with line wraps ignored.' \
-  "$ANSWERS_LINE" "$ANSWERS_END"
+# Row 46 replaced the whole-plan uniqueness rule with a block-scoped one.
+# The check on the new sentence is in section 13 below.
 assert_in_range_folded "row 40: uniqueness is checked before the note is inserted" \
   "$ORCH_SKILL" 'Check this before you insert the note.' \
   "$ANSWERS_LINE" "$ANSWERS_END"
@@ -3522,6 +3521,74 @@ assert_in_range_folded "finding 2: the post-write checks run for each reverted c
 # An Exact-content block carries its whitespace into a produced file.
 assert_in_range_folded "row 42: an Exact content block is compared line by line" \
   "$ORCH_SKILL" 'its whitespace is copied into a produced file, so a reindented block is a changed block' \
+  "$RESUME_LINE" "$RULINGS_LINE"
+
+bold "13. Rows 46 and 47: the audit note's quote stays findable"
+
+# Row 47. A plan step is a checkbox line, and a mandated sentence in such a
+# line can be amended without a marker, so its quote is the only way to find
+# it again. The rule is general on purpose: naming `- [ ] ` and `- [x] ` as
+# literals would break again on `- [X]`, `* [ ] ` or `1. [ ] `.
+assert_in_range_folded "row 47: a task checkbox is never part of the quote" \
+  "$ORCH_SKILL" 'A task checkbox — the box drawn at the start of a step line, whatever character stands inside it — belongs to the list marker and is never part of the quote' \
+  "$ANSWERS_LINE" "$ANSWERS_END"
+assert_in_range_folded "row 47: the checkbox rule covers the inside of the quote, not only its start" \
+  "$ORCH_SKILL" 'neither at the start of the quote nor inside it' \
+  "$ANSWERS_LINE" "$ANSWERS_END"
+assert_in_range_folded "row 47: the quote rule and the word comparison of Resume step 3 state one rule" \
+  "$ORCH_SKILL" 'a task checkbox marker at the start of a line is not a word of the clause' \
+  "$ANSWERS_LINE" "$ANSWERS_END"
+# A mutant that answers row 47 by listing the two common checkbox spellings
+# passes the three checks above; this one fails it.
+assert_absent_in_range_folded "row 47: the checkbox rule names no literal box spelling" \
+  "$ORCH_SKILL" '- [x] ' \
+  "$ANSWERS_LINE" "$ANSWERS_END" fragment
+
+# Row 46. The quote must be unique only inside the block the note stands in,
+# which is the scope Resume step 3 searches. Whole-plan uniqueness could not
+# be kept true: the plan keeps changing after the note is inserted.
+assert_in_range_folded "row 46: the quote is unique inside the note's block, not the whole plan" \
+  "$ORCH_SKILL" 'Add words until no other place inside the note'"'"'s block, outside audit notes, holds the quote, with line wraps ignored.' \
+  "$ANSWERS_LINE" "$ANSWERS_END"
+assert_in_range_folded "row 46: the note's block is defined where the quote is built" \
+  "$ORCH_SKILL" 'The note'"'"'s block is the text the note stands in: the `**Global Constraints:**` block for a note that follows that block, and the `### Task <n>` section for a note that follows a task heading line' \
+  "$ANSWERS_LINE" "$ANSWERS_END"
+assert_in_range_folded "row 46: the block scope is stated to match the revert's search" \
+  "$ORCH_SKILL" 'because the revert of Resume step 3 searches that block first' \
+  "$ANSWERS_LINE" "$ANSWERS_END"
+# The old whole-plan rule demanded a read the classification read exception
+# grants only inside Resume step 3, so it must be gone, not merely extended.
+assert_absent_in_range_folded "row 46: the whole-plan uniqueness rule is gone from the amendment procedure" \
+  "$ORCH_SKILL" 'no other place in the plan outside audit notes holds the quote' \
+  "$ANSWERS_LINE" "$ANSWERS_END" fragment
+
+# Row 46, the revert side. After narrowing, the exclusion of audit notes is
+# the only thing keeping the notes out of the match set, so the term is
+# defined here.
+assert_in_range_folded "row 46: an audit note is defined for the revert's search" \
+  "$ORCH_SKILL" 'An audit note is one block quote line that begins `> **Amendment ` — that line alone, never the clause text around it.' \
+  "$RESUME_LINE" "$RULINGS_LINE"
+assert_in_range_folded "row 46: the revert searches the note's block before the whole plan" \
+  "$ORCH_SKILL" 'Search the note'"'"'s block first' \
+  "$RESUME_LINE" "$RULINGS_LINE"
+assert_in_range_folded "row 46: exactly one match inside the block is the target" \
+  "$ORCH_SKILL" 'When exactly one clause inside that block matches, that clause is the target.' \
+  "$RESUME_LINE" "$RULINGS_LINE"
+# Narrowing must never turn a revert that works today into a stop: a note
+# placed after another block by an older skill version still resolves.
+assert_in_range_folded "row 46: no match inside the block falls back to the whole plan" \
+  "$ORCH_SKILL" 'When no clause inside that block matches, search the whole plan the same way' \
+  "$RESUME_LINE" "$RULINGS_LINE"
+assert_in_range_folded "row 46: the major-error counts are the counts after narrowing" \
+  "$ORCH_SKILL" 'The counts in the sentence below are the counts this search ends with.' \
+  "$RESUME_LINE" "$RULINGS_LINE"
+# With only one of the two searches narrowed, the other one's stop fires
+# anyway and the rule changes no behaviour.
+assert_in_range_folded "row 46: the ruling-commit search is narrowed the same way" \
+  "$ORCH_SKILL" 'Narrow that search to the note'"'"'s block first, and fall back to the whole plan the same way.' \
+  "$RESUME_LINE" "$RULINGS_LINE"
+assert_in_range_folded "row 46: two searches ending in different blocks is a major error" \
+  "$ORCH_SKILL" 'When the two searches end on clauses in different blocks, this is a major error — stop and report it, never guess a clause.' \
   "$RESUME_LINE" "$RULINGS_LINE"
 
 # --- end of checks ---
