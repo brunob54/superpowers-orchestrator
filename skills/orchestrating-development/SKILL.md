@@ -899,7 +899,15 @@ Trigger: `Resume orchestration for <plan-or-spec path>`.
    stop and report what is missing; for a run stopped under the pre-7.3.0
    layout — its log and plan sit at the old flat paths, outside the glob —
    follow the migration recipe in the v7.3.0 release note; otherwise start
-   a fresh orchestration. Never reconstruct it. Before checking how the log
+   a fresh orchestration. Never reconstruct it. The log read above supplies
+   `<BASE>`; with it, run `git merge-base --is-ancestor <BASE> HEAD`, with
+   `<BASE>` written as the full commit name, not the shortened one, which
+   can become ambiguous as the repository grows. Exit 0 is normal. Exit 1
+   means the branch was rebased or reset since the run started: this is a
+   major error — stop and report it, and take no recovery path below, whose
+   subject searches would read a rewritten history as a ruling that was
+   never committed. Any other exit is a git error, not a rebase: report the
+   exit and the command. Before checking how the log
    ends (steps 2-4 below), scan the ruling record
    (`<topic>/plans/<slug>-open-decisions.md`) for an incomplete ruling and
    repair it now, unconditionally — whatever the log's last entry is, not
@@ -1019,7 +1027,17 @@ Trigger: `Resume orchestration for <plan-or-spec path>`.
    item's own number. When that diff shows a change to the clause the ruling
    names, the clause edit was made: insert only the missing note, and
    never edit the clause again. When the clause edit was not made, the
-   session died before the plan amendment —
+   session died before the plan amendment.
+   Before you re-apply an amendment, read the item's
+   `**Contract clause:**` text, which the ruling record wrote before the
+   amendment and which therefore holds the clause's pre-amendment wording.
+   Compare it with the clause at the location the item names, under the
+   prefix rule of "The quoted clause, and how it is compared". When the
+   clause no longer matches it, the amendment already stands in the plan:
+   do not apply it again, report it and stop. This test also covers a
+   branch whose commit subjects were rewritten — a squash or a reword
+   keeps the file content, so the clause carries the amendment while its
+   commit can no longer be found by its subject. Otherwise
    re-apply it now by the amendment procedure (`## In-run rulings`,
    "Plan amendment"), and when that procedure finds no target for it,
    discard the ruling rather than re-dispatching its answer: present it
@@ -1077,6 +1095,22 @@ Trigger: `Resume orchestration for <plan-or-spec path>`.
    instead of the ruled one; when the ruling that line recorded had
    amended the plan, revert that amendment in the same resume commit.
    In this revert, `<m>` is the number of the overturned ruling.
+   **The order of one resume's plan edits.** A revert has a condition on
+   the clause's current text, and an applied amendment has none: it is a
+   forward edit onto whatever text stands. So within one resume, make every
+   amendment revert first, taking the rulings in descending ruling number,
+   and check the clause again after each restore. Only when every revert is
+   done, apply this resume's own `amend plan` answers, in ascending ruling
+   number. Sorting all of them by ruling number does not serve both, because
+   an amendment applied here carries an existing ruling number that can be
+   lower than the number of a ruling this same resume reverts.
+   When no `**Amendment <m>` note stands in the plan and no clause carries
+   the `(amended by ruling <m>)` marker, this amendment was already reverted
+   by an earlier resume: make no plan edit for this ruling, record one line
+   in the report saying so, and go on to the fix half below. Step 1 above
+   has already repaired a ruling whose note was never written, so a missing
+   note here means the revert was made, not that the amendment was never
+   applied.
    Find the audit note by its `**Amendment <m>` label. Find a marked
    clause by its `(amended by ruling <m>)` marker. The amendment
    procedure leaves some clauses unmarked; find such a clause in the plan
@@ -1087,6 +1121,27 @@ Trigger: `Resume orchestration for <plan-or-spec path>`.
    report it, never guess a clause. When the audit note quotes no opening
    words, because an older version of this skill wrote it, this is also a
    major error — stop and report it, never guess a clause.
+   Before you restore anything, check that the clause did not change after
+   the ruling. Find the same clause in
+   `git show <ruling commit>:<plan path>` — the plan as the ruling commit
+   left it — by the same quoted opening words, searched outside audit notes,
+   and read it to the end of the clause as the four clause kinds of "Plan
+   amendment" define it. The clause in the plan now and the clause in that
+   output must hold the same words in the same order, with line wraps
+   ignored. A task checkbox marker at the start of a line is not a word of
+   the clause. When the quote matches no clause, or more than one clause, in
+   that output, this is a major error — stop and report it. When the two
+   differ, find the same clause in `git show <ruling commit>^:<plan path>`,
+   the plan before the ruling; when the amendment changed the clause's
+   opening words the quote is not in that output, so use the removed lines
+   of the ruling commit's diff of the plan file to read the clause there.
+   When the clause now holds the same words as that earlier text, this
+   amendment was already reverted: delete the note and the
+   `(amended by ruling <m>)` marker if either still stands, make no other
+   plan edit, record one line in the report, and go on to the fix half. When
+   neither comparison holds, the clause changed after the ruling — a later
+   ruling amended it, or another actor edited it — and this is a major
+   error: stop and report it, and never restore over the later text.
    Then find the change to that clause in the ruling commit's diff of the
    plan file, `git show <ruling commit> -- <plan path>`
    (`<ruling commit>` is found as stated below). Use that diff only to see
@@ -1112,16 +1167,20 @@ Trigger: `Resume orchestration for <plan-or-spec path>`.
    no wording the user's answer overturned stays in the plan with the
    authority of decided wording.
    After you write the plan file, and before the resume commit, run
-   `git diff -- <plan path>`. Every changed line of that output must
+   `git diff HEAD -- <plan path>`. Every changed line of that output must
    belong to this clause, to this clause's audit note, to another
    revert that this same resume already wrote, to a checkbox line that
    this same resume unticks, or to a plan edit that was already
    uncommitted before this revert started. Step 0 above lets a resume
    begin over such an uncommitted edit: it is the blocked task's own
    work, and this revert did not write it. To tell that kind apart,
-   run `git diff -- <plan path>` once before you change the plan file
-   and keep its output; every line changed in it was already
-   uncommitted. When any other line
+   save the pre-revert state with `git diff HEAD -- <plan path>`, which
+   compares the working tree with the last commit and therefore also
+   shows a change that was staged but not committed — staged means
+   written into git's index with `git add`, and not yet committed. Take
+   that output once, before you change the plan file, and keep it. Every
+   line changed in that output was already uncommitted before this revert
+   started. When any other line
    changed, this is a major error — stop, report it, and do not commit.
    Then check the words themselves. Git removes whole lines, so the
    removed lines of the ruling commit's diff and this clause do not
@@ -1137,14 +1196,28 @@ Trigger: `Resume orchestration for <plan-or-spec path>`.
    text on those same lines that does not belong to this clause —
    another clause, or another sentence that this ruling did not amend.
    That text must read exactly as the plan held it before this revert
-   started. The `git diff -- <plan path>` output you saved before
+   started. Text that belongs to another clause this same resume
+   reverts, or to a checkbox line this same resume unticks, is excluded
+   from this comparison; that text is covered by its own clause's check.
+   The `git diff HEAD -- <plan path>` output you saved before
    changing the plan shows what the plan held then. That output holds
-   only the lines that were already uncommitted; for every other line,
+   every line that was already uncommitted; for every other line,
    the committed text is what the plan held, and
    `git show HEAD:<plan path>` prints it. This part catches a
    revert that also changed another clause's words on a line the two
    clauses share. A difference in either part is a major error — stop
    and report it, and do not commit.
+   When any check after the write fails, put back the text this resume
+   replaced, one clause at a time, using the text you read before you
+   changed that clause, so that the plan file reads as it did when this
+   resume began. Only then stop and report. Never restore it by writing a
+   whole file over the plan, and never run `git checkout`,
+   `git reset --hard` or `git clean`: a whole-file write would remove
+   every checkbox tick and every later amendment, and those three
+   commands would delete the blocked task's own uncommitted work. A stop
+   must leave the plan file exactly as this resume found it, so that the
+   next resume never reads this revert's half-written text as the blocked
+   task's own work.
    **Reverting the plan is only half of
    the revert.** Which half depends on the reverted ruling's phase: a
    Phase 4 ruling's other half is a fix commit, covered by the rest of
@@ -1236,7 +1309,29 @@ Trigger: `Resume orchestration for <plan-or-spec path>`.
    `git show <ruling commit>^:<plan path>` prints the WHOLE plan file as
    it stood before the ruling: copy the clause's own text out of what it
    prints, and never write that output over the plan file, which would
-   revert every checkbox tick and every later amendment. Append each
+   revert every checkbox tick and every later amendment.
+   **A user's `amend plan` answer at this stop.** When a resume-prompt
+   answer is `amend plan: …; fix it: …`, you apply that amendment
+   yourself, by the amendment procedure (`## In-run rulings`, "Plan
+   amendment"), before the re-dispatch, after this resume's reverts and in
+   ascending ruling number. The amendment carries the item's own ruling
+   number `<n>`, and its note keeps the label
+   `**Amendment <n> (orchestrator ruling):**` and the marker rules of that
+   procedure unchanged. The resume commit below names the plan file on its
+   command line for an amendment applied here, exactly as it does for an
+   amendment reverted here. When the amendment procedure finds no target,
+   the exit "No match is never an edit by guess" applies: present it back
+   to the user as a blocking question and stop. A ruling amended this way
+   carries its plan change in the resume commit, not in its ruling commit,
+   and the subject filter above exists to drop that commit's subject. This
+   skill has no rule for reverting such an amendment: when a later resume
+   answer overturns a ruling whose ruling-record entry carries an
+   `amend plan` follow-up, this is a major error — stop and report it, and
+   make no plan edit. A stop that made no ruling writes no resume commit
+   and has no ruling number, so an `amend plan: …` answer there has
+   nowhere to be recorded: this is a major error — stop and report it, and
+   make no plan edit.
+   Append each
    user answer **that has a ruling-record entry of its own** to that
    entry
    as a `**Follow-up:**` line carrying the item's `clause:` text (its
@@ -1528,9 +1623,13 @@ you and your forks may read exactly:
    `git show <ruling commit> -- <plan path>`,
    `git diff -- <plan path>`,
    `git show HEAD:<plan path>`,
-   `git diff HEAD -- <plan path>`, and a scan of the whole plan
+   `git diff HEAD -- <plan path>`, `git show <ruling commit>:<plan path>`,
+   `git status --porcelain`, `git show --name-only --format= <sha>`,
+   `git merge-base --is-ancestor <BASE> HEAD`, and a scan of the whole plan
    file for an orphan `(amended by ruling <n>)` marker and its
-   `**Amendment <n>` note.
+   `**Amendment <n>` note. The `git status --porcelain` output is compared
+   with the saved pre-revert state and is never a source of file names to
+   read.
 5. Your own ruling record for this run,
    `<topic folder>/plans/<slug>-open-decisions.md` — the file you write
    yourself. Guard 4 (below) reads it, before every decision, for an
@@ -1568,7 +1667,13 @@ reading the test, not by running it.
 
 The read that Resume step 3 makes — the review log's completion marker and
 its `decided (…)` lines — belongs to this same exception, so that this
-rule lists every body you read.
+rule lists every body you read. In that step you alone — never a fork — may
+also read the `fixed — <summary> → <sha>` line of the entry that recorded
+the fix, and only when a ruling's fix commit must be reverted; that line is
+the one exception to "never an earlier entry" above. A fork's
+`git show <sha>:<path>` form never takes the review log as its path,
+because that form prints a whole file and would carry every earlier entry
+with it.
 
 ### Fork review for a design item
 
