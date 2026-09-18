@@ -3112,6 +3112,41 @@ assert_in_range_folded "row 40: any other changed line is a major error and no c
   "$ORCH_SKILL" 'When any other line changed, this is a major error — stop, report it, and do not commit.' \
   "$RESUME_LINE" "$RULINGS_LINE"
 
+# Row 40, review round 3, finding 1. The same resume also unticks the blocked
+# task's checkboxes, and the tree can already hold that task's uncommitted
+# plan edits when the resume begins. Both change lines of the same file, so
+# both must be allowed kinds, or a correct resume stops on a false major
+# error.
+assert_in_range_folded "row 40: a checkbox line this resume unticks is an allowed changed line" \
+  "$ORCH_SKILL" 'to a checkbox line that this same resume unticks' \
+  "$RESUME_LINE" "$RULINGS_LINE"
+assert_in_range_folded "row 40: a plan edit already uncommitted before the revert is an allowed changed line" \
+  "$ORCH_SKILL" 'or to a plan edit that was already uncommitted before this revert started' \
+  "$RESUME_LINE" "$RULINGS_LINE"
+assert_in_range_folded "row 40: step 0 is named as the rule that lets a resume begin over such an edit" \
+  "$ORCH_SKILL" 'Step 0 above lets a resume begin over such an uncommitted edit' \
+  "$RESUME_LINE" "$RULINGS_LINE"
+assert_in_range_folded "row 40: the plan diff taken before the write tells the already-uncommitted lines apart" \
+  "$ORCH_SKILL" 'run `git diff -- <plan path>` once before you change the plan file and keep its output; every line changed in it was already uncommitted.' \
+  "$RESUME_LINE" "$RULINGS_LINE"
+
+# Row 40, review round 3, finding 2. The line check tests only WHICH lines
+# changed. A clause spread over two lines and restored on one of them, and a
+# revert that also rewrote another clause on a shared line, both pass it, so
+# the words themselves are compared as well.
+assert_in_range_folded "row 40: the restored clause is compared with the removed lines of the ruling commit diff" \
+  "$ORCH_SKILL" 'Then compare the restored clause in the plan file with the removed lines of the ruling commit'"'"'s diff for this clause — the lines that start with `-`.' \
+  "$RESUME_LINE" "$RULINGS_LINE"
+assert_in_range_folded "row 40: the restored clause and those removed lines must hold the same words" \
+  "$ORCH_SKILL" 'Both must hold the same words, with line wraps ignored.' \
+  "$RESUME_LINE" "$RULINGS_LINE"
+assert_in_range_folded "row 40: the word comparison names a part-restored clause and a shared line" \
+  "$ORCH_SKILL" 'one that restored only part of a clause spread over more than one line, and one that also changed another clause'"'"'s words on a line the two clauses share' \
+  "$RESUME_LINE" "$RULINGS_LINE"
+assert_in_range_folded "row 40: a difference in those words is a major error and no commit is made" \
+  "$ORCH_SKILL" 'A difference is a major error — stop and report it, and do not commit.' \
+  "$RESUME_LINE" "$RULINGS_LINE"
+
 # Row 40, review round 2, finding 2. An amendment that rewrote the clause's
 # opening words leaves those words absent from the plan as it stood before the
 # ruling, so the removed lines of the ruling commit's diff locate the clause
@@ -3184,12 +3219,26 @@ assert_in_range_folded "row 40: Resume names the first parent in plain words" \
 # reaches the branch only as the second parent of a merge. The run rules
 # forbid the merge, and the commit-exists check stops when a merge is there
 # all the same, instead of treating a committed ruling as not committed.
-assert_in_range_folded "row 40: an orchestrated run never pulls into the feature branch and never merges into it" \
-  "$ORCH_SKILL" 'During an orchestrated run nobody pulls into the feature branch, and nobody merges another branch into it.' \
+assert_in_range_folded "row 40: an orchestrated run never runs git pull on the feature branch and never merges into it" \
+  "$ORCH_SKILL" 'During an orchestrated run nobody runs `git pull` on the feature branch, and nobody merges another branch into it.' \
   "$RESUME_LINE" "$RULINGS_LINE"
-assert_in_range_folded "row 40: an empty commit-exists search first looks for a merge commit in the range" \
-  "$ORCH_SKILL" 'When the search prints no line at all, first run `git log --merges --format=%h <BASE>..HEAD`.' \
+# Review round 3, finding 5: the old sentence said "nobody pulls into the
+# feature branch", which named no command.
+assert_absent_in_range_folded "row 40: Resume no longer says that nobody pulls into the feature branch" \
+  "$ORCH_SKILL" 'nobody pulls into the feature branch' \
+  "$RESUME_LINE" "$RULINGS_LINE" fragment
+# Review round 3, finding 4: a merge can hide the ruling commit in both
+# outcomes of the search, so the merge check covers the search that printed
+# nothing AND the search that printed lines with no exact match.
+assert_in_range_folded "row 40: the merge check runs whenever the search finds no exact match" \
+  "$ORCH_SKILL" 'When the search finds no exact match, in either of its two forms — the search printed no line at all, or it printed lines and no printed subject is an exact match — first run `git log --merges --format=%h <BASE>..HEAD`.' \
   "$RESUME_LINE" "$RULINGS_LINE"
+assert_absent_in_range_folded "row 40: the merge check is no longer restricted to a search that printed no line" \
+  "$ORCH_SKILL" 'When the search prints no line at all, first run' \
+  "$RESUME_LINE" "$RULINGS_LINE" fragment
+assert_absent_in_range_folded "row 40: a search with no exact match no longer goes straight to the recovery" \
+  "$ORCH_SKILL" 'When the search prints lines but no subject is an exact match, the session died the same way.' \
+  "$RESUME_LINE" "$RULINGS_LINE" fragment
 assert_in_range_folded "row 40: a merge commit in the range is a major error and stops the recovery" \
   "$ORCH_SKILL" 'When that command prints a merge commit, this is a major error — stop and report it, and do not take the recovery below.' \
   "$RESUME_LINE" "$RULINGS_LINE"
@@ -3209,6 +3258,19 @@ assert_in_range_folded "row 40: the permitted reads never drop --first-parent or
 # commit-exists check, the name Resume step 3 gives it.
 assert_in_range_folded "row 40: the permitted reads call the ruling-commit search the commit-exists check" \
   "$ORCH_SKILL" 'the commit-exists check `git log --first-parent -F --grep "<slug> ruling <n>" <BASE>..HEAD`' \
+  "$READ_EXCEPTION_LINE" "$READ_EXCEPTION_END"
+# Review round 3, finding 5: the same search carries two names in this item.
+# The text now says that the two names mean one check.
+assert_in_range_folded "row 40: the permitted reads say the two names of that search mean one check" \
+  "$ORCH_SKILL" 'for the commit-landed check (the same check, under the other name that step gives it)' \
+  "$READ_EXCEPTION_LINE" "$READ_EXCEPTION_END"
+# Review round 3, finding 3: the two commands the new Resume checks run are
+# permitted reads as well.
+assert_in_range_folded "row 40: the permitted reads include the merge search over the recorded range" \
+  "$ORCH_SKILL" '`git log --merges --format=%h <BASE>..HEAD`,' \
+  "$READ_EXCEPTION_LINE" "$READ_EXCEPTION_END"
+assert_in_range_folded "row 40: the permitted reads include the plan diff against the index and HEAD" \
+  "$ORCH_SKILL" '`git diff -- <plan path>`, `git diff HEAD -- <plan path>`,' \
   "$READ_EXCEPTION_LINE" "$READ_EXCEPTION_END"
 
 # Every ruling-commit search in a range carries both --first-parent and

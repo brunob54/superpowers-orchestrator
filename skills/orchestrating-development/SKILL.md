@@ -935,21 +935,22 @@ Trigger: `Resume orchestration for <plan-or-spec path>`.
    the search reads only this branch's own line of commits after the
    recorded branch point. A commit with the same subject that reaches this
    branch through a merge, for example from `main`, is not found.
-   During an orchestrated run nobody pulls into the feature branch, and
-   nobody merges another branch into it. Every ruling commit of this run
-   is therefore on the branch's own line of commits, where this search
-   reads.
+   During an orchestrated run nobody runs `git pull` on the feature
+   branch, and nobody merges another branch into it. Every ruling commit
+   of this run is therefore on the branch's own line of commits, where
+   this search reads.
    `--grep` stays unanchored, so its output also holds a
    `ruling <n> follow-up` subject and, for ruling 1, a `ruling 10`
    subject: compare each printed subject with the full expected string
-   and accept only an exact match. When the search prints no line at all,
-   first run `git log --merges --format=%h <BASE>..HEAD`. When that
+   and accept only an exact match. When the search finds no exact match,
+   in either of its two forms — the search printed no line at all, or it
+   printed lines and no printed subject is an exact match — first run
+   `git log --merges --format=%h <BASE>..HEAD`. When that
    command prints a merge commit, this is a major error — stop and report
    it, and do not take the recovery below. A merge is forbidden during a
    run, and its second parent can carry a ruling commit that the
    `--first-parent` search did not read. When it prints nothing, the
-   session died between the writes and the commit. When the search prints
-   lines but no subject is an exact match, the session died the same way.
+   session died between the writes and the commit.
    Before you make that commit, run the third-write check below for each
    item whose
    `**Resolution:**` begins `amend plan`, and complete any missing
@@ -1112,9 +1113,24 @@ Trigger: `Resume orchestration for <plan-or-spec path>`.
    authority of decided wording.
    After you write the plan file, and before the resume commit, run
    `git diff -- <plan path>`. Every changed line of that output must
-   belong to this clause, to this clause's audit note, or to another
-   revert that this same resume already wrote. When any other line
+   belong to this clause, to this clause's audit note, to another
+   revert that this same resume already wrote, to a checkbox line that
+   this same resume unticks, or to a plan edit that was already
+   uncommitted before this revert started. Step 0 above lets a resume
+   begin over such an uncommitted edit: it is the blocked task's own
+   work, and this revert did not write it. To tell that kind apart,
+   run `git diff -- <plan path>` once before you change the plan file
+   and keep its output; every line changed in it was already
+   uncommitted. When any other line
    changed, this is a major error — stop, report it, and do not commit.
+   Then compare the restored clause in the plan file with the removed
+   lines of the ruling commit's diff for this clause — the lines that
+   start with `-`. Both must hold the same words, with line wraps
+   ignored. This second check catches two restores the line check alone
+   lets through: one that restored only part of a clause spread over
+   more than one line, and one that also changed another clause's words
+   on a line the two clauses share. A difference is a major error — stop
+   and report it, and do not commit.
    **Reverting the plan is only half of
    the revert.** Which half depends on the reverted ruling's phase: a
    Phase 4 ruling's other half is a fix commit, covered by the rest of
@@ -1488,12 +1504,15 @@ you and your forks may read exactly:
    check
    `git log --first-parent -F --grep "<slug> ruling <n>" <BASE>..HEAD` in
    either of the two `--format` spellings that step uses
-   (`-F --format=%s` for the commit-landed check,
+   (`-F --format=%s` for the commit-landed check (the same check, under
+   the other name that step gives it),
    `-F --format="%H %s"` when an amendment must be reverted; `-F` belongs to
    the permitted form and is never dropped, and the same holds for
    `--first-parent` and `<BASE>..HEAD`),
+   `git log --merges --format=%h <BASE>..HEAD`,
    `git show <ruling commit>^:<plan path>`,
    `git show <ruling commit> -- <plan path>`,
+   `git diff -- <plan path>`,
    `git diff HEAD -- <plan path>`, and a scan of the whole plan
    file for an orphan `(amended by ruling <n>)` marker and its
    `**Amendment <n>` note.
