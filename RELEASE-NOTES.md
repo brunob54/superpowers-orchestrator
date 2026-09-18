@@ -8,6 +8,81 @@
 > (`REPOZY/superpowers-optimized`) and are kept unchanged as history; any
 > testing they describe was not done here.
 
+## v7.35.0 — revert an amendment without removing a later one
+
+**Problem.** A resume that overturned a ruling restored the clause from the
+commit before that ruling, so it also removed a later amendment of the same
+clause. Nothing tested whether a ruling was already reverted, so one could be
+overturned twice.
+
+**Change.** The revert now compares the clause with the ruling commit's own
+version before restoring, and stops when a later ruling amended it. An
+absent amendment note and an absent marker mean "already reverted". A stop
+after the plan file changed puts the replaced text back.
+
+**Effect.** An override no longer removes another ruling's text or runs
+twice, and no half-written plan is committed. Reinstall the plugin. Nothing
+to migrate.
+
+When the user overturns a ruling in a resume prompt, Resume step 3 reverts
+the amendment that ruling made to the plan. Until now it copied the clause
+from `git show <ruling commit>^:<plan path>` — the plan as it read *before*
+that ruling. When a later ruling had amended the same clause, that copy also
+removed the later ruling's text, and the later ruling's `**Amendment <m>`
+note stayed in the plan and described a change that was gone (worklist row
+42).
+
+**The clause is compared before it is restored.** The revert now reads the
+same clause from `git show <ruling commit>:<plan path>` — the plan as the
+ruling commit itself left it — and compares it with the clause in the plan
+now. Equal texts mean nothing touched the clause after that ruling, and the
+revert proceeds. Different texts mean a later ruling amended it, which is a
+major error: the run stops and reports, and restores nothing.
+
+**A ruling cannot be overturned twice.** A second resume prompt can carry
+the same ruling id. The only duplicate test was for an identical
+`**Follow-up:**` line, so nothing said "already reverted", and when the
+first answer was itself `amend plan`, the second revert wrote the
+pre-ruling text over the user's own amendment (worklist row 43). An absent
+`**Amendment <m>` note together with an absent `(amended by ruling <m>)`
+marker now means the amendment was already reverted; the resume records
+that and moves to the next answer. The test runs **before** the clause is
+located, because the first revert deletes both the note and the marker.
+
+**A stop puts the replaced text back.** Every path that reaches the revert
+reaches it with the clean-tree check skipped, on purpose: the tree may hold
+the blocked task's own work. A stop in the middle of a revert therefore left
+a half-written plan in the tree, and the next resume classified it as a plan
+edit that was already uncommitted before the revert started — the blocked
+task's work — and committed it. A resume that has already changed the plan
+file and then has to stop now puts the replaced text back, clause by clause,
+before it stops. It never writes a whole file, and the three commands that
+discard local changes stay forbidden.
+
+**Three smaller corrections in the same passage.** (1) The saved baseline
+and the check after the write both use `git diff HEAD -- <plan path>`, so a
+plan edit that a task staged with `git add` is visible; the earlier form
+compared the working tree with the index and missed it. (2) When one resume
+reverts two rulings whose clauses share a line, part 2 of the word check
+excludes the text of the other clause this same resume restored, and the
+reverts run in descending ruling number, with every plan revert before any
+fix-commit revert. (3) The permitted-reads list carries the three commands
+the fix-commit revert needs — `git show <ruling commit>:<plan path>`,
+`git status --porcelain` and `git show --name-only --format= <sha>` — for
+the orchestrator alone, and no longer permits `git diff -- <plan path>`.
+Without them an orchestrator that obeys its own read list could not revert
+the fix half at all.
+
+**Acceptance.** 705 checks in `tests/in-run-rulings/run-tests.sh`, against
+678 on 7.34.0, after two review rounds. The second round was checked by
+mutation testing in a separate `git worktree`: a mutant that replaced a stop
+with a commit, and mutants that renamed the forbidden commands, kept the
+whole suite green, so six checks were added that hold each rule's
+consequence and not only the sentence that says when the rule applies. The
+same analysis opened four smaller worklist rows, and worklist rows 41 and 44
+were taken out of this release after its first review round, each with the
+blockers that a later design must answer.
+
 ## v7.34.0 — find the ruling commit of a later ruling of a return
 
 **Problem.** A resume could not find the ruling commit of an overturned
