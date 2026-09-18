@@ -1111,7 +1111,7 @@ Trigger: `Resume orchestration for <plan-or-spec path>`.
    Before you restore anything, check that the clause did not change after
    the ruling. Find the same clause in
    `git show <ruling commit>:<plan path>` — the plan as the ruling commit
-   left it — by the same quote, searched outside audit notes, with line
+   left it, with `<ruling commit>` found as stated below — by the same quote, searched outside audit notes, with line
    wraps ignored and a `'` in the quote matching either `'` or `"`, exactly
    as above. The unit you read is the one step 1 of "Plan amendment" edits:
    a Global Constraints entry, an `**Exact content:**` block, a
@@ -1119,7 +1119,10 @@ Trigger: `Resume orchestration for <plan-or-spec path>`.
    the clause the plan holds now. The two
    must hold the same words in the same order, with line wraps ignored.
    Neither a task checkbox marker at the start of a line nor an
-   `(amended by ruling <n>)` marker is a word of the clause. When the quote
+   `(amended by ruling <n>)` marker is a word of the clause. For an
+   `**Exact content:**` block, compare its lines as they stand instead:
+   its whitespace is copied into a produced file, so a reindented block is
+   a changed block. When the quote
    matches no clause, or more than one clause, in
    that output, this is a major error — stop and report it.
    When the two differ, read the clause from the plan before the ruling, by
@@ -1156,6 +1159,8 @@ Trigger: `Resume orchestration for <plan-or-spec path>`.
    note, so that
    no wording the user's answer overturned stays in the plan with the
    authority of decided wording.
+   Run the two checks below for each clause you revert, right after you
+   write that clause, never once for the whole resume.
    After you write the plan file, and before the resume commit, run
    `git diff HEAD -- <plan path>`. Every changed line of that output must
    belong to this clause, to this clause's audit note, to another
@@ -1640,10 +1645,10 @@ its `decided (…)` lines — belongs to this same exception, so that this
 rule lists every body you read. In that step you alone — never a fork — may
 also read the `fixed — <summary> → <sha>` line of the entry that recorded
 the fix, and only when a ruling's fix commit must be reverted; that line is
-the one exception to "never an earlier entry" above. A fork's
-`git show <sha>:<path>` form never takes the review log as its path,
-because that form prints a whole file and would carry every earlier entry
-with it.
+the one exception to "never an earlier entry" above. Neither of a fork's whole-file forms —
+`git show <sha>:<path>` and `git diff <BASE>..HEAD -- <path>` — ever takes
+the review log as its path: both would carry every earlier entry with
+them.
 
 ### Fork review for a design item
 

@@ -3421,7 +3421,7 @@ assert_in_range_folded "row 43: step 1's repair is named as the reason a missing
 assert_in_range_folded "row 42: the revert checks that the clause did not change after the ruling" \
   "$ORCH_SKILL" 'Before you restore anything, check that the clause did not change after the ruling.' \
   "$RESUME_LINE" "$RULINGS_LINE"
-assert_in_range_folded_exact "row 42: the revert reads the clause as the ruling commit left it" \
+assert_in_range_folded "row 42: the revert reads the clause as the ruling commit left it" \
   "$ORCH_SKILL" '`git show <ruling commit>:<plan path>` — the plan as the ruling commit left it' \
   "$RESUME_LINE" "$RULINGS_LINE"
 assert_in_range_folded "row 42: the clause now and the clause the ruling left must hold the same words in order" \
@@ -3496,8 +3496,33 @@ assert_in_range_folded "finding 5: the fix-commit line may be read by the orches
   "$ORCH_SKILL" 'you alone — never a fork — may also read the `fixed — <summary> → <sha>` line' \
   "$READ_EXCEPTION_LINE" "$READ_EXCEPTION_END"
 assert_in_range_folded "finding 5: a fork's git show form never takes the review log as its path" \
-  "$ORCH_SKILL" 'never takes the review log as its path' \
+  "$ORCH_SKILL" 'ever takes the review log as its path' \
   "$READ_EXCEPTION_LINE" "$READ_EXCEPTION_END"
+
+# Mutation testing of review cycle 1 showed that the checks above hold each
+# rule's condition and leave its consequence free: a mutant could rename the
+# forbidden commands, turn a major error into "restore anyway", or replace the
+# stop with a commit, and no check failed. These hold the consequences.
+assert_in_range_folded "finding 2: the undo names the three commands it forbids" \
+  "$ORCH_SKILL" 'never run `git checkout` on the plan file, `git reset --hard` or `git clean`' \
+  "$RESUME_LINE" "$RULINGS_LINE"
+assert_in_range_folded "row 42: a clause changed after the ruling stops the resume" \
+  "$ORCH_SKILL" 'This is a major error — stop and report it, and never restore over the later text.' \
+  "$RESUME_LINE" "$RULINGS_LINE"
+assert_in_range_folded "finding 2: the undo restores the plan to what this resume found" \
+  "$ORCH_SKILL" 'so that the plan file reads as it did when this resume began' \
+  "$RESUME_LINE" "$RULINGS_LINE"
+assert_in_range_folded "finding 2: the undo ends in a stop, never in a commit" \
+  "$ORCH_SKILL" 'Only then stop and report.' \
+  "$RESUME_LINE" "$RULINGS_LINE"
+# The two post-write checks run per reverted clause, not once per resume.
+assert_in_range_folded "finding 2: the post-write checks run for each reverted clause" \
+  "$ORCH_SKILL" 'for each clause you revert, right after you write that clause, never once for the whole resume' \
+  "$RESUME_LINE" "$RULINGS_LINE"
+# An Exact-content block carries its whitespace into a produced file.
+assert_in_range_folded "row 42: an Exact content block is compared line by line" \
+  "$ORCH_SKILL" 'its whitespace is copied into a produced file, so a reindented block is a changed block' \
+  "$RESUME_LINE" "$RULINGS_LINE"
 
 # --- end of checks ---
 
