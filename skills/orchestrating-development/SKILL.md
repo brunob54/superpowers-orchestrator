@@ -931,16 +931,27 @@ Trigger: `Resume orchestration for <plan-or-spec path>`.
    with `--first-parent`. `<BASE>..HEAD` keeps only the commits after the
    recorded branch point. `--first-parent` makes git skip the commits that
    a merge brought in: at each merge commit, git follows only the first
-   parent, the earlier tip of the branch that received the merge. So the
-   search reads only this branch's own line of commits after the recorded
-   branch point. A commit with the same subject that reaches this branch
-   through a merge, for example from `main`, is not found.
+   parent, the latest commit of the receiving branch before the merge. So
+   the search reads only this branch's own line of commits after the
+   recorded branch point. A commit with the same subject that reaches this
+   branch through a merge, for example from `main`, is not found.
+   During an orchestrated run nobody pulls into the feature branch, and
+   nobody merges another branch into it. Every ruling commit of this run
+   is therefore on the branch's own line of commits, where this search
+   reads.
    `--grep` stays unanchored, so its output also holds a
    `ruling <n> follow-up` subject and, for ruling 1, a `ruling 10`
    subject: compare each printed subject with the full expected string
-   and accept only an exact match. When it does
-   not, the session died between the writes and the commit. Before you
-   make that commit, run the third-write check below for each item whose
+   and accept only an exact match. When the search prints no line at all,
+   first run `git log --merges --format=%h <BASE>..HEAD`. When that
+   command prints a merge commit, this is a major error — stop and report
+   it, and do not take the recovery below. A merge is forbidden during a
+   run, and its second parent can carry a ruling commit that the
+   `--first-parent` search did not read. When it prints nothing, the
+   session died between the writes and the commit. When the search prints
+   lines but no subject is an exact match, the session died the same way.
+   Before you make that commit, run the third-write check below for each
+   item whose
    `**Resolution:**` begins `amend plan`, and complete any missing
    amendment, so that the plan edit is inside the
    `chore(orchestration): <slug> ruling <n>` commit. Then stage the
@@ -1083,21 +1094,28 @@ Trigger: `Resume orchestration for <plan-or-spec path>`.
    changed lines) can hold the changes to several clauses of one return.
    Take the old text of the clause from
    `git show <ruling commit>^:<plan path>`, which prints the plan as it
-   stood before the ruling. Restore only that one clause's own text, never
+   stood before the ruling. When the amendment changed the clause's
+   opening words, the quoted words are not in that output. In that case,
+   use the removed lines of the ruling commit's diff of the plan file —
+   the lines that start with `-` — to see which lines of the earlier
+   version hold this clause. Restore only that one clause's own text, never
    a whole hunk, and never another clause's text, even when the two
-   clauses share a line or a hunk. When the old text of the clause cannot
-   be told apart from another ruling's change, this is a major error —
-   stop and report it, never guess. Before you write the plan file,
-   compare the restored clause with the same clause in the output of
-   `git show <ruling commit>^:<plan path>`: both must hold the same words,
-   with line wraps ignored, and a difference is a major error — stop and
-   report it. Restore the clause to its
-   pre-amendment text — recovered verbatim from the ruling's own commit,
-   never from the audit note,
+   clauses share a line or a hunk. When the lines of this clause in the
+   diff also hold another ruling's change, and you cannot separate the two
+   changes, this is a major error — stop and report it, never guess.
+   Restore the clause to its
+   pre-amendment text — recovered verbatim from the commit before the
+   ruling commit, never from the audit note,
    whose prose is not required to quote the original — and delete the
    note, so that
    no wording the user's answer overturned stays in the plan with the
-   authority of decided wording. **Reverting the plan is only half of
+   authority of decided wording.
+   After you write the plan file, and before the resume commit, run
+   `git diff -- <plan path>`. Every changed line of that output must
+   belong to this clause, to this clause's audit note, or to another
+   revert that this same resume already wrote. When any other line
+   changed, this is a major error — stop, report it, and do not commit.
+   **Reverting the plan is only half of
    the revert.** Which half depends on the reverted ruling's phase: a
    Phase 4 ruling's other half is a fix commit, covered by the rest of
    this paragraph; a Phase 3 ruling has no fix commit, and its other half
@@ -1466,7 +1484,8 @@ you and your forks may read exactly:
 4. The code at each cited `file:line`, bounded to the enclosing function
    or to 40 lines on each side, whichever is smaller, and
    `git log --oneline <BASE>..HEAD`. You alone — never a fork — may also
-   make the `## RULING` entry checks of Resume step 3: the landed check
+   make the `## RULING` entry checks of Resume step 3: the commit-exists
+   check
    `git log --first-parent -F --grep "<slug> ruling <n>" <BASE>..HEAD` in
    either of the two `--format` spellings that step uses
    (`-F --format=%s` for the commit-landed check,
@@ -2195,7 +2214,7 @@ are:
    task-level clause:
 
    ```markdown
-   > **Amendment <n> (orchestrator ruling):** clause "<opening words of the amended clause>" — <what changed, from what, and why — one paragraph>
+   > **Amendment <n> (orchestrator ruling):** opening words "<opening words of the amended clause>" — <what changed, from what, and why — one paragraph>
    ```
 
    `<opening words of the amended clause>` quotes the clause as it reads

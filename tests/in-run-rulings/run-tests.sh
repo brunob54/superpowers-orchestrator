@@ -3091,12 +3091,46 @@ assert_in_range_folded "row 40: the override revert takes the old clause text fr
 assert_in_range_folded "row 40: the override revert restores only that one clause, never a whole hunk" \
   "$ORCH_SKILL" 'Restore only that one clause'"'"'s own text, never a whole hunk, and never another clause'"'"'s text, even when the two clauses share a line or a hunk.' \
   "$RESUME_LINE" "$RULINGS_LINE"
-assert_in_range_folded "row 40: old clause text that cannot be told apart from another ruling's change is a major error" \
-  "$ORCH_SKILL" 'When the old text of the clause cannot be told apart from another ruling'"'"'s change, this is a major error — stop and report it, never guess.' \
+assert_in_range_folded "row 40: two changes on the same lines that cannot be separated are a major error" \
+  "$ORCH_SKILL" 'When the lines of this clause in the diff also hold another ruling'"'"'s change, and you cannot separate the two changes, this is a major error — stop and report it, never guess.' \
   "$RESUME_LINE" "$RULINGS_LINE"
-assert_in_range_folded "row 40: the override revert compares the restored clause with the plan before the ruling before it writes" \
-  "$ORCH_SKILL" 'Before you write the plan file, compare the restored clause with the same clause in the output of `git show <ruling commit>^:<plan path>`' \
+
+# Row 40, review round 2, finding 1. The old check compared the restored
+# clause with the same output the restored text was copied from, so it could
+# never fail. The check now reads the written plan file instead, after the
+# write and before the resume commit.
+assert_absent_in_range_folded "row 40: the override revert no longer compares the restored clause with the output it was copied from" \
+  "$ORCH_SKILL" 'Before you write the plan file, compare the restored clause' \
+  "$RESUME_LINE" "$RULINGS_LINE" fragment
+assert_in_range_folded "row 40: the override revert checks the written plan file with git diff before the resume commit" \
+  "$ORCH_SKILL" 'After you write the plan file, and before the resume commit, run `git diff -- <plan path>`.' \
   "$RESUME_LINE" "$RULINGS_LINE"
+assert_in_range_folded "row 40: every changed line of that diff must belong to this clause" \
+  "$ORCH_SKILL" 'Every changed line of that output must belong to this clause' \
+  "$RESUME_LINE" "$RULINGS_LINE"
+assert_in_range_folded "row 40: any other changed line is a major error and no commit is made" \
+  "$ORCH_SKILL" 'When any other line changed, this is a major error — stop, report it, and do not commit.' \
+  "$RESUME_LINE" "$RULINGS_LINE"
+
+# Row 40, review round 2, finding 2. An amendment that rewrote the clause's
+# opening words leaves those words absent from the plan as it stood before the
+# ruling, so the removed lines of the ruling commit's diff locate the clause
+# there.
+assert_in_range_folded "row 40: the revert states that changed opening words are absent from the earlier plan" \
+  "$ORCH_SKILL" 'When the amendment changed the clause'"'"'s opening words, the quoted words are not in that output.' \
+  "$RESUME_LINE" "$RULINGS_LINE"
+assert_in_range_folded "row 40: the removed lines of the ruling commit diff locate the clause in the earlier plan" \
+  "$ORCH_SKILL" 'use the removed lines of the ruling commit'"'"'s diff of the plan file — the lines that start with `-` — to see which lines of the earlier version hold this clause' \
+  "$RESUME_LINE" "$RULINGS_LINE"
+
+# Row 40, review round 2, finding 4: the old text comes from the commit before
+# the ruling commit, not from the ruling commit itself.
+assert_in_range_folded "row 40: the pre-amendment text comes from the commit before the ruling commit" \
+  "$ORCH_SKILL" 'recovered verbatim from the commit before the ruling commit' \
+  "$RESUME_LINE" "$RULINGS_LINE"
+assert_absent_in_range_folded "row 40: the pre-amendment text is no longer said to come from the ruling commit itself" \
+  "$ORCH_SKILL" 'recovered verbatim from the ruling'"'"'s own commit' \
+  "$RESUME_LINE" "$RULINGS_LINE" fragment
 # Finding D: a note written by v7.33.0 carries no quote.
 assert_in_range_folded "row 40: the override revert stops when the audit note quotes no opening words" \
   "$ORCH_SKILL" 'When the audit note quotes no opening words, because an older version of this skill wrote it, this is also a major error — stop and report it, never guess a clause.' \
@@ -3138,6 +3172,30 @@ assert_in_range_folded "row 40: Resume explains --first-parent in plain words" \
 assert_in_range_folded "row 40: Resume says a same-subject commit that reaches the branch through a merge is not found" \
   "$ORCH_SKILL" 'A commit with the same subject that reaches this branch through a merge, for example from `main`, is not found.' \
   "$RESUME_LINE" "$RULINGS_LINE"
+# Review round 2, finding 4: "tip" is not defined in this document.
+assert_absent_in_range_folded "row 40: Resume no longer calls the first parent the earlier tip of the branch" \
+  "$ORCH_SKILL" 'the earlier tip of the branch' \
+  "$RESUME_LINE" "$RULINGS_LINE" fragment
+assert_in_range_folded "row 40: Resume names the first parent in plain words" \
+  "$ORCH_SKILL" 'the latest commit of the receiving branch before the merge' \
+  "$RESUME_LINE" "$RULINGS_LINE"
+
+# Row 40, review round 2, finding 3. --first-parent skips a ruling commit that
+# reaches the branch only as the second parent of a merge. The run rules
+# forbid the merge, and the commit-exists check stops when a merge is there
+# all the same, instead of treating a committed ruling as not committed.
+assert_in_range_folded "row 40: an orchestrated run never pulls into the feature branch and never merges into it" \
+  "$ORCH_SKILL" 'During an orchestrated run nobody pulls into the feature branch, and nobody merges another branch into it.' \
+  "$RESUME_LINE" "$RULINGS_LINE"
+assert_in_range_folded "row 40: an empty commit-exists search first looks for a merge commit in the range" \
+  "$ORCH_SKILL" 'When the search prints no line at all, first run `git log --merges --format=%h <BASE>..HEAD`.' \
+  "$RESUME_LINE" "$RULINGS_LINE"
+assert_in_range_folded "row 40: a merge commit in the range is a major error and stops the recovery" \
+  "$ORCH_SKILL" 'When that command prints a merge commit, this is a major error — stop and report it, and do not take the recovery below.' \
+  "$RESUME_LINE" "$RULINGS_LINE"
+assert_in_range_folded "row 40: without a merge commit the recovery path stays as it is" \
+  "$ORCH_SKILL" 'When it prints nothing, the session died between the writes and the commit' \
+  "$RESUME_LINE" "$RULINGS_LINE"
 assert_absent_in_range_folded "row 40: Resume no longer promises that an earlier run's commit is never found" \
   "$ORCH_SKILL" 'from an earlier run on the same slug is never found' \
   "$RESUME_LINE" "$RULINGS_LINE" fragment
@@ -3146,6 +3204,11 @@ assert_in_range_folded_exact "row 40: the permitted reads name the ruling-commit
   "$READ_EXCEPTION_LINE" "$READ_EXCEPTION_END"
 assert_in_range_folded "row 40: the permitted reads never drop --first-parent or <BASE>..HEAD" \
   "$ORCH_SKILL" 'the same holds for `--first-parent` and `<BASE>..HEAD`' \
+  "$READ_EXCEPTION_LINE" "$READ_EXCEPTION_END"
+# Review round 2, finding 4: the permitted reads name this search the
+# commit-exists check, the name Resume step 3 gives it.
+assert_in_range_folded "row 40: the permitted reads call the ruling-commit search the commit-exists check" \
+  "$ORCH_SKILL" 'the commit-exists check `git log --first-parent -F --grep "<slug> ruling <n>" <BASE>..HEAD`' \
   "$READ_EXCEPTION_LINE" "$READ_EXCEPTION_END"
 
 # Every ruling-commit search in a range carries both --first-parent and
@@ -3176,7 +3239,13 @@ assert_ruling_searches_complete "row 40: every ruling-commit search in the permi
 
 # Row 40, the audit note and its quote (findings B, C, D, E of review round 1).
 assert_in_range "row 40: the audit note template keeps its label and quotes the opening words of the clause" \
-  "$ORCH_SKILL" '> **Amendment <n> (orchestrator ruling):** clause "<opening words of the amended clause>" — <what changed, from what, and why — one paragraph>' \
+  "$ORCH_SKILL" '> **Amendment <n> (orchestrator ruling):** opening words "<opening words of the amended clause>" — <what changed, from what, and why — one paragraph>' \
+  "$ANSWERS_LINE" "$ANSWERS_END" exact
+# Review round 2, finding 4: the template part is named "opening words",
+# because "clause" already names a plan location on the `— clause:` lines of
+# the ruling record.
+assert_absent_in_range_folded "row 40: the audit note template no longer names its quoted part a clause" \
+  "$ORCH_SKILL" '(orchestrator ruling):** clause "' \
   "$ANSWERS_LINE" "$ANSWERS_END" exact
 assert_absent_in_range_folded "row 40: the quote rule no longer asks for uniqueness in the whole plan" \
   "$ORCH_SKILL" 'more words when eight words are not unique in the plan' \
