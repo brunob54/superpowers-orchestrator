@@ -3314,7 +3314,7 @@ assert_in_range_folded "row 40: the permitted reads include the merge search ove
   "$ORCH_SKILL" '`git log --merges --format=%h <BASE>..HEAD`,' \
   "$READ_EXCEPTION_LINE" "$READ_EXCEPTION_END"
 assert_in_range_folded "row 40: the permitted reads include the plan diff against the index and HEAD" \
-  "$ORCH_SKILL" '`git diff -- <plan path>`, `git show HEAD:<plan path>`, `git diff HEAD -- <plan path>`,' \
+  "$ORCH_SKILL" '`git show HEAD:<plan path>`, `git diff HEAD -- <plan path>`,' \
   "$READ_EXCEPTION_LINE" "$READ_EXCEPTION_END"
 
 # Every ruling-commit search in a range carries both --first-parent and
@@ -3427,8 +3427,8 @@ assert_in_range_folded_exact "row 42: the revert reads the clause as the ruling 
 assert_in_range_folded "row 42: the clause now and the clause the ruling left must hold the same words in order" \
   "$ORCH_SKILL" 'must hold the same words in the same order, with line wraps ignored' \
   "$RESUME_LINE" "$RULINGS_LINE"
-assert_in_range_folded "row 42: a checkbox marker is not a word of the clause" \
-  "$ORCH_SKILL" 'A task checkbox marker at the start of a line is not a word of the clause.' \
+assert_in_range_folded "row 42: neither a checkbox marker nor a ruling marker is a word of the clause" \
+  "$ORCH_SKILL" 'Neither a task checkbox marker at the start of a line nor an `(amended by ruling <n>)` marker is a word of the clause.' \
   "$RESUME_LINE" "$RULINGS_LINE"
 assert_in_range_folded "row 42: a clause changed after the ruling is a major error, never restored over" \
   "$ORCH_SKILL" 'the clause changed after the ruling' \
@@ -3442,56 +3442,13 @@ assert_in_range_folded "row 42: the already-reverted branch still deletes the no
   "$ORCH_SKILL" 'delete the note and the `(amended by ruling <m>)` marker if either still stands' \
   "$RESUME_LINE" "$RULINGS_LINE"
 
-# Rows 42 and 43, ordering. A revert has a precondition on the clause's current
-# text; an applied amendment has none. Undo comes before redo, and a single
-# sort by ruling number does not serve both.
-assert_in_range_folded "rows 42-44: one resume reverts in descending ruling number before it applies any amendment" \
-  "$ORCH_SKILL" 'make every amendment revert first, taking the rulings in descending ruling number' \
-  "$RESUME_LINE" "$RULINGS_LINE"
-assert_in_range_folded "rows 42-44: applied amendments come after every revert, in ascending ruling number" \
-  "$ORCH_SKILL" 'apply this resume'"'"'s own `amend plan` answers, in ascending ruling number' \
+# Rows 42 and 43, ordering. A revert requires that the clause still read as its
+# own ruling left it, so a later ruling must be undone before an earlier one.
+assert_in_range_folded "rows 42-43: one resume reverts its rulings in descending ruling number" \
+  "$ORCH_SKILL" 'take the rulings in descending ruling number' \
   "$RESUME_LINE" "$RULINGS_LINE"
 
-# Row 44. A user's `amend plan` answer at Resume had no actor, no procedure step
-# and no commit. The apply half is specified here; reverting such an amendment
-# is a stop, because the resume commit's subject cannot be found by the
-# ruling-commit lookup (the filter exists to drop it).
-assert_in_range_folded "row 44: the orchestrator applies a user's amend plan answer by the amendment procedure" \
-  "$ORCH_SKILL" 'you apply that amendment yourself, by the amendment procedure' \
-  "$RESUME_LINE" "$RULINGS_LINE"
-assert_in_range_folded "row 44: an amendment applied at Resume keeps the orchestrator-ruling note label" \
-  "$ORCH_SKILL" 'its note keeps the label `**Amendment <n> (orchestrator ruling):**`' \
-  "$RESUME_LINE" "$RULINGS_LINE"
-assert_in_range_folded "row 44: the resume commit names the plan file for an amendment applied there" \
-  "$ORCH_SKILL" 'names the plan file on its command line for an amendment applied here' \
-  "$RESUME_LINE" "$RULINGS_LINE"
-assert_in_range_folded "row 44: reverting an amendment applied at Resume is a major error, stated as a limit" \
-  "$ORCH_SKILL" 'This skill has no rule for reverting such an amendment' \
-  "$RESUME_LINE" "$RULINGS_LINE"
-assert_in_range_folded "row 44: an amend plan answer at a stop that made no ruling is a major error" \
-  "$ORCH_SKILL" 'has nowhere to be recorded: this is a major error' \
-  "$RESUME_LINE" "$RULINGS_LINE"
 
-# Row 41. A rewritten branch hides ruling commits from the subject search. The
-# ancestor check belongs in step 1, where the log read has supplied <BASE>;
-# step 0 only peeks at the log's last entry.
-assert_in_range_folded_exact "row 41: Resume runs the ancestor check with the full commit name" \
-  "$ORCH_SKILL" '`git merge-base --is-ancestor <BASE> HEAD`, with `<BASE>` written as the full commit name' \
-  "$RESUME_LINE" "$RULINGS_LINE"
-assert_in_range_folded "row 41: exit 1 is a rebase or a reset, and a major error" \
-  "$ORCH_SKILL" 'Exit 1 means the branch was rebased or reset since the run started' \
-  "$RESUME_LINE" "$RULINGS_LINE"
-assert_in_range_folded "row 41: any other exit is reported as a git error, not as a rebase" \
-  "$ORCH_SKILL" 'Any other exit is a git error, not a rebase' \
-  "$RESUME_LINE" "$RULINGS_LINE"
-# The squash case: the subject is gone but the amendment stands. The identity
-# test uses the pre-amendment wording the ruling record already holds.
-assert_in_range_folded "row 41: a standing amendment is never applied a second time" \
-  "$ORCH_SKILL" 'the amendment already stands in the plan: do not apply it again' \
-  "$RESUME_LINE" "$RULINGS_LINE"
-assert_in_range_folded "row 41: the identity test reads the Contract clause field, not the Resolution text" \
-  "$ORCH_SKILL" 'read the item'"'"'s `**Contract clause:**` text, which the ruling record wrote before the amendment' \
-  "$RESUME_LINE" "$RULINGS_LINE"
 
 # Red-team finding 2. A major-error stop after the plan file was written left a
 # half-written plan that the NEXT resume committed as the blocked task's own
@@ -3530,10 +3487,10 @@ assert_in_range_folded "finding 4: text of another clause this resume reverts is
 # exception forbids. The widening is for the orchestrator alone: a fork's
 # `git show <sha>:<path>` form prints whole files.
 assert_in_range_folded_exact "finding 5: the permitted reads carry the four commands the revert runs, ending with the plan scan" \
-  "$ORCH_SKILL" '`git show <ruling commit>:<plan path>`, `git status --porcelain`, `git show --name-only --format= <sha>`, `git merge-base --is-ancestor <BASE> HEAD`, and a scan of the whole plan' \
+  "$ORCH_SKILL" '`git show <ruling commit>:<plan path>`, `git status --porcelain`, `git show --name-only --format= <sha>`, and a scan of the whole plan' \
   "$READ_EXCEPTION_LINE" "$READ_EXCEPTION_END"
 assert_in_range_folded "finding 5: the porcelain output is never a source of file names to read" \
-  "$ORCH_SKILL" 'is never a source of file names to read' \
+  "$ORCH_SKILL" 'you never read a file name out of it' \
   "$READ_EXCEPTION_LINE" "$READ_EXCEPTION_END"
 assert_in_range_folded "finding 5: the fix-commit line may be read by the orchestrator alone, never a fork" \
   "$ORCH_SKILL" 'you alone — never a fork — may also read the `fixed — <summary> → <sha>` line' \
