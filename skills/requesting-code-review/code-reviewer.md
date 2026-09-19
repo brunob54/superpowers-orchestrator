@@ -27,9 +27,15 @@ Do NOT proceed with findings until you have read the actual code.
 ## Review Scope
 
 ```bash
-git diff --stat {BASE_SHA}..{HEAD_SHA}
-git diff {BASE_SHA}..{HEAD_SHA}
+git diff --no-ext-diff --no-textconv --stat {BASE_SHA}..{HEAD_SHA}
+git diff --no-ext-diff --no-textconv {BASE_SHA}..{HEAD_SHA}
 ```
+
+Keep `--no-ext-diff --no-textconv` on every diff you run yourself: a
+repository can configure a helper program for a diff (a textconv filter
+turns a file into text before git compares it; an external diff driver
+replaces git's own comparison), and git then prints the helper's output
+instead of the code.
 
 ## Required Output
 

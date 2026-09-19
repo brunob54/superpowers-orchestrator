@@ -114,10 +114,16 @@ Agent tool (general-purpose):
     list, a stat summary, and the full diff with surrounding context, and
     it is your view of the change. Do not re-run git commands. Only if
     the diff file is missing may you fetch the diff yourself:
-    `git diff --stat [BASE_SHA]..[HEAD_SHA] -- ':(top)' ':(top,exclude)docs/superpowers-orchestrator/*/*-review-log.md' ':(top,exclude)docs/superpowers-orchestrator/*/*-fix-reports.md' ':(top,exclude)docs/superpowers-orchestrator/*/*-orchestration-log.md' ':(top,exclude)docs/superpowers-orchestrator/*/*-open-decisions.md' ':(top,exclude)docs/specs/*-review-log.md' ':(top,exclude)docs/plans/*-review-log.md' ':(top,exclude)docs/plans/*-orchestration-log.md' ':(top,exclude)docs/plans/*-open-decisions.md'`
+    `git diff --no-ext-diff --no-textconv --stat [BASE_SHA]..[HEAD_SHA] -- ':(top)' ':(top,exclude)docs/superpowers-orchestrator/*/*-review-log.md' ':(top,exclude)docs/superpowers-orchestrator/*/*-fix-reports.md' ':(top,exclude)docs/superpowers-orchestrator/*/*-orchestration-log.md' ':(top,exclude)docs/superpowers-orchestrator/*/*-open-decisions.md' ':(top,exclude)docs/specs/*-review-log.md' ':(top,exclude)docs/plans/*-review-log.md' ':(top,exclude)docs/plans/*-orchestration-log.md' ':(top,exclude)docs/plans/*-open-decisions.md'`
     and the same command without `--stat` — a failure fallback, not an
     alternative workflow. Keep the pathspecs: they exclude review material
-    you must not read. Do not crawl the broader codebase. Inspect
+    you must not read.
+    Keep `--no-ext-diff --no-textconv` on every diff you run yourself: a
+    repository can configure a helper program for a diff (a textconv filter
+    turns a file into text before git compares it; an external diff driver
+    replaces git's own comparison), and git then prints the helper's output
+    instead of the code.
+    Do not crawl the broader codebase. Inspect
     code outside the diff only to evaluate a concrete risk you can
     name — one focused check per named risk, and name both the risk and
     what you checked in your report.

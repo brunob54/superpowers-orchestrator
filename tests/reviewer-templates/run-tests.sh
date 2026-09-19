@@ -834,6 +834,67 @@ assert_folded_not_contains "code-review template: the returns legend no longer l
 assert_folded_contains "multi-code-review step 3: the Full report line is not a finding and its path is never logged" "$CODE_VALIDATE_RANGE" "$CONTROLLER_NEVER_LOGS_PATH"
 
 echo
+bold "A reviewer's own diff read turns off configured helper programs (worklist row 54)"
+
+# When the diff file is missing, a reviewer fetches the diff itself. A
+# repository can configure a helper program for a diff (a textconv filter or
+# an external diff driver), and git then prints the helper's output instead of
+# the code. Each fallback read must carry both options, and each file must
+# state the rule and its reason, so a later edit cannot keep the options and
+# lose the reason.
+REQUESTING_REVIEWER="$ROOT/skills/requesting-code-review/code-reviewer.md"
+GUARD_OPTIONS='--no-ext-diff --no-textconv'
+# A content read, found by its shape and not by one spelling: `git`, then any
+# global options (`--no-pager`), then `diff`, `show` or `log -p`.
+CONTENT_READ_RE='git( -[^ ]+)* (diff|show|log -p)'
+NAMES_ONLY_RE="$CONTENT_READ_RE --name-only"
+HELPER_RULE='Keep `--no-ext-diff --no-textconv` on every diff you run yourself'
+# The skill file speaks to the orchestrator, not to the reviewer, so it words
+# the same rule differently.
+HELPER_RULE_SKILL='each carrying `--no-ext-diff --no-textconv`'
+HELPER_REASON="prints the helper's output instead of the code"
+
+count_folded_re() { # file extended-regex -> number of matches across line breaks
+  fold_file "$1" | grep -oE -- "$2" | wc -l | tr -d ' '
+}
+# Number of content reads in file $1 that lack the two options. A name-only
+# read prints file names and runs no helper program, so it is not counted.
+unguarded_reads() { # file
+  local all names guarded
+  all=$(count_folded_re "$1" "$CONTENT_READ_RE")
+  names=$(count_folded_re "$1" "$NAMES_ONLY_RE")
+  guarded=$(count_folded_re "$1" "$CONTENT_READ_RE $GUARD_OPTIONS")
+  echo $((all - names - guarded))
+}
+assert_diff_reads_guarded() { # desc file rule-sentence
+  local guarded
+  guarded=$(count_folded_re "$2" "$CONTENT_READ_RE $GUARD_OPTIONS")
+  if [ "$guarded" -gt 0 ]; then ok "$1: holds a content read with both options ($guarded)"; else bad "$1: no content read with both options"; fi
+  assert_eq "$1: no content read lacks the two options" "$(unguarded_reads "$2")" "0"
+  # The opposite options, written later on the same command, turn the helper
+  # programs on again. The leading blank keeps `--no-ext-diff` from matching.
+  assert_folded_not_contains "$1: never turns an external diff driver on" "$2" " --ext-diff"
+  assert_folded_not_contains "$1: never turns a textconv filter on" "$2" " --textconv"
+  assert_folded_contains "$1: states the rule" "$2" "$3"
+  assert_folded_contains "$1: states the reason" "$2" "$HELPER_REASON"
+}
+
+# The skill file describes the package's diff elsewhere in prose, so only its
+# fallback bullet is checked: from the bullet's first line to the next bullet.
+CODE_FALLBACK_RANGE="$WORK/code-fallback-range.md"
+awk '/^- `review-package` missing or failing/ { on = 1; print; next } on && /^- / { exit } on { print }' "$CODE_SKILL" > "$CODE_FALLBACK_RANGE"
+
+# Outside the fallback bullet the skill file names the package's two-dot diff
+# once, in prose, as a description and not as a command to run. Any further
+# content read without the two options changes this count.
+CODE_SKILL_PROSE_MENTIONS=1
+assert_eq "multi-code-review SKILL.md: no new content read without the two options" "$(unguarded_reads "$CODE_SKILL")" "$CODE_SKILL_PROSE_MENTIONS"
+assert_diff_reads_guarded "multi-code-review reviewer template" "$CODE_PROMPT" "$HELPER_RULE"
+assert_diff_reads_guarded "multi-code-review SKILL.md no-package fallback" "$CODE_FALLBACK_RANGE" "$HELPER_RULE_SKILL"
+assert_diff_reads_guarded "task reviewer template" "$SDD_TASK_REVIEWER" "$HELPER_RULE"
+assert_diff_reads_guarded "requesting-code-review reviewer template" "$REQUESTING_REVIEWER" "$HELPER_RULE"
+
+echo
 bold "Results: $PASS passed, $FAIL failed"
 if [ "$FAIL" -gt 0 ]; then
   for e in "${ERRORS[@]}"; do red "  - $e"; done

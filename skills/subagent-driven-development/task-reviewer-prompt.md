@@ -48,11 +48,17 @@ Task tool (general-purpose):
     judge is cut off mid-function — and say so in your report. Do not
     re-run git commands.
     Only if the diff file is missing may you fetch the diff yourself:
-    `git diff --stat [BASE_SHA]..[HEAD_SHA]` and `git diff [BASE_SHA]..[HEAD_SHA]`
+    `git diff --no-ext-diff --no-textconv --stat [BASE_SHA]..[HEAD_SHA]` and
+    `git diff --no-ext-diff --no-textconv [BASE_SHA]..[HEAD_SHA]`
     — this is a failure fallback, not an alternative workflow. If the Base/Head
     lines above were replaced by a commit list (wave mode), do not fall back to
     a range diff — it would include sibling tasks' commits; stop and report the
     missing diff file instead.
+    Keep `--no-ext-diff --no-textconv` on every diff you run yourself: a
+    repository can configure a helper program for a diff (a textconv filter
+    turns a file into text before git compares it; an external diff driver
+    replaces git's own comparison), and git then prints the helper's output
+    instead of the code.
     Do not crawl the broader codebase. Inspect code outside the diff only
     to evaluate a concrete risk you can name — one focused check per named
     risk, and name both the risk and what you checked in your report.

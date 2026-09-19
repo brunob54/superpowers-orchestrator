@@ -876,6 +876,64 @@ else
   bad "archive naming: expected $WS/archive/baz, found: $(ls "$WS/archive" 2>/dev/null | tr '\n' ' ')"
 fi
 
+bold "review-package ignores configured diff helper programs"
+
+# Worklist row 54. A repository can configure two kinds of helper program for
+# a diff. A textconv filter turns a file into text before git compares it. An
+# external diff driver replaces git's own comparison. Both print whatever the
+# helper prints, so a package built through them would show a reviewer text
+# that is not in the repository. This fixture configures both kinds and
+# requires the package to hold the real lines and none of the helper's output.
+HELPER_REPO=$(mktemp -d)
+: "${HELPER_REPO:?mktemp failed — refusing to run with an empty repo path}"
+HELPER_REPO=$(cd "$HELPER_REPO" && pwd -P)
+trap 'rm -rf "$REPO" "$ERRF" "$HELPER_REPO"' EXIT
+HELPER_OUTPUT="FABRICATED-BY-HELPER"
+cd "$HELPER_REPO"
+git init --quiet
+git config user.email "test@test"
+git config user.name "test"
+# *.conv goes through a textconv filter, *.ext through a per-attribute
+# external driver, and diff.external covers every other file.
+printf '*.conv diff=convhelper\n*.ext diff=exthelper\n' > .gitattributes
+echo "base" > base.txt
+echo "old-conv-line" > m.conv
+git add .gitattributes base.txt m.conv && git commit --quiet -m "base commit"
+HELPER_BASE=$(git rev-parse HEAD)
+echo "real-conv-line" > a.conv
+echo "real-ext-line" > b.ext
+# A modified file is the stronger case: a textconv filter turns both sides into
+# the same helper text, so the change disappears from the diff completely.
+echo "new-conv-line" > m.conv
+echo "real-plain-line" > c.txt
+git add a.conv b.ext c.txt m.conv && git commit --quiet -m "task: add three files, modify one"
+HELPER_HEAD=$(git rev-parse HEAD)
+git config diff.convhelper.textconv "echo $HELPER_OUTPUT #"
+git config diff.exthelper.command "echo $HELPER_OUTPUT #"
+git config diff.external "echo $HELPER_OUTPUT #"
+
+assert_package_is_real() { # mode-label package-file
+  local real
+  assert_file_not_contains "$1: no helper output in the package" "$2" "$HELPER_OUTPUT"
+  for real in "+real-conv-line" "+real-ext-line" "+real-plain-line" "-old-conv-line" "+new-conv-line"; do
+    assert_file_contains "$1: package holds $real" "$2" "$real"
+  done
+}
+
+"$SCRIPTS/review-package" "$HELPER_BASE" "$HELPER_HEAD" "$HELPER_REPO/range.diff" >/dev/null 2>&1
+assert_package_is_real "helpers, range mode" "$HELPER_REPO/range.diff"
+"$SCRIPTS/review-package" --commits "$HELPER_HEAD" --out "$HELPER_REPO/commits.diff" >/dev/null 2>&1
+assert_package_is_real "helpers, --commits mode" "$HELPER_REPO/commits.diff"
+cd "$REPO"
+# `--stat` runs no helper program on git 2.50.1, so no fixture can show that a
+# `--stat` read lost the options. The rule is one spelling on every read, so
+# this check reads the script: each `git diff` or `git show` command line
+# carries the options array.
+PACKAGE_READS=$(grep -cE '^ *git (diff|show) ' "$SCRIPTS/review-package")
+PACKAGE_READS_GUARDED=$(grep -cE '^ *git (diff|show) "\$\{no_helpers\[@\]\}" ' "$SCRIPTS/review-package")
+assert_eq "review-package: every diff or show read carries the options array" "$PACKAGE_READS_GUARDED" "$PACKAGE_READS"
+assert_eq "review-package: four diff or show reads" "$PACKAGE_READS" "4"
+
 bold ""
 bold "Results: $PASS passed, $FAIL failed"
 if [ "$FAIL" -gt 0 ]; then

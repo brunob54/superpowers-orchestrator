@@ -52,6 +52,15 @@ blind_pathspecs=(
   ':(top,exclude)docs/plans/*-open-decisions.md'
 )
 
+# A repository can configure two kinds of helper program for a diff: a
+# textconv filter, which turns a file into text before git compares it, and an
+# external diff driver, which replaces git's own comparison. Either one prints
+# whatever the helper prints, so the package would show the reviewer text that
+# is not in the repository. Every read that feeds the package turns both off.
+# 'git show' runs only a textconv filter today; it carries both options anyway,
+# so that every read uses the same two options.
+no_helpers=(--no-ext-diff --no-textconv)
+
 if [ "${1:-}" = "--commits" ]; then
   shift
   out=""
@@ -82,12 +91,12 @@ if [ "${1:-}" = "--commits" ]; then
     echo
     echo "## Files changed (per commit)"
     for c in "${commits[@]}"; do
-      git show --stat --format="%h %s" "$c" -- "${blind_pathspecs[@]}"
+      git show "${no_helpers[@]}" --stat --format="%h %s" "$c" -- "${blind_pathspecs[@]}"
       echo
     done
     echo "## Diff"
     for c in "${commits[@]}"; do
-      git show -U10 --format="### commit %h %s" "$c" -- "${blind_pathspecs[@]}"
+      git show "${no_helpers[@]}" -U10 --format="### commit %h %s" "$c" -- "${blind_pathspecs[@]}"
       echo
     done
   } > "$out"
@@ -119,10 +128,10 @@ fi
   git log --oneline "${base}..${head}" -- "${blind_pathspecs[@]}"
   echo
   echo "## Files changed"
-  git diff --stat "${base}..${head}" -- "${blind_pathspecs[@]}"
+  git diff "${no_helpers[@]}" --stat "${base}..${head}" -- "${blind_pathspecs[@]}"
   echo
   echo "## Diff"
-  git diff -U10 "${base}..${head}" -- "${blind_pathspecs[@]}"
+  git diff "${no_helpers[@]}" -U10 "${base}..${head}" -- "${blind_pathspecs[@]}"
 } > "$out"
 
 count=$(git rev-list --count "${base}..${head}" -- "${blind_pathspecs[@]}")
