@@ -1103,6 +1103,11 @@ Trigger: `Resume orchestration for <plan-or-spec path>`.
    clause again after each restore. Make every ruling's plan revert first,
    and only then every ruling's fix-commit revert below, so that a stop
    during the plan reverts has staged no code file.
+   Write every revert of this resume before any amendment that a user's
+   own `amend plan` answer of this same resume makes, so that the plan
+   the amendment edits already holds the restored wording. A revert
+   checks that the clause still reads as its own ruling left it, and an
+   amendment written first would make that check stop the resume.
    Wherever this step reads a `**Amendment <m>` label, match the whole
    number: `**Amendment 1` is also the opening of `**Amendment 10`, so the
    label matches `<m>` only when a space follows the number.
@@ -1110,9 +1115,20 @@ Trigger: `Resume orchestration for <plan-or-spec path>`.
    the `(amended by ruling <m>)` marker, this amendment was already reverted
    by an earlier resume: make no plan edit for this ruling, and record one
    line in the report you give the user at the end of this resume. When the
-   item's `**Follow-up:**` line already records this same answer, that
-   earlier resume also reverted the ruling's fix commit: make no code change
-   for it either, and skip the other half of the revert below. Step 1 above
+   item's `**Follow-up:**` line already records this same answer, read the
+   end of that line before you skip anything. A line that ends
+   `— fix <sha> not reverted` records that the earlier resume left the fix
+   commit standing. Do not skip the other half of the revert then: make it
+   now for that `<sha>`. What stopped the earlier attempt was a local
+   change in the working tree, never a property of the fix commit, so it
+   can be gone now. When it still stands, the other half's own rule takes
+   the `— fix <sha> not reverted` branch again. When that revert succeeds,
+   delete the `— fix <sha> not reverted` text from the end of the line, so
+   that a later resume reads an ordinary line. Record one line for that
+   `<sha>` in the report you give the user at the end of this resume. A
+   line that ends any other way records that the earlier resume reverted
+   the ruling's fix commit: make no code change for it either, and skip
+   the other half of the revert below. Step 1 above
    has already repaired a ruling whose note was never written, so a missing
    note here means the revert was made, not that the amendment was never
    applied.
@@ -1189,6 +1205,27 @@ Trigger: `Resume orchestration for <plan-or-spec path>`.
    neither comparison holds, the clause changed after the ruling: a later
    ruling amended it, or another actor edited it. This is a major
    error — stop and report it, and never restore over the later text.
+   **One ruling commit can hold more than one amendment of one clause.** A
+   return writes one ruling commit, so `git show <ruling commit>^:<plan
+   path>` prints the plan as it stood before every amendment of that
+   return. Restoring from it would also undo an amendment this resume does
+   not revert, and both checks after the write would pass. So, before you
+   restore, look inside the note's block for another `**Amendment <k>` note
+   whose `<k>` is not `<m>`. Ruling `<k>` belongs to this same return when
+   the `## RULING` entry that covers it is the entry that covers `<m>`,
+   each found by the covering-entry rule below. A note of another return is
+   skipped: that ruling has its own commit, whose parent holds this
+   return's amendment. For each note of this return, search its quoted
+   opening words as this step searches for an unmarked clause above:
+   outside audit notes only, with line wraps ignored, and a `'` in the
+   quote matching either `'` or `"` in the plan. When that quote matches
+   exactly one clause of the block, and that clause is not the one you are
+   reverting, ruling `<k>` amended another clause and this revert is safe.
+   Every other outcome is a major error — no match, more than one match, or
+   a match on the clause you are reverting: stop, report `<m>` and `<k>`,
+   and restore nothing. A clause amended twice by one return has an
+   intermediate wording that stands in no commit, so the earlier note's
+   quote matches nothing.
    Then find the change to that clause in the ruling commit's diff of the
    plan file, `git show --no-ext-diff --no-textconv <ruling commit> -- <plan path>`
    (`<ruling commit>` is found as stated below). Use that diff only to see
@@ -2009,7 +2046,7 @@ appended, never rewritten, in the shape below:
 
 - **Class:** forced | design | escalated (<spec wrong|scope|irreversible|secret|chain>)
 - **Item:** [<id> inv <i>] <severity> <file:line> — <finding summary, verbatim>   (Phase 3: `[task <n>/<k>]` n/a n/a — <the question or conflict, one line>)
-- **Contract clause:** "<verbatim quote>" — <path of the spec, plan or skill that holds it>
+- **Contract clause:** "<verbatim quote>" — <path of the spec, plan or skill that holds it>, <plan location: Global Constraints, Task <n>, or n/a when the clause is not plan text>
 - **Defensible answers:** <one line each; `n/a` for forced>
 - **Forks:** <k> of <planned> — <lens>: <VERDICT line> (one per fork; `none` for forced); contradiction: none | <what and how it was settled, or `unsettled`>
 - **Resolution:** <the answer as written into [RESUME_ANSWER]> — <reason; for forced, the one-sentence fact>
@@ -2049,7 +2086,9 @@ stop (below) — writes `n/a n/a — <the stop's own reason>` after its id.
   `unresolved:` line, the text after `unresolved: ` and before the first
   ` — at` is the `<reason>`, and the `<reason>` is written as the summary. For an item
   that carries a secret, write the location only (see "Never reproduce
-  a secret"). Never copy the whole disposition line into this field.
+  a secret"). Never copy the whole disposition line into this field. The `**Contract clause:**` tail names the plan location after the path,
+because Resume step 3 needs it when the item's current disposition line
+carries none.
 
 An example of a Phase 4 field line:
 
@@ -2149,8 +2188,8 @@ answer that replaces a `Ruled:` line lands as a `**Follow-up:**` line on
 that item's `forced` or `design` entry the same way. That line carries
 the user's answer and, after it, the
 item's `clause:` text quoted — `**Follow-up:** <answer> — clause:
-<plan location> "<quoted plan text>"`, copied from the item's disposition
-line. A Phase 3 item has no disposition line: for it, the clause is taken
+<plan location> "<quoted plan text>"`, its two parts read as the block
+below states. A Phase 3 item has no disposition line: for it, the clause is taken
 instead from the plan text the item's `### Conflict <k>` section quotes
 (the batch controller's Deviation 1 requires both sides quoted), or, when
 that section quotes none, from this same ruling-record entry's own
@@ -2158,6 +2197,56 @@ that section quotes none, from this same ruling-record entry's own
 only when the item names no plan text at all. The quote is the key guard
 4 (below) matches a later item against, so a follow-up written without it
 leaves the user's decision unprotected.
+
+**The quote is read from the plan, after this resume's own edits.**
+Write the `<quoted plan text>` by reading the plan file at the named
+location, once every plan edit of this resume is written. Those edits are
+the reverts of Resume step 3, and the amendment a user's own `amend plan`
+answer makes. The item's disposition line quotes the plan as it stood when
+the item was raised, and an `amend plan` answer changes that text; a quote
+copied from that line would record wording the plan no longer holds and
+guard 4 would find no match for it. What you write instead is the wording
+the user's decision leaves in force, which is the wording a later item will
+quote.
+
+**The location, and the sentence inside it.** Take the plan location from
+the item's current disposition line when that line carries a
+`— clause: <plan location>` part. When it carries none — a
+`fixed — <summary> → <sha>` line carries none — take the location from this
+entry's own `**Contract clause:**` tail. A Phase 3 item's location is the
+`### Task <n>` section its `[task <n>/<k>]` id names. Then pick the sentence
+to record. It is the clause this resume reverted or amended, when it made
+either edit. Otherwise it is the sentence or the list entry at that location
+that the field's quote is a prefix of, with the field's quote normalized the
+same way before the test.
+
+Normalize what you read exactly as multi-code-review normalizes a quote,
+under all FOUR replacements of its one rule (`../multi-code-review/SKILL.md`,
+"Self-sufficient open-item lines"). Take the one sentence or the one list
+entry of the clause. Collapse every run of whitespace — a newline and the
+indentation after it included — to one space. Replace each ` — ` and each
+` ← ` by one space, and each `"` by a single quotation mark `'`. Then cut
+the result to 160 characters. The whitespace collapse is not optional here:
+a plan wraps a clause across several physical lines, and a quote holding
+those line breaks matches nothing. Leave out an `(amended by ruling <n>)`
+marker and a task checkbox marker. Neither is a word of the clause, and a
+marker stands after the clause's own words, so the prefix test still
+matches. For a clause that is an `**Exact content:**` block, record its
+introducing `**Exact content:** <reason>` paragraph line, and no line inside
+the fenced block or the block quote. Step 1 of "Plan amendment" gives the
+reason: an implementer copies the text inside them verbatim into a produced
+file.
+
+**Stop only when the record cannot say what the user decided.** When the
+field's quote matches no sentence at the named location, search the whole
+plan the same way, because an entry written by an older version of this
+skill names no location. When that search ends on no sentence, or on more
+than one, stop under the Major-Error Stop Policy. Report the entry, the item
+and the search you made, and never write `— clause: none` in that case. A
+`**Contract clause:**` field that reads `n/a` is the one case that does
+write it: the item named no plan text at all. That is the shape a
+verification-cap item, an addendum re-review item and an environment item
+carry.
 
 **An item escalated by an environment stop of the Major-Error Stop
 Policy — never by classification — has no entry until the user answers

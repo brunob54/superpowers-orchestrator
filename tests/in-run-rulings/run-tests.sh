@@ -962,7 +962,7 @@ assert_in_range_folded "clause: none is written only when the item names no plan
 # are pinned — and only the template's own line can satisfy it.
 for pin in '- **Class:** forced | design | escalated (<spec wrong|scope|irreversible|secret|chain>)' \
            '- **Item:** [<id> inv <i>] <severity> <file:line> — <finding summary, verbatim>' \
-           '- **Contract clause:** "<verbatim quote>" — <path of the spec, plan or skill that holds it>' \
+           '- **Contract clause:** "<verbatim quote>" — <path of the spec, plan or skill that holds it>, <plan location: Global Constraints, Task <n>, or n/a when the clause is not plan text>' \
            '- **Defensible answers:** <one line each; `n/a` for forced>' \
            '- **Forks:** <k> of <planned> — <lens>: <VERDICT line>' \
            '- **Resolution:** <the answer as written into [RESUME_ANSWER]>'; do
@@ -3886,6 +3886,84 @@ assert_in_range_folded "no entry, or more than one, for the answered id is a maj
   "$RESUME_LINE" "$RULINGS_LINE"
 assert_in_range_folded "the reason the answered id decides the entry" \
   "$ORCH_SKILL" 'An answer appended to another entry makes every rule that reads one entry' \
+  "$RESUME_LINE" "$RULINGS_LINE"
+
+# Row 45 — the record side. The `**Follow-up:**` line must record the clause
+# the user's decision leaves in force. Two causes made it record something
+# else: the item's current disposition line is usually a clause-less
+# `fixed — <summary> → <sha>` line, and a user's own `amend plan` answer moves
+# the plan away from the quote.
+assert_in_range_folded "row 45: the Follow-up clause field takes its two parts from the block below" \
+  "$ORCH_SKILL" 'its two parts read as the block below states.' \
+  "$RECORD_LINE" "$RECORD_END"
+assert_absent_in_range_folded "row 45: the Follow-up quote is no longer copied from the disposition line" \
+  "$ORCH_SKILL" 'copied from the item'"'"'s disposition line' \
+  "$RECORD_LINE" "$RECORD_END" fragment
+assert_in_range_folded "row 45: the ruling record carries the read-from-the-plan block" \
+  "$ORCH_SKILL" '**The quote is read from the plan, after this resume'"'"'s own edits.**' \
+  "$RECORD_LINE" "$RECORD_END"
+assert_in_range_folded "row 45: the quote is read from the plan once every plan edit of the resume is written" \
+  "$ORCH_SKILL" 'Write the `<quoted plan text>` by reading the plan file at the named location, once every plan edit of this resume is written.' \
+  "$RECORD_LINE" "$RECORD_END"
+# The reason sentence stands between the rule and its consequence. Mutation
+# testing on 2026-09-19 showed such a sentence can be deleted while the rule
+# and the consequence stay pinned.
+assert_in_range_folded "row 45: the rule says why the disposition line is the wrong source" \
+  "$ORCH_SKILL" 'The item'"'"'s disposition line quotes the plan as it stood when the item was raised, and an `amend plan` answer changes that text' \
+  "$RECORD_LINE" "$RECORD_END"
+assert_in_range_folded "row 45: the rule states what a quote taken from the disposition line costs" \
+  "$ORCH_SKILL" 'would record wording the plan no longer holds and guard 4 would find no match for it.' \
+  "$RECORD_LINE" "$RECORD_END"
+assert_in_range_folded "row 45: a clause-less disposition line takes its location from the Contract clause tail" \
+  "$ORCH_SKILL" 'take the location from this entry'"'"'s own `**Contract clause:**` tail' \
+  "$RECORD_LINE" "$RECORD_END"
+assert_in_range_folded "row 45: the recorded quote is normalized under all four replacements" \
+  "$ORCH_SKILL" 'under all FOUR replacements of its one rule' \
+  "$RECORD_LINE" "$RECORD_END"
+assert_in_range_folded "row 45: an unreadable clause stops instead of writing clause: none" \
+  "$ORCH_SKILL" 'When that search ends on no sentence, or on more than one, stop under the Major-Error Stop Policy.' \
+  "$RECORD_LINE" "$RECORD_END"
+assert_in_range_folded "row 45: the Contract clause tail names the plan location" \
+  "$ORCH_SKILL" 'The `**Contract clause:**` tail names the plan location after the path' \
+  "$RECORD_LINE" "$RECORD_END"
+# Change B orders two edits; the rule above times one read. Applying a user's
+# own amendment first makes the revert see changed text and stop the resume.
+# This sentence must never write the literal `(user)` tag: the Resume range
+# requires equal counts of `(user)` and `(orchestrator)`.
+assert_in_range_folded "row 45: every revert of this resume is written before this resume's own amendments" \
+  "$ORCH_SKILL" 'Write every revert of this resume before any amendment that a user'"'"'s own `amend plan` answer of this same resume makes' \
+  "$RESUME_LINE" "$RULINGS_LINE"
+assert_in_range_folded "row 45: the order is stated so the amendment edits the restored wording" \
+  "$ORCH_SKILL" 'so that the plan the amendment edits already holds the restored wording.' \
+  "$RESUME_LINE" "$RULINGS_LINE"
+assert_absent_in_range_folded_nobacktick "row 45: the revert is never ordered after this resume's own amendments" \
+  "$ORCH_SKILL" 'after any amendment that a user'"'"'s own `amend plan` answer' \
+  "$RESUME_LINE" "$RULINGS_LINE" fragment
+
+# Row 59: the `— fix <sha> not reverted` suffix records that an earlier resume
+# left the fix commit standing. The rule that skips the second half of a later
+# revert did not read it, and its stated reason is false on that branch.
+assert_in_range_folded "row 59: the skip reads the end of the Follow-up line first" \
+  "$ORCH_SKILL" 'read the end of that line before you skip anything' \
+  "$RESUME_LINE" "$RULINGS_LINE"
+assert_in_range_folded "row 59: a not-reverted suffix means the fix commit still stands" \
+  "$ORCH_SKILL" 'records that the earlier resume left the fix commit standing' \
+  "$RESUME_LINE" "$RULINGS_LINE"
+assert_in_range_folded "row 59: a successful later revert deletes the not-reverted suffix" \
+  "$ORCH_SKILL" 'delete the `— fix <sha> not reverted` text from the end of the line' \
+  "$RESUME_LINE" "$RULINGS_LINE"
+
+# Row 58: one return writes one ruling commit, so its parent holds the plan
+# from before every amendment of that return. Restoring from it would undo an
+# amendment nobody overturned, and both post-write checks would pass.
+assert_in_range_folded "row 58: one ruling commit can hold more than one amendment of one clause" \
+  "$ORCH_SKILL" '**One ruling commit can hold more than one amendment of one clause.**' \
+  "$RESUME_LINE" "$RULINGS_LINE"
+assert_in_range_folded "row 58: a note of this return matching another clause makes the revert safe" \
+  "$ORCH_SKILL" 'When that quote matches exactly one clause of the block, and that clause is not the one you are reverting, ruling `<k>` amended another clause and this revert is safe.' \
+  "$RESUME_LINE" "$RULINGS_LINE"
+assert_in_range_folded "row 58: the reason an intermediate wording matches nothing" \
+  "$ORCH_SKILL" 'A clause amended twice by one return has an intermediate wording that stands in no commit' \
   "$RESUME_LINE" "$RULINGS_LINE"
 
 # --- end of checks ---
