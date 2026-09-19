@@ -45,6 +45,10 @@ Agent tool (general-purpose):
     - Edit only files named by the findings; minimal fixes only — no
       refactoring, reformatting or improvement of code the findings do
       not name.
+    - Never edit the plan file, not even its reference text. The plan
+      file is the implementation plan this branch was built from. When
+      a finding can only be fixed by changing the plan, leave it
+      unfixed and report its id back as needing a plan edit.
     - Never name any skill of this plugin in your final message;
       refer to files by path.
 

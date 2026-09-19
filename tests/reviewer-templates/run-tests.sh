@@ -58,7 +58,15 @@ FIX_RULE_CLAUSES=(
   'review fixes ([SLUG], round [ROUND])'
   'refer to files by path'
   'the command run and the output'
+  'Never edit the plan file, not even its reference text'
+  'report its id back as needing a plan edit'
 )
+# Rows 61 and 62, review round 1. The clause list above matches one line at a
+# time, so the middle of the plan-file rule could be deleted, or its condition
+# turned round ("Unless a finding can only ..."), with the suite green. This is
+# the whole bullet, folded, up to the opening of the next bullet. The closing
+# words are the words multi-code-review's Triage step records the id under.
+FIX_PLAN_RULE='- Never edit the plan file, not even its reference text. The plan file is the implementation plan this branch was built from. When a finding can only be fixed by changing the plan, leave it unfixed and report its id back as needing a plan edit. - Never name any skill of this plugin'
 NOTHING_ELSE='**Nothing else may be added to the prompt.**'
 # Pointer-dispatch contracts on multi-code-review SKILL.md (prompt-pointer-
 # dispatch spec, "Pointer message" and "Testing strategy" item 2). Each pointer
@@ -289,6 +297,7 @@ if [ -s "$FIX_BODY" ]; then ok "fix template: prompt body extract is non-empty";
 for clause in "${FIX_RULE_CLAUSES[@]}"; do
   assert_file_contains "fix template body: rule clause '$clause'" "$FIX_BODY" "$clause"
 done
+assert_folded_contains "fix template body: the plan-file rule is one whole bullet" "$FIX_BODY" "$FIX_PLAN_RULE"
 assert_file_contains "fix template: legend closes with the nothing-else sentence" "$FIX_PROMPT" "$NOTHING_ELSE"
 assert_file_has_line "fix template: [FAILURE_BLOCK] stands alone on its line" "$FIX_BODY" '    [FAILURE_BLOCK]'
 assert_file_has_line "fix template: [FINDINGS] stands alone on its line" "$FIX_BODY" '    [FINDINGS]'

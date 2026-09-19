@@ -387,6 +387,13 @@ addendum. A finding that still stands after the second re-review is logged
 an autonomous run (§4) the orchestrator gives these answers by its rulings,
 and the same limit applies.
 
+Since v7.41.0 a fix subagent never edits the plan file, not even its
+reference text. When a finding can only be fixed by a change to the plan, the
+fix subagent leaves it unfixed and reports its id back. The loop logs that
+finding `unresolved: fix needs a plan edit`, and it comes back to you as an
+open item. The loop does not retry that fix. When your answer changes the plan
+(`amend plan …; fix it`), the fix your answer orders is dispatched as usual.
+
 Since v7.9.0 the reviewers and the fix subagent receive their instructions
 **by pointer**, not as pasted text. The controller (the subagent that runs
 the loop) creates one temporary directory outside your repository at the
@@ -962,6 +969,17 @@ same file, the next resume makes that revert instead of skipping it. A crash aft
 re-dispatch completed is recovered the same way as any other: resume reads
 the trailing `## RULING` entry and re-dispatches the phase with the same
 answers.
+
+Since v7.41.0 a resume of a Phase 3 or a Phase 4 stop reads the plan file's
+uncommitted changes before it writes anything. The only change it accepts is
+a ticked or unticked task checkbox. Any other changed line is a plan edit
+that an earlier session wrote and did not commit, because that session ended
+first. No record says which answer that edit belonged to, so the run does not
+complete the edit and does not keep it. It stops, writes nothing, and its
+report names the changed lines. The way out: restore those plan lines to
+their committed text, then send the same resume prompt again. A resume of a
+Phase 1 or a Phase 2 stop does not make this check, because those phases
+leave the plan file uncommitted on purpose.
 
 **Interrupted during plan writing or a review round?** Resume re-enters any
 phase whose completion entry never made it into the orchestration log, but
