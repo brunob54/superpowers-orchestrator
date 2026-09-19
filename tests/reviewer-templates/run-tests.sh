@@ -834,6 +834,55 @@ assert_folded_not_contains "code-review template: the returns legend no longer l
 assert_folded_contains "multi-code-review step 3: the Full report line is not a finding and its path is never logged" "$CODE_VALIDATE_RANGE" "$CONTROLLER_NEVER_LOGS_PATH"
 
 echo
+bold "A reviewer's own diff read turns off configured helper programs (worklist row 54)"
+
+# When the diff file is missing, a reviewer fetches the diff itself. A
+# repository can configure a helper program for a diff (a textconv filter or
+# an external diff driver), and git then prints the helper's output instead of
+# the code. Each fallback read must carry both options, and each file must
+# state the rule and its reason, so a later edit cannot keep the options and
+# lose the reason.
+REQUESTING_REVIEWER="$ROOT/skills/requesting-code-review/code-reviewer.md"
+DIFF_READ='git diff'
+DIFF_READ_GUARDED='git diff --no-ext-diff --no-textconv'
+DIFF_NAMES_ONLY='git diff --name-only'
+HELPER_RULE='Keep `--no-ext-diff --no-textconv` on every diff you run yourself'
+# The skill file speaks to the orchestrator, not to the reviewer, so it words
+# the same rule differently.
+HELPER_RULE_SKILL='each carrying `--no-ext-diff --no-textconv`'
+HELPER_REASON="prints the helper's output instead of the code"
+
+count_folded() { # file needle -> number of occurrences across line breaks
+  fold_file "$1" | grep -oF -- "$2" | wc -l | tr -d ' '
+}
+# Every content diff in file $2 carries both options. A read found by its
+# shape (`git diff`), not by one spelling: a name-only read prints file names
+# and runs no helper program, so it is the one read left out of the count.
+assert_diff_reads_guarded() { # desc file rule-sentence
+  local all names guarded
+  all=$(count_folded "$2" "$DIFF_READ")
+  names=$(count_folded "$2" "$DIFF_NAMES_ONLY")
+  guarded=$(count_folded "$2" "$DIFF_READ_GUARDED")
+  if [ "$guarded" -gt 0 ] && [ "$((all - names))" -eq "$guarded" ]; then
+    ok "$1: every content diff read carries both options ($guarded)"
+  else
+    bad "$1: $((all - names)) content diff read(s), $guarded with both options"
+  fi
+  assert_folded_contains "$1: states the rule" "$2" "$3"
+  assert_folded_contains "$1: states the reason" "$2" "$HELPER_REASON"
+}
+
+# The skill file describes the package's diff elsewhere in prose, so only its
+# fallback bullet is checked: from the bullet's first line to the next bullet.
+CODE_FALLBACK_RANGE="$WORK/code-fallback-range.md"
+awk '/^- `review-package` missing or failing/ { on = 1; print; next } on && /^- / { exit } on { print }' "$CODE_SKILL" > "$CODE_FALLBACK_RANGE"
+
+assert_diff_reads_guarded "multi-code-review reviewer template" "$CODE_PROMPT" "$HELPER_RULE"
+assert_diff_reads_guarded "multi-code-review SKILL.md no-package fallback" "$CODE_FALLBACK_RANGE" "$HELPER_RULE_SKILL"
+assert_diff_reads_guarded "task reviewer template" "$SDD_TASK_REVIEWER" "$HELPER_RULE"
+assert_diff_reads_guarded "requesting-code-review reviewer template" "$REQUESTING_REVIEWER" "$HELPER_RULE"
+
+echo
 bold "Results: $PASS passed, $FAIL failed"
 if [ "$FAIL" -gt 0 ]; then
   for e in "${ERRORS[@]}"; do red "  - $e"; done
