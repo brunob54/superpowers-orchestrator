@@ -4,6 +4,8 @@
 # Windows note: avoids /dev/stdin (not available in Git Bash on Windows).
 
 set -u
+# Stop the suite when a command is not found; the file explains the reason.
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")/../lib" && pwd)/undefined-command-guard.sh"
 
 SCRIPTS="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)/skills/subagent-driven-development/scripts"
 PASS=0

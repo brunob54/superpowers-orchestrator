@@ -21,6 +21,8 @@
 # and two records without a `message` field.
 
 set -u
+# Stop the suite when a command is not found; the file explains the reason.
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")/../lib" && pwd)/undefined-command-guard.sh"
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 SCRIPT="$ROOT/tools/analyze-compaction.js"

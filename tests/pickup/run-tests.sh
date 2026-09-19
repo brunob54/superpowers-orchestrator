@@ -14,6 +14,8 @@
 # "verification" from the verification round (review-fixes-2.md there).
 
 set -u
+# Stop the suite when a command is not found; the file explains the reason.
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")/../lib" && pwd)/undefined-command-guard.sh"
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 SCRIPT="$ROOT/skills/pickup/scripts/pickup-scan.js"
