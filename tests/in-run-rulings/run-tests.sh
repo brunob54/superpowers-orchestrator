@@ -3694,10 +3694,14 @@ assert_in_range_folded "row 46: two searches ending in different blocks is a maj
 # Every read is found by its shape, not by a list of spellings. A first
 # version counted two literal commands, and a review showed the hole: a read
 # added later that names another revision, such as `git show <resume commit>
-# -- <plan path>`, was invisible to it and the suite stayed green. The whole
-# value of this check is that it protects reads written later, so it matches
-# any revision word. The pattern ends at the backtick that closes the command
-# in the Markdown text.
+# -- <plan path>`, was invisible to it and the suite stayed green. Mutation
+# testing then showed two more spellings that slipped through: a read written
+# without the `--` separator, and one naming another placeholder. So the
+# pattern now matches any git diff or git show that names a plan placeholder,
+# whatever stands between them, bounded by the backtick that closes the
+# command in the Markdown text.
+# A read of the file itself, written `git show <commit>:<plan path>`, runs no
+# helper program and needs no option, so those are removed by their colon.
 # One accepted false failure: a future sentence that quotes a read WITHOUT the
 # options as an example of what not to write would be counted as a read and
 # fail this check. That fails loudly and is corrected in one edit, which is
@@ -3706,7 +3710,7 @@ assert_plan_diff_reads_carry_options() { # desc
   local desc="$1" folded total_lines reads total with_options
   total_lines="$(wc -l < "$ORCH_SKILL")"
   folded="$(fold_range "$ORCH_SKILL" 1 $((total_lines + 1)))"
-  reads="$(printf '%s' "$folded" | grep -o -E 'git (diff|show)[^`]*-- <plan path>')"
+  reads="$(printf '%s' "$folded" | grep -o -E 'git (diff|show)[^`]*<plan [a-z]*>' | grep -v ':<plan ')"
   total="$(printf '%s\n' "$reads" | grep -c .)"
   with_options="$(printf '%s\n' "$reads" | grep -c -- '--no-ext-diff --no-textconv')"
   if [ "$total" -gt 0 ] && [ "$total" = "$with_options" ]; then
@@ -3716,6 +3720,12 @@ assert_plan_diff_reads_carry_options() { # desc
   fi
 }
 assert_plan_diff_reads_carry_options "row 53: every diff read of the plan file carries --no-ext-diff and --no-textconv"
+# Row 53, the rule itself: mutation testing showed that weakening this
+# sentence to name one option, or deleting it, left every check green. The
+# commands were pinned, the reason was pinned, the rule between them was not.
+assert_in_range_folded "row 53: the rule names both options and covers every read in the skill" \
+  "$ORCH_SKILL" 'Every diff of the plan file is read with `--no-ext-diff` and `--no-textconv`, wherever this skill reads one.' \
+  "$RESUME_LINE" "$RULINGS_LINE"
 # Row 53, the consequence: the rule states what a read without the options costs,
 # not only that the options are written. A check that pins the spelling alone
 # would pass a skill that kept the options and lost the reason for them.
