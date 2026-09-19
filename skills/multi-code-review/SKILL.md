@@ -1756,11 +1756,11 @@ completed invocation only on explicit user request.
   has the reviewer run `git diff --no-ext-diff --no-textconv --stat BASE..HEAD`
   and `git diff --no-ext-diff --no-textconv BASE..HEAD` itself, each
   carrying `--no-ext-diff --no-textconv` and the pathspec set from
-  "Reviewer blinding — pathspecs" above; without the two options, a
-  helper program that the repository configures for a diff — a textconv
-  filter, which turns a file into text before git compares it, or an
-  external diff driver, which replaces git's own comparison — prints the
-  helper's output instead of the code) and log the fallback.
+  "Reviewer blinding — pathspecs" above; without the two options, git
+  runs a helper program that the repository configures for a diff — a
+  textconv filter, which turns a file into text before git compares it,
+  or an external diff driver, which replaces git's own comparison — and
+  prints the helper's output instead of the code) and log the fallback.
 - Fix subagent fails twice → findings `unresolved: <reason>`, blocking;
   loop continues.
 - Invalid N → `<d-n>`. N = 0 → skip, log.

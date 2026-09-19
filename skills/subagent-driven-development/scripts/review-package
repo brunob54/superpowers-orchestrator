@@ -58,7 +58,7 @@ blind_pathspecs=(
 # whatever the helper prints, so the package would show the reviewer text that
 # is not in the repository. Every read that feeds the package turns both off.
 # 'git show' runs only a textconv filter today; it carries both options anyway,
-# so that one spelling serves every read.
+# so that every read uses the same two options.
 no_helpers=(--no-ext-diff --no-textconv)
 
 if [ "${1:-}" = "--commits" ]; then

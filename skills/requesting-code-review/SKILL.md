@@ -29,7 +29,7 @@ Request review early to catch issues before they spread.
    - If absent: determine scope from `git diff --name-only BASE_SHA..HEAD_SHA` directly.
 3. Dispatch `superpowers-orchestrator:code-reviewer` using `requesting-code-review/code-reviewer.md`.
 4. Provide:
-   - What changed (from context snapshot or git diff)
+   - What changed (from context snapshot or `git diff --no-ext-diff --no-textconv`)
    - Scoped file list (changed files + blast radius callers if fresh snapshot available, or broad if not)
    - Requirement or plan reference
    - SHA range
