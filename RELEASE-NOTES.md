@@ -8,6 +8,75 @@
 > (`REPOZY/superpowers-optimized`) and are kept unchanged as history; any
 > testing they describe was not done here.
 
+## v7.36.0 — an audit note that still finds its clause
+
+**Problem.** For an amended plan clause that carries no marker, the quote
+inside its audit note is the only way to find that clause again. The quote had
+to be unique in the whole plan, checked once, although the plan keeps
+changing. A quote taken from a task step also started at the checkbox, so
+ticking the box broke it.
+
+**Change.** The quote must now be unique inside the note's own block, which is
+the scope the revert searches, and all four searches narrow to that block. A
+task checkbox is never part of the quote.
+
+**Effect.** A revert no longer stops as a major error because the plan moved
+on or a box was ticked. Nothing to migrate.
+
+Rows 46 and 47 of the orchestration worklist. Both broke the same mechanism.
+
+**Row 47 — the checkbox.** `- [ ] ` was not among the named list markers, so
+on a task step line the quote started at the box itself. Plan steps are
+checkbox lines, an amendment may edit a mandated sentence in such a line, and
+that edit gets no marker — so the quote is the only route back to the clause.
+The implementer's only write to the plan file is the checkbox tick, which
+happens between the ruling commit and any later revert. The new rule names no
+box spelling on purpose: naming `- [ ] ` and `- [x] ` would break again on
+`- [X]`, `* [ ] ` or `1. [ ] `, which is the defect itself. The revert already
+stated the same thing for its word comparison; the two sites now agree.
+
+**Row 46 — uniqueness that could not stay true.** The old rule compared the
+quote against the whole plan, once, before the note was inserted. A batch
+controller commits the plan on every task completion, and later rulings amend
+other clauses, so a second clause could come to hold the same opening words.
+The revert then stopped as a major error with no recovery. Uniqueness is now
+required only inside the note's block — the `**Global Constraints:**` block,
+or the `### Task <n>` section — and every search narrows there first, falling
+back to the whole plan when the block holds no match, so a note placed
+elsewhere by an older version of this skill still resolves.
+
+**A read contradiction resolved on the way.** The classification read
+exception grants a scan of the whole plan only inside Resume step 3, while the
+old rule demanded one at ruling time, where the exception grants only the
+cited clause or the constraints block. The block scope removed the demand, so
+the release adds no command and leaves the permitted-reads list unchanged.
+
+**What the review rounds caught.** One review round, mutation testing in a
+separate worktree, and three verification cycles, which is the cap. The review
+round found a Critical regression in the first fix: the block ended at the
+next line beginning with a `#` character, but a plan step often shows a script
+whose first line is `#!/usr/bin/env bash`, so the block ended inside the
+fenced code block — 21 of 46 plan files in this repository hold such a line
+inside a task section. Cycle 1 found the fence rule repeating the same shape
+of mistake, because an inner fence's opening line read as the close of the
+outer one; 9 of 46 plan files hold such a nested fence. Cycle 2 found that the
+search over the plan before the ruling fell back to the whole of that output
+in exactly the case the next sentence calls expected. Cycle 3 found that the
+same search's zero-match branch was keyed to one cause instead of to the
+search result. Mutation testing showed every one of the first fifteen checks
+failing on some wrong text, and each finding was re-tested locally before it
+was called closed.
+
+**Acceptance.** `tests/in-run-rulings/run-tests.sh` runs 737 checks, 705 on
+v7.35.0. All eleven fast suites pass.
+
+**Known limits, recorded as worklist rows 49 to 52.** The quote is built under
+a strict comparison and matched under a loose one; a clause amended twice with
+only the earlier ruling overturned cannot be reverted; an `**Exact content:**`
+block cannot always be quoted; and the crash-repair path writes a note with no
+uniqueness rule. An indented fenced block is invisible to the fence rule,
+which fails to a stop and never to a wrong clause.
+
 ## v7.35.0 — revert an amendment without removing a later one
 
 **Problem.** A resume that overturned a ruling restored the clause from the
