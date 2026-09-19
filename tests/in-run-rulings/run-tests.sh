@@ -3824,6 +3824,70 @@ ROW52B_ANCHOR='as that clause reads in the plan now.'
 assert_rule_near "row 52: a note repaired on a retry follows every rule of a first insertion" "$ROW52B_ANCHOR" 4 \
   'Build that quote under every rule of step 2 above: the uniqueness test, and its one exception for an `**Exact content:**` block.' "$ANSWERS_LINE"
 
+# Row 45: guard 4's matching condition is the sentence that decides whether a
+# user's decision is found at all. Measured on 2026-09-19: deleting the whole
+# condition left the suite at 768 passed, 0 failed. Its twelve neighbouring
+# checks bracket the condition without covering it.
+assert_in_range_folded_exact "guard 4 matches an entry whose Follow-up quotes this item's clause" \
+  "$ORCH_SKILL" 'quotes the same clause as this item — compared under the normalization rule above' \
+  "$GUARDS_LINE" "$GUARDS_END"
+
+# Row 57: the orchestrator is named as a consumer of the clause normalization
+# rule, and its own copy of that rule left out the whitespace collapse.
+# multi-code-review states four replacements and warns that a consumer
+# skipping the collapse fails every clause the plan wraps across lines.
+assert_in_range_folded "orchestrator normalization collapses every run of whitespace" \
+  "$ORCH_SKILL" 'every run of whitespace, a newline and its leading indentation included, collapsed to one space' \
+  "$ANSWERS_LINE" "$ANSWERS_END"
+assert_in_range_folded "orchestrator normalization states that all four replacements are one rule" \
+  "$ORCH_SKILL" 'All FOUR replacements belong to the one rule' \
+  "$ANSWERS_LINE" "$ANSWERS_END"
+assert_in_range_folded "orchestrator normalization states what skipping the collapse costs" \
+  "$ORCH_SKILL" 'fails every clause the plan wraps across more than one physical line' \
+  "$ANSWERS_LINE" "$ANSWERS_END"
+
+# Row 48: a fork given the review-log path can open every earlier
+# `_Invocation` entry, which the same list entry forbids it to use. The fork
+# prompt already carries the disposition line verbatim in its `## Item`
+# section, so a fork is given the line and never the path.
+assert_in_range_folded "a fork is never given the review-log path" \
+  "$ORCH_SKILL" 'A fork never receives this path' \
+  "$READ_EXCEPTION_LINE" "$READ_EXCEPTION_END"
+assert_in_range_folded "the reason a fork is given the line and not the path" \
+  "$ORCH_SKILL" 'the rule can limit which line a fork uses, and it cannot limit what an opened file shows' \
+  "$READ_EXCEPTION_LINE" "$READ_EXCEPTION_END"
+assert_in_range_folded "the fork prompt states that entry 1 carries no path for a fork" \
+  "$ORCH_SKILL" 'for entry 1 write no path: the disposition line already stands in the `## Item` section above' \
+  "$FORK_LINE" "$FORK_END"
+
+# Row 56: step 1 of "Plan amendment" did not say what happens to an earlier
+# `(amended by ruling <k>)` marker when a marked clause is amended a second
+# time. Both readings ended safely, so the harm was an unclear report.
+assert_in_range_folded "an earlier marker stays when a marked clause is amended again" \
+  "$ORCH_SKILL" 'leave that marker in place and append the new one after it' \
+  "$ANSWERS_LINE" "$ANSWERS_END"
+assert_in_range_folded "a twice-amended clause carries one marker per ruling, in ruling order" \
+  "$ORCH_SKILL" 'one marker per ruling, in ruling order' \
+  "$ANSWERS_LINE" "$ANSWERS_END"
+# The marker rule is mirrored in multi-code-review, which reads the marker.
+assert_in_range_folded "the loop tests each marker of a clause amended more than once" \
+  "$MCR_SKILL" 'A clause amended more than once carries one marker per ruling, in ruling order, and each marker is tested on its own' \
+  "$NO_FIX_LINE" "$NO_FIX_END"
+
+# Row 60: in the run of 2026-09-05 the user's answer to ruling 6 was appended
+# to ruling 7's entry, and ruling 6 kept no `**Follow-up:**` line. Resume step
+# 3 said to append the answer "to that entry" and never said how the entry is
+# identified.
+assert_in_range_folded "the entry a follow-up is appended to is found by the answered id" \
+  "$ORCH_SKILL" 'The entry is the one whose `**Item:**` field names the id this answer answers' \
+  "$RESUME_LINE" "$RULINGS_LINE"
+assert_in_range_folded "no entry, or more than one, for the answered id is a major error" \
+  "$ORCH_SKILL" 'When no entry names it, or more than one does, this is a major error' \
+  "$RESUME_LINE" "$RULINGS_LINE"
+assert_in_range_folded "the reason the answered id decides the entry" \
+  "$ORCH_SKILL" 'An answer appended to another entry makes every rule that reads one entry' \
+  "$RESUME_LINE" "$RULINGS_LINE"
+
 # --- end of checks ---
 
 echo

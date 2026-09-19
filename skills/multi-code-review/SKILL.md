@@ -1125,7 +1125,9 @@ code has been revised since, so a re-pass is meaningful):
    `_Invocation` entry of the same orchestration run (same BASE), and a
    plan clause carrying the marker `(amended by ruling <n>)` — so a
    decision made in an earlier invocation, including an amendment that
-   started a new invocation, still counts. A quoted clause is matched
+   started a new invocation, still counts. A clause amended more than once
+   carries one marker per ruling, in ruling order, and each marker is tested
+   on its own. A quoted clause is matched
    against the plan under the one normalization rule of "Self-sufficient
    open-item lines" below: normalize both sides, then test the quote as a
    prefix. For an `**Exact content:**` block the marker stands at the end
