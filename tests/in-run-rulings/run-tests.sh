@@ -3881,8 +3881,11 @@ assert_in_range_folded "the loop tests each marker of a clause amended more than
 assert_in_range_folded "the entry a follow-up is appended to is found by the answered id" \
   "$ORCH_SKILL" 'The entry is the one whose `**Item:**` field names the id this answer answers' \
   "$RESUME_LINE" "$RULINGS_LINE"
-assert_in_range_folded "no entry, or more than one, for the answered id is a major error" \
-  "$ORCH_SKILL" 'When no entry names it, or more than one does, this is a major error' \
+assert_in_range_folded "two entries with one bare id are told apart by the answer's parenthesis" \
+  "$ORCH_SKILL" 'tell them apart by the parenthesis the answer opens with, which names the entry the item came from' \
+  "$RESUME_LINE" "$RULINGS_LINE"
+assert_in_range_folded "only an id the parenthesis cannot resolve is a major error" \
+  "$ORCH_SKILL" 'Only when no entry names the id, or when that parenthesis still leaves more than one, is this a major error' \
   "$RESUME_LINE" "$RULINGS_LINE"
 assert_in_range_folded "the reason the answered id decides the entry" \
   "$ORCH_SKILL" 'An answer appended to another entry makes every rule that reads one entry' \
@@ -3944,13 +3947,13 @@ assert_absent_in_range_folded_nobacktick "row 45: the revert is never ordered af
 # left the fix commit standing. The rule that skips the second half of a later
 # revert did not read it, and its stated reason is false on that branch.
 assert_in_range_folded "row 59: the skip reads the end of the Follow-up line first" \
-  "$ORCH_SKILL" 'read the end of that line before you skip anything' \
+  "$ORCH_SKILL" 'read the last `— fix <sha>` item of that line before you skip anything' \
   "$RESUME_LINE" "$RULINGS_LINE"
 assert_in_range_folded "row 59: a not-reverted suffix means the fix commit still stands" \
   "$ORCH_SKILL" 'records that the earlier resume left the fix commit standing' \
   "$RESUME_LINE" "$RULINGS_LINE"
-assert_in_range_folded "row 59: a successful later revert deletes the not-reverted suffix" \
-  "$ORCH_SKILL" 'delete the `— fix <sha> not reverted` text from the end of the line' \
+assert_in_range_folded "row 59: a successful later revert appends a reverted item" \
+  "$ORCH_SKILL" 'append `— fix <sha> reverted` after that item, because this record is appended and never rewritten' \
   "$RESUME_LINE" "$RULINGS_LINE"
 
 # Row 58: one return writes one ruling commit, so its parent holds the plan
@@ -3965,6 +3968,134 @@ assert_in_range_folded "row 58: a note of this return matching another clause ma
 assert_in_range_folded "row 58: the reason an intermediate wording matches nothing" \
   "$ORCH_SKILL" 'A clause amended twice by one return has an intermediate wording that stands in no commit' \
   "$RESUME_LINE" "$RULINGS_LINE"
+
+# Checks closing the 26 mutation survivors found on 2026-09-19.
+assert_in_range_folded "row 45: the reason a revert is written before this resume's own amendments" \
+  "$ORCH_SKILL" 'an amendment written first would make that check stop the resume' \
+  "$RESUME_LINE" "$RULINGS_LINE"
+assert_in_range_folded "row 59: the reason a fix commit left standing can be reverted now" \
+  "$ORCH_SKILL" 'What stopped the earlier attempt was a local change in the working tree, never a property of the fix commit' \
+  "$RESUME_LINE" "$RULINGS_LINE"
+assert_in_range_folded "row 58: every other outcome of the note search is a major error" \
+  "$ORCH_SKILL" 'Every other outcome is a major error — no match, more than one match, or a match on the clause you are reverting' \
+  "$RESUME_LINE" "$RULINGS_LINE"
+assert_in_range_folded "row 58: the reason the ruling commit's parent cannot be trusted" \
+  "$ORCH_SKILL" 'Restoring from it would also undo an amendment this resume does not revert, and both checks after the write would pass' \
+  "$RESUME_LINE" "$RULINGS_LINE"
+assert_in_range_folded "row 48: the orchestrator writes the disposition line into the fork prompt itself" \
+  "$ORCH_SKILL" 'You read this line yourself and write it into the fork prompt, which carries it verbatim in its `## Item` section' \
+  "$READ_EXCEPTION_LINE" "$READ_EXCEPTION_END"
+assert_in_range_folded "row 48: a fork never opens the review log" \
+  "$ORCH_SKILL" 'A fork therefore reads the line from its own prompt and never opens the review log' \
+  "$READ_EXCEPTION_LINE" "$READ_EXCEPTION_END"
+assert_in_range_folded "row 45: the reason the Contract clause tail carries the plan location" \
+  "$ORCH_SKILL" 'because Resume step 3 needs it when the item'"'"'s current disposition line carries none' \
+  "$RECORD_LINE" "$RECORD_END"
+assert_in_range_folded "row 45: the plan edits the recorded quote waits for are named" \
+  "$ORCH_SKILL" 'Those edits are the reverts of Resume step 3, and the amendment a user'"'"'s own `amend plan` answer makes' \
+  "$RECORD_LINE" "$RECORD_END"
+assert_in_range_folded "row 45: what the recorded quote holds instead" \
+  "$ORCH_SKILL" 'What you write instead is the wording the user'"'"'s decision leaves in force, which is the wording a later item will quote' \
+  "$RECORD_LINE" "$RECORD_END"
+assert_in_range_folded "row 45: the reason a disposition line often carries no clause part" \
+  "$ORCH_SKILL" 'a `fixed — <summary> → <sha>` line carries none' \
+  "$RECORD_LINE" "$RECORD_END"
+assert_in_range_folded "row 45: the sentence recorded is the one this resume reverted or amended" \
+  "$ORCH_SKILL" 'It is the clause this resume reverted or amended, when it made either edit' \
+  "$RECORD_LINE" "$RECORD_END"
+assert_in_range_folded "row 45: the otherwise branch picks the sentence the field's quote is a prefix of" \
+  "$ORCH_SKILL" 'Otherwise it is the sentence or the list entry at that location that the field'"'"'s quote is a prefix of' \
+  "$RECORD_LINE" "$RECORD_END"
+assert_in_range_folded "row 45: the location is taken from a disposition line that carries a clause part" \
+  "$ORCH_SKILL" 'Take the plan location from the item'"'"'s current disposition line when that line carries a `— clause: <plan location>` part' \
+  "$RECORD_LINE" "$RECORD_END"
+assert_absent_in_range_folded_nobacktick "row 45: the location is never taken from a line that carries no clause part" \
+  "$ORCH_SKILL" 'disposition line when that line carries no `— clause:' \
+  "$RECORD_LINE" "$RECORD_END" fragment
+assert_in_range_folded "row 45: the recorded quote collapses every run of whitespace" \
+  "$ORCH_SKILL" 'Collapse every run of whitespace — a newline and the indentation after it included — to one space' \
+  "$RECORD_LINE" "$RECORD_END"
+assert_in_range_folded "row 45: the reason the whitespace collapse is not optional in the record" \
+  "$ORCH_SKILL" 'The whitespace collapse is not optional here: a plan wraps a clause across several physical lines, and a quote holding those line breaks matches nothing' \
+  "$RECORD_LINE" "$RECORD_END"
+assert_in_range_folded "row 45: an amendment marker and a checkbox marker are left out of the quote" \
+  "$ORCH_SKILL" 'Leave out an `(amended by ruling <n>)` marker and a task checkbox marker' \
+  "$RECORD_LINE" "$RECORD_END"
+assert_absent_in_range_folded_nobacktick "row 45: the recorded quote never includes an amendment marker" \
+  "$ORCH_SKILL" 'Include an `(amended by ruling <n>)` marker' \
+  "$RECORD_LINE" "$RECORD_END" fragment
+assert_in_range_folded "row 45: the reason leaving a marker out keeps the prefix test matching" \
+  "$ORCH_SKILL" 'a marker stands after the clause'"'"'s own words, so the prefix test still matches' \
+  "$RECORD_LINE" "$RECORD_END"
+assert_in_range_folded "row 45: the record stops only when it cannot say what the user decided" \
+  "$ORCH_SKILL" '**Stop only when the record cannot say what the user decided.**' \
+  "$RECORD_LINE" "$RECORD_END"
+assert_in_range_folded "row 45: a quote matching nothing at the location is searched for in the whole plan" \
+  "$ORCH_SKILL" 'When the field'"'"'s quote matches no sentence at the named location, search the whole plan the same way' \
+  "$RECORD_LINE" "$RECORD_END"
+assert_in_range_folded "row 45: the reason an entry of an older skill version names no location" \
+  "$ORCH_SKILL" 'because an entry written by an older version of this skill names no location' \
+  "$RECORD_LINE" "$RECORD_END"
+assert_in_range_folded "row 45: a stop reports the entry, the item and the search, and writes no clause: none" \
+  "$ORCH_SKILL" 'Report the entry, the item and the search you made, and never write `— clause: none` in that case' \
+  "$RECORD_LINE" "$RECORD_END"
+assert_in_range_folded "row 45: an n/a Contract clause field is the one case that writes clause: none" \
+  "$ORCH_SKILL" 'field that reads `n/a` writes it: the item named no plan text at all' \
+  "$RECORD_LINE" "$RECORD_END"
+assert_in_range_folded "row 57: the whitespace collapse is the first of the four replacements" \
+  "$ORCH_SKILL" 'the whitespace collapse is the first of them' \
+  "$ANSWERS_LINE" "$ANSWERS_END"
+assert_in_range_folded "row 56: an earlier marker stays" \
+  "$ORCH_SKILL" '**An earlier marker stays.**' \
+  "$ANSWERS_LINE" "$ANSWERS_END"
+
+# Checks for the rules the review round of 2026-09-19 added or corrected.
+# An Exact-content clause is recorded in the unit a disposition line quotes,
+# so that guard 4 can compare the two at all.
+assert_in_range_folded "row 45: the recorded quote uses the unit a disposition line quotes" \
+  "$ORCH_SKILL" 'Record the same unit a disposition line quotes for that clause, so that the two are always comparable' \
+  "$RECORD_LINE" "$RECORD_END"
+assert_in_range_folded "row 45: an Exact content clause records the colliding text, not the introducing line" \
+  "$ORCH_SKILL" 'that unit is the text the finding collides with, never the introducing' \
+  "$RECORD_LINE" "$RECORD_END"
+assert_in_range_folded "row 45: the reason the produced-file rule does not reach this record" \
+  "$ORCH_SKILL" 'this record is read by guard 4 and is copied into no file, so that reason does not reach it' \
+  "$RECORD_LINE" "$RECORD_END"
+# The two quotes can differ in length, so the comparison names its direction.
+assert_in_range_folded "row 45: guard 4 tests the shorter quote as a prefix of the longer" \
+  "$ORCH_SKILL" 'it normalizes both the same way and tests the shorter one as a prefix of the longer one' \
+  "$RECORD_LINE" "$RECORD_END"
+# An item carrying a secret writes no quoted text anywhere.
+assert_in_range_folded "row 45: an item carrying a secret writes no quote on the Follow-up line" \
+  "$ORCH_SKILL" '**An item that carries a secret writes no quote.**' \
+  "$RECORD_LINE" "$RECORD_END"
+assert_in_range_folded "row 45: a secret item names the location only and is not a stop" \
+  "$ORCH_SKILL" 'part names the plan location only and carries no quoted text. That is the rule, never a stop' \
+  "$RECORD_LINE" "$RECORD_END"
+# A clause that is not plan text writes clause: none instead of stopping.
+assert_in_range_folded "row 45: an n/a location tail writes clause: none and is not a stop" \
+  "$ORCH_SKILL" 'A field whose location tail reads `n/a` writes it too — the clause is a spec or a skill clause, not plan text — and neither case is a stop' \
+  "$RECORD_LINE" "$RECORD_END"
+# A clause a later ruling amended is found by that ruling's marker.
+assert_in_range_folded "row 45: a clause a later ruling amended is found by that ruling's marker" \
+  "$ORCH_SKILL" 'take the sentence at that location carrying that later ruling'"'"'s `(amended by ruling <k>)` marker' \
+  "$RECORD_LINE" "$RECORD_END"
+# Plan amendment takes the same location fallback.
+assert_in_range_folded "row 45: Plan amendment falls back to the Contract clause tail for the location" \
+  "$ORCH_SKILL" 'when that line names none, the location on the ruling-record entry'"'"'s `**Contract clause:**` tail' \
+  "$ANSWERS_LINE" "$ANSWERS_END"
+# The general-purpose reviewer, the normal dispatch after round 1, gets the
+# disposition line and not the review-log path.
+assert_in_range_folded "row 48: a general-purpose reviewer of a later round gets entry 1 as the line" \
+  "$ORCH_SKILL" 'entry 1 excepted, which reaches them as the disposition line inside the prompt and never as a path' \
+  "$FORK_LINE" "$FORK_END"
+assert_in_range_folded "row 48: a general-purpose reviewer on a platform with no fork type gets entry 1 as the line" \
+  "$ORCH_SKILL" 'entry 1 excepted, which reaches it as the disposition line inside the prompt' \
+  "$FORK_LINE" "$FORK_END"
+# Row 57's second site: the Phase 3 plan governs clause takes all four.
+assert_in_range_folded "row 57: the Phase 3 clause takes all four replacements" \
+  "$ORCH_SKILL" 'every run of whitespace collapsed to one space, each ` — ` and each ` ← ` replaced by one space' \
+  "$ANSWERS_LINE" "$ANSWERS_END"
 
 # --- end of checks ---
 

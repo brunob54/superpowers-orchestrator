@@ -1116,18 +1116,20 @@ Trigger: `Resume orchestration for <plan-or-spec path>`.
    by an earlier resume: make no plan edit for this ruling, and record one
    line in the report you give the user at the end of this resume. When the
    item's `**Follow-up:**` line already records this same answer, read the
-   end of that line before you skip anything. A line that ends
-   `— fix <sha> not reverted` records that the earlier resume left the fix
-   commit standing. Do not skip the other half of the revert then: make it
+   last `— fix <sha>` item of that line before you skip anything. An item
+   reading `— fix <sha> not reverted` records that the earlier resume left
+   the fix commit standing. Do not skip the other half of the revert then: make it
    now for that `<sha>`. What stopped the earlier attempt was a local
    change in the working tree, never a property of the fix commit, so it
    can be gone now. When it still stands, the other half's own rule takes
    the `— fix <sha> not reverted` branch again. When that revert succeeds,
-   delete the `— fix <sha> not reverted` text from the end of the line, so
-   that a later resume reads an ordinary line. Record one line for that
+   append `— fix <sha> reverted` after that item, because this record is
+   appended and never rewritten, so a later resume reads the last item and
+   knows the fix commit is gone. Record one line for that
    `<sha>` in the report you give the user at the end of this resume. A
-   line that ends any other way records that the earlier resume reverted
-   the ruling's fix commit: make no code change for it either, and skip
+   line whose last `— fix <sha>` item reads `reverted`, and a line carrying
+   no such item, both record that the earlier resume reverted the ruling's
+   fix commit: make no code change for it either, and skip
    the other half of the revert below. Step 1 above
    has already repaired a ruling whose note was never written, so a missing
    note here means the revert was made, not that the amendment was never
@@ -1425,8 +1427,9 @@ Trigger: `Resume orchestration for <plan-or-spec path>`.
    Append each
    user answer **that has a ruling-record entry of its own** to that
    entry
-   as a `**Follow-up:**` line carrying the item's `clause:` text (its
-   shape is in `## In-run rulings`, "The ruling record"), skipping the
+   as a `**Follow-up:**` line whose `clause:` part is written as
+   `## In-run rulings`, "The ruling record", states — its location from the
+   item, its quote read from the plan, skipping the
    append when a
    `**Follow-up:**` line with the same text already stands in that entry
    (a second resume answering the same ids must not append it twice), and
@@ -1437,8 +1440,13 @@ Trigger: `Resume orchestration for <plan-or-spec path>`.
    lowest ruling number the resume touched (a Phase 5 or
    boundary clean-tree check must never find it uncommitted).
    **Find that entry by the answered id.** The entry is the one whose
-   `**Item:**` field names the id this answer answers. When no entry names
-   it, or more than one does, this is a major error — stop and report it.
+   `**Item:**` field names the id this answer answers. One return can hold
+   two items with the same bare id, so when two entries name that id, tell
+   them apart by the parenthesis the answer opens with, which names the
+   entry the item came from ("Phase 4 answers", below), and match it
+   against each entry's `**Item:**` finding summary. Only when no entry
+   names the id, or when that parenthesis still leaves more than one, is
+   this a major error — stop and report it.
    An answer appended to another entry makes every rule that reads one
    entry's `**Follow-up:**` line read the wrong one, and the entry the user
    really answered keeps no record of the answer. **That commit
@@ -1828,8 +1836,9 @@ consolidation reasoning of its own round. So only the FIRST `design`
 item of a return uses the fork path. Every later item's reviewers, and
 every tie-break reviewer, are dispatched instead as fresh
 `general-purpose` subagents — given the "What may be read" list as
-explicit paths and the same prompt, exactly as on a platform with no
-`fork` type — and they are named `fork-<lens>` all the same, so that the
+explicit paths and the same prompt, entry 1 excepted, which reaches them as
+the disposition line inside the prompt and never as a path, exactly as on a
+platform with no `fork` type — and they are named `fork-<lens>` all the same, so that the
 ruling's Forks field stays readable. Write your consolidation reasoning
 for an item only after that item's round has fully returned.
 
@@ -1846,7 +1855,8 @@ notice is delivered to you — the stall of claude-code #75043 concerns a
 controller's children, not the main session's. Wait for the notices of all
 forks of a round, doing no other work in between. When the platform has no
 `fork` type, dispatch a fresh `general-purpose` subagent instead, given the
-"What may be read" list as explicit paths and the same prompt.
+"What may be read" list as explicit paths and the same prompt — entry 1
+excepted, which reaches it as the disposition line inside the prompt.
 
 Before building the fork prompt, generate a per-dispatch nonce — a short
 random token — for `<nonce>` in the delimiter below. If the item text
@@ -2086,9 +2096,10 @@ stop (below) — writes `n/a n/a — <the stop's own reason>` after its id.
   `unresolved:` line, the text after `unresolved: ` and before the first
   ` — at` is the `<reason>`, and the `<reason>` is written as the summary. For an item
   that carries a secret, write the location only (see "Never reproduce
-  a secret"). Never copy the whole disposition line into this field. The `**Contract clause:**` tail names the plan location after the path,
-because Resume step 3 needs it when the item's current disposition line
-carries none.
+  a secret"). Never copy the whole disposition line into this field. The
+  `**Contract clause:**` tail names the plan location after the path,
+  because Resume step 3 needs it when the item's current disposition line
+  carries none.
 
 An example of a Phase 4 field line:
 
@@ -2218,7 +2229,9 @@ entry's own `**Contract clause:**` tail. A Phase 3 item's location is the
 to record. It is the clause this resume reverted or amended, when it made
 either edit. Otherwise it is the sentence or the list entry at that location
 that the field's quote is a prefix of, with the field's quote normalized the
-same way before the test.
+same way before the test. When that quote matches nothing because a later
+ruling amended the clause, take the sentence at that location carrying that
+later ruling's `(amended by ruling <k>)` marker.
 
 Normalize what you read exactly as multi-code-review normalizes a quote,
 under all FOUR replacements of its one rule (`../multi-code-review/SKILL.md`,
@@ -2228,14 +2241,24 @@ indentation after it included — to one space. Replace each ` — ` and each
 ` ← ` by one space, and each `"` by a single quotation mark `'`. Then cut
 the result to 160 characters. The whitespace collapse is not optional here:
 a plan wraps a clause across several physical lines, and a quote holding
-those line breaks matches nothing. Leave out an `(amended by ruling <n>)`
-marker and a task checkbox marker. Neither is a word of the clause, and a
+those line breaks matches nothing. When guard 4 later compares this
+recorded quote with an item's quote, it normalizes both the same way and
+tests the shorter one as a prefix of the longer one. Leave out an
+`(amended by ruling <n>)` marker and a task checkbox marker. Neither is a word of the clause, and a
 marker stands after the clause's own words, so the prefix test still
-matches. For a clause that is an `**Exact content:**` block, record its
-introducing `**Exact content:** <reason>` paragraph line, and no line inside
-the fenced block or the block quote. Step 1 of "Plan amendment" gives the
-reason: an implementer copies the text inside them verbatim into a produced
-file.
+matches. Record the same unit a disposition line quotes for that clause, so
+that the two are always comparable. For an `**Exact content:**` block that
+unit is the text the finding collides with, never the introducing
+`**Exact content:** <reason>` paragraph line. Step 1 of "Plan amendment"
+keeps a marker out of the fenced block because an implementer copies that
+text verbatim into a produced file; this record is read by guard 4 and is
+copied into no file, so that reason does not reach it.
+
+**An item that carries a secret writes no quote.** For an item classified
+`escalated (secret)`, and for any item whose text carries a credential,
+"Never reproduce a secret" above governs this line too: the `— clause:`
+part names the plan location only and carries no quoted text. That is the
+rule, never a stop.
 
 **Stop only when the record cannot say what the user decided.** When the
 field's quote matches no sentence at the named location, search the whole
@@ -2243,8 +2266,10 @@ plan the same way, because an entry written by an older version of this
 skill names no location. When that search ends on no sentence, or on more
 than one, stop under the Major-Error Stop Policy. Report the entry, the item
 and the search you made, and never write `— clause: none` in that case. A
-`**Contract clause:**` field that reads `n/a` is the one case that does
-write it: the item named no plan text at all. That is the shape a
+`**Contract clause:**` field that reads `n/a` writes it: the item named no
+plan text at all. A field whose location tail reads `n/a` writes it too —
+the clause is a spec or a skill clause, not plan text — and neither case is
+a stop. That is the shape a
 verification-cap item, an addendum re-review item and an environment item
 carry.
 
@@ -2402,8 +2427,10 @@ naming the side that governs — the implementer follows that text — or
 `amend plan: <the amendment>` when the other side governs. `<clause>` is
 the plan text the conflict section quotes, put through the same
 normalization and 160-character cut Phase 4's quoted clause takes above
-— each ` — ` and each ` ← ` replaced by one space, each `"` replaced by
-`'`, then cut to 160 characters — before it is written into this answer,
+— every run of whitespace collapsed to one space, each ` — ` and each
+` ← ` replaced by one space, each `"` replaced by
+`'`, then cut to 160 characters, all four replacements — before it is
+written into this answer,
 and the whole `plan governs: …` line occupies one physical line, never
 wrapped: an un-normalized quotation mark inside the clause would close
 the answer's own `"…"` early, and a wrapped clause would put a
@@ -2485,7 +2512,8 @@ any mandated text is binding instead, as before. An amendment that only
 annotates the plan would leave the binding clause in force, and the next
 review would raise the same finding. So, using the plan location the
 disposition line names (`— clause: Global Constraints` or
-`— clause: Task <n>`) or the task report names — and finding the clause
+`— clause: Task <n>`) or the task report names — and, when that line names
+none, the location on the ruling-record entry's `**Contract clause:**` tail — and finding the clause
 inside it by the prefix rule above, never by a byte-equal match — do two
 things, in this order. Step 1 is always done before step 2, so a
 standing audit note shows that the clause edit was made. The two things
