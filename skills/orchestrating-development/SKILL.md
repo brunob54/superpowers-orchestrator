@@ -1011,9 +1011,23 @@ Trigger: `Resume orchestration for <plan-or-spec path>`.
    missing, first check whether the clause edit was already made. For a
    marked clause, the marker decides: a standing marker shows the edit
    was made, so insert only the missing note. For an unmarked clause,
-   read the change from a diff of the plan file:
-   `git diff HEAD -- <plan path>` when the ruling commit is not made yet,
-   or the ruling commit's own diff, `git show <ruling commit> -- <plan path>`,
+   read the change from a diff of the plan file.
+   **Every diff of the plan file is read with `--no-ext-diff` and
+   `--no-textconv`, wherever this skill reads one.** A repository can
+   configure a textconv filter — a program that turns a file into text
+   before git compares it — or an external diff driver — a program that
+   replaces git's own comparison. Either one rewrites the output these
+   steps read. A revert would then restore the text a helper produced
+   instead of the plan's own text, and the checks that exist to stop a
+   wrong write would pass while seeing nothing. `git diff` runs both
+   kinds of helper program by default and `git show` runs a textconv
+   filter by default, so both options are written on every diff read,
+   giving one spelling to remember. A read of the file itself, written
+   `git show <commit>:<path>`, runs no helper program and needs no
+   option. The two commands to read here are:
+   `git diff --no-ext-diff --no-textconv HEAD -- <plan path>` when the
+   ruling commit is not made yet, or the ruling commit's own diff,
+   `git show --no-ext-diff --no-textconv <ruling commit> -- <plan path>`,
    once it is. Here the ruling commit is the commit of the `## RULING`
    entry, and its subject carries the number of that entry, not the
    item's own number. When that diff shows a change to the clause the ruling
@@ -1155,7 +1169,7 @@ Trigger: `Resume orchestration for <plan-or-spec path>`.
    ruling amended it, or another actor edited it. This is a major
    error — stop and report it, and never restore over the later text.
    Then find the change to that clause in the ruling commit's diff of the
-   plan file, `git show <ruling commit> -- <plan path>`
+   plan file, `git show --no-ext-diff --no-textconv <ruling commit> -- <plan path>`
    (`<ruling commit>` is found as stated below). Use that diff only to see
    which lines of this clause changed. Git compares whole lines: a changed
    line can hold other text next to the clause, and one hunk (one block of
@@ -1191,14 +1205,15 @@ Trigger: `Resume orchestration for <plan-or-spec path>`.
    Run the two checks below for each clause you revert, right after you
    write that clause, never once for the whole resume.
    After you write the plan file, and before the resume commit, run
-   `git diff HEAD -- <plan path>`. Every changed line of that output must
-   belong to this clause, to this clause's audit note, to another
+   `git diff --no-ext-diff --no-textconv HEAD -- <plan path>`. Every
+   changed line of that output must belong to this clause, to this clause's audit note, to another
    revert that this same resume already wrote, to a checkbox line that
    this same resume unticks, or to a plan edit that was already
    uncommitted before this revert started. Step 0 above lets a resume
    begin over such an uncommitted edit: it is the blocked task's own
    work, and this revert did not write it. To tell that kind apart,
-   save the pre-revert state with `git diff HEAD -- <plan path>`, which
+   save the pre-revert state with
+   `git diff --no-ext-diff --no-textconv HEAD -- <plan path>`, which
    compares the working tree with the last commit and therefore also
    shows a change that was staged but not committed — staged means
    written into git's index with `git add`, and not yet committed. Take
@@ -1223,8 +1238,8 @@ Trigger: `Resume orchestration for <plan-or-spec path>`.
    started. Text that belongs to another clause this same resume
    reverts, or to a checkbox line this same resume unticks, is excluded
    from this comparison; that text is covered by its own clause's check.
-   The `git diff HEAD -- <plan path>` output you saved before
-   changing the plan shows what the plan held then. That output holds
+   The `git diff --no-ext-diff --no-textconv HEAD -- <plan path>` output
+   you saved before changing the plan shows what the plan held then. That output holds
    every line that was already uncommitted; for every other line,
    the committed text is what the plan held, and
    `git show HEAD:<plan path>` prints it. This part catches a
@@ -1625,9 +1640,10 @@ you and your forks may read exactly:
    `--first-parent` and `<BASE>..HEAD`),
    `git log --merges --format=%h <BASE>..HEAD`,
    `git show <ruling commit>^:<plan path>`,
-   `git show <ruling commit> -- <plan path>`,
+   `git show --no-ext-diff --no-textconv <ruling commit> -- <plan path>`,
    `git show HEAD:<plan path>`,
-   `git diff HEAD -- <plan path>`, `git show <ruling commit>:<plan path>`,
+   `git diff --no-ext-diff --no-textconv HEAD -- <plan path>`,
+   `git show <ruling commit>:<plan path>`,
    `git status --porcelain`, `git show --name-only --format= <sha>`,
    and a scan of the whole plan
    file for an orphan `(amended by ruling <n>)` marker and its
@@ -2404,8 +2420,10 @@ skill wrote it, this is a major error — stop and report it, never guess
 the clause. For an unmarked clause, the standing audit note alone shows
 that the amendment was applied. When the note is missing, a marked
 clause is decided by its marker. For an unmarked clause, read the
-change from a diff of the plan file (`git diff HEAD -- <plan path>`
-before the ruling commit, `git show <ruling commit> -- <plan path>`
+change from a diff of the plan file
+(`git diff --no-ext-diff --no-textconv HEAD -- <plan path>` before the
+ruling commit,
+`git show --no-ext-diff --no-textconv <ruling commit> -- <plan path>`
 after it). When that diff shows a change to the clause, insert only the
 missing note. The inserted note quotes the opening words of the clause
 as that clause reads in the plan now. Never apply the amendment twice.

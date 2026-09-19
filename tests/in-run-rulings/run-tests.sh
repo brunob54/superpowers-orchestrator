@@ -1949,7 +1949,12 @@ assert_absent_in_range_folded "row 39: the Resume check no longer requires the m
 # Row 39, crash between the clause edit and the note: an unmarked clause is
 # compared with the plan text before the ruling, and only the note is added.
 assert_in_range_folded "row 39: the Resume check reads the change to an unmarked clause from a diff of the plan file" \
-  "$ORCH_SKILL" 'For an unmarked clause, read the change from a diff of the plan file: `git diff HEAD -- <plan path>` when the ruling commit is not made yet, or the ruling commit'"'"'s own diff, `git show <ruling commit> -- <plan path>`, once it is' \
+  "$ORCH_SKILL" 'For an unmarked clause, read the change from a diff of the plan file.' \
+  "$RESUME_LINE" "$RULINGS_LINE"
+# Row 53 put the guard rule between that sentence and the two commands, so the
+# commands are pinned by their own check rather than in one long needle.
+assert_in_range_folded "row 39: the Resume check names both commands it reads the change from" \
+  "$ORCH_SKILL" 'The two commands to read here are: `git diff --no-ext-diff --no-textconv HEAD -- <plan path>` when the ruling commit is not made yet, or the ruling commit'"'"'s own diff, `git show --no-ext-diff --no-textconv <ruling commit> -- <plan path>`, once it is' \
   "$RESUME_LINE" "$RULINGS_LINE"
 assert_in_range_folded "row 39: the Resume check treats a change to the named clause in that diff as the clause edit" \
   "$ORCH_SKILL" 'When that diff shows a change to the clause the ruling names, the clause edit was made' \
@@ -1980,16 +1985,16 @@ assert_in_range_folded "row 39: the repaired plan edit is inside the ruling comm
 # by the opening words its audit note quotes, then finds the change to that
 # clause in the ruling commit diff.
 assert_in_range_folded "row 39: the override revert finds an unmarked clause in the ruling commit diff" \
-  "$ORCH_SKILL" 'find the change to that clause in the ruling commit'"'"'s diff of the plan file, `git show <ruling commit> -- <plan path>`' \
+  "$ORCH_SKILL" 'find the change to that clause in the ruling commit'"'"'s diff of the plan file, `git show --no-ext-diff --no-textconv <ruling commit> -- <plan path>`' \
   "$RESUME_LINE" "$RULINGS_LINE"
 assert_absent_in_range_folded "row 39: the override revert no longer finds the clause by its marker alone" \
   "$ORCH_SKILL" 'find the edited clause by its `(amended by ruling <n>)` marker' \
   "$RESUME_LINE" "$RULINGS_LINE" fragment
 assert_in_range_folded "row 39: the permitted reads include the ruling commit diff of the plan file" \
-  "$ORCH_SKILL" '`git show <ruling commit>^:<plan path>`, `git show <ruling commit> -- <plan path>`,' \
+  "$ORCH_SKILL" '`git show <ruling commit>^:<plan path>`, `git show --no-ext-diff --no-textconv <ruling commit> -- <plan path>`,' \
   "$READ_EXCEPTION_LINE" "$READ_EXCEPTION_END"
 assert_in_range_folded "row 39: the permitted reads include the uncommitted diff of the plan file" \
-  "$ORCH_SKILL" '`git diff HEAD -- <plan path>`, `git show <ruling commit>:<plan path>`,' \
+  "$ORCH_SKILL" '`git diff --no-ext-diff --no-textconv HEAD -- <plan path>`, `git show <ruling commit>:<plan path>`,' \
   "$READ_EXCEPTION_LINE" "$READ_EXCEPTION_END"
 assert_in_range_folded "row 39: a retry finds the clause by its marker when step 1 placed one" \
   "$ORCH_SKILL" 'Find the clause by its marker when step 1 placed one.' \
@@ -1998,7 +2003,7 @@ assert_in_range_folded "row 39: on a retry the standing audit note shows the ame
   "$ORCH_SKILL" 'For an unmarked clause, the standing audit note alone shows that the amendment was applied' \
   "$ANSWERS_LINE" "$ANSWERS_END"
 assert_in_range_folded "row 39: a retry reads the change to an unmarked clause from a diff of the plan file" \
-  "$ORCH_SKILL" 'For an unmarked clause, read the change from a diff of the plan file (`git diff HEAD -- <plan path>` before the ruling commit, `git show <ruling commit> -- <plan path>` after it).' \
+  "$ORCH_SKILL" 'For an unmarked clause, read the change from a diff of the plan file (`git diff --no-ext-diff --no-textconv HEAD -- <plan path>` before the ruling commit, `git show --no-ext-diff --no-textconv <ruling commit> -- <plan path>` after it).' \
   "$ANSWERS_LINE" "$ANSWERS_END"
 assert_in_range_folded "row 39: a retry inserts only the missing note when the diff shows a change to the clause" \
   "$ORCH_SKILL" 'When that diff shows a change to the clause, insert only the missing note' \
@@ -3103,7 +3108,7 @@ assert_absent_in_range_folded "row 40: the override revert no longer compares th
   "$ORCH_SKILL" 'Before you write the plan file, compare the restored clause' \
   "$RESUME_LINE" "$RULINGS_LINE" fragment
 assert_in_range_folded "row 40: the override revert checks the written plan file with git diff before the resume commit" \
-  "$ORCH_SKILL" 'After you write the plan file, and before the resume commit, run `git diff HEAD -- <plan path>`.' \
+  "$ORCH_SKILL" 'After you write the plan file, and before the resume commit, run `git diff --no-ext-diff --no-textconv HEAD -- <plan path>`.' \
   "$RESUME_LINE" "$RULINGS_LINE"
 assert_in_range_folded "row 40: every changed line of that diff must belong to this clause" \
   "$ORCH_SKILL" 'Every changed line of that output must belong to this clause' \
@@ -3176,7 +3181,7 @@ assert_in_range_folded "row 40: part 2 requires that text to read exactly as the
   "$ORCH_SKILL" 'That text must read exactly as the plan held it before this revert started.' \
   "$RESUME_LINE" "$RULINGS_LINE"
 assert_in_range_folded "row 40: part 2 uses the plan diff saved before the plan file was changed" \
-  "$ORCH_SKILL" 'The `git diff HEAD -- <plan path>` output you saved before changing the plan shows what the plan held then.' \
+  "$ORCH_SKILL" 'The `git diff --no-ext-diff --no-textconv HEAD -- <plan path>` output you saved before changing the plan shows what the plan held then.' \
   "$RESUME_LINE" "$RULINGS_LINE"
 assert_in_range_folded "row 40: part 2 names the committed text as the reference for a line that was not uncommitted" \
   "$ORCH_SKILL" 'That output holds every line that was already uncommitted; for every other line, the committed text is what the plan held, and `git show HEAD:<plan path>` prints it.' \
@@ -3314,7 +3319,7 @@ assert_in_range_folded "row 40: the permitted reads include the merge search ove
   "$ORCH_SKILL" '`git log --merges --format=%h <BASE>..HEAD`,' \
   "$READ_EXCEPTION_LINE" "$READ_EXCEPTION_END"
 assert_in_range_folded "row 40: the permitted reads include the plan diff against the index and HEAD" \
-  "$ORCH_SKILL" '`git show HEAD:<plan path>`, `git diff HEAD -- <plan path>`,' \
+  "$ORCH_SKILL" '`git show HEAD:<plan path>`, `git diff --no-ext-diff --no-textconv HEAD -- <plan path>`,' \
   "$READ_EXCEPTION_LINE" "$READ_EXCEPTION_END"
 
 # Every ruling-commit search in a range carries both --first-parent and
@@ -3466,7 +3471,7 @@ assert_in_range_folded "finding 2: the undo never uses checkout, reset --hard or
 # the index, so a plan edit a task staged with `git add` was invisible to every
 # baseline. Step 0 skips the only index-aware check on exactly this path.
 assert_in_range_folded "finding 3: the pre-revert state is saved with git diff HEAD, which sees a staged change" \
-  "$ORCH_SKILL" 'Save the pre-revert state with `git diff HEAD -- <plan path>`, which compares the working tree with the last commit' \
+  "$ORCH_SKILL" 'Save the pre-revert state with `git diff --no-ext-diff --no-textconv HEAD -- <plan path>`, which compares the working tree with the last commit' \
   "$RESUME_LINE" "$RULINGS_LINE"
 assert_in_range_folded "finding 3: the baseline is stated to show a change that was staged but not committed" \
   "$ORCH_SKILL" 'also shows a change that was staged but not committed' \
@@ -3675,6 +3680,60 @@ assert_in_range_folded "row 46: the ruling-commit search is narrowed the same wa
   "$RESUME_LINE" "$RULINGS_LINE"
 assert_in_range_folded "row 46: two searches ending in different blocks is a major error" \
   "$ORCH_SKILL" 'When the two searches end on clauses in blocks with different headings, this is a major error — stop and report it, never guess a clause.' \
+  "$RESUME_LINE" "$RULINGS_LINE"
+
+# Row 53: every read of a diff of the plan file turns off the two helper
+# programs a repository can configure. A textconv filter turns a file into
+# text before git compares it; an external diff driver replaces git's own
+# comparison. Either one rewrites the output these steps read, and the revert
+# restores text taken from that output, so a read written without the two
+# options can write wrong plan text. Measured with git 2.50.1: `git diff`
+# runs both kinds of helper program by default and `git show` runs a textconv
+# filter by default, so the skill writes one uniform spelling on every diff
+# read rather than two spellings to remember.
+# Every read is found by its shape, not by a list of spellings. A first
+# version counted two literal commands, and a review showed the hole: a read
+# added later that names another revision, such as `git show <resume commit>
+# -- <plan path>`, was invisible to it and the suite stayed green. Mutation
+# testing then showed two more spellings that slipped through: a read written
+# without the `--` separator, and one naming another placeholder. So the
+# pattern now matches any git diff or git show that names a plan placeholder,
+# whatever stands between them, bounded by the backtick that closes the
+# command in the Markdown text.
+# A read of the file itself, written `git show <commit>:<plan path>`, runs no
+# helper program and needs no option, so those are removed by their colon.
+# One accepted false failure: a future sentence that quotes a read WITHOUT the
+# options as an example of what not to write would be counted as a read and
+# fail this check. That fails loudly and is corrected in one edit, which is
+# the safe direction for a rule that protects plan text.
+assert_plan_diff_reads_carry_options() { # desc
+  local desc="$1" folded total_lines reads total with_options
+  total_lines="$(wc -l < "$ORCH_SKILL")"
+  folded="$(fold_range "$ORCH_SKILL" 1 $((total_lines + 1)))"
+  reads="$(printf '%s' "$folded" | grep -o -E 'git (diff|show)[^`]*<plan [a-z]*>' | grep -v ':<plan ')"
+  total="$(printf '%s\n' "$reads" | grep -c .)"
+  with_options="$(printf '%s\n' "$reads" | grep -c -- '--no-ext-diff --no-textconv')"
+  if [ "$total" -gt 0 ] && [ "$total" = "$with_options" ]; then
+    ok "$desc ($total reads of a diff of the plan file, all with both options)"
+  else
+    bad "$desc ($total reads of a diff of the plan file, only $with_options with both options)"
+  fi
+}
+assert_plan_diff_reads_carry_options "row 53: every diff read of the plan file carries --no-ext-diff and --no-textconv"
+# Row 53, the rule itself: mutation testing showed that weakening this
+# sentence to name one option, or deleting it, left every check green. The
+# commands were pinned, the reason was pinned, the rule between them was not.
+assert_in_range_folded "row 53: the rule names both options and covers every read in the skill" \
+  "$ORCH_SKILL" 'Every diff of the plan file is read with `--no-ext-diff` and `--no-textconv`, wherever this skill reads one.' \
+  "$RESUME_LINE" "$RULINGS_LINE"
+# Row 53, the consequence: the rule states what a read without the options costs,
+# not only that the options are written. A check that pins the spelling alone
+# would pass a skill that kept the options and lost the reason for them.
+assert_in_range_folded "row 53: the rule states that a helper program would rewrite the diff the revert reads" \
+  "$ORCH_SKILL" 'A repository can configure a textconv filter — a program that turns a file into text before git compares it — or an external diff driver — a program that replaces git'"'"'s own comparison.' \
+  "$RESUME_LINE" "$RULINGS_LINE"
+assert_in_range_folded "row 53: the rule states the consequence of reading a diff without the two options" \
+  "$ORCH_SKILL" 'a revert would then restore the text a helper produced instead of the plan'"'"'s own text' \
   "$RESUME_LINE" "$RULINGS_LINE"
 
 # --- end of checks ---
