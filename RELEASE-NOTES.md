@@ -8,6 +8,88 @@
 > (`REPOZY/superpowers-optimized`) and are kept unchanged as history; any
 > testing they describe was not done here.
 
+## v7.40.0 — the recorded answer quotes the clause your decision leaves in force
+
+**Problem.** An orchestrated run recorded your answer with a quoted clause
+copied from the review log. After a fix that line carries no clause at all,
+and after your own `amend plan` answer it still held the older wording. The
+rule that protects your decision compares that quote, so it found no match
+and the run could decide the item itself, writing plan text you had
+overturned.
+
+**Change.** The quote is now read from the plan, at the named location, once
+the resume has made its own edits. Reverts run before your amendments. Six
+more rules of the ruling record are corrected.
+
+**Effect.** A decision you made is found again whenever a later finding
+touches it. Nothing to migrate.
+
+Row 45 of the orchestration issues log named this defect and described it
+wrongly: it said a revert leaves a quote of the removed wording behind.
+Reverts were never the defect. Each `**Follow-up:**` line quotes the clause
+as it stood before **its own** ruling's amendment, and a revert restores
+exactly that wording, so the two match. Three independent reviewer lenses
+reached that conclusion separately, and the ruling record of a real run of
+2026-09-05 shows it: each of its five follow-up quotes is the wording from
+before the amendment that the same answer makes.
+
+The damage the row named is real, and it has two other causes. The
+orchestrator may read only the latest invocation entry's current disposition
+line for an item. After `amend plan …; fix it` the review loop fixes the
+item, so that line becomes a `fixed — <summary> → <sha>` line, which carries
+no quoted clause. The recorded answer then reads `— clause: none`, which the
+protecting rule matches against nothing — a consequence the skill already
+stated and had no rule against. Separately, your own `amend plan` answer
+moves the plan while the recorded quote stays behind.
+
+The fix is on the record side. The quoted text is read from the plan file at
+the named location once every plan edit of the resume is written, so it
+records the wording your decision leaves in force, which is the wording a
+later finding will quote. The plan location falls back to a new tail on the
+ruling record's `**Contract clause:**` field when the disposition line
+carries none. A clause that cannot be read stops the run instead of being
+recorded as `none`. The guard-side alternative — widening the comparison —
+was rejected: that rule's default when nothing matches is to decide the item,
+so every branch where a widened test failed would land back in the defect,
+and an adversarial lens found nine such branches.
+
+Six further rules ship with it. Reverts of a resume are written before any
+amendment your own answer makes, because the other order makes the revert see
+changed text and stop. A revert stops when one return amended the same clause
+twice, since the commit it restores from predates both. A code change an
+earlier resume could not undo, because your working tree held a local change
+to the same file, is now undone by the next resume instead of being skipped
+for ever. A read-only reviewer is given the disposition line inside its
+prompt and never the review log's path, so it cannot open every earlier entry.
+A clause amended twice keeps both markers, in ruling order. And the
+orchestrator's own copy of the clause comparison rule regained the whitespace
+collapse it was missing at two sites, without which every clause the plan
+wraps across lines — the ordinary shape — failed to match.
+
+One defect here was observed in a real run rather than reasoned about: on
+2026-09-05 the answer to one ruling was appended to another ruling's entry,
+and the first kept no record of it. The entry is now found by the answered
+id, and two entries sharing a bare id are told apart by the parenthesis the
+answer already carries.
+
+Review found one Critical and ten Important findings, five of them reached by
+two independent reviewers. The Critical was in this release's own first
+attempt: the new entry lookup stopped whenever two entries shared an id, a
+case the skill says occurs, with no answer a user could write to continue.
+107 mutations were run against the new rules; 26 survived the first check set
+and 26 checks close them.
+
+`tests/in-run-rulings/run-tests.sh` goes from 768 to 839 checks. All twelve
+fast suites pass: codex 14 suites, smart-compress 107, reviewer-templates 269,
+writing-plans 21, in-run-rulings 839, fill-prompt 166,
+orchestrating-development 217, review-gates 142, measure-context 143, pickup
+198, analyze-compaction 40, sdd-scripts 207.
+
+Two limits shipped on purpose, both stopping rather than writing plan text: a
+revert also stops when a sibling clause of the same return was amended again
+later, and when the other amendment note belongs to an `**Exact content:**`
+block. Narrowing either needs a comparison that can itself be wrong.
+
 ## v7.39.0 — a quote that the revert can find again
 
 **Problem.** When the orchestrator amends a plan clause, its audit note

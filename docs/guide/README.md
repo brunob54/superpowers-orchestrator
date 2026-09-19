@@ -840,6 +840,12 @@ the answer stood on the `**Resolution:**` line. An amended `**Contract:**`
 gets no marker, so a later finding against it is triaged as ordinary
 text. Before v7.11.0 only the Resolution line was read, so a finding
 against a clause you had amended could be dropped as ordinary text.
+Since v7.40.0 the quoted clause on that `**Follow-up:**` line is read from
+the plan after the resume has made its own edits, so it records the wording
+your decision leaves in force. Before that it was copied from the review
+log line, which after a fix carries no clause at all, and which after your
+own `amend plan` answer still held the older wording — in both cases the
+run could later find no match and decide the item itself.
 
 A Phase 3 or Phase 4 stop entry therefore lists two kinds of items: each
 escalated item on an `Open:` line with its reason — these are the ones
@@ -947,7 +953,12 @@ restoring, because restoring would also remove the later amendment. A
 ruling you overturn a second time is recognised as already reverted and
 is skipped. When one resume prompt overturns several rulings, the run
 takes them from the highest ruling number down, and it undoes every plan
-change before it undoes any code change. A crash after a ruling was committed but before its
+change before it undoes any code change. Since v7.40.0 it also makes every
+revert before it applies any amendment your own answer asks for, and it
+stops when one return amended the same clause twice, because the commit it
+restores from predates both amendments. When an earlier resume could not
+undo a code change, because your working tree held a local change to the
+same file, the next resume makes that revert instead of skipping it. A crash after a ruling was committed but before its
 re-dispatch completed is recovered the same way as any other: resume reads
 the trailing `## RULING` entry and re-dispatches the phase with the same
 answers.
