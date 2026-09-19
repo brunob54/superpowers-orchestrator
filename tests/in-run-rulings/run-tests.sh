@@ -2533,8 +2533,9 @@ MCR_TRIAGE_LINE="$(line_starting_with_after "$MCR_SKILL" '4. **Triage:**' 0)"
 MCR_TRIAGE_END="$(line_starting_with_after "$MCR_SKILL" '5. **Append the round entry**' "$MCR_TRIAGE_LINE")"
 for phrase in '**The fix subagent reports an id back as needing a plan edit:**' \
               'Record every id reported back that way as `unresolved: fix needs a plan edit` (blocking) in the round entry, never as `fixed`, also when the same fix commit fixed other ids.' \
-              'This is not a failed fix: never re-dispatch a fix for that id.' \
-              'The same holds for a verification-cycle fix and for an addendum fix.'; do
+              'This is not a failed fix: never make the retry of the next bullet for that id.' \
+              'Record the same disposition when a verification-cycle fix or an addendum fix reports an id back that way.' \
+              'A fix that a later answer orders for the same id is dispatched as usual, because an `amend plan` answer can have changed the plan by then.'; do
   assert_in_range_folded "row 62: the loop's rule for a fix that needs a plan edit states '$phrase'" \
     "$MCR_SKILL" "$phrase" "$MCR_TRIAGE_LINE" "$MCR_TRIAGE_END"
 done

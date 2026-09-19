@@ -1006,8 +1006,11 @@ code has been revised since, so a re-pass is meaningful):
      reported back that way as `unresolved: fix needs a plan edit`
      (blocking) in the round entry, never as `fixed`, also when the
      same fix commit fixed other ids. This is not a failed fix: never
-     re-dispatch a fix for that id. The same holds for a
-     verification-cycle fix and for an addendum fix.
+     make the retry of the next bullet for that id. Record the same
+     disposition when a verification-cycle fix or an addendum fix
+     reports an id back that way. A fix that a later answer orders for
+     the same id is dispatched as usual, because an `amend plan` answer
+     can have changed the plan by then.
    - **Fix subagent fails or its covering tests fail:** re-dispatch once
      with the failure appended. Before that re-dispatch — and before
      continuing after a second failure — do two steps, in this order.
