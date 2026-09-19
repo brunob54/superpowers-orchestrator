@@ -8,6 +8,71 @@
 > (`REPOZY/superpowers-optimized`) and are kept unchanged as history; any
 > testing they describe was not done here.
 
+## v7.39.0 — a quote that the revert can find again
+
+**Problem.** When the orchestrator amends a plan clause, its audit note
+quotes the clause's opening words, and a later revert finds the clause by
+that quote. The quote failed in four ways: it was unique under a stricter
+comparison than the revert uses; it found nothing after a later ruling
+changed the words; it could not be built for an `**Exact content:**` block;
+and a repaired note skipped the uniqueness rule.
+
+**Change.** Added sentences at seven places in the orchestrating-development
+skill close the four cases. No existing sentence was reworded.
+
+**Effect.** Each case now ends in a correct revert or in a stop that names
+its cause. The in-run-rulings suite goes from 742 to 768 checks. Nothing to
+migrate.
+
+Rows 49 to 52 of the orchestration worklist. None was observed in a run.
+
+**One comparison, not two (row 49).** The revert lets a `'` in the quote
+match `'` or `"` in the plan, because open-item lines are normalised. The
+insertion test now compares the same way. When the whole clause stands twice
+in its block, adding words cannot end: the clause is quoted whole, the note
+says so, and a revert or a retry stops on more than one match.
+
+**A later ruling is named (row 50).** Ruling 3 amends a clause, ruling 7
+amends it again and changes its opening words, and the user overturns only
+ruling 3. The quote of ruling 3 then matches nothing. The resume now looks in
+the note's block for a note or a marker with a higher ruling number, names
+that ruling in its report, and stops in both cases. The same holds for a
+marked clause whose marker a later ruling replaced. The design step decided
+that this case ends at a stop with a named cause: Resume step 3 runs only
+when the user is present.
+
+**An Exact-content block is found by its marker (row 51).** Its quote could
+be pushed into the fenced block, which holds several lines and backtick
+characters. The block is now the one exception to the uniqueness rule: eight
+words of the introducing paragraph line, never a line of the block. The
+marker finds it in the plan now and in the ruling commit's plan. The plan
+before the ruling cannot hold the marker, so several matches are chosen by
+position: the match whose introducing paragraph line is a removed line of the
+hunk (one block of changed lines) that holds the added marker line. A choice
+that does not leave exactly one clause stops.
+
+**A repaired note follows the first-insertion rules (row 52).** All three
+places that insert only a missing note are covered; the row named one.
+
+**What the review changed.** Two lenses, mutation testing and one
+verification pass. Two corrections were to this work's own first wording. The
+exception first covered every marked clause, which took the unique quote from
+Global Constraints entries; a measurement in a scratch repository showed that
+a hunk header also covers unchanged neighbour entries, so the position rule
+could never choose among them. And the first pre-ruling rule forbade the
+quote search that reads the whole old clause. Mutation testing caught 38 of
+44 mutations; every survivor that still applied now fails, as do fourteen
+mutations of the later wording.
+
+**Not built.** A `was "…"` field in the note: a quote that finds nothing
+already goes to the removed lines of the diff, and the field would change the
+note template that multi-code-review mirrors. A rule that pairs removed and
+added lines by their order: a wrong pairing would write wrong plan text.
+Row 56 records one open point: what happens to an earlier marker when a
+marked clause is amended a second time.
+
+---
+
 ## v7.38.0 — a code reviewer that reads the real code
 
 **Problem.** A repository can configure a textconv filter, a program that
