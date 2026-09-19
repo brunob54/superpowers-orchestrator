@@ -32,6 +32,7 @@
 # here.
 
 set -u
+# Stop the suite when a command is not found; the file explains the reason.
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 ORCH_SKILL="$ROOT/skills/orchestrating-development/SKILL.md"
@@ -2541,6 +2542,11 @@ for phrase in '**The fix subagent reports an id back as needing a plan edit:**' 
 done
 assert_in_range_folded "row 62: the canonical dispositions name the new reason" \
   "$MCR_SKILL" '`unresolved: fix needs a plan edit`, step 4;' \
+  "$MCR_LOG_FORMAT_LINE" "$MCR_AFTER_LOOP_LINE"
+# Row 65: the list must hold every reason this skill writes. The withheld
+# reason is written in the Error Handling section only.
+assert_in_range_folded "row 65: the canonical dispositions name the withheld-finding reason" \
+  "$MCR_SKILL" '`unresolved: withheld finding, no credential at the location`, Error Handling)' \
   "$MCR_LOG_FORMAT_LINE" "$MCR_AFTER_LOOP_LINE"
 # The loop verifies an `(amended by ruling <n>)` marker against the ruling
 # record before granting the clause decided-wording authority — the same rule
