@@ -3766,7 +3766,10 @@ assert_rule_near "row 50: the report names the later ruling" "$ROW50_ANCHOR" 16 
 assert_rule_near "row 50: the rule says why the descending order does not cover the case" "$ROW50_ANCHOR" 16 \
   'the descending order above undoes only the rulings that this resume reverts'
 assert_rule_near "row 50: both cases stop" "$ROW50_ANCHOR" 16 \
-  'Otherwise report only that the quote matches no clause. Stop in both cases'
+  'Otherwise report only that the quote matches no clause. Stop in both cases. The same holds'
+# Mutation testing: the reason of the rule was held by no check.
+assert_rule_near "row 50: the rule says what a later ruling can have done" "$ROW50_ANCHOR" 16 \
+  'A later ruling can have amended the same clause and changed its opening words.'
 # Review round 1, F1. A marked clause is never found by its quote, so the
 # zero-match rule did not reach a marked clause whose marker a later ruling
 # replaced.
@@ -3779,7 +3782,10 @@ ROW51A_ANCHOR='Quote the whole clause when it has fewer than eight'
 assert_rule_near "row 51: a marked clause is the exception to the uniqueness rule" "$ROW51A_ANCHOR" 10 \
   'A clause that carries the `(amended by ruling <n>)` marker is the one exception to the uniqueness rule' "$ANSWERS_LINE"
 assert_rule_near "row 51: the exception says why it is safe" "$ROW51A_ANCHOR" 10 \
-  'find that clause by its marker, never by its quote' "$ANSWERS_LINE"
+  'Resume step 3 and a retry find that clause by its marker, never by its quote' "$ANSWERS_LINE"
+# Mutation testing: this is the sentence that stops the quote from growing.
+assert_rule_near "row 51: the quote of a marked clause has a fixed length" "$ROW51A_ANCHOR" 10 \
+  'Quote its first eight words, or every word before the marker when there are fewer, and add no more.' "$ANSWERS_LINE"
 assert_rule_near "row 51: the quote of an Exact-content clause never enters the block" "$ROW51A_ANCHOR" 10 \
   'these are words of the introducing paragraph line only, never a line of the fenced block or of the block quote' "$ANSWERS_LINE"
 ROW51B_ANCHOR='that output, this is a major error — stop and report it.'
@@ -3792,7 +3798,7 @@ ROW51C_ANCHOR='sentence states; never widen this search.'
 # clause, which the search needs to read the whole old clause; two entries
 # amended in one hunk could then not be told apart.
 assert_rule_near "row 51: more than one match is no major error for a marked clause" "$ROW51C_ANCHOR" 10 \
-  'For a marked clause, more than one match in that output is not a major error, because the quote of a marked clause is not required to be unique'
+  'For a marked clause, more than one match in that output is not a major error, because the quote of a marked clause is not required to be unique, and the marker is not in that output: the ruling commit added it.'
 assert_rule_near "row 51: a failed choice by position stops" "$ROW51C_ANCHOR" 10 \
   'When this does not leave exactly one clause, this is a major error — stop and report it.'
 assert_rule_near "row 51: the old clause of a marked clause is chosen by the position of the marker line" "$ROW51C_ANCHOR" 10 \
