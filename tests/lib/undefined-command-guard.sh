@@ -21,11 +21,16 @@
 #
 # The EXIT trap of a suite still runs after the `exit 1` below, so the
 # suite still removes its temporary files. A suite that sets an ERR trap of
-# its own after the load line replaces this guard; tests/suite-guard checks
-# that no suite does this.
+# its own after the load line replaces this guard. tests/suite-guard scans
+# every guarded suite for the plain forms of this: a `trap` line that names
+# ERR, `set +E`, `set +o errtrace`, `shopt -u -o errtrace`. The scan reads the
+# text of the suite file only. It cannot see a command that `eval` runs, a
+# signal name held in a variable, a line continuation between `trap` and ERR,
+# or a file that the suite loads with `source`.
 #
-# Known limits. Each one was measured on bash 3.2, and tests/suite-guard
-# records limits 1, 2, 3, 4 and 6.
+# Known limits. Each one was measured on bash 3.2. tests/suite-guard has a
+# check for limits 1, 2, 3 and 4, and for the `return 127` form of limit 6.
+# Limit 5 has no check.
 # 1. Bash runs no ERR trap for a command that is the condition of an `if`,
 #    `while` or `until`, for a command negated with `!`, and for every command
 #    of an `&&` or `||` list except the last one. The guard cannot see an
