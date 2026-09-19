@@ -1108,6 +1108,22 @@ Trigger: `Resume orchestration for <plan-or-spec path>`.
    the amendment edits already holds the restored wording. A revert
    checks that the clause still reads as its own ruling left it, and an
    amendment written first would make that check stop the resume.
+   **A plan edit that an earlier session left uncommitted stops the
+   resume.** In the `## STOPPED` case, before this step writes anything
+   — a revert, an amendment or a `**Follow-up:**` line — run
+   `git diff --no-ext-diff --no-textconv HEAD -- <plan path>`. Run it
+   also when this resume makes no plan edit at all. An implementer's
+   only write to the plan file is the checkbox tick, so every changed
+   line of that diff must be a task checkbox line. Any other changed
+   line is a plan edit that an earlier session wrote, and that session
+   died before it committed the edit: a clause edit, with or without
+   its audit note, or a revert. This is a major error. Stop: make no
+   plan edit, write no `**Follow-up:**` line and make no commit. Never
+   complete that edit and never keep it. No record says which answer
+   the edit belonged to, and a comparison of wordings can itself be
+   wrong. The report names the changed lines and states the way out:
+   restore those lines to their committed text, then send the same
+   resume prompt again.
    Wherever this step reads a `**Amendment <m>` label, match the whole
    number: `**Amendment 1` is also the opening of `**Amendment 10`, so the
    label matches `<m>` only when a space follows the number.
@@ -2498,9 +2514,11 @@ plan file only under an `amend plan` answer, and only by the amendment
 procedure below. In the ruling commit that records them, a
 `plan governs` answer, a `fix it` answer, an `accept` answer and a
 plain-text answer never edit the plan file, not even its reference
-text. Two kinds of plan edit are outside this rule. The first is the
-amendment revert and the checkbox untick of Resume step 3. The second is
-a fix commit that the code-review loop makes.
+text. One kind of plan edit is outside this rule: the amendment revert
+and the checkbox untick of Resume step 3. A fix commit that the
+code-review loop makes never edits the plan file, as
+`../multi-code-review/SKILL.md` states ("The loop never edits plan
+text") and as the fix subagent's prompt states.
 
 **Plan amendment.** A plan conflict is a collision with text the plan's
 `**Body authority:**` note — a block the plan-writing skill,

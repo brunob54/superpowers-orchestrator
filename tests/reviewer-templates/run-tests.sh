@@ -58,6 +58,8 @@ FIX_RULE_CLAUSES=(
   'review fixes ([SLUG], round [ROUND])'
   'refer to files by path'
   'the command run and the output'
+  'Never edit the plan file, not even its reference text'
+  'leave it unfixed and report it back with that reason'
 )
 NOTHING_ELSE='**Nothing else may be added to the prompt.**'
 # Pointer-dispatch contracts on multi-code-review SKILL.md (prompt-pointer-

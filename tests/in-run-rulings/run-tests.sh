@@ -2020,11 +2020,19 @@ for phrase in '**In a ruling commit, only an `amend plan` answer edits the plan 
               'only by the amendment procedure below' \
               'In the ruling commit that records them, a `plan governs` answer, a `fix it` answer, an `accept` answer and a plain-text answer never edit the plan file' \
               'never edit the plan file, not even its reference text' \
-              'Two kinds of plan edit are outside this rule.' \
-              'The first is the amendment revert and the checkbox untick of Resume step 3.' \
-              'The second is a fix commit that the code-review loop makes.'; do
+              'One kind of plan edit is outside this rule: the amendment revert and the checkbox untick of Resume step 3.' \
+              'A fix commit that the code-review loop makes never edits the plan file' \
+              'as `../multi-code-review/SKILL.md` states ("The loop never edits plan text") and as the fix subagent'"'"'s prompt states.'; do
   assert_in_range_folded "row 39: the plan-edit rule states '$phrase'" \
     "$ORCH_SKILL" "$phrase" "$ANSWERS_LINE" "$ANSWERS_END"
+done
+# Row 62: the skill named a fix commit of the code-review loop as a permitted
+# plan edit, against `../multi-code-review/SKILL.md`. Neither old sentence may
+# come back.
+for phrase in 'Two kinds of plan edit are outside this rule' \
+              'The second is a fix commit'; do
+  assert_absent_in_range_folded "row 62: the plan-edit rule no longer states '$phrase'" \
+    "$ORCH_SKILL" "$phrase" "$ANSWERS_LINE" "$ANSWERS_END" fragment
 done
 # Row 39: the probe run copied the whole disposition line into the
 # `**Item:**` field. The Phase 4 step names the record shape, and the ruling
@@ -4096,6 +4104,41 @@ assert_in_range_folded "row 48: a general-purpose reviewer on a platform with no
 assert_in_range_folded "row 57: the Phase 3 clause takes all four replacements" \
   "$ORCH_SKILL" 'every run of whitespace collapsed to one space, each ` — ` and each ` ← ` replaced by one space' \
   "$ANSWERS_LINE" "$ANSWERS_END"
+# Row 61: a session can die after it edits a plan clause and before it
+# commits. The next resume then starts over a plan that holds an edit no
+# record explains. Resume step 3 runs a diff of the plan file against HEAD
+# before it writes anything, and stops on any changed line that is not a task
+# checkbox line. The rule has no retry branch and compares no wording.
+R61_ANCHOR='**A plan edit that an earlier session left uncommitted stops the'
+R61_LINES=18
+R61_FROM="$(line_containing_after "$ORCH_SKILL" "$R61_ANCHOR" "$RESUME_LINE")"
+R61_PREV="$(line_containing_after "$ORCH_SKILL" 'amendment written first would make that check stop the resume.' "$RESUME_LINE")"
+if [ -n "$R61_FROM" ] && [ -n "$R61_PREV" ] && [ "$R61_FROM" -eq $((R61_PREV + 1)) ]; then
+  ok "row 61: the rule stands directly after the revert-order rule"
+else
+  bad "row 61: the rule is missing or misplaced (revert-order rule ends at line '$R61_PREV', rule starts at line '$R61_FROM')"
+fi
+assert_rule_near "row 61: the rule sentence" "$R61_ANCHOR" "$R61_LINES" \
+  '**A plan edit that an earlier session left uncommitted stops the resume.**'
+assert_rule_near "row 61: the diff is run before this step writes anything" "$R61_ANCHOR" "$R61_LINES" \
+  'In the `## STOPPED` case, before this step writes anything — a revert, an amendment or a `**Follow-up:**` line — run `git diff'
+assert_in_range "row 61: the diff command carries both options" "$ORCH_SKILL" \
+  '   `git diff --no-ext-diff --no-textconv HEAD -- <plan path>`. Run it' \
+  "$R61_FROM" "$((${R61_FROM:-0} + R61_LINES))" exact
+assert_rule_near "row 61: the diff is run also when the resume makes no plan edit" "$R61_ANCHOR" "$R61_LINES" \
+  'Run it also when this resume makes no plan edit at all.'
+assert_absent_in_range_folded "row 61: the rule never reads a saved diff output" "$ORCH_SKILL" \
+  'read the saved' "$R61_FROM" "$((${R61_FROM:-0} + R61_LINES))" fragment
+assert_rule_near "row 61: the condition" "$R61_ANCHOR" "$R61_LINES" \
+  'An implementer'"'"'s only write to the plan file is the checkbox tick, so every changed line of that diff must be a task checkbox line.'
+assert_rule_near "row 61: what any other changed line is" "$R61_ANCHOR" "$R61_LINES" \
+  'Any other changed line is a plan edit that an earlier session wrote, and that session died before it committed the edit: a clause edit, with or without its audit note, or a revert.'
+assert_rule_near "row 61: the stop writes nothing" "$R61_ANCHOR" "$R61_LINES" \
+  'This is a major error. Stop: make no plan edit, write no `**Follow-up:**` line and make no commit.'
+assert_rule_near "row 61: the edit is never completed and never kept" "$R61_ANCHOR" "$R61_LINES" \
+  'Never complete that edit and never keep it. No record says which answer the edit belonged to, and a comparison of wordings can itself be wrong.'
+assert_rule_near "row 61: the report states the way out" "$R61_ANCHOR" "$R61_LINES" \
+  'The report names the changed lines and states the way out: restore those lines to their committed text, then send the same resume prompt again.'
 
 # --- end of checks ---
 
