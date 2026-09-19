@@ -3691,27 +3691,32 @@ assert_in_range_folded "row 46: two searches ending in different blocks is a maj
 # runs both kinds of helper program by default and `git show` runs a textconv
 # filter by default, so the skill writes one uniform spelling on every diff
 # read rather than two spellings to remember.
-# The spellings that lack the options are counted directly. A command written
-# with the options does not hold the bare command as a substring, because the
-# options stand between the command and its first argument.
+# Every read is found by its shape, not by a list of spellings. A first
+# version counted two literal commands, and a review showed the hole: a read
+# added later that names another revision, such as `git show <resume commit>
+# -- <plan path>`, was invisible to it and the suite stayed green. The whole
+# value of this check is that it protects reads written later, so it matches
+# any revision word. The pattern ends at the backtick that closes the command
+# in the Markdown text.
+# One accepted false failure: a future sentence that quotes a read WITHOUT the
+# options as an example of what not to write would be counted as a read and
+# fail this check. That fails loudly and is corrected in one edit, which is
+# the safe direction for a rule that protects plan text.
 assert_plan_diff_reads_carry_options() { # desc
-  local desc="$1" folded total_lines
-  local bare_diff bare_show full_diff full_show
+  local desc="$1" folded total_lines reads total with_options
   total_lines="$(wc -l < "$ORCH_SKILL")"
   folded="$(fold_range "$ORCH_SKILL" 1 $((total_lines + 1)))"
-  bare_diff="$(count_occurrences "$folded" 'git diff HEAD -- <plan path>')"
-  bare_show="$(count_occurrences "$folded" 'git show <ruling commit> -- <plan path>')"
-  full_diff="$(count_occurrences "$folded" 'git diff --no-ext-diff --no-textconv HEAD -- <plan path>')"
-  full_show="$(count_occurrences "$folded" 'git show --no-ext-diff --no-textconv <ruling commit> -- <plan path>')"
-  if [ "$bare_diff" -eq 0 ] && [ "$bare_show" -eq 0 ] \
-    && [ "$full_diff" -gt 0 ] && [ "$full_show" -gt 0 ]; then
-    ok "$desc ($full_diff git diff reads and $full_show git show reads, all with both options)"
+  reads="$(printf '%s' "$folded" | grep -o -E 'git (diff|show)[^`]*-- <plan path>')"
+  total="$(printf '%s\n' "$reads" | grep -c .)"
+  with_options="$(printf '%s\n' "$reads" | grep -c -- '--no-ext-diff --no-textconv')"
+  if [ "$total" -gt 0 ] && [ "$total" = "$with_options" ]; then
+    ok "$desc ($total reads of a diff of the plan file, all with both options)"
   else
-    bad "$desc ($bare_diff git diff reads and $bare_show git show reads lack the options; $full_diff and $full_show carry them)"
+    bad "$desc ($total reads of a diff of the plan file, only $with_options with both options)"
   fi
 }
 assert_plan_diff_reads_carry_options "row 53: every diff read of the plan file carries --no-ext-diff and --no-textconv"
-# Row 53, the consequence: the rule states what an without the two options read would cost,
+# Row 53, the consequence: the rule states what a read without the options costs,
 # not only that the options are written. A check that pins the spelling alone
 # would pass a skill that kept the options and lost the reason for them.
 assert_in_range_folded "row 53: the rule states that a helper program would rewrite the diff the revert reads" \
