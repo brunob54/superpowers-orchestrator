@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
 # undefined-command-guard.sh: stop a test suite when a command is not found.
 #
-# Load this file near the top of a suite, directly after its `set` line:
+# Load this file near the top of a suite, before the first check: directly
+# after the `set` line, or after the comment header when the suite has no
+# `set` line:
 #   source "$(cd "$(dirname "${BASH_SOURCE[0]}")/../lib" && pwd)/undefined-command-guard.sh"
 #
 # The defect that this guard closes (row 66 of the orchestration issues):
@@ -18,13 +20,40 @@
 # match, `false`) is normal in a suite and continues.
 #
 # The EXIT trap of a suite still runs after the `exit 1` below, so the
-# suite still removes its temporary files. No suite sets an ERR trap of its
-# own; a suite that sets one later replaces this guard.
+# suite still removes its temporary files. A suite that sets an ERR trap of
+# its own after the load line replaces this guard; tests/suite-guard checks
+# that no suite does this.
 #
-# Known limits. Bash runs no ERR trap for a command that is the condition of
-# an `if`, `while` or `until`, a part of an `&&` or `||` list, or negated
-# with `!`. The guard cannot see an undefined call in those places. In a
-# pipeline, bash looks at the last command only.
+# Known limits. Each one was measured on bash 3.2, and tests/suite-guard
+# records limits 1, 2, 3, 4 and 6.
+# 1. Bash runs no ERR trap for a command that is the condition of an `if`,
+#    `while` or `until`, for a command negated with `!`, and for every command
+#    of an `&&` or `||` list except the last one. The guard cannot see an
+#    undefined call in those places.
+# 2. While a function runs in one of the places of limit 1 (`if helper`,
+#    `helper && x`, `helper || x`), bash runs no ERR trap for ANY command in
+#    the body of that function, and of the functions that it calls. `set -E`
+#    does not change this. An undefined call in such a body is not seen.
+# 3. A command substitution runs in a subshell, and the `exit 1` of the trap
+#    ends only that subshell. Two cases:
+#    - `x=$(undefined_call)` as a plain assignment: the assignment gives exit
+#      code 127 to the script, and the guard stops the script.
+#    - `x=$(check)`, where the undefined call is in the middle of the body of
+#      `check`: the FAIL line is printed, but the script sees exit code 1 and
+#      continues.
+# 4. `assert "label" "$(undefined_call)"` and `local x="$(undefined_call)"`:
+#    the exit code of the substitution is lost. No FAIL line is printed and
+#    the script continues with an empty value.
+# 5. In a plain subshell `( ... )`, the FAIL line is printed and the subshell
+#    ends, but the script sees exit code 1 and continues. In a background job
+#    (`command &`), nothing is seen. In a pipeline, the guard sees only the
+#    last command.
+# 6. The guard reads the exit code only. It stops the script on EVERY exit
+#    code 127, also when a command gives 127 on purpose: a function that runs
+#    `return 127`, `bash -c "exit 127"`, `x=$(exit 127)`. The message then
+#    still says that a command was not found. A future check that expects
+#    exit code 127 must run that command in a place of limit 1, for example
+#    `code=0; command_under_test || code=$?`.
 #
 # The line number is the value of $LINENO inside the trap. On bash 3.2 this
 # value is only a line near the call: measured cases were the exact line, a
@@ -38,9 +67,6 @@
 # returns 0. With it, bash can run the trap a second time in the caller; this
 # has no effect here, because the trap ends the script the first time it sees
 # 127 and does nothing for every other exit code.
-# One more known limit: inside a command substitution such as `x=$(check)`,
-# the `exit 1` ends only the subshell. The FAIL line is printed, but the
-# suite sees exit code 1 and continues.
 
 set -E
 trap '__guard_code=$?

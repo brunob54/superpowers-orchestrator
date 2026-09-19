@@ -22,14 +22,23 @@ GUARD_NAME='undefined-command-guard.sh'
 GUARD="$ROOT/tests/lib/$GUARD_NAME"
 
 # The guard must be loaded before the first check of a suite runs. Every
-# suite starts with a comment header, then its `set` line, then the load
-# line. The longest header ends at line 34 (tests/in-run-rulings).
+# suite starts with a comment header, then its `set` line when it has one,
+# then the load line. No suite runs a check in its first lines; the latest
+# load line of today is the one of tests/in-run-rulings.
 GUARD_LOAD_MAX_LINE=45
 
-# The fast suites that must load the guard.
-GUARDED_SUITES='smart-compress reviewer-templates writing-plans in-run-rulings
-fill-prompt orchestrating-development review-gates measure-context pickup
-analyze-compaction sdd-scripts suite-guard'
+# Every file tests/*/run-tests.sh must load the guard, except the suites
+# named here. The list of suites is built from the files on disk, so a new
+# suite that does not load the guard fails a check below.
+#   opencode: it runs under `set -euo pipefail`, which already stops the
+#             script with exit code 127 on a command that is not found.
+# tests/codex/run-unit-tests.sh also runs under `set -euo pipefail`. Its file
+# name is not run-tests.sh, so the file pattern does not match it and it
+# needs no entry here.
+UNGUARDED_SUITES='opencode'
+# The smallest number of suites that the file pattern must find. A pattern
+# that finds nothing must not look like a success.
+MIN_GUARDED_SUITES=12
 
 # Fragments of the guard's message (free text, matched as fixed strings).
 MSG_FAIL='FAIL'
@@ -130,7 +139,8 @@ check() { false; echo in-function; }
 check"
 assert_continued "a command that fails with exit code 1 does not stop the script"
 
-# This check records a known limit; it does not describe a wanted behaviour.
+# This check records known limit 1 of the guard file; it does not describe a
+# wanted behaviour.
 # Bash does not run an ERR (error) trap for a command that is the condition
 # of an `if`, or a part of an `&&` or `||` list. The guard cannot see an
 # undefined call in those places.
@@ -138,8 +148,9 @@ run_fixture if-condition "if $UNDEFINED_CALL; then echo yes; fi
 $UNDEFINED_CALL || echo handled"
 assert_continued "known limit: an undefined call in an if condition or an || list is not seen"
 
-# This check records the second known limit. Inside a command substitution
-# such as `x=$(check)`, the guard runs in the subshell. It prints its message
+# This check records known limit 3 of the guard file. Inside a command
+# substitution such as `x=$(check)`, the guard runs in the subshell. It prints
+# its message
 # and ends the subshell only. The script sees exit code 1 and continues.
 run_fixture command-substitution "check() {
   echo before
@@ -152,6 +163,36 @@ if [ "$CODE" -eq 0 ] && out_has "$REACHED_END" && out_has "$MSG_CODE"; then
 else
   fail "known limit: an undefined call inside \$(...) prints the message, but the script continues (exit code $CODE, output: $OUT)"
 fi
+
+# This check records known limit 2 of the guard file. While a function runs
+# as the condition of an `if`, or as a part of an `&&` or `||` list, bash runs no ERR
+# trap for ANY command in the body of that function. `set -E` does not change
+# this. The guard cannot see an undefined call in such a body.
+run_fixture function-as-condition "helper() {
+  local value=1
+  $UNDEFINED_CALL
+  [ \"\$value\" -eq 1 ]
+}
+if helper; then echo yes; fi
+helper && echo and
+helper || echo or"
+assert_continued "known limit: an undefined call in the body of a function that runs as a condition is not seen"
+
+# This check records known limit 4 of the guard file. When the undefined
+# call is the only command of a command substitution that is an argument of another
+# command, the guard prints nothing and the script continues.
+run_fixture substitution-as-argument "show() { echo \"value=[\$1]\"; }
+show \"\$($UNDEFINED_CALL)\"
+in_local() { local value=\"\$($UNDEFINED_CALL)\"; echo \"local=[\$value]\"; }
+in_local"
+assert_continued "known limit: an undefined call that is alone in \$(...) as an argument or after local is not seen"
+
+# This check records known limit 6 of the guard file. The guard reads the
+# exit code only. It cannot tell a command that was not found from a command that gives
+# exit code 127 on purpose.
+run_fixture code-127-on-purpose "gives_127() { return 127; }
+gives_127"
+assert_stopped "known limit: a command that gives exit code 127 on purpose also stops the script"
 
 bold "The guard keeps the EXIT trap of a suite"
 
@@ -166,17 +207,39 @@ fi
 
 bold "Every fast suite loads the guard before its first check"
 
-for suite in $GUARDED_SUITES; do
-  file="$ROOT/tests/$suite/run-tests.sh"
+guarded_count=0
+for file in "$ROOT"/tests/*/run-tests.sh; do
+  suite="$(basename "$(dirname "$file")")"
+  case " $UNGUARDED_SUITES " in *" $suite "*) continue ;; esac
+  guarded_count=$((guarded_count+1))
+  name="tests/$suite/run-tests.sh"
   load_line="$(grep -nE "^(source|\.) .*/$GUARD_NAME\"?\$" "$file" | head -1 | cut -d: -f1)"
   if [ -z "$load_line" ]; then
-    fail "tests/$suite/run-tests.sh loads the guard"
+    fail "$name loads the guard"
+    continue
   elif [ "$load_line" -gt "$GUARD_LOAD_MAX_LINE" ]; then
-    fail "tests/$suite/run-tests.sh loads the guard in its first $GUARD_LOAD_MAX_LINE lines (found at line $load_line)"
+    fail "$name loads the guard in its first $GUARD_LOAD_MAX_LINE lines (found at line $load_line)"
   else
-    pass "tests/$suite/run-tests.sh loads the guard at line $load_line"
+    pass "$name loads the guard at line $load_line"
+  fi
+  # A later `trap ... ERR` replaces the guard, `trap - ERR` removes it, and
+  # `set +E` stops functions from inheriting it. The pattern reads a trap
+  # command at the start of a line or after `;`, `&`, `|`, `(` or `{`.
+  undo_line="$(awk -v from="$load_line" \
+    'NR > from && $0 !~ /^[[:space:]]*#/ &&
+     ($0 ~ /(^|[;&|({])[[:space:]]*trap[[:space:]].*[[:space:]]ERR([[:space:];)}]|$)/ ||
+      $0 ~ /(^|[;&|({])[[:space:]]*set[[:space:]]+\+[A-Za-z]*E/) { print NR; exit }' "$file")"
+  if [ -z "$undo_line" ]; then
+    pass "$name keeps the guard: no ERR trap and no set +E after the load line"
+  else
+    fail "$name keeps the guard: no ERR trap and no set +E after the load line (found at line $undo_line)"
   fi
 done
+if [ "$guarded_count" -ge "$MIN_GUARDED_SUITES" ]; then
+  pass "the file pattern tests/*/run-tests.sh found $guarded_count suites that must load the guard"
+else
+  fail "the file pattern tests/*/run-tests.sh found $guarded_count suites; at least $MIN_GUARDED_SUITES are expected"
+fi
 
 echo
 bold "Results: $PASS passed, $FAIL failed"
