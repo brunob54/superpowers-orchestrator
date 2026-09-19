@@ -8,6 +8,121 @@
 > (`REPOZY/superpowers-optimized`) and are kept unchanged as history; any
 > testing they describe was not done here.
 
+## v7.41.0 — a resume stops on a plan edit that no record explains
+
+**Problem.** A session that ended after it edited a plan clause, and before
+it wrote any record, left the plan edited. Nothing read that edit, so a later
+commit could include it with no ruling. The orchestrator skill also
+permitted a plan edit by a code-review fix commit, which `multi-code-review`
+forbids.
+
+**Change.** A resume of a Phase 3 or Phase 4 stop first reads the plan diff
+and stops on any change except a checkbox tick. A fix subagent never edits
+the plan.
+
+**Effect.** The in-run-rulings suite goes from 839 to 871 checks and
+reviewer-templates from 269 to 272; 41 mutations were run and 7 survivors
+closed. Update the plugin and restart the command-line interface
+(CLI). Nothing to migrate.
+
+Rows 61 and 62 of the orchestration issues log are closed by this release.
+
+**The orphan plan edit stop (row 61).** An orphan plan edit is a change to
+the plan file that no commit, no audit note and no ruling record explains. It
+arises when a session writes a clause edit and ends before it writes the
+audit note, the `**Follow-up:**` line and the follow-up commit. Resume (the
+part of the orchestrator skill that continues a stopped run) skips its
+clean-tree check when the orchestration log ends with a `## STOPPED` entry,
+so nothing read that edit. A later commit of the plan file would then take
+the edit into history with no note and no ruling.
+
+Resume step 3 now has a new rule. It runs only when the heading of the
+`## STOPPED` entry names phase 3 or phase 4. Before the step writes anything
+— a revert, an amendment or a `**Follow-up:**` line — it runs
+`git diff --no-ext-diff --no-textconv HEAD -- <plan path>`. It runs that
+command also when the resume makes no plan edit at all. An implementer's only
+write to the plan file is the tick in a task checkbox, the box at the start
+of a step line. So a changed line may differ from its committed text only in
+the character inside that checkbox. A line that differs in any other
+character, and a line added or removed whole, is a major error (an error that
+stops the run).
+
+The stop makes no plan edit, writes no `**Follow-up:**` line, makes no commit
+and appends no log entry. The `## STOPPED` entry therefore stays the last
+entry of the log, and the same resume prompt works again. The report names
+the changed lines and states the way out: restore those lines to their
+committed text, then send the same resume prompt again.
+
+The rule has no retry branch and no comparison of wordings. No record says
+which answer the orphan edit belonged to. A retry that completed the edit
+would keep wording X in the plan while the record says wording Y. A
+comparison of the two wordings can itself be wrong.
+
+**Why the row's own candidate was rejected.** Row 61 proposed a two-form
+test on the `**Follow-up:**` line. Three independent design lenses found that
+this test cannot see the crash the row describes. A user's own amendment is
+written in this order: reverts, clause edit, audit note, `**Follow-up:**`
+line, one follow-up commit. A crash between the clause edit and the note
+leaves no `**Follow-up:**` line to test. Parts of the row were also wrong:
+the state is not the one the skill calls inconsistent, and Resume step 3
+never reverts a user's own amendment, so no revert needs the missing note.
+
+**A fix commit never edits the plan (row 62).** The orchestrator skill named
+two kinds of plan edit outside its amendment rule, and the second was a fix
+commit of the code-review loop. `multi-code-review` states "The loop never
+edits plan text", and the fix prompt said nothing about the plan file. The
+corrected sentence names one kind only, the amendment revert and the
+checkbox untick of Resume step 3, and states that a fix commit never edits
+the plan file. The fix prompt has a new rule: never edit the plan file, not
+even its reference text; when a finding can only be fixed by a change to the
+plan, leave it unfixed and report its id back as needing a plan edit.
+
+`multi-code-review` has a new disposition (the recorded outcome of a
+finding) for such an id: `unresolved: fix needs a plan edit`. It is blocking.
+It is recorded also when the same fix commit fixed other ids, and also for a
+verification-cycle fix and an addendum fix. It is not a failed fix, so the
+loop does not make the failed-fix retry for that id. A fix that a later
+answer orders for the same id is dispatched as usual, because an
+`amend plan` answer can have changed the plan by then. The row's word "move"
+was wrong: the rule that protects a user's decision compares quote text only,
+never the location. Two alternatives were rejected: a rule that escalates
+when a recorded quote matches nothing at its location, because a later user
+amendment of the same unmarked clause makes it fire for the rest of the run,
+and a `--stat` check by the controller.
+
+**Review.** Three reviews ran on the first commit: correctness, adversarial,
+and mutation testing (a deliberate wrong edit of a rule, to see whether a
+check fails) in a separate worktree. One Critical finding was reached by two
+reviewers: the first version had no phase condition. Phase 2 leaves the plan
+uncommitted on purpose, so every resume of a Phase 2 stop would have stopped
+with a false reason. 41 mutations were run and 7 survived; checks now close
+all 7, and 25 mutations replayed after the fixes were all caught. One
+verification pass then found 1 Important item: the sentence that forbids a
+retry had no scope, so a controller could refuse the fix that an `amend plan`
+answer orders. That sentence now forbids only the failed-fix retry.
+
+`tests/in-run-rulings/run-tests.sh` goes from 839 to 871 checks and
+`tests/reviewer-templates/run-tests.sh` from 269 to 272. All twelve fast
+suites pass: codex 14 suites, smart-compress 107, reviewer-templates 272,
+writing-plans 21, in-run-rulings 871, fill-prompt 166,
+orchestrating-development 217, review-gates 142, measure-context 143, pickup
+198, analyze-compaction 40, sdd-scripts 207.
+
+Four limits are accepted. A fix subagent that disobeys the new prompt line is
+not detected. A staged orphan edit whose working-tree lines were restored is
+not seen; commits name their paths, so the working-tree content is what gets
+committed. The way out does not list uncommitted checkbox ticks. A sentence
+added inside the new `multi-code-review` bullet is not caught by a check.
+
+Four worklist rows were opened. Row 63: a fix-commit revert that a crash
+interrupts leaves its staged code changes, and the next resume reads them as
+someone else's work. Row 64: the stop hook counts a subagent's edits as the
+main session's work and asks for a `[saved]` entry that is not owed. Row 65:
+the list of `unresolved:` reasons in `multi-code-review` leaves out
+`withheld finding, no credential at the location`. Row 66: a fast suite stays
+green when a check calls a function that is not defined yet, because bash
+prints `command not found` and no failure is counted.
+
 ## v7.40.0 — the recorded answer quotes the clause your decision leaves in force
 
 **Problem.** An orchestrated run recorded your answer with a quoted clause
