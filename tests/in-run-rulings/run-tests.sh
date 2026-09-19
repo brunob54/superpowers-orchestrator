@@ -3365,9 +3365,8 @@ assert_in_range_folded "row 40: the quote never includes the marker" \
 assert_in_range_folded "row 40: the quote has at least eight words" \
   "$ORCH_SKILL" 'Quote at least the first eight words of the clause.' \
   "$ANSWERS_LINE" "$ANSWERS_END"
-assert_in_range_folded "row 40: the quote is unique outside audit notes" \
-  "$ORCH_SKILL" 'Add words until no other place in the plan outside audit notes holds the quote, with line wraps ignored.' \
-  "$ANSWERS_LINE" "$ANSWERS_END"
+# Row 46 replaced the whole-plan uniqueness rule with a block-scoped one.
+# The check on the new sentence is in section 13 below.
 assert_in_range_folded "row 40: uniqueness is checked before the note is inserted" \
   "$ORCH_SKILL" 'Check this before you insert the note.' \
   "$ANSWERS_LINE" "$ANSWERS_END"
@@ -3522,6 +3521,160 @@ assert_in_range_folded "finding 2: the post-write checks run for each reverted c
 # An Exact-content block carries its whitespace into a produced file.
 assert_in_range_folded "row 42: an Exact content block is compared line by line" \
   "$ORCH_SKILL" 'its whitespace is copied into a produced file, so a reindented block is a changed block' \
+  "$RESUME_LINE" "$RULINGS_LINE"
+
+bold "13. Rows 46 and 47: the audit note's quote stays findable"
+
+# Row 47. A plan step is a checkbox line, and a mandated sentence in such a
+# line can be amended without a marker, so its quote is the only way to find
+# it again. The rule is general on purpose: naming `- [ ] ` and `- [x] ` as
+# literals would break again on `- [X]`, `* [ ] ` or `1. [ ] `.
+assert_in_range_folded "row 47: a task checkbox is never part of the quote" \
+  "$ORCH_SKILL" 'A task checkbox — the box drawn at the start of a step line, whatever character stands inside it — belongs to the list marker and is never part of the quote' \
+  "$ANSWERS_LINE" "$ANSWERS_END"
+assert_in_range_folded "row 47: the checkbox rule covers the inside of the quote, not only its start" \
+  "$ORCH_SKILL" 'neither at the start of the quote nor inside it' \
+  "$ANSWERS_LINE" "$ANSWERS_END"
+assert_in_range_folded "row 47: the quote rule and the word comparison of Resume step 3 state one rule" \
+  "$ORCH_SKILL" 'a task checkbox marker at the start of a line is not a word of the clause' \
+  "$ANSWERS_LINE" "$ANSWERS_END"
+# A mutant that answers row 47 by listing the two common checkbox spellings
+# passes the three checks above; this one fails it.
+assert_absent_in_range_folded "row 47: the checkbox rule names no ticked box spelling" \
+  "$ORCH_SKILL" '- [x] ' \
+  "$ANSWERS_LINE" "$ANSWERS_END" fragment
+assert_absent_in_range_folded "row 47: the checkbox rule names no empty box spelling" \
+  "$ORCH_SKILL" '- [ ] ' \
+  "$ANSWERS_LINE" "$ANSWERS_END" fragment
+
+# Row 46. The quote must be unique only inside the block the note stands in,
+# which is the scope Resume step 3 searches. Whole-plan uniqueness could not
+# be kept true: the plan keeps changing after the note is inserted.
+assert_in_range_folded "row 46: the quote is unique inside the note's block, not the whole plan" \
+  "$ORCH_SKILL" 'Add words until no other place inside the note'"'"'s block, outside audit notes, holds the quote, with line wraps ignored.' \
+  "$ANSWERS_LINE" "$ANSWERS_END"
+assert_in_range_folded "row 46: the note's block is defined where the quote is built" \
+  "$ORCH_SKILL" 'The note'"'"'s block is the text the note stands in. For a note that follows the `**Global Constraints:**` block, it is that same block. For a note that follows a task heading line, it is that `### Task <n>` section, up to the line before the next line that begins with a `#` character outside a fenced code block.' \
+  "$ANSWERS_LINE" "$ANSWERS_END"
+# Review round 1, C1. A plan step often shows a script, and a shebang or a
+# comment inside its fence begins with `#`. Without the fence exception the
+# block ends at that line, the uniqueness check covers a few lines only, and
+# row 46 comes back for every clause below a fence.
+assert_in_range_folded "row 46: a fenced line never ends the block, where the quote is built" \
+  "$ORCH_SKILL" 'A fenced code block runs from a line that opens with three or more backtick characters to the next line that opens with at least as many backtick characters. A line inside such a fence never ends the section' \
+  "$ANSWERS_LINE" "$ANSWERS_END"
+# The same definition must hold on the revert side, or the two scopes drift
+# apart and the quote is unique in one scope while searched in another.
+assert_in_range_folded "row 46: the note's block is defined the same way for the revert" \
+  "$ORCH_SKILL" 'For a note that follows the `**Global Constraints:**` block, it is that same block. For a note that follows a task heading line, it is that `### Task <n>` section, up to the line before the next line that begins with a `#` character outside a fenced code block.' \
+  "$RESUME_LINE" "$RULINGS_LINE"
+assert_in_range_folded "row 46: a fenced line never ends the block, for the revert" \
+  "$ORCH_SKILL" 'a line inside such a fence never ends the section' \
+  "$RESUME_LINE" "$RULINGS_LINE"
+# Verification pass, finding 3. The sentence that defines a fence was pinned
+# on the amendment side only, so deleting the revert's copy passed all 726
+# checks. The two copies must say the same thing, or the two scopes differ.
+assert_in_range_folded "row 46: the fence itself is defined for the revert too" \
+  "$ORCH_SKILL" 'A fenced code block runs from a line that opens with three or more backtick characters to the next line that opens with at least as many backtick characters.' \
+  "$RESUME_LINE" "$RULINGS_LINE"
+# Verification pass, finding 1. A plan can hold a fence inside a fence. If the
+# closing line may carry fewer backticks, the inner opening line reads as the
+# close of the outer fence and C1 comes back for the lines between them.
+# Measured: 9 of 46 plan files hold such a nested fence with a `#` line.
+assert_in_range_folded "row 46: a nested fence does not close its outer fence, where the quote is built" \
+  "$ORCH_SKILL" 'to the next line that opens with at least as many backtick characters' \
+  "$ANSWERS_LINE" "$ANSWERS_END"
+assert_absent_in_range_folded "row 46: no copy of the fence rule closes on any backtick line" \
+  "$ORCH_SKILL" 'backtick characters to the line that closes it' \
+  "$RESUME_LINE" "$RULINGS_LINE" fragment
+# Verification pass, finding 2, and verification cycle 2, findings I1 to I3.
+# The search over the plan before the ruling assumed a quote unique in the
+# whole plan. This branch makes the quote unique inside the note's block
+# only, so that search needs the same scope. The checks below run over that
+# paragraph alone, not over the whole Resume range: pinned to the wide range,
+# the two sentences could be moved to another search and still pass.
+PRE_RULING_LINE="$(line_containing_after "$ORCH_SKILL" 'Take the old text of the clause from' "$RESUME_LINE")"
+PRE_RULING_END=$((PRE_RULING_LINE + 12))
+assert_in_range_folded "row 46: the pre-ruling output holds no note, and the rule says so" \
+  "$ORCH_SKILL" 'That output does not hold the note, because the note is written in the ruling commit itself.' \
+  "$PRE_RULING_LINE" "$PRE_RULING_END"
+assert_in_range_folded "row 46: the pre-ruling search is held to the matching block" \
+  "$ORCH_SKILL" 'Search that output inside the block that matches the note'"'"'s block — the block with the same heading, or that same `**Global Constraints:**` block — and nowhere else' \
+  "$PRE_RULING_LINE" "$PRE_RULING_END"
+# Verification cycle 3, I1. The zero-match branch was keyed to one cause, so
+# a zero match from any other cause reached no rule at all.
+assert_in_range_folded "row 46: the pre-ruling search routes every zero match to the diff" \
+  "$ORCH_SKILL" 'When no clause inside that block matches, whatever the cause, take the clause from the removed lines of the ruling commit'"'"'s diff' \
+  "$PRE_RULING_LINE" "$PRE_RULING_END"
+# Verification cycle 3, I2. Every check on this paragraph was positive, so
+# reinstating the whole-output fallback passed them all.
+assert_in_range_folded "row 46: the pre-ruling search is never widened" \
+  "$ORCH_SKILL" 'never widen this search' \
+  "$PRE_RULING_LINE" "$PRE_RULING_END"
+assert_absent_in_range_folded "row 46: no whole-output fallback returns to the pre-ruling search" \
+  "$ORCH_SKILL" 'search the whole of that output' \
+  "$PRE_RULING_LINE" "$PRE_RULING_END" fragment
+assert_in_range_folded "row 46: the pre-ruling search says why it takes no match elsewhere" \
+  "$ORCH_SKILL" 'a clause of the same wording can stand in another task of the older plan' \
+  "$PRE_RULING_LINE" "$PRE_RULING_END"
+assert_in_range_folded "row 46: the pre-ruling search stops when more than one clause matches" \
+  "$ORCH_SKILL" 'When more than one clause inside that block matches, this is a major error — stop and report it, never guess a clause.' \
+  "$PRE_RULING_LINE" "$PRE_RULING_END"
+# Verification cycle 2, M1. The absent-check on the old fence wording ran in
+# the Resume range only, so the amendment copy could gain a contradicting
+# sentence and the two sides would compute different blocks.
+assert_absent_in_range_folded "row 46: no copy of the fence rule closes on any backtick line, where the quote is built" \
+  "$ORCH_SKILL" 'backtick characters to the line that closes it' \
+  "$ANSWERS_LINE" "$ANSWERS_END" fragment
+# Review round 1, M5. More than one match inside the block had no branch of
+# its own and was reached only through the counts sentence.
+assert_in_range_folded "row 46: more than one match inside the block stops the resume" \
+  "$ORCH_SKILL" 'When more than one clause inside that block matches, stop under the sentence below.' \
+  "$RESUME_LINE" "$RULINGS_LINE"
+# Review round 1, I2. The retry path finds an unmarked clause by the same
+# quote, so it needs the same scope and the same consequence.
+assert_in_range_folded "row 46: the retry path searches the note's block first" \
+  "$ORCH_SKILL" 'Search the note'"'"'s block first, as defined above, and search the whole plan only when that block holds no match.' \
+  "$ANSWERS_LINE" "$ANSWERS_END"
+assert_in_range_folded "row 46: the retry path stops when more than one clause matches" \
+  "$ORCH_SKILL" 'When more than one clause matches, this is a major error — stop and report it, never guess the clause.' \
+  "$ANSWERS_LINE" "$ANSWERS_END"
+assert_in_range_folded "row 46: the block scope is stated to match the revert's search" \
+  "$ORCH_SKILL" 'because the revert of Resume step 3 searches that block first' \
+  "$ANSWERS_LINE" "$ANSWERS_END"
+# The old whole-plan rule demanded a read the classification read exception
+# grants only inside Resume step 3, so it must be gone, not merely extended.
+assert_absent_in_range_folded "row 46: the whole-plan uniqueness rule is gone from the amendment procedure" \
+  "$ORCH_SKILL" 'no other place in the plan outside audit notes holds the quote' \
+  "$ANSWERS_LINE" "$ANSWERS_END" fragment
+
+# Row 46, the revert side. After narrowing, the exclusion of audit notes is
+# the only thing keeping the notes out of the match set, so the term is
+# defined here.
+assert_in_range_folded "row 46: an audit note is defined for the revert's search" \
+  "$ORCH_SKILL" 'An audit note is one block quote line that begins `> **Amendment ` — that line alone, never the clause text around it.' \
+  "$RESUME_LINE" "$RULINGS_LINE"
+assert_in_range_folded "row 46: the revert searches the note's block before the whole plan" \
+  "$ORCH_SKILL" 'Search the note'"'"'s block first' \
+  "$RESUME_LINE" "$RULINGS_LINE"
+assert_in_range_folded "row 46: exactly one match inside the block is the target" \
+  "$ORCH_SKILL" 'When exactly one clause inside that block matches, that clause is the target.' \
+  "$RESUME_LINE" "$RULINGS_LINE"
+# Narrowing must never turn a revert that works today into a stop: a note
+# placed after another block by an older skill version still resolves.
+assert_in_range_folded "row 46: no match inside the block falls back to the whole plan" \
+  "$ORCH_SKILL" 'When no clause inside that block matches, search the whole plan the same way' \
+  "$RESUME_LINE" "$RULINGS_LINE"
+assert_in_range_folded "row 46: the major-error counts are the counts after narrowing" \
+  "$ORCH_SKILL" 'The counts in the sentence below are the counts this search ends with.' \
+  "$RESUME_LINE" "$RULINGS_LINE"
+# With only one of the two searches narrowed, the other one's stop fires
+# anyway and the rule changes no behaviour.
+assert_in_range_folded "row 46: the ruling-commit search is narrowed the same way" \
+  "$ORCH_SKILL" 'Narrow that search to the note'"'"'s block first, and fall back to the whole plan the same way.' \
+  "$RESUME_LINE" "$RULINGS_LINE"
+assert_in_range_folded "row 46: two searches ending in different blocks is a major error" \
+  "$ORCH_SKILL" 'When the two searches end on clauses in blocks with different headings, this is a major error — stop and report it, never guess a clause.' \
   "$RESUME_LINE" "$RULINGS_LINE"
 
 # --- end of checks ---
