@@ -8,6 +8,66 @@
 > (`REPOZY/superpowers-optimized`) and are kept unchanged as history; any
 > testing they describe was not done here.
 
+## v7.38.0 — a code reviewer that reads the real code
+
+**Problem.** A repository can configure a textconv filter, a program that
+turns a file into text before git compares it, or an external diff driver, a
+program that replaces git's own comparison. v7.37.0 turned both off for the
+plan file only. The review package, the diff file every code reviewer reads,
+was still built through them, so a reviewer could judge text that is not in
+the repository.
+
+**Change.** All four reads of the `review-package` script and all five
+fallback reads in the reviewer templates now carry
+`--no-ext-diff --no-textconv`.
+
+**Effect.** A review round judges the committed code. The sdd-scripts suite
+goes from 193 to 207 checks and reviewer-templates from 244 to 269. Nothing
+to migrate.
+
+Row 54 of the orchestration worklist. It was never observed in a run.
+
+**The row named three reads; nine were open.** The three named reads are the
+fallback a reviewer uses only when the review package is missing. The main
+path had the same defect: `skills/subagent-driven-development/scripts/review-package`
+builds the package with two `git diff` and two `git show` reads, and none
+turned the helper programs off. Two more fallback reads stood in the task
+reviewer template and in the requesting-code-review template. Each of the four
+prose files now states the rule and its reason, so a later edit cannot keep
+the options and lose the reason.
+
+**Measured, not assumed.** On macOS with git 2.50.1, a fixture repository
+configures a textconv filter and both external driver mechanisms
+(`diff.<name>.command` and `diff.external`). Before the fix the package held
+the helper's text and none of the real lines. A modified file is the stronger
+case: a textconv filter turns both sides into the same text, so the change
+disappears from the diff completely. `--stat`, `--numstat`, `--name-only` and
+`git log --oneline` run no helper program, so on the two `--stat` reads the
+options change nothing today. They stay, for the v7.37.0 reason: one uniform
+spelling cannot be got wrong. Because no fixture can show a `--stat` read
+losing them, one check reads the script and requires the options on each of
+its four reads.
+
+**What the review round changed.** A correctness review, an adversarial
+review and mutation testing found no defect in the fix. Mutation testing found
+that the wording checks counted only the spelling `git diff`: an added
+`git show`, `git log -p` or `git --no-pager diff` read passed. The checks now
+find a content read by a pattern, refuse the opposite options `--ext-diff` and
+`--textconv`, and hold the whole multi-code-review skill at its present count
+of reads without the options (one, a prose description). Seven mutations that
+first passed now fail. One is accepted as not caught: a rule sentence negated
+in prose.
+
+**Not covered, and recorded as row 55.** The adversarial review showed a
+different class. A `* binary` attribute makes git print `Binary files differ`
+in place of the code, and a replace reference makes git show another commit's
+content. Both were reproduced; `--text` and `--no-replace-objects` were
+measured as counter-measures. They need a decision on whether the local
+configuration of a reviewed repository is trusted, so they are not part of
+this release.
+
+---
+
 ## v7.37.0 — a revert that reads the plan's own text
 
 **Problem.** A repository can configure a textconv filter, a program that
