@@ -8,6 +8,69 @@
 > (`REPOZY/superpowers-optimized`) and are kept unchanged as history; any
 > testing they describe was not done here.
 
+## v7.37.0 — a revert that reads the plan's own text
+
+**Problem.** A repository can configure a textconv filter, a program that
+turns a file into text before git compares it, or an external diff driver, a
+program that replaces git's own comparison. The orchestrating-development
+skill already called `--no-ext-diff --no-textconv` mandatory for a reviewer's
+diff. Its own ten reads of the plan file carried neither option.
+
+**Change.** Every diff of the plan file now carries both options, and the
+skill states once what a read without them would cost.
+
+**Effect.** A revert restores the plan's own text instead of a helper
+program's output. Nothing to migrate.
+
+Row 53 of the orchestration worklist. It was never observed in a run.
+
+**What the ten reads could do.** The worst is the step that takes the old text
+of an amended clause before restoring it: that text came from the diff, so a
+helper program's output would have been written into the plan. Three more
+reads back the checks that exist to stop a wrong write; those checks would
+have passed while seeing nothing. The last four are the crash-repair path,
+which decides from a diff whether an amendment was already applied, so a
+rewritten diff could apply it twice.
+
+**Measured, not assumed.** On macOS with git 2.50.1, in a scratch repository
+with both kinds of helper program configured: `git diff` runs both by default;
+`git show <commit> -- <path>` runs a textconv filter by default but not an
+external diff driver; the file read `git show <commit>:<path>` runs neither.
+An external driver prints whatever the helper prints, never a recognisable
+refusal, so the failure would not announce itself.
+
+**One spelling, not two.** Both options are written on every diff read, even
+on `git show`, where `--no-ext-diff` turns nothing off today. Two accurate
+spellings would be two things to remember and two patterns to check; one
+uniform spelling cannot be got wrong, and it survives a change in git's own
+defaults. No sentence claims that both options are load-bearing everywhere.
+The seven file reads, which need no option, are left as they are.
+
+**How it was found.** Not by looking for it. A design step for worklist rows
+49 to 52 rejected the redesign those rows were opened for, and this defect
+turned up while one lens's claim about helper programs was being checked. It
+outranks all four of those rows, which end at a stop rather than at wrong
+text, so it shipped first.
+
+**Tests.** The in-run-rulings suite goes from 737 checks to 742. Three hold
+row 53: one finds every read of a plan diff by its shape and requires both
+options on each, and two hold the rule's consequence, so a later edit cannot
+keep the options and lose the reason for them. A fourth pins the rule sentence
+itself. The checks were written before the fix and verified failing.
+
+One review round and one mutation-testing round ran against this branch. Both
+found real holes in the first version of those checks, and every finding was
+replayed before it was accepted: the counting check first matched two literal
+commands, so a read added later was invisible to it, and the rule sentence
+could be weakened or deleted with the suite still green. All ten mutations
+now fail.
+
+**Still open.** The same helper programs are not turned off for a reviewer's
+own diff reads in `skills/multi-code-review/`. A configured helper would show
+a reviewer text that is not in the repository, so every finding of that round
+would be made against code that does not exist. That is recorded as row 54 and
+is not fixed here, because row 53 scopes itself to the plan file.
+
 ## v7.36.0 — an audit note that still finds its clause
 
 **Problem.** For an amended plan clause that carries no marker, the quote
