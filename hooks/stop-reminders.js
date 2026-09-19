@@ -142,26 +142,42 @@ function matchesSession(entry, sessionId) {
 }
 
 /**
- * Read recent edits from the edit log (last 30 minutes), filtered to the current session.
+ * A path inside the worktree of a subagent. Claude Code creates the folder
+ * `.claude/worktrees/agent-a<16 hexadecimal digits>/` for a subagent that runs
+ * with worktree isolation, also for a named subagent (six samples, measured
+ * 2026-09-19). The edit log records such edits under the parent session's id.
+ * They are throwaway work, for example mutation testing, so no reminder counts
+ * them. A worktree that the main session entered has a name of another form
+ * and is still counted. Both path separators match, for Windows paths.
  */
-function getRecentEdits(sessionId) {
+const SUBAGENT_WORKTREE_PATTERN = /(?:^|[/\\])\.claude[/\\]worktrees[/\\]agent-a[0-9a-f]{16}[/\\]/;
+
+/**
+ * Read the edit log entries of the current session that are newer than cutoff.
+ * Edits inside a subagent's own worktree are left out.
+ */
+function readSessionEditsAfter(cutoff, sessionId) {
   try {
     if (!fs.existsSync(EDIT_LOG)) return [];
-
-    const content = fs.readFileSync(EDIT_LOG, 'utf8');
-    const lines = content.split('\n').filter(Boolean);
-    const cutoff = new Date(Date.now() - 30 * 60 * 1000);
-
-    return lines
+    return fs.readFileSync(EDIT_LOG, 'utf8')
+      .split('\n').filter(Boolean)
       .map(parseLogLine)
       .filter(entry =>
         entry &&
         new Date(entry.timestamp) > cutoff &&
-        matchesSession(entry, sessionId)
+        matchesSession(entry, sessionId) &&
+        !SUBAGENT_WORKTREE_PATTERN.test(entry.filePath)
       );
   } catch {
     return [];
   }
+}
+
+/**
+ * Read recent edits from the edit log (last 30 minutes), filtered to the current session.
+ */
+function getRecentEdits(sessionId) {
+  return readSessionEditsAfter(new Date(Date.now() - 30 * 60 * 1000), sessionId);
 }
 
 /**
@@ -183,16 +199,7 @@ function getLastSavedEntryTime() {
  * If timestamp is null, returns all session entries (i.e. no [saved] baseline exists).
  */
 function getEditsAfter(timestamp, sessionId) {
-  try {
-    if (!fs.existsSync(EDIT_LOG)) return [];
-    const cutoff = timestamp || new Date(0);
-    return fs.readFileSync(EDIT_LOG, 'utf8')
-      .split('\n').filter(Boolean)
-      .map(parseLogLine)
-      .filter(e => e && new Date(e.timestamp) > cutoff && matchesSession(e, sessionId));
-  } catch {
-    return [];
-  }
+  return readSessionEditsAfter(timestamp || new Date(0), sessionId);
 }
 
 /**
