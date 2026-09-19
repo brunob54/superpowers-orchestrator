@@ -3748,20 +3748,32 @@ assert_rule_near() { # desc anchor-text lines-after needle [start-line]
 }
 # Row 49: the uniqueness test at insertion uses the comparison of the revert.
 ROW49_ANCHOR='Add words until no other place inside the note'
-assert_rule_near "row 49: the uniqueness test compares as the revert compares" "$ROW49_ANCHOR" 8 \
+assert_rule_near "row 49: the uniqueness test compares as the revert compares" "$ROW49_ANCHOR" 11 \
   'Make this test exactly as the revert of Resume step 3 makes its search: a `'"'"'` in the quote matches either `'"'"'` or `"` in the plan.' "$ANSWERS_LINE"
-assert_rule_near "row 49: the rule says what a stricter test would cost" "$ROW49_ANCHOR" 8 \
+assert_rule_near "row 49: the rule says what a stricter test would cost" "$ROW49_ANCHOR" 11 \
   'a quote that is unique only as written would match both at the revert' "$ANSWERS_LINE"
+# Review round 1, F3. Adding words cannot end when the whole clause stands twice.
+assert_rule_near "row 49: a whole clause that stands twice is quoted whole and the note says so" "$ROW49_ANCHOR" 11 \
+  'When the whole clause is quoted and another place inside the block still holds the quote, quote the whole clause and state this in the note'"'"'s paragraph.' "$ANSWERS_LINE"
+assert_rule_near "row 49: the rule states what the revert then does" "$ROW49_ANCHOR" 11 \
+  'A revert of this ruling then stops on more than one match, and the user restores the clause.' "$ANSWERS_LINE"
 # Row 50: a quote that finds no clause names a later ruling when one is there.
 ROW50_ANCHOR='When the audit note quotes no opening'
-assert_rule_near "row 50: a zero match looks for a later ruling in the note's block" "$ROW50_ANCHOR" 14 \
+assert_rule_near "row 50: a zero match looks for a later ruling in the note's block" "$ROW50_ANCHOR" 16 \
   'When the quote matches no clause, look inside the note'"'"'s block for an `**Amendment <k>` note or an `(amended by ruling <k>)` marker whose number `<k>` is higher than `<m>`.'
-assert_rule_near "row 50: the report names the later ruling" "$ROW50_ANCHOR" 14 \
+assert_rule_near "row 50: the report names the later ruling" "$ROW50_ANCHOR" 16 \
   'When one stands there, name ruling `<k>` in the report'
-assert_rule_near "row 50: the rule says why the descending order does not cover the case" "$ROW50_ANCHOR" 14 \
+assert_rule_near "row 50: the rule says why the descending order does not cover the case" "$ROW50_ANCHOR" 16 \
   'the descending order above undoes only the rulings that this resume reverts'
-assert_rule_near "row 50: both cases stop" "$ROW50_ANCHOR" 14 \
+assert_rule_near "row 50: both cases stop" "$ROW50_ANCHOR" 16 \
   'Otherwise report only that the quote matches no clause. Stop in both cases'
+# Review round 1, F1. A marked clause is never found by its quote, so the
+# zero-match rule did not reach a marked clause whose marker a later ruling
+# replaced.
+assert_rule_near "row 50: a marked clause whose marker is gone is never searched by the quote" "$ROW50_ANCHOR" 16 \
+  'no clause of the plan carries `(amended by ruling <m>)`, and `git show <ruling commit>:<plan path>` does carry it, a later ruling can have replaced the marker. Never search by the quote then.'
+assert_rule_near "row 50: the marked case names the later ruling and stops" "$ROW50_ANCHOR" 16 \
+  'name ruling `<k>` when it stands there, and stop'
 # Row 51: a marked clause is never found by its quote.
 ROW51A_ANCHOR='Quote the whole clause when it has fewer than eight'
 assert_rule_near "row 51: a marked clause is the exception to the uniqueness rule" "$ROW51A_ANCHOR" 10 \
@@ -3776,20 +3788,25 @@ assert_rule_near "row 51: the ruling commit's plan is searched by the marker for
 assert_rule_near "row 51: the marker search of the ruling commit's plan gives its reason" "$ROW51B_ANCHOR" 5 \
   'the ruling commit added the marker, and the quote of a marked clause is not required to be unique'
 ROW51C_ANCHOR='sentence states; never widen this search.'
-assert_rule_near "row 51: the plan before the ruling is never searched by the quote of a marked clause" "$ROW51C_ANCHOR" 8 \
-  'For a marked clause, make no search by the quote in that output'
-assert_rule_near "row 51: the old text of a marked clause comes from the change that added the marker" "$ROW51C_ANCHOR" 8 \
-  'Find the added line of the ruling commit'"'"'s diff that carries `(amended by ruling <m>)`, and take the old text of the clause from the removed lines of that same change'
+# Review round 1, F2. The first wording forbade the quote search for a marked
+# clause, which the search needs to read the whole old clause; two entries
+# amended in one hunk could then not be told apart.
+assert_rule_near "row 51: more than one match is no major error for a marked clause" "$ROW51C_ANCHOR" 10 \
+  'For a marked clause, more than one match in that output is not a major error, because the quote of a marked clause is not required to be unique'
+assert_rule_near "row 51: a failed choice by position stops" "$ROW51C_ANCHOR" 10 \
+  'When this does not leave exactly one clause, this is a major error — stop and report it.'
+assert_rule_near "row 51: the old clause of a marked clause is chosen by the position of the marker line" "$ROW51C_ANCHOR" 10 \
+  'Find the added line of the ruling commit'"'"'s diff that carries `(amended by ruling <m>)`. The header of the hunk that holds this line — the line that starts with `@@` — gives the line numbers of the earlier version. The old clause is the matching clause that stands at those lines.'
 # Row 52: a repaired note follows the rules of a first insertion, at all three
 # sites that insert only the missing note.
 ROW52A_ANCHOR='was made, so insert only the missing note. For an unmarked clause,'
 assert_rule_near "row 52: a note repaired at Resume follows every rule of a first insertion" "$ROW52A_ANCHOR" 7 \
-  'A missing note that this step inserts, for a marked or an unmarked clause, is written under every rule of step 2 of "Plan amendment"'
+  'A missing note that this step inserts is written under every rule of step 2 of "Plan amendment"'
 assert_rule_near "row 52: the Resume repair names the uniqueness test" "$ROW52A_ANCHOR" 7 \
-  'its quote passes the same uniqueness test as the quote of a first insertion'
+  'For an unmarked clause, its quote passes the same uniqueness test as the quote of a first insertion. For a marked clause, the exception that step 2 states applies.'
 ROW52B_ANCHOR='as that clause reads in the plan now.'
 assert_rule_near "row 52: a note repaired on a retry follows every rule of a first insertion" "$ROW52B_ANCHOR" 4 \
-  'Build that quote under every rule of step 2 above, the uniqueness test included' "$ANSWERS_LINE"
+  'Build that quote under every rule of step 2 above: the uniqueness test for an unmarked clause, and its exception for a marked clause.' "$ANSWERS_LINE"
 
 # --- end of checks ---
 

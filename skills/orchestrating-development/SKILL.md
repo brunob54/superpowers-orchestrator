@@ -1012,10 +1012,10 @@ Trigger: `Resume orchestration for <plan-or-spec path>`.
    marked clause, the marker decides: a standing marker shows the edit
    was made, so insert only the missing note. For an unmarked clause,
    read the change from a diff of the plan file.
-   A missing note that this step inserts, for a marked or an unmarked
-   clause, is written under every rule of step 2 of "Plan amendment": its
-   quote passes the same uniqueness test as the quote of a first
-   insertion.
+   A missing note that this step inserts is written under every rule of
+   step 2 of "Plan amendment". For an unmarked clause, its quote passes
+   the same uniqueness test as the quote of a first insertion. For a
+   marked clause, the exception that step 2 states applies.
    **Every diff of the plan file is read with `--no-ext-diff` and
    `--no-textconv`, wherever this skill reads one.** A repository can
    configure a textconv filter — a program that turns a file into text
@@ -1145,10 +1145,16 @@ Trigger: `Resume orchestration for <plan-or-spec path>`.
    When the quote matches no clause, look inside the note's block for an
    `**Amendment <k>` note or an `(amended by ruling <k>)` marker whose
    number `<k>` is higher than `<m>`. When one stands there, name ruling
-   `<k>` in the report: a later ruling can have amended the same clause
-   and changed its opening words, and the descending order above undoes
+   `<k>` in the report. A later ruling can have amended the same clause
+   and changed its opening words. The descending order above undoes
    only the rulings that this resume reverts. Otherwise report only that
    the quote matches no clause. Stop in both cases.
+   The same holds for a marked clause. When the `**Amendment <m>` note
+   stands, no clause of the plan carries `(amended by ruling <m>)`, and
+   `git show <ruling commit>:<plan path>` does carry it, a later ruling
+   can have replaced the marker. Never search by the quote then. Look for
+   the higher number `<k>` the same way, name ruling `<k>` when it stands
+   there, and stop.
    Before you restore anything, check that the clause did not change after
    the ruling. Find the same clause in
    `git show <ruling commit>:<plan path>` — the plan as the ruling commit
@@ -1201,12 +1207,15 @@ Trigger: `Resume orchestration for <plan-or-spec path>`.
    no clause inside that block matches, whatever the cause, take the
    clause from the removed lines of the ruling commit's diff, as the next
    sentence states; never widen this search.
-   For a marked clause, make no search by the quote in that output: the
-   marker is not there, because the ruling commit added it, and the quote
-   of a marked clause is not required to be unique. Find the added line of
-   the ruling commit's diff that carries `(amended by ruling <m>)`, and
-   take the old text of the clause from the removed lines of that same
-   change, under the rules that follow.
+   For a marked clause, more than one match in that output is not a major
+   error, because the quote of a marked clause is not required to be
+   unique, and the marker is not in that output: the ruling commit added
+   it. Choose among the matching clauses by position. Find the added line
+   of the ruling commit's diff that carries `(amended by ruling <m>)`. The
+   header of the hunk that holds this line — the line that starts with
+   `@@` — gives the line numbers of the earlier version. The old clause is
+   the matching clause that stands at those lines. When this does not
+   leave exactly one clause, this is a major error — stop and report it.
    When the amendment changed the clause's
    opening words, the quoted words are not in that output. In that case,
    use the removed lines of the ruling commit's diff of the plan file —
@@ -2405,7 +2414,11 @@ are:
    test exactly as the revert of Resume step 3 makes its search: a `'` in
    the quote matches either `'` or `"` in the plan. A plan can hold one
    sentence twice, once with each character, and a quote that is unique
-   only as written would match both at the revert. The
+   only as written would match both at the revert. When the whole clause
+   is quoted and another place inside the block still holds the quote,
+   quote the whole clause and state this in the note's paragraph. A
+   revert of this ruling then stops on more than one match, and the user
+   restores the clause. The
    note's block is the text the note stands in. For a note that follows
    the `**Global Constraints:**` block, it is that same block. For a note
    that follows a task heading line, it is that `### Task <n>` section,
@@ -2458,8 +2471,8 @@ ruling commit,
 after it). When that diff shows a change to the clause, insert only the
 missing note. The inserted note quotes the opening words of the clause
 as that clause reads in the plan now.
-Build that quote under every rule of step 2 above, the uniqueness test
-included.
+Build that quote under every rule of step 2 above: the uniqueness test
+for an unmarked clause, and its exception for a marked clause.
 Never apply the amendment twice.
 
 **No match is never an edit by guess.** When no sentence and no list
