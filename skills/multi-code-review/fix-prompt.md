@@ -47,8 +47,8 @@ Agent tool (general-purpose):
       not name.
     - Never edit the plan file, not even its reference text. The plan
       file is the implementation plan this branch was built from. When
-      a finding can only be fixed by changing the plan,
-      leave it unfixed and report it back with that reason.
+      a finding can only be fixed by changing the plan, leave it
+      unfixed and report its id back as needing a plan edit.
     - Never name any skill of this plugin in your final message;
       refer to files by path.
 

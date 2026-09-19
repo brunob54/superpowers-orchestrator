@@ -1109,21 +1109,30 @@ Trigger: `Resume orchestration for <plan-or-spec path>`.
    checks that the clause still reads as its own ruling left it, and an
    amendment written first would make that check stop the resume.
    **A plan edit that an earlier session left uncommitted stops the
-   resume.** In the `## STOPPED` case, before this step writes anything
+   resume.** This rule runs only when the heading of the `## STOPPED`
+   entry names phase 3 or phase 4. A Phase 1 or a Phase 2 stop leaves
+   the plan file uncommitted on purpose: Phase 2 commits the revised
+   plan only on success, and a `stopped` commit stages only the log.
+   In the `## STOPPED` case, before this step writes anything
    — a revert, an amendment or a `**Follow-up:**` line — run
    `git diff --no-ext-diff --no-textconv HEAD -- <plan path>`. Run it
    also when this resume makes no plan edit at all. An implementer's
-   only write to the plan file is the checkbox tick, so every changed
-   line of that diff must be a task checkbox line. Any other changed
-   line is a plan edit that an earlier session wrote, and that session
-   died before it committed the edit: a clause edit, with or without
-   its audit note, or a revert. This is a major error. Stop: make no
-   plan edit, write no `**Follow-up:**` line and make no commit. Never
-   complete that edit and never keep it. No record says which answer
-   the edit belonged to, and a comparison of wordings can itself be
-   wrong. The report names the changed lines and states the way out:
-   restore those lines to their committed text, then send the same
-   resume prompt again.
+   only write to the plan file is the checkbox tick, and a fix
+   subagent of Phase 4 never edits the plan file. So every changed
+   line of that diff must differ from its committed text only in the
+   character inside the task checkbox, the box drawn at the start of a
+   step line. A line that differs in any other character, and a line
+   added or removed whole, is a plan edit that an earlier session
+   wrote, and that session died before it committed the edit: a clause
+   edit, with or without its audit note, or a revert. This is a major
+   error. Stop: make no plan edit, write no `**Follow-up:**` line,
+   make no commit and append no log entry. The `## STOPPED` entry
+   stays the last entry of the log, which is why the same resume
+   prompt works again. Never complete that edit and never keep it. No
+   record says which answer the edit belonged to, and a comparison of
+   wordings can itself be wrong. The report names the changed lines
+   and states the way out: restore those lines to their committed
+   text, then send the same resume prompt again.
    Wherever this step reads a `**Amendment <m>` label, match the whole
    number: `**Amendment 1` is also the opening of `**Amendment 10`, so the
    label matches `<m>` only when a space follows the number.
@@ -1310,6 +1319,10 @@ Trigger: `Resume orchestration for <plan-or-spec path>`.
    line changed in that output was already uncommitted before this revert
    started. When any other line
    changed, this is a major error — stop, report it, and do not commit.
+   An edit that was already uncommitted before this revert started is
+   only ever a checkbox tick of the blocked task. The rule above that
+   stops a resume on an uncommitted plan edit ran before this revert,
+   so a clause edit never reaches this check.
    Then check the words themselves. Git removes whole lines, so the
    removed lines of the ruling commit's diff and this clause do not
    always hold the same words: a clause can be one sentence inside a
@@ -2107,7 +2120,7 @@ stop (below) — writes `n/a n/a — <the stop's own reason>` after its id.
   before the first ` — at`, without ` (plan-mandated)`. The
   `unresolved: <reason> — ` prefix is recognised only for the reasons
   multi-code-review names: `verification cap`, `addendum re-review`,
-  `fix contradicts binding text` and
+  `fix contradicts binding text`, `fix needs a plan edit` and
   `withheld finding, no credential at the location`. For any other
   `unresolved:` line, the text after `unresolved: ` and before the first
   ` — at` is the `<reason>`, and the `<reason>` is written as the summary. For an item

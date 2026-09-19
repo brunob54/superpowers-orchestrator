@@ -1000,6 +1000,14 @@ code has been revised since, so a re-pass is meaningful):
      carried item whose premise is a harness property is checked the same
      way before it is logged `user-decision`. Log each under the round's
      dispositions, without a source annotation.
+   - **The fix subagent reports an id back as needing a plan edit:**
+     the fix prompt tells it never to edit the plan file, and to leave
+     unfixed a finding that only a plan edit can fix. Record every id
+     reported back that way as `unresolved: fix needs a plan edit`
+     (blocking) in the round entry, never as `fixed`, also when the
+     same fix commit fixed other ids. This is not a failed fix: never
+     re-dispatch a fix for that id. The same holds for a
+     verification-cycle fix and for an addendum fix.
    - **Fix subagent fails or its covering tests fail:** re-dispatch once
      with the failure appended. Before that re-dispatch — and before
      continuing after a second failure — do two steps, in this order.
@@ -1421,6 +1429,7 @@ secret value; the same applies to command output quoted in fix reports.
 Canonical dispositions — Critical/Important:
 `fixed — <summary> → <sha>` | `rejected: <reason>` | `user-decision` |
 `unresolved: <reason>` (the reasons this skill names:
+`unresolved: fix needs a plan edit`, step 4;
 `unresolved: verification cap`, step 6; `unresolved: addendum re-review`
 and `unresolved: fix contradicts binding text`, After the Loop); Minor:
 `fixed — <summary> → <sha>` | `carried` |
