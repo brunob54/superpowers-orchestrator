@@ -61,10 +61,11 @@ function shouldFire(sessionId) {
 /**
  * Write the guard of this session. Also delete every per-session marker,
  * guard and edit log file that is older than 7 days, which is every file in
- * the log folder that has the name form of one. This includes a file of this
- * session. That is harmless: the hook never looks further back than 7 days
- * for unsaved edits, so a marker or an edit line of that age changes no
- * result, and every append renews the age of an edit log.
+ * the log folder whose name matches the pattern of a per-session file. This
+ * includes a file of this session. That is harmless: the hook never looks
+ * further back than 7 days for unsaved edits, so a marker or an edit line of
+ * that age changes no result, and every append sets the modification time of
+ * the edit log to the present time.
  * Limit (from reasoning, not measured): the cleanup reads the time of a file
  * and then deletes the file. When a session rewrites its marker, which was
  * older than 7 days, between these two steps, the cleanup deletes the new
