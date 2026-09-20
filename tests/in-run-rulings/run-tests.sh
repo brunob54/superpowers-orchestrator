@@ -2081,8 +2081,9 @@ assert_in_range_folded "reverting a plan amendment also reverts the fix it autho
   "$RESUME_LINE" "$RULINGS_LINE"
 # Row 79. Measured on git 2.50.1: `git revert` follows a folder rename and
 # writes a file of the revert into the other folder, a path outside the list.
-# With `merge.directoryRenames=true` it overwrites an ignored file there, ends
-# with exit code 0 and prints no message. `-c merge.directoryRenames=false` on
+# With `merge.directoryRenames=true` it overwrites an ignored file there and
+# ends with exit code 0. It prints a "Path updated" line about the rename on
+# standard output, and no warning about the overwritten file. `-c merge.directoryRenames=false` on
 # the command keeps every change of the revert on the listed paths.
 R79_REVERT_COMMAND='git -c merge.directoryRenames=false revert --no-commit <sha>'
 assert_in_range_folded_exact "the fix commit is found by the addendum's fixed line and reverted into the resume commit, and the revert follows no folder rename" \
@@ -2091,9 +2092,9 @@ assert_in_range_folded_exact "the fix commit is found by the addendum's fixed li
 assert_absent_in_range_folded "row 79: the plain revert command is no instruction any more" "$ORCH_SKILL" \
   '(`git revert --no-commit <sha>`' "$RESUME_LINE" "$RULINGS_LINE" exact
 # The reason stands directly below the command: the range is the line of the
-# command and the 8 lines after it.
+# command and the 9 lines after it.
 R79_COMMAND_LINE="$(line_containing_after "$ORCH_SKILL" "$R79_REVERT_COMMAND" "$RESUME_LINE")"
-R79_REASON_END="$((${R79_COMMAND_LINE:-0} + 9))"
+R79_REASON_END="$((${R79_COMMAND_LINE:-0} + 10))"
 assert_in_range_folded_exact "row 79: the rule sentence of the reason" \
   "$ORCH_SKILL" 'The `-c merge.directoryRenames=false` part stops git from following a folder rename, made by the fix commit or by a later commit, and writing a file of the revert into the other folder:' \
   "$R79_COMMAND_LINE" "$R79_REASON_END"
@@ -2101,7 +2102,7 @@ assert_in_range_folded "row 79: the condition of the reason" \
   "$ORCH_SKILL" 'that path stands outside the list, no line of the pre-check script reads it,' \
   "$R79_COMMAND_LINE" "$R79_REASON_END"
 assert_in_range_folded_exact "row 79: the consequence of the reason" \
-  "$ORCH_SKILL" 'and git would overwrite an ignored file there, with no message when the configuration of the user says `true`. **On a non-zero exit from that command**' \
+  "$ORCH_SKILL" 'and git would overwrite an ignored file there; when the configuration of the user says `true`, git does that with exit code 0 and with no warning about the overwritten file. **On a non-zero exit from that command**' \
   "$R79_COMMAND_LINE" "$R79_REASON_END"
 assert_in_range_folded "an unrevertable fix is re-raised by the next invocation instead" \
   "$ORCH_SKILL" 're-raises the finding against the restored clause' \
@@ -2180,9 +2181,15 @@ R74_LIST_COMMAND="\`git show $R74_LIST_TAIL\`"
 # which names the listed paths, fails. Row 79: a later commit renamed a parent
 # folder, and git writes a file of the revert into the other folder. The
 # script reports both: a path, or a parent folder, that the fix commit holds
-# and HEAD does not hold. A later commit can also put a folder where the fix
-# commit holds a file; the revert ends with exit code 0 there, so the script
-# compares the two object types. The hash stands on one line only (`c=<sha>`):
+# and HEAD does not hold. When only a parent folder is gone, the narrow revert
+# ends with exit code 0 and stays inside the list: it puts the file back into
+# a folder that the branch no longer holds, or, after a rename that changes
+# only the letter case, under the other spelling of the folder name. A later
+# commit can also put a folder where the fix commit holds a file. When that
+# commit moved the file into the folder with equal content, the revert ends
+# with exit code 0 and changes the moved file, outside the list; with other
+# content it ends with exit code 1 and CONFLICT (file/directory). So the
+# script compares the two object types. The hash stands on one line only (`c=<sha>`):
 # a placeholder that nobody replaced is a syntax error, which is output.
 # Review round 1 of rows 76 to 78 (measured). C1: the fix commit replaced the
 # tracked file `d` by `d/x.txt` and the user keeps an ignored `d/junk.dat`;
@@ -2191,7 +2198,7 @@ R74_LIST_COMMAND="\`git show $R74_LIST_TAIL\`"
 # folder and is quiet, so its first line reports a wrong current folder. I1: a
 # line added inside the fence passed, so the two fence lines are pinned too.
 assert_in_range_folded_exact "rows 74 and 76 to 80: one list feeds every later rule, and the eight cases of the pre-check script are named" \
-  "$ORCH_SKILL" "Its third line lists the paths the fix commit touched ($R74_LIST_COMMAND lists those paths; \`--no-renames\` makes a renamed file appear under both its names, \`-z\` prints each name unquoted, and every later rule of this revert takes its paths from this one list: the cleanup, the undo before a stop, and the reverted paths that the resume commit names). The script prints a line in eight cases. The current folder is not the top folder of the repository: the script reads each path from the current folder. The name of a listed path holds a character outside letters, digits, \`.\`, \`_\`, \`/\`, \`@\`, \`+\`, \`=\`, \`,\` and \`-\`, or begins with \`-\` or \`=\`: git prints such a name quoted or reads it as a pattern, or the shell expands it, so the commands below, which take a typed name, would miss the file or reach other files. The path carries a local change. An ignored file stands on the path or, when the path is a folder on disk, under it: \`git status --porcelain\` does not list an ignored file, and the revert overwrites or deletes it with no warning. The path stands on disk and does not exist at HEAD: an untracked file, or the same name in another letter case on a file system that ignores case. The path is a folder at HEAD and is not a folder in the fix commit: a later commit put a folder where the fix commit holds a file, or no entry. The path, or a parent folder of the path, exists in the fix commit and does not exist at HEAD: a later commit deleted or renamed it, so the revert would change a file outside this list, or change nothing, and the resume commit, which names the listed paths, would fail. A parent folder name of the path stands on disk and is not a real folder: the revert would replace that file with a folder and give no warning. Never type a path into the script and never change its letters list: a range such as \`A-Z\` lets an accented letter pass in some shells." \
+  "$ORCH_SKILL" "Its third line lists the paths the fix commit touched ($R74_LIST_COMMAND lists those paths; \`--no-renames\` makes a renamed file appear under both its names, \`-z\` prints each name unquoted, and every later rule of this revert takes its paths from this one list: the cleanup, the undo before a stop, and the reverted paths that the resume commit names). The script prints a line in eight cases. The current folder is not the top folder of the repository: the script reads each path from the current folder. The name of a listed path holds a character outside letters, digits, \`.\`, \`_\`, \`/\`, \`@\`, \`+\`, \`=\`, \`,\` and \`-\`, or begins with \`-\` or \`=\`: git prints such a name quoted or reads it as a pattern, or the shell expands it, so the commands below, which take a typed name, would miss the file or reach other files. The path carries a local change. An ignored file stands on the path or, when the path is a folder on disk, under it: \`git status --porcelain\` does not list an ignored file, and the revert overwrites or deletes it with no warning. The path stands on disk and does not exist at HEAD: an untracked file, or the same name in another letter case on a file system that ignores case. The path is a folder at HEAD and is not a folder in the fix commit: a later commit put a folder where the fix commit holds a file, or no entry. The path, or a parent folder of the path, exists in the fix commit and does not exist at HEAD: a later commit deleted or renamed it. When the path itself is gone, the revert would change a file outside this list, or change nothing, and the resume commit, which names the listed paths, would fail. When only a parent folder is gone, the revert would put the file back into a folder that the branch no longer holds, or, after a rename that changes only the letter case, under the other spelling of the folder name. A parent folder name of the path stands on disk and is not a real folder: the revert would replace that file with a folder and give no warning. Never type a path into the script and never change its letters list: a range such as \`A-Z\` lets an accented letter pass in some shells." \
   "$RESUME_LINE" "$RULINGS_LINE"
 # Print the number of the first line of file $1, from line $3 up to and not
 # including line $4, that is equal to $2 as a whole line.
@@ -4215,7 +4222,7 @@ assert_in_range_folded "row 45: the reason a revert is written before this resum
   "$ORCH_SKILL" 'an amendment written first would make that check stop the resume' \
   "$RESUME_LINE" "$RULINGS_LINE"
 assert_in_range_folded "row 59: the reason a retry can succeed, and the causes that stay" \
-  "$ORCH_SKILL" 'What stopped the earlier attempt may have been a local change or a local file in the working tree (a changed, untracked or ignored file, a file that stands where a folder is needed, or a run of the script from a folder that is not the top folder), which can be gone now. It may also have been a property of the fix commit that the pre-check script reports (a special name, a rename that changes only the letter case, a folder that the fix commit replaced by a file or by a symbolic link), which stays. Or it was a later commit of the branch that deleted or renamed a listed path or one of its parent folders, or put a folder on a listed path, which stays as well. When the cause still stands, the other half'"'"'s own rule takes the `— fix <sha> not reverted` branch again.' \
+  "$ORCH_SKILL" 'What stopped the earlier attempt may have been a local change or a local file in the working tree (a changed, untracked or ignored file, a file that stands where a folder is needed, or a run of the script from a folder that is not the top folder), which can be gone now. It may also have been a property of the fix commit that the pre-check script reports (a special name, a rename that changes only the letter case, a folder that the fix commit replaced by a file or by a symbolic link), which stays. Or it was a later commit of the branch that deleted or renamed a listed path or one of its parent folders, or put a folder on a listed path; that normally stays too, until a still later commit puts the path back. When the cause still stands, the other half'"'"'s own rule takes the `— fix <sha> not reverted` branch again.' \
   "$RESUME_LINE" "$RULINGS_LINE"
 assert_absent_in_range_folded "rows 76 to 78: no sentence says that the cause of a failed revert is never a property of the fix commit" "$ORCH_SKILL" \
   'never a property of the fix commit' "$RESUME_LINE" "$RULINGS_LINE" fragment

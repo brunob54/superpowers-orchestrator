@@ -250,6 +250,11 @@ newrepo s14; printf 'a\nb\nc\n' > dd; add_all; git rm -q dd; fix; mkdir dd; prin
 check_alarm_line "the fix deleted the file dd, a later commit made the folder dd/" "${FOLDER_AT_HEAD}dd"
 newrepo s18; printf 'a\nb\nc\n' > dd; add_all; printf 'a\nFIX\nc\n' > dd; fix; git rm -q dd; mkdir dd; printf 'other\n' > dd/in.txt; later
 check_alarm_line "the fix changed the file dd, a later commit made the folder dd/" "${FOLDER_AT_HEAD}dd"
+# Equal content: git reads the later commit as a rename. Measured: without an
+# alarm the revert command ends with exit code 0 there and stages a change of
+# dd/in.txt, a path outside the list.
+newrepo s18same; printf 'a\nb\nc\n' > dd; add_all; printf 'a\nFIX\nc\n' > dd; fix; git mv dd tmpname; mkdir dd; git mv tmpname dd/in.txt; later
+check_alarm_line "the fix changed the file dd, a later commit moved it to dd/in.txt with equal content" "${FOLDER_AT_HEAD}dd"
 # The accepted cost: this revert would succeed and stay inside the list. The
 # script still stops it, because it cannot tell a deleted folder from a
 # renamed folder.

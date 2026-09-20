@@ -1185,7 +1185,8 @@ Trigger: `Resume orchestration for <plan-or-spec path>`.
    symbolic link), which stays.
    Or it was a later commit of the branch that deleted or renamed a
    listed path or one of its parent folders, or put a folder on a listed
-   path, which stays as well.
+   path; that normally stays too, until a still later commit puts the
+   path back.
    When the cause still stands, the other half's own rule takes
    the `— fix <sha> not reverted` branch again. When that revert succeeds,
    append `— fix <sha> reverted` after that item, because this record is
@@ -1476,9 +1477,13 @@ Trigger: `Resume orchestration for <plan-or-spec path>`.
    a later commit put a folder where the fix commit holds a file, or no
    entry. The path, or a parent folder of the path, exists in the fix
    commit and does not exist at HEAD: a later commit deleted or renamed
-   it, so the revert would change a file outside this list, or change
-   nothing, and the resume commit, which names the listed paths, would
-   fail. A parent folder name
+   it. When the path itself is gone, the revert would change a file
+   outside this list, or change nothing, and the resume commit, which
+   names the listed paths, would fail.
+   When only a parent folder is gone, the revert would put the file back
+   into a folder that the branch no longer holds, or, after a rename
+   that changes only the letter case, under the other spelling of the
+   folder name. A parent folder name
    of the path stands on disk and is not a real folder: the revert would
    replace that file with a folder and give no warning. Never type a
    path into the script and never change its letters list: a range such
@@ -1496,8 +1501,9 @@ Trigger: `Resume orchestration for <plan-or-spec path>`.
    a folder rename, made by the fix commit or by a later commit, and
    writing a file of the revert into the other folder: that path stands
    outside the list, no line of the pre-check script reads it, and git
-   would overwrite an ignored file there, with no message when the
-   configuration of the user says `true`.
+   would overwrite an ignored file there; when the configuration of the
+   user says `true`, git does that with exit code 0 and with no warning
+   about the overwritten file.
    **On a non-zero exit from that command** the exit code names the
    case. Exit 1 is a conflict, and the checkout is left mid-revert: git
    writes conflict markers into the conflicting files, stages the clean
