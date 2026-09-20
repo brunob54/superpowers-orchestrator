@@ -29,13 +29,14 @@
 # guard therefore starts the suite again as a child process, with a marker
 # variable set and with `LC_MESSAGES=C`, so that bash prints the message in
 # English. The wrapper copies the standard error of the child to a log file
-# and still shows it. The child loads the guard again, sees the marker, removes
-# it from its environment (see limit 12), and runs the body of the suite with the ERR trap. The body runs one time. When
-# the child ends, the wrapper ends with exit code 1 if the log file holds a
-# line of the form `<script>: line <number>: <command>: command not found`.
-# In every other case the wrapper ends with the exit code of the child. The
-# wrapper does not start when the suite is loaded with `source`, or when the
-# guard is loaded from a file that is not $0 (measured without this rule:
+# and still shows it. The child loads the guard again, sees the marker,
+# removes it from its environment (see limit 12), and runs the body of the
+# suite with the ERR trap. The body runs one time. When the child ends, the
+# wrapper ends with exit code 1 if the log file holds a line of the form
+# `<script>: line <number>: <command>: command not found`. In every other
+# case the wrapper ends with the exit code of the child. The wrapper does
+# not start when the suite is loaded with `source`, or when the guard is
+# loaded from a file that is not $0 (measured without this rule:
 # `bash -c 'source suite'` ran `bash bash` and ended with exit code 126).
 # The wrapper uses no named pipe and no process substitution (neither is
 # reliable in Git Bash on Windows).
@@ -134,9 +135,17 @@
 # The name of the marker variable. The re-run wrapper sets it for the child.
 GUARD_INNER_RUN_VAR='__GUARD_INNER_RUN'
 # The form of the message of bash: `<script>: line <number>: <command>:
-# command not found`. The `.\{0,1\}` allows one more character at the end of
-# the line: Git Bash on Windows can end the line with a carriage return.
-GUARD_NOT_FOUND_PATTERN=': line [0-9]*: .*: command not found.\{0,1\}$'
+# command not found`. The pattern allows one carriage return at the end of
+# the line, and no other character: Git Bash on Windows can end the line
+# with a carriage return.
+GUARD_NOT_FOUND_PATTERN=': line [0-9]*: .*: command not found'$'\r''\{0,1\}$'
+
+# guard_not_found_count <file>: print the number of lines of <file> that have
+# the form of the message. tests/suite-guard also calls this function.
+# LC_ALL=C: grep reads the file as bytes. Measured in a UTF-8 locale: grep
+# did not match a line whose command name held a byte that is not valid
+# UTF-8.
+guard_not_found_count() { LC_ALL=C grep -c -- "$GUARD_NOT_FOUND_PATTERN" "$1"; }
 
 # The re-run wrapper. It starts only when the marker is not set, and only when
 # the file that loads the guard is the script that bash runs ($0).
@@ -148,10 +157,7 @@ if [ -z "${!GUARD_INNER_RUN_VAR:-}" ] && [ "${BASH_SOURCE[1]:-}" = "$0" ]; then
   # File descriptor 3 keeps the standard output of the child away from `tee`.
   { env "$GUARD_INNER_RUN_VAR=1" LC_MESSAGES=C "$BASH" "$0" "$@" 2>&1 1>&3 | tee "$__guard_log" >&2
     __guard_code=${PIPESTATUS[0]}; } 3>&1
-  # LC_ALL=C: grep reads the log file as bytes. Measured in a UTF-8 locale:
-  # grep did not match a line whose command name held a byte that is not
-  # valid UTF-8.
-  __guard_count="$(LC_ALL=C grep -c -- "$GUARD_NOT_FOUND_PATTERN" "$__guard_log")"
+  __guard_count="$(guard_not_found_count "$__guard_log")"
   if [ "$__guard_count" -gt 0 ]; then
     echo "FAIL: the standard error of $0 holds $__guard_count \"command not found\" line(s); the suite fails, because a check that does not run proves nothing" >&2
     __guard_code=1

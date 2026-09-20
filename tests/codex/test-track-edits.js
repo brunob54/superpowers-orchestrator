@@ -192,6 +192,8 @@ const MARKER_CASES = [
     { old_string: 'Goal: one', new_string: 'Goal: two' }, false],
   ['T8e: an Edit that names [saved] outside a heading does not move the marker', 'Edit',
     { old_string: 'Goal: one', new_string: 'Goal: explain the [saved] tag' }, false],
+  ['T8o: an Edit that adds a heading without the tag does not move the marker', 'Edit',
+    { old_string: OLDER_SAVED_HEADING, new_string: OLDER_SAVED_HEADING + '## 2026-09-20 decisions\n' }, false],
   ['T8j: an Edit that adds a [saved] heading after three spaces moves the marker', 'Edit',
     { old_string: OLDER_SAVED_HEADING, new_string: OLDER_SAVED_HEADING + '   ' + SAVED_HEADING }, true],
   ['T8k: an Edit that adds a [saved] line after four spaces (a code block) does not move the marker', 'Edit',
@@ -368,6 +370,8 @@ const SKILL_RULES = [
     /the delimiter `'[a-z0-9_]+'` is in single quotes, and it must stay so/],
   ['the entry must hold no line that is equal to the delimiter',
     /the entry must hold no line that is equal to the delimiter/],
+  ['do not replace the delimiter with a common word',
+    /the delimiter is an unusual word for this reason; do not replace it with a common word/],
 ];
 
 const foldedSkillText = fs.readFileSync(SKILL_FILE, 'utf8').replace(/\s+/g, ' ').toLowerCase();
