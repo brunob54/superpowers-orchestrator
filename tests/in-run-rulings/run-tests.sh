@@ -2103,6 +2103,9 @@ assert_in_range_folded "the ledger line is removed on disk only, never staged" \
 # touched, and leaves `REVERT_HEAD` behind. The paragraph must name the
 # pre-check, the cleanup and the verification, or "make no code change at all"
 # names no reachable state.
+assert_in_range_folded "the pre-revert state is saved again before each revert" \
+  "$ORCH_SKILL" '**Before starting each revert**, save the tree' \
+  "$RESUME_LINE" "$RULINGS_LINE"
 assert_in_range_folded "the revert checks for local changes to the paths it would touch first" \
   "$ORCH_SKILL" 'output as the pre-revert state, and check it for local changes to any path the fix commit touched' \
   "$RESUME_LINE" "$RULINGS_LINE"
@@ -2143,7 +2146,7 @@ assert_absent_in_range_folded "a non-zero exit is no longer said to be never unt
 # cleanup now leaves `REVERT_HEAD` in place: the resume commit deletes it, and
 # a stop runs `git revert --quit` last.
 assert_in_range_folded "the cleanup leaves REVERT_HEAD in place" \
-  "$ORCH_SKILL" 'Undo the markers and the staged hunks with explicit paths only: for each path the fix commit touched, named one at a time, run `git reset -- <path>` and then `git checkout -- <path>`. Do not run `git revert --quit` here: `REVERT_HEAD` must stay while an earlier revert of this resume stands staged, the resume commit deletes it, and a stop runs `git revert --quit` last, as the rule above states. **A path the fix commit deleted is the exception**' \
+  "$ORCH_SKILL" 'Undo the markers and the staged hunks with explicit paths only: for each path the fix commit touched, named one at a time, run `git reset -- <path>` and then `git checkout -- <path>`. Do not run `git revert --quit` here: `REVERT_HEAD` must stay while an earlier revert of this resume stands staged, the resume commit deletes it, and a stop runs `git revert --quit` last, as the rule above states. **A path the fix commit deleted is the exception**: `git revert --no-commit` re-created it as a staged addition, so `git reset -- <path>` leaves it untracked and `git checkout -- <path>` then fails with "pathspec did not match any file known to git" — for such a path (one the saved pre-revert state did not list, now untracked after the reset), remove it explicitly with `rm -- <path>` instead of `git checkout -- <path>`, or, when the path exists at HEAD, restore it with `git checkout HEAD -- <path>`.' \
   "$RESUME_LINE" "$RULINGS_LINE"
 assert_absent_in_range_folded "the cleanup no longer ends the sequencer state first" "$ORCH_SKILL" \
   'end the sequencer state with' "$RESUME_LINE" "$RULINGS_LINE" fragment
@@ -4336,6 +4339,7 @@ R63_B_SENTENCES=(
   '**A stop after this resume staged a fix-commit revert undoes that revert first.**'
   'A `stopped` commit names its paths, so it leaves the staged changes of the revert in place, and any commit deletes `REVERT_HEAD`: the next resume would find staged code that nothing explains.'
   'So before such a stop, for each path of each fix commit this resume reverted, named one at a time, run `git reset -- <path>` and then `git checkout -- <path>`, with the rule below for a path the fix commit deleted, and run `git revert --quit` last: `REVERT_HEAD` must stay for as long as one staged change of the revert stays.'
+  'A fix commit whose revert git refused is not one of them: git changed nothing there, and the two commands would delete a local change on its paths.'
 )
 R63_B_WHOLE=''
 for sentence in "${R63_B_SENTENCES[@]}"; do

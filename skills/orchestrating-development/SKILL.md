@@ -1399,7 +1399,9 @@ Trigger: `Resume orchestration for <plan-or-spec path>`.
    and then `git checkout -- <path>`, with the rule below for a path
    the fix commit deleted, and run `git revert --quit` last:
    `REVERT_HEAD` must stay for as long as one staged change of the
-   revert stays.
+   revert stays. A fix commit whose revert git refused is not one of
+   them: git changed nothing there, and the two commands would delete a
+   local change on its paths.
    **Reverting the plan is only half of
    the revert.** Which half depends on the reverted ruling's phase: a
    Phase 4 ruling's other half is a fix commit, covered by the rest of
@@ -1409,7 +1411,7 @@ Trigger: `Resume orchestration for <plan-or-spec path>`.
    the branch against a clause the user has just reinstated. So, in the
    same resume commit, revert that fix commit too: find it by the
    `fixed — <summary> → <sha>` line the review-log addendum recorded for
-   that id. **Before starting the revert**, save the tree's current
+   that id. **Before starting each revert**, save the tree's current
    `git status --porcelain` output as the pre-revert state, and check it
    for local changes to any path the fix commit touched
    (`git show --name-only --format= <sha>` lists those paths): when one of
