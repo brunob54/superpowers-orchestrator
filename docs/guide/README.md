@@ -1018,12 +1018,13 @@ the paths of a fix commit that renamed a file hold both names of that file,
 so the way out above lists the old name too.
 
 Since v7.47.0 the run checks every path of a fix before it reverts that fix.
-One fixed script does the check, and it replaces the `git ls-files` read of
-v7.46.0. The run does not revert a fix automatically in four cases. A path
-name holds a space, an accent or another unusual character. A path has a
-local change. A file stands on disk under a path that the last commit does
-not hold: for example an ignored file, or a rename that changes only the
-letter case on a disk that ignores case. A file stands where the revert
+One fixed script does the check. The run does not revert a fix automatically
+in six cases. The script does not run in the top folder of the repository. A
+path name holds a space, an accent or another unusual character. A path has a
+local change. An ignored file stands on a path or under it. A file stands on
+disk under a path that the last commit does not hold: for example an
+untracked file, or a rename that changes only the letter case on a disk that
+ignores case. A file stands where the revert
 needs a folder. The record then reads `fix <sha> not reverted`, and no file
 of yours changes. The next review raises the finding again, so that a new
 fix commit corrects the code.

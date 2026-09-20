@@ -2121,7 +2121,7 @@ assert_in_range_folded "a locally-changed path takes the not-reverted branch wit
 # deletes an unstaged change that the pre-check did not list, so a refusal runs
 # no cleanup at all.
 assert_in_range_folded "the pre-check names what git does over each kind of local change" \
-  "$ORCH_SKILL" 'When the script prints anything at all, on standard output or standard error, do not start the revert at all — `git revert` refuses over an unstaged or untracked one, merges the revert into a staged one or conflicts with it, and overwrites an ignored one with no warning — and take the "not reverted" branch below directly' \
+  "$ORCH_SKILL" 'When the script prints anything at all, on standard output or standard error, do not start the revert at all — `git revert` refuses over an unstaged or untracked change, merges the revert into a staged change or conflicts with it, and overwrites an ignored file with no warning — and take the "not reverted" branch below directly' \
   "$RESUME_LINE" "$RULINGS_LINE"
 # Rows 74 and 73. Measured on git 2.50.1. Without `--no-renames` the path list
 # of a fix commit that renamed a file holds only the new name (and it depends
@@ -2142,16 +2142,21 @@ assert_in_range_folded "the pre-check names what git does over each kind of loca
 R74_LIST_TAIL='--name-only --no-renames --format= <sha>'
 R74_LIST_COMMAND="\`git show $R74_LIST_TAIL\`"
 # Rows 76, 77 and 78. Measured on git 2.50.1, bash 3.2 and zsh 5.9. One fixed
-# script replaces the comparison of names and the `git ls-files` read. Row 77:
+# script replaces the comparison of names and holds the `git ls-files` read. Row 77:
 # git prints a name with a space or an accent quoted, and reads a name such as
 # `*.txt` as a pattern. Row 78: on a file system that ignores case, a file
 # stands on disk under a path that HEAD does not hold. Row 76: an ignored file
 # stands where the revert needs a folder. The range form `A-Za-z` lets
 # `café.txt` pass under bash 3.2 with a UTF-8 (8-bit Unicode Transformation
 # Format) locale, and zsh fails on a bare `=*` pattern, so the script is pinned
-# line by line.
-assert_in_range_folded_exact "rows 74, 76, 77 and 78: one list feeds every later rule, and the four cases of the pre-check script are named" \
-  "$ORCH_SKILL" "($R74_LIST_COMMAND lists those paths; \`--no-renames\` makes a renamed file appear under both its names, \`-z\` prints each name unquoted, and every later rule of this revert takes its paths from this one list: the cleanup, the undo before a stop, and the reverted paths that the resume commit names). For each path the script prints a line in four cases. The name holds a character outside letters, digits, \`.\`, \`_\`, \`/\`, \`@\`, \`+\`, \`=\`, \`,\` and \`-\`, or begins with \`-\` or \`=\`: git prints such a name quoted or reads it as a pattern, so the commands below, which take a typed name, would miss the file or reach other files. The path carries a local change. The path stands on disk and does not exist at HEAD: an untracked file, an ignored file, which \`git status --porcelain\` does not list, or the same name in another letter case on a file system that ignores case. A parent folder name of the path stands on disk and is not a real folder: the revert would replace that file with a folder and give no warning. Never type a path into the script and never change its letters list: a range such as \`A-Z\` lets an accented letter pass in some shells." \
+# line by line. Review round 1 (measured). C1: the fix commit replaced the
+# tracked file `d` by `d/x.txt` and the user keeps an ignored `d/junk.dat`;
+# without the `git ls-files` read the script is quiet and the revert deletes
+# that file. F3: run from a sub-folder, the script reads each path from that
+# folder and is quiet, so its first line reports a wrong current folder. I1: a
+# line added inside the fence passed, so the two fence lines are pinned too.
+assert_in_range_folded_exact "rows 74, 76, 77 and 78: one list feeds every later rule, and the six cases of the pre-check script are named" \
+  "$ORCH_SKILL" "Its second line lists the paths the fix commit touched ($R74_LIST_COMMAND lists those paths; \`--no-renames\` makes a renamed file appear under both its names, \`-z\` prints each name unquoted, and every later rule of this revert takes its paths from this one list: the cleanup, the undo before a stop, and the reverted paths that the resume commit names). The script prints a line in six cases. The current folder is not the top folder of the repository: the script reads each path from the current folder. The name of a listed path holds a character outside letters, digits, \`.\`, \`_\`, \`/\`, \`@\`, \`+\`, \`=\`, \`,\` and \`-\`, or begins with \`-\` or \`=\`: git prints such a name quoted or reads it as a pattern, or the shell expands it, so the commands below, which take a typed name, would miss the file or reach other files. The path carries a local change. An ignored file stands on the path or, when the path is a folder on disk, under it: \`git status --porcelain\` does not list an ignored file, and the revert overwrites or deletes it with no warning. The path stands on disk and does not exist at HEAD: an untracked file, or the same name in another letter case on a file system that ignores case. A parent folder name of the path stands on disk and is not a real folder: the revert would replace that file with a folder and give no warning. Never type a path into the script and never change its letters list: a range such as \`A-Z\` lets an accented letter pass in some shells." \
   "$RESUME_LINE" "$RULINGS_LINE"
 # Print the number of the first line of file $1, from line $3 up to and not
 # including line $4, that is equal to $2 as a whole line.
@@ -2159,6 +2164,9 @@ whole_line_number() { # file text start end
   text="$2" awk -v a="$3" -v b="$4" \
     'NR >= a && NR < b && $0 == ENVIRON["text"] { print NR; exit }' "$1"
 }
+# The first line of the pre-check script area: the fence lines of the script
+# are not unique in the Resume section, so the search starts at these words.
+PRECHECK_ANCHOR_LINE="$(line_containing_after "$ORCH_SKILL" 'pre-check script below' "$RESUME_LINE")"
 # One check per line of $5 and later: the first line must stand somewhere
 # inside the range $3..$4 of file $2, and every later line must stand on the
 # line directly below the line before it.
@@ -2177,24 +2185,28 @@ assert_consecutive_whole_lines() { # desc file start end line...
     fi
   done
 }
-assert_consecutive_whole_lines "rows 76 to 78: the pre-check script" "$ORCH_SKILL" "$RESUME_LINE" "$RULINGS_LINE" \
-  '   git show -z --name-only --no-renames --format= <sha> |' \
+assert_consecutive_whole_lines "rows 76 to 78: the pre-check script and its fence" "$ORCH_SKILL" "${PRECHECK_ANCHOR_LINE:-$RULINGS_LINE}" "$RULINGS_LINE" \
+  '   ```bash' \
+  '   [ -z "$(git rev-parse --show-prefix)" ] || echo "not the top folder"' \
+  "   git show -z $R74_LIST_TAIL |" \
   '   while IFS= read -r -d '"''"' p; do' \
   '     case "$p" in -*|[=]*|*[!abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789._/@+=,-]*) echo "special name: $p";; esac' \
   '     git --literal-pathspecs status --porcelain -- "$p"' \
+  '     git --literal-pathspecs ls-files --others --ignored --exclude-standard -- "$p"' \
   '     if [ -e "$p" ] || [ -L "$p" ]; then' \
   '       git rev-parse -q --verify "HEAD:$p" >/dev/null || echo "on disk, not at HEAD: $p"' \
   '     fi' \
   '     while p=$(dirname -- "$p"); [ "$p" != . ]; do' \
   '       if [ -L "$p" ] || { [ -e "$p" ] && [ ! -d "$p" ]; }; then echo "not a folder: $p"; fi' \
   '     done' \
-  '   done'
+  '   done' \
+  '   ```'
 for range in "$RESUME_LINE $RULINGS_LINE" "$READ_EXCEPTION_LINE $READ_EXCEPTION_END"; do
   assert_absent_in_range_folded "row 74: no path list is taken without --no-renames (lines ${range% *} to ${range#* })" "$ORCH_SKILL" \
     '--name-only --format=' ${range% *} ${range#* } fragment
   assert_absent_in_range_folded "rows 74 and 73: no command changes the spelling of a name on one side of a comparison (lines ${range% *} to ${range#* })" "$ORCH_SKILL" \
     'core.quotePath' ${range% *} ${range#* } fragment
-  for replaced_read in 'ls-files' '<those paths>' 'cat-file'; do
+  for replaced_read in '<those paths>' 'cat-file'; do
     assert_absent_in_range_folded "rows 76 to 78: the pre-check script is the only read of the listed paths, no '$replaced_read' (lines ${range% *} to ${range#* })" "$ORCH_SKILL" \
       "$replaced_read" ${range% *} ${range#* } fragment
   done
@@ -4144,7 +4156,7 @@ assert_in_range_folded "row 45: the reason a revert is written before this resum
   "$ORCH_SKILL" 'an amendment written first would make that check stop the resume' \
   "$RESUME_LINE" "$RULINGS_LINE"
 assert_in_range_folded "row 59: the reason a retry can succeed, and the causes that stay" \
-  "$ORCH_SKILL" 'What stopped the earlier attempt may have been a local change in the working tree, which can be gone now. It may also have been a property of the fix commit that the pre-check script reports (a special name, a rename that changes only the letter case, a parent folder name that is a file), which stays. When the cause still stands, the other half'"'"'s own rule takes the `— fix <sha> not reverted` branch again.' \
+  "$ORCH_SKILL" 'What stopped the earlier attempt may have been a local change or a local file in the working tree (a changed, untracked or ignored file, or a file that stands where a folder is needed), which can be gone now. It may also have been a property of the fix commit that the pre-check script reports (a special name, a rename that changes only the letter case, a folder that the fix commit replaced by a file or by a symbolic link), which stays. When the cause still stands, the other half'"'"'s own rule takes the `— fix <sha> not reverted` branch again.' \
   "$RESUME_LINE" "$RULINGS_LINE"
 assert_absent_in_range_folded "rows 76 to 78: no sentence says that the cause of a failed revert is never a property of the fix commit" "$ORCH_SKILL" \
   'never a property of the fix commit' "$RESUME_LINE" "$RULINGS_LINE" fragment

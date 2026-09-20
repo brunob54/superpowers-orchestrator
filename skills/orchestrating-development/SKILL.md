@@ -1175,10 +1175,13 @@ Trigger: `Resume orchestration for <plan-or-spec path>`.
    reading `— fix <sha> not reverted` records that the earlier resume left
    the fix commit standing. Do not skip the other half of the revert then: make it
    now for that `<sha>`. What stopped the earlier attempt may have been
-   a local change in the working tree, which can be gone now.
+   a local change or a local file in the working tree (a changed,
+   untracked or ignored file, or a file that stands where a folder is
+   needed), which can be gone now.
    It may also have been a property of the fix commit that the pre-check
    script reports (a special name, a rename that changes only the letter
-   case, a parent folder name that is a file), which stays.
+   case, a folder that the fix commit replaced by a file or by a
+   symbolic link), which stays.
    When the cause still stands, the other half's own rule takes
    the `— fix <sha> not reverted` branch again. When that revert succeeds,
    append `— fix <sha> reverted` after that item, because this record is
@@ -1422,10 +1425,12 @@ Trigger: `Resume orchestration for <plan-or-spec path>`.
    no other change:
 
    ```bash
+   [ -z "$(git rev-parse --show-prefix)" ] || echo "not the top folder"
    git show -z --name-only --no-renames --format= <sha> |
    while IFS= read -r -d '' p; do
      case "$p" in -*|[=]*|*[!abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789._/@+=,-]*) echo "special name: $p";; esac
      git --literal-pathspecs status --porcelain -- "$p"
+     git --literal-pathspecs ls-files --others --ignored --exclude-standard -- "$p"
      if [ -e "$p" ] || [ -L "$p" ]; then
        git rev-parse -q --verify "HEAD:$p" >/dev/null || echo "on disk, not at HEAD: $p"
      fi
@@ -1435,20 +1440,28 @@ Trigger: `Resume orchestration for <plan-or-spec path>`.
    done
    ```
 
-   Its first line lists the paths the fix commit touched
+   Its second line lists the paths the fix commit touched
    (`git show --name-only --no-renames --format= <sha>` lists those paths;
    `--no-renames` makes a renamed file appear under both its names,
    `-z` prints each name unquoted, and
    every later rule of this revert takes its paths from this one list:
    the cleanup, the undo before a stop, and the reverted paths that the
-   resume commit names). For each path the script prints a line in four
-   cases. The name holds a character outside letters, digits, `.`, `_`,
+   resume commit names). The script prints a line in six cases.
+   The current folder is not the top folder of the repository: the
+   script reads each path from the current folder.
+   The name of a listed path holds
+   a character outside letters, digits, `.`, `_`,
    `/`, `@`, `+`, `=`, `,` and `-`, or begins with `-` or `=`: git
-   prints such a name quoted or reads it as a pattern, so the commands
+   prints such a name quoted or reads it as a pattern,
+   or the shell expands it, so the commands
    below, which take a typed name, would miss the file or reach other
-   files. The path carries a local change. The path stands on disk and
-   does not exist at HEAD: an untracked file, an ignored file, which
-   `git status --porcelain` does not list, or the same name in another
+   files. The path carries a local change.
+   An ignored file stands on the path or, when the path is a folder on
+   disk, under it: `git status --porcelain` does not list an ignored
+   file, and the revert overwrites or deletes it with no warning.
+   The path stands on disk and
+   does not exist at HEAD: an untracked file,
+   or the same name in another
    letter case on a file system that ignores case. A parent folder name
    of the path stands on disk and is not a real folder: the revert would
    replace that file with a folder and give no warning. Never type a
@@ -1456,9 +1469,9 @@ Trigger: `Resume orchestration for <plan-or-spec path>`.
    as `A-Z` lets an accented letter pass in some shells. When the script
    prints anything at all, on standard output or standard error,
    do not start the revert at all —
-   `git revert` refuses over an unstaged or untracked one, merges the
-   revert into a staged one or conflicts with it, and overwrites an
-   ignored one with no warning — and take the
+   `git revert` refuses over an unstaged or untracked change, merges the
+   revert into a staged change or conflicts with it, and overwrites an
+   ignored file with no warning — and take the
    "not reverted" branch below
    directly. Otherwise revert it without a commit of its own
    (`git revert --no-commit <sha>`), staging the result by explicit

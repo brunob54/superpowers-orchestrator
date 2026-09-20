@@ -3,7 +3,8 @@
 # Resume step 3 of skills/orchestrating-development/SKILL.md holds one fixed
 # script that the orchestrator runs before it reverts a fix commit. This suite
 # takes the script out of the skill file and runs it in fixture repositories,
-# once with bash and once with zsh when zsh is installed. Any output of the
+# once with bash and once with zsh when zsh is installed (`zsh -f`: zsh reads
+# no start-up file of the user). Any output of the
 # script, on standard output or on standard error, means "do not revert".
 # Pure bash + git; no claude invocation.
 # Windows note: avoids /dev/stdin (not available in Git Bash on Windows).
@@ -32,6 +33,11 @@ ALARM=alarm
 SHA_PLACEHOLDER='<sha>'
 # The words of the skill that stand directly before the script.
 SCRIPT_ANCHOR='pre-check script below'
+# The words of the skill that end the paragraph of the script.
+SCRIPT_AREA_END='do not start the revert at all'
+# The opening fence line of the script, with the indent of its list item.
+FENCE_OPEN='   ```bash'
+SCRIPT_LINE_COUNT=13
 
 # All fixtures live under one throwaway folder.
 # pwd -P resolves the /var -> /private/var symbolic link of macOS.
@@ -45,9 +51,9 @@ bold "The skill holds the pre-check script"
 
 # The script is the first fenced bash block after the anchor words. The block
 # stands inside a numbered list item, so every line carries 3 spaces of indent.
-SCRIPT_TEXT="$(awk -v anchor="$SCRIPT_ANCHOR" '
+SCRIPT_TEXT="$(awk -v anchor="$SCRIPT_ANCHOR" -v fence="$FENCE_OPEN" '
   index($0, anchor) > 0 { armed = 1 }
-  armed && !inside && $0 == "   ```bash" { inside = 1; next }
+  armed && !inside && $0 == fence { inside = 1; next }
   inside && $0 == "   ```" { exit }
   inside { sub(/^   /, ""); print }
 ' "$SKILL")"
@@ -63,9 +69,25 @@ else
   bad "one line of the script holds $SHA_PLACEHOLDER (found on $PLACEHOLDER_LINES lines)"
 fi
 
+# assert_count <label> <actual> <expected>
+assert_count() {
+  if [ "$2" = "$3" ]; then ok "$1"; else bad "$1 (expected $3, found $2)"; fi
+}
+assert_count "the script has $SCRIPT_LINE_COUNT lines" \
+  "$(printf '%s\n' "$SCRIPT_TEXT" | grep -c '')" "$SCRIPT_LINE_COUNT"
+assert_count "one line of the skill holds the words '$SCRIPT_ANCHOR'" \
+  "$(grep -cF -- "$SCRIPT_ANCHOR" "$SKILL")" 1
+# A second block near the script would be a second script to run.
+assert_count "one fenced bash block stands between those words and the words '$SCRIPT_AREA_END'" \
+  "$(awk -v anchor="$SCRIPT_ANCHOR" -v last="$SCRIPT_AREA_END" -v fence="$FENCE_OPEN" '
+    index($0, anchor) > 0 { armed = 1 }
+    armed && $0 == fence { count++ }
+    armed && index($0, last) > 0 { exit }
+    END { print count + 0 }' "$SKILL")" 1
+
 SHELLS=(bash)
 if command -v zsh >/dev/null 2>&1; then
-  SHELLS+=(zsh)
+  SHELLS+=('zsh -f')
 else
   skip "zsh is not installed; every case runs with bash only"
 fi
@@ -89,7 +111,8 @@ check_case() {
   local label="$1" expected="$2" hash="${3:-$SHA}" locale="${4:-}" shell out got
   printf '%s\n' "${SCRIPT_TEXT//$SHA_PLACEHOLDER/$hash}" > "$RUN_FILE"
   for shell in "${SHELLS[@]}"; do
-    out="$(env ${locale:+LC_ALL=$locale} "$shell" "$RUN_FILE" 2>&1)"
+    # $shell is not quoted: `zsh -f` must become two words.
+    out="$(env ${locale:+LC_ALL=$locale} $shell "$RUN_FILE" 2>&1)"
     if [ -n "$out" ]; then got="$ALARM"; else got="$QUIET"; fi
     if [ "$got" = "$expected" ]; then
       ok "$label [$shell]: $expected"
@@ -130,6 +153,11 @@ newrepo empty; git commit -q --allow-empty -m fix; SHA=$(git rev-parse HEAD); di
 check_case "empty fix commit over a changed tree" "$QUIET"
 newrepo badhash
 check_case "a hash that names no commit" "$ALARM" 0123456789abcdef
+
+# Review round 1, F3 (measured): from a sub-folder the script reads f.txt as
+# s/f.txt, finds nothing, and a staged user line ends in the resume commit.
+newrepo subfolder; printf 'a\n' > f.txt; mkdir s; printf 'k\n' > s/keep.txt; add_all; printf 'b\n' >> f.txt; fix; printf 'c\n' >> f.txt; git add f.txt; cd s
+check_case "staged change on a listed path, the script runs from a sub-folder" "$ALARM"
 
 bold "A file on disk that HEAD does not hold (rows 73 and 78)"
 
@@ -173,6 +201,23 @@ newrepo r76ok; mkdir d; printf 'x\n' > d/x.txt; printf 'k\n' > d/keep.txt; add_a
 check_case "ordinary folder d that holds an ignored file" "$QUIET"
 newrepo tparent; mkdir d; printf 'x\n' > d/x.txt; add_all; git rm -q d/x.txt; printf 'file\n' > d; fix
 check_case "the fix replaced the folder d/ by a tracked file d" "$ALARM"
+
+bold "An ignored file under a listed path (review round 1, C1)"
+
+# filetofolder <name>: the fix commit replaces the tracked file d by d/x.txt.
+filetofolder() {
+  newrepo "$1"; printf 'file\n' > d; printf '*.dat\n' > .gitignore; add_all
+  git rm -q d; mkdir d; printf 'x\n' > d/x.txt; fix
+}
+# Measured: the revert ends with exit code 0 and deletes d/junk.dat.
+filetofolder c1; printf 'precious\n' > d/junk.dat
+check_case "the fix replaced the file d by d/x.txt, ignored user file d/junk.dat" "$ALARM"
+filetofolder c1safe
+check_case "the fix replaced the file d by d/x.txt, no user file" "$QUIET"
+newrepo subsrc; printf 's\n' > s.txt; add_all; printf 's2\n' > s.txt; git commit -qam s2
+newrepo super; git -c protocol.file.allow=always submodule add -q "$WORK/subsrc" sub >/dev/null 2>&1; git commit -qm addsub
+( cd sub && git checkout -q HEAD~1 ); fix
+check_case "the fix moved a sub-module pointer" "$QUIET"
 
 bold ""
 bold "Results: $PASS passed, $FAIL failed"
