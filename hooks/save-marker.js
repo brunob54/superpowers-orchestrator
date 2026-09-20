@@ -25,7 +25,8 @@ const LOG_DIR = path.join(
 
 const MARKER_KIND = { prefix: 'last-saved-entry', extension: '.txt' };
 const GUARD_KIND = { prefix: 'stop-hook-fired', extension: '.lock' };
-const FILE_KINDS = [MARKER_KIND, GUARD_KIND];
+const EDIT_LOG_KIND = { prefix: 'edit-log', extension: '.txt' };
+const FILE_KINDS = [MARKER_KIND, GUARD_KIND, EDIT_LOG_KIND];
 
 // A per-session file is named `<prefix>-<clean id><extension>`.
 const ID_SEPARATOR = '-';
@@ -59,6 +60,15 @@ function markerFile(sessionId) {
 /** Path of the stop guard of one session. No id gives the old shared file. */
 function guardFile(sessionId) {
   return sessionFile(GUARD_KIND, sessionId);
+}
+
+/**
+ * Path of the edit log of one session. No id gives the old shared file. A
+ * writer only appends to an edit log, and no hook rewrites, renames or trims
+ * one: a rewrite of a file that several processes append to loses lines.
+ */
+function editLogFile(sessionId) {
+  return sessionFile(EDIT_LOG_KIND, sessionId);
 }
 
 /** True for the name of a per-session file, false for the old shared names. */
@@ -119,6 +129,7 @@ module.exports = {
   LOG_DIR,
   MARKER_COMMAND,
   MAX_AGE_MS,
+  editLogFile,
   guardFile,
   markerFile,
   removeOldSessionFiles,

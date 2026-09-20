@@ -78,15 +78,24 @@ function envWithHome(homeDir, extra = {}) {
   return env;
 }
 
+/**
+ * The value of a JavaScript expression in a process with this HOME. Inside the
+ * expression, `m` is the exports of modulePath and `id` is sessionId.
+ */
+function evaluateInHome(homeDir, modulePath, sessionId, expression) {
+  const script =
+    `const m = require(${JSON.stringify(modulePath)});` +
+    `const id = ${JSON.stringify(sessionId === undefined ? null : sessionId)};` +
+    `console.log(JSON.stringify(${expression}));`;
+  const result = spawnSync(process.execPath, ['-e', script], { env: envWithHome(homeDir), encoding: 'utf8' });
+  assert.strictEqual(result.status, 0, `${path.basename(modulePath)} did not load: ${result.stderr}`);
+  return JSON.parse(result.stdout);
+}
+
 /** The exports of hooks/save-marker.js as a process with this HOME sees them. */
 function markerPaths(homeDir, sessionId) {
-  const script =
-    `const m = require(${JSON.stringify(SAVE_MARKER)});` +
-    `const id = ${JSON.stringify(sessionId === undefined ? null : sessionId)};` +
-    'console.log(JSON.stringify({ logDir: m.LOG_DIR, marker: m.markerFile(id), guard: m.guardFile(id), command: m.MARKER_COMMAND }));';
-  const result = spawnSync(process.execPath, ['-e', script], { env: envWithHome(homeDir), encoding: 'utf8' });
-  assert.strictEqual(result.status, 0, `save-marker.js did not load: ${result.stderr}`);
-  return JSON.parse(result.stdout);
+  return evaluateInHome(homeDir, SAVE_MARKER, sessionId,
+    '{ logDir: m.LOG_DIR, marker: m.markerFile(id), guard: m.guardFile(id), command: m.MARKER_COMMAND }');
 }
 
 function runHook(script, payload, homeDir) {
@@ -351,6 +360,67 @@ test('The skill holds the marker command of save-marker.js, in step 4 and alone 
     'The save command must run the marker command after &&');
   assert.strictEqual(blocks.filter(block => block.trim() === command).length, 1,
     'Expected one block that holds the marker command alone');
+});
+
+// ── The edit log of one session (row 70) ─────────────────────────────────────
+
+console.log('\nEdit log: one file per session');
+
+const SHARED_EDIT_LOG = 'edit-log.txt';
+const PLAIN_FILE = 'notes.txt';
+// More lines than the old shared limit of 500, and more than 50 KB.
+const MANY_LINES = 700;
+
+function editLogLine(sessionId, filePath) {
+  return `${new Date().toISOString()} | ${sessionId} | Edit | ${filePath}\n`;
+}
+
+/** Write lines into the shared edit log, which older plugin versions wrote. */
+function seedSharedEditLog(homeDir, lines) {
+  const { logDir } = markerPaths(homeDir);
+  fs.mkdirSync(logDir, { recursive: true });
+  fs.writeFileSync(path.join(logDir, SHARED_EDIT_LOG), lines.join(''));
+}
+
+function expectDecisionLogBlock(result, who) {
+  assert.ok((result.reason || '').includes(DECISION_LOG),
+    `Expected the decision-log block for ${who}, got: ${JSON.stringify(result)}`);
+}
+
+test("T11: an edit by session A removes no line of session B's edits", () => {
+  const { homeDir, cwdDir } = makeHome();
+  const filler = path.join(cwdDir, 'a-long-folder-name-'.repeat(5), PLAIN_FILE);
+  seedSharedEditLog(homeDir, [
+    editLogLine(SESSION_B, path.join(cwdDir, SIGNIFICANT_FILE)),
+    ...Array.from({ length: MANY_LINES }, () => editLogLine(SESSION_B, filler)),
+  ]);
+  trackEdit(homeDir, cwdDir, SESSION_A, 'Edit', PLAIN_FILE, { old_string: 'a', new_string: 'b' });
+  expectDecisionLogBlock(stop(homeDir, cwdDir, SESSION_B), 'session B');
+});
+
+test('T12: a session that was open during the plugin update keeps its earlier edits', () => {
+  const { homeDir, cwdDir } = makeHome();
+  seedSharedEditLog(homeDir, [editLogLine(SESSION_A, path.join(cwdDir, SIGNIFICANT_FILE))]);
+  trackEdit(homeDir, cwdDir, SESSION_A, 'Edit', PLAIN_FILE, { old_string: 'a', new_string: 'b' });
+  expectDecisionLogBlock(stop(homeDir, cwdDir, SESSION_A), 'session A');
+});
+
+test('T13: an edit with a session id goes into the file of that session only', () => {
+  const { homeDir, cwdDir } = makeHome();
+  trackEdit(homeDir, cwdDir, SESSION_A, 'Edit', SIGNIFICANT_FILE, { old_string: 'a', new_string: 'b' });
+  const ownLog = evaluateInHome(homeDir, SAVE_MARKER, SESSION_A, 'm.editLogFile(id)');
+  const sharedLog = evaluateInHome(homeDir, SAVE_MARKER, undefined, 'm.editLogFile(id)');
+  assert.strictEqual(path.basename(sharedLog), SHARED_EDIT_LOG);
+  assert.strictEqual(fs.readFileSync(ownLog, 'utf8').split('\n').filter(Boolean).length, 1);
+  assert.ok(!fs.existsSync(sharedLog), 'The shared edit log must not be written');
+});
+
+test('T14: an edit without a session id is written to the shared log and counted once', () => {
+  const { homeDir, cwdDir } = makeHome();
+  trackEdit(homeDir, cwdDir, undefined, 'Edit', SIGNIFICANT_FILE, { old_string: 'a', new_string: 'b' });
+  const { logDir } = markerPaths(homeDir);
+  assert.deepStrictEqual(fs.readdirSync(logDir).filter(name => name.startsWith('edit-log')), [SHARED_EDIT_LOG]);
+  assert.strictEqual(evaluateInHome(homeDir, STOP_REMINDERS, undefined, 'm.getRecentEdits(id).length'), 1);
 });
 
 // ── The rules that the skill states next to the save command ─────────────────

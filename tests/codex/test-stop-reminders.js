@@ -554,10 +554,12 @@ test('T6: a block deletes per-session files older than 7 days and keeps all othe
   const remaining = files => files.filter(file => fs.existsSync(file));
   const result = evaluateStop(({ hook, logDir }) => {
     writeEditLog(logDir, [editLogLine(TEST_SESSION_ID, SIGNIFICANT_FILE)]);
-    const newFiles = [hook.markerFile(OTHER_SESSION_ID), hook.guardFile(OTHER_SESSION_ID)];
+    const perSessionFiles = sessionId =>
+      [hook.markerFile, hook.guardFile, hook.editLogFile].map(fileOf => fileOf(sessionId));
+    const newFiles = perSessionFiles(OTHER_SESSION_ID);
     // Only the file age decides: the shared files are as old as the deleted ones.
     const sharedFiles = [hook.markerFile(), hook.guardFile()];
-    oldFiles = [hook.markerFile('old-session'), hook.guardFile('old-session')];
+    oldFiles = perSessionFiles('old-session');
     keptFiles = [...newFiles, ...sharedFiles];
     [...oldFiles, ...keptFiles].forEach(file => writeTime(file, 8 * DAY_MS));
     [...oldFiles, ...sharedFiles].forEach(file => setFileAge(file, 8 * DAY_MS));
