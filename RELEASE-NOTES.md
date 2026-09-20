@@ -8,6 +8,81 @@
 > (`REPOZY/superpowers-optimized`) and are kept unchanged as history; any
 > testing they describe was not done here.
 
+## v7.44.0 — a resume stops on a code revert that an earlier session left unfinished
+
+**Problem.** A resume that undoes a Phase 4 fix stages the reverted code and
+commits it later. When the session ended in between, the next resume
+recorded `not reverted` over that staged code. The stop hook blocked at every
+stop of a continuation longer than two minutes. The v7.43.0 release commit
+shipped an empty `VERSION` file, and every suite passed.
+
+**Change.** A resume asks git for `REVERT_HEAD` before it writes anything, and
+stops on it. A stop undoes its own staged reverts first. The stop hook reads
+the payload field `stop_hook_active`. A test compares nine version places.
+
+**Effect.** In-run-rulings checks go from 873 to 899; stop-reminders tests
+from 40 to 47. Update the plugin and restart the command-line interface (CLI).
+
+### Row 63 — an unfinished fix-commit revert
+
+`git revert --no-commit` writes the file `REVERT_HEAD`, and git keeps it until
+the next commit. Resume step 3 of `skills/orchestrating-development/SKILL.md`
+has two new rules.
+
+- **Rule A.** Every resume of the `## STOPPED` case runs
+  `git rev-parse -q --verify REVERT_HEAD` before it writes anything. A printed
+  hash is a major error: the resume writes nothing and makes no commit. Its
+  report lists the paths of the unfinished revert, taken from
+  `git show --name-only --format= <sha>` and never from the
+  `git status --porcelain` output, and states the way out: `git reset -- <path>`
+  and `git checkout -- <path>` for each listed path, `git revert --quit` last.
+  `git revert --abort` is never the way out: it deletes staged work on other
+  paths (measured).
+- **Rule B.** A stop inside a running resume first undoes the reverts that this
+  resume staged. Measured: a `stopped` commit that names its paths deletes
+  `REVERT_HEAD` and leaves the staged code in place.
+- The cleanup of a conflicted revert no longer runs `git revert --quit`.
+  Measured by two reviewers: with an earlier revert of the same resume staged,
+  that command left staged code and no `REVERT_HEAD`. The resume commit deletes
+  the file; a stop runs `git revert --quit` last.
+
+Rejected by measurement: a `git patch-id` comparison of the staged changes
+with the reverse of the fix commit. It finds no match for two fix commits on
+one path, nor for a later change within 3 lines of the fix.
+
+Stated limits: a commit, or a `git reset` without a path, that the user runs
+by hand deletes `REVERT_HEAD`; a session that ends between a cleaned conflict
+and the resume commit costs one more stop with a harmless way out.
+
+### Row 69 — the stop hook reads `stop_hook_active`
+
+`hooks/stop-reminders.js` returns `{}` when the field is strictly `true` OR the
+guard file is younger than two minutes. The field can only remove a block, so
+a platform or version that does not send it behaves as before. Measured:
+Claude Code 2.1.278 sends the field as a boolean on every Stop, also in
+headless mode. The guard file stays: it is the only repeat limit of the
+test-first reminder, which the model cannot clear. "Guard only when the field
+is absent" was rejected by measurement: 5 blocks in 5 quick user turns, against
+1 today. Stated limit: when another plugin's Stop hook blocked first, this hook
+is silent for that chain and blocks at the next user stop.
+
+### Row 71 — one version in every place
+
+`tests/codex/test-version-files.js` (10 tests; the hook unit runner goes from
+15 to 16 suites) compares `VERSION`, `marketplace.json`,
+`plugin.universal.yaml`, the README badge, the two README ranges, the README
+release list and the first `RELEASE-NOTES.md` heading with `plugin.json`, and
+proves each damage on a copy.
+
+### Review
+
+Five design lenses and two rebuttal rounds; a correctness and an adversarial
+review (0 Critical, 2 Important, both fixed); mutation testing, 68 run, 66
+caught, 2 survived (one equivalent, one fixed); one verification pass limited
+to the fixes (0 Critical, 0 Important, 6 of 6 mutations caught). Worklist row
+72 is new: two sentences about `git revert` in the same passage are false for
+some states.
+
 ## v7.43.0 — the stop hook keeps its save state per session
 
 **Problem.** The stop hook kept one save marker and one guard file for all

@@ -2112,8 +2112,16 @@ assert_in_range_folded "a locally-changed path takes the not-reverted branch wit
 assert_in_range_folded "a non-zero revert exit leaves the checkout mid-revert, not untouched" \
   "$ORCH_SKILL" '**On any non-zero exit from that command** the checkout is left mid-revert, never untouched' \
   "$RESUME_LINE" "$RULINGS_LINE"
-assert_in_range "the cleanup ends the sequencer state" \
-  "$ORCH_SKILL" 'git revert --quit' "$RESUME_LINE" "$RULINGS_LINE" exact
+# Row 63, review round 1. The cleanup ran `git revert --quit` first. With an
+# earlier revert of the same resume still staged, that left staged code and no
+# `REVERT_HEAD` (measured), which is the state the row 63 stop cannot see. The
+# cleanup now leaves `REVERT_HEAD` in place: the resume commit deletes it, and
+# a stop runs `git revert --quit` last.
+assert_in_range_folded "the cleanup leaves REVERT_HEAD in place" \
+  "$ORCH_SKILL" 'Undo the markers and the staged hunks with explicit paths only: for each path the fix commit touched, named one at a time, run `git reset -- <path>` and then `git checkout -- <path>`. Do not run `git revert --quit` here: `REVERT_HEAD` must stay while an earlier revert of this resume stands staged, the resume commit deletes it, and a stop runs `git revert --quit` last, as the rule above states. **A path the fix commit deleted is the exception**' \
+  "$RESUME_LINE" "$RULINGS_LINE"
+assert_absent_in_range_folded "the cleanup no longer ends the sequencer state first" "$ORCH_SKILL" \
+  'end the sequencer state with' "$RESUME_LINE" "$RULINGS_LINE" fragment
 assert_in_range_folded "the cleanup restores each touched path by name" \
   "$ORCH_SKILL" 'for each path the fix commit touched, named one at a time, run `git reset -- <path>` and then `git checkout -- <path>`' \
   "$RESUME_LINE" "$RULINGS_LINE"
@@ -4144,7 +4152,10 @@ assert_in_range_folded "row 57: the Phase 3 clause takes all four replacements" 
 # before it writes anything, and stops on any change that is not the character
 # inside a task checkbox. The rule has no retry branch and compares no wording.
 R61_ANCHOR='**A plan edit that an earlier session left uncommitted stops the'
-R61_NEXT_TEXT='Wherever this step reads a `**Amendment <m>` label'
+# Row 63: the rule that follows the row 61 paragraph is the stop on an
+# unfinished fix-commit revert, so its opening is the end of the row 61 range.
+R63_ANCHOR='**A fix-commit revert that an earlier session left unfinished stops'
+R61_NEXT_TEXT="$R63_ANCHOR"
 R61_PREV_TEXT='amendment written first would make that check stop the resume.'
 R61_FROM="$(line_containing_after "$ORCH_SKILL" "$R61_ANCHOR" "$RESUME_LINE")"
 # Review round 1, F6. The line before the rule is searched after the heading of
@@ -4238,6 +4249,87 @@ for word in 'unless' 'except'; do
   assert_absent_in_range_folded "row 62: the rule's own paragraph never says '$word'" "$ORCH_SKILL" \
     "$word" "$R62_FROM" "$R62_NEXT" fragment
 done
+
+# Row 63: a session can die after `git revert --no-commit` staged a fix-commit
+# revert and before the resume commit. The next resume read the staged changes
+# as local changes of someone else and recorded `not reverted` over them. Git
+# keeps the file REVERT_HEAD while a revert is unfinished, and any commit
+# deletes it. Rule A stops a resume that finds REVERT_HEAD, before any write.
+# Rule B undoes the staged reverts before a stop inside a running resume,
+# because the `stopped` commit would delete REVERT_HEAD and leave the staged
+# code. A limit that no check can close: a commit or a `git reset` that the
+# user runs by hand also deletes REVERT_HEAD.
+R63_NEXT_TEXT='Wherever this step reads a `**Amendment <m>` label'
+R63_FROM="$(line_containing_after "$ORCH_SKILL" "$R63_ANCHOR" "$RESUME_LINE")"
+R63_NEXT="$(line_containing_after "$ORCH_SKILL" "$R63_NEXT_TEXT" "${R63_FROM:-$RESUME_LINE}")"
+# The range of every rule A check: the paragraph and the first line after it.
+R63_LINES=$(( ${R63_NEXT:-0} + 1 - ${R63_FROM:-0} ))
+R63_END=$(( ${R63_FROM:-0} + R63_LINES ))
+if [ -n "$R63_FROM" ] && [ -n "$R61_FROM" ] && [ "$R63_FROM" -gt "$R61_FROM" ] \
+  && [ "$(grep -cF -- "$R63_ANCHOR" "$ORCH_SKILL")" -eq 1 ]; then
+  ok "row 63: the stop rule stands once, after the row 61 rule"
+else
+  bad "row 63: the stop rule is missing, misplaced or repeated (row 61 rule at line '$R61_FROM', row 63 rule at line '$R63_FROM')"
+fi
+R63_A_SENTENCES=(
+  '**A fix-commit revert that an earlier session left unfinished stops the resume.**'
+  'This rule runs on every resume of the `## STOPPED` case, whatever phase its heading names: no phase leaves a revert unfinished on purpose.'
+  'Before this step writes anything, and also when the rule above stops the resume, run `git rev-parse -q --verify REVERT_HEAD`.'
+  'When it prints a hash, an earlier session staged a revert with `git revert --no-commit` and died before its resume commit.'
+  'This is a major error. Stop as the rule above does: write nothing, make no commit and append no log entry.'
+  'Any commit deletes `REVERT_HEAD`, and the staged changes stay.'
+  'Never record `not reverted` over these changes: the record would say that no revert was made while half of it stands staged.'
+  'Never complete that revert and never commit it: `REVERT_HEAD` names only the last commit of several reverts, so no record says which staged change belongs to which answer.'
+  'The report names the hash and the whole `git status --porcelain` output, lists the paths of the unfinished revert, and states the way out: for each listed path, run `git reset -- <path>` and then `git checkout -- <path>`, run `git revert --quit` last, then send the same resume prompt again.'
+  'Take those paths from `git show --name-only --format= <sha>`, run for the printed hash and for the fix commit of every ruling that the prompt of this resume overturns, never from the `git status --porcelain` output: that output cannot tell a change of the revert from the staged work of the blocked task.'
+  'For a path that the revert created again, `git checkout -- <path>` fails; the way out removes it with `rm -- <path>`.'
+  'The report also says that these commands delete an edit of the user'"'"'s own on such a path, and that `git revert --abort` is never the way out: it also deletes staged work on every other path.'
+)
+R63_A_WHOLE=''
+for sentence in "${R63_A_SENTENCES[@]}"; do
+  assert_rule_near "row 63, rule A: ${sentence:0:60}" "$R63_ANCHOR" "$R63_LINES" "$sentence"
+  R63_A_WHOLE="$R63_A_WHOLE$sentence "
+done
+assert_in_range_folded_exact "row 63, rule A: the paragraph holds these sentences, in this order, and no other sentence" "$ORCH_SKILL" \
+  "$R63_A_WHOLE$R63_NEXT_TEXT" "$R63_FROM" "$R63_END"
+assert_in_range "row 63, rule A: the command stands on one line" "$ORCH_SKILL" \
+  '   `git rev-parse -q --verify REVERT_HEAD`. When it prints a hash, an' \
+  "$R63_FROM" "$R63_END" exact
+for word in 'unless' 'except' 'does not apply'; do
+  assert_absent_in_range_folded "row 63, rule A: the paragraph never says '$word'" "$ORCH_SKILL" \
+    "$word" "$R63_FROM" "$R63_END" fragment
+done
+assert_in_range_folded "row 63: the permitted reads include the REVERT_HEAD read" "$ORCH_SKILL" \
+  '`git log --merges --format=%h <BASE>..HEAD`, `git rev-parse -q --verify REVERT_HEAD`, `git show <ruling commit>^:<plan path>`,' \
+  "$READ_EXCEPTION_LINE" "$READ_EXCEPTION_END"
+R63_B_ANCHOR='**A stop after this resume staged a fix-commit revert undoes that'
+R63_B_NEXT_TEXT='**Reverting the plan is only half of'
+R63_B_FROM="$(line_containing_after "$ORCH_SKILL" "$R63_B_ANCHOR" "$RESUME_LINE")"
+R63_B_NEXT="$(line_containing_after "$ORCH_SKILL" "$R63_B_NEXT_TEXT" "${R63_B_FROM:-$RESUME_LINE}")"
+R63_B_LINES=$(( ${R63_B_NEXT:-0} + 1 - ${R63_B_FROM:-0} ))
+R63_B_SENTENCES=(
+  '**A stop after this resume staged a fix-commit revert undoes that revert first.**'
+  'A `stopped` commit names its paths, so it leaves the staged changes of the revert in place, and any commit deletes `REVERT_HEAD`: the next resume would find staged code that nothing explains.'
+  'So before such a stop, for each path of each fix commit this resume reverted, named one at a time, run `git reset -- <path>` and then `git checkout -- <path>`, with the rule below for a path the fix commit deleted, and run `git revert --quit` last: `REVERT_HEAD` must stay for as long as one staged change of the revert stays.'
+)
+R63_B_WHOLE=''
+for sentence in "${R63_B_SENTENCES[@]}"; do
+  assert_rule_near "row 63, rule B: ${sentence:0:60}" "$R63_B_ANCHOR" "$R63_B_LINES" "$sentence"
+  R63_B_WHOLE="$R63_B_WHOLE$sentence "
+done
+assert_in_range_folded_exact "row 63, rule B: the paragraph holds these sentences, in this order, directly before the fix-commit revert" "$ORCH_SKILL" \
+  "$R63_B_WHOLE$R63_B_NEXT_TEXT" "$R63_B_FROM" "$(( ${R63_B_FROM:-0} + R63_B_LINES ))"
+# Review round 1, F2. A sentence inserted directly before rule B, for example
+# one that makes the rule optional, passed every check above. The end of the
+# put-back paragraph is pinned to the opening of rule B.
+assert_in_range_folded_exact "row 63, rule B: the rule stands directly after the put-back paragraph" "$ORCH_SKILL" \
+  'never reads this revert'"'"'s half-written text as the blocked task'"'"'s own work. '"$R63_B_ANCHOR" \
+  "$RESUME_LINE" "$RULINGS_LINE"
+if [ "$(grep -cF -- "$R63_B_ANCHOR" "$ORCH_SKILL")" -eq 1 ]; then
+  ok "row 63, rule B: the rule stands once in the skill"
+else
+  bad "row 63, rule B: the rule does not stand exactly once in the skill"
+fi
 
 # --- end of checks ---
 
