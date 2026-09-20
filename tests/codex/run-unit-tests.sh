@@ -54,6 +54,7 @@ run_test "statusline-context-cache" "${SCRIPT_DIR}/test-statusline-cache.js"
 run_test "subagent-guard (SubagentStop)" "${SCRIPT_DIR}/test-subagent-guard.js"
 run_test "protect-secrets (PreToolUse Bash)" "${SCRIPT_DIR}/test-protect-secrets.js"
 run_test "track-edits and context-engine (git ignore entries)" "${SCRIPT_DIR}/test-git-exclude-hooks.js"
+run_test "save marker (track-edits, stop-reminders, context-management save command)" "${SCRIPT_DIR}/test-track-edits.js"
 
 echo "=================================================="
 echo " Results: ${PASS} suites passed, ${FAIL} suites failed"

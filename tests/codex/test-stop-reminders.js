@@ -13,7 +13,9 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 
-const HOOK_MODULE_PATH = path.join(__dirname, '../../hooks/stop-reminders.js');
+const HOOKS_DIR = path.join(__dirname, '../../hooks');
+const HOOK_MODULE_PATH = path.join(HOOKS_DIR, 'stop-reminders.js');
+const SAVE_MARKER_MODULE_PATH = path.join(HOOKS_DIR, 'save-marker.js');
 
 let passed = 0;
 let failed = 0;
@@ -54,8 +56,11 @@ function loadHookWithHome(homeDir) {
 
   process.env.HOME = homeDir;
   process.env.USERPROFILE = homeDir;
-  delete require.cache[require.resolve(HOOK_MODULE_PATH)];
-  const hook = require(HOOK_MODULE_PATH);
+  // Both modules compute the log folder from HOME when they load.
+  for (const modulePath of [HOOK_MODULE_PATH, SAVE_MARKER_MODULE_PATH]) {
+    delete require.cache[require.resolve(modulePath)];
+  }
+  const hook = { ...require(HOOK_MODULE_PATH), ...require(SAVE_MARKER_MODULE_PATH) };
 
   if (prevHome === undefined) delete process.env.HOME;
   else process.env.HOME = prevHome;
@@ -68,12 +73,20 @@ function loadHookWithHome(homeDir) {
 
 const TEST_SESSION_ID = 'test-session-abc123';
 
+const MINUTE_MS = 60 * 1000;
+const DAY_MS = 24 * 60 * MINUTE_MS;
+
+function editLogLine(sessionId, filePath, ageMs = 0) {
+  return `${new Date(Date.now() - ageMs).toISOString()} | ${sessionId} | Edit | ${filePath}\n`;
+}
+
+function writeEditLog(logDir, lines) {
+  fs.writeFileSync(path.join(logDir, 'edit-log.txt'), lines.join(''), 'utf8');
+}
+
 function writeRecentEdits(logDir, filePaths, ageMinutes = 0) {
-  const timestamp = new Date(Date.now() - ageMinutes * 60 * 1000).toISOString();
-  const lines = filePaths
-    .map(filePath => `${timestamp} | ${TEST_SESSION_ID} | Edit | ${filePath}\n`)
-    .join('');
-  fs.writeFileSync(path.join(logDir, 'edit-log.txt'), lines, 'utf8');
+  writeEditLog(logDir, filePaths.map(filePath =>
+    editLogLine(TEST_SESSION_ID, filePath, ageMinutes * MINUTE_MS)));
 }
 
 function writeRecentEdit(logDir, filePath) {
@@ -118,8 +131,8 @@ test('Active guard suppresses reminder output', () => {
   const { homeDir, cwdDir, logDir } = makeTempDirs();
   try {
     writeRecentEdit(logDir, 'src/index.js');
-    fs.writeFileSync(path.join(logDir, 'stop-hook-fired.lock'), new Date().toISOString(), 'utf8');
-    const { evaluatePayload } = loadHookWithHome(homeDir);
+    const { evaluatePayload, guardFile } = loadHookWithHome(homeDir);
+    fs.writeFileSync(guardFile(TEST_SESSION_ID), new Date().toISOString(), 'utf8');
 
     const result = evaluatePayload({ cwd: cwdDir, session_id: TEST_SESSION_ID });
     assert.deepStrictEqual(result, {},
@@ -368,6 +381,157 @@ test('Does not count a source edit that is 31 minutes old', () => {
   const result = evaluateEdits(SOURCE_EDIT, 31);
   assert.deepStrictEqual(result, {},
     `Expected no reminder for an edit outside the 30-minute window, got: ${JSON.stringify(result)}`);
+});
+
+// ── Save marker and stop guard of one session ────────────────────────────────
+// Each session has its own save marker and its own stop guard. The old marker
+// file that all sessions share is still honoured, because old skill text and
+// old handoff documents still write it.
+
+console.log('\nSave marker and stop guard of one session');
+
+const OTHER_SESSION_ID = 'other-session-def456';
+const SIGNIFICANT_FILE = '/project/skills/x/SKILL.md';
+const DECISION_LOG = 'Decision log';
+
+/**
+ * Run one scenario: `arrange` prepares the log folder, then the stop hook
+ * evaluates a stop of TEST_SESSION_ID. `inspect` runs after the stop, while
+ * the temporary folders still exist. Returns the hook result.
+ */
+function evaluateStop(arrange, inspect = () => {}) {
+  const { homeDir, cwdDir, logDir } = makeTempDirs();
+  try {
+    const hook = loadHookWithHome(homeDir);
+    const stop = sessionId => hook.evaluatePayload({ cwd: cwdDir, session_id: sessionId });
+    arrange({ hook, logDir, stop });
+    const result = stop(TEST_SESSION_ID);
+    inspect();
+    return result;
+  } finally {
+    cleanup(homeDir, cwdDir);
+  }
+}
+
+function writeTime(file, ageMs = 0) {
+  fs.writeFileSync(file, new Date(Date.now() - ageMs).toISOString(), 'utf8');
+}
+
+function setFileAge(file, ageMs) {
+  const time = new Date(Date.now() - ageMs);
+  fs.utimesSync(file, time, time);
+}
+
+test('T2: the stop guard of another session does not silence this session', () => {
+  const result = evaluateStop(({ logDir, stop }) => {
+    writeEditLog(logDir, [
+      editLogLine(OTHER_SESSION_ID, SIGNIFICANT_FILE),
+      editLogLine(TEST_SESSION_ID, SIGNIFICANT_FILE),
+    ]);
+    assert.strictEqual(stop(OTHER_SESSION_ID).decision, 'block',
+      'Expected the other session to be blocked first, which sets its guard');
+  });
+  assert.ok((result.reason || '').includes(DECISION_LOG),
+    `Expected a block inside two minutes of the other session's block, got: ${JSON.stringify(result)}`);
+});
+
+test('T2b: the stop guard of this session still silences its next stop', () => {
+  const result = evaluateStop(({ logDir, stop }) => {
+    writeEditLog(logDir, [editLogLine(TEST_SESSION_ID, SIGNIFICANT_FILE)]);
+    assert.strictEqual(stop(TEST_SESSION_ID).decision, 'block', 'Expected the first stop to be blocked');
+  });
+  assert.deepStrictEqual(result, {}, `Expected {} for the second stop, got: ${JSON.stringify(result)}`);
+});
+
+test('T3: the save marker of this session clears its decision-log block', () => {
+  const result = evaluateStop(({ hook, logDir }) => {
+    writeEditLog(logDir, [editLogLine(TEST_SESSION_ID, SIGNIFICANT_FILE, MINUTE_MS)]);
+    writeTime(hook.markerFile(TEST_SESSION_ID));
+  });
+  assert.deepStrictEqual(result, {}, `Expected no block after a save, got: ${JSON.stringify(result)}`);
+});
+
+test('T3b: the save marker of another session does not clear the block', () => {
+  const result = evaluateStop(({ hook, logDir }) => {
+    writeEditLog(logDir, [editLogLine(TEST_SESSION_ID, SIGNIFICANT_FILE, MINUTE_MS)]);
+    writeTime(hook.markerFile(OTHER_SESSION_ID));
+  });
+  assert.ok((result.reason || '').includes(DECISION_LOG),
+    `Expected the decision-log block, got: ${JSON.stringify(result)}`);
+});
+
+test('T3c: an edit later than the save marker is still reported', () => {
+  const result = evaluateStop(({ hook, logDir }) => {
+    writeEditLog(logDir, [editLogLine(TEST_SESSION_ID, SIGNIFICANT_FILE)]);
+    writeTime(hook.markerFile(TEST_SESSION_ID), MINUTE_MS);
+  });
+  assert.ok((result.reason || '').includes(DECISION_LOG),
+    `Expected the decision-log block, got: ${JSON.stringify(result)}`);
+});
+
+test('T4: the old shared save marker still clears the block', () => {
+  const result = evaluateStop(({ hook, logDir }) => {
+    writeEditLog(logDir, [editLogLine(TEST_SESSION_ID, SIGNIFICANT_FILE, MINUTE_MS)]);
+    writeTime(hook.markerFile());
+  });
+  assert.deepStrictEqual(result, {}, `Expected no block, got: ${JSON.stringify(result)}`);
+});
+
+test('T4b: the later of the two markers counts', () => {
+  const result = evaluateStop(({ hook, logDir }) => {
+    writeEditLog(logDir, [editLogLine(TEST_SESSION_ID, SIGNIFICANT_FILE, MINUTE_MS)]);
+    writeTime(hook.markerFile(TEST_SESSION_ID));
+    writeTime(hook.markerFile(), DAY_MS);
+  });
+  assert.deepStrictEqual(result, {}, `Expected no block, got: ${JSON.stringify(result)}`);
+});
+
+test('T6: a block deletes per-session files older than 7 days and keeps all others', () => {
+  let oldFiles;
+  let keptFiles;
+  const remaining = files => files.filter(file => fs.existsSync(file));
+  const result = evaluateStop(({ hook, logDir }) => {
+    writeEditLog(logDir, [editLogLine(TEST_SESSION_ID, SIGNIFICANT_FILE)]);
+    const newFiles = [hook.markerFile(OTHER_SESSION_ID), hook.guardFile(OTHER_SESSION_ID)];
+    // Only the file age decides: the shared files are as old as the deleted ones.
+    const sharedFiles = [hook.markerFile(), hook.guardFile()];
+    oldFiles = [hook.markerFile('old-session'), hook.guardFile('old-session')];
+    keptFiles = [...newFiles, ...sharedFiles];
+    [...oldFiles, ...keptFiles].forEach(file => writeTime(file, 8 * DAY_MS));
+    [...oldFiles, ...sharedFiles].forEach(file => setFileAge(file, 8 * DAY_MS));
+    newFiles.forEach(file => setFileAge(file, 6 * DAY_MS));
+  }, () => {
+    oldFiles = remaining(oldFiles);
+    keptFiles = [keptFiles.length, remaining(keptFiles).length];
+  });
+  assert.strictEqual(result.decision, 'block', `Expected a block, got: ${JSON.stringify(result)}`);
+  assert.deepStrictEqual(oldFiles, [], 'Old per-session files must be deleted');
+  assert.strictEqual(keptFiles[1], keptFiles[0], 'New per-session files and shared files must stay');
+});
+
+test('T7: an edit 8 days old with no save marker gives no decision-log block', () => {
+  const result = evaluateStop(({ logDir }) => {
+    writeEditLog(logDir, [editLogLine(TEST_SESSION_ID, SIGNIFICANT_FILE, 8 * DAY_MS)]);
+  });
+  assert.deepStrictEqual(result, {}, `Expected no block, got: ${JSON.stringify(result)}`);
+});
+
+test('T7b: an edit 6 days old with no save marker is still reported', () => {
+  const result = evaluateStop(({ logDir }) => {
+    writeEditLog(logDir, [editLogLine(TEST_SESSION_ID, SIGNIFICANT_FILE, 6 * DAY_MS)]);
+  });
+  assert.ok((result.reason || '').includes(DECISION_LOG),
+    `Expected the decision-log block, got: ${JSON.stringify(result)}`);
+});
+
+test('The decision-log reminder prints the marker command', () => {
+  let command;
+  const result = evaluateStop(({ hook, logDir }) => {
+    command = hook.MARKER_COMMAND;
+    writeEditLog(logDir, [editLogLine(TEST_SESSION_ID, SIGNIFICANT_FILE)]);
+  });
+  assert.ok(command && (result.reason || '').includes(command),
+    `Expected the marker command in the reminder, got: ${result.reason}`);
 });
 
 // ── checkSessionLogSize hard cap ─────────────────────────────────────────────

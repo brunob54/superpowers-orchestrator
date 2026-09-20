@@ -8,6 +8,106 @@
 > (`REPOZY/superpowers-optimized`) and are kept unchanged as history; any
 > testing they describe was not done here.
 
+## v7.43.0 — the stop hook keeps its save state per session
+
+**Problem.** The stop hook kept one save marker and one guard file for all
+sessions, so one session could hide another session's reminders. 70 of 331
+measured saves did not move the marker, and the hook then blocked a session
+that had saved. The test guard missed an undefined command inside a function
+called as a condition.
+
+**Change.** Both files are kept per session. The context-management skill
+gives one command that appends the entry and writes the marker. The guard runs
+each suite again as a child process and reads its standard error.
+
+**Effect.** Stop-reminders tests go from 29 to 40; suite-guard from 69 to 113
+checks. Update the plugin and restart the command-line interface (CLI).
+Nothing to migrate.
+
+Rows 67 and 68 of the orchestration issues log are closed by this release.
+
+**The save state of the stop hook (row 67).** The stop hook blocks a stop when
+significant files were edited after the last saved decision. It knew the time
+of that save from one marker file,
+`~/.claude/hooks-logs/last-saved-entry.txt`, and it kept a two-minute guard
+file, `stop-hook-fired.lock`, so that it does not block twice in a row. Both
+files were shared by every session. A save in session B removed the reminder
+of session A, and a block in session B silenced every reminder of session A
+for two minutes. The new helper `hooks/save-marker.js` builds both file names
+from the session id. Every character outside `A-Za-z0-9_-` becomes `_`, and
+the result is cut to 64 characters, so an id such as `../../evil` cannot leave
+the log folder. A payload without a session id uses the old shared names.
+
+The stop hook now takes the latest of three times: the per-session marker,
+the old shared marker, and the current time minus 7 days. The old shared
+marker is still honoured, because old skill text and old handoff documents
+still write it; honouring it can only cause a missed reminder, never a block
+of a session that saved. The 7-day floor exists because the hook now deletes
+per-session files older than 7 days: without the floor, a deleted marker made
+edits count again that were already saved (reproduced in review, then fixed).
+
+**A save that did not move the marker.** The marker was written by
+`hooks/track-edits.js` when `session-log.md` was changed with the Edit or
+Write tool, and by a separate `node -e` line in the context-management skill.
+Measured on the transcripts of four days: 81 saves went through Bash and 1
+through Edit or Write, 70 of 331 saves did not move the marker, and 33 of 226
+real blocks came after a save with no later edit. The skill now gives ONE
+Bash command. It appends the entry through a here-document (shell syntax that
+passes the following lines to a command as its input) and then writes the
+per-session marker, reading the id from `CLAUDE_CODE_SESSION_ID`. Measured
+with 7 headless runs: that variable equals the hook's session id in a fresh
+session, after `--resume`, after `--continue`, after a compaction and after
+`/clear`. The delimiter of the here-document is quoted, so quotes, backticks
+and `$` in the entry stay literal, and it is the unlikely word
+`SAVED_ENTRY_END_7Q`: review showed that an entry line equal to the delimiter
+ends the here-document early, and the shell then runs the rest of the entry
+as commands. When a safety hook blocks the command, the skill names the Edit
+tool as the other way. An Edit now moves the marker only when it adds a
+`[saved]` heading (0 to 3 leading spaces), so trimming an old entry no longer
+hides a reminder.
+
+One behaviour stays on purpose. An entry that is saved before the edits that
+implement it gives one more reminder, because the hook sees times and not
+what an entry covers. The skill now says to save after the edits, and the
+reminder prints the marker command for an entry that already covers them.
+
+Rejected by measurement: `Saved` lines in the edit log (while the log rotated,
+a line was lost in 7 of 20 rounds), the time in the `[saved]` heading (73 of
+328 real headings have no clock time), the modification time of
+`session-log.md`, and one shared map file (a save lost in 20 of 20 rounds).
+
+**An undefined command inside a condition (row 68).** The guard of v7.42.0
+stops a suite through an ERR (error) trap when a command ends with exit code
+127. Bash runs no ERR trap below a function that is called as a condition
+(`if f`, `f && x`, `f || continue`, `if f | grep`). Measured: an undefined
+command in such a helper of the review-gates suite printed 94
+`command not found` lines, and the suite still ended with exit code 0. The
+worklist named 12 call sites of this form; the count was 20 in 5 suites. On
+its first load the guard now starts the suite again as a child process,
+copies the child's standard error to a log file, and fails the suite when the
+log holds a line of the form `: line N: …: command not found`. The suite body
+runs once. Measured on the 12 guarded suites: the same exit code, the same
+standard output, at most 0.04 seconds slower. The ERR trap stays, because it
+stops a suite at the first undefined call. This also catches two forms that a
+rewrite of the call sites could not fix: `x=$(f)` and a plain `f | grep`.
+`tests/suite-guard` tests the guard, so it keeps its own exit code and checks
+its own standard error at its end.
+
+Limits, stated in the guard's header: the wrapper fails a suite at its end; a
+call whose standard error is hidden or captured is not seen; a marker
+variable that is already set in the caller's environment switches the wrapper
+off; a kill of the wrapper alone leaves the child suite running; `bash -x`
+no longer traces the suite body; Git Bash and bash 5 were not tested.
+
+**Review.** Three design lenses with a rebuttal round for row 67, and two
+measuring verifiers for row 68. Then a correctness review (0 Critical, 1
+Important), an adversarial review (2 Important), mutation testing (63 run, 14
+survived, all closed) and one verification pass (30 more mutations). All
+thirteen fast suites pass: stop-reminders 40 tests, the new save-marker test
+file 33, suite-guard 113 checks, the others unchanged. Rows 69 (the Stop
+payload field `stop_hook_active`) and 70 (the edit log loses lines while it
+rotates) were opened.
+
 ## v7.42.0 — the stop hook ignores a subagent's throwaway worktree
 
 **Problem.** The stop hook counted a subagent's throwaway edits under
