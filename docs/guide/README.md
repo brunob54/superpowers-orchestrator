@@ -1029,6 +1029,17 @@ needs a folder. The record then reads `fix <sha> not reverted`, and no file
 of yours changes. The next review raises the finding again, so that a new
 fix commit corrects the code.
 
+Since v7.48.0 the script looks also at the commits that came after the fix,
+and the run does not revert a fix automatically in eight cases. The two new
+cases are these. A later commit deleted or renamed a file of the fix or a
+folder above it. A later commit put a folder on a path where the fix had
+changed or deleted a file. In both cases the revert would stop on a
+conflict, or change a file that the run does not watch, or change nothing,
+or put a file back into a folder that the project no longer has, so the run
+records `fix <sha> not reverted` as before. The run also stops git from
+moving a reverted file into a renamed folder: there the file could
+overwrite an ignored file of yours with no warning.
+
 **Interrupted during plan writing or a review round?** Resume re-enters any
 phase whose completion entry never made it into the orchestration log, but
 how much is redone differs:

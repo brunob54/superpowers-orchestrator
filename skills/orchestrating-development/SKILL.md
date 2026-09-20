@@ -1183,6 +1183,10 @@ Trigger: `Resume orchestration for <plan-or-spec path>`.
    script reports (a special name, a rename that changes only the letter
    case, a folder that the fix commit replaced by a file or by a
    symbolic link), which stays.
+   Or it was a later commit of the branch that deleted or renamed a
+   listed path or one of its parent folders, or put a folder on a listed
+   path; that normally stays too, until a still later commit puts the
+   path back.
    When the cause still stands, the other half's own rule takes
    the `— fix <sha> not reverted` branch again. When that revert succeeds,
    append `— fix <sha> reverted` after that item, because this record is
@@ -1427,7 +1431,8 @@ Trigger: `Resume orchestration for <plan-or-spec path>`.
 
    ```bash
    [ -z "$(git rev-parse --show-prefix)" ] || echo "not the top folder"
-   git show -z --name-only --no-renames --format= <sha> |
+   c=<sha>
+   git show -z --name-only --no-renames --format= "$c" |
    while IFS= read -r -d '' p; do
      case "$p" in -*|[=]*|*[!abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789._/@+=,-]*) echo "special name: $p";; esac
      git --literal-pathspecs status --porcelain -- "$p"
@@ -1435,19 +1440,23 @@ Trigger: `Resume orchestration for <plan-or-spec path>`.
      if [ -e "$p" ] || [ -L "$p" ]; then
        git rev-parse -q --verify "HEAD:$p" >/dev/null || echo "on disk, not at HEAD: $p"
      fi
-     while p=$(dirname -- "$p"); [ "$p" != . ]; do
+     if [ "$(git cat-file -t "HEAD:$p" 2>/dev/null)" = tree ] && [ "$(git cat-file -t "$c:$p" 2>/dev/null)" != tree ]; then echo "a folder at HEAD, not in the fix commit: $p"; fi
+     while
+       if git rev-parse -q --verify "$c:$p" >/dev/null; then git rev-parse -q --verify "HEAD:$p" >/dev/null || echo "in the fix commit, not at HEAD: $p"; fi
+       p=$(dirname -- "$p"); [ "$p" != . ]
+     do
        if [ -L "$p" ] || { [ -e "$p" ] && [ ! -d "$p" ]; }; then echo "not a folder: $p"; fi
      done
    done
    ```
 
-   Its second line lists the paths the fix commit touched
+   Its third line lists the paths the fix commit touched
    (`git show --name-only --no-renames --format= <sha>` lists those paths;
    `--no-renames` makes a renamed file appear under both its names,
    `-z` prints each name unquoted, and
    every later rule of this revert takes its paths from this one list:
    the cleanup, the undo before a stop, and the reverted paths that the
-   resume commit names). The script prints a line in six cases.
+   resume commit names). The script prints a line in eight cases.
    The current folder is not the top folder of the repository: the
    script reads each path from the current folder.
    The name of a listed path holds
@@ -1463,7 +1472,19 @@ Trigger: `Resume orchestration for <plan-or-spec path>`.
    The path stands on disk and
    does not exist at HEAD: an untracked file,
    or the same name in another
-   letter case on a file system that ignores case. A parent folder name
+   letter case on a file system that ignores case.
+   The path is a folder at HEAD and is not a folder in the fix commit:
+   a later commit put a folder where the fix commit holds a file, or no
+   entry. The path, or a parent folder of the path, exists in the fix
+   commit and does not exist at HEAD: a later commit deleted or renamed
+   it. When the path itself is gone, the revert would stop on a
+   conflict, or change a file outside this list, or change nothing; in
+   the last two cases the resume commit, which names the listed paths,
+   would fail.
+   When only a parent folder is gone, the revert would put the file back
+   into a folder that the branch no longer holds, or, after a rename
+   that changes only the letter case, under the other spelling of the
+   folder name. A parent folder name
    of the path stands on disk and is not a real folder: the revert would
    replace that file with a folder and give no warning. Never type a
    path into the script and never change its letters list: a range such
@@ -1475,8 +1496,16 @@ Trigger: `Resume orchestration for <plan-or-spec path>`.
    ignored file with no warning — and take the
    "not reverted" branch below
    directly. Otherwise revert it without a commit of its own
-   (`git revert --no-commit <sha>`), staging the result by explicit
-   path. **On a non-zero exit from that command** the exit code names the
+   (`git -c merge.directoryRenames=false revert --no-commit <sha>`),
+   staging the result by explicit path.
+   The `-c merge.directoryRenames=false` part stops git from following
+   a folder rename, made by the fix commit or by a later commit, and
+   writing a file of the revert into the other folder: that path stands
+   outside the list, no line of the pre-check script reads it, and git
+   would overwrite an ignored file there; when the configuration of the
+   user says `true`, git does that with exit code 0 and with no warning
+   about the overwritten file.
+   **On a non-zero exit from that command** the exit code names the
    case. Exit 1 is a conflict, and the checkout is left mid-revert: git
    writes conflict markers into the conflicting files, stages the clean
    hunks of every other file the revert touched, and leaves `REVERT_HEAD`
