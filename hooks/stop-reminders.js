@@ -18,26 +18,31 @@
 const fs = require('fs');
 const path = require('path');
 const { spawnSync } = require('child_process');
+const {
+  LOG_DIR,
+  MARKER_COMMAND,
+  MAX_AGE_MS,
+  guardFile,
+  markerFile,
+  removeOldSessionFiles,
+  writeTimeFile,
+} = require('./save-marker');
 
-const LOG_DIR = path.join(
-  process.env.HOME || process.env.USERPROFILE || '.',
-  '.claude',
-  'hooks-logs'
-);
 const EDIT_LOG = path.join(LOG_DIR, 'edit-log.txt');
-const LAST_SAVED_FILE = path.join(LOG_DIR, 'last-saved-entry.txt');
 const STATS_FILE = path.join(LOG_DIR, 'session-stats.json');
-const GUARD_FILE = path.join(LOG_DIR, 'stop-hook-fired.lock');
 
 // Guard: only fire once per session (prevent infinite loop)
 // The guard file is created on first fire and checked on subsequent fires.
 // It auto-expires after 2 minutes so subsequent Claude stops can show reminders.
+// Each session has its own guard file, so a block of one session does not
+// silence another session.
 const GUARD_TTL_MS = 2 * 60 * 1000;
 
-function shouldFire() {
+function shouldFire(sessionId) {
   try {
-    if (fs.existsSync(GUARD_FILE)) {
-      const stat = fs.statSync(GUARD_FILE);
+    const file = guardFile(sessionId);
+    if (fs.existsSync(file)) {
+      const stat = fs.statSync(file);
       const age = Date.now() - stat.mtimeMs;
       if (age < GUARD_TTL_MS) {
         return false; // Guard is active, don't fire
@@ -49,13 +54,13 @@ function shouldFire() {
   }
 }
 
-function setGuard() {
-  try {
-    if (!fs.existsSync(LOG_DIR)) fs.mkdirSync(LOG_DIR, { recursive: true });
-    fs.writeFileSync(GUARD_FILE, new Date().toISOString());
-  } catch {
-    // Ignore guard write errors
-  }
+/**
+ * Write the guard of this session. Also delete the marker and guard files
+ * that other sessions left behind more than 7 days ago.
+ */
+function setGuard(sessionId) {
+  writeTimeFile(guardFile(sessionId));
+  removeOldSessionFiles();
 }
 
 // Common test file patterns
@@ -181,13 +186,13 @@ function getRecentEdits(sessionId) {
 }
 
 /**
- * Return the timestamp of the last [saved] entry written to session-log.md,
- * or null if no saved entry exists yet this session.
+ * Return the time that one save marker file holds, or null when the file does
+ * not exist or holds no valid time.
  */
-function getLastSavedEntryTime() {
+function readMarkerTime(file) {
   try {
-    if (!fs.existsSync(LAST_SAVED_FILE)) return null;
-    const ts = new Date(fs.readFileSync(LAST_SAVED_FILE, 'utf8').trim());
+    if (!fs.existsSync(file)) return null;
+    const ts = new Date(fs.readFileSync(file, 'utf8').trim());
     return isNaN(ts.getTime()) ? null : ts;
   } catch {
     return null;
@@ -195,11 +200,20 @@ function getLastSavedEntryTime() {
 }
 
 /**
- * Return all edit log entries after the given timestamp, filtered to the current session.
- * If timestamp is null, returns all session entries (i.e. no [saved] baseline exists).
+ * Return the time after which an edit counts as not saved. It is the latest
+ * of three times:
+ *   - the save marker of this session;
+ *   - the old marker that all sessions share. Old skill text and old handoff
+ *     documents still write it. Honouring it can only cause a missed
+ *     reminder, never a false block;
+ *   - the current time minus MAX_AGE_MS, so that a missing or deleted marker
+ *     never causes a block for edits older than that.
  */
-function getEditsAfter(timestamp, sessionId) {
-  return readSessionEditsAfter(timestamp || new Date(0), sessionId);
+function getLastSavedEntryTime(sessionId) {
+  const oldestCounted = new Date(Date.now() - MAX_AGE_MS);
+  return [markerFile(sessionId), markerFile()]
+    .map(readMarkerTime)
+    .reduce((latest, time) => (time && time > latest ? time : latest), oldestCounted);
 }
 
 /**
@@ -405,21 +419,25 @@ function evaluatePayload(data) {
   const edits = getRecentEdits(sessionId);
 
   // File-based guard prevents infinite loop for reminder injection
-  if (!shouldFire()) return {};
+  if (!shouldFire(sessionId)) return {};
 
   const reminders = generateReminders(edits, cwd);
 
   // Decision-log reminder: significant files modified since the last [saved] entry.
   // Using "since last saved" (not "last 30 min") means long sessions with multiple
   // work phases keep getting reminded until each phase is explicitly documented.
-  const lastSavedTime = getLastSavedEntryTime();
-  const editsSinceLastSaved = getEditsAfter(lastSavedTime, sessionId);
+  // A save before the edits that implement a decision gives one more reminder:
+  // the hook cannot know that the entry already covers the later edits. The
+  // reminder therefore names the marker command for that case.
+  const editsSinceLastSaved = readSessionEditsAfter(getLastSavedEntryTime(sessionId), sessionId);
   if (isSignificantSession(editsSinceLastSaved)) {
     reminders.push(
       'Decision log: This session modified core skill/hook/config files. ' +
       'Before stopping, invoke context-management via the Skill tool to write a [saved] entry ' +
       'capturing decisions, rationale, and rejected approaches. ' +
-      'Future sessions start with zero context — this is the only way to preserve the "why".'
+      'Future sessions start with zero context — this is the only way to preserve the "why". ' +
+      'If a [saved] entry of this session already covers these edits, write no new entry; ' +
+      `run only the marker command: ${MARKER_COMMAND}`
     );
   }
 
@@ -440,7 +458,7 @@ function evaluatePayload(data) {
   if (!hasActionableReminders) return {};
 
   // Set guard BEFORE outputting — prevents re-entry
-  setGuard();
+  setGuard(sessionId);
 
   const context = [
     '<stop-hook-reminders>',
@@ -462,7 +480,6 @@ if (require.main === module) {
     checkStateMdStaleness,
     evaluatePayload,
     generateReminders,
-    getEditsAfter,
     getLastSavedEntryTime,
     getRecentEdits,
     isSourceFile,
