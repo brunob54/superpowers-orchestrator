@@ -1148,10 +1148,15 @@ Trigger: `Resume orchestration for <plan-or-spec path>`.
    Never complete that revert and never commit it: `REVERT_HEAD` names
    only the last commit of several reverts, so no record says which
    staged change belongs to which answer. The report names the hash
-   and the whole `git status --porcelain` output, and states the way
-   out: for each path that the unfinished revert staged, run
-   `git reset -- <path>` and then `git checkout -- <path>`, run
-   `git revert --quit` last, then send the same resume prompt again.
+   and the whole `git status --porcelain` output, lists the paths of
+   the unfinished revert, and states the way out: for each listed
+   path, run `git reset -- <path>` and then `git checkout -- <path>`,
+   run `git revert --quit` last, then send the same resume prompt
+   again. Take those paths from `git show --name-only --format= <sha>`,
+   run for the printed hash and for the fix commit of every ruling
+   that the prompt of this resume overturns, never from the
+   `git status --porcelain` output: that output cannot tell a change
+   of the revert from the staged work of the blocked task.
    For a path that the revert created again, `git checkout -- <path>`
    fails; the way out removes it with `rm -- <path>`. The report also
    says that these commands delete an edit of the user's own on such a
@@ -1416,10 +1421,13 @@ Trigger: `Resume orchestration for <plan-or-spec path>`.
    mid-revert, never untouched: git writes conflict markers into the
    conflicting files, stages the clean hunks of every other file the revert
    touched, and leaves `REVERT_HEAD` and the sequencer state behind. Undo
-   all of that with explicit paths only — end the sequencer state with
-   `git revert --quit`, then, for each path the fix commit touched, named
-   one at a time, run `git reset -- <path>` and then
-   `git checkout -- <path>`. **A path the fix commit deleted is the
+   all of that with explicit paths only: for each path the fix commit
+   touched, named one at a time, run `git reset -- <path>` and then
+   `git checkout -- <path>`. Do not run `git revert --quit` here:
+   `REVERT_HEAD` must stay while an earlier revert of this resume
+   stands staged, the resume commit deletes it, and a stop runs
+   `git revert --quit` last, as the rule above states.
+   **A path the fix commit deleted is the
    exception**: `git revert --no-commit` re-created it as a staged
    addition, so `git reset -- <path>` leaves it untracked and
    `git checkout -- <path>` then fails with "pathspec did not match any

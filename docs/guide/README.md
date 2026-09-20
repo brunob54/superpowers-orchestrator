@@ -987,9 +987,12 @@ Phase 4 fix stages the reverted code first and commits it at its end. When
 that session ended between the two steps, the reverted code stays staged, and
 git keeps the file `REVERT_HEAD` until the next commit. The run then stops,
 writes nothing, and its report names the hash and the `git status --porcelain`
-output. The way out: for each path that the unfinished revert staged, run
+output, and it lists the paths of the unfinished revert. The way out: for
+each listed path, run
 `git reset -- <path>` and then `git checkout -- <path>`, run
-`git revert --quit` last, then send the same resume prompt again. These
+`git revert --quit` last, then send the same resume prompt again. For a path
+that the revert created again, `git checkout -- <path>` fails with "pathspec
+did not match"; remove that path with `rm -- <path>`. These
 commands also delete an edit of your own on such a path. Never use
 `git revert --abort`: it also deletes staged work on every other path. One
 limit: a commit or a `git reset` that you run by hand before the resume

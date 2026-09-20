@@ -2112,8 +2112,16 @@ assert_in_range_folded "a locally-changed path takes the not-reverted branch wit
 assert_in_range_folded "a non-zero revert exit leaves the checkout mid-revert, not untouched" \
   "$ORCH_SKILL" '**On any non-zero exit from that command** the checkout is left mid-revert, never untouched' \
   "$RESUME_LINE" "$RULINGS_LINE"
-assert_in_range "the cleanup ends the sequencer state" \
-  "$ORCH_SKILL" 'git revert --quit' "$RESUME_LINE" "$RULINGS_LINE" exact
+# Row 63, review round 1. The cleanup ran `git revert --quit` first. With an
+# earlier revert of the same resume still staged, that left staged code and no
+# `REVERT_HEAD` (measured), which is the state the row 63 stop cannot see. The
+# cleanup now leaves `REVERT_HEAD` in place: the resume commit deletes it, and
+# a stop runs `git revert --quit` last.
+assert_in_range_folded "the cleanup leaves REVERT_HEAD in place" \
+  "$ORCH_SKILL" 'Undo all of that with explicit paths only: for each path the fix commit touched, named one at a time, run `git reset -- <path>` and then `git checkout -- <path>`. Do not run `git revert --quit` here: `REVERT_HEAD` must stay while an earlier revert of this resume stands staged, the resume commit deletes it, and a stop runs `git revert --quit` last, as the rule above states. **A path the fix commit deleted is the exception**' \
+  "$RESUME_LINE" "$RULINGS_LINE"
+assert_absent_in_range_folded "the cleanup no longer ends the sequencer state first" "$ORCH_SKILL" \
+  'end the sequencer state with' "$RESUME_LINE" "$RULINGS_LINE" fragment
 assert_in_range_folded "the cleanup restores each touched path by name" \
   "$ORCH_SKILL" 'for each path the fix commit touched, named one at a time, run `git reset -- <path>` and then `git checkout -- <path>`' \
   "$RESUME_LINE" "$RULINGS_LINE"
@@ -4272,7 +4280,8 @@ R63_A_SENTENCES=(
   'Any commit deletes `REVERT_HEAD`, and the staged changes stay.'
   'Never record `not reverted` over these changes: the record would say that no revert was made while half of it stands staged.'
   'Never complete that revert and never commit it: `REVERT_HEAD` names only the last commit of several reverts, so no record says which staged change belongs to which answer.'
-  'The report names the hash and the whole `git status --porcelain` output, and states the way out: for each path that the unfinished revert staged, run `git reset -- <path>` and then `git checkout -- <path>`, run `git revert --quit` last, then send the same resume prompt again.'
+  'The report names the hash and the whole `git status --porcelain` output, lists the paths of the unfinished revert, and states the way out: for each listed path, run `git reset -- <path>` and then `git checkout -- <path>`, run `git revert --quit` last, then send the same resume prompt again.'
+  'Take those paths from `git show --name-only --format= <sha>`, run for the printed hash and for the fix commit of every ruling that the prompt of this resume overturns, never from the `git status --porcelain` output: that output cannot tell a change of the revert from the staged work of the blocked task.'
   'For a path that the revert created again, `git checkout -- <path>` fails; the way out removes it with `rm -- <path>`.'
   'The report also says that these commands delete an edit of the user'"'"'s own on such a path, and that `git revert --abort` is never the way out: it also deletes staged work on every other path.'
 )
@@ -4310,6 +4319,12 @@ for sentence in "${R63_B_SENTENCES[@]}"; do
 done
 assert_in_range_folded_exact "row 63, rule B: the paragraph holds these sentences, in this order, directly before the fix-commit revert" "$ORCH_SKILL" \
   "$R63_B_WHOLE$R63_B_NEXT_TEXT" "$R63_B_FROM" "$(( ${R63_B_FROM:-0} + R63_B_LINES ))"
+# Review round 1, F2. A sentence inserted directly before rule B, for example
+# one that makes the rule optional, passed every check above. The end of the
+# put-back paragraph is pinned to the opening of rule B.
+assert_in_range_folded_exact "row 63, rule B: the rule stands directly after the put-back paragraph" "$ORCH_SKILL" \
+  'never reads this revert'"'"'s half-written text as the blocked task'"'"'s own work. '"$R63_B_ANCHOR" \
+  "$RESUME_LINE" "$RULINGS_LINE"
 if [ "$(grep -cF -- "$R63_B_ANCHOR" "$ORCH_SKILL")" -eq 1 ]; then
   ok "row 63, rule B: the rule stands once in the skill"
 else
