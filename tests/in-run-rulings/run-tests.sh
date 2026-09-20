@@ -2118,7 +2118,7 @@ assert_in_range_folded "a non-zero revert exit leaves the checkout mid-revert, n
 # cleanup now leaves `REVERT_HEAD` in place: the resume commit deletes it, and
 # a stop runs `git revert --quit` last.
 assert_in_range_folded "the cleanup leaves REVERT_HEAD in place" \
-  "$ORCH_SKILL" 'Undo all of that with explicit paths only: for each path the fix commit touched, named one at a time, run `git reset -- <path>` and then `git checkout -- <path>`. Do not run `git revert --quit` here: `REVERT_HEAD` must stay while an earlier revert of this resume stands staged, the resume commit deletes it, and a stop runs `git revert --quit` last, as the rule above states. **A path the fix commit deleted is the exception**' \
+  "$ORCH_SKILL" 'Undo the markers and the staged hunks with explicit paths only: for each path the fix commit touched, named one at a time, run `git reset -- <path>` and then `git checkout -- <path>`. Do not run `git revert --quit` here: `REVERT_HEAD` must stay while an earlier revert of this resume stands staged, the resume commit deletes it, and a stop runs `git revert --quit` last, as the rule above states. **A path the fix commit deleted is the exception**' \
   "$RESUME_LINE" "$RULINGS_LINE"
 assert_absent_in_range_folded "the cleanup no longer ends the sequencer state first" "$ORCH_SKILL" \
   'end the sequencer state with' "$RESUME_LINE" "$RULINGS_LINE" fragment

@@ -1421,9 +1421,10 @@ Trigger: `Resume orchestration for <plan-or-spec path>`.
    mid-revert, never untouched: git writes conflict markers into the
    conflicting files, stages the clean hunks of every other file the revert
    touched, and leaves `REVERT_HEAD` and the sequencer state behind. Undo
-   all of that with explicit paths only: for each path the fix commit
-   touched, named one at a time, run `git reset -- <path>` and then
-   `git checkout -- <path>`. Do not run `git revert --quit` here:
+   the markers and the staged hunks with explicit paths only: for each
+   path the fix commit touched, named one at a time, run
+   `git reset -- <path>` and then `git checkout -- <path>`.
+   Do not run `git revert --quit` here:
    `REVERT_HEAD` must stay while an earlier revert of this resume
    stands staged, the resume commit deletes it, and a stop runs
    `git revert --quit` last, as the rule above states.

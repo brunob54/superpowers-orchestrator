@@ -995,7 +995,8 @@ that the revert created again, `git checkout -- <path>` fails with "pathspec
 did not match"; remove that path with `rm -- <path>`. These
 commands also delete an edit of your own on such a path. Never use
 `git revert --abort`: it also deletes staged work on every other path. One
-limit: a commit or a `git reset` that you run by hand before the resume
+limit: a commit, or a `git reset` without a path, that you run by hand before
+the resume
 deletes `REVERT_HEAD`, and the run then no longer sees the unfinished revert.
 
 **Interrupted during plan writing or a review round?** Resume re-enters any

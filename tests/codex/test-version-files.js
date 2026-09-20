@@ -41,8 +41,8 @@ const firstMatch = (pattern) => (text) => matches(pattern)(text).slice(0, 1);
 const RELEASE_LIST_START = 'The remaining releases';
 const releaseListLine = (text) => text.split('\n').find((line) => line.startsWith(RELEASE_LIST_START)) || '';
 const PLACES = [
-  // Only one line end is removed: a program that reads the file without
-  // trimming must get the version and nothing else.
+  // Only one line end is removed (a Windows line end counts as one): a second
+  // line, also an empty one, is not part of the version.
   { label: 'the VERSION file', file: VERSION_FILE, read: (text) => [text.replace(/\r?\n$/, '')] },
   { label: 'marketplace.json, first plugin', file: MARKETPLACE_JSON, read: (text) => [JSON.parse(text).plugins[0].version] },
   { label: 'plugin.universal.yaml, meta', file: UNIVERSAL_YAML, read: firstMatch(new RegExp(`^  version: "(${VERSION_SHAPE})"$`, 'gm')) },
