@@ -8,6 +8,76 @@
 > (`REPOZY/superpowers-optimized`) and are kept unchanged as history; any
 > testing they describe was not done here.
 
+## v7.47.0 — one fixed check script runs before every code revert
+
+**Problem.** Before it reverted a fix commit, Resume step 3 compared printed
+path names and typed them into git commands. A name with a space hid a local
+change. A name such as `*.txt` reached other files. A rename that changes only
+the letter case could not be committed on a file system that ignores case. An
+ignored file named like a folder was deleted.
+
+**Change.** One fixed script runs before each revert; the orchestrator
+replaces only `<sha>`. Any output means "not reverted". The
+cleanup and the resume commit are unchanged.
+
+**Effect.** These reverts no longer start; the next review raises the finding
+again. 0 of this repository's 363 tracked names are affected. Reinstall the
+plugin. Nothing to migrate.
+
+Rows 76, 77 and 78 of the orchestration issues log. All three are closed by
+prevention, not by repair.
+
+**What was measured (git 2.50.1, macOS, bash 3.2 and zsh 5.9).**
+`git status --porcelain` prints a name with a space inside double quotes, and
+`git show --name-only` does not, so the released comparison of printed names
+missed a local change on such a path: with a staged user line the revert
+exited 0 and merged into it. The comparison also missed a user's staged rename
+away from a listed path. Without `--literal-pathspecs`, `git checkout --
+'*.txt'` overwrote four unrelated files and `git commit -- ':x.txt'` committed
+`x.txt`; every command exited 0. After a revert of a rename from `old.txt` to
+`Old.txt`, the cleanup deleted the file, and the resume commit exited 128
+(`fatal: will not add file alias`) in every measured form. When the fix commit
+deleted `d/x.txt` and the user kept an ignored file `d`, the revert exited 0
+and replaced the file with a folder.
+
+**The script.** It stands in Resume step 3 of
+`skills/orchestrating-development/SKILL.md` and prints a line in six cases:
+the current folder is not the top folder of the repository; a listed name
+holds a character outside letters, digits and `. _ / @ + = , -`, or begins
+with `-` or `=`; a listed path carries a local change
+(`git --literal-pathspecs status --porcelain -- "$p"`); an ignored file stands
+on the path or under it; the path stands on disk and does not exist at HEAD
+(an untracked file, or the same name in another letter case); a parent folder
+name stands on disk and is not a real folder. The path list is read with `-z`,
+so no name is printed and typed again. Output on standard error counts: a
+wrong hash is an alarm. Two traps are pinned: the letters of the name test are
+written out, because the range `A-Z` lets `café.txt` pass under bash 3.2 with
+a UTF-8 locale, and the pattern is `[=]*`, because zsh fails on a bare `=*`.
+
+**Review.** Two design lenses and a rebuttal round chose prevention over a
+design that handled every name with scripts for the cleanup and the commit:
+that design repaired a revert that cannot be committed. The first commit
+deleted the `git ls-files` read of v7.46.0; the correctness review showed the
+loss (the fix commit replaced the file `d` by `d/x.txt`, the user keeps an
+ignored `d/junk.dat`), and the read went back inside the loop. The red team
+found that the script was quiet from a sub-folder for a bare file name; the
+first script line now refuses that. Mutation testing: 57 of 57 caught on the
+first commit, 15 of 15 on the fixes, and one survivor (a second script block
+after the paragraph) that a check now catches.
+
+**Tests.** `bash tests/in-run-rulings/run-tests.sh`: 934 passed (914 on
+v7.46.0). New suite `bash tests/precheck-script/run-tests.sh`: 77 passed. It
+takes the script out of the skill file and runs it on fixture repositories
+under bash and `zsh -f`.
+
+**Accepted limits.** A fix commit is never reverted automatically when a path
+holds a space, an accent or another unusual character, when it renames a file
+by letter case only on a file system that ignores case, or when it replaced a
+folder by a file or a symbolic link (row 84). The cleanup and the undo before a
+stop are still typed per path (row 83). Rows 79 to 82 record four defects that
+are older than this release: a later folder rename, a revert that cannot be
+committed, the `assume-unchanged` bit, and two fix commits on one path.
+
 ## v7.46.0 — the revert sees renamed and ignored files; one statistics file per session
 
 **Problem.** In Resume step 3 the path list of a reverted fix commit held only
