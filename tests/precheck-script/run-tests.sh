@@ -128,7 +128,7 @@ newrepo plain; printf 'a\n' > plain.txt; mkdir -p sub/dir-1; printf 'a\n' > sub/
 check_case "plain names, and a change in a file that the fix does not touch" "$QUIET"
 newrepo wide; mkdir '@types'; printf 'a\n' > 'a+b.ts'; printf 'a\n' > '@types/x.d.ts'; printf 'a\n' > 'k=v.txt'; printf 'a\n' > 'a,b.txt'; fix
 check_case "names that hold + @ = and a comma" "$QUIET"
-for name in 'café.txt' 'a b.txt' '*.txt' ':x.txt' '=x.txt' '-n.txt'; do
+for name in 'café.txt' 'a b.txt' '*.txt' ':x.txt' '=x.txt' '-n.txt' 'a\b.txt'; do
   newrepo special; printf 'a\n' > "./$name"; fix
   check_case "special name <$name>" "$ALARM"
 done
