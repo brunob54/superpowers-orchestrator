@@ -4156,7 +4156,7 @@ assert_in_range_folded "row 45: the reason a revert is written before this resum
   "$ORCH_SKILL" 'an amendment written first would make that check stop the resume' \
   "$RESUME_LINE" "$RULINGS_LINE"
 assert_in_range_folded "row 59: the reason a retry can succeed, and the causes that stay" \
-  "$ORCH_SKILL" 'What stopped the earlier attempt may have been a local change or a local file in the working tree (a changed, untracked or ignored file, or a file that stands where a folder is needed), which can be gone now. It may also have been a property of the fix commit that the pre-check script reports (a special name, a rename that changes only the letter case, a folder that the fix commit replaced by a file or by a symbolic link), which stays. When the cause still stands, the other half'"'"'s own rule takes the `— fix <sha> not reverted` branch again.' \
+  "$ORCH_SKILL" 'What stopped the earlier attempt may have been a local change or a local file in the working tree (a changed, untracked or ignored file, a file that stands where a folder is needed, or a run of the script from a folder that is not the top folder), which can be gone now. It may also have been a property of the fix commit that the pre-check script reports (a special name, a rename that changes only the letter case, a folder that the fix commit replaced by a file or by a symbolic link), which stays. When the cause still stands, the other half'"'"'s own rule takes the `— fix <sha> not reverted` branch again.' \
   "$RESUME_LINE" "$RULINGS_LINE"
 assert_absent_in_range_folded "rows 76 to 78: no sentence says that the cause of a failed revert is never a property of the fix commit" "$ORCH_SKILL" \
   'never a property of the fix commit' "$RESUME_LINE" "$RULINGS_LINE" fragment

@@ -1176,8 +1176,9 @@ Trigger: `Resume orchestration for <plan-or-spec path>`.
    the fix commit standing. Do not skip the other half of the revert then: make it
    now for that `<sha>`. What stopped the earlier attempt may have been
    a local change or a local file in the working tree (a changed,
-   untracked or ignored file, or a file that stands where a folder is
-   needed), which can be gone now.
+   untracked or ignored file, a file that stands where a folder is
+   needed, or a run of the script from a folder that is not the top
+   folder), which can be gone now.
    It may also have been a property of the fix commit that the pre-check
    script reports (a special name, a rename that changes only the letter
    case, a folder that the fix commit replaced by a file or by a

@@ -33,8 +33,6 @@ ALARM=alarm
 SHA_PLACEHOLDER='<sha>'
 # The words of the skill that stand directly before the script.
 SCRIPT_ANCHOR='pre-check script below'
-# The words of the skill that end the paragraph of the script.
-SCRIPT_AREA_END='do not start the revert at all'
 # The opening fence line of the script, with the indent of its list item.
 FENCE_OPEN='   ```bash'
 SCRIPT_LINE_COUNT=13
@@ -77,12 +75,11 @@ assert_count "the script has $SCRIPT_LINE_COUNT lines" \
   "$(printf '%s\n' "$SCRIPT_TEXT" | grep -c '')" "$SCRIPT_LINE_COUNT"
 assert_count "one line of the skill holds the words '$SCRIPT_ANCHOR'" \
   "$(grep -cF -- "$SCRIPT_ANCHOR" "$SKILL")" 1
-# A second block near the script would be a second script to run.
-assert_count "one fenced bash block stands between those words and the words '$SCRIPT_AREA_END'" \
-  "$(awk -v anchor="$SCRIPT_ANCHOR" -v last="$SCRIPT_AREA_END" -v fence="$FENCE_OPEN" '
+# A second block anywhere after those words would be a second script to run.
+assert_count "one fenced bash block stands after those words" \
+  "$(awk -v anchor="$SCRIPT_ANCHOR" -v fence="$FENCE_OPEN" '
     index($0, anchor) > 0 { armed = 1 }
     armed && $0 == fence { count++ }
-    armed && index($0, last) > 0 { exit }
     END { print count + 0 }' "$SKILL")" 1
 
 SHELLS=(bash)
