@@ -15,11 +15,32 @@
 # folder, runs it with bash, and reads its exit code and its output.
 
 set -u
-source "$(cd "$(dirname "${BASH_SOURCE[0]}")/../lib" && pwd)/undefined-command-guard.sh"
-
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 GUARD_NAME='undefined-command-guard.sh'
 GUARD="$ROOT/tests/lib/$GUARD_NAME"
+
+# This suite must own its exit code. The re-run wrapper of the guard decides
+# the exit code of a suite that it wraps. Measured: with a guard that always
+# ended with exit code 0, this suite printed 23 FAIL lines and still ended
+# with exit code 0, because the broken guard wrapped this suite too.
+# So this suite sets the marker variable before the load line, and the guard
+# starts no wrapper for it. The body of this suite has the ERR (error) trap
+# only. No other suite may do this; a check at the end of this file scans
+# every suite for it.
+# The guard file defines the name of the marker variable, and it is not
+# loaded yet, so this line reads the name from the text of the guard file.
+GUARD_INNER_RUN_VAR="$(sed -n "s/^GUARD_INNER_RUN_VAR='\(.*\)'\$/\1/p" "$GUARD")"
+if [ -z "$GUARD_INNER_RUN_VAR" ]; then
+  echo "FAIL: $GUARD does not define the name of the marker variable" >&2
+  exit 1
+fi
+# A marker that is set already comes from a re-run wrapper, which then owns
+# the exit code of this run. A check at the end of this file reads this value.
+MARKER_FROM_PARENT="${!GUARD_INNER_RUN_VAR:-}"
+declare "$GUARD_INNER_RUN_VAR=1"
+# The file name is written out on the load line, because the check at the end
+# of this file looks for that text in every suite.
+source "$ROOT/tests/lib/undefined-command-guard.sh"
 
 # The guard must be loaded before the first check of a suite runs. Every
 # suite starts with a comment header, then its `set` line when it has one,
@@ -75,9 +96,10 @@ trap 'rm -rf "$WORK"' EXIT
 # only the nested-suite check fails.
 fixture_bash() { env -u "$GUARD_INNER_RUN_VAR" bash "$@"; }
 
-# run_fixture <name> <body>: write a script that loads the guard and then
-# runs <body>; run it; leave its path in SCRIPT, its exit code in CODE and its
-# output (standard output and standard error together) in OUT.
+# run_fixture <name> <body> [arguments of the script]: write a script that
+# loads the guard and then runs <body>; run it; leave its path in SCRIPT, its
+# exit code in CODE and its output (standard output and standard error
+# together) in OUT.
 run_fixture() {
   SCRIPT="$WORK/$1.sh"
   {
@@ -87,7 +109,7 @@ run_fixture() {
     printf 'echo %s\n' "$REACHED_END"
   } > "$SCRIPT"
   CODE=0
-  OUT="$(fixture_bash "$SCRIPT" 2>&1)" || CODE=$?
+  OUT="$(fixture_bash "$SCRIPT" "${@:3}" 2>&1)" || CODE=$?
 }
 
 out_has() { printf '%s\n' "$OUT" | grep -qF -- "$1"; }
@@ -281,10 +303,14 @@ run_fixture exit-code-3 "exit 3"
 assert_exit_code 3 "a suite that ends with exit code 3 keeps exit code 3"
 
 # The wrapper reads only the message form of bash: `<script>: line <number>:
-# <command>: command not found`. A check may print the bare words.
+# <command>: command not found`. A check may print the bare words, the words
+# after a prefix with no line number, or the message form with more text
+# after it.
 run_fixture bare-words "echo 'command not found' >&2
-echo 'the tool said: command not found' >&2"
-assert_continued "the bare words 'command not found' on standard error do not fail the suite"
+echo 'the tool said: command not found' >&2
+echo 'prefix: tool: command not found' >&2
+echo 'x: line 5: tool: command not found (quoted)' >&2"
+assert_continued "the words 'command not found' outside the message form of bash do not fail the suite"
 
 # Git Bash on Windows can end a message line with a carriage return.
 run_fixture carriage-return "printf '%s: line 5: tool: command not found\r\n' \"\$0\" >&2"
@@ -298,6 +324,37 @@ if locale -a 2>/dev/null | grep -qx -- "$UTF8_LOCALE"; then
   assert_caught_at_end "a command name with a byte that is not valid UTF-8 fails the suite"
 else
   echo "  SKIP: the locale $UTF8_LOCALE does not exist here"
+fi
+
+bold "The re-run wrapper starts the child suite with the right environment"
+
+# The wrapper reads the English message only, so the child must run with
+# LC_MESSAGES=C, also when the caller set another value.
+LC_MESSAGES_LABEL='lc-messages='
+LC_MESSAGES=fr_FR.UTF-8 run_fixture lc-messages "echo \"$LC_MESSAGES_LABEL\${LC_MESSAGES:-}\""
+label="the child suite runs with LC_MESSAGES=C"
+if [ "$CODE" -eq 0 ] && out_has "${LC_MESSAGES_LABEL}C"; then
+  pass "$label"
+else
+  fail "$label (exit code $CODE, output: $OUT)"
+fi
+
+run_fixture arguments "printf 'argument=[%s]\n' \"\$@\"" 'a b' '*'
+label="the child suite gets the arguments of the suite unchanged"
+if [ "$CODE" -eq 0 ] && out_has 'argument=[a b]' && out_has 'argument=[*]'; then
+  pass "$label"
+else
+  fail "$label (exit code $CODE, output: $OUT)"
+fi
+
+# Without a log file the wrapper cannot read the standard error of the child.
+# It must end with exit code 1 before it starts the child.
+TMPDIR="$WORK/missing-folder" run_fixture no-log-file "echo body"
+label="a wrapper that cannot create its log file ends with exit code 1 and does not run the suite"
+if [ "$CODE" -eq 1 ] && ! out_has "$REACHED_END"; then
+  pass "$label"
+else
+  fail "$label (exit code $CODE, output: $OUT)"
 fi
 
 bold "A guarded suite that runs another guarded suite"
@@ -499,14 +556,59 @@ label="the scan reads on after two < characters inside a string"
 SCAN_LINE="$(first_guard_undo_line "$WORK/scan-fixture.sh" 0)"
 if [ "$SCAN_LINE" = 2 ]; then pass "$label"; else fail "$label (found: '$SCAN_LINE')"; fi
 
+bold "The scan finds a line that names the marker variable"
+
+# A suite that sets the marker variable before its load line gets no re-run
+# wrapper. first_marker_line <file>: print the number of the first line that
+# is not a comment and that holds the name of the marker variable without its
+# leading underscores. The name of the constant GUARD_INNER_RUN_VAR holds the
+# same word, so the scan also finds a line that sets the marker through the
+# constant. The scan reads the whole file, because the line that matters
+# stands BEFORE the load line. It cannot see a name that is built from parts.
+MARKER_WORD="${GUARD_INNER_RUN_VAR#__}"
+first_marker_line() {
+  grep -n -- "$MARKER_WORD" "$1" | grep -v '^[0-9]*:[[:space:]]*#' | head -1 | cut -d: -f1
+}
+
+# marker_scan_fixture <text>: the same as scan_fixture, for first_marker_line.
+marker_scan_fixture() {
+  printf '%s\n' "$1" > "$WORK/scan-fixture.sh"
+  SCAN_LINE="$(first_marker_line "$WORK/scan-fixture.sh")"
+}
+
+while IFS= read -r form; do
+  marker_scan_fixture "$form"
+  label="the marker scan finds: $form"
+  if [ -n "$SCAN_LINE" ]; then pass "$label"; else fail "$label"; fi
+done <<FORMS
+export $GUARD_INNER_RUN_VAR=1
+  $GUARD_INNER_RUN_VAR=1
+$GUARD_INNER_RUN_VAR=1 bash other-suite.sh
+declare "\$GUARD_INNER_RUN_VAR=1"
+FORMS
+
+while IFS= read -r form; do
+  marker_scan_fixture "$form"
+  label="the marker scan does not find: $form"
+  if [ -z "$SCAN_LINE" ]; then pass "$label"; else fail "$label (found at line $SCAN_LINE)"; fi
+done <<FORMS
+# $GUARD_INNER_RUN_VAR=1
+GUARD="\$ROOT/tests/lib/\$GUARD_NAME"
+export INNER_RUN=1
+FORMS
+
 bold "Every fast suite loads the guard before its first check"
+
+# suite_name <file>: the name of the folder that holds the suite file.
+suite_name() { basename "$(dirname "$1")"; }
+OWN_SUITE="$(suite_name "${BASH_SOURCE[0]}")"
 
 guarded_count=0
 for file in "$ROOT"/tests/*/run-tests.sh; do
   # When the pattern matches no file, bash keeps the pattern itself as one
   # word. That word is not a file and must not be counted.
   [ -f "$file" ] || continue
-  suite="$(basename "$(dirname "$file")")"
+  suite="$(suite_name "$file")"
   case " $UNGUARDED_SUITES " in *" $suite "*) continue ;; esac
   guarded_count=$((guarded_count+1))
   name="tests/$suite/run-tests.sh"
@@ -525,6 +627,16 @@ for file in "$ROOT"/tests/*/run-tests.sh; do
     pass "$label"
   else
     fail "$label (found at line $undo_line)"
+  fi
+  # Only this suite may set the marker variable (see the top of this file).
+  marker_line="$(first_marker_line "$file")"
+  if [ "$suite" = "$OWN_SUITE" ]; then
+    label="$name is not the child of a re-run wrapper, so it owns its exit code"
+    if [ -z "$MARKER_FROM_PARENT" ]; then pass "$label"; else fail "$label"; fi
+  elif [ -z "$marker_line" ]; then
+    pass "$name keeps the re-run wrapper: no line names the marker variable"
+  else
+    fail "$name keeps the re-run wrapper: no line names the marker variable (found at line $marker_line)"
   fi
 done
 if [ "$guarded_count" -ge "$MIN_GUARDED_SUITES" ]; then

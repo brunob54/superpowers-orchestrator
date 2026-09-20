@@ -34,6 +34,8 @@ const HOSTILE_ID = '../../evil';
 // Written by hand, not computed by save-marker.js: each of the six characters
 // `../../` becomes `_`.
 const HOSTILE_MARKER_NAME = 'last-saved-entry-______evil.txt';
+// Longer than the 64 characters that a file name keeps of a session id.
+const LONG_ID = 'long-id-'.repeat(13).slice(0, 100);
 const SESSION_ID_VARIABLE = 'CLAUDE_CODE_SESSION_ID';
 const SESSION_LOG = 'session-log.md';
 const SIGNIFICANT_FILE = 'skills/x/SKILL.md';
@@ -213,11 +215,23 @@ for (const [label, toolName, toolInput, expectMarker] of MARKER_CASES) {
   });
 }
 
-test('T8h: a [saved] Edit of a file that is not the session log does not move the marker', () => {
-  const { homeDir, cwdDir } = makeHome();
-  trackEdit(homeDir, cwdDir, SESSION_A, 'Edit', 'notes.md', { old_string: '', new_string: SAVED_HEADING });
-  assert.strictEqual(fs.existsSync(markerPaths(homeDir, SESSION_A).marker), false);
-});
+// The session log is a file whose name starts with `session-log`, in upper or
+// lower case. The name of a folder does not count.
+const FILE_NAME_CASES = [
+  ['T8h: a [saved] Edit of notes.md does not move the marker', 'notes.md', false],
+  ['T8l: a [saved] Edit of session-notes.md does not move the marker', 'session-notes.md', false],
+  ['T8m: a [saved] Edit of Session-Log.md moves the marker', 'Session-Log.md', true],
+  ['T8n: a [saved] Edit of notes.md in a folder named session-log does not move the marker',
+    '/x/session-log/notes.md', false],
+];
+
+for (const [label, filePath, expectMarker] of FILE_NAME_CASES) {
+  test(label, () => {
+    const { homeDir, cwdDir } = makeHome();
+    trackEdit(homeDir, cwdDir, SESSION_A, 'Edit', filePath, { old_string: '', new_string: SAVED_HEADING });
+    assert.strictEqual(fs.existsSync(markerPaths(homeDir, SESSION_A).marker), expectMarker);
+  });
+}
 
 test('T8i: a payload without a session id writes the shared marker', () => {
   const { homeDir, cwdDir } = makeHome();
@@ -303,13 +317,24 @@ test('T9d: with the session id not set, the command writes the shared marker', (
   assert.deepStrictEqual(fs.readdirSync(logDir), [path.basename(marker)]);
 });
 
-test('T9e: the marker written by the command clears the decision-log block', () => {
+/** After a significant edit, run command as the session; the stop hook must then not ask for a decision-log entry. */
+function assertCommandClearsBlock(sessionId, commandOf) {
   const { homeDir, cwdDir } = makeHome();
-  trackEdit(homeDir, cwdDir, SESSION_A, 'Edit', SIGNIFICANT_FILE, { old_string: 'a', new_string: 'b' });
-  runBash(markerPaths(homeDir).command, homeDir, cwdDir, SESSION_A);
-  const result = stop(homeDir, cwdDir, SESSION_A);
+  trackEdit(homeDir, cwdDir, sessionId, 'Edit', SIGNIFICANT_FILE, { old_string: 'a', new_string: 'b' });
+  runBash(commandOf(homeDir), homeDir, cwdDir, sessionId);
+  const result = stop(homeDir, cwdDir, sessionId);
   assert.ok(!(result.reason || '').includes(DECISION_LOG),
     `Expected no decision-log block, got: ${JSON.stringify(result)}`);
+}
+
+test('T9e: the marker written by the command clears the decision-log block', () => {
+  assertCommandClearsBlock(SESSION_A, homeDir => markerPaths(homeDir).command);
+});
+
+// The hooks and the command must cut a long id at the same length. If they
+// do not, they name two different files, and a save never clears the block.
+test('T9g: for an id of 100 characters, the save command of the skill clears the decision-log block', () => {
+  assertCommandClearsBlock(LONG_ID, () => saveCommandWithEntry(ENTRY_TEXT));
 });
 
 test('T10: the here-document delimiter of the save command is quoted', () => {
@@ -325,6 +350,32 @@ test('The skill holds the marker command of save-marker.js, in step 4 and alone 
   assert.strictEqual(blocks.filter(block => block.trim() === command).length, 1,
     'Expected one block that holds the marker command alone');
 });
+
+// ── The rules that the skill states next to the save command ─────────────────
+
+console.log('\ncontext-management skill: the rules of the save command');
+
+// Each pattern pins one rule sentence. The skill text is read with its line
+// breaks folded to spaces, and in lower case.
+const SKILL_RULES = [
+  ['a hook can block the command; write the entry with the Edit tool instead',
+    /a hook can block this command\..*in that case write the entry with the edit tool instead/],
+  ['write the [saved] heading at the start of a line',
+    /write the `## \.\.\. \[saved\]` heading at the start of a line/],
+  ['save after the edits that implement a decision',
+    /save after the edits that implement a decision/],
+  ['the delimiter is in single quotes and must stay so',
+    /the delimiter `'[a-z0-9_]+'` is in single quotes, and it must stay so/],
+  ['the entry must hold no line that is equal to the delimiter',
+    /the entry must hold no line that is equal to the delimiter/],
+];
+
+const foldedSkillText = fs.readFileSync(SKILL_FILE, 'utf8').replace(/\s+/g, ' ').toLowerCase();
+for (const [label, pattern] of SKILL_RULES) {
+  test(`The skill states the rule: ${label}`, () => {
+    assert.ok(pattern.test(foldedSkillText), `No sentence of the skill matches ${pattern}`);
+  });
+}
 
 console.log(`\n${'─'.repeat(50)}`);
 console.log(`save-marker: ${passed} passed, ${failed} failed`);
