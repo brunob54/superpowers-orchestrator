@@ -8,6 +8,106 @@
 > (`REPOZY/superpowers-optimized`) and are kept unchanged as history; any
 > testing they describe was not done here.
 
+## v7.46.0 — the revert sees renamed and ignored files; one statistics file per session
+
+**Problem.** In Resume step 3 the path list of a reverted fix commit held only
+the new name of a renamed file: a conflict ended in a false major error, and
+the resume commit removed the file from the branch. The revert also wrote over
+an ignored file with no warning. All sessions shared one `session-stats.json`,
+so the "Session summary" line named skills of other sessions.
+
+**Change.** The list uses `--no-renames`; the pre-check also lists ignored
+files on those paths and then does not revert. Each session has its own
+statistics file; the summary line has no minutes.
+
+**Effect.** A revert keeps both names and your ignored files. in-run-rulings
+holds 914 checks (907 before). Nothing to migrate.
+
+### Rows 74 and 73 — the fix-commit revert of Resume step 3
+
+`git show --name-only --format= <sha>` lists a renamed file under its new name
+only, and the result depends on the user's `diff.renames` setting. Three rules
+of `skills/orchestrating-development/SKILL.md` take their paths from that
+list. Measured on git 2.50.1, for a fix commit that renamed `old.txt` to
+`new.txt`:
+
+- After a conflict (exit 1) the cleanup left `A  old.txt` staged, the status
+  check found a mismatch, and the run stopped with a false major error. This
+  is the effect that worklist row 74 named.
+- The undo before a stop left the same staged file, and no status check
+  follows that undo.
+- On the success path the resume commit over the narrow list exited 0, and
+  `HEAD` then held neither `new.txt` nor `old.txt`: the branch lost the file.
+
+The list command is now `git show --name-only --no-renames --format= <sha>`
+at all three sites (the pre-check, the way out of an unfinished revert, the
+permitted reads). `--no-renames` gave both names in all seven measured cases.
+The pre-check now states that every later rule of the revert takes its paths
+from this one list: the cleanup, the undo before a stop, and the reverted
+paths that the resume commit names.
+
+`git status --porcelain` does not list an ignored file. When the fix commit
+deleted a path and the user keeps an ignored file there, `git revert
+--no-commit` exits 0 and writes the committed content over it. `git revert`
+has no option that prevents this. The pre-check now also runs
+`git ls-files --others --ignored --exclude-standard -- <those paths>`, each
+path as its own argument, and skips the command when the list is empty (with
+no path it prints every ignored file of the repository). A printed path takes
+the existing "not reverted" branch. The candidate of the worklist row,
+`git status --porcelain --ignored`, was rejected by measurement: for a file
+inside an ignored folder it prints only the folder.
+
+### Row 75 — one statistics file per session
+
+`hooks/track-session-stats.js` kept one `session-stats.json` for all sessions.
+Only the writer applied a 2-hour reset, and only on the next Skill call, so
+the stop hook could print a stale file of any age (observed: "826min" in a
+session that was 10 minutes old).
+
+- `hooks/save-marker.js` has a fourth file kind and `statsFile(sessionId)`.
+  The 7-day cleanup of per-session files covers it with no other change.
+- The writer uses the file of its session and has no 2-hour reset. With a
+  per-session file that reset deleted the counts of a session longer than 2
+  hours (measured: "125min, 3" became "0min, 1").
+- The stop hook reads the file of its session only. It never reads the old
+  shared file, which holds one total of all sessions.
+- The summary line no longer shows minutes. They were the time since the first
+  Skill call after the last reset, never the age of the session.
+- A payload without a session id keeps the shared file name on both sides.
+
+The lost update between parallel writers exists (2 processes at one instant
+kept 1 of 2 counts in 10 of 10 runs) but is not the reason for the change:
+1,894 transcript files with 160 Skill calls held no two Skill calls of one
+session less than 1 second apart.
+
+### Review
+
+One measuring verifier (rows 74 and 73); two lenses plus a rebuttal round
+(row 75). Correctness review: 0 Critical, 1 Important, 5 Minor. Red team: 0
+Critical, 3 Important, 3 Minor. Mutation testing in a worktree: 35 run, 33
+caught, 2 survived, both now caught. One verification pass: 1 Important, 4
+Minor. That Important finding was caused by a review fix: `-c
+core.quotePath=false` on the list command alone made the pre-check blind to a
+local change on a path with an accented character. It was taken back before
+the release, and a check pins its absence.
+
+### Accepted limits and new worklist rows
+
+- Parallel Skill calls inside one session can still lose a count. A session
+  that runs during the plugin update starts its counts again at zero. The old
+  `session-stats.json` stays on disk; you may delete it. A session with no
+  Skill call for 8 days loses its counts to the 7-day cleanup.
+- Row 76: an ignored file named like a folder that the revert creates again
+  is seen by no command. Row 77: a path name that git prints quoted (an
+  accented character) or reads as a pattern (`*.txt`). Row 78: a rename that
+  changes only the case of a name, on a file system that ignores case.
+
+### Tests
+
+All thirteen fast suites pass with no `command not found` line:
+in-run-rulings 914 (907), `tests/codex/test-track-edits.js` 44 tests (39),
+`tests/codex/test-stop-reminders.js` 47; the others as on v7.45.0.
+
 ## v7.45.0 — one edit log per session; a refused revert runs no cleanup
 
 **Problem.** All sessions shared one edit log, and every edit rewrote it: 8

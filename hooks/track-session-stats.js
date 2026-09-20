@@ -13,28 +13,16 @@
  */
 
 const fs = require('fs');
-const path = require('path');
-
-const LOG_DIR = path.join(
-  process.env.HOME || process.env.USERPROFILE || '.',
-  '.claude',
-  'hooks-logs'
-);
-
-const STATS_FILE = path.join(LOG_DIR, 'session-stats.json');
+const { LOG_DIR, statsFile } = require('./save-marker');
 
 /**
- * Load current session stats or initialize empty.
+ * Load the stats of one session from its file, or initialize empty. The file
+ * belongs to one session, so its counts never expire by age.
  */
-function loadStats() {
+function loadStats(file) {
   try {
-    if (fs.existsSync(STATS_FILE)) {
-      const raw = JSON.parse(fs.readFileSync(STATS_FILE, 'utf8'));
-      // Auto-expire after 2 hours (new session)
-      if (raw.startedAt && (Date.now() - new Date(raw.startedAt).getTime()) > 2 * 60 * 60 * 1000) {
-        return createFreshStats();
-      }
-      return raw;
+    if (fs.existsSync(file)) {
+      return JSON.parse(fs.readFileSync(file, 'utf8'));
     }
   } catch {
     // Corrupted file — start fresh
@@ -53,10 +41,10 @@ function createFreshStats() {
   };
 }
 
-function saveStats(stats) {
+function saveStats(file, stats) {
   try {
     if (!fs.existsSync(LOG_DIR)) fs.mkdirSync(LOG_DIR, { recursive: true });
-    fs.writeFileSync(STATS_FILE, JSON.stringify(stats, null, 2));
+    fs.writeFileSync(file, JSON.stringify(stats, null, 2));
   } catch {
     // Silently ignore
   }
@@ -103,7 +91,7 @@ async function main() {
 
   try {
     const data = JSON.parse(input);
-    const { tool_name, tool_input } = data;
+    const { tool_name, tool_input, session_id } = data;
 
     if (tool_name !== 'Skill') {
       process.stdout.write('{}');
@@ -111,13 +99,14 @@ async function main() {
     }
 
     const skillName = tool_input?.skill || 'unknown';
-    const stats = loadStats();
+    const file = statsFile(session_id);
+    const stats = loadStats(file);
 
     // Track skill invocation
     stats.skillInvocations[skillName] = (stats.skillInvocations[skillName] || 0) + 1;
     stats.totalSkillCalls += 1;
 
-    saveStats(stats);
+    saveStats(file, stats);
   } catch {
     // Silently ignore
   }
@@ -128,5 +117,5 @@ async function main() {
 if (require.main === module) {
   main();
 } else {
-  module.exports = { loadStats, saveStats, formatSummary, createFreshStats, STATS_FILE };
+  module.exports = { loadStats, saveStats, formatSummary, createFreshStats };
 }

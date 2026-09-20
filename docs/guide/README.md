@@ -1006,6 +1006,17 @@ each path, and `git checkout -- <path>` deleted that change. Now the run runs
 no undo after a refusal: it compares `git status --porcelain` with the state
 that it saved before the revert, and it records `fix <sha> not reverted`.
 
+Since v7.46.0 the run looks for an ignored file before it reverts a fix. An
+ignored file is a file that a line in `.gitignore` or `.git/info/exclude`
+hides from git. When the fix commit deleted a file and you keep an ignored
+file at the same path, `git revert` writes the committed content over your
+file with no warning. The run now lists such files first
+(`git ls-files --others --ignored --exclude-standard` over the paths of the
+fix commit). When it finds one, it does not start the revert, it records
+`fix <sha> not reverted`, and your file stays as it is. Also since v7.46.0
+the paths of a fix commit that renamed a file hold both names of that file,
+so the way out above lists the old name too.
+
 **Interrupted during plan writing or a review round?** Resume re-enters any
 phase whose completion entry never made it into the orchestration log, but
 how much is redone differs:

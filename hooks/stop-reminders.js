@@ -23,17 +23,15 @@ const fs = require('fs');
 const path = require('path');
 const { spawnSync } = require('child_process');
 const {
-  LOG_DIR,
   MARKER_COMMAND,
   MAX_AGE_MS,
   editLogFile,
   guardFile,
   markerFile,
   removeOldSessionFiles,
+  statsFile,
   writeTimeFile,
 } = require('./save-marker');
-
-const STATS_FILE = path.join(LOG_DIR, 'session-stats.json');
 
 // Guard: only fire once per session (prevent infinite loop)
 // The guard file is created on first fire and checked on subsequent fires.
@@ -234,12 +232,13 @@ function getLastSavedEntryTime(sessionId) {
 }
 
 /**
- * Load session statistics for progress visibility.
+ * Load the statistics of one session for progress visibility.
  */
-function getSessionStats() {
+function getSessionStats(sessionId) {
   try {
-    if (!fs.existsSync(STATS_FILE)) return null;
-    return JSON.parse(fs.readFileSync(STATS_FILE, 'utf8'));
+    const file = statsFile(sessionId);
+    if (!fs.existsSync(file)) return null;
+    return JSON.parse(fs.readFileSync(file, 'utf8'));
   } catch {
     return null;
   }
@@ -251,13 +250,12 @@ function getSessionStats() {
 function formatStatsSummary(stats) {
   if (!stats || stats.totalSkillCalls === 0) return null;
 
-  const duration = Math.round((Date.now() - new Date(stats.startedAt).getTime()) / 60000);
   const skillNames = Object.entries(stats.skillInvocations)
     .sort((a, b) => b[1] - a[1])
     .map(([name, count]) => `${name} (${count}x)`)
     .join(', ');
 
-  return `Session summary: ${duration}min, ${stats.totalSkillCalls} skill invocations [${skillNames}]`;
+  return `Session summary: ${stats.totalSkillCalls} skill invocations [${skillNames}]`;
 }
 
 /**
@@ -279,11 +277,11 @@ function getUncommittedCount(cwd) {
   }
 }
 
-function generateReminders(edits, cwd) {
+function generateReminders(edits, cwd, sessionId) {
   const reminders = [];
 
   // Session stats summary (always include if available)
-  const stats = getSessionStats();
+  const stats = getSessionStats(sessionId);
   const statsSummary = formatStatsSummary(stats);
   if (statsSummary) {
     reminders.push(statsSummary);
@@ -441,7 +439,7 @@ function evaluatePayload(data) {
   // reminder that the model cannot clear (the TDD reminder) repeats.
   if (data.stop_hook_active === true || !shouldFire(sessionId)) return {};
 
-  const reminders = generateReminders(edits, cwd);
+  const reminders = generateReminders(edits, cwd, sessionId);
 
   // Decision-log reminder: significant files modified since the last [saved] entry.
   // Using "since last saved" (not "last 30 min") means long sessions with multiple

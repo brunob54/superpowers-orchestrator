@@ -24,6 +24,7 @@ const { spawnSync } = require('child_process');
 const REPO_ROOT = path.join(__dirname, '..', '..');
 const HOOKS_DIR = path.join(REPO_ROOT, 'hooks');
 const TRACK_EDITS = path.join(HOOKS_DIR, 'track-edits.js');
+const TRACK_STATS = path.join(HOOKS_DIR, 'track-session-stats.js');
 const STOP_REMINDERS = path.join(HOOKS_DIR, 'stop-reminders.js');
 const SAVE_MARKER = path.join(HOOKS_DIR, 'save-marker.js');
 const SKILL_FILE = path.join(REPO_ROOT, 'skills', 'context-management', 'SKILL.md');
@@ -441,6 +442,89 @@ test('T14: an edit without a session id is written to the shared log and counted
   const { logDir } = markerPaths(homeDir);
   assert.deepStrictEqual(fs.readdirSync(logDir).filter(name => name.startsWith('edit-log')), [SHARED_EDIT_LOG]);
   assert.strictEqual(evaluateInHome(homeDir, STOP_REMINDERS, undefined, 'm.getRecentEdits(id).length'), 1);
+});
+
+// ── Session statistics: one file per session ─────────────────────────────────
+
+console.log('\nSession statistics: one file per session');
+
+const SHARED_STATS_FILE = 'session-stats.json';
+const SUMMARY_LABEL = 'Session summary';
+const MINUTE_MS = 60 * 1000;
+
+function trackSkill(homeDir, sessionId, skill) {
+  const output = runHook(TRACK_STATS, { tool_name: 'Skill', tool_input: { skill }, session_id: sessionId }, homeDir);
+  assert.deepStrictEqual(output, JSON.parse(EMPTY_HOOK_OUTPUT), 'track-session-stats must never block');
+}
+
+/** The content of a statistics file that counts one call of each named skill. */
+function statsContent(skills, startedMinutesAgo) {
+  return JSON.stringify({
+    startedAt: new Date(Date.now() - startedMinutesAgo * MINUTE_MS).toISOString(),
+    skillInvocations: Object.fromEntries(skills.map(skill => [skill, 1])),
+    totalSkillCalls: skills.length,
+  });
+}
+
+/** The file is as old on disk as its content says, so no age rule of any kind can pass. */
+function seedStatsFile(homeDir, file, skills, startedMinutesAgo) {
+  fs.mkdirSync(markerPaths(homeDir).logDir, { recursive: true });
+  fs.writeFileSync(file, statsContent(skills, startedMinutesAgo));
+  const started = new Date(Date.now() - startedMinutesAgo * MINUTE_MS);
+  fs.utimesSync(file, started, started);
+}
+
+/**
+ * The reason text of the block that a stop gives after one significant edit.
+ * The summary line appears only inside a block, so every check makes one edit.
+ */
+function stopReasonAfterEdit(homeDir, cwdDir, sessionId) {
+  trackEdit(homeDir, cwdDir, sessionId, 'Edit', SIGNIFICANT_FILE, { old_string: 'a', new_string: 'b' });
+  return stop(homeDir, cwdDir, sessionId).reason || '';
+}
+
+test('T15: the summary of session B names only the skills of session B, and no minutes', () => {
+  const { homeDir, cwdDir } = makeHome();
+  trackSkill(homeDir, SESSION_A, 'skill-a');
+  trackSkill(homeDir, SESSION_B, 'skill-b');
+  const reason = stopReasonAfterEdit(homeDir, cwdDir, SESSION_B);
+  assert.ok(reason.includes(`${SUMMARY_LABEL}: 1 skill invocations [skill-b (1x)]`), `Got: ${reason}`);
+  assert.ok(!reason.includes('skill-a'), `The summary names a skill of session A: ${reason}`);
+  assert.ok(!fs.existsSync(path.join(markerPaths(homeDir).logDir, SHARED_STATS_FILE)),
+    'The shared statistics file must not be written');
+});
+
+test('T16: the shared statistics file of an older plugin version gives a session no summary', () => {
+  const { homeDir, cwdDir } = makeHome();
+  seedStatsFile(homeDir, path.join(markerPaths(homeDir).logDir, SHARED_STATS_FILE), ['old-skill'], 180);
+  const reason = stopReasonAfterEdit(homeDir, cwdDir, SESSION_A);
+  assert.ok(reason.includes(DECISION_LOG), `Expected a block, got: ${reason}`);
+  assert.ok(!reason.includes(SUMMARY_LABEL), `Expected no summary line, got: ${reason}`);
+});
+
+test('T16b: the first Skill call of a session does not start from the shared statistics file', () => {
+  const { homeDir, cwdDir } = makeHome();
+  seedStatsFile(homeDir, path.join(markerPaths(homeDir).logDir, SHARED_STATS_FILE), ['old-skill'], 1);
+  trackSkill(homeDir, SESSION_A, 'skill-a');
+  const reason = stopReasonAfterEdit(homeDir, cwdDir, SESSION_A);
+  assert.ok(reason.includes(`${SUMMARY_LABEL}: 1 skill invocations [skill-a (1x)]`), `Got: ${reason}`);
+});
+
+test('T17: a session longer than 2 hours keeps its counts', () => {
+  const { homeDir, cwdDir } = makeHome();
+  const ownStats = evaluateInHome(homeDir, SAVE_MARKER, SESSION_A, 'm.statsFile(id)');
+  seedStatsFile(homeDir, ownStats, ['skill-a'], 180);
+  trackSkill(homeDir, SESSION_A, 'skill-a');
+  const reason = stopReasonAfterEdit(homeDir, cwdDir, SESSION_A);
+  assert.ok(reason.includes('2 skill invocations [skill-a (2x)]'), `Got: ${reason}`);
+});
+
+test('T18: a Skill call without a session id is counted in the shared file and shown', () => {
+  const { homeDir, cwdDir } = makeHome();
+  trackSkill(homeDir, undefined, 'skill-a');
+  const { logDir } = markerPaths(homeDir);
+  assert.deepStrictEqual(fs.readdirSync(logDir).filter(name => name.startsWith('session-stats')), [SHARED_STATS_FILE]);
+  assert.ok(stopReasonAfterEdit(homeDir, cwdDir, undefined).includes('skill-a (1x)'));
 });
 
 // ── The rules that the skill states next to the save command ─────────────────
