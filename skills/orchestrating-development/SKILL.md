@@ -1174,9 +1174,16 @@ Trigger: `Resume orchestration for <plan-or-spec path>`.
    last `— fix <sha>` item of that line before you skip anything. An item
    reading `— fix <sha> not reverted` records that the earlier resume left
    the fix commit standing. Do not skip the other half of the revert then: make it
-   now for that `<sha>`. What stopped the earlier attempt was a local
-   change in the working tree, never a property of the fix commit, so it
-   can be gone now. When it still stands, the other half's own rule takes
+   now for that `<sha>`. What stopped the earlier attempt may have been
+   a local change or a local file in the working tree (a changed,
+   untracked or ignored file, a file that stands where a folder is
+   needed, or a run of the script from a folder that is not the top
+   folder), which can be gone now.
+   It may also have been a property of the fix commit that the pre-check
+   script reports (a special name, a rename that changes only the letter
+   case, a folder that the fix commit replaced by a file or by a
+   symbolic link), which stays.
+   When the cause still stands, the other half's own rule takes
    the `— fix <sha> not reverted` branch again. When that revert succeeds,
    append `— fix <sha> reverted` after that item, because this record is
    appended and never rewritten, so a later resume reads the last item and
@@ -1413,22 +1420,59 @@ Trigger: `Resume orchestration for <plan-or-spec path>`.
    same resume commit, revert that fix commit too: find it by the
    `fixed — <summary> → <sha>` line the review-log addendum recorded for
    that id. **Before starting each revert**, save the tree's current
-   `git status --porcelain` output as the pre-revert state, and check it
-   for local changes to any path the fix commit touched
+   `git status --porcelain` output as the pre-revert state. Then run the
+   pre-check script below from the top folder of the repository, in bash
+   or zsh, with the hash of the fix commit in place of `<sha>` and with
+   no other change:
+
+   ```bash
+   [ -z "$(git rev-parse --show-prefix)" ] || echo "not the top folder"
+   git show -z --name-only --no-renames --format= <sha> |
+   while IFS= read -r -d '' p; do
+     case "$p" in -*|[=]*|*[!abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789._/@+=,-]*) echo "special name: $p";; esac
+     git --literal-pathspecs status --porcelain -- "$p"
+     git --literal-pathspecs ls-files --others --ignored --exclude-standard -- "$p"
+     if [ -e "$p" ] || [ -L "$p" ]; then
+       git rev-parse -q --verify "HEAD:$p" >/dev/null || echo "on disk, not at HEAD: $p"
+     fi
+     while p=$(dirname -- "$p"); [ "$p" != . ]; do
+       if [ -L "$p" ] || { [ -e "$p" ] && [ ! -d "$p" ]; }; then echo "not a folder: $p"; fi
+     done
+   done
+   ```
+
+   Its second line lists the paths the fix commit touched
    (`git show --name-only --no-renames --format= <sha>` lists those paths;
-   `--no-renames` makes a renamed file appear under both its names, and
+   `--no-renames` makes a renamed file appear under both its names,
+   `-z` prints each name unquoted, and
    every later rule of this revert takes its paths from this one list:
    the cleanup, the undo before a stop, and the reverted paths that the
-   resume commit names). Also run
-   `git ls-files --others --ignored --exclude-standard -- <those paths>`,
-   each path as its own argument, and skip this command when the list is
-   empty (with no path it prints every ignored file of the repository):
-   a path it prints holds an ignored file, which `git status --porcelain`
-   does not list. When one of the paths already carries a local change,
-   or that command prints one, do not start the revert at all —
-   `git revert` refuses over an unstaged or untracked one, merges the
-   revert into a staged one or conflicts with it, and overwrites an
-   ignored one with no warning — and take the
+   resume commit names). The script prints a line in six cases.
+   The current folder is not the top folder of the repository: the
+   script reads each path from the current folder.
+   The name of a listed path holds
+   a character outside letters, digits, `.`, `_`,
+   `/`, `@`, `+`, `=`, `,` and `-`, or begins with `-` or `=`: git
+   prints such a name quoted or reads it as a pattern,
+   or the shell expands it, so the commands
+   below, which take a typed name, would miss the file or reach other
+   files. The path carries a local change.
+   An ignored file stands on the path or, when the path is a folder on
+   disk, under it: `git status --porcelain` does not list an ignored
+   file, and the revert overwrites or deletes it with no warning.
+   The path stands on disk and
+   does not exist at HEAD: an untracked file,
+   or the same name in another
+   letter case on a file system that ignores case. A parent folder name
+   of the path stands on disk and is not a real folder: the revert would
+   replace that file with a folder and give no warning. Never type a
+   path into the script and never change its letters list: a range such
+   as `A-Z` lets an accented letter pass in some shells. When the script
+   prints anything at all, on standard output or standard error,
+   do not start the revert at all —
+   `git revert` refuses over an unstaged or untracked change, merges the
+   revert into a staged change or conflicts with it, and overwrites an
+   ignored file with no warning — and take the
    "not reverted" branch below
    directly. Otherwise revert it without a commit of its own
    (`git revert --no-commit <sha>`), staging the result by explicit
@@ -1834,13 +1878,13 @@ you and your forks may read exactly:
    `git show <ruling commit>:<plan path>`,
    `git status --porcelain`,
    `git show --name-only --no-renames --format= <sha>`,
-   `git ls-files --others --ignored --exclude-standard -- <those paths>`,
+   the pre-check script of Resume step 3,
    and a scan of the whole plan
    file for an orphan `(amended by ruling <n>)` marker and its
    `**Amendment <n>` note. You compare the `git status --porcelain`
    output with the saved pre-revert state; you never read a file name out
-   of it. The `git ls-files` command only answers whether an ignored file
-   stands on a path of the fix commit.
+   of it. Of the pre-check script you use one fact only: whether it
+   printed anything.
 5. Your own ruling record for this run,
    `<topic folder>/plans/<slug>-open-decisions.md` — the file you write
    yourself. Guard 4 (below) reads it, before every decision, for an
