@@ -8,6 +8,94 @@
 > (`REPOZY/superpowers-optimized`) and are kept unchanged as history; any
 > testing they describe was not done here.
 
+## v7.48.0 — a code revert stays inside the files of the fix
+
+**Problem.** A commit made after a fix commit could move the revert of that fix
+away from the listed paths. After a folder rename git wrote the reverted file
+into the other folder and overwrote an ignored file of the user there. After a
+file was renamed or deleted, the revert ended with exit code 0 and could not
+be committed.
+
+**Change.** The revert runs with `-c merge.directoryRenames=false`. The check
+script has 18 lines (13 before) and two new tests that read the fix commit and
+HEAD.
+
+**Effect.** Such a revert no longer starts, and the next review raises the
+finding again. `tests/precheck-script` has 116 checks (77 before). Reinstall
+the plugin. Nothing to migrate.
+
+Rows 79 and 80 of the orchestration issues log. Row 79 is closed at its
+source (the revert command), row 80 by prevention (the check script).
+
+**What was measured (git 2.50.1, macOS, bash 3.2 and zsh 5.9).**
+
+- *A later folder rename (row 79).* The fix commit deleted `d/ignx.txt`, a
+  later commit renamed `d/` to `e/`, and the user keeps an ignored
+  `e/ignx.txt`. The check script of v7.47.0 printed nothing. The plain
+  `git revert --no-commit` followed the folder rename and overwrote the user's
+  file: with exit code 1 by default, and with exit code 0 when the
+  configuration holds `merge.directoryRenames=true` (git then prints one
+  `Path updated` line and no warning about the overwritten file). The loss
+  needs an ignored file; git refuses over an untracked or a changed tracked
+  file. Git applies the folder rename only when the old folder no longer
+  exists at HEAD.
+- *The reverse direction.* The fix commit itself renamed `d/` to `e/`, a later
+  commit added `e/ignnew.txt`, and the user keeps an ignored `d/ignnew.txt`.
+  Every listed path is in order, so no check of the listed paths can see this
+  state. The plain revert overwrote the user's file; with
+  `-c merge.directoryRenames=false` it changes only the listed paths. The
+  setting on the command line also wins over the user's configuration and over
+  `GIT_CONFIG_COUNT` and `GIT_CONFIG_PARAMETERS`. On ordinary fix commits
+  (modify, add, delete, rename, rename with a later change) the command gave
+  the same result as the plain one in every state: success with the resume
+  commit, success with the undo, conflict with the cleanup, refusal.
+- *A revert that cannot be committed (row 80).* The fix commit changed `a.txt`
+  and a later commit renamed it to `b.txt`: the revert ended with exit code 0
+  and staged `M  b.txt`, outside the list, and the resume commit failed with
+  `pathspec 'a.txt' did not match`. The fix commit added `n.txt` and a later
+  commit deleted it: the revert was empty, only `REVERT_HEAD` stayed, and the
+  commit failed the same way.
+
+**The script.** `c=<sha>` holds the hash, so the placeholder stands on one
+line only; a placeholder that nobody replaced is a syntax error in bash and in
+zsh, and any output counts as an alarm. The test `in the fix commit, not at
+HEAD` runs for the listed path and then for each parent folder. The test `a
+folder at HEAD, not in the fix commit` runs for the path: a later commit that
+put a folder on a listed file path made git write a file named
+`dd~parent of <sha> (fix)` outside the list, and the run stopped (found in the
+design step). Both tests read git trees, never the disk: a disk test gave a
+false alarm for a fix commit that replaced a file by a folder. The prose names
+eight cases; the retry sentence names a later commit as a cause that normally
+stays.
+
+**One decision and its cost.** With the new command alone, the revert of row
+79 is safe, but the file comes back alone in the old folder `d/`. The
+parent-folder test ends that state as "not reverted". Its cost: when a later
+commit deleted the whole folder, a revert that would work also ends as "not
+reverted". The test is the only line that stops one more measured state: after
+a later rename `d/` to `D/` on a file system that ignores letter case, the
+revert ends with exit code 0, the resume commit takes the file in as
+`D/x.txt`, and a staged rename stays.
+
+**Rejected.** `-X no-renames` on the revert (it loses later work after a
+rename by the fix, turns a refusal into a conflict, and reports success for a
+revert that changed nothing). Naming a path in the resume commit only when its
+status prints a line (a commit of the record alone, with the change still
+staged). A check after the revert (it needs a saved tree to take the change
+back safely).
+
+**Review.** A measuring step with two verifiers, two design lenses with a
+rebuttal round (each lens withdrew one of its own lines), a correctness review
+(1 Important, 4 Minor, all applied), a red-team review (no loss and no write
+outside the list with the new lines), mutation testing (61 run, 60 caught; the
+survivor deletes the guide passage, which no suite pins) and a verification
+pass (1 Minor, applied). `tests/in-run-rulings` has 944 checks (934 before).
+
+**Still open, as new rows of the log:** a fix commit that moved a sub-module
+pointer; a false alarm when a fix commit deleted the last file of a nested
+folder; a sparse checkout, where the resume commit leaves a path out; a later
+change of type between a file and a symbolic link.
+
 ## v7.47.0 — one fixed check script runs before every code revert
 
 **Problem.** Before it reverted a fix commit, Resume step 3 compared printed
