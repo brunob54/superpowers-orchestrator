@@ -1,14 +1,16 @@
 /**
- * Save marker and stop guard — file names shared by the hooks
+ * Save marker, stop guard and edit log — file names shared by the hooks
  *
- * Two files under the hook log folder record the state of one session:
+ * Three files under the hook log folder record the state of one session:
  *   - the save marker holds the time of the session's last `[saved]` entry in
  *     session-log.md. track-edits.js and the context-management skill write
  *     it; stop-reminders.js reads it.
  *   - the stop guard holds the time of the last stop that stop-reminders.js
  *     blocked.
+ *   - the edit log holds one line for each Edit or Write of the session.
+ *     track-edits.js appends to it; stop-reminders.js reads it.
  *
- * Each session has its own two files, so one session cannot hide the
+ * Each session has its own three files, so one session cannot hide the
  * reminders of another session. The session id is part of the file name.
  * A payload without a session id uses the old file names, which all sessions
  * share.
@@ -25,7 +27,8 @@ const LOG_DIR = path.join(
 
 const MARKER_KIND = { prefix: 'last-saved-entry', extension: '.txt' };
 const GUARD_KIND = { prefix: 'stop-hook-fired', extension: '.lock' };
-const FILE_KINDS = [MARKER_KIND, GUARD_KIND];
+const EDIT_LOG_KIND = { prefix: 'edit-log', extension: '.txt' };
+const FILE_KINDS = [MARKER_KIND, GUARD_KIND, EDIT_LOG_KIND];
 
 // A per-session file is named `<prefix>-<clean id><extension>`.
 const ID_SEPARATOR = '-';
@@ -59,6 +62,15 @@ function markerFile(sessionId) {
 /** Path of the stop guard of one session. No id gives the old shared file. */
 function guardFile(sessionId) {
   return sessionFile(GUARD_KIND, sessionId);
+}
+
+/**
+ * Path of the edit log of one session. No id gives the old shared file. A
+ * writer only appends to an edit log, and no hook rewrites, renames or trims
+ * one: a rewrite of a file that several processes append to loses lines.
+ */
+function editLogFile(sessionId) {
+  return sessionFile(EDIT_LOG_KIND, sessionId);
 }
 
 /** True for the name of a per-session file, false for the old shared names. */
@@ -119,6 +131,7 @@ module.exports = {
   LOG_DIR,
   MARKER_COMMAND,
   MAX_AGE_MS,
+  editLogFile,
   guardFile,
   markerFile,
   removeOldSessionFiles,

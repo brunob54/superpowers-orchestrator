@@ -1399,7 +1399,9 @@ Trigger: `Resume orchestration for <plan-or-spec path>`.
    and then `git checkout -- <path>`, with the rule below for a path
    the fix commit deleted, and run `git revert --quit` last:
    `REVERT_HEAD` must stay for as long as one staged change of the
-   revert stays.
+   revert stays. A fix commit whose revert git refused is not one of
+   them: git changed nothing there, and the two commands would delete a
+   local change on its paths.
    **Reverting the plan is only half of
    the revert.** Which half depends on the reverted ruling's phase: a
    Phase 4 ruling's other half is a fix commit, covered by the rest of
@@ -1409,18 +1411,28 @@ Trigger: `Resume orchestration for <plan-or-spec path>`.
    the branch against a clause the user has just reinstated. So, in the
    same resume commit, revert that fix commit too: find it by the
    `fixed — <summary> → <sha>` line the review-log addendum recorded for
-   that id. **Before starting the revert**, save the tree's current
+   that id. **Before starting each revert**, save the tree's current
    `git status --porcelain` output as the pre-revert state, and check it
    for local changes to any path the fix commit touched
    (`git show --name-only --format= <sha>` lists those paths): when one of
    them already carries a local change, do not start the revert at all —
-   `git revert` refuses over it — and take the "not reverted" branch below
+   `git revert` refuses over an unstaged or untracked one, and merges the
+   revert into a staged one, or conflicts with it — and take the
+   "not reverted" branch below
    directly. Otherwise revert it without a commit of its own
    (`git revert --no-commit <sha>`), staging the result by explicit
-   path. **On any non-zero exit from that command** the checkout is left
-   mid-revert, never untouched: git writes conflict markers into the
-   conflicting files, stages the clean hunks of every other file the revert
-   touched, and leaves `REVERT_HEAD` and the sequencer state behind. Undo
+   path. **On a non-zero exit from that command** the exit code names the
+   case. Exit 1 is a conflict, and the checkout is left mid-revert: git
+   writes conflict markers into the conflicting files, stages the clean
+   hunks of every other file the revert touched, and leaves `REVERT_HEAD`
+   behind. Any other non-zero exit is a refusal: git wrote no
+   `REVERT_HEAD` and normally changed nothing. After a refusal run no
+   cleanup at all — no
+   `git reset`, no `git checkout`, no `rm` — and go directly to the status
+   check below: the tree can hold a local change that the pre-check did
+   not list, and the cleanup would delete it; the status check reports
+   the rare refusal that did change the tree, for example when git could
+   not write a file. The cleanup that follows is for exit 1 only. Undo
    the markers and the staged hunks with explicit paths only: for each
    path the fix commit touched, named one at a time, run
    `git reset -- <path>` and then `git checkout -- <path>`.
@@ -1439,7 +1451,8 @@ Trigger: `Resume orchestration for <plan-or-spec path>`.
    **Never `git reset --hard`, never
    `git checkout .`, never `git clean`**: a stop can happen over a
    deliberately dirty tree, and those three would delete the blocked task's
-   legitimate uncommitted work. After that cleanup, and only on this
+   legitimate uncommitted work. After that cleanup, or directly after a
+   refusal, and only on this
    non-zero-exit path, require `git status --porcelain` to
    print exactly the pre-revert state you saved; a mismatch is a major
    error — stop and report both outputs, never commit over it. Only when
@@ -1448,8 +1461,8 @@ Trigger: `Resume orchestration for <plan-or-spec path>`.
    Phase 4 invocation that the reverted plan file forces (the plan is
    content for the effective-HEAD test) re-raises the finding against the
    restored clause. **On the success path — a zero exit from `git revert
-   --no-commit` — skip that status check**: a successful revert leaves the
-   reverted hunks staged, which never matches the pre-revert state, and
+   --no-commit` — skip that status check**: a successful revert normally leaves the
+   reverted hunks staged, which does not match the pre-revert state, and
    that mismatch is expected, not an error. Stage the reverted paths (already
    done above) and continue straight to the follow-up commit below. **When
    the reverted ruling was made in Phase 3,

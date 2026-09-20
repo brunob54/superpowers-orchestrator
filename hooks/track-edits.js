@@ -13,7 +13,7 @@
 const fs = require('fs');
 const path = require('path');
 const { excludeFromGit } = require('./git-exclude');
-const { LOG_DIR, markerFile, writeTimeFile } = require('./save-marker');
+const { LOG_DIR, editLogFile, markerFile, writeTimeFile } = require('./save-marker');
 
 // AI-generated workspace artifacts that should never be committed
 const AI_ARTIFACTS = ['project-map.md', 'session-log.md', 'state.md', 'known-issues.md'];
@@ -27,9 +27,6 @@ function excludeArtifact(filePath) {
   if (!AI_ARTIFACTS.includes(path.basename(filePath))) return;
   excludeFromGit(filePath);
 }
-
-const EDIT_LOG = path.join(LOG_DIR, 'edit-log.txt');
-const MAX_LINES = 500;
 
 const SAVED_TAG = '[saved]';
 const REGEXP_SPECIAL_CHARACTER = /[.*+?^${}()|[\]\\]/g;
@@ -59,7 +56,8 @@ function addsSavedEntry(toolName, toolInput) {
 }
 
 /**
- * Append an entry to the edit log.
+ * Append an entry to the edit log of the session. The log is never rewritten
+ * or trimmed here; save-marker.js deletes a log that is older than 7 days.
  * Format: ISO-timestamp | session_id | tool | file_path
  * (Legacy format without session_id is still accepted on read)
  */
@@ -77,73 +75,12 @@ function logEdit(tool, filePath, cwd, sessionId) {
 
     const sid = sessionId || '';
     const entry = `${new Date().toISOString()} | ${sid} | ${tool} | ${resolved}\n`;
-    fs.appendFileSync(EDIT_LOG, entry);
+    fs.appendFileSync(editLogFile(sessionId), entry);
 
     // Keep AI workspace artifacts out of git status on first write
     excludeArtifact(resolved);
-
-    // Auto-rotate: check file size first (cheaper than reading content)
-    // Only rotate if file exceeds ~50KB (roughly 500 lines at 100 chars each)
-    rotateIfNeeded();
   } catch {
     // Silently ignore logging errors — never block the tool
-  }
-}
-
-function rotateIfNeeded() {
-  try {
-    const stat = fs.statSync(EDIT_LOG);
-    // Only read file for rotation if it exceeds ~50KB
-    if (stat.size < 50 * 1024) return;
-
-    const content = fs.readFileSync(EDIT_LOG, 'utf8');
-    const lines = content.split('\n').filter(Boolean);
-    if (lines.length > MAX_LINES) {
-      const trimmed = lines.slice(-MAX_LINES).join('\n') + '\n';
-      fs.writeFileSync(EDIT_LOG, trimmed);
-    }
-  } catch {
-    // Ignore rotation errors
-  }
-}
-
-/**
- * Read the edit log and return entries from the current session.
- * Used by stop-reminders to check what files were changed.
- * Supports both the legacy 3-field format and new 4-field format with session_id.
- */
-function getRecentEdits(withinMinutes = 60) {
-  try {
-    if (!fs.existsSync(EDIT_LOG)) return [];
-
-    const content = fs.readFileSync(EDIT_LOG, 'utf8');
-    const lines = content.split('\n').filter(Boolean);
-    const cutoff = new Date(Date.now() - withinMinutes * 60 * 1000);
-
-    return lines
-      .map(line => {
-        const parts = line.split(' | ');
-        if (parts.length < 3) return null;
-        if (parts.length >= 4) {
-          // New format: timestamp | session_id | tool | filePath
-          return {
-            timestamp: parts[0],
-            sessionId: parts[1] || null,
-            tool: parts[2],
-            filePath: parts.slice(3).join(' | '),
-          };
-        }
-        // Legacy format: timestamp | tool | filePath
-        return {
-          timestamp: parts[0],
-          sessionId: null,
-          tool: parts[1],
-          filePath: parts.slice(2).join(' | '),
-        };
-      })
-      .filter(entry => entry && new Date(entry.timestamp) > cutoff);
-  } catch {
-    return [];
   }
 }
 
@@ -187,5 +124,5 @@ async function main() {
 if (require.main === module) {
   main();
 } else {
-  module.exports = { logEdit, getRecentEdits, rotateIfNeeded, excludeArtifact, EDIT_LOG, LOG_DIR };
+  module.exports = { logEdit, excludeArtifact, LOG_DIR };
 }

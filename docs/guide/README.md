@@ -999,6 +999,13 @@ limit: a commit, or a `git reset` without a path, that you run by hand before
 the resume
 deletes `REVERT_HEAD`, and the run then no longer sees the unfinished revert.
 
+Since v7.45.0 a revert that git refuses changes none of your files.
+`git revert` refuses (exit code 128) when a path of the fix commit holds an
+unstaged or untracked change. Before v7.45.0 the run then ran its undo for
+each path, and `git checkout -- <path>` deleted that change. Now the run runs
+no undo after a refusal: it compares `git status --porcelain` with the state
+that it saved before the revert, and it records `fix <sha> not reverted`.
+
 **Interrupted during plan writing or a review round?** Resume re-enters any
 phase whose completion entry never made it into the orchestration log, but
 how much is redone differs:

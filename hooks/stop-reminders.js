@@ -26,13 +26,13 @@ const {
   LOG_DIR,
   MARKER_COMMAND,
   MAX_AGE_MS,
+  editLogFile,
   guardFile,
   markerFile,
   removeOldSessionFiles,
   writeTimeFile,
 } = require('./save-marker');
 
-const EDIT_LOG = path.join(LOG_DIR, 'edit-log.txt');
 const STATS_FILE = path.join(LOG_DIR, 'session-stats.json');
 
 // Guard: only fire once per session (prevent infinite loop)
@@ -59,10 +59,13 @@ function shouldFire(sessionId) {
 }
 
 /**
- * Write the guard of this session. Also delete every per-session marker and
- * guard file that is older than 7 days. This includes a file of this session.
- * That is harmless: the hook never looks further back than 7 days for unsaved
- * edits, so a marker of that age changes no result.
+ * Write the guard of this session. Also delete every per-session marker,
+ * guard and edit log file that is older than 7 days, which is every file in
+ * the log folder whose name matches the pattern of a per-session file. This
+ * includes a file of this session. That is harmless: the hook never looks
+ * further back than 7 days for unsaved edits, so a marker or an edit line of
+ * that age changes no result, and every append sets the modification time of
+ * the edit log to the present time.
  * Limit (from reasoning, not measured): the cleanup reads the time of a file
  * and then deletes the file. When a session rewrites its marker, which was
  * older than 7 days, between these two steps, the cleanup deletes the new
@@ -169,13 +172,17 @@ const SUBAGENT_WORKTREE_PATTERN = /(?:^|[/\\])\.claude[/\\]worktrees[/\\]agent-a
 
 /**
  * Read the edit log entries of the current session that are newer than cutoff.
- * Edits inside a subagent's own worktree are left out.
+ * Edits inside a subagent's own worktree are left out. The old shared log is
+ * read as well: it holds the edits without a session id, and the earlier edits
+ * of a session that was open while the plugin was updated. Without a session
+ * id both paths are the same file, and the Set keeps it from being read twice.
  */
 function readSessionEditsAfter(cutoff, sessionId) {
   try {
-    if (!fs.existsSync(EDIT_LOG)) return [];
-    return fs.readFileSync(EDIT_LOG, 'utf8')
-      .split('\n').filter(Boolean)
+    return [...new Set([editLogFile(sessionId), editLogFile()])]
+      .filter(file => fs.existsSync(file))
+      .flatMap(file => fs.readFileSync(file, 'utf8').split('\n'))
+      .filter(Boolean)
       .map(parseLogLine)
       .filter(entry =>
         entry &&

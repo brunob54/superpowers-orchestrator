@@ -2100,25 +2100,53 @@ assert_in_range_folded "the ledger line is removed on disk only, never staged" \
   "$RESUME_LINE" "$RULINGS_LINE"
 # `git revert --no-commit` does not leave the tree untouched on a conflict: it
 # writes conflict markers, stages the clean hunks of every other file it
-# touched, and leaves the sequencer state behind. The paragraph must name the
+# touched, and leaves `REVERT_HEAD` behind. The paragraph must name the
 # pre-check, the cleanup and the verification, or "make no code change at all"
 # names no reachable state.
+assert_in_range_folded "the pre-revert state is saved again before each revert" \
+  "$ORCH_SKILL" '**Before starting each revert**, save the tree' \
+  "$RESUME_LINE" "$RULINGS_LINE"
 assert_in_range_folded "the revert checks for local changes to the paths it would touch first" \
   "$ORCH_SKILL" 'output as the pre-revert state, and check it for local changes to any path the fix commit touched' \
   "$RESUME_LINE" "$RULINGS_LINE"
 assert_in_range_folded "a locally-changed path takes the not-reverted branch without starting the revert" \
   "$ORCH_SKILL" 'do not start the revert at all' \
   "$RESUME_LINE" "$RULINGS_LINE"
-assert_in_range_folded "a non-zero revert exit leaves the checkout mid-revert, not untouched" \
-  "$ORCH_SKILL" '**On any non-zero exit from that command** the checkout is left mid-revert, never untouched' \
+# Row 72. Measured on git 2.50.1: `git revert --no-commit` refuses (exit 128,
+# nothing changed, no `REVERT_HEAD`) over an unstaged or untracked change, and
+# exits 0 over a staged one. Only exit 1, a conflict, leaves the checkout
+# mid-revert. No state creates the folder `.git/sequencer`. After a refusal git
+# created no file, so an untracked file at a path of the fix commit is the
+# user's own. Review round 1 (measured): the per-path cleanup after a refusal
+# deletes an unstaged change that the pre-check did not list, so a refusal runs
+# no cleanup at all.
+assert_in_range_folded "the pre-check names what git does over each kind of local change" \
+  "$ORCH_SKILL" 'do not start the revert at all — `git revert` refuses over an unstaged or untracked one, and merges the revert into a staged one, or conflicts with it — and take the "not reverted" branch below directly' \
   "$RESUME_LINE" "$RULINGS_LINE"
+assert_in_range_folded "exit 1 leaves the checkout mid-revert, any other non-zero exit leaves it untouched" \
+  "$ORCH_SKILL" '**On a non-zero exit from that command** the exit code names the case. Exit 1 is a conflict, and the checkout is left mid-revert: git writes conflict markers into the conflicting files, stages the clean hunks of every other file the revert touched, and leaves `REVERT_HEAD` behind. Any other non-zero exit is a refusal: git wrote no `REVERT_HEAD` and normally changed nothing. After a refusal run no cleanup at all — no `git reset`, no `git checkout`, no `rm` — and go directly to the status check below: the tree can hold a local change that the pre-check did not list, and the cleanup would delete it; the status check reports the rare refusal that did change the tree, for example when git could not write a file. The cleanup that follows is for exit 1 only. Undo the markers' \
+  "$RESUME_LINE" "$RULINGS_LINE"
+assert_in_range_folded "the status check follows a refusal as well as a cleanup" \
+  "$ORCH_SKILL" 'After that cleanup, or directly after a refusal, and only on this non-zero-exit path, require `git status --porcelain` to print exactly the pre-revert state you saved' \
+  "$RESUME_LINE" "$RULINGS_LINE"
+assert_absent_in_range_folded "no sentence tells the orchestrator to clean up after a refusal" "$ORCH_SKILL" \
+  'Run the same cleanup in both cases' "$RESUME_LINE" "$RULINGS_LINE" fragment
+# A revert of a fix that a later commit already reverted exits 0 and stages
+# nothing (measured), so the success-path sentence must not be absolute.
+assert_in_range_folded "a successful revert normally leaves the reverted hunks staged" \
+  "$ORCH_SKILL" 'a successful revert normally leaves the reverted hunks staged, which does not match the pre-revert state' \
+  "$RESUME_LINE" "$RULINGS_LINE"
+assert_absent_in_range_folded "no revert state is said to leave sequencer state" "$ORCH_SKILL" \
+  'the sequencer state' "$RESUME_LINE" "$RULINGS_LINE" fragment
+assert_absent_in_range_folded "a non-zero exit is no longer said to be never untouched" "$ORCH_SKILL" \
+  'never untouched' "$RESUME_LINE" "$RULINGS_LINE" fragment
 # Row 63, review round 1. The cleanup ran `git revert --quit` first. With an
 # earlier revert of the same resume still staged, that left staged code and no
 # `REVERT_HEAD` (measured), which is the state the row 63 stop cannot see. The
 # cleanup now leaves `REVERT_HEAD` in place: the resume commit deletes it, and
 # a stop runs `git revert --quit` last.
 assert_in_range_folded "the cleanup leaves REVERT_HEAD in place" \
-  "$ORCH_SKILL" 'Undo the markers and the staged hunks with explicit paths only: for each path the fix commit touched, named one at a time, run `git reset -- <path>` and then `git checkout -- <path>`. Do not run `git revert --quit` here: `REVERT_HEAD` must stay while an earlier revert of this resume stands staged, the resume commit deletes it, and a stop runs `git revert --quit` last, as the rule above states. **A path the fix commit deleted is the exception**' \
+  "$ORCH_SKILL" 'Undo the markers and the staged hunks with explicit paths only: for each path the fix commit touched, named one at a time, run `git reset -- <path>` and then `git checkout -- <path>`. Do not run `git revert --quit` here: `REVERT_HEAD` must stay while an earlier revert of this resume stands staged, the resume commit deletes it, and a stop runs `git revert --quit` last, as the rule above states. **A path the fix commit deleted is the exception**: `git revert --no-commit` re-created it as a staged addition, so `git reset -- <path>` leaves it untracked and `git checkout -- <path>` then fails with "pathspec did not match any file known to git" — for such a path (one the saved pre-revert state did not list, now untracked after the reset), remove it explicitly with `rm -- <path>` instead of `git checkout -- <path>`, or, when the path exists at HEAD, restore it with `git checkout HEAD -- <path>`.' \
   "$RESUME_LINE" "$RULINGS_LINE"
 assert_absent_in_range_folded "the cleanup no longer ends the sequencer state first" "$ORCH_SKILL" \
   'end the sequencer state with' "$RESUME_LINE" "$RULINGS_LINE" fragment
@@ -4311,6 +4339,7 @@ R63_B_SENTENCES=(
   '**A stop after this resume staged a fix-commit revert undoes that revert first.**'
   'A `stopped` commit names its paths, so it leaves the staged changes of the revert in place, and any commit deletes `REVERT_HEAD`: the next resume would find staged code that nothing explains.'
   'So before such a stop, for each path of each fix commit this resume reverted, named one at a time, run `git reset -- <path>` and then `git checkout -- <path>`, with the rule below for a path the fix commit deleted, and run `git revert --quit` last: `REVERT_HEAD` must stay for as long as one staged change of the revert stays.'
+  'A fix commit whose revert git refused is not one of them: git changed nothing there, and the two commands would delete a local change on its paths.'
 )
 R63_B_WHOLE=''
 for sentence in "${R63_B_SENTENCES[@]}"; do

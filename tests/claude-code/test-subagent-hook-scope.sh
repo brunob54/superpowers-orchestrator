@@ -33,21 +33,26 @@ trap "finish_transcript_dir \$? '$TRANSCRIPT_DIR'; cleanup_claude_workdir '$CLAU
 LOG_DIR="$HOME/.claude/hooks-logs"
 TODAY=$(date +%Y-%m-%d)
 BLOCK_LOG="$LOG_DIR/$TODAY.jsonl"
-EDIT_LOG="$LOG_DIR/edit-log.txt"
+# Since v7.45.0 each session writes its own edit log, `edit-log-<session id>.txt`;
+# `edit-log.txt` is the older shared file. The test counts the lines that name
+# its marker file in all of them.
+EDIT_LOG_GLOB="$LOG_DIR/edit-log*.txt"
+EDIT_LOG_TEST_PATTERN='subagent-hook-test-marker\|SUBAGENT_HOOK_TEST'
+count_edit_log_hits() {
+    # $EDIT_LOG_GLOB is unquoted on purpose, so that the shell expands it.
+    cat $EDIT_LOG_GLOB 2>/dev/null | grep -c "$EDIT_LOG_TEST_PATTERN" || true
+}
 
 # Record log file sizes before test (to detect new entries)
 BLOCK_LOG_SIZE_BEFORE=0
-EDIT_LOG_SIZE_BEFORE=0
 if [ -f "$BLOCK_LOG" ]; then
     BLOCK_LOG_SIZE_BEFORE=$(wc -c < "$BLOCK_LOG")
 fi
-if [ -f "$EDIT_LOG" ]; then
-    EDIT_LOG_SIZE_BEFORE=$(wc -c < "$EDIT_LOG")
-fi
+EDIT_LOG_HITS_BEFORE=$(count_edit_log_hits)
 
 echo "Test project: $TEST_PROJECT"
 echo "Block log: $BLOCK_LOG (size before: $BLOCK_LOG_SIZE_BEFORE bytes)"
-echo "Edit log: $EDIT_LOG (size before: $EDIT_LOG_SIZE_BEFORE bytes)"
+echo "Edit logs: $EDIT_LOG_GLOB (lines that name the test file before: $EDIT_LOG_HITS_BEFORE)"
 echo ""
 
 # --- Test 1: PreToolUse hook scope (block-dangerous-commands.js) ---
@@ -76,7 +81,7 @@ echo ""
 
 # --- Test 2: PostToolUse hook scope (track-edits.js) ---
 # Ask the main agent to dispatch a subagent that creates a file.
-# If track-edits.js fires, it will log the Write to edit-log.txt.
+# If track-edits.js fires, it will log the Write to the edit log of the session.
 
 echo "=== Test 2: PostToolUse hooks in subagents ==="
 echo "Dispatching subagent to create a file via Write tool"
@@ -141,24 +146,12 @@ echo ""
 
 # Check Test 2: PostToolUse
 echo "--- Test 2: PostToolUse (track-edits.js) ---"
-EDIT_LOG_SIZE_AFTER=0
-if [ -f "$EDIT_LOG" ]; then
-    EDIT_LOG_SIZE_AFTER=$(wc -c < "$EDIT_LOG")
-fi
-
-if [ "$EDIT_LOG_SIZE_AFTER" -gt "$EDIT_LOG_SIZE_BEFORE" ]; then
-    NEW_EDITS=$(tail -c +$((EDIT_LOG_SIZE_BEFORE + 1)) "$EDIT_LOG" 2>/dev/null || echo "")
-    if echo "$NEW_EDITS" | grep -q "subagent-hook-test-marker\|SUBAGENT_HOOK_TEST"; then
-        echo "  [RESULT] PostToolUse hooks DO fire inside subagents"
-        echo "  Evidence: track-edits.js logged the subagent's Write operation"
-    else
-        echo "  [RESULT] New edit log entries found but don't match test file"
-        echo "  Entries: $NEW_EDITS"
-        echo "  Manual inspection may be needed"
-    fi
+if [ "$(count_edit_log_hits)" -gt "$EDIT_LOG_HITS_BEFORE" ]; then
+    echo "  [RESULT] PostToolUse hooks DO fire inside subagents"
+    echo "  Evidence: track-edits.js logged the subagent's Write operation"
 else
     echo "  [RESULT] PostToolUse hooks do NOT fire inside subagents"
-    echo "  Evidence: No new entries in edit log after subagent created a file"
+    echo "  Evidence: No new edit log line names the file that the subagent created"
     echo ""
     echo "  >> CONCLUSION: Subagent edits are NOT tracked by stop-reminders."
 fi
