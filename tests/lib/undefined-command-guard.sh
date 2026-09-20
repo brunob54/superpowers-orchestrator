@@ -5,6 +5,10 @@
 # after the `set` line, or after the comment header when the suite has no
 # `set` line:
 #   source "$(cd "$(dirname "${BASH_SOURCE[0]}")/../lib" && pwd)/undefined-command-guard.sh"
+# Load it before any `trap`, `mktemp` or `cd` line of the suite. The re-run
+# wrapper (see below) starts the suite a second time, so every line before
+# the load line runs twice (measured: a `mktemp -d` before the load line left
+# one temporary folder behind).
 #
 # The defect that this guard closes (row 66 of the orchestration issues):
 # a check called a function that was not defined, for example a call placed
@@ -25,8 +29,8 @@
 # guard therefore starts the suite again as a child process, with a marker
 # variable set and with `LC_MESSAGES=C`, so that bash prints the message in
 # English. The wrapper copies the standard error of the child to a log file
-# and still shows it. The child loads the guard again, sees the marker, and
-# runs the body of the suite with the ERR trap. The body runs one time. When
+# and still shows it. The child loads the guard again, sees the marker, removes
+# it from its environment (see limit 12), and runs the body of the suite with the ERR trap. The body runs one time. When
 # the child ends, the wrapper ends with exit code 1 if the log file holds a
 # line of the form `<script>: line <number>: <command>: command not found`.
 # In every other case the wrapper ends with the exit code of the child. The
@@ -104,6 +108,15 @@
 #    which has no message catalogue: on a bash with message catalogues,
 #    `LC_ALL` or `LANGUAGE` overrides `LC_MESSAGES`, the message is then not
 #    in English, and the wrapper does not see it.
+# 12. The child removes the marker variable from its environment, so a
+#    guarded suite that the child starts gets a wrapper of its own. One case
+#    remains: a marker variable that is already set in the environment of the
+#    user, or of continuous integration (CI), switches the wrapper off, and
+#    the guard prints no message about it.
+# 13. `env nosuch`, `xargs nosuch` and `nohup nosuch` print "No such file or
+#    directory", not "command not found". The pattern does not match that
+#    text, and the ERR trap sees exit code 127 only in the places where it
+#    runs.
 #
 # The line number is the value of $LINENO inside the trap. On bash 3.2 this
 # value is only a line near the call: measured cases were the exact line, a
@@ -121,8 +134,9 @@
 # The name of the marker variable. The re-run wrapper sets it for the child.
 GUARD_INNER_RUN_VAR='__GUARD_INNER_RUN'
 # The form of the message of bash: `<script>: line <number>: <command>:
-# command not found`.
-GUARD_NOT_FOUND_PATTERN=': line [0-9]*: .*: command not found$'
+# command not found`. The `.\{0,1\}` allows one more character at the end of
+# the line: Git Bash on Windows can end the line with a carriage return.
+GUARD_NOT_FOUND_PATTERN=': line [0-9]*: .*: command not found.\{0,1\}$'
 
 # The re-run wrapper. It starts only when the marker is not set, and only when
 # the file that loads the guard is the script that bash runs ($0).
@@ -134,7 +148,10 @@ if [ -z "${!GUARD_INNER_RUN_VAR:-}" ] && [ "${BASH_SOURCE[1]:-}" = "$0" ]; then
   # File descriptor 3 keeps the standard output of the child away from `tee`.
   { env "$GUARD_INNER_RUN_VAR=1" LC_MESSAGES=C "$BASH" "$0" "$@" 2>&1 1>&3 | tee "$__guard_log" >&2
     __guard_code=${PIPESTATUS[0]}; } 3>&1
-  __guard_count="$(grep -c -- "$GUARD_NOT_FOUND_PATTERN" "$__guard_log")"
+  # LC_ALL=C: grep reads the log file as bytes. Measured in a UTF-8 locale:
+  # grep did not match a line whose command name held a byte that is not
+  # valid UTF-8.
+  __guard_count="$(LC_ALL=C grep -c -- "$GUARD_NOT_FOUND_PATTERN" "$__guard_log")"
   if [ "$__guard_count" -gt 0 ]; then
     echo "FAIL: the standard error of $0 holds $__guard_count \"command not found\" line(s); the suite fails, because a check that does not run proves nothing" >&2
     __guard_code=1
@@ -142,6 +159,9 @@ if [ -z "${!GUARD_INNER_RUN_VAR:-}" ] && [ "${BASH_SOURCE[1]:-}" = "$0" ]; then
   exit "$__guard_code"
 fi
 
+# The marker is for this process only. A guarded suite that this suite starts
+# must get a wrapper of its own.
+unset "$GUARD_INNER_RUN_VAR"
 set -E
 trap '__guard_code=$?
 if [ "$__guard_code" -eq 127 ]; then

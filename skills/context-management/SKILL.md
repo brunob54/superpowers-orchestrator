@@ -120,18 +120,19 @@ Rejected: <what NOT to try, one line each — the anti-pattern knowledge>
 Open: <carry-forward items only>
 ```
 
-Append the entry and move the stop-hook marker with ONE Bash command. It uses a here-document: shell syntax that gives the lines after the command to the command as its input. Replace only the placeholder line with the entry. Keep the blank line, the first line and the closing `ENTRY` line unchanged:
+Append the entry and move the stop-hook marker with ONE Bash command. It uses a here-document: shell syntax that gives the lines after the command to the command as its input. Replace only the placeholder line with the entry. Keep the blank line, the first line and the closing `SAVED_ENTRY_END_7Q` line unchanged:
 
 ```bash
-cat >> session-log.md <<'ENTRY' && node -e "const fs=require('fs'),path=require('path'),id=String(process.env.CLAUDE_CODE_SESSION_ID||'').replace(/[^A-Za-z0-9_-]/g,'_').slice(0,64),dir=path.join(process.env.HOME||process.env.USERPROFILE||'.','.claude','hooks-logs');fs.mkdirSync(dir,{recursive:true});fs.writeFileSync(path.join(dir,'last-saved-entry'+(id?'-'+id:'')+'.txt'),new Date().toISOString())"
+cat >> session-log.md <<'SAVED_ENTRY_END_7Q' && node -e "const fs=require('fs'),path=require('path'),id=String(process.env.CLAUDE_CODE_SESSION_ID||'').replace(/[^A-Za-z0-9_-]/g,'_').slice(0,64),dir=path.join(process.env.HOME||process.env.USERPROFILE||'.','.claude','hooks-logs');fs.mkdirSync(dir,{recursive:true});fs.writeFileSync(path.join(dir,'last-saved-entry'+(id?'-'+id:'')+'.txt'),new Date().toISOString())"
 
 <the entry, in the format above>
-ENTRY
+SAVED_ENTRY_END_7Q
 ```
 
-- The delimiter `'ENTRY'` is in single quotes, and it must stay so. With a quoted delimiter the shell copies the entry text unchanged: quotes, backticks and `$` stay literal. With an unquoted delimiter the shell EXECUTES every command that the entry text holds between backticks.
+- The delimiter `'SAVED_ENTRY_END_7Q'` is in single quotes, and it must stay so. With a quoted delimiter the shell copies the entry text unchanged: quotes, backticks and `$` stay literal. With an unquoted delimiter the shell EXECUTES every command that the entry text holds between backticks.
+- The entry must hold no line that is equal to the delimiter. Such a line ends the here-document early, and the shell then RUNS the rest of the entry as commands. The delimiter is an unusual word for this reason; do not replace it with a common word.
 - The part after `&&` writes the save marker of this session. The save marker is a file under `~/.claude/hooks-logs/` that holds the time of the last `[saved]` entry; the stop hook compares it with the time of each edit. The file name holds the session id, which Claude Code gives to every Bash command in the environment variable `CLAUDE_CODE_SESSION_ID`, so a save in one session does not reset the reminder of another session. When the variable is not set, the command writes the older marker file that all sessions share; the stop hook reads that file as well.
-- Fallback: a hook can block this command. For example, a safety hook denies a here-document whose text names a destructive git command. In that case write the entry with the Edit tool instead (or with the Write tool when `session-log.md` does not exist yet). The edit-tracking hook sees the new `[saved]` heading and moves the marker itself, so step 5 is not needed.
+- Fallback: a hook can block this command. For example, a safety hook denies a here-document whose text names a destructive git command. In that case write the entry with the Edit tool instead (or with the Write tool when `session-log.md` does not exist yet). Write the `## ... [saved]` heading at the start of a line: the hook counts a heading only when at most three spaces stand before its `#`. The edit-tracking hook sees the new `[saved]` heading and moves the marker itself, so step 5 is not needed.
 - Save AFTER the edits that implement a decision. The stop hook reports every significant edit that is later than the marker, and it cannot know that an earlier entry already covers a later edit. An entry saved before its edits therefore gives one more reminder. This is a known limit; step 5 handles it.
 
 5. When the `[saved]` entry already exists, do not write a second entry. This is the case when the stop hook asks for a decision-log entry again, and an entry of this session already covers the edits that it reports. Run the marker command alone, so that the decision-log reminder resets:

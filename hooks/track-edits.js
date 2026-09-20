@@ -32,8 +32,13 @@ const EDIT_LOG = path.join(LOG_DIR, 'edit-log.txt');
 const MAX_LINES = 500;
 
 const SAVED_TAG = '[saved]';
+const REGEXP_SPECIAL_CHARACTER = /[.*+?^${}()|[\]\\]/g;
 // A Markdown heading line that holds the tag, for example `## 2026-09-20 [saved]`.
-const SAVED_HEADING = /^#{1,6}\s.*\[saved\]/gm;
+// Markdown allows up to three spaces before the `#`; four spaces start a code block.
+const SAVED_HEADING = new RegExp(
+  `^ {0,3}#{1,6}\\s.*${SAVED_TAG.replace(REGEXP_SPECIAL_CHARACTER, '\\$&')}`,
+  'gm'
+);
 
 function countSavedHeadings(text) {
   return (String(text || '').match(SAVED_HEADING) || []).length;

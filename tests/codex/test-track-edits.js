@@ -31,6 +31,9 @@ const SKILL_FILE = path.join(REPO_ROOT, 'skills', 'context-management', 'SKILL.m
 const SESSION_A = 'session-a-111';
 const SESSION_B = 'session-b-222';
 const HOSTILE_ID = '../../evil';
+// Written by hand, not computed by save-marker.js: each of the six characters
+// `../../` becomes `_`.
+const HOSTILE_MARKER_NAME = 'last-saved-entry-______evil.txt';
 const SESSION_ID_VARIABLE = 'CLAUDE_CODE_SESSION_ID';
 const SESSION_LOG = 'session-log.md';
 const SIGNIFICANT_FILE = 'skills/x/SKILL.md';
@@ -160,6 +163,7 @@ test('T5: the id "../../evil" creates no file outside the log folder', () => {
   trackEdit(homeDir, cwdDir, HOSTILE_ID, 'Write', SESSION_LOG, { content: SAVED_HEADING });
   runBash(command, homeDir, cwdDir, HOSTILE_ID);
 
+  assert.strictEqual(path.basename(marker), HOSTILE_MARKER_NAME);
   for (const file of [marker, guard]) {
     assert.strictEqual(path.dirname(file), logDir, `${file} must be directly inside the log folder`);
     assert.ok(fs.existsSync(file), `Expected ${file} to exist`);
@@ -186,6 +190,10 @@ const MARKER_CASES = [
     { old_string: 'Goal: one', new_string: 'Goal: two' }, false],
   ['T8e: an Edit that names [saved] outside a heading does not move the marker', 'Edit',
     { old_string: 'Goal: one', new_string: 'Goal: explain the [saved] tag' }, false],
+  ['T8j: an Edit that adds a [saved] heading after three spaces moves the marker', 'Edit',
+    { old_string: OLDER_SAVED_HEADING, new_string: OLDER_SAVED_HEADING + '   ' + SAVED_HEADING }, true],
+  ['T8k: an Edit that adds a [saved] line after four spaces (a code block) does not move the marker', 'Edit',
+    { old_string: OLDER_SAVED_HEADING, new_string: OLDER_SAVED_HEADING + '    ' + SAVED_HEADING }, false],
   ['T8f: a Write with a [saved] heading moves the marker', 'Write',
     { content: SAVED_HEADING }, true],
   ['T8g: a Write without [saved] does not move the marker', 'Write',
@@ -251,11 +259,11 @@ function saveCommandWithEntry(entryText) {
   return [lines[0], entryText, delimiter, ''].join('\n');
 }
 
-function runSaveCommand(sessionId, existingLog = '') {
+function runSaveCommand(sessionId, existingLog = '', entryText = ENTRY_TEXT) {
   const { homeDir, cwdDir } = makeHome();
   const logFile = path.join(cwdDir, SESSION_LOG);
   if (existingLog) fs.writeFileSync(logFile, existingLog);
-  runBash(saveCommandWithEntry(ENTRY_TEXT), homeDir, cwdDir, sessionId);
+  runBash(saveCommandWithEntry(entryText), homeDir, cwdDir, sessionId);
   return { homeDir, cwdDir, logFile };
 }
 
@@ -263,6 +271,18 @@ test('T9a: the entry text arrives literal and no backtick command runs', () => {
   const { cwdDir, logFile } = runSaveCommand(SESSION_A);
   assert.strictEqual(fs.readFileSync(logFile, 'utf8'), ENTRY_TEXT + '\n');
   assert.strictEqual(fs.existsSync(path.join(cwdDir, BACKTICK_PROOF)), false, 'The backtick command ran');
+});
+
+// A line equal to a common delimiter word, followed by a command line. With
+// the delimiter `ENTRY`, the here-document ended at that line and the shell
+// ran the command.
+const DELIMITER_PROOF = 'delimiter-command-ran';
+const ENTRY_WITH_DELIMITER_WORD = [ENTRY_TEXT, 'ENTRY', `touch ${DELIMITER_PROOF}`].join('\n');
+
+test('T9f: an entry that holds the line ENTRY arrives whole and none of its lines runs', () => {
+  const { cwdDir, logFile } = runSaveCommand(SESSION_A, '', ENTRY_WITH_DELIMITER_WORD);
+  assert.strictEqual(fs.existsSync(path.join(cwdDir, DELIMITER_PROOF)), false, 'A line of the entry ran as a command');
+  assert.strictEqual(fs.readFileSync(logFile, 'utf8'), ENTRY_WITH_DELIMITER_WORD + '\n');
 });
 
 test('T9b: the command appends to an existing session log', () => {
@@ -294,7 +314,7 @@ test('T9e: the marker written by the command clears the decision-log block', () 
 
 test('T10: the here-document delimiter of the save command is quoted', () => {
   const delimiter = skillSaveCommand().match(HEREDOC_OPENER)[1];
-  assert.ok(/^'[A-Za-z_]+'$/.test(delimiter), `Expected a delimiter in single quotes, got: ${delimiter}`);
+  assert.ok(/^'[A-Za-z0-9_]+'$/.test(delimiter), `Expected a delimiter in single quotes, got: ${delimiter}`);
 });
 
 test('The skill holds the marker command of save-marker.js, in step 4 and alone in step 5', () => {

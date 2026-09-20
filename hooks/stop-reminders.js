@@ -55,8 +55,14 @@ function shouldFire(sessionId) {
 }
 
 /**
- * Write the guard of this session. Also delete the marker and guard files
- * that other sessions left behind more than 7 days ago.
+ * Write the guard of this session. Also delete every per-session marker and
+ * guard file that is older than 7 days. This includes a file of this session.
+ * That is harmless: the hook never looks further back than 7 days for unsaved
+ * edits, so a marker of that age changes no result.
+ * Limit (from reasoning, not measured): the cleanup reads the time of a file
+ * and then deletes the file. When a session rewrites its marker, which was
+ * older than 7 days, between these two steps, the cleanup deletes the new
+ * marker. That session then gets one more reminder, until its next save.
  */
 function setGuard(sessionId) {
   writeTimeFile(guardFile(sessionId));

@@ -67,8 +67,12 @@ WORK="$(mktemp -d)"
 trap 'rm -rf "$WORK"' EXIT
 
 # fixture_bash <arguments of bash>: run bash without the marker variable of
-# the guard. This suite runs as the child of the re-run wrapper, so the marker
-# is set here. A fixture that inherits the marker would not start the wrapper.
+# the guard. A fixture that inherits the marker would not start the wrapper.
+# The guard removes the marker in the child suite, so `env -u` changes nothing
+# while that rule holds. It stays for the case that the rule breaks. Measured
+# without `env -u` and without the rule: 19 checks failed, and the SIGINT
+# fixture ended this suite (exit code 130, no result lines). With `env -u`,
+# only the nested-suite check fails.
 fixture_bash() { env -u "$GUARD_INNER_RUN_VAR" bash "$@"; }
 
 # run_fixture <name> <body>: write a script that loads the guard and then
@@ -281,6 +285,36 @@ assert_exit_code 3 "a suite that ends with exit code 3 keeps exit code 3"
 run_fixture bare-words "echo 'command not found' >&2
 echo 'the tool said: command not found' >&2"
 assert_continued "the bare words 'command not found' on standard error do not fail the suite"
+
+# Git Bash on Windows can end a message line with a carriage return.
+run_fixture carriage-return "printf '%s: line 5: tool: command not found\r\n' \"\$0\" >&2"
+assert_caught_at_end "a message line that ends with a carriage return fails the suite"
+
+# grep must read the log file as bytes. In a UTF-8 locale, grep did not match
+# a line whose command name holds a byte that is not valid UTF-8.
+UTF8_LOCALE='en_US.UTF-8'
+if locale -a 2>/dev/null | grep -qx -- "$UTF8_LOCALE"; then
+  LC_ALL="$UTF8_LOCALE" run_fixture invalid-byte "if \$'undefined_\\377_call'; then echo yes; fi"
+  assert_caught_at_end "a command name with a byte that is not valid UTF-8 fails the suite"
+else
+  echo "  SKIP: the locale $UTF8_LOCALE does not exist here"
+fi
+
+bold "A guarded suite that runs another guarded suite"
+
+# The child suite must not pass the marker variable on. With the marker set,
+# the inner suite starts no wrapper, and nothing sees its hidden undefined call.
+INNER_EXIT='inner-exit-code='
+run_fixture nested-inner "if $UNDEFINED_CALL; then echo yes; fi"
+run_fixture nested-outer "code=0
+bash \"$SCRIPT\" >/dev/null 2>&1 || code=\$?
+echo \"$INNER_EXIT\$code\""
+label="the inner suite gets its own wrapper and ends with exit code 1"
+if [ "$CODE" -eq 0 ] && out_has "${INNER_EXIT}1"; then
+  pass "$label"
+else
+  fail "$label (exit code $CODE, output: $OUT)"
+fi
 
 bold "The re-run wrapper starts only for a suite that bash runs as a script"
 
