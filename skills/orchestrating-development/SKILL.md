@@ -1152,7 +1152,8 @@ Trigger: `Resume orchestration for <plan-or-spec path>`.
    the unfinished revert, and states the way out: for each listed
    path, run `git reset -- <path>` and then `git checkout -- <path>`,
    run `git revert --quit` last, then send the same resume prompt
-   again. Take those paths from `git show --name-only --format= <sha>`,
+   again. Take those paths from
+   `git show --name-only --no-renames --format= <sha>`,
    run for the printed hash and for the fix commit of every ruling
    that the prompt of this resume overturns, never from the
    `git status --porcelain` output: that output cannot tell a change
@@ -1414,10 +1415,18 @@ Trigger: `Resume orchestration for <plan-or-spec path>`.
    that id. **Before starting each revert**, save the tree's current
    `git status --porcelain` output as the pre-revert state, and check it
    for local changes to any path the fix commit touched
-   (`git show --name-only --format= <sha>` lists those paths): when one of
-   them already carries a local change, do not start the revert at all —
-   `git revert` refuses over an unstaged or untracked one, and merges the
-   revert into a staged one, or conflicts with it — and take the
+   (`git show --name-only --no-renames --format= <sha>` lists those paths;
+   `--no-renames` makes a renamed file appear under both its names, and
+   every later rule of this revert takes its paths from this one list:
+   the cleanup, the undo before a stop, and the reverted paths that the
+   resume commit names). Also run
+   `git ls-files --others --ignored --exclude-standard -- <those paths>`:
+   a path it prints holds an ignored file, which `git status --porcelain`
+   does not list. When one of the paths already carries a local change,
+   or that command prints one, do not start the revert at all —
+   `git revert` refuses over an unstaged or untracked one, merges the
+   revert into a staged one or conflicts with it, and overwrites an
+   ignored one with no warning — and take the
    "not reverted" branch below
    directly. Otherwise revert it without a commit of its own
    (`git revert --no-commit <sha>`), staging the result by explicit
@@ -1821,12 +1830,15 @@ you and your forks may read exactly:
    `git show HEAD:<plan path>`,
    `git diff --no-ext-diff --no-textconv HEAD -- <plan path>`,
    `git show <ruling commit>:<plan path>`,
-   `git status --porcelain`, `git show --name-only --format= <sha>`,
+   `git status --porcelain`,
+   `git show --name-only --no-renames --format= <sha>`,
+   `git ls-files --others --ignored --exclude-standard -- <those paths>`,
    and a scan of the whole plan
    file for an orphan `(amended by ruling <n>)` marker and its
    `**Amendment <n>` note. You compare the `git status --porcelain`
    output with the saved pre-revert state; you never read a file name out
-   of it.
+   of it. The `git ls-files` command only answers whether an ignored file
+   stands on a path of the fix commit.
 5. Your own ruling record for this run,
    `<topic folder>/plans/<slug>-open-decisions.md` — the file you write
    yourself. Guard 4 (below) reads it, before every decision, for an
