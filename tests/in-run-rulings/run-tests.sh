@@ -2128,6 +2128,11 @@ assert_in_range_folded "the status check follows a refusal as well as a cleanup"
   "$RESUME_LINE" "$RULINGS_LINE"
 assert_absent_in_range_folded "no sentence tells the orchestrator to clean up after a refusal" "$ORCH_SKILL" \
   'Run the same cleanup in both cases' "$RESUME_LINE" "$RULINGS_LINE" fragment
+# A revert of a fix that a later commit already reverted exits 0 and stages
+# nothing (measured), so the success-path sentence must not be absolute.
+assert_in_range_folded "a successful revert normally leaves the reverted hunks staged" \
+  "$ORCH_SKILL" 'a successful revert normally leaves the reverted hunks staged, which does not match the pre-revert state' \
+  "$RESUME_LINE" "$RULINGS_LINE"
 assert_absent_in_range_folded "no revert state is said to leave sequencer state" "$ORCH_SKILL" \
   'the sequencer state' "$RESUME_LINE" "$RULINGS_LINE" fragment
 assert_absent_in_range_folded "a non-zero exit is no longer said to be never untouched" "$ORCH_SKILL" \

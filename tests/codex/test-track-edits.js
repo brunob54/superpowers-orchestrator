@@ -418,6 +418,13 @@ test("T12b: an edit keeps every earlier line of the session's own log", () => {
   expectDecisionLogBlock(stop(homeDir, cwdDir, SESSION_A), 'session A');
 });
 
+test("T12c: a line of session B in the shared log gives session A no block", () => {
+  const { homeDir, cwdDir } = makeHome();
+  seedSharedEditLog(homeDir, [editLogLine(SESSION_B, path.join(cwdDir, SIGNIFICANT_FILE))]);
+  assert.deepStrictEqual(stop(homeDir, cwdDir, SESSION_A), JSON.parse(EMPTY_HOOK_OUTPUT));
+  expectDecisionLogBlock(stop(homeDir, cwdDir, SESSION_B), 'session B');
+});
+
 test('T13: an edit with a session id goes into the file of that session only', () => {
   const { homeDir, cwdDir } = makeHome();
   trackEdit(homeDir, cwdDir, SESSION_A, 'Edit', SIGNIFICANT_FILE, { old_string: 'a', new_string: 'b' });
