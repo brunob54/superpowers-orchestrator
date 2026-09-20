@@ -2114,16 +2114,20 @@ assert_in_range_folded "a locally-changed path takes the not-reverted branch wit
 # exits 0 over a staged one. Only exit 1, a conflict, leaves the checkout
 # mid-revert. No state creates the folder `.git/sequencer`. After a refusal git
 # created no file, so an untracked file at a path of the fix commit is the
-# user's own, and the `rm` exception must not apply.
+# user's own. Review round 1 (measured): the per-path cleanup after a refusal
+# deletes an unstaged change that the pre-check did not list, so a refusal runs
+# no cleanup at all.
 assert_in_range_folded "the pre-check names what git does over each kind of local change" \
-  "$ORCH_SKILL" 'do not start the revert at all — `git revert` refuses over an unstaged or untracked one, and merges the revert into a staged one — and take the "not reverted" branch below directly' \
+  "$ORCH_SKILL" 'do not start the revert at all — `git revert` refuses over an unstaged or untracked one, and merges the revert into a staged one, or conflicts with it — and take the "not reverted" branch below directly' \
   "$RESUME_LINE" "$RULINGS_LINE"
 assert_in_range_folded "exit 1 leaves the checkout mid-revert, any other non-zero exit leaves it untouched" \
-  "$ORCH_SKILL" '**On a non-zero exit from that command** the exit code names the case. Exit 1 is a conflict, and the checkout is left mid-revert: git writes conflict markers into the conflicting files, stages the clean hunks of every other file the revert touched, and leaves `REVERT_HEAD` behind. Any other non-zero exit is a refusal: git changed nothing and wrote no `REVERT_HEAD`. Run the same cleanup in both cases; on an untouched tree it changes nothing, and a `git checkout -- <path>` that fails there is expected. Undo the markers' \
+  "$ORCH_SKILL" '**On a non-zero exit from that command** the exit code names the case. Exit 1 is a conflict, and the checkout is left mid-revert: git writes conflict markers into the conflicting files, stages the clean hunks of every other file the revert touched, and leaves `REVERT_HEAD` behind. Any other non-zero exit is a refusal: git changed nothing and wrote no `REVERT_HEAD`. After a refusal run no cleanup at all — no `git reset`, no `git checkout`, no `rm` — and go directly to the status check below: the tree can hold a local change that the pre-check did not list, and the cleanup would delete it. The cleanup that follows is for exit 1 only. Undo the markers' \
   "$RESUME_LINE" "$RULINGS_LINE"
-assert_in_range_folded "the rm exception applies only after exit 1" \
-  "$ORCH_SKILL" 'now untracked after the reset, and only when `git revert` exited 1: after a refusal git created no file, so never run `rm` then), remove it explicitly with `rm -- <path>`' \
+assert_in_range_folded "the status check follows a refusal as well as a cleanup" \
+  "$ORCH_SKILL" 'After that cleanup, or directly after a refusal, and only on this non-zero-exit path, require `git status --porcelain` to print exactly the pre-revert state you saved' \
   "$RESUME_LINE" "$RULINGS_LINE"
+assert_absent_in_range_folded "no sentence tells the orchestrator to clean up after a refusal" "$ORCH_SKILL" \
+  'Run the same cleanup in both cases' "$RESUME_LINE" "$RULINGS_LINE" fragment
 assert_absent_in_range_folded "no revert state is said to leave sequencer state" "$ORCH_SKILL" \
   'the sequencer state' "$RESUME_LINE" "$RULINGS_LINE" fragment
 assert_absent_in_range_folded "a non-zero exit is no longer said to be never untouched" "$ORCH_SKILL" \

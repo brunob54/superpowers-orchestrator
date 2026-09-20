@@ -1415,7 +1415,8 @@ Trigger: `Resume orchestration for <plan-or-spec path>`.
    (`git show --name-only --format= <sha>` lists those paths): when one of
    them already carries a local change, do not start the revert at all —
    `git revert` refuses over an unstaged or untracked one, and merges the
-   revert into a staged one — and take the "not reverted" branch below
+   revert into a staged one, or conflicts with it — and take the
+   "not reverted" branch below
    directly. Otherwise revert it without a commit of its own
    (`git revert --no-commit <sha>`), staging the result by explicit
    path. **On a non-zero exit from that command** the exit code names the
@@ -1423,9 +1424,11 @@ Trigger: `Resume orchestration for <plan-or-spec path>`.
    writes conflict markers into the conflicting files, stages the clean
    hunks of every other file the revert touched, and leaves `REVERT_HEAD`
    behind. Any other non-zero exit is a refusal: git changed nothing and
-   wrote no `REVERT_HEAD`. Run the same cleanup in both cases; on an
-   untouched tree it changes nothing, and a `git checkout -- <path>` that
-   fails there is expected. Undo
+   wrote no `REVERT_HEAD`. After a refusal run no cleanup at all — no
+   `git reset`, no `git checkout`, no `rm` — and go directly to the status
+   check below: the tree can hold a local change that the pre-check did
+   not list, and the cleanup would delete it. The cleanup that follows is
+   for exit 1 only. Undo
    the markers and the staged hunks with explicit paths only: for each
    path the fix commit touched, named one at a time, run
    `git reset -- <path>` and then `git checkout -- <path>`.
@@ -1438,15 +1441,14 @@ Trigger: `Resume orchestration for <plan-or-spec path>`.
    addition, so `git reset -- <path>` leaves it untracked and
    `git checkout -- <path>` then fails with "pathspec did not match any
    file known to git" — for such a path (one the saved pre-revert state
-   did not list, now untracked after the reset, and only when
-   `git revert` exited 1: after a refusal git created no file, so never
-   run `rm` then), remove it explicitly
+   did not list, now untracked after the reset), remove it explicitly
    with `rm -- <path>` instead of `git checkout -- <path>`, or, when the
    path exists at HEAD, restore it with `git checkout HEAD -- <path>`.
    **Never `git reset --hard`, never
    `git checkout .`, never `git clean`**: a stop can happen over a
    deliberately dirty tree, and those three would delete the blocked task's
-   legitimate uncommitted work. After that cleanup, and only on this
+   legitimate uncommitted work. After that cleanup, or directly after a
+   refusal, and only on this
    non-zero-exit path, require `git status --porcelain` to
    print exactly the pre-revert state you saved; a mismatch is a major
    error — stop and report both outputs, never commit over it. Only when

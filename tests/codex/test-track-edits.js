@@ -405,6 +405,19 @@ test('T12: a session that was open during the plugin update keeps its earlier ed
   expectDecisionLogBlock(stop(homeDir, cwdDir, SESSION_A), 'session A');
 });
 
+test("T12b: an edit keeps every earlier line of the session's own log", () => {
+  const { homeDir, cwdDir } = makeHome();
+  const ownLog = evaluateInHome(homeDir, SAVE_MARKER, SESSION_A, 'm.editLogFile(id)');
+  const filler = path.join(cwdDir, 'a-long-folder-name-'.repeat(5), PLAIN_FILE);
+  fs.mkdirSync(path.dirname(ownLog), { recursive: true });
+  fs.writeFileSync(ownLog, [
+    editLogLine(SESSION_A, path.join(cwdDir, SIGNIFICANT_FILE)),
+    ...Array.from({ length: MANY_LINES }, () => editLogLine(SESSION_A, filler)),
+  ].join(''));
+  trackEdit(homeDir, cwdDir, SESSION_A, 'Edit', PLAIN_FILE, { old_string: 'a', new_string: 'b' });
+  expectDecisionLogBlock(stop(homeDir, cwdDir, SESSION_A), 'session A');
+});
+
 test('T13: an edit with a session id goes into the file of that session only', () => {
   const { homeDir, cwdDir } = makeHome();
   trackEdit(homeDir, cwdDir, SESSION_A, 'Edit', SIGNIFICANT_FILE, { old_string: 'a', new_string: 'b' });

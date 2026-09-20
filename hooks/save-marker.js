@@ -1,14 +1,16 @@
 /**
- * Save marker and stop guard — file names shared by the hooks
+ * Save marker, stop guard and edit log — file names shared by the hooks
  *
- * Two files under the hook log folder record the state of one session:
+ * Three files under the hook log folder record the state of one session:
  *   - the save marker holds the time of the session's last `[saved]` entry in
  *     session-log.md. track-edits.js and the context-management skill write
  *     it; stop-reminders.js reads it.
  *   - the stop guard holds the time of the last stop that stop-reminders.js
  *     blocked.
+ *   - the edit log holds one line for each Edit or Write of the session.
+ *     track-edits.js appends to it; stop-reminders.js reads it.
  *
- * Each session has its own two files, so one session cannot hide the
+ * Each session has its own three files, so one session cannot hide the
  * reminders of another session. The session id is part of the file name.
  * A payload without a session id uses the old file names, which all sessions
  * share.
