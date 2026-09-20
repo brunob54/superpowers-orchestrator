@@ -1423,12 +1423,14 @@ Trigger: `Resume orchestration for <plan-or-spec path>`.
    case. Exit 1 is a conflict, and the checkout is left mid-revert: git
    writes conflict markers into the conflicting files, stages the clean
    hunks of every other file the revert touched, and leaves `REVERT_HEAD`
-   behind. Any other non-zero exit is a refusal: git changed nothing and
-   wrote no `REVERT_HEAD`. After a refusal run no cleanup at all — no
+   behind. Any other non-zero exit is a refusal: git wrote no
+   `REVERT_HEAD` and normally changed nothing. After a refusal run no
+   cleanup at all — no
    `git reset`, no `git checkout`, no `rm` — and go directly to the status
    check below: the tree can hold a local change that the pre-check did
-   not list, and the cleanup would delete it. The cleanup that follows is
-   for exit 1 only. Undo
+   not list, and the cleanup would delete it; the status check reports
+   the rare refusal that did change the tree, for example when git could
+   not write a file. The cleanup that follows is for exit 1 only. Undo
    the markers and the staged hunks with explicit paths only: for each
    path the fix commit touched, named one at a time, run
    `git reset -- <path>` and then `git checkout -- <path>`.
