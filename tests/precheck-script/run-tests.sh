@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Pre-check script test suite (rows 76, 77 and 78 of the orchestration issues).
+# Pre-check script test suite (rows 76 to 80 of the orchestration issues).
 # Resume step 3 of skills/orchestrating-development/SKILL.md holds one fixed
 # script that the orchestrator runs before it reverts a fix commit. This suite
 # takes the script out of the skill file and runs it in fixture repositories,
@@ -35,7 +35,15 @@ SHA_PLACEHOLDER='<sha>'
 SCRIPT_ANCHOR='pre-check script below'
 # The opening fence line of the script, with the indent of its list item.
 FENCE_OPEN='   ```bash'
-SCRIPT_LINE_COUNT=13
+SCRIPT_LINE_COUNT=18
+# The two lines that the script prints about a later commit (rows 79 and 80).
+# The path follows each text.
+GONE_AT_HEAD='in the fix commit, not at HEAD: '
+FOLDER_AT_HEAD='a folder at HEAD, not in the fix commit: '
+# The words of the skill that stand directly before the revert command, and
+# the end of that command.
+REVERT_ANCHOR='revert it without a commit of its own'
+REVERT_COMMAND_END="revert --no-commit $SHA_PLACEHOLDER"
 
 # All fixtures live under one throwaway folder.
 # pwd -P resolves the /var -> /private/var symbolic link of macOS.
@@ -99,25 +107,30 @@ newrepo() {
 fix() { git add -A -f && git commit -qm fix && SHA=$(git rev-parse HEAD); }
 # add_all: commit everything as an ordinary commit that stands before the fix.
 add_all() { git add -A && git commit -qm add; }
+# later: commit everything as an ordinary commit that stands after the fix.
+later() { add_all; }
 # dirty: change a file that the fix commit does not touch.
 dirty() { printf 'u\nunrelated user work\n' > user.txt; }
 
-# check_case <label> <expected> [<hash>] [<locale>]: run the script in the
-# current folder with every shell, and compare the result with <expected>.
+# check_case <label> <expected> [<hash>] [<locale>] [<line>]: run the script in
+# the current folder with every shell, and compare the result with <expected>.
+# When <line> is given, the output must also hold <line> as a whole line.
 check_case() {
-  local label="$1" expected="$2" hash="${3:-$SHA}" locale="${4:-}" shell out got
+  local label="$1" expected="$2" hash="${3:-$SHA}" locale="${4:-}" line="${5:-}" shell out got
   printf '%s\n' "${SCRIPT_TEXT//$SHA_PLACEHOLDER/$hash}" > "$RUN_FILE"
   for shell in "${SHELLS[@]}"; do
     # $shell is not quoted: `zsh -f` must become two words.
     out="$(env ${locale:+LC_ALL=$locale} $shell "$RUN_FILE" 2>&1)"
     if [ -n "$out" ]; then got="$ALARM"; else got="$QUIET"; fi
-    if [ "$got" = "$expected" ]; then
+    if [ "$got" = "$expected" ] && { [ -z "$line" ] || printf '%s\n' "$out" | grep -qxF -- "$line"; }; then
       ok "$label [$shell]: $expected"
     else
-      bad "$label [$shell]: expected $expected, got $got ($(printf '%s' "$out" | head -n 2 | tr '\n' ';'))"
+      bad "$label [$shell]: expected $expected${line:+ with the line <$line>}, got $got ($(printf '%s' "$out" | head -n 2 | tr '\n' ';'))"
     fi
   done
 }
+# check_alarm_line <label> <line>: the script must print <line> as a whole line.
+check_alarm_line() { check_case "$1" "$ALARM" "" "" "$2"; }
 
 bold "Names (row 77)"
 
@@ -215,6 +228,84 @@ newrepo subsrc; printf 's\n' > s.txt; add_all; printf 's2\n' > s.txt; git commit
 newrepo super; git -c protocol.file.allow=always submodule add -q "$WORK/subsrc" sub >/dev/null 2>&1; git commit -qm addsub
 ( cd sub && git checkout -q HEAD~1 ); fix
 check_case "the fix moved a sub-module pointer" "$QUIET"
+
+bold "A later commit changed what stands on a listed path (rows 79 and 80)"
+
+# Measured on git 2.50.1. Row 80: a later commit renamed or deleted a file of
+# the fix commit; the revert then changes a file outside the list, or changes
+# nothing, and the resume commit, which names the listed paths, fails. Row 79:
+# a later commit renamed a folder; git follows the rename and writes a file of
+# the revert into the other folder, over an ignored file of the user.
+newrepo r80a; printf 'a\nb\nc\n' > a.txt; add_all; printf 'a\nFIX\nc\n' > a.txt; fix; git mv a.txt b.txt; later
+check_alarm_line "the fix changed a.txt, a later commit renamed it to b.txt" "${GONE_AT_HEAD}a.txt"
+newrepo r80b; printf 'n\n' > n.txt; fix; git rm -q n.txt; later
+check_alarm_line "the fix added n.txt, a later commit deleted it" "${GONE_AT_HEAD}n.txt"
+newrepo r79; mkdir d; printf 'x\n' > d/ignx.txt; printf 'k\n' > d/k.txt; add_all; git rm -q d/ignx.txt; fix; git mv d e; later
+check_alarm_line "the fix deleted d/ignx.txt, a later commit renamed the folder d/ to e/" "${GONE_AT_HEAD}d"
+newrepo dirmod; mkdir d; printf 'a\nb\nc\n' > d/m.txt; printf 'k\n' > d/k.txt; add_all; printf 'a\nFIX\nc\n' > d/m.txt; fix; git mv d e; later
+check_alarm_line "the fix changed d/m.txt, a later commit renamed the folder d/ to e/" "${GONE_AT_HEAD}d"
+# The file inside the new folder holds other content than the file dd held:
+# with equal content git reads the later commit as a rename.
+newrepo s14; printf 'a\nb\nc\n' > dd; add_all; git rm -q dd; fix; mkdir dd; printf 'other\n' > dd/in.txt; later
+check_alarm_line "the fix deleted the file dd, a later commit made the folder dd/" "${FOLDER_AT_HEAD}dd"
+newrepo s18; printf 'a\nb\nc\n' > dd; add_all; printf 'a\nFIX\nc\n' > dd; fix; git rm -q dd; mkdir dd; printf 'other\n' > dd/in.txt; later
+check_alarm_line "the fix changed the file dd, a later commit made the folder dd/" "${FOLDER_AT_HEAD}dd"
+# The accepted cost: this revert would succeed and stay inside the list. The
+# script still stops it, because it cannot tell a deleted folder from a
+# renamed folder.
+newrepo dirgone; mkdir d; printf 'x\n' > d/x.txt; printf 'k\n' > d/k.txt; add_all; git rm -q d/x.txt; fix; git rm -rq d; later
+check_alarm_line "the fix deleted d/x.txt, a later commit deleted the whole folder d/ (the accepted cost)" "${GONE_AT_HEAD}d"
+# The commit that a sub-module entry names is no object of this repository, so
+# a read of the object fails; `git rev-parse` reads the entry only.
+newrepo subgone; git -c protocol.file.allow=always submodule add -q "$WORK/subsrc" sub >/dev/null 2>&1; fix; git rm -qf sub; later
+check_alarm_line "the fix added a sub-module, a later commit removed it" "${GONE_AT_HEAD}sub"
+
+newrepo lastfile; mkdir q; printf 'o\n' > q/only.txt; add_all; git rm -q q/only.txt; fix
+check_case "the fix deleted the last file of a top folder" "$QUIET"
+newrepo renlater; printf 'a\nb\nc\n' > a.txt; add_all; git mv a.txt r.txt; fix; printf 'a\nb\nLATER\n' > r.txt; later
+check_case "the fix renamed a.txt to r.txt, a later commit changed r.txt" "$QUIET"
+newrepo partmove; mkdir d; printf 'a\nb\nc\n' > d/a.txt; printf 'k\n' > d/b.txt; add_all; printf 'a\nFIX\nc\n' > d/a.txt; fix; mkdir e; git mv d/b.txt e/b.txt; later
+check_case "a later commit moved another file out of d/, and d/ stands at HEAD" "$QUIET"
+newrepo dirback; mkdir d; printf 'x\n' > d/x.txt; add_all; git rm -q d/x.txt; fix; mkdir -p d; printf 'o\n' > d/other.txt; later
+check_case "the fix deleted the last file of d/, a later commit made d/ again" "$QUIET"
+newrepo rootfix; git checkout -q --orphan alone; fix
+check_case "the fix commit is a root commit" "$QUIET"
+
+bold "The revert command does not follow a folder rename (row 79)"
+
+# The command is the one back-quoted text that ends in `$REVERT_COMMAND_END`
+# and stands after the words of $REVERT_ANCHOR. The prose is wrapped, so the
+# search reads the skill as one line.
+REVERT_MATCHES="$(tr '\n' ' ' < "$SKILL" | tr -s ' ' | grep -oE -- "$REVERT_ANCHOR \(\`[^\`]*$REVERT_COMMAND_END\`")"
+assert_count "one revert command stands after the words '$REVERT_ANCHOR'" \
+  "$(printf '%s' "$REVERT_MATCHES" | grep -c '')" 1
+REVERT_COMMAND="${REVERT_MATCHES#*\`}"
+REVERT_COMMAND="${REVERT_COMMAND%\`}"
+
+# check_revert <label> <name> [<setting>]: build the reverse fixture in the
+# folder <name>, run the revert command of the skill there, and check the
+# user's ignored file. The fix commit renamed the folder d/ to e/. A later
+# commit added the tracked file e/ignnew.txt. The user keeps an ignored file
+# d/ignnew.txt. Measured: the plain command follows the rename back, exits 1
+# and writes the tracked content over the user's file. With <setting>, the
+# configuration of the repository sets merge.directoryRenames to <setting>.
+check_revert() {
+  local label="$1" name="$2" setting="${3:-}" code
+  newrepo "$name"; mkdir d; for f in x y z; do printf 'a\nb\nc\n' > "d/$f.txt"; done
+  printf 'ignnew.txt\n' > .gitignore; add_all; git mv d e; fix
+  printf 'tracked\n' > e/ignnew.txt; git add -f e/ignnew.txt; git commit -qm later
+  mkdir -p d; printf 'mine\n' > d/ignnew.txt
+  [ -z "$setting" ] || git config merge.directoryRenames "$setting"
+  check_case "$label: the pre-check script" "$QUIET"
+  bash -c "${REVERT_COMMAND//$SHA_PLACEHOLDER/$SHA}" >/dev/null 2>&1
+  code=$?
+  assert_count "$label: the revert command ends with exit code 0" "$code" 0
+  assert_count "$label: the user's ignored file keeps its content" "$(cat d/ignnew.txt)" mine
+  assert_count "$label: no status line names ignnew.txt" \
+    "$(git status --porcelain | grep -cF -- ignnew.txt)" 0
+}
+check_revert "reverse fixture" reverse
+check_revert "reverse fixture, merge.directoryRenames=true" reversetrue true
 
 bold ""
 bold "Results: $PASS passed, $FAIL failed"
