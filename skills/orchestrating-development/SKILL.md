@@ -1133,6 +1133,30 @@ Trigger: `Resume orchestration for <plan-or-spec path>`.
    wordings can itself be wrong. The report names the changed lines
    and states the way out: restore those lines to their committed
    text, then send the same resume prompt again.
+   **A fix-commit revert that an earlier session left unfinished stops
+   the resume.** This rule runs on every resume of the `## STOPPED`
+   case, whatever phase its heading names: no phase leaves a revert
+   unfinished on purpose. Before this step writes anything, and also
+   when the rule above stops the resume, run
+   `git rev-parse -q --verify REVERT_HEAD`. When it prints a hash, an
+   earlier session staged a revert with `git revert --no-commit` and
+   died before its resume commit. This is a major error. Stop as the
+   rule above does: write nothing, make no commit and append no log
+   entry. Any commit deletes `REVERT_HEAD`, and the staged changes
+   stay. Never record `not reverted` over these changes: the record
+   would say that no revert was made while half of it stands staged.
+   Never complete that revert and never commit it: `REVERT_HEAD` names
+   only the last commit of several reverts, so no record says which
+   staged change belongs to which answer. The report names the hash
+   and the whole `git status --porcelain` output, and states the way
+   out: for each path that the unfinished revert staged, run
+   `git reset -- <path>` and then `git checkout -- <path>`, run
+   `git revert --quit` last, then send the same resume prompt again.
+   For a path that the revert created again, `git checkout -- <path>`
+   fails; the way out removes it with `rm -- <path>`. The report also
+   says that these commands delete an edit of the user's own on such a
+   path, and that `git revert --abort` is never the way out: it also
+   deletes staged work on every other path.
    Wherever this step reads a `**Amendment <m>` label, match the whole
    number: `**Amendment 1` is also the opening of `**Amendment 10`, so the
    label matches `<m>` only when a space follows the number.
@@ -1361,6 +1385,16 @@ Trigger: `Resume orchestration for <plan-or-spec path>`.
    must leave the plan file exactly as this resume found it, so that the
    next resume never reads this revert's half-written text as the blocked
    task's own work.
+   **A stop after this resume staged a fix-commit revert undoes that
+   revert first.** A `stopped` commit names its paths, so it leaves the
+   staged changes of the revert in place, and any commit deletes
+   `REVERT_HEAD`: the next resume would find staged code that nothing
+   explains. So before such a stop, for each path of each fix commit
+   this resume reverted, named one at a time, run `git reset -- <path>`
+   and then `git checkout -- <path>`, with the rule below for a path
+   the fix commit deleted, and run `git revert --quit` last:
+   `REVERT_HEAD` must stay for as long as one staged change of the
+   revert stays.
    **Reverting the plan is only half of
    the revert.** Which half depends on the reverted ruling's phase: a
    Phase 4 ruling's other half is a fix commit, covered by the rest of
@@ -1759,6 +1793,7 @@ you and your forks may read exactly:
    the permitted form and is never dropped, and the same holds for
    `--first-parent` and `<BASE>..HEAD`),
    `git log --merges --format=%h <BASE>..HEAD`,
+   `git rev-parse -q --verify REVERT_HEAD`,
    `git show <ruling commit>^:<plan path>`,
    `git show --no-ext-diff --no-textconv <ruling commit> -- <plan path>`,
    `git show HEAD:<plan path>`,

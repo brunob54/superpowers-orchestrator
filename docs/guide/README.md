@@ -981,6 +981,20 @@ their committed text, then send the same resume prompt again. A resume of a
 Phase 1 or a Phase 2 stop does not make this check, because those phases
 leave the plan file uncommitted on purpose.
 
+Since v7.44.0 a resume of any stop also asks git whether a revert is
+unfinished (`git rev-parse -q --verify REVERT_HEAD`). A resume that undoes a
+Phase 4 fix stages the reverted code first and commits it at its end. When
+that session ended between the two steps, the reverted code stays staged, and
+git keeps the file `REVERT_HEAD` until the next commit. The run then stops,
+writes nothing, and its report names the hash and the `git status --porcelain`
+output. The way out: for each path that the unfinished revert staged, run
+`git reset -- <path>` and then `git checkout -- <path>`, run
+`git revert --quit` last, then send the same resume prompt again. These
+commands also delete an edit of your own on such a path. Never use
+`git revert --abort`: it also deletes staged work on every other path. One
+limit: a commit or a `git reset` that you run by hand before the resume
+deletes `REVERT_HEAD`, and the run then no longer sees the unfinished revert.
+
 **Interrupted during plan writing or a review round?** Resume re-enters any
 phase whose completion entry never made it into the orchestration log, but
 how much is redone differs:
@@ -1074,7 +1088,9 @@ The same file-based durability serves everyday work:
    on purpose. Since v7.35.0, a resume that has already changed the plan
    file and then stops puts the replaced clause text back before it
    stops, so the tree cannot hold a half-finished revert that the next
-   resume would commit as the blocked task's own work. Uncommitted files under the topic's `implementation/` folder
+   resume would commit as the blocked task's own work. Since v7.44.0 it
+   also undoes the code changes that its own revert of a Phase 4 fix has
+   already staged. Uncommitted files under the topic's `implementation/` folder
    or in `plans/<slug>-open-decisions.md` never block, because the resumed
    run commits or repairs them. Batched plan execution and `executing-plans`
    have no clean-tree check at resume, so look at `git status` yourself
