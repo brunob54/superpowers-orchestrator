@@ -8,6 +8,127 @@
 > (`REPOZY/superpowers-optimized`) and are kept unchanged as history; any
 > testing they describe was not done here.
 
+## v7.45.0 — one edit log per session; a refused revert runs no cleanup
+
+**Problem.** All sessions shared one edit log, and every edit rewrote it: 8
+sessions at once lost 51 of 160 edit lines, and a lost test-file line gave a
+false test-first block. In Resume step 3, four sentences about `git revert`
+were false, and the cleanup after a refused revert deleted a user's unstaged
+change.
+
+**Change.** Each session appends to its own edit log; no hook rewrites one.
+After a refused revert the orchestrator runs no cleanup and goes to the
+status check.
+
+**Effect.** 0 of 160 lines lost. In-run-rulings checks go from 899 to 907;
+save-marker tests from 33 to 39. Update the plugin and restart the
+command-line interface (CLI).
+
+### Row 70 — the edit log lost lines
+
+`hooks/track-edits.js` wrote every Edit and Write of every session into one
+file, `~/.claude/hooks-logs/edit-log.txt`, and `rotateIfNeeded()` read the
+whole file and wrote its last 500 lines again. A line that another process
+appended between the read and the write was lost. The worklist row called this
+rare. It was not: the real log held 500 lines in 96,427 bytes, which is over
+the 50 KB limit of the size check, so every edit read the file, and every edit
+that found more than 500 lines rewrote it. All sessions also shared the one
+limit of 500 lines (the real log held 19 session ids), so a busy session
+pushed the lines of another session out with no race at all.
+
+Measured with 8 hook processes started at once, 20 rounds, on a log of 700
+lines: v7.44.0 lost 51 of 160 edit lines with 8 session ids and 38 of 160 with
+one shared id (parallel subagents write under the id of their parent
+session). The row said "never a false block". That is false: when the lost
+line is the edit of a test file, the stop hook sees a source edit without a
+test edit and blocks with the test-first reminder (measured with the real
+`stop-reminders.js`).
+
+- A session now appends to its own file, `edit-log-<cleaned session id>.txt`.
+  The path comes from the new `editLogFile(sessionId)` in
+  `hooks/save-marker.js`, which reuses the id cleaning of the save marker. A
+  payload without a session id still appends to the shared `edit-log.txt`.
+- No hook rewrites, renames or trims an edit log. `rotateIfNeeded`, and the
+  unused `getRecentEdits` and `EDIT_LOG` of `track-edits.js`, are removed.
+- The 7-day cleanup of per-session files deletes old edit logs. Every append
+  sets the modification time of the log, so the log of a live session stays.
+- The reader in `hooks/stop-reminders.js` reads the file of its session and
+  the old shared file. The shared file holds the edits without a session id,
+  and the earlier edits of a session that was open during the plugin update.
+
+After the fix the same measurement lost 0 of 160 lines in both cases. Two
+independent design lenses measured 0 of 3,600 and 0 of 800 lines.
+
+Both candidates of the row were rejected by measurement. Rotation through a
+rename lost 87 of 800 new lines and, in at least one round, all 700 older
+lines: two processes both saw the size over the limit, and the second rename
+put a nearly empty file over the full one. A guarded rename still lost 3 of
+1,200 lines with 24 processes. Rotation at session start lost 18 of 800 lines
+with 8 sessions starting at once.
+
+Limits. A per-session log has no size limit inside one session; the whole stop
+hook took 44 ms with 10,000 lines and 165 ms with 100,000 lines (measured).
+The old shared `edit-log.txt` is never trimmed again; you may delete it 7 days
+after the update. After a downgrade, the older stop hook does not see the
+per-session logs, which costs one missed reminder. Whether a short append is
+atomic on Windows is documented, not measured. The slow test
+`tests/claude-code/test-subagent-hook-scope.sh` now counts the lines that name
+its marker file across all edit logs; it was read and syntax-checked, not run.
+
+### Row 72 — what `git revert --no-commit` really does
+
+Measured on git 2.50.1 by one verifier and two reviewers, and replayed by the
+main session:
+
+- Exit 128 is a refusal: over an unstaged or untracked change on a path of the
+  commit, a merge commit, a bad hash or an `index.lock` file. Git normally
+  changes nothing and writes no `REVERT_HEAD`.
+- Over a staged change git exits 0 and merges the revert into it, or exits 1
+  and conflicts with it.
+- Only exit 1 leaves the checkout in the middle of a revert: conflict markers,
+  the clean hunks staged, and `REVERT_HEAD`.
+- No state creates the folder `.git/sequencer`.
+
+The row named two false sentences in Resume step 3 of
+`skills/orchestrating-development/SKILL.md`; four were false. The text now
+states the behaviour per exit code, no longer names "the sequencer state", and
+says that a successful revert "normally" leaves the reverted hunks staged (a
+revert of a fix that a later commit already reverted exits 0 and stages
+nothing).
+
+The review found the defect that matters. The text ran the per-path cleanup
+(`git reset -- <path>`, then `git checkout -- <path>`) after EVERY non-zero
+exit. The pre-check can miss a local change: plain `git status --porcelain`
+prints `?? d/` for an untracked file inside an untracked folder. After a
+refusal over an unstaged change that the pre-check had not listed, the cleanup
+deleted that change (measured: ` M a.txt` before, an empty status after).
+After a refusal the orchestrator now runs no cleanup at all and goes directly
+to the status check, which also reports the rare exit 128 that did change the
+tree (measured with a folder that is not writable). The cleanup and its
+`rm -- <path>` exception are for exit 1 only. Two more sentences changed in the
+verification pass: the pre-revert state is saved before EACH revert, and a
+stop does not undo a fix commit whose revert git refused.
+
+### Review and tests
+
+Two design lenses plus a rebuttal round for row 70; one measuring verifier for
+row 72. Review round: correctness 0 Critical, 2 Important, 4 Minor; adversarial
+0 Critical, 0 Important, 3 Minor. Mutation testing in a separate worktree: 26
+run, 23 caught, 3 survived; all three are now caught (replayed). One
+verification pass limited to the fixes: 0 Critical, 0 Important, 4 Minor, all
+applied.
+
+All thirteen fast suites pass with no `command not found` line:
+`tests/in-run-rulings` 907 checks (899 on v7.44.0), and
+`tests/codex/test-track-edits.js` 39 tests (33). The new tests T11 to T14, T12b
+and T12c run the real hook scripts as processes under a temporary home folder.
+
+Three worklist rows were opened: a revert overwrites an ignored file at a path
+that the fix commit deleted (row 73); a fix commit that renamed a file ends a
+conflicted revert in a false major error, because `git show --name-only` lists
+only the new name (row 74); all sessions share one `session-stats.json` (row
+75).
+
 ## v7.44.0 — a resume stops on a code revert that an earlier session left unfinished
 
 **Problem.** A resume that undoes a Phase 4 fix stages the reverted code and
