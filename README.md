@@ -126,7 +126,7 @@ flowchart TD
 
     subgraph STOPS["Stop hooks"]
         SG["SubagentStop — subagent-guard<br/>detects + blocks subagent skill leakage"]
-        SR["Stop — stop-reminders<br/>TDD + commit nudges, decision-log reminder,<br/>session summary (duration, skills used)"]
+        SR["Stop — stop-reminders<br/>TDD + commit nudges, decision-log reminder,<br/>session summary (skills used)"]
     end
 ```
 

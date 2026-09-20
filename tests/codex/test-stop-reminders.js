@@ -159,11 +159,11 @@ test('Stats-only session (skill invocations but no edits) emits {} — does not 
   // The user reported "Stop hook error: <stop-hook-reminders> Session summary: 6min,
   // 1 skill invocations [executing-plans (1x)]" after every stop — caused by the stop
   // hook blocking even when the only reminder was the informational stats summary.
-  const { homeDir, cwdDir, logDir } = makeTempDirs();
+  const { homeDir, cwdDir } = makeTempDirs();
   try {
-    // Write a session-stats.json simulating a session with 1 skill call, no edits
-    const statsFile = path.join(logDir, 'session-stats.json');
-    fs.writeFileSync(statsFile, JSON.stringify({
+    const hook = loadHookWithHome(homeDir);
+    // Write the statistics file of this session: 1 skill call, no edits
+    fs.writeFileSync(hook.statsFile(TEST_SESSION_ID), JSON.stringify({
       startedAt: new Date(Date.now() - 6 * 60 * 1000).toISOString(), // 6 min ago
       skillInvocations: { 'superpowers-orchestrator:executing-plans': 1 },
       totalSkillCalls: 1,
@@ -173,8 +173,11 @@ test('Stats-only session (skill invocations but no edits) emits {} — does not 
     }), 'utf8');
     // No edit-log entries for this session (no edits made)
 
-    const { evaluatePayload } = loadHookWithHome(homeDir);
-    const result = evaluatePayload({ cwd: cwdDir, session_id: TEST_SESSION_ID });
+    // The summary exists, so the empty result below proves that it does not block.
+    const reminders = hook.generateReminders([], cwdDir, TEST_SESSION_ID);
+    assert.ok(reminders.some(reminder => reminder.startsWith('Session summary:')),
+      `Expected the summary of this session, got: ${JSON.stringify(reminders)}`);
+    const result = hook.evaluatePayload({ cwd: cwdDir, session_id: TEST_SESSION_ID });
 
     assert.deepStrictEqual(result, {},
       `Stats-only session must emit {}, got: ${JSON.stringify(result)}`);
@@ -555,7 +558,7 @@ test('T6: a block deletes per-session files older than 7 days and keeps all othe
   const result = evaluateStop(({ hook, logDir }) => {
     writeEditLog(logDir, [editLogLine(TEST_SESSION_ID, SIGNIFICANT_FILE)]);
     const perSessionFiles = sessionId =>
-      [hook.markerFile, hook.guardFile, hook.editLogFile].map(fileOf => fileOf(sessionId));
+      [hook.markerFile, hook.guardFile, hook.editLogFile, hook.statsFile].map(fileOf => fileOf(sessionId));
     const newFiles = perSessionFiles(OTHER_SESSION_ID);
     // Only the file age decides: the shared files are as old as the deleted ones.
     const sharedFiles = [hook.markerFile(), hook.guardFile()];

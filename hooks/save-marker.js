@@ -1,7 +1,7 @@
 /**
- * Save marker, stop guard and edit log — file names shared by the hooks
+ * Save marker, stop guard, edit log and statistics — file names shared by the hooks
  *
- * Three files under the hook log folder record the state of one session:
+ * Four files under the hook log folder record the state of one session:
  *   - the save marker holds the time of the session's last `[saved]` entry in
  *     session-log.md. track-edits.js and the context-management skill write
  *     it; stop-reminders.js reads it.
@@ -9,8 +9,10 @@
  *     blocked.
  *   - the edit log holds one line for each Edit or Write of the session.
  *     track-edits.js appends to it; stop-reminders.js reads it.
+ *   - the statistics file counts the Skill calls of the session.
+ *     track-session-stats.js writes it; stop-reminders.js reads it.
  *
- * Each session has its own three files, so one session cannot hide the
+ * Each session has its own four files, so one session cannot hide the
  * reminders of another session. The session id is part of the file name.
  * A payload without a session id uses the old file names, which all sessions
  * share.
@@ -28,7 +30,8 @@ const LOG_DIR = path.join(
 const MARKER_KIND = { prefix: 'last-saved-entry', extension: '.txt' };
 const GUARD_KIND = { prefix: 'stop-hook-fired', extension: '.lock' };
 const EDIT_LOG_KIND = { prefix: 'edit-log', extension: '.txt' };
-const FILE_KINDS = [MARKER_KIND, GUARD_KIND, EDIT_LOG_KIND];
+const STATS_KIND = { prefix: 'session-stats', extension: '.json' };
+const FILE_KINDS = [MARKER_KIND, GUARD_KIND, EDIT_LOG_KIND, STATS_KIND];
 
 // A per-session file is named `<prefix>-<clean id><extension>`.
 const ID_SEPARATOR = '-';
@@ -71,6 +74,15 @@ function guardFile(sessionId) {
  */
 function editLogFile(sessionId) {
   return sessionFile(EDIT_LOG_KIND, sessionId);
+}
+
+/**
+ * Path of the statistics file of one session. No id gives the old shared file.
+ * A reader never reads the shared file for a session that has an id: the shared
+ * file holds one total of all sessions, and no part of it belongs to one session.
+ */
+function statsFile(sessionId) {
+  return sessionFile(STATS_KIND, sessionId);
 }
 
 /** True for the name of a per-session file, false for the old shared names. */
@@ -135,5 +147,6 @@ module.exports = {
   guardFile,
   markerFile,
   removeOldSessionFiles,
+  statsFile,
   writeTimeFile,
 };
