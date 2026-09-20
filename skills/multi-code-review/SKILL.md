@@ -1434,7 +1434,9 @@ Canonical dispositions — Critical/Important:
 `unresolved: <reason>` (the reasons this skill names:
 `unresolved: fix needs a plan edit`, step 4;
 `unresolved: verification cap`, step 6; `unresolved: addendum re-review`
-and `unresolved: fix contradicts binding text`, After the Loop); Minor:
+and `unresolved: fix contradicts binding text`, After the Loop;
+`unresolved: withheld finding, no credential at the location`, Error
+Handling); Minor:
 `fixed — <summary> → <sha>` | `carried` |
 `rejected: <reason>` — the `fixed` line uses the shape
 `fixed — <summary> → <sha>`, with the source annotation appended when

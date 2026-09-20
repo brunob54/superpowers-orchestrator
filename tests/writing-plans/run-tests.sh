@@ -15,6 +15,8 @@
 # plan-contracts-not-bodies-design.md, section R6.
 
 set -u
+# Stop the suite when a command is not found; the file explains the reason.
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")/../lib" && pwd)/undefined-command-guard.sh"
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 SKILL="$ROOT/skills/writing-plans/SKILL.md"

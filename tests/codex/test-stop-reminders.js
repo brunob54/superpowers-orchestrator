@@ -68,9 +68,16 @@ function loadHookWithHome(homeDir) {
 
 const TEST_SESSION_ID = 'test-session-abc123';
 
+function writeRecentEdits(logDir, filePaths, ageMinutes = 0) {
+  const timestamp = new Date(Date.now() - ageMinutes * 60 * 1000).toISOString();
+  const lines = filePaths
+    .map(filePath => `${timestamp} | ${TEST_SESSION_ID} | Edit | ${filePath}\n`)
+    .join('');
+  fs.writeFileSync(path.join(logDir, 'edit-log.txt'), lines, 'utf8');
+}
+
 function writeRecentEdit(logDir, filePath) {
-  const line = `${new Date().toISOString()} | ${TEST_SESSION_ID} | Edit | ${filePath}\n`;
-  fs.writeFileSync(path.join(logDir, 'edit-log.txt'), line, 'utf8');
+  writeRecentEdits(logDir, [filePath]);
 }
 
 console.log('\nStop reminders output contract (Claude)');
@@ -283,6 +290,84 @@ test('Does NOT trigger for regular source file edits', () => {
   } finally {
     cleanup(homeDir, cwdDir);
   }
+});
+
+// ── Edits inside a subagent's own worktree ───────────────────────────────────
+// Claude Code gives a subagent that runs with worktree isolation the folder
+// `.claude/worktrees/agent-a<16 hexadecimal digits>/`. The edit log records
+// those edits under the parent session's id. They are throwaway work (for
+// example mutation testing), so no reminder may count them.
+
+console.log('\nEdits inside a subagent worktree');
+
+const AGENT_WORKTREE = '/project/.claude/worktrees/agent-a017948ab31bc3287';
+
+function evaluateEdits(filePaths, ageMinutes = 0) {
+  const { homeDir, cwdDir, logDir } = makeTempDirs();
+  try {
+    writeRecentEdits(logDir, filePaths, ageMinutes);
+    const { evaluatePayload } = loadHookWithHome(homeDir);
+    return evaluatePayload({ cwd: cwdDir, session_id: TEST_SESSION_ID });
+  } finally {
+    cleanup(homeDir, cwdDir);
+  }
+}
+
+const IGNORED_WORKTREE_EDITS = [
+  ['a SKILL.md edit', `${AGENT_WORKTREE}/skills/debugging/SKILL.md`],
+  ['a hooks/*.js edit (also a source file for the test-first reminder)', `${AGENT_WORKTREE}/hooks/a.js`],
+  ['a Windows path with backslashes', 'C:\\project\\.claude\\worktrees\\agent-a017948ab31bc3287\\skills\\x\\SKILL.md'],
+  ['a relative path with no leading separator', '.claude/worktrees/agent-a017948ab31bc3287/skills/x/SKILL.md'],
+];
+
+for (const [label, filePath] of IGNORED_WORKTREE_EDITS) {
+  test(`Ignores ${label} inside a subagent worktree`, () => {
+    const result = evaluateEdits([filePath]);
+    assert.deepStrictEqual(result, {},
+      `Expected no reminder for ${filePath}, got: ${JSON.stringify(result)}`);
+  });
+}
+
+const COUNTED_EDITS = [
+  ['a main checkout edit that stands next to a subagent worktree edit',
+    [`${AGENT_WORKTREE}/skills/x/SKILL.md`, '/project/skills/x/SKILL.md']],
+  ['a worktree that the main session entered (the folder name is not an agent id)',
+    ['/project/.claude/worktrees/feature-login/skills/x/SKILL.md']],
+  ['a worktree folder that only begins like an agent id',
+    ['/project/.claude/worktrees/agent-cafe/skills/x/SKILL.md']],
+  ['an agent-id folder outside .claude/worktrees',
+    ['/project/.worktrees/agent-a017948ab31bc3287/skills/x/SKILL.md']],
+  ['an agent-id folder under a worktrees folder that is not inside .claude',
+    ['/project/worktrees/agent-a017948ab31bc3287/skills/x/SKILL.md']],
+  ['a folder name with 17 hexadecimal digits',
+    ['/project/.claude/worktrees/agent-a017948ab31bc32870/skills/x/SKILL.md']],
+  ['a folder name that continues after the agent id',
+    ['/project/.claude/worktrees/agent-a017948ab31bc3287-notes/skills/x/SKILL.md']],
+  ['a folder name with a letter that is not a hexadecimal digit',
+    ['/project/.claude/worktrees/agent-a017948ab31bc328z/skills/x/SKILL.md']],
+];
+
+for (const [label, filePaths] of COUNTED_EDITS) {
+  test(`Still counts ${label}`, () => {
+    const reason = evaluateEdits(filePaths).reason || '';
+    assert.ok(reason.includes('Decision log'),
+      `Expected the decision log reminder for ${filePaths.join(', ')}: ${reason}`);
+  });
+}
+
+// The reminder about source edits reads the edits of the last 30 minutes.
+// Both tests write one source file edit and differ only in its age.
+const SOURCE_EDIT = ['src/index.js'];
+
+test('Counts a source edit that is 10 minutes old', () => {
+  assert.strictEqual(evaluateEdits(SOURCE_EDIT, 10).decision, 'block',
+    'Expected a reminder for an edit inside the 30-minute window');
+});
+
+test('Does not count a source edit that is 31 minutes old', () => {
+  const result = evaluateEdits(SOURCE_EDIT, 31);
+  assert.deepStrictEqual(result, {},
+    `Expected no reminder for an edit outside the 30-minute window, got: ${JSON.stringify(result)}`);
 });
 
 // ── checkSessionLogSize hard cap ─────────────────────────────────────────────

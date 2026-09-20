@@ -5,6 +5,9 @@
 # Windows note: avoids /dev/stdin (not available in Git Bash on Windows).
 # All node JSON parsing uses temp files instead.
 
+# Stop the suite when a command is not found; the file explains the reason.
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")/../lib" && pwd)/undefined-command-guard.sh"
+
 PLUGIN_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 PASS=0
 FAIL=0

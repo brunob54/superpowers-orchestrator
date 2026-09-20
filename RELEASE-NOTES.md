@@ -8,6 +8,81 @@
 > (`REPOZY/superpowers-optimized`) and are kept unchanged as history; any
 > testing they describe was not done here.
 
+## v7.42.0 — the stop hook ignores a subagent's throwaway worktree
+
+**Problem.** The stop hook counted a subagent's throwaway edits under
+`.claude/worktrees/agent-…/` as the main session's work, and blocked three
+stops on one day. A list of `unresolved:` reasons left out one reason that the
+same skill writes. A test suite stayed green when a check called a function
+that did not exist.
+
+**Change.** The hook leaves those worktree edits out. The list names all five
+reasons. Eleven suites load a guard that stops the suite on exit code 127.
+
+**Effect.** The stop-reminders tests go from 15 to 29, in-run-rulings from 871
+to 873, and the new suite-guard suite holds 69 checks; 82 mutations were run.
+Update the plugin and restart the command-line interface (CLI). Nothing to
+migrate.
+
+Rows 64, 65 and 66 of the orchestration issues log are closed by this release.
+
+**The stop hook and a subagent's own worktree (row 64).** The edit log
+(`~/.claude/hooks-logs/edit-log.txt`) records every Edit and Write with the
+session id, and a subagent's edits carry the id of the session that started
+it. Claude Code gives a subagent that runs with worktree isolation the folder
+`.claude/worktrees/agent-a<16 hexadecimal digits>/`; a named subagent gets the
+same form (six samples, one from a probe dispatch). Such edits are throwaway
+work, for example mutation testing, yet `hooks/stop-reminders.js` counted them
+and asked for a `[saved]` entry. Both log readers of the hook now go through
+one helper, `readSessionEditsAfter`, which leaves those paths out, so the
+decision-log reminder, the test-first reminder and the `state.md` check all
+ignore them. Both path separators match, for Windows paths. A worktree that
+the main session entered has a name of another form and is still counted. The
+wider candidate, every path under `.claude/worktrees/`, was rejected for that
+reason. "Ignore every edit of a subagent" was rejected too: the log has no
+subagent field, and subagents made 114 of the 121 edits of the observed
+session. Only the Claude Code hook file wires this hook. Accepted limits: a
+subagent in such a worktree whose work is kept gets no reminder, and neither
+does a main session started inside such a folder. If Claude Code changes the
+name form, the filter matches nothing and the block returns, which is the
+safe direction.
+
+**The fifth `unresolved:` reason (row 65).** The Canonical dispositions list
+of `skills/multi-code-review/SKILL.md` now names
+`unresolved: withheld finding, no credential at the location`, with the
+section that writes it (Error Handling). Two checks hold it: one pins the
+entry inside its sentence, and one pins the sentence that writes the reason,
+so the writer cannot be reworded while the list keeps the old text.
+
+**The undefined-command guard (row 66).** A check that called a function
+defined later in the file made bash print `command not found`; no FAIL was
+counted and the suite ended with exit code 0 (measured: 871 passed, 0 failed,
+with the undefined call in place). `set -u` does not catch this, and
+`command_not_found_handle` does not run on bash 3.2, the bash of macOS.
+`tests/lib/undefined-command-guard.sh` sets an ERR (error) trap that stops the
+suite with exit code 1 when a command ends with exit code 127, and `set -E`,
+because without it a call in the middle of a function body is missed. Eleven
+suites load it; the codex and opencode runners use `set -euo pipefail` and
+already stop. The new suite `tests/suite-guard/run-tests.sh` pins the
+behaviour with fixture scripts, builds the list of guarded suites from
+`tests/*/run-tests.sh`, and scans every suite for a line that switches the
+guard off (18 forms, each proved by a fixture). The known limits are stated in
+the guard file. The largest one is open as row 68: bash runs no ERR trap in
+the body of a function that is itself called as a condition or inside an `&&`
+or `||` list, and 12 call sites in four suites have that form.
+
+**Review.** Two design lenses with a rebuttal round for row 64; then three
+reviews in parallel: correctness (0 Critical, 0 Important, 5 Minor),
+adversarial (2 Important) and mutation testing in a separate worktree (30 run,
+19 caught, 11 survived: 1 equivalent mutant, 10 closed and replayed); then one
+verification pass (52 mutations, 2 Important findings on the guard scan, fixed
+and replayed on a real suite). All thirteen fast suites pass: codex 14 suites,
+smart-compress 107, reviewer-templates 272, writing-plans 21, in-run-rulings
+873, fill-prompt 166, orchestrating-development 217, review-gates 142,
+measure-context 143, pickup 198, analyze-compaction 40, sdd-scripts 207,
+suite-guard 69. Rows 67 (the stop hook's save marker is global, not per
+session) and 68 were opened.
+
 ## v7.41.0 — a resume stops on a plan edit that no record explains
 
 **Problem.** A session that ended after it edited a plan clause, and before

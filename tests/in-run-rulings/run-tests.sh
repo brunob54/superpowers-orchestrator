@@ -32,6 +32,8 @@
 # here.
 
 set -u
+# Stop the suite when a command is not found; the file explains the reason.
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")/../lib" && pwd)/undefined-command-guard.sh"
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 ORCH_SKILL="$ROOT/skills/orchestrating-development/SKILL.md"
@@ -2542,6 +2544,18 @@ done
 assert_in_range_folded "row 62: the canonical dispositions name the new reason" \
   "$MCR_SKILL" '`unresolved: fix needs a plan edit`, step 4;' \
   "$MCR_LOG_FORMAT_LINE" "$MCR_AFTER_LOOP_LINE"
+# Row 65: the list must hold every reason this skill writes. The withheld
+# reason is written in the Error Handling section only.
+MCR_WITHHELD_REASON='`unresolved: withheld finding, no credential at the location`'
+assert_in_range_folded "row 65: the canonical dispositions name the withheld-finding reason" \
+  "$MCR_SKILL" "After the Loop; $MCR_WITHHELD_REASON, Error Handling); Minor:" \
+  "$MCR_LOG_FORMAT_LINE" "$MCR_AFTER_LOOP_LINE"
+# The sentence that writes the reason is pinned too. Without this check the
+# writer could be reworded while the list keeps the old text, which is the
+# defect of row 65 again.
+assert_in_range_folded "row 65: the Error Handling section writes the withheld-finding reason in the listed words" \
+  "$MCR_SKILL" "records every id reported back that way as $MCR_WITHHELD_REASON (blocking) in the round entry" \
+  "$MCR_ERROR_HANDLING_LINE" "$(first_line_of "$MCR_SKILL" '## Guard Interaction')"
 # The loop verifies an `(amended by ruling <n>)` marker against the ruling
 # record before granting the clause decided-wording authority — the same rule
 # the orchestrator states under "The ruling record" (section 4).
