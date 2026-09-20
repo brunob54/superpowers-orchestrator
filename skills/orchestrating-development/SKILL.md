@@ -1477,9 +1477,10 @@ Trigger: `Resume orchestration for <plan-or-spec path>`.
    a later commit put a folder where the fix commit holds a file, or no
    entry. The path, or a parent folder of the path, exists in the fix
    commit and does not exist at HEAD: a later commit deleted or renamed
-   it. When the path itself is gone, the revert would change a file
-   outside this list, or change nothing, and the resume commit, which
-   names the listed paths, would fail.
+   it. When the path itself is gone, the revert would stop on a
+   conflict, or change a file outside this list, or change nothing; in
+   the last two cases the resume commit, which names the listed paths,
+   would fail.
    When only a parent folder is gone, the revert would put the file back
    into a folder that the branch no longer holds, or, after a rename
    that changes only the letter case, under the other spelling of the
