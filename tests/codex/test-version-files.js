@@ -41,7 +41,9 @@ const firstMatch = (pattern) => (text) => matches(pattern)(text).slice(0, 1);
 const RELEASE_LIST_START = 'The remaining releases';
 const releaseListLine = (text) => text.split('\n').find((line) => line.startsWith(RELEASE_LIST_START)) || '';
 const PLACES = [
-  { label: 'the VERSION file', file: VERSION_FILE, read: (text) => [text.trim()] },
+  // Only one line end is removed: a program that reads the file without
+  // trimming must get the version and nothing else.
+  { label: 'the VERSION file', file: VERSION_FILE, read: (text) => [text.replace(/\r?\n$/, '')] },
   { label: 'marketplace.json, first plugin', file: MARKETPLACE_JSON, read: (text) => [JSON.parse(text).plugins[0].version] },
   { label: 'plugin.universal.yaml, meta', file: UNIVERSAL_YAML, read: firstMatch(new RegExp(`^  version: "(${VERSION_SHAPE})"$`, 'gm')) },
   { label: 'the README badge', file: README, read: matches(new RegExp(`badge/version-(${VERSION_SHAPE})-`, 'g')) },
@@ -120,6 +122,10 @@ test('an unchanged copy has no problem', () => {
 
 test('an empty VERSION file is reported (the v7.43.0 release commit)', () => {
   assertOneProblem(damagedCopy(VERSION_FILE, () => ''), 'the VERSION file');
+});
+
+test('a VERSION file with a second line of white space is reported', () => {
+  assertOneProblem(damagedCopy(VERSION_FILE, (text) => `${text} \n`), 'the VERSION file');
 });
 
 test('another version in marketplace.json is reported', () => {
