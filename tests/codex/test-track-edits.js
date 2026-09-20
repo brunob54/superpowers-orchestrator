@@ -466,9 +466,12 @@ function statsContent(skills, startedMinutesAgo) {
   });
 }
 
+/** The file is as old on disk as its content says, so no age rule of any kind can pass. */
 function seedStatsFile(homeDir, file, skills, startedMinutesAgo) {
   fs.mkdirSync(markerPaths(homeDir).logDir, { recursive: true });
   fs.writeFileSync(file, statsContent(skills, startedMinutesAgo));
+  const started = new Date(Date.now() - startedMinutesAgo * MINUTE_MS);
+  fs.utimesSync(file, started, started);
 }
 
 /**
@@ -487,11 +490,13 @@ test('T15: the summary of session B names only the skills of session B, and no m
   const reason = stopReasonAfterEdit(homeDir, cwdDir, SESSION_B);
   assert.ok(reason.includes(`${SUMMARY_LABEL}: 1 skill invocations [skill-b (1x)]`), `Got: ${reason}`);
   assert.ok(!reason.includes('skill-a'), `The summary names a skill of session A: ${reason}`);
+  assert.ok(!fs.existsSync(path.join(markerPaths(homeDir).logDir, SHARED_STATS_FILE)),
+    'The shared statistics file must not be written');
 });
 
 test('T16: the shared statistics file of an older plugin version gives a session no summary', () => {
   const { homeDir, cwdDir } = makeHome();
-  seedStatsFile(homeDir, path.join(markerPaths(homeDir).logDir, SHARED_STATS_FILE), ['old-skill'], 1);
+  seedStatsFile(homeDir, path.join(markerPaths(homeDir).logDir, SHARED_STATS_FILE), ['old-skill'], 180);
   const reason = stopReasonAfterEdit(homeDir, cwdDir, SESSION_A);
   assert.ok(reason.includes(DECISION_LOG), `Expected a block, got: ${reason}`);
   assert.ok(!reason.includes(SUMMARY_LABEL), `Expected no summary line, got: ${reason}`);

@@ -33,7 +33,6 @@ const {
   writeTimeFile,
 } = require('./save-marker');
 
-
 // Guard: only fire once per session (prevent infinite loop)
 // The guard file is created on first fire and checked on subsequent fires.
 // It auto-expires after 2 minutes so subsequent Claude stops can show reminders.

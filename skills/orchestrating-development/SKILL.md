@@ -1153,7 +1153,7 @@ Trigger: `Resume orchestration for <plan-or-spec path>`.
    path, run `git reset -- <path>` and then `git checkout -- <path>`,
    run `git revert --quit` last, then send the same resume prompt
    again. Take those paths from
-   `git show --name-only --no-renames --format= <sha>`,
+   `git -c core.quotePath=false show --name-only --no-renames --format= <sha>`,
    run for the printed hash and for the fix commit of every ruling
    that the prompt of this resume overturns, never from the
    `git status --porcelain` output: that output cannot tell a change
@@ -1415,12 +1415,17 @@ Trigger: `Resume orchestration for <plan-or-spec path>`.
    that id. **Before starting each revert**, save the tree's current
    `git status --porcelain` output as the pre-revert state, and check it
    for local changes to any path the fix commit touched
-   (`git show --name-only --no-renames --format= <sha>` lists those paths;
+   (`git -c core.quotePath=false show --name-only --no-renames --format= <sha>`
+   lists those paths;
+   `-c core.quotePath=false` prints a name that holds an accented
+   character as it is,
    `--no-renames` makes a renamed file appear under both its names, and
    every later rule of this revert takes its paths from this one list:
    the cleanup, the undo before a stop, and the reverted paths that the
    resume commit names). Also run
-   `git ls-files --others --ignored --exclude-standard -- <those paths>`:
+   `git ls-files --others --ignored --exclude-standard -- <those paths>`,
+   each path as its own argument, and never with an empty list (with no
+   path it prints every ignored file of the repository):
    a path it prints holds an ignored file, which `git status --porcelain`
    does not list. When one of the paths already carries a local change,
    or that command prints one, do not start the revert at all —
@@ -1831,7 +1836,7 @@ you and your forks may read exactly:
    `git diff --no-ext-diff --no-textconv HEAD -- <plan path>`,
    `git show <ruling commit>:<plan path>`,
    `git status --porcelain`,
-   `git show --name-only --no-renames --format= <sha>`,
+   `git -c core.quotePath=false show --name-only --no-renames --format= <sha>`,
    `git ls-files --others --ignored --exclude-standard -- <those paths>`,
    and a scan of the whole plan
    file for an orphan `(amended by ruling <n>)` marker and its

@@ -561,7 +561,7 @@ test('T6: a block deletes per-session files older than 7 days and keeps all othe
       [hook.markerFile, hook.guardFile, hook.editLogFile, hook.statsFile].map(fileOf => fileOf(sessionId));
     const newFiles = perSessionFiles(OTHER_SESSION_ID);
     // Only the file age decides: the shared files are as old as the deleted ones.
-    const sharedFiles = [hook.markerFile(), hook.guardFile()];
+    const sharedFiles = [hook.markerFile(), hook.guardFile(), hook.statsFile()];
     oldFiles = perSessionFiles('old-session');
     keptFiles = [...newFiles, ...sharedFiles];
     [...oldFiles, ...keptFiles].forEach(file => writeTime(file, 8 * DAY_MS));
