@@ -2131,21 +2131,26 @@ assert_in_range_folded "the pre-check names what git does over each kind of loca
 # --porcelain` does not list an ignored file, and `git revert` overwrites one
 # with no warning; `git status --porcelain --ignored` prints only the folder
 # for a file inside an ignored folder, `git ls-files --others --ignored
-# --exclude-standard -- <paths>` prints the file. Review round 1 (measured): git
-# prints a name with an accented character quoted and escaped, and `git ls-files`
-# then finds nothing for it and exits 0; `-c core.quotePath=false` prints the
-# real name. With no path at all, that `git ls-files` command prints every
-# ignored file of the repository.
-R74_LIST_COMMAND='`git -c core.quotePath=false show --name-only --no-renames --format= <sha>`'
+# --exclude-standard -- <paths>` prints the file. Review round 1 (measured):
+# with no path at all, that `git ls-files` command prints every ignored file of
+# the repository. Verification pass (measured): `-c core.quotePath=false` on the
+# list command alone is wrong. The list then prints `café.txt` while `git status
+# --porcelain` prints the quoted, escaped form, so the pre-check no longer sees
+# a local change on that path and the cleanup after a conflict deletes it.
+R74_LIST_COMMAND='`git show --name-only --no-renames --format= <sha>`'
 R73_IGNORED_COMMAND='`git ls-files --others --ignored --exclude-standard -- <those paths>`'
 assert_in_range_folded_exact "rows 74 and 73: the pre-check lists both names of a renamed file, and one list feeds every later rule" \
-  "$ORCH_SKILL" "($R74_LIST_COMMAND lists those paths; \`-c core.quotePath=false\` prints a name that holds an accented character as it is, \`--no-renames\` makes a renamed file appear under both its names, and every later rule of this revert takes its paths from this one list: the cleanup, the undo before a stop, and the reverted paths that the resume commit names). Also run $R73_IGNORED_COMMAND, each path as its own argument, and never with an empty list (with no path it prints every ignored file of the repository): a path it prints holds an ignored file, which \`git status --porcelain\` does not list. When one of the paths already carries a local change, or that command prints one, do not start the revert at all" \
+  "$ORCH_SKILL" "($R74_LIST_COMMAND lists those paths; \`--no-renames\` makes a renamed file appear under both its names, and every later rule of this revert takes its paths from this one list: the cleanup, the undo before a stop, and the reverted paths that the resume commit names). Also run $R73_IGNORED_COMMAND, each path as its own argument, and skip this command when the list is empty (with no path it prints every ignored file of the repository): a path it prints holds an ignored file, which \`git status --porcelain\` does not list. When one of the paths already carries a local change, or that command prints one, do not start the revert at all" \
   "$RESUME_LINE" "$RULINGS_LINE"
 for range in "$RESUME_LINE $RULINGS_LINE" "$READ_EXCEPTION_LINE $READ_EXCEPTION_END"; do
   assert_absent_in_range_folded "row 74: no path list is taken without --no-renames (lines ${range% *} to ${range#* })" "$ORCH_SKILL" \
     '--name-only --format=' ${range% *} ${range#* } fragment
+  assert_absent_in_range_folded "rows 74 and 73: no command changes the spelling of a name on one side of a comparison (lines ${range% *} to ${range#* })" "$ORCH_SKILL" \
+    'core.quotePath' ${range% *} ${range#* } fragment
 done
 # The check above sees one spelling only, so the two counts must also be equal.
+# This text scan counts lines, and it cannot see a path list that another
+# command takes.
 if [ "$(grep -c -- '--name-only' "$ORCH_SKILL")" -eq "$(grep -cF -- "${R74_LIST_COMMAND//\`/}" "$ORCH_SKILL")" ]; then
   ok "row 74: every path list of the skill is taken with the whole list command"
 else
@@ -3597,7 +3602,7 @@ assert_in_range_folded "finding 4: text of another clause this resume reverts is
 # exception forbids. The widening is for the orchestrator alone: a fork's
 # `git show <sha>:<path>` form prints whole files.
 assert_in_range_folded_exact "finding 5: the permitted reads carry the five commands the revert runs, ending with the plan scan" \
-  "$ORCH_SKILL" '`git show <ruling commit>:<plan path>`, `git status --porcelain`, `git -c core.quotePath=false show --name-only --no-renames --format= <sha>`, `git ls-files --others --ignored --exclude-standard -- <those paths>`, and a scan of the whole plan' \
+  "$ORCH_SKILL" '`git show <ruling commit>:<plan path>`, `git status --porcelain`, `git show --name-only --no-renames --format= <sha>`, `git ls-files --others --ignored --exclude-standard -- <those paths>`, and a scan of the whole plan' \
   "$READ_EXCEPTION_LINE" "$READ_EXCEPTION_END"
 # Mutation testing: a sentence added after this one ("You may also read the
 # files it prints") gave a new read and no check failed. The needle runs into
@@ -4343,7 +4348,7 @@ R63_A_SENTENCES=(
   'Never record `not reverted` over these changes: the record would say that no revert was made while half of it stands staged.'
   'Never complete that revert and never commit it: `REVERT_HEAD` names only the last commit of several reverts, so no record says which staged change belongs to which answer.'
   'The report names the hash and the whole `git status --porcelain` output, lists the paths of the unfinished revert, and states the way out: for each listed path, run `git reset -- <path>` and then `git checkout -- <path>`, run `git revert --quit` last, then send the same resume prompt again.'
-  'Take those paths from `git -c core.quotePath=false show --name-only --no-renames --format= <sha>`, run for the printed hash and for the fix commit of every ruling that the prompt of this resume overturns, never from the `git status --porcelain` output: that output cannot tell a change of the revert from the staged work of the blocked task.'
+  'Take those paths from `git show --name-only --no-renames --format= <sha>`, run for the printed hash and for the fix commit of every ruling that the prompt of this resume overturns, never from the `git status --porcelain` output: that output cannot tell a change of the revert from the staged work of the blocked task.'
   'For a path that the revert created again, `git checkout -- <path>` fails; the way out removes it with `rm -- <path>`.'
   'The report also says that these commands delete an edit of the user'"'"'s own on such a path, and that `git revert --abort` is never the way out: it also deletes staged work on every other path.'
 )
