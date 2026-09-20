@@ -397,15 +397,17 @@ const DECISION_LOG = 'Decision log';
 /**
  * Run one scenario: `arrange` prepares the log folder, then the stop hook
  * evaluates a stop of TEST_SESSION_ID. `inspect` runs after the stop, while
- * the temporary folders still exist. Returns the hook result.
+ * the temporary folders still exist. Returns the hook result. An object that
+ * `arrange` returns is added to the payload of that last stop.
  */
 function evaluateStop(arrange, inspect = () => {}) {
   const { homeDir, cwdDir, logDir } = makeTempDirs();
   try {
     const hook = loadHookWithHome(homeDir);
-    const stop = sessionId => hook.evaluatePayload({ cwd: cwdDir, session_id: sessionId });
-    arrange({ hook, logDir, stop });
-    const result = stop(TEST_SESSION_ID);
+    const stop = (sessionId, extraFields = {}) =>
+      hook.evaluatePayload({ cwd: cwdDir, session_id: sessionId, ...extraFields });
+    const lastStopFields = arrange({ hook, logDir, stop });
+    const result = stop(TEST_SESSION_ID, lastStopFields);
     inspect();
     return result;
   } finally {
@@ -441,6 +443,66 @@ test('T2b: the stop guard of this session still silences its next stop', () => {
     assert.strictEqual(stop(TEST_SESSION_ID).decision, 'block', 'Expected the first stop to be blocked');
   });
   assert.deepStrictEqual(result, {}, `Expected {} for the second stop, got: ${JSON.stringify(result)}`);
+});
+
+// `stop_hook_active` is the payload field that Claude Code sets to true when it
+// is already continuing because a stop hook blocked. The hook stays silent when
+// the field is true OR the guard file is young; the field can never add a block.
+const CONTINUING = { stop_hook_active: true };
+const GUARD_EXPIRED_MS = 3 * MINUTE_MS;
+
+function arrangeDueBlock({ logDir }) {
+  writeEditLog(logDir, [editLogLine(TEST_SESSION_ID, SIGNIFICANT_FILE)]);
+}
+
+test('T2c: stop_hook_active true silences the stop when no guard file exists, and writes none', () => {
+  let guardWritten;
+  let guardPath;
+  const result = evaluateStop((context) => {
+    arrangeDueBlock(context);
+    guardPath = context.hook.guardFile(TEST_SESSION_ID);
+    return CONTINUING;
+  }, () => { guardWritten = fs.existsSync(guardPath); });
+  assert.deepStrictEqual(result, {}, `Expected {} while Claude Code is continuing, got: ${JSON.stringify(result)}`);
+  assert.strictEqual(guardWritten, false, 'A silent stop must not write the guard file');
+});
+
+test('T2d: stop_hook_active true silences a continuation that lasts longer than the guard', () => {
+  const result = evaluateStop((context) => {
+    arrangeDueBlock(context);
+    assert.strictEqual(context.stop(TEST_SESSION_ID).decision, 'block', 'Expected the first stop to be blocked');
+    setFileAge(context.hook.guardFile(TEST_SESSION_ID), GUARD_EXPIRED_MS);
+    return CONTINUING;
+  });
+  assert.deepStrictEqual(result, {}, `Expected {} for the continuation stop, got: ${JSON.stringify(result)}`);
+});
+
+test('T2e: an expired guard and no field blocks again (a platform without the field)', () => {
+  const result = evaluateStop((context) => {
+    arrangeDueBlock(context);
+    assert.strictEqual(context.stop(TEST_SESSION_ID).decision, 'block', 'Expected the first stop to be blocked');
+    setFileAge(context.hook.guardFile(TEST_SESSION_ID), GUARD_EXPIRED_MS);
+  });
+  assert.strictEqual(result.decision, 'block', `Expected a block, got: ${JSON.stringify(result)}`);
+});
+
+for (const value of [false, 'true', 1]) {
+  test(`T2f: stop_hook_active ${JSON.stringify(value)} is not "continuing": the stop is blocked`, () => {
+    const result = evaluateStop((context) => {
+      arrangeDueBlock(context);
+      return { stop_hook_active: value };
+    });
+    assert.strictEqual(result.decision, 'block', `Expected a block, got: ${JSON.stringify(result)}`);
+  });
+}
+
+test('T2g: stop_hook_active false does not switch the guard off', () => {
+  const result = evaluateStop((context) => {
+    arrangeDueBlock(context);
+    assert.strictEqual(context.stop(TEST_SESSION_ID).decision, 'block', 'Expected the first stop to be blocked');
+    return { stop_hook_active: false };
+  });
+  assert.deepStrictEqual(result, {}, `Expected {} inside two minutes of the block, got: ${JSON.stringify(result)}`);
 });
 
 test('T3: the save marker of this session clears its decision-log block', () => {

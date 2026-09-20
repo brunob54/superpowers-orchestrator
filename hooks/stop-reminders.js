@@ -8,8 +8,12 @@
  *
  * Uses a file-based guard to fire only once per session to prevent
  * infinite loops (Stop hook returning content causes Claude to resume).
+ * It also stays silent when the payload field `stop_hook_active` is true:
+ * Claude Code sets it when it is already continuing because a stop hook
+ * blocked. The field can only remove a block, never add one, so a platform
+ * or version that does not send it behaves as before.
  *
- * Input:  stdin JSON with { session_id, cwd, ... }
+ * Input:  stdin JSON with { session_id, cwd, stop_hook_active, ... }
  * Output: stdout JSON with decision/reason continuation payload (only when
  * actionable reminders exist), or {} to let Claude stop normally.
  * Uses decision+reason rather than hookSpecificOutput for broader version compat.
@@ -424,8 +428,11 @@ function evaluatePayload(data) {
   const sessionId = data.session_id || null;
   const edits = getRecentEdits(sessionId);
 
-  // File-based guard prevents infinite loop for reminder injection
-  if (!shouldFire(sessionId)) return {};
+  // Claude Code says directly that it is continuing because of a stop hook
+  // (strictly `true`, as in hooks/codex/stop-adapter.js). The file-based guard
+  // stays: it covers a payload without the field, and it limits how often a
+  // reminder that the model cannot clear (the TDD reminder) repeats.
+  if (data.stop_hook_active === true || !shouldFire(sessionId)) return {};
 
   const reminders = generateReminders(edits, cwd);
 
