@@ -502,6 +502,14 @@ test('T16: the shared statistics file of an older plugin version gives a session
   assert.ok(!reason.includes(SUMMARY_LABEL), `Expected no summary line, got: ${reason}`);
 });
 
+test('T16b: the first Skill call of a session does not start from the shared statistics file', () => {
+  const { homeDir, cwdDir } = makeHome();
+  seedStatsFile(homeDir, path.join(markerPaths(homeDir).logDir, SHARED_STATS_FILE), ['old-skill'], 1);
+  trackSkill(homeDir, SESSION_A, 'skill-a');
+  const reason = stopReasonAfterEdit(homeDir, cwdDir, SESSION_A);
+  assert.ok(reason.includes(`${SUMMARY_LABEL}: 1 skill invocations [skill-a (1x)]`), `Got: ${reason}`);
+});
+
 test('T17: a session longer than 2 hours keeps its counts', () => {
   const { homeDir, cwdDir } = makeHome();
   const ownStats = evaluateInHome(homeDir, SAVE_MARKER, SESSION_A, 'm.statsFile(id)');

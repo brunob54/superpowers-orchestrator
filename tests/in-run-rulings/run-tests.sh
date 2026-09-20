@@ -3599,8 +3599,11 @@ assert_in_range_folded "finding 4: text of another clause this resume reverts is
 assert_in_range_folded_exact "finding 5: the permitted reads carry the five commands the revert runs, ending with the plan scan" \
   "$ORCH_SKILL" '`git show <ruling commit>:<plan path>`, `git status --porcelain`, `git -c core.quotePath=false show --name-only --no-renames --format= <sha>`, `git ls-files --others --ignored --exclude-standard -- <those paths>`, and a scan of the whole plan' \
   "$READ_EXCEPTION_LINE" "$READ_EXCEPTION_END"
-assert_in_range_folded "row 73: the ignored-file read only answers whether such a file stands on a path" \
-  "$ORCH_SKILL" 'The `git ls-files` command only answers whether an ignored file stands on a path of the fix commit.' \
+# Mutation testing: a sentence added after this one ("You may also read the
+# files it prints") gave a new read and no check failed. The needle runs into
+# the next list item, so nothing can stand between them.
+assert_in_range_folded_exact "row 73: the ignored-file read only answers whether such a file stands on a path, and the list item ends there" \
+  "$ORCH_SKILL" 'The `git ls-files` command only answers whether an ignored file stands on a path of the fix commit. 5. Your own ruling record for this run' \
   "$READ_EXCEPTION_LINE" "$READ_EXCEPTION_END"
 assert_in_range_folded "finding 5: the porcelain output is never a source of file names to read" \
   "$ORCH_SKILL" 'you never read a file name out of it' \
