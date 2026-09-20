@@ -1414,13 +1414,18 @@ Trigger: `Resume orchestration for <plan-or-spec path>`.
    for local changes to any path the fix commit touched
    (`git show --name-only --format= <sha>` lists those paths): when one of
    them already carries a local change, do not start the revert at all —
-   `git revert` refuses over it — and take the "not reverted" branch below
+   `git revert` refuses over an unstaged or untracked one, and merges the
+   revert into a staged one — and take the "not reverted" branch below
    directly. Otherwise revert it without a commit of its own
    (`git revert --no-commit <sha>`), staging the result by explicit
-   path. **On any non-zero exit from that command** the checkout is left
-   mid-revert, never untouched: git writes conflict markers into the
-   conflicting files, stages the clean hunks of every other file the revert
-   touched, and leaves `REVERT_HEAD` and the sequencer state behind. Undo
+   path. **On a non-zero exit from that command** the exit code names the
+   case. Exit 1 is a conflict, and the checkout is left mid-revert: git
+   writes conflict markers into the conflicting files, stages the clean
+   hunks of every other file the revert touched, and leaves `REVERT_HEAD`
+   behind. Any other non-zero exit is a refusal: git changed nothing and
+   wrote no `REVERT_HEAD`. Run the same cleanup in both cases; on an
+   untouched tree it changes nothing, and a `git checkout -- <path>` that
+   fails there is expected. Undo
    the markers and the staged hunks with explicit paths only: for each
    path the fix commit touched, named one at a time, run
    `git reset -- <path>` and then `git checkout -- <path>`.
@@ -1433,7 +1438,9 @@ Trigger: `Resume orchestration for <plan-or-spec path>`.
    addition, so `git reset -- <path>` leaves it untracked and
    `git checkout -- <path>` then fails with "pathspec did not match any
    file known to git" — for such a path (one the saved pre-revert state
-   did not list, now untracked after the reset), remove it explicitly
+   did not list, now untracked after the reset, and only when
+   `git revert` exited 1: after a refusal git created no file, so never
+   run `rm` then), remove it explicitly
    with `rm -- <path>` instead of `git checkout -- <path>`, or, when the
    path exists at HEAD, restore it with `git checkout HEAD -- <path>`.
    **Never `git reset --hard`, never
@@ -1448,8 +1455,8 @@ Trigger: `Resume orchestration for <plan-or-spec path>`.
    Phase 4 invocation that the reverted plan file forces (the plan is
    content for the effective-HEAD test) re-raises the finding against the
    restored clause. **On the success path — a zero exit from `git revert
-   --no-commit` — skip that status check**: a successful revert leaves the
-   reverted hunks staged, which never matches the pre-revert state, and
+   --no-commit` — skip that status check**: a successful revert normally leaves the
+   reverted hunks staged, which does not match the pre-revert state, and
    that mismatch is expected, not an error. Stage the reverted paths (already
    done above) and continue straight to the follow-up commit below. **When
    the reverted ruling was made in Phase 3,
