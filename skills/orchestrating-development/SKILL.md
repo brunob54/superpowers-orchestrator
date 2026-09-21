@@ -1177,7 +1177,8 @@ Trigger: `Resume orchestration for <plan-or-spec path>`.
    now for that `<sha>`. What stopped the earlier attempt may have been
    a local change or a local file in the working tree (a changed,
    untracked or ignored file, a file that stands where a folder is
-   needed, or a run of the script from a folder that is not the top
+   needed, an index bit on a listed path, a sparse checkout,
+   or a run of the script from a folder that is not the top
    folder), which can be gone now.
    It may also have been a property of the fix commit that the pre-check
    script reports (a special name, a rename that changes only the letter
@@ -1431,12 +1432,15 @@ Trigger: `Resume orchestration for <plan-or-spec path>`.
 
    ```bash
    [ -z "$(git rev-parse --show-prefix)" ] || echo "not the top folder"
+   [ "$(git config --bool core.sparseCheckout)" != true ] || echo "a sparse checkout"
    c=<sha>
    git show -z --name-only --no-renames --format= "$c" |
    while IFS= read -r -d '' p; do
      case "$p" in -*|[=]*|*[!abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789._/@+=,-]*) echo "special name: $p";; esac
-     git --literal-pathspecs status --porcelain -- "$p"
-     git --literal-pathspecs ls-files --others --ignored --exclude-standard -- "$p"
+     git --literal-pathspecs status --porcelain --untracked-files=no -- "$p"
+     [ -d "$(dirname -- "$p")" ] && git --literal-pathspecs status --porcelain -- "$p"
+     [ -d "$(dirname -- "$p")" ] && git --literal-pathspecs ls-files --others --ignored --exclude-standard -- "$p"
+     git --literal-pathspecs ls-files -v -- "$p" | sed "/^H /d"
      if [ -e "$p" ] || [ -L "$p" ]; then
        git rev-parse -q --verify "HEAD:$p" >/dev/null || echo "on disk, not at HEAD: $p"
      fi
@@ -1450,15 +1454,20 @@ Trigger: `Resume orchestration for <plan-or-spec path>`.
    done
    ```
 
-   Its third line lists the paths the fix commit touched
+   Its fourth line lists the paths the fix commit touched
    (`git show --name-only --no-renames --format= <sha>` lists those paths;
    `--no-renames` makes a renamed file appear under both its names,
    `-z` prints each name unquoted, and
    every later rule of this revert takes its paths from this one list:
    the cleanup, the undo before a stop, and the reverted paths that the
-   resume commit names). The script prints a line in eight cases.
+   resume commit names). The script prints a line in ten cases.
    The current folder is not the top folder of the repository: the
    script reads each path from the current folder.
+   The repository is a sparse checkout (`core.sparseCheckout` is true, so
+   git keeps only a part of the tree on disk): the resume commit, which
+   names the listed paths, leaves a reverted path outside that part out
+   and still ends with exit code 0, so no fix commit is reverted in a
+   sparse checkout.
    The name of a listed path holds
    a character outside letters, digits, `.`, `_`,
    `/`, `@`, `+`, `=`, `,` and `-`, or begins with `-` or `=`: git
@@ -1469,6 +1478,16 @@ Trigger: `Resume orchestration for <plan-or-spec path>`.
    An ignored file stands on the path or, when the path is a folder on
    disk, under it: `git status --porcelain` does not list an ignored
    file, and the revert overwrites or deletes it with no warning.
+   The script reads untracked and ignored files only when the folder of
+   the path stands on disk: for a missing folder below an existing one
+   git prints a warning on standard error, and that warning is no alarm.
+   The path carries the `assume-unchanged` or the `skip-worktree` bit of
+   the index (`git ls-files -v` prints a letter other than `H`): git does
+   not compare such a file with the disk, so `git status --porcelain`
+   hides a local change there; the resume commit would commit that
+   change, the cleanup and the undo would delete it, and the resume
+   commit leaves a `skip-worktree` path out and still ends with exit
+   code 0.
    The path stands on disk and
    does not exist at HEAD: an untracked file,
    or the same name in another
