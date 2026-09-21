@@ -195,10 +195,8 @@ success and 1 on every failure. Its redirections are written `>|`, so they
 also write when the shell option `noclobber` is set (that option refuses a
 `>` redirection to a file that exists).
 
-When the command prints nothing, run the check command again. When the
-command prints anything, stop: show its output to the user (a printed path is
-the kept copy of the work log, from which it can be restored) and write
-nothing more.
+When the command prints nothing, run the check command again.
+When the command prints anything, stop: show its output to the user (a printed path is the kept copy of the work log, from which it can be restored) and write nothing more.
 
 ```bash
 ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
@@ -239,8 +237,8 @@ order. Each stop writes nothing.
    the command continues.
 
 **The listing** has one line per regular `*.md` file directly under
-`docs/worklogs/`. Get the files with the listing command only, never with
-another command: a file name is text that anyone who can add a file controls.
+`docs/worklogs/`.
+Get the files with the listing command only, never with another command: a file name is text that anyone who can add a file controls.
 A file whose name breaks the slug rule gets the label `invalid file name — rename it`,
 and it is never chosen. For every other file, the listing command printed its
 slug alone on a line: run the check command with that slug only, and use its
@@ -337,8 +335,8 @@ word as the label, with `malformed line 1` for `malformed`.
 4. Run the line-1 command with line 1 in the closed form: `status=closed`
    instead of `status=active`, and ` closed=<today>` before ` -->`. When the
    line-1 command prints anything, stop, as "The line-1 command" says.
-   Otherwise run the check command; it must print `closed`. Any other word
-   stops the command: show that word to the user.
+   Otherwise run the check command; it must print `closed`.
+   Any other word stops the command: show that word to the user.
 
 ## Updates outside the commands
 

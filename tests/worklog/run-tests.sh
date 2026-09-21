@@ -33,6 +33,9 @@ assert_file_contains() { # desc file needle
 assert_file_lacks() { # desc file needle
   if grep -qF -- "$3" "$2" 2>/dev/null; then bad "$1 (must not contain: $3)"; else ok "$1"; fi
 }
+assert_not_empty() { # desc actual
+  if [ -n "$2" ]; then ok "$1"; else bad "$1 (got an empty text)"; fi
+}
 
 note() { printf '  NOTE: %s\n' "$1"; }
 # The output of a fixture run is held in $OUT; these match a whole line with
@@ -87,8 +90,11 @@ CLOSED_RE=$(form_of closed)
 # line "set -euo pipefail".
 strict_script() { printf 'set -euo pipefail\n%s\n' "$2" > "$TMP/$1"; }
 # The list command runs as a script under set -euo pipefail, the options that
-# hooks/session-start sets on its line 4. The listing command runs under the
-# same options, so its "|| true" is tested.
+# hooks/session-start sets on its line 4, and the listing command runs under
+# the same options. Only the fixture with an unreadable docs/worklogs folder
+# (sections 3 and 3b) tests the "|| true" of each command: find fails there.
+# With no folder, the folder test skips find; with an unreadable file, find
+# still exits 0, because "find -exec ... \;" ignores the exit status of awk.
 strict_script list.sh "$LIST_CMD"
 strict_script listing.sh "$LISTING_CMD"
 
@@ -228,6 +234,34 @@ chmod 644 "$W/b.md"
 D="$TMP/nofolder"; mkdir -p "$D"; git -C "$D" init -q
 run_list "$D"
 assert_eq "no docs/worklogs folder: one empty line and exit 0 under set -euo pipefail" "$OUT" "$(lines '')"
+# A docs/worklogs folder with mode 000: the folder test passes, and find
+# fails when it reads the folder, so only the "|| true" keeps the exit
+# status 0.
+repo lockedfolder
+LD="$D"; LW="$W"
+active_log "$W/a.md" a
+# locked_run <run function> <desc> <expected>: runs <run function> on $LD
+# while its docs/worklogs folder has mode 000, compares OUT with <expected>,
+# and restores the mode. When the folder stays readable (for example for the
+# root user), the check is skipped with a NOTE line.
+locked_run() {
+  chmod 000 "$LW"
+  if [ -r "$LW" ]; then
+    note "docs/worklogs stays readable (root user?); the check '$2' is skipped"
+  else
+    "$1" "$LD"
+    assert_eq "$2" "$OUT" "$3"
+  fi
+  chmod 755 "$LW"
+}
+locked_run run_list "an unreadable docs/worklogs folder: one empty line and exit 0 under set -euo pipefail" "$(lines '')"
+# A folder that is not a git repository: the root is the folder of the shell
+# (the "|| pwd" of each command).
+NG="$TMP/notgit"; NGW="$NG/docs/worklogs"
+mkdir -p "$NGW"
+active_log "$NGW/solo.md" solo
+run_list "$NG"
+assert_eq "not a git repository: the work log under the folder of the shell is listed" "$OUT" "$(lines "$NGW/solo.md")"
 repo onlybad
 active_log "$W/A.md" a
 run_list "$D"
@@ -257,6 +291,15 @@ fi
 assert_eq "the hostile file name ran no command: no marker file exists" "$(find "$TMP" -name "$MARKER")" ''
 run_listing "$TMP/nofolder"
 assert_eq "listing, no docs/worklogs folder: no line and exit 0 under set -euo pipefail" "$OUT" 'exit=0'
+locked_run run_listing "listing, an unreadable docs/worklogs folder: no line and exit 0 under set -euo pipefail" 'exit=0'
+# The listing command has its own copy of the file-name filter, so it runs on
+# the folder of section 3 too. Under LC_ALL=C each byte of é becomes one "?".
+# The symbolic link is not a regular file, so it has no line.
+MIXED_LISTING=("?pper.md: $INVALID_LABEL" alpha bom "caf??.md: $INVALID_LABEL" closed crlf line-three)
+if [ -f "$MW/$(printf 'n\nl').md" ]; then MIXED_LISTING+=("n?l.md: $INVALID_LABEL"); fi
+MIXED_LISTING+=("new.md: $INVALID_LABEL" open-status quoted "$S40" "$S41.md: $INVALID_LABEL" "x?y.md: $INVALID_LABEL")
+run_listing "$MD"
+assert_eq "listing of the section 3 folder: the same file-name filter as the list command" "$OUT" "$(lines "${MIXED_LISTING[@]}")"
 
 bold "4. The valid forms of line 1"
 # form_matches <regex> <line>: exit 0 when <line> matches <regex>.
@@ -291,6 +334,10 @@ assert_eq "a status line on line 3 prints malformed first" "${OUT%%"$NL"*}" 'mal
 out_has_line "the status line on line 3 is printed with its line number" "3:$(printf "$ACTIVE_FMT" line-three "$CREATED")"
 run_check "$MD" absent
 assert_eq "a missing file prints missing and the folder it searched" "$OUT" "missing (searched $MW)"
+run_check "$NG" solo
+assert_eq "not a git repository: the work log under the folder of the shell prints active" "$OUT" 'active'
+run_check "$NG" absent
+assert_eq "not a git repository: a missing file prints the folder of the shell that it searched" "$OUT" "missing (searched $NGW)"
 if [ "$HAVE_LINKS" = 1 ]; then
   run_check "$MD" link; assert_eq "a symbolic link prints symlink" "$OUT" 'symlink'
 fi
@@ -323,17 +370,6 @@ assert_eq "bom: the byte order mark is kept" "$(head -c 3 "$W/bom.md" | od -An -
 assert_eq "plain: line 1 is the new line, with no carriage return" "$(head -n 1 "$W/plain.md")" "$(closed_line plain)"
 assert_eq "plain: the file keeps its permissions" "$(ls -l "$W/plain.md" | cut -c1-10)" "$MODE_BEFORE"
 
-# The shell option noclobber (bash "set -o noclobber", zsh "setopt
-# noclobber") refuses a ">" redirection to a file that exists. mktemp creates
-# the temporary file before the command writes to it, and the work log
-# exists, so the command must still rewrite line 1 with this option set.
-active_log "$W/noclobber.md" noclobber
-run_line1 "$D" noclobber "$(closed_line noclobber)" 'set -o noclobber'
-assert_eq "noclobber: the command exits quietly" "$OUT" ''
-assert_eq "noclobber: the exit status is 0" "$CODE" '0'
-run_check "$D" noclobber
-assert_eq "noclobber: the check command then prints closed" "$OUT" 'closed'
-
 # line1_through_link <link> <slug> <label>: makes <link> in $W a symbolic
 # link to a new file outside the docs/worklogs folder, runs the line-1
 # command to close <slug> (OUT and CODE keep its result), and checks that
@@ -355,13 +391,6 @@ if [ "$HAVE_LINKS" = 1 ]; then
   run_check "$D" attack-tmp
   assert_eq "a symbolic link at <slug>.md.tmp: the work log still closes" "$OUT" 'closed'
   rm -f "$W/attack-tmp.md.tmp"
-
-  # (b) a work log that is itself a symbolic link to a file outside the
-  # folder: the command refuses it and leaves the link target unchanged.
-  line1_through_link linked-log.md linked-log "a work log that is a symbolic link"
-  assert_eq "a work log that is a symbolic link: the command prints symlink" "$OUT" 'symlink'
-  assert_eq "a work log that is a symbolic link: the exit status is 1" "$CODE" '1'
-  rm -f "$W/linked-log.md"
 else
   note "this file system made no symbolic link in section 3; the line-1 symbolic-link checks are skipped"
 fi
@@ -414,40 +443,77 @@ assert_eq "no temporary file lingers in the private mktemp folder after a succes
 run_check "$D" tmp-cleanup
 assert_eq "tmp-cleanup: the check command then prints closed" "$OUT" 'closed'
 
-# (d) the rewrite fails: the work log is read-only, so writing it back is
-# refused. The command keeps its temporary copy, prints the copy's path on
-# its last line, and exits with status 1; the work log is unchanged.
-active_log "$W/read-only.md" read-only
-READ_ONLY_SUM=$(cksum < "$W/read-only.md")
-chmod 444 "$W/read-only.md"
-if [ -w "$W/read-only.md" ]; then
-  note "read-only.md stays writable (root user?); the kept-copy check is skipped"
-else
-  run_line1_private read-only
-  KEPT=$(cat "$MKLOG")
-  assert_eq "a failed rewrite: the exit status is 1" "$CODE" '1'
-  assert_eq "a failed rewrite: the last line printed is the path of the copy" "${OUT##*"$NL"}" "$KEPT"
-  assert_eq "a failed rewrite: the copy is kept, with the new line 1" "$(head -n 1 "$KEPT" 2>/dev/null)" "$(closed_line read-only)"
-  assert_eq "a failed rewrite: the work log is unchanged" "$(cksum < "$W/read-only.md")" "$READ_ONLY_SUM"
-  rm -f "$KEPT"
-fi
-chmod 644 "$W/read-only.md"
+# line1_cases <p> <label prefix>: the noclobber run and the failure paths
+# (b), (d) and (e) of the line-1 command, run with the shell RUN_SHELL.
+# Section 6 calls it with bash and section 6b with zsh. <p> starts every
+# slug, so each shell closes work logs of its own; <label prefix> starts
+# every label.
+line1_cases() {
+  local p="$1" lp="$2" s l sum kept
+  # The shell option noclobber (bash "set -o noclobber", zsh "setopt
+  # noclobber") refuses a ">" redirection to a file that exists. mktemp
+  # creates the temporary file before the command writes to it, and the work
+  # log exists, so the command must still rewrite line 1 with this option set.
+  s="${p}noclobber"; l="${lp}noclobber"
+  active_log "$W/$s.md" "$s"
+  run_line1 "$D" "$s" "$(closed_line "$s")" 'set -o noclobber'
+  assert_eq "$l: the command exits quietly" "$OUT" ''
+  assert_eq "$l: the exit status is 0" "$CODE" '0'
+  run_check "$D" "$s"
+  assert_eq "$l: the check command then prints closed" "$OUT" 'closed'
 
-# (e) awk fails: the work log cannot be read. The command removes its
-# temporary copy and exits with status 1; the work log is unchanged.
-active_log "$W/unreadable.md" unreadable
-UNREADABLE_SUM=$(cksum < "$W/unreadable.md")
-chmod 000 "$W/unreadable.md"
-if [ -r "$W/unreadable.md" ]; then
-  note "unreadable.md stays readable (root user?); the awk-failure check is skipped"
-else
-  run_line1_private unreadable
-  assert_eq "awk fails: the exit status is 1" "$CODE" '1'
-  assert_eq "awk fails: the command called mktemp once" "$(mktemp_calls)" '1'
-  assert_eq "awk fails: the temporary copy is removed" "$(private_tmp_left)" '0'
-fi
-chmod 644 "$W/unreadable.md"
-assert_eq "awk fails: the work log is unchanged" "$(cksum < "$W/unreadable.md")" "$UNREADABLE_SUM"
+  # (b) a work log that is itself a symbolic link to a file outside the
+  # folder: the command refuses it and leaves the link target unchanged.
+  # Without symbolic links, the note of case (a) covers this case too.
+  if [ "$HAVE_LINKS" = 1 ]; then
+    s="${p}linked-log"; l="${lp}a work log that is a symbolic link"
+    line1_through_link "$s.md" "$s" "$l"
+    assert_eq "$l: the command prints symlink" "$OUT" 'symlink'
+    assert_eq "$l: the exit status is 1" "$CODE" '1'
+    rm -f "$W/$s.md"
+  fi
+
+  # (d) the rewrite fails: the work log is read-only, so writing it back is
+  # refused. The command keeps its temporary copy, prints the copy's path on
+  # its last line, and exits with status 1; the work log is unchanged.
+  s="${p}read-only"; l="${lp}a failed rewrite"
+  active_log "$W/$s.md" "$s"
+  sum=$(cksum < "$W/$s.md")
+  chmod 444 "$W/$s.md"
+  if [ -w "$W/$s.md" ]; then
+    note "$s.md stays writable (root user?); the kept-copy check is skipped"
+  else
+    run_line1_private "$s"
+    kept=$(cat "$MKLOG")
+    assert_eq "$l: the exit status is 1" "$CODE" '1'
+    assert_eq "$l: the last line printed is the path of the copy" "${OUT##*"$NL"}" "$kept"
+    assert_eq "$l: the copy is kept, with the new line 1" "$(head -n 1 "$kept" 2>/dev/null)" "$(closed_line "$s")"
+    assert_eq "$l: the work log is unchanged" "$(cksum < "$W/$s.md")" "$sum"
+    rm -f "$kept"
+  fi
+  chmod 644 "$W/$s.md"
+
+  # (e) awk fails: the work log cannot be read. The command prints the error
+  # of awk, removes its temporary copy and exits with status 1; the work log
+  # is unchanged. The printed text is checked because the skill stops only
+  # when the command prints something.
+  s="${p}unreadable"; l="${lp}awk fails"
+  active_log "$W/$s.md" "$s"
+  sum=$(cksum < "$W/$s.md")
+  chmod 000 "$W/$s.md"
+  if [ -r "$W/$s.md" ]; then
+    note "$s.md stays readable (root user?); the awk-failure check is skipped"
+  else
+    run_line1_private "$s"
+    assert_eq "$l: the exit status is 1" "$CODE" '1'
+    assert_not_empty "$l: the command prints something" "$OUT"
+    assert_eq "$l: the command called mktemp once" "$(mktemp_calls)" '1'
+    assert_eq "$l: the temporary copy is removed" "$(private_tmp_left)" '0'
+  fi
+  chmod 644 "$W/$s.md"
+  assert_eq "$l: the work log is unchanged" "$(cksum < "$W/$s.md")" "$sum"
+}
+line1_cases '' ''
 
 bold "6b. The slug, check and line-1 commands under zsh"
 if command -v zsh >/dev/null 2>&1; then
@@ -460,7 +526,10 @@ if command -v zsh >/dev/null 2>&1; then
   run_check "$MD" absent; assert_eq "zsh: a missing file prints missing and the folder it searched" "$OUT" "missing (searched $MW)"
   printf "$ACTIVE_FMT\r\n\r\n# Work log: fixture\r\n" zsh-crlf "$CREATED" > "$W/zsh-crlf.md"
   run_line1 "$D" zsh-crlf "$(closed_line zsh-crlf)"
+  assert_eq "zsh: the line-1 command exits quietly" "$OUT" ''
+  assert_eq "zsh: the exit status of the line-1 command is 0" "$CODE" '0'
   run_check "$D" zsh-crlf; assert_eq "zsh: the line-1 command closes a work log with CRLF line ends" "$OUT" 'closed'
+  line1_cases zsh- 'zsh: '
   RUN_SHELL=bash
 else
   note "zsh is not installed; the zsh checks of section 6b are skipped"
@@ -476,7 +545,12 @@ PHRASES=(
   'Grammar: `/worklog [new|update|close] [<slug>]`'
   "The fallback to \`update\` applies only when the user's own message starts with the command"
   'The message also counts as starting with the command when it holds a'
+  '`<command-name>` tag that names `/worklog`'
   'stops with the usage text'
+  'More than one word after the command word also stops with the usage text and writes nothing'
+  'When the command prints anything, stop: show its output to the user (a printed path is the kept copy of the work log, from which it can be restored)'
+  'Get the files with the listing command only, never with another command'
+  'Any other word stops the command: show that word to the user'
   'A closed work log is never written'
   'close anyway'
   "$INVALID_LABEL"
