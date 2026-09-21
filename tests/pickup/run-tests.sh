@@ -257,6 +257,26 @@ assert_exit0
 assert_line "a failed git status is not listed (verification)" "dirty: not-listed"
 assert_line "a failed git status makes CHECK, never UNKNOWN (verification)" "status: CHECK"
 
+bold "6c. An uncommitted work log is not work (skill worklog)"
+# add_file is defined in section 10, below this case, so this case writes its
+# files inline.
+base_repo worklog
+mkdir -p "$D/docs/worklogs"
+printf '<!-- Work log: status=active slug=t created=2026-01-09 -->\n' > "$D/docs/worklogs/t.md"
+git -C "$D" add docs/worklogs/t.md
+GIT_AUTHOR_DATE="$BEFORE" GIT_COMMITTER_DATE="$BEFORE" git -C "$D" commit -q -m "work log"
+H=$(git -C "$D" rev-parse --short=7 HEAD)
+handoff "$D" "$HANDOFF_FILE" "$(header main "$H")"
+printf 'part 1 done\n' >> "$D/docs/worklogs/t.md"
+printf 'new\n' > "$D/docs/worklogs/u.md"
+scan "$D"
+assert_line "a changed and a new file under docs/worklogs are not dirty" "dirty: 0"
+assert_line "status stays FRESH" "status: FRESH"
+printf 'notes\n' > "$D/docs/notes.md"
+scan "$D"
+assert_line "a new file elsewhere under docs/ is dirty" "dirty: 1"
+assert_line "status is CHECK" "status: CHECK"
+
 bold "7. CHECK: a commit on an unmerged other branch while HEAD is on the default branch"
 base_repo otherbranch
 git -C "$D" checkout -q -b feature/other

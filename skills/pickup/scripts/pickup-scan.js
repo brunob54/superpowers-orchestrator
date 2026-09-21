@@ -33,8 +33,11 @@ const NOT_LISTED = 'not-listed';
 const GIT_OK = 'ok';
 const GIT_NO_COMMITS = 'no-commits';
 const LOG_ROOT = 'docs/superpowers-orchestrator';
-// Files that /handoff itself writes after the handoff; they are not work.
-const NOT_WORK = [HANDOFF_DIR, 'state.md', 'session-log.md'];
+// Files that /handoff itself writes after the handoff, and the work logs of
+// skills/worklog, which the same sessions update; they are not work. This list
+// covers the uncommitted-change check only: a commit made after the handoff
+// still counts, also when it touches only docs/worklogs.
+const NOT_WORK = [HANDOFF_DIR, 'state.md', 'session-log.md', 'docs/worklogs'];
 const GIT_MAX_BUFFER = 256 * 1024 * 1024;
 const FEATURE_PREFIX = 'feature/';
 const HEADS = 'refs/heads/';
