@@ -1436,6 +1436,19 @@ console.log('\nworklog routing');
 
 const suggested = (prompt) => matchSkills(prompt).map(m => m.skill);
 
+test('the worklog rule stands before brainstorming, refactoring and writing-plans in hooks/skill-rules.json', () => {
+  const rules = require('../../hooks/skill-rules.json').rules;
+  const indexOf = (skill) => rules.findIndex(r => r.skill === skill);
+  const worklogIndex = indexOf('worklog');
+  assert.ok(worklogIndex !== -1, 'expected a worklog rule in hooks/skill-rules.json');
+  for (const skill of ['brainstorming', 'refactoring', 'writing-plans']) {
+    const otherIndex = indexOf(skill);
+    assert.ok(otherIndex !== -1, `expected a ${skill} rule in hooks/skill-rules.json`);
+    assert.ok(worklogIndex < otherIndex,
+      `expected worklog (index ${worklogIndex}) before ${skill} (index ${otherIndex})`);
+  }
+});
+
 for (const prompt of [
   'update the work log of the test refactoring',
   'create a work log for the test refactoring',

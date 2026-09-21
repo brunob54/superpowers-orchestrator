@@ -308,9 +308,16 @@ if form_matches "$ACTIVE_RE" "$(printf "$ACTIVE_FMT" test-refactor "$CREATED")";
   ok "the active form accepts its example line"; else bad "the active form accepts its example line"; fi
 if form_matches "$CLOSED_RE" "$(closed_line test-refactor)"; then
   ok "the closed form accepts its example line"; else bad "the closed form accepts its example line"; fi
-for line in '<!-- Work log: status=active slug=test-refactor -->' \
-            "<!-- Work log: status=closed slug=test-refactor created=$CREATED -->" \
-            '<!-- Work log: status=active slug=test-refactor created=2026-9-1 -->'; do
+# REFUSED_LINES: line-1 texts that no valid form accepts (no created=, a
+# closed line with no closed=, and a date of the wrong shape). Section 5
+# reuses this list to check that the check command's own copy of the
+# patterns also refuses each one.
+REFUSED_LINES=(
+  '<!-- Work log: status=active slug=test-refactor -->'
+  "<!-- Work log: status=closed slug=test-refactor created=$CREATED -->"
+  '<!-- Work log: status=active slug=test-refactor created=2026-9-1 -->'
+)
+for line in "${REFUSED_LINES[@]}"; do
   for form in active closed; do
     re=$(form_of "$form")
     if form_matches "$re" "$line"; then bad "the $form form refuses '$line'"; else ok "the $form form refuses '$line'"; fi
@@ -332,6 +339,25 @@ assert_eq "an unknown status prints malformed first" "${OUT%%"$NL"*}" 'malformed
 run_check "$MD" line-three
 assert_eq "a status line on line 3 prints malformed first" "${OUT%%"$NL"*}" 'malformed'
 out_has_line "the status line on line 3 is printed with its line number" "3:$(printf "$ACTIVE_FMT" line-three "$CREATED")"
+# The check command has its own copy of the active and closed patterns (its
+# S=/D= values and two grep -Eq lines), separate from the "### Valid forms of
+# line 1" prose lines that section 4 checks above. These fixtures pin that
+# copy directly: each of section 4's refused lines, plus a valid active line
+# with text after -->, plus an uppercase slug= value, must make the check
+# command print malformed.
+MALFORMED_NAMES=(malformed-no-created malformed-no-closed malformed-bad-date)
+for i in "${!REFUSED_LINES[@]}"; do
+  name="${MALFORMED_NAMES[$i]}"
+  { printf '%s\n' "${REFUSED_LINES[$i]}"; printf '\n# Work log: fixture\n'; } > "$MW/$name.md"
+  run_check "$MD" "$name"
+  assert_eq "the check command refuses '${REFUSED_LINES[$i]}'" "${OUT%%"$NL"*}" 'malformed'
+done
+{ printf "$ACTIVE_FMT extra\n" malformed-trailing "$CREATED"; printf '\n# Work log: fixture\n'; } > "$MW/malformed-trailing.md"
+run_check "$MD" malformed-trailing
+assert_eq "the check command refuses a valid active line with extra text after -->" "${OUT%%"$NL"*}" 'malformed'
+{ printf "$ACTIVE_FMT\n" MALFORMED "$CREATED"; printf '\n# Work log: fixture\n'; } > "$MW/malformed-upper-slug.md"
+run_check "$MD" malformed-upper-slug
+assert_eq "the check command refuses an uppercase slug= value" "${OUT%%"$NL"*}" 'malformed'
 run_check "$MD" absent
 assert_eq "a missing file prints missing and the folder it searched" "$OUT" "missing (searched $MW)"
 run_check "$NG" solo
@@ -414,10 +440,18 @@ REAL_MKTEMP="$(command -v mktemp)"
 MKBIN="$TMP/mkbin"
 MKFILES="$TMP/mkfiles"
 MKLOG="$TMP/mktemp.log"
+# MKARGS records the argument count ($#) of every stand-in call, one line
+# per call: the skill states that the command writes its temporary copy
+# outside the docs/worklogs folder, which for mktemp means calling it with
+# no argument (a template argument such as "$F.XXXXXX" would place the copy
+# next to the work log instead).
+MKARGS="$TMP/mktemp.args"
 mkdir -p "$MKBIN" "$MKFILES"
 : > "$MKLOG"
+: > "$MKARGS"
 {
   printf '#!/bin/sh\n'
+  printf 'printf "%%s\\n" "$#" >> "%s"\n' "$MKARGS"
   printf 'p="$(%s "%s/tmp.XXXXXX")"\n' "$REAL_MKTEMP" "$MKFILES"
   printf 'printf "%%s\\n" "$p" >> "%s"\n' "$MKLOG"
   printf 'printf "%%s\\n" "$p"\n'
@@ -425,9 +459,11 @@ mkdir -p "$MKBIN" "$MKFILES"
 chmod +x "$MKBIN/mktemp"
 OLD_PATH="$PATH"
 # run_line1_private <slug>: runs the line-1 command to close <slug>, with the
-# stand-in mktemp first on PATH; $MKLOG then names only the files of this run.
+# stand-in mktemp first on PATH; $MKLOG and $MKARGS then name only the calls
+# of this run.
 run_line1_private() {
   : > "$MKLOG"
+  : > "$MKARGS"
   PATH="$MKBIN:$OLD_PATH"
   run_line1 "$D" "$1" "$(closed_line "$1")"
   PATH="$OLD_PATH"
@@ -439,6 +475,7 @@ private_tmp_left() { find "$MKFILES" -maxdepth 1 -type f | wc -l | tr -d ' '; }
 active_log "$W/tmp-cleanup.md" tmp-cleanup
 run_line1_private tmp-cleanup
 assert_eq "the line-1 command calls mktemp exactly once" "$(mktemp_calls)" '1'
+assert_eq "the line-1 command calls mktemp with no argument" "$(cat "$MKARGS")" '0'
 assert_eq "no temporary file lingers in the private mktemp folder after a successful run" "$(private_tmp_left)" '0'
 run_check "$D" tmp-cleanup
 assert_eq "tmp-cleanup: the check command then prints closed" "$OUT" 'closed'
@@ -546,7 +583,7 @@ PHRASES=(
   "The fallback to \`update\` applies only when the user's own message starts with the command"
   'The message also counts as starting with the command when it holds a'
   '`<command-name>` tag that names `/worklog`'
-  'stops with the usage text'
+  'given as a slug (for example `/worklog new close`), stops with the usage text'
   'More than one word after the command word also stops with the usage text and writes nothing'
   'When the command prints anything, stop: show its output to the user (a printed path is the kept copy of the work log, from which it can be restored)'
   'Get the files with the listing command only, never with another command'

@@ -7,12 +7,12 @@
 #
 # Cases (from the section "Testing strategy" of the worklog design):
 #   1. No docs/worklogs folder: exit 0, no notice, and the same output as with
-#      a folder that holds only a closed work log. The folder test of the
-#      list command skips find in both states. Then the same folder with mode
-#      000: the folder test passes and find fails, so this is the fixture
-#      that runs the pipeline to its failure. Exit 0 and the same output
-#      again pin the "|| true" of the list command under the hook's
-#      "set -euo pipefail".
+#      a folder that holds only a closed work log. With no folder the folder
+#      test skips find; with only a closed work log find runs and exits 0;
+#      neither reaches the "|| true". Then the same folder with mode 000: the
+#      folder test passes and find fails, so this is the fixture that runs
+#      the pipeline to its failure. Exit 0 and the same output again pin the
+#      "|| true" of the list command under the hook's "set -euo pipefail".
 #   2. One active and one closed work log: the exact one-path notice, after
 #      two line breaks, at the end of the notices part.
 #   3. A file name that breaks the slug rule, with an active line 1: the same

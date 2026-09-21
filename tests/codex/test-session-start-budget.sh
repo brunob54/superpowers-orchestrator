@@ -312,8 +312,10 @@ clear_workspace
 # ── Case 8: three active work logs with 40-character slugs ─────────────────
 # The <active-work-logs> notice belongs to the notices, which are always
 # included, so its room comes out of the room of the workspace sections.
-# With the longest notice that three names can produce and the oversized
-# workspace files of case 5, the output must stay at or under the limit.
+# With three active 40-character work logs and the oversized workspace files
+# of case 5, the output must stay at or under the limit and the whole notice
+# must still be present (this fixture's root is a short temporary path, so
+# the root-truncation branch of the notice does not fire here).
 (
   cd "$TMP_REPO"
   mkdir -p docs/worklogs
@@ -328,6 +330,11 @@ clear_workspace
 rm -rf "$TMP_REPO/docs"
 assert_common "three 40-character work logs" "$ctx_worklogs"
 assert_contains "three 40-character work logs: the notice is injected" "$ctx_worklogs" "<active-work-logs>"
+for letter in a b c; do
+  slug="${letter}$(printf '%39s' '' | tr ' ' w)"
+  assert_contains "three 40-character work logs: the $letter slug is named" "$ctx_worklogs" "docs/worklogs/${slug}.md"
+done
+assert_contains "three 40-character work logs: the notice is closed" "$ctx_worklogs" "</active-work-logs>"
 
 echo "  ${PASS} passed, ${FAIL} failed"
 [ "$FAIL" -eq 0 ]
