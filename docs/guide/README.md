@@ -952,20 +952,19 @@ applied to the right finding. Writing the parenthesis when no ids collide
 does no harm. The `Ruled:` lines are decisions the
 orchestrator already made and recorded — resume carries them forward as
 they are. If you disagree with one, answer that id yourself in the resume
-prompt: the run then reverts that ruling, and the change made under it,
-before continuing. Since v7.35.0 the run first checks that the clause it
+prompt: the run then restores the plan clause that the ruling amended,
+before continuing. The run does not undo a code fix made under that ruling
+itself; the paragraph "A fix made under an overturned ruling", below, says
+what happens to it. Since v7.35.0 the run first checks that the clause it
 is about to restore has not changed since that ruling: when a later
 ruling amended the same clause, the run stops and reports instead of
 restoring, because restoring would also remove the later amendment. A
 ruling you overturn a second time is recognised as already reverted and
 is skipped. When one resume prompt overturns several rulings, the run
-takes them from the highest ruling number down, and it undoes every plan
-change before it undoes any code change. Since v7.40.0 it also makes every
+takes them from the highest ruling number down. Since v7.40.0 it also makes every
 revert before it applies any amendment your own answer asks for, and it
 stops when one return amended the same clause twice, because the commit it
-restores from predates both amendments. When an earlier resume could not
-undo a code change, because your working tree held a local change to the
-same file, the next resume makes that revert instead of skipping it. A crash after a ruling was committed but before its
+restores from predates both amendments. A crash after a ruling was committed but before its
 re-dispatch completed is recovered the same way as any other: resume reads
 the trailing `## RULING` entry and re-dispatches the phase with the same
 answers.
@@ -981,83 +980,23 @@ their committed text, then send the same resume prompt again. A resume of a
 Phase 1 or a Phase 2 stop does not make this check, because those phases
 leave the plan file uncommitted on purpose.
 
-Since v7.44.0 a resume of any stop also asks git whether a revert is
-unfinished (`git rev-parse -q --verify REVERT_HEAD`). A resume that undoes a
-Phase 4 fix stages the reverted code first and commits it at its end. When
-that session ended between the two steps, the reverted code stays staged, and
-git keeps the file `REVERT_HEAD` until the next commit. The run then stops,
-writes nothing, and its report names the hash and the `git status --porcelain`
-output, and it lists the paths of the unfinished revert. The way out: for
-each listed path, run
-`git reset -- <path>` and then `git checkout -- <path>`, run
-`git revert --quit` last, then send the same resume prompt again. For a path
-that the revert created again, `git checkout -- <path>` fails with "pathspec
-did not match"; remove that path with `rm -- <path>`. These
-commands also delete an edit of your own on such a path. Never use
-`git revert --abort`: it also deletes staged work on every other path. One
-limit: a commit, or a `git reset` without a path, that you run by hand before
-the resume
-deletes `REVERT_HEAD`, and the run then no longer sees the unfinished revert.
-
-Since v7.45.0 a revert that git refuses changes none of your files.
-`git revert` refuses (exit code 128) when a path of the fix commit holds an
-unstaged or untracked change. Before v7.45.0 the run then ran its undo for
-each path, and `git checkout -- <path>` deleted that change. Now the run runs
-no undo after a refusal: it compares `git status --porcelain` with the state
-that it saved before the revert, and it records `fix <sha> not reverted`.
-
-Since v7.46.0 the run looks for an ignored file before it reverts a fix. An
-ignored file is a file that a line in `.gitignore` or `.git/info/exclude`
-hides from git. When the fix commit deleted a file and you keep an ignored
-file at the same path, `git revert` writes the committed content over your
-file with no warning. The run now lists such files first
-(`git ls-files --others --ignored --exclude-standard` over the paths of the
-fix commit). When it finds one, it does not start the revert, it records
-`fix <sha> not reverted`, and your file stays as it is. Also since v7.46.0
-the paths of a fix commit that renamed a file hold both names of that file,
-so the way out above lists the old name too.
-
-Since v7.47.0 the run checks every path of a fix before it reverts that fix.
-One fixed script does the check. The run does not revert a fix automatically
-in six cases. The script does not run in the top folder of the repository. A
-path name holds a space, an accent or another unusual character. A path has a
-local change. An ignored file stands on a path or under it. A file stands on
-disk under a path that the last commit does not hold: for example an
-untracked file, or a rename that changes only the letter case on a disk that
-ignores case. A file stands where the revert
-needs a folder. The record then reads `fix <sha> not reverted`, and no file
-of yours changes. The next review raises the finding again, so that a new
-fix commit corrects the code.
-
-Since v7.48.0 the script looks also at the commits that came after the fix,
-and the run does not revert a fix automatically in eight cases. The two new
-cases are these. A later commit deleted or renamed a file of the fix or a
-folder above it. A later commit put a folder on a path where the fix had
-changed or deleted a file. In both cases the revert would stop on a
-conflict, or change a file that the run does not watch, or change nothing,
-or put a file back into a folder that the project no longer has, so the run
-records `fix <sha> not reverted` as before. The run also stops git from
-moving a reverted file into a renamed folder: there the file could
-overwrite an ignored file of yours with no warning.
-
-Since v7.49.0 the script also reads two marks that git keeps for a file in
-its index (the list of files that git tracks) and the sparse-checkout
-setting, and the run does not revert a fix automatically in ten cases. The
-two new cases are these. A path of the fix carries one of the two marks: the
-first is the `assume-unchanged` bit, the second is the `skip-worktree` bit,
-and each tells git not to compare the file with the disk. Git then hides a
-local change of yours on that path. With the first mark the commit that
-resume makes would commit that change, or an undo would delete it; with the
-second mark that commit leaves the path out and git still reports success.
-The repository is a sparse checkout (git keeps only a part of
-the project's files on disk). There the commit that resume makes can leave out
-a reverted path that is not on disk, and git still reports success. So in a
-sparse checkout the run reverts no fix automatically, also when every path
-of the fix is on disk. In both cases the record reads
-`fix <sha> not reverted` as before. One false alarm is gone: when a fix
-deleted the last file of a nested folder such as `d/s/`, and the folder
-above it still holds other files, the script now stays quiet and the run
-reverts the fix.
+**A fix made under an overturned ruling.** A Phase 4 ruling can have a fix
+commit: a commit in which the code-review loop changed code under that
+ruling. When your answer overturns the ruling, the run makes no code change
+itself. It writes `fix <sha> not reverted` into the ruling record, and it adds
+one `Minor:` line that names the fix commit to the ledger
+(`.superpowers/sdd/progress.md`, the progress file of the run). The restored
+plan clause forces a new code review of the whole branch. The reviewers of
+its first round receive that ledger line, and they are asked to report code
+that contradicts the restored clause. The fix subagent of that review then
+removes the wrong code in a normal `review fixes` commit. Until then the
+branch keeps the change, and the record line and the ledger line make it
+visible. Versions v7.44.0 to v7.49.0 tried to revert such a fix commit
+automatically with `git revert`; that mechanism was removed, because it never
+ran in a real run and its safety checks could never cover every state of a
+working tree. A record written by one of those versions can hold
+`fix <sha> not reverted` or `fix <sha> reverted`; the run no longer acts on
+either.
 
 **Interrupted during plan writing or a review round?** Resume re-enters any
 phase whose completion entry never made it into the orchestration log, but
@@ -1152,9 +1091,7 @@ The same file-based durability serves everyday work:
    on purpose. Since v7.35.0, a resume that has already changed the plan
    file and then stops puts the replaced clause text back before it
    stops, so the tree cannot hold a half-finished revert that the next
-   resume would commit as the blocked task's own work. Since v7.44.0 it
-   also undoes the code changes that its own revert of a Phase 4 fix has
-   already staged. Uncommitted files under the topic's `implementation/` folder
+   resume would commit as the blocked task's own work. Uncommitted files under the topic's `implementation/` folder
    or in `plans/<slug>-open-decisions.md` never block, because the resumed
    run commits or repairs them. Batched plan execution and `executing-plans`
    have no clean-tree check at resume, so look at `git status` yourself
