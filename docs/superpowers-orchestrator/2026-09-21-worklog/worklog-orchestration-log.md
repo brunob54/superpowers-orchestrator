@@ -30,3 +30,9 @@ Items: [I1] forced — amend plan: Task 4 Contract requires a near-limit budget 
 Detail: docs/superpowers-orchestrator/2026-09-21-worklog/plans/worklog-open-decisions.md
 Forks: 3 of 3 (design consistency, implementation practicality, adversarial) — contradiction: settled
 Re-dispatch: phase 4, in-run resume 1 of 3, return 1 of 6
+
+## RULING 4 — 2026-09-21 — phase 4 — worklog intent patterns stay as the spec pins them
+Items: [I1] forced — plan governs: "[Interfaces and contracts] The `hooks/skill-rules.json` entry is: '`skill`: `worklog`; `type`: `workflow`; `priority`: `high`.'" — docs/superpowers-orchestrator/2026-09-21-worklog/plans/worklog.md
+Detail: docs/superpowers-orchestrator/2026-09-21-worklog/plans/worklog-open-decisions.md
+Forks: none
+Re-dispatch: phase 4, in-run resume 2 of 3, return 2 of 6
