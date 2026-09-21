@@ -17,3 +17,8 @@ readiness owed: 5
 - Task 4: complete — the session-start notice (99207f3..1d40fb8)
 - Task 5: complete — /pickup does not count an uncommitted work log (713961b..adf5cff)
 - Task 6: complete — routing, the worklog rule (5c25aa5..6c8c7d6)
+
+## Phase 3 — Batch 3 (tasks 7–9) — COMPLETE — commits 76a53d1..d875227
+- Task 7: complete — skill triggering and the Routing Guide (76a53d1..ebb76ef)
+- Task 8: complete — user documentation (c8ba782..d6f0255)
+- Task 9: complete — release v7.52.0 (71dccaf..51a7306)
