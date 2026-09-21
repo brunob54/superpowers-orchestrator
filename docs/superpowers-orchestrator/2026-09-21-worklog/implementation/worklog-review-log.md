@@ -47,3 +47,14 @@ _Invocation 1 — 2026-09-21 — N=4 M=3 — BASE..HEAD e06a224..1c04872 — bra
 - [I1] fixed — the bare `/worklog` test now also counts a user message holding a `<command-name>` tag that names `/worklog` or `/superpowers-orchestrator:worklog`, the form in which Claude Code delivers a typed slash command; the pinned sentence is kept and the tag form is pinned in suite section 7 → 54850ef ← 2/3: r2:M1, r3:I1
 - [M1] carried — the binding intent patterns of Global Constraint 12 (`work\s?logs?`) also fire on application-domain prompts such as a Jira or Tempo "worklog"; changing them contradicts Global Constraint 12, and the consequence is one routing suggestion ← 2/3: r1:M1, r3:M1
 - [M2] fixed — more than one word after the command word now stops with the usage text and writes nothing → 54850ef ← 1/3: r2:M2
+
+## Round 3 — Security — opus
+**Reviewers:** M=3, usable 3/3
+**Reviewer verdicts:** r1: 0 Critical, 0 Important, 2 Minor | r2: 0 Critical, 0 Important, 2 Minor | r3: 0 Critical, 0 Important, 1 Minor
+**Sources mapped:** 5/5
+**Reviewer verdict:** 0 Critical, 0 Important, 3 Minor
+**Converged:** no
+### Dispositions
+- [M1] fixed — the listing's names now come from a fixed listing command that tests each name in awk like the list command (folder test, C-locale sort, `|| true`) and prints an invalid name with unsafe characters replaced by `?`; the check command runs only on slugs it printed; suite section 3b runs it on a hostile file name → 325a266 ← 3/3: r1:M1, r2:M1, r3:M1
+- [M2] carried — the notice tells the model to follow a repository-supplied work log section from inside the session-start block; the spec accepts work-log content at the trust level of the project's CLAUDE.md, and the notice text is fixed by Global Constraint 11 ← 1/3: r1:M2
+- [M3] carried — the check command, the line-1 command and `new` follow a symbolic-linked `docs` or `docs/worklogs` folder, so a crafted repository can direct a write outside the clone; the check command is fixed by Global Constraint 4, and the linked-folder question is open as [L12]-round's [L18] user-decision ← 1/3: r2:M2
