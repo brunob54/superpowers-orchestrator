@@ -123,8 +123,11 @@ Placeholders: `<slug>`, and `<line>`, the new line 1 in one of the two valid
 forms. It replaces line 1 only. It keeps a carriage return at the end of line
 1 and a byte order mark at its start, and every other line stays as it was.
 Change line 1 only with this command, then run the check command again. It
-refuses a work log that is a symbolic link, and it writes its temporary copy
-outside the `docs/worklogs` folder.
+refuses a work log that is a symbolic link: it prints `symlink` and changes
+nothing. It writes its temporary copy outside the `docs/worklogs` folder and
+removes that copy once the file is rewritten. If the rewrite itself fails, it
+keeps the temporary copy and prints one line, the copy's path, so the work
+log can be restored from it. It prints nothing on success.
 
 ```bash
 ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
@@ -132,8 +135,9 @@ F="$ROOT/docs/worklogs/<slug>.md"
 if [ -L "$F" ]; then echo symlink; else
   T="$(mktemp)"
   if LC_ALL=C awk -v new='<line>' 'NR == 1 { cr = /\r$/; bom = /^\357\273\277/; l = (bom ? "\357\273\277" : "") new (cr ? "\r" : ""); print l; next } { print }' "$F" > "$T"; then
-    cat "$T" > "$F"
+    if cat "$T" > "$F"; then rm -f "$T"; else echo "$T"; fi
+  else
+    rm -f "$T"
   fi
-  rm -f "$T"
 fi
 ```

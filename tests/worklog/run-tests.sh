@@ -310,13 +310,23 @@ if [ "$HAVE_LINKS" = 1 ]; then
   assert_eq "a work log that is a symbolic link: the command prints symlink" "$OUT" 'symlink'
   assert_eq "a work log that is a symbolic link: the link target stays byte-identical" "$(cksum < "$OUTSIDE_B")" "$OUTSIDE_B_SUM"
   rm -f "$W/linked-log.md"
-
-  # (c) after a successful run, no <slug>.md.tmp file is left in the folder
-  # for a fixture without the planted link (crlf, bom, plain, above).
-  assert_eq "no <slug>.md.tmp file is left in docs/worklogs" "$(find "$W" -maxdepth 1 -name '*.md.tmp' 2>/dev/null | wc -l | tr -d ' ')" "0"
 else
   note "this file system made no symbolic link in section 3; the line-1 symbolic-link checks are skipped"
 fi
+
+# (c) the temporary file is removed after a successful run. Setting TMPDIR to
+# an empty folder does not pin mktemp's directory on every supported platform
+# (macOS's mktemp with no template prefers _CS_DARWIN_USER_TEMP_DIR over
+# TMPDIR, confirmed via its man page), so this finds mktemp's real directory
+# first (a throwaway file, immediately removed), snapshots the 'tmp.*' names
+# in it (mktemp's own default prefix), runs the real command, and asserts the
+# snapshot is unchanged.
+MKTMPPROBE="$(mktemp)"; MKTMPDIR="$(dirname "$MKTMPPROBE")"; rm -f "$MKTMPPROBE"
+BEFORE_MKTMP="$(find "$MKTMPDIR" -maxdepth 1 -name 'tmp.*' 2>/dev/null | LC_ALL=C sort)"
+active_log "$W/tmp-cleanup.md" tmp-cleanup
+run_line1 "$D" tmp-cleanup "$(printf "$CLOSED_FMT" tmp-cleanup "$CREATED" "$CLOSED_ON")"
+AFTER_MKTMP="$(find "$MKTMPDIR" -maxdepth 1 -name 'tmp.*' 2>/dev/null | LC_ALL=C sort)"
+assert_eq "no temporary file lingers in mktemp's directory after a successful run" "$AFTER_MKTMP" "$BEFORE_MKTMP"
 
 bold "6b. The slug, check and line-1 commands under zsh"
 if command -v zsh >/dev/null 2>&1; then
