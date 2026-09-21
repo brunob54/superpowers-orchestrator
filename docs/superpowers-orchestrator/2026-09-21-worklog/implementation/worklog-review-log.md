@@ -57,4 +57,24 @@ _Invocation 1 — 2026-09-21 — N=4 M=3 — BASE..HEAD e06a224..1c04872 — bra
 ### Dispositions
 - [M1] fixed — the listing's names now come from a fixed listing command that tests each name in awk like the list command (folder test, C-locale sort, `|| true`) and prints an invalid name with unsafe characters replaced by `?`; the check command runs only on slugs it printed; suite section 3b runs it on a hostile file name → 325a266 ← 3/3: r1:M1, r2:M1, r3:M1
 - [M2] carried — the notice tells the model to follow a repository-supplied work log section from inside the session-start block; the spec accepts work-log content at the trust level of the project's CLAUDE.md, and the notice text is fixed by Global Constraint 11 ← 1/3: r1:M2
-- [M3] carried — the check command, the line-1 command and `new` follow a symbolic-linked `docs` or `docs/worklogs` folder, so a crafted repository can direct a write outside the clone; the check command is fixed by Global Constraint 4, and the linked-folder question is open as [L12]-round's [L18] user-decision ← 1/3: r2:M2
+- [M3] carried — the check command, the line-1 command and `new` follow a symbolic-linked `docs` or `docs/worklogs` folder, so a crafted repository can direct a write outside the clone; the check command is fixed by Global Constraint 4, and the linked-folder question is open as the round 1 [L18] user-decision ← 1/3: r2:M2
+
+## Round 4 — Test & coverage quality — opus
+**Reviewers:** M=3, usable 3/3
+**Reviewer verdicts:** r1: 0 Critical, 1 Important, 6 Minor | r2: 0 Critical, 0 Important, 7 Minor | r3: 0 Critical, 0 Important, 5 Minor
+**Sources mapped:** 19/19
+**Reviewer verdict:** 0 Critical, 1 Important, 11 Minor
+**Converged:** no
+### Dispositions
+- [I1] fixed — an unreadable `docs/worklogs` folder fixture now runs the `|| true` of the list command, the listing command and the hook, each assertion red without it; the comments that claimed the no-folder fixture tested it are corrected → ce6b7e1 ← 1/3: r1:I1
+- [M1] fixed — five rules added by review fixes are now pinned in suite section 7, each on one line of SKILL.md → ce6b7e1 ← 3/3: r1:M4, r2:M7, r3:M3
+- [M2] fixed — notice-test case 7 asserts the exact notice with three active work logs (no "more" text) and with four (" and 1 more") → ce6b7e1 ← 2/3: r1:M2, r2:M1
+- [M3] fixed — a folder without git holds an active work log; the list and check commands and the `missing (searched …)` path are asserted there → ce6b7e1 ← 2/3: r1:M5, r3:M5
+- [M4] fixed — the noclobber run and line-1 cases (b), (d), (e) run under zsh too, and the zsh success run checks its output and exit status → ce6b7e1 ← 2/3: r1:M6, r2:M5
+- [M5] fixed — notice-test cases for a root holding a space and a glob character and for a root of exactly 300 characters → ce6b7e1 ← 2/3: r2:M2, r3:M1
+- [M6] fixed — the listing command also runs on the section-3 fixture folder, with exact output and labels → ce6b7e1 ← 2/3: r2:M4, r3:M2
+- [M7] carried — budget case 8 cannot fail for the reason its comment gives and does not build the worst notice; plan-given case ← 1/3: r1:M1
+- [M8] carried — no activator prompt returns more than two matches, so the rule position of Global Constraint 12 is checked only by the plan's one-time command ← 1/3: r1:M3
+- [M9] carried — on macOS the C-locale sort checks cannot fail when `LC_ALL=C` is removed, because the fixture names sort the same in the ambient locales ← 1/3: r2:M3
+- [M10] fixed — line-1 case (e) asserts that the failed command prints something → ce6b7e1 ← 1/3: r2:M6
+- [M11] fixed — pickup case 6c also covers an untracked `docs/worklogs/` folder (dirty 0, FRESH) and a later commit under it (CHECK) → ce6b7e1 ← 1/3: r3:M4
