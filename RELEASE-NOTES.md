@@ -8,6 +8,124 @@
 > (`REPOZY/superpowers-optimized`) and are kept unchanged as history; any
 > testing they describe was not done here.
 
+## v7.49.0 — the check script reads index bits and the sparse-checkout setting
+
+**Problem.** Two git states hid a wrong result behind exit code 0. With the
+`assume-unchanged` bit on a path, the commit that resume makes committed a
+hidden edit of the user. With the `skip-worktree` bit, or in a sparse
+checkout, it left a reverted path out. A fix that deleted the last file of a
+nested folder gave a false alarm.
+
+**Change.** The check script has 21 lines (18 before). It alarms for either
+bit and for any sparse checkout, and it reads untracked files only when the
+folder of the path exists.
+
+**Effect.** Such a revert no longer starts. In a sparse checkout no fix is
+reverted. `tests/precheck-script` has 138 checks (116 before).
+Reinstall the plugin. Nothing to migrate.
+
+Rows 81, 86 and 87 of the orchestration issues log, all three closed by
+prevention (the check script). The revert command, the cleanup, the undo and
+the commit that resume makes are unchanged.
+
+**Terms.** The index is the list of files that git tracks. The
+`assume-unchanged` bit and the `skip-worktree` bit are two marks in the index
+that tell git not to compare a file with the disk. A sparse checkout is a
+checkout where git keeps only a part of the tree on disk
+(`core.sparseCheckout` is true).
+
+**What was measured (git 2.50.1, macOS, bash 3.2 and zsh 5.9).**
+
+- *A hidden edit under `assume-unchanged` (row 81).* The fix commit changed
+  `conf.txt`, a later commit already took that change back, and the user
+  holds an edit of `conf.txt` that the bit hides. `git status --porcelain`
+  prints nothing and the check script of v7.48.0 printed nothing. The revert
+  ends with exit code 0 and does not write the path. The commit that resume
+  makes then reads the file from disk: exit code 0, and the user's edit
+  stands at HEAD. The undo before a stop, and the cleanup after a conflict,
+  put the file back to HEAD and delete the edit. When the revert must write
+  the path over a hidden edit, git refuses with exit code 128 for both bits;
+  that state was safe before.
+- *The `skip-worktree` bit (row 81, not in the row's text).* With no edit and
+  no sparse checkout, the revert ends with exit code 0 and stages the path;
+  the commit that resume makes ends with exit code 0 WITHOUT the path, which
+  stays staged. With a hidden edit the edit is neither committed nor deleted:
+  the `git checkout` of the undo fails with exit code 1 while the path still
+  carries the bit. A path with both bits behaves as a `skip-worktree` path. A
+  revert that conflicts on the path itself clears the bit, and the cleanup
+  then works.
+- *A sparse checkout (row 87).* Cone mode and `--no-cone` mode gave identical
+  lines. A fix commit that changed a path outside the checked-out part: the
+  commit that resume makes ends with exit code 0 without it. The candidate of
+  the row (one `git ls-files -v` line) MISSED a fix commit that DELETED an
+  outside path: the path is not in the index before the revert, the revert
+  stages it with the letter `S`, and the commit leaves it out. A fix commit
+  that ADDED an outside path reverts correctly.
+- *The false alarm (row 86).* The fix deleted `d/s/x.txt` while `d/` holds
+  other files. Git printed `warning: could not open directory 'd/s/'` on
+  standard error two times: from the status read AND from the ignored-file
+  read, not from one line as the row says. The revert of such a fix works.
+
+**The three script changes.**
+
+- Line 2, run once:
+  `[ "$(git config --bool core.sparseCheckout)" != true ] || echo "a sparse checkout"`.
+  `--bool` makes git print `true` for the values `yes`, `on` and `1` too.
+- After the ignored-file read:
+  `git --literal-pathspecs ls-files -v -- "$p" | sed "/^H /d"`. It prints `h`,
+  `S` or `s` for a marked path. The filter is `sed`, not `grep -v`: with
+  `set -e` in front of the script the `grep` form ended the script at the
+  first ordinary path with no output, which reads as "no alarm".
+- The status read is two lines. The first carries `--untracked-files=no` and
+  always runs. The released full form, and the ignored-file read, run only
+  when `[ -d "$(dirname -- "$p")" ]`. When that folder is absent, no
+  untracked or ignored file can stand on or below the path.
+
+**The decision on the sparse checkout.** Two designs missed no measured state.
+A per-path line with `git sparse-checkout check-rules` keeps the automatic
+revert for a fix whose paths all stand inside the checked-out part; it needs
+git 2.41, its behaviour on an older git could not be measured here, and it is
+about 100 characters longer. The shipped line alarms for every sparse
+checkout; it works on every git version and every part of it is measured.
+Both review lenses ended the rebuttal round on each other's first position,
+so the user decided: the repository-level line.
+
+**Rejected.** `2>/dev/null` on the ignored-file read: for an unreadable folder
+that standard error is the only alarm. `--untracked-files=no` alone: it lost
+the `?? d/u.txt` alarm for an untracked file below a listed path that is a
+folder at HEAD and in the fix commit. A test for the letters `S` and `s`
+only, or `git ls-files -t`: quiet on the hidden edit under `assume-unchanged`.
+
+**Cost.** Three kinds of fix commit that revert correctly now end as "not
+reverted": every fix commit in a sparse checkout, a path with the
+`assume-unchanged` bit and no edit (git cleared the bit without a message in
+that revert), and a fix that added a path outside the checked-out part.
+
+**Accepted limits.** One lost alarm with no loss: the fix deleted
+`d/s/x.txt`, the user made the file again, and the folder `d` has mode 000;
+the script is now quiet, git refuses the revert with exit code 128, and no
+cleanup runs after a refusal. No suite pins the guide passage. The script
+makes about 10 git calls per listed path.
+
+**Review.** Correctness review: 2 Important findings (the sentence about the
+two bits was true only for `assume-unchanged`; "that warning is no alarm"
+read as a permission to disregard standard error) and 2 Minor. Red team: no
+regression that loses data. Mutation testing: 48 run,
+47 caught; the survivor deletes the guide passage; one mutation that changes
+behaviour (`--bool` dropped) now has its own fixture. Verification pass: 0
+Critical, 0 Important, 3 Minor. Four older defects of other classes became
+rows 89 to 92 of the issues log (a file replaced by a folder with a later
+change; `core.fileMode=false`; a file-system monitor that reports wrongly;
+`core.trustctime=false`).
+
+**Tests.** `tests/in-run-rulings` has 948 checks (944 before): 23 pinned
+whole lines (both fences and the 21 script lines), the ten cases with the new
+sentences, the retry sentence, and an absence check for `grep -v`.
+`tests/precheck-script` has 138 checks (116 before): the two bits, the bit
+on the second listed path with `set -e`, four sparse states, the two shapes
+of row 86, and two states that guard against a lost alarm. All fourteen fast
+suites exit 0.
+
 ## v7.48.0 — a code revert stays inside the files of the fix
 
 **Problem.** A commit made after a fix commit could move the revert of that fix
