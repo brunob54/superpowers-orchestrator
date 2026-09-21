@@ -1465,9 +1465,9 @@ Trigger: `Resume orchestration for <plan-or-spec path>`.
    script reads each path from the current folder.
    The repository is a sparse checkout (`core.sparseCheckout` is true, so
    git keeps only a part of the tree on disk): the resume commit, which
-   names the listed paths, can leave a reverted path outside that part out
-   and still ends with exit code 0, so no fix commit is reverted in a
-   sparse checkout.
+   names the listed paths, can leave a reverted path outside that part out,
+   and the commit still ends with exit code 0, so no fix commit is
+   reverted in a sparse checkout.
    The name of a listed path holds
    a character outside letters, digits, `.`, `_`,
    `/`, `@`, `+`, `=`, `,` and `-`, or begins with `-` or `=`: git
@@ -1485,11 +1485,13 @@ Trigger: `Resume orchestration for <plan-or-spec path>`.
    the index (`git ls-files -v` prints a letter other than `H`): git does
    not compare such a file with the disk, so `git status --porcelain`
    hides a local change there.
-   On an `assume-unchanged` path the resume commit would commit that
-   change, and the cleanup and the undo would delete it.
-   On a `skip-worktree` path the resume commit leaves the path out and
-   still ends with exit code 0, and the `git checkout` of the cleanup and
-   of the undo fails with exit code 1.
+   On a path that carries only the `assume-unchanged` bit the resume
+   commit would commit that change, and the cleanup and the undo would
+   delete it.
+   On a path that carries the `skip-worktree` bit the resume commit
+   leaves the path out and still ends with exit code 0, and the
+   `git checkout` of the cleanup and of the undo fails with exit code 1
+   while the path still carries the bit.
    The path stands on disk and
    does not exist at HEAD: an untracked file,
    or the same name in another
