@@ -174,6 +174,7 @@ digraph planmode_intercept {
 - Independent parallel tasks outside of plan execution: `dispatching-parallel-agents`
 - Cross-session state persistence: `context-management`
 - Known issue tracking / save recurring fixes: `error-recovery`
+- Tracking document for one piece of multi-part work across sessions (create, update or close a work log): `worklog`
 - Code restructuring without behavior change: `refactoring` (lock behavior with tests, then restructure incrementally)
 - Performance issues (slow, high memory/CPU, latency): `performance-investigation` (measure → profile → fix → re-measure)
 - Dependency updates, security vulnerabilities, migrations: `dependency-management` (audit → assess impact → update incrementally → verify)
