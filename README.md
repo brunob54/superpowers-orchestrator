@@ -609,9 +609,10 @@ The same subcommands work from the shell as `copilot plugin ...`
 (for example `copilot plugin update superpowers-orchestrator`). The
 installed copy lives under
 `~/.copilot/installed-plugins/superpowers-orchestrator/superpowers-orchestrator/`;
-the skills in `skills/` are discovered automatically. Copilot CLI supports
-subagents that dispatch subagents (multi-level), which the orchestration
-skills need. The hooks in `hooks/hooks.json` use Claude Code's event names
+the skills in `skills/` are discovered automatically.
+`orchestrating-development` refuses to run on Copilot CLI: it has never
+been run there. Copilot CLI documents subagents that dispatch subagents
+(multi-level), so a first real run there could change this. The hooks in `hooks/hooks.json` use Claude Code's event names
 and have not been verified on Copilot CLI.
 
 ### Available Update Notification

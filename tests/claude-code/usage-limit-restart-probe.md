@@ -5,11 +5,20 @@ after a claude.ai usage limit stops it, instead of waiting for a person to type
 `continue` (orchestration issue row 12).
 
 A **usage limit** is the moment claude.ai refuses further requests until a reset
-time. Claude Code 2.1.272 has a setting for it, `autoContinueAtUsageLimit`:
+time. Claude Code has a setting for it, `autoContinueAtUsageLimit`:
 "When a claude.ai usage limit stops your session, wait for the limit to reset and
 continue the task automatically. When off, the limit dialog offers the wait as a
 choice instead." (Text read from the settings schema of the installed CLI on
-2026-09-15; the public settings documentation does not list the key.)
+2026-09-15, unchanged in 2.1.278.) On 2026-09-21 the key was found documented:
+the settings reference gives "Requires Claude Code v2.1.234 or later" and the
+default `true`. Measured all the same: 18 limit stops of orchestrated runs on
+2.1.245 to 2.1.258 did not continue by themselves; the cause is unknown.
+
+Observed once (2026-09-16, transcript `60b4ca86`, 2.1.273, an ordinary
+interactive session, not an orchestrated run): the session printed "Usage limit
+reached · continuing automatically at 6:10pm", continued 1 minute 26 seconds
+after the reset with no typed input, and the lead model then restarted its two
+agent-team teammates by message; the teammates did not continue by themselves.
 
 The probe is an **observation**, not a test that can be started on demand: no
 model-side tool can produce a real usage limit. Run it on the next orchestrated
@@ -20,8 +29,11 @@ run that hits one.
 - Covered by this probe: account usage limits. They were 23 of the 29 recorded
   restart events (Case 009, Follow-up of 2026-09-15, second entry).
 - Not covered: the other 6 events — 4 machine sleeps, 1 `529 Overloaded`, and 1
-  request time-out. The setting names usage limits only. Those stay open in row 12
-  step (c).
+  request time-out. The setting names usage limits only. Those were closed as
+  accepted on 2026-09-16 (row 12 step (c)).
+- Of the 23 usage-limit kills, the setting covers 19 as documented today; 1
+  (transcript `d03ae6be`) was a background session with a weekly reset 35 hours
+  away, and 3 were model or credit stops with no reset time.
 
 ## Preconditions
 
@@ -31,8 +43,13 @@ run that hits one.
 - The CLI was restarted after that line was added. A setting read at startup does
   not apply to a session that was already running.
 - `claude --version` prints 2.1.272 or later.
-- An interactive session. Scheduled jobs and this setting do not exist in
-  headless `claude -p` mode.
+- An interactive session in the foreground. Claude Code documents that it does
+  not wait in these cases: a background session (`claude --bg`, `claude agents`,
+  or a session moved to the background; the transcript records carry
+  `sessionKind: "bg"`), a `claude -p` run, agent-team teammate sessions, a reset
+  more than 24 hours away, and a computer that slept for more than about 30
+  minutes (then a person must press Enter). It re-arms the wait at most twice in
+  a row.
 - Record the plan or spec path of the run, the model and the window (`/model`; a
   `[1m]` suffix means the 1M window).
 
@@ -73,12 +90,14 @@ run that hits one.
 
 ## Record in docs/orchestration-issues.md
 
-- On a pass: in row 12, mark the usage-limit half closed, naming this probe's
-  date, the run slug and the transcript id. Keep step (c) for the remaining 6
-  events (sleep, 529, time-out), or close that half when those are judged too
-  rare to fix.
-- On a fail: keep row 12 open and add the observed behaviour as a new line, with
-  the transcript id and the times.
+Row 12 was closed on 2026-09-21 with this probe as the acceptance check of the
+next orchestrated run that hits a usage limit.
+
+- On a pass: nothing reopens; the Follow-up below is the record.
+- On a fail, when none of the documented cases under Preconditions applies:
+  reopen row 12 in the worklist with the observed behaviour, the transcript id
+  and the times. A stop in one of those documented cases is expected and
+  reopens nothing.
 - Either way: add a `**Follow-up — <date> — usage-limit restart probe.**`
   paragraph to Case 009 with the numbers below.
 

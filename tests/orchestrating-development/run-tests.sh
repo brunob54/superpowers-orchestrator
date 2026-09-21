@@ -505,6 +505,29 @@ for needle in 'compaction summary' \
   assert_folded_contains "recovery: Required Start contains '$needle'" "$REQUIRED_RANGE" "$needle"
 done
 
+bold "12. Platform: the skill runs on Claude Code only"
+# Row 33 (user decision, 2026-09-21): the pipeline has only ever run on
+# Claude Code. Copilot CLI documents nested subagents, but no run exists
+# there, so the description, the platform check, the README and the guide
+# all say "Claude Code only", and the skill refuses on Copilot CLI too.
+README_FILE="$ROOT/README.md"
+GUIDE_FILE="$ROOT/docs/guide/README.md"
+assert_folded_contains "platform: the description says Claude Code only" "$ORCH_SKILL" \
+  'Requires the Agent tool with nested dispatch (Claude Code only).'
+assert_folded_contains "platform: the check names Claude Code only" "$ORCH_SKILL" \
+  '**Platform check:** this skill runs on Claude Code only'
+assert_folded_contains "platform: the check refuses every other platform" "$ORCH_SKILL" \
+  'On any other platform, refuse with one line — `orchestrating-development runs on Claude Code only` — and stop.'
+assert_file_not_contains "platform: no Copilot CLI dispatch note" "$ORCH_SKILL" 'Copilot CLI: `task`'
+assert_folded_contains "platform: the README says the skill refuses on Copilot CLI" "$README_FILE" \
+  '`orchestrating-development` refuses to run on Copilot CLI'
+assert_folded_not_contains "platform: the README no longer gives Copilot CLI the orchestration skills" "$README_FILE" \
+  'which the orchestration skills need'
+assert_folded_contains "platform: the guide overview says Claude Code only" "$GUIDE_FILE" \
+  "§4's orchestration runs on Claude Code only"
+assert_folded_contains "platform: the guide requirement names Copilot CLI" "$GUIDE_FILE" \
+  'On any other platform, Copilot CLI included, the skill refuses with one line.'
+
 echo
 bold "Results: $PASS passed, $FAIL failed"
 if [ "$FAIL" -gt 0 ]; then
