@@ -17,8 +17,9 @@ default `true`. Measured all the same: 18 limit stops of orchestrated runs on
 Observed once (2026-09-16, transcript `60b4ca86`, 2.1.273, an ordinary
 interactive session, not an orchestrated run): the session printed "Usage limit
 reached · continuing automatically at 6:10pm", continued 1 minute 26 seconds
-after the reset with no typed input, and the lead model then restarted its two
-agent-team teammates by message; the teammates did not continue by themselves.
+after the reset with no typed input. Two of its three agent-team teammates had
+no report yet; the lead model restarted those two by message, because the
+teammates did not continue by themselves.
 
 The probe is an **observation**, not a test that can be started on demand: no
 model-side tool can produce a real usage limit. Run it on the next orchestrated
@@ -43,13 +44,17 @@ run that hits one.
 - The CLI was restarted after that line was added. A setting read at startup does
   not apply to a session that was already running.
 - `claude --version` prints 2.1.272 or later.
-- An interactive session in the foreground. Claude Code documents that it does
-  not wait in these cases: a background session (`claude --bg`, `claude agents`,
-  or a session moved to the background; the transcript records carry
-  `sessionKind: "bg"`), a `claude -p` run, agent-team teammate sessions, a reset
-  more than 24 hours away, and a computer that slept for more than about 30
-  minutes (then a person must press Enter). It re-arms the wait at most twice in
-  a row.
+- An interactive session in the foreground, signed in with a claude.ai
+  subscription. The Claude Code page "Wait for a usage limit to reset"
+  (https://code.claude.com/docs/en/interactive-mode) lists every case in which
+  Claude Code does not start the wait or ends it. Among them: a background
+  session (`claude --bg`, `claude agents`, or a session moved to the
+  background; its records carry `sessionKind: "bg"`), a `claude -p` run,
+  Remote Control and agent-team teammate sessions, a reset more than 24 hours
+  away, an Opus or Sonnet limit while the session runs a model of another
+  family, an exit and resume of the session, and `/clear`. When the limit
+  reset during a sleep of more than about 30 minutes, a person must press
+  Enter. Claude Code re-arms the wait at most twice in a row.
 - Record the plan or spec path of the run, the model and the window (`/model`; a
   `[1m]` suffix means the 1M window).
 
@@ -94,7 +99,7 @@ Row 12 was closed on 2026-09-21 with this probe as the acceptance check of the
 next orchestrated run that hits a usage limit.
 
 - On a pass: nothing reopens; the Follow-up below is the record.
-- On a fail, when none of the documented cases under Preconditions applies:
+- On a fail, when none of the cases on that documentation page applies:
   reopen row 12 in the worklist with the observed behaviour, the transcript id
   and the times. A stop in one of those documented cases is expected and
   reopens nothing.

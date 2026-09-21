@@ -53,8 +53,8 @@ copy under `~/.claude/statusline/` that your `settings.json` points at.
 
 Platform capabilities differ — §4's orchestration runs on Claude Code only.
 Codex and Cursor lack the nested subagent dispatch it requires, and Copilot
-CLI has never run it, so the skill is written to refuse on all three (not
-observed, since the skill has not been run there). See
+CLI and OpenCode have never run it, so the skill is written to refuse on all
+four (not observed, since the skill has not been run there). See
 [docs/platforms](../platforms) for per-platform notes.
 
 ## 2. Quick start — your first session
@@ -649,17 +649,26 @@ prompt with your spec's path already filled in.
 
 **Usage limits.** Start a long run in an ordinary interactive session, in
 the foreground. When a claude.ai usage limit stops that session, Claude Code
-waits for the reset and then continues the run by itself: this is the
-setting `autoContinueAtUsageLimit`, on by default since Claude Code 2.1.234.
-Put `"autoContinueAtUsageLimit": true` into `~/.claude/settings.json`
-anyway: 18 limit stops of orchestrated runs on Claude Code 2.1.245 to
-2.1.258 did not continue by themselves, and the cause is not known. Claude
-Code documents four cases in which it does not wait: a background session
-(`claude --bg`, agent view), a `claude -p` run, a reset more than 24 hours
-away (a weekly limit), and a computer that slept for more than about 30
-minutes (then press Enter). In those cases, type `continue` after the
-reset. The automatic continuation was observed once, in an ordinary session
-on 2026-09-16; it has not yet been observed in an orchestrated run.
+waits for the reset and then continues the run by itself. This is the
+setting `autoContinueAtUsageLimit`; the Claude Code documentation says that
+it is "on by default in interactive sessions signed in with a claude.ai
+subscription" and requires Claude Code 2.1.234 or later. Put
+`"autoContinueAtUsageLimit": true` into `~/.claude/settings.json` anyway:
+18 limit stops of orchestrated runs on Claude Code 2.1.245 to 2.1.258 did
+not continue by themselves, and the cause is not known. The controller that
+was running when the limit hit stops too; the orchestrator retries it once,
+as it retries any controller that died of its environment, and a second
+stop ends the run. Claude Code does not wait by itself in several
+documented cases, among them a background session (`claude --bg`, agent
+view), a `claude -p` run and a reset more than 24 hours away (a weekly
+limit). Exiting the session or `/clear` ends a wait, and when the limit
+reset during a sleep of more than about 30 minutes, Claude Code waits for
+Enter. The full list is on the documentation page "Wait for a usage limit
+to reset" (<https://code.claude.com/docs/en/interactive-mode>). In such a
+case, type `continue` in the open session after the reset; when the
+session has ended, send `Resume orchestration for <plan path>` in a new
+session (§5). The automatic continuation was observed once, in an ordinary
+session on 2026-09-16; it has not yet been observed in an orchestrated run.
 
 ### Phase 0 — the only conversation you'll have
 

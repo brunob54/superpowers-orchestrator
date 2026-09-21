@@ -518,13 +518,21 @@ assert_folded_contains "platform: the check names Claude Code only" "$ORCH_SKILL
   '**Platform check:** this skill runs on Claude Code only'
 assert_folded_contains "platform: the check refuses every other platform" "$ORCH_SKILL" \
   'On any other platform, refuse with one line — `orchestrating-development runs on Claude Code only` — and stop.'
-assert_file_not_contains "platform: no Copilot CLI dispatch note" "$ORCH_SKILL" 'Copilot CLI: `task`'
+assert_folded_contains "platform: the check refuses Claude Code without the Agent tool" "$ORCH_SKILL" \
+  'On Claude Code without the Agent tool, refuse with one line — `orchestrating-development needs the Agent tool, which this session lacks` — and stop.'
+assert_folded_not_contains "platform: no Copilot CLI dispatch note" "$ORCH_SKILL" 'Copilot CLI: `task`'
+assert_folded_contains "platform: the brainstorming gate offers the pipeline for Claude Code only" \
+  "$ROOT/skills/brainstorming/SKILL.md" '**Autonomous pipeline** (Claude Code only)'
 assert_folded_contains "platform: the README says the skill refuses on Copilot CLI" "$README_FILE" \
   '`orchestrating-development` refuses to run on Copilot CLI'
 assert_folded_not_contains "platform: the README no longer gives Copilot CLI the orchestration skills" "$README_FILE" \
   'which the orchestration skills need'
+assert_folded_contains "platform: the README says the skill refuses on OpenCode" "$README_FILE" \
+  '`orchestrating-development` runs on Claude Code only and refuses on OpenCode'
 assert_folded_contains "platform: the guide overview says Claude Code only" "$GUIDE_FILE" \
   "§4's orchestration runs on Claude Code only"
+assert_folded_contains "platform: the guide overview names Copilot CLI and OpenCode" "$GUIDE_FILE" \
+  'Copilot CLI and OpenCode have never run it'
 assert_folded_contains "platform: the guide requirement names Copilot CLI" "$GUIDE_FILE" \
   'On any other platform, Copilot CLI included, the skill refuses with one line.'
 

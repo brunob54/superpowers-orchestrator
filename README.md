@@ -522,13 +522,14 @@ Fetch and follow the update instructions from https://raw.githubusercontent.com/
 
 Or manually: `git pull` in your local clone of the repository.
 
-**Required for the orchestration skills: raise the subagent depth.**
-`orchestrating-development`, `multi-doc-review` and `multi-code-review`
-dispatch a controller subagent that itself dispatches worker subagents
+**Required for the review-loop skills: raise the subagent depth.**
+`multi-doc-review` and `multi-code-review` dispatch a controller subagent
+that itself dispatches worker subagents
 (*nested dispatch*: session → controller → worker). OpenCode allows only one
 level by default — the top-level `subagent_depth` option is `1`, which lets
 the main session start subagents but stops those subagents from starting
 more. Set it to `2`. This needs OpenCode v1.18.2 or newer.
+`orchestrating-development` runs on Claude Code only and refuses on OpenCode.
 
 Put this in `opencode.json` in your project root, or in
 `~/.config/opencode/opencode.json` to apply it to every project
@@ -612,7 +613,8 @@ installed copy lives under
 the skills in `skills/` are discovered automatically.
 `orchestrating-development` refuses to run on Copilot CLI: it has never
 been run there. Copilot CLI documents subagents that dispatch subagents
-(multi-level), so a first real run there could change this. The hooks in `hooks/hooks.json` use Claude Code's event names
+(multi-level); allowing it would need a change to the skill and a first
+real run. The hooks in `hooks/hooks.json` use Claude Code's event names
 and have not been verified on Copilot CLI.
 
 ### Available Update Notification

@@ -30,7 +30,10 @@ Announce: `I'm using orchestrating-development to run this pipeline.`
 **Platform check:** this skill runs on Claude Code only: it needs the
 Agent tool with nested dispatch, and it has never run on another platform
 (Copilot CLI included). On any other platform, refuse with one line —
-`orchestrating-development runs on Claude Code only` — and stop.
+`orchestrating-development runs on Claude Code only` — and stop. On Claude
+Code without the Agent tool, refuse with one line —
+`orchestrating-development needs the Agent tool, which this session lacks` —
+and stop.
 
 **After a compaction summary.** A compaction summary is the text Claude Code
 writes in place of the earlier conversation when the context window fills.
