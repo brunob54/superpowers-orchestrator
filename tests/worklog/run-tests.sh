@@ -78,13 +78,19 @@ form_of() {
 }
 SLUG_CMD=$(block_after '### The slug command')
 LIST_CMD=$(block_after '### The list command')
+LISTING_CMD=$(block_after '### The listing command')
 CHECK_CMD=$(block_after '### The check command')
 LINE1_CMD=$(block_after '### The line-1 command')
 ACTIVE_RE=$(form_of active)
 CLOSED_RE=$(form_of closed)
+# strict_script <name> <command>: writes <command> to $TMP/<name> after the
+# line "set -euo pipefail".
+strict_script() { printf 'set -euo pipefail\n%s\n' "$2" > "$TMP/$1"; }
 # The list command runs as a script under set -euo pipefail, the options that
-# hooks/session-start sets on its line 4.
-printf 'set -euo pipefail\n%s\n' "$LIST_CMD" > "$TMP/list.sh"
+# hooks/session-start sets on its line 4. The listing command runs under the
+# same options, so its "|| true" is tested.
+strict_script list.sh "$LIST_CMD"
+strict_script listing.sh "$LISTING_CMD"
 
 # The replacement texts below hold no "&" and no backslash, so bash 5.2's
 # patsub_replacement option cannot change them.
@@ -96,11 +102,13 @@ run_slug() {
   printf '%s\n' "${SLUG_CMD//<slug>/$1}" > "$TMP/slug.sh"
   OUT=$("$RUN_SHELL" "$TMP/slug.sh" 2>&1)
 }
-# run_list <folder> [shell]: runs the list command from <folder>; sets OUT to
-# its output followed by "exit=<status>".
+# run_list <folder> [shell] [script]: runs the list command (or the script
+# $TMP/<script>) from <folder>; sets OUT to its output followed by
+# "exit=<status>". run_listing <folder> [shell] runs the listing command.
 run_list() {
-  OUT=$(cd "$1" && "${2:-bash}" "$TMP/list.sh" 2>&1; printf 'exit=%s' "$?")
+  OUT=$(cd "$1" && "${2:-bash}" "$TMP/${3:-list.sh}" 2>&1; printf 'exit=%s' "$?")
 }
+run_listing() { run_list "$1" "${2:-bash}" listing.sh; }
 # lines <path>...: the output that run_list expects for these paths.
 lines() { printf '%s\n' "$@"; printf 'exit=0'; }
 # run_check <folder> <slug>: runs the check command from <folder>; sets OUT.
@@ -146,7 +154,7 @@ assert_eq "only line 1 starts with the status-line prefix" \
 assert_file_lacks "the word workstream is not used" "$TEMPLATE" 'workstream'
 
 bold "2. The slug command"
-for name in SLUG_CMD LIST_CMD CHECK_CMD LINE1_CMD ACTIVE_RE CLOSED_RE; do
+for name in SLUG_CMD LIST_CMD LISTING_CMD CHECK_CMD LINE1_CMD ACTIVE_RE CLOSED_RE; do
   if [ -n "${!name}" ]; then ok "the skill text holds $name"; else bad "the skill text holds $name"; fi
 done
 # Claude Code replaces $0, $1 and so on in a skill body with the arguments of
@@ -224,6 +232,31 @@ repo onlybad
 active_log "$W/A.md" a
 run_list "$D"
 assert_eq "a folder with only A.md: one empty line and exit 0" "$OUT" "$(lines '')"
+
+bold "3b. The listing command"
+# A file named x'$(touch <marker>)'.md creates the marker file when any shell
+# evaluates that name, so the marker must not exist after the runs. The
+# zero-byte empty.md is listed because the command never reads a file.
+INVALID_LABEL='invalid file name — rename it'
+MARKER=listing-marker
+repo listing
+: > "$W/x'\$(touch $MARKER)'.md"
+: > "$W/x y.md"
+: > "$W/new.md"
+: > "$W/empty.md"
+for name in alpha a-b; do active_log "$W/$name.md" "$name"; done
+LISTING_EXPECTED=$(lines a-b alpha empty "new.md: $INVALID_LABEL" "x???touch?$MARKER??.md: $INVALID_LABEL" "x?y.md: $INVALID_LABEL")
+run_listing "$D"
+assert_eq "valid names print their slug, other names a label with ? for unsafe characters, in C-locale order, exit 0" "$OUT" "$LISTING_EXPECTED"
+if command -v zsh >/dev/null 2>&1; then
+  run_listing "$D" zsh
+  assert_eq "the same listing when zsh runs it" "$OUT" "$LISTING_EXPECTED"
+else
+  note "zsh is not installed; the zsh listing check is skipped"
+fi
+assert_eq "the hostile file name ran no command: no marker file exists" "$(find "$TMP" -name "$MARKER")" ''
+run_listing "$TMP/nofolder"
+assert_eq "listing, no docs/worklogs folder: no line and exit 0 under set -euo pipefail" "$OUT" 'exit=0'
 
 bold "4. The valid forms of line 1"
 # form_matches <regex> <line>: exit 0 when <line> matches <regex>.
@@ -446,7 +479,7 @@ PHRASES=(
   'stops with the usage text'
   'A closed work log is never written'
   'close anyway'
-  'invalid file name — rename it'
+  "$INVALID_LABEL"
   'malformed line 1'
   'Never overwrite a work log'
   'never commits'

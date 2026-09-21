@@ -125,6 +125,28 @@ fi
 printf '%s\n' "$LIST"
 ```
 
+### The listing command
+
+It prints one line per regular `*.md` file directly under `docs/worklogs`, in
+the same order in every locale, and nothing when there is none. For a file
+whose name is a valid slug plus `.md`, the line is that slug. For any other
+file, the line is the file name, with each character other than `a` to `z`, a
+digit, `.` and `-` replaced by `?`, followed by
+`: invalid file name — rename it`. It tests each name inside awk, as the list
+command does, so a file name reaches no command before it passes the slug
+rule. It never reads a file. The folder test and the `|| true` keep it safe
+under `set -euo pipefail`.
+
+```bash
+ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
+if [ -d "$ROOT/docs/worklogs" ]; then
+  LC_ALL=C find "$ROOT/docs/worklogs" -maxdepth 1 -type f -name '*.md' -exec awk 'BEGIN { n = ARGV[1]; sub(/.*\//, "", n)
+    if (n ~ /^[a-z0-9]+(-[a-z0-9]+)*\.md$/ && length(n) <= 43 &&
+        n != "new.md" && n != "update.md" && n != "close.md") print substr(n, 1, length(n) - 3)
+    else { gsub(/[^a-z0-9.-]/, "?", n); print n ": invalid file name — rename it" } }' {} \; 2>/dev/null | LC_ALL=C sort || true
+fi
+```
+
 ### The check command
 
 Placeholder: `<slug>`. It prints one word: `symlink`, `missing` (followed by
@@ -217,15 +239,12 @@ order. Each stop writes nothing.
    the command continues.
 
 **The listing** has one line per regular `*.md` file directly under
-`docs/worklogs/`. Find the files with
-`find "$(git rev-parse --show-toplevel 2>/dev/null || pwd)/docs/worklogs" -maxdepth 1 -type f -name '*.md'`.
-The slug of a file is its name without `.md`. Test it with the first test of
-"Shell commands", then with the slug command. A name that fails either test
-breaks the slug rule; the listing then goes on with the next file, because the
-stop of the first test does not apply to a listed name.
+`docs/worklogs/`. Get the files with the listing command only, never with
+another command: a file name is text that anyone who can add a file controls.
 A file whose name breaks the slug rule gets the label `invalid file name — rename it`,
-and it is never chosen. For every other file, run the check command with its
-slug and use its word as the label, with `malformed line 1` for `malformed`.
+and it is never chosen. For every other file, the listing command printed its
+slug alone on a line: run the check command with that slug only, and use its
+word as the label, with `malformed line 1` for `malformed`.
 
 ## `/worklog new [<slug>]` — create a work log
 
