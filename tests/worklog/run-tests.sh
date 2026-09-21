@@ -108,11 +108,14 @@ run_check() {
   printf '%s\n' "${CHECK_CMD//<slug>/$2}" > "$TMP/check.sh"
   OUT=$(cd "$1" && "$RUN_SHELL" "$TMP/check.sh" 2>&1)
 }
-# run_line1 <folder> <slug> <new line 1>: runs the line-1 command; sets OUT.
+# run_line1 <folder> <slug> <new line 1> [<first line>]: runs the line-1
+# command, after <first line> when it is given (for example a shell option);
+# sets OUT and CODE, the exit status.
 run_line1() {
   local cmd="${LINE1_CMD//<slug>/$2}"
-  printf '%s\n' "${cmd//<line>/$3}" > "$TMP/line1.sh"
+  printf '%s\n%s\n' "${4:-}" "${cmd//<line>/$3}" > "$TMP/line1.sh"
   OUT=$(cd "$1" && "$RUN_SHELL" "$TMP/line1.sh" 2>&1)
+  CODE=$?
 }
 # repo <name>: a git repository with an empty docs/worklogs folder; sets D
 # (the repository) and W (its docs/worklogs folder).
@@ -121,6 +124,8 @@ repo() { D="$TMP/$1"; W="$D/docs/worklogs"; mkdir -p "$W"; git -C "$D" init -q; 
 # status line on line 1.
 active_log() { { printf "$ACTIVE_FMT\n" "$2" "$CREATED"; printf '\n# Work log: fixture\n'; } > "$1"; }
 closed_log() { { printf "$CLOSED_FMT\n" "$2" "$CREATED" "$CLOSED_ON"; printf '\n# Work log: fixture\n'; } > "$1"; }
+# closed_line <slug>: the closed status line of <slug>, with no line break.
+closed_line() { printf "$CLOSED_FMT" "$1" "$CREATED" "$CLOSED_ON"; }
 
 bold "1. skills/worklog/template.md"
 assert_eq "line 1 is the active status line with placeholders" \
@@ -225,7 +230,7 @@ bold "4. The valid forms of line 1"
 form_matches() { printf '%s\n' "$2" | grep -Eq -- "$1"; }
 if form_matches "$ACTIVE_RE" "$(printf "$ACTIVE_FMT" test-refactor "$CREATED")"; then
   ok "the active form accepts its example line"; else bad "the active form accepts its example line"; fi
-if form_matches "$CLOSED_RE" "$(printf "$CLOSED_FMT" test-refactor "$CREATED" "$CLOSED_ON")"; then
+if form_matches "$CLOSED_RE" "$(closed_line test-refactor)"; then
   ok "the closed form accepts its example line"; else bad "the closed form accepts its example line"; fi
 for line in '<!-- Work log: status=active slug=test-refactor -->' \
             "<!-- Work log: status=closed slug=test-refactor created=$CREATED -->" \
@@ -272,43 +277,57 @@ chmod 640 "$W/plain.md"
 MODE_BEFORE=$(ls -l "$W/plain.md" | cut -c1-10)
 for name in crlf bom plain; do
   REST_SUM=$(tail -n +2 "$W/$name.md" | cksum)
-  NEW_LINE=$(printf "$CLOSED_FMT" "$name" "$CREATED" "$CLOSED_ON")
-  run_line1 "$D" "$name" "$NEW_LINE"
+  run_line1 "$D" "$name" "$(closed_line "$name")"
   assert_eq "$name: the command exits quietly" "$OUT" ''
+  assert_eq "$name: the exit status is 0" "$CODE" '0'
   assert_eq "$name: lines 2 and later are unchanged" "$(tail -n +2 "$W/$name.md" | cksum)" "$REST_SUM"
   run_check "$D" "$name"
   assert_eq "$name: the check command then prints closed" "$OUT" 'closed'
 done
-assert_eq "crlf: line 1 is the new line" "$(head -n 1 "$W/crlf.md" | tr -d '\r')" "$(printf "$CLOSED_FMT" crlf "$CREATED" "$CLOSED_ON")"
+assert_eq "crlf: line 1 is the new line" "$(head -n 1 "$W/crlf.md" | tr -d '\r')" "$(closed_line crlf)"
 assert_eq "crlf: line 1 still ends with a carriage return" "$(head -n 1 "$W/crlf.md" | tail -c 2 | od -An -tx1 | tr -d ' \n')" '0d0a'
 assert_eq "bom: the byte order mark is kept" "$(head -c 3 "$W/bom.md" | od -An -tx1 | tr -d ' \n')" 'efbbbf'
-assert_eq "plain: line 1 is the new line, with no carriage return" "$(head -n 1 "$W/plain.md")" "$(printf "$CLOSED_FMT" plain "$CREATED" "$CLOSED_ON")"
+assert_eq "plain: line 1 is the new line, with no carriage return" "$(head -n 1 "$W/plain.md")" "$(closed_line plain)"
 assert_eq "plain: the file keeps its permissions" "$(ls -l "$W/plain.md" | cut -c1-10)" "$MODE_BEFORE"
 
+# The shell option noclobber (bash "set -o noclobber", zsh "setopt
+# noclobber") refuses a ">" redirection to a file that exists. mktemp creates
+# the temporary file before the command writes to it, and the work log
+# exists, so the command must still rewrite line 1 with this option set.
+active_log "$W/noclobber.md" noclobber
+run_line1 "$D" noclobber "$(closed_line noclobber)" 'set -o noclobber'
+assert_eq "noclobber: the command exits quietly" "$OUT" ''
+assert_eq "noclobber: the exit status is 0" "$CODE" '0'
+run_check "$D" noclobber
+assert_eq "noclobber: the check command then prints closed" "$OUT" 'closed'
+
+# line1_through_link <link> <slug> <label>: makes <link> in $W a symbolic
+# link to a new file outside the docs/worklogs folder, runs the line-1
+# command to close <slug> (OUT and CODE keep its result), and checks that
+# the outside file stays byte-identical.
+line1_through_link() {
+  local outside="$TMP/outside-$2.md" sum
+  printf 'outside file of %s, untouched\n' "$2" > "$outside"
+  sum=$(cksum < "$outside")
+  ln -s "$outside" "$W/$1"
+  run_line1 "$D" "$2" "$(closed_line "$2")"
+  assert_eq "$3: the outside file stays byte-identical" "$(cksum < "$outside")" "$sum"
+}
 if [ "$HAVE_LINKS" = 1 ]; then
   # (a) a symbolic link planted at the predictable temp path <slug>.md.tmp
   # must not be written through: the command's temporary file must never
   # live at that name.
-  OUTSIDE_A="$TMP/outside-a.md"
-  printf 'outside file A, untouched\n' > "$OUTSIDE_A"
-  OUTSIDE_A_SUM=$(cksum < "$OUTSIDE_A")
   active_log "$W/attack-tmp.md" attack-tmp
-  ln -s "$OUTSIDE_A" "$W/attack-tmp.md.tmp"
-  run_line1 "$D" attack-tmp "$(printf "$CLOSED_FMT" attack-tmp "$CREATED" "$CLOSED_ON")"
-  assert_eq "a symbolic link at <slug>.md.tmp: the outside file stays byte-identical" "$(cksum < "$OUTSIDE_A")" "$OUTSIDE_A_SUM"
+  line1_through_link attack-tmp.md.tmp attack-tmp "a symbolic link at <slug>.md.tmp"
   run_check "$D" attack-tmp
   assert_eq "a symbolic link at <slug>.md.tmp: the work log still closes" "$OUT" 'closed'
   rm -f "$W/attack-tmp.md.tmp"
 
   # (b) a work log that is itself a symbolic link to a file outside the
   # folder: the command refuses it and leaves the link target unchanged.
-  OUTSIDE_B="$TMP/outside-b.md"
-  printf 'outside file B, untouched\n' > "$OUTSIDE_B"
-  OUTSIDE_B_SUM=$(cksum < "$OUTSIDE_B")
-  ln -s "$OUTSIDE_B" "$W/linked-log.md"
-  run_line1 "$D" linked-log "$(printf "$CLOSED_FMT" linked-log "$CREATED" "$CLOSED_ON")"
+  line1_through_link linked-log.md linked-log "a work log that is a symbolic link"
   assert_eq "a work log that is a symbolic link: the command prints symlink" "$OUT" 'symlink'
-  assert_eq "a work log that is a symbolic link: the link target stays byte-identical" "$(cksum < "$OUTSIDE_B")" "$OUTSIDE_B_SUM"
+  assert_eq "a work log that is a symbolic link: the exit status is 1" "$CODE" '1'
   rm -f "$W/linked-log.md"
 else
   note "this file system made no symbolic link in section 3; the line-1 symbolic-link checks are skipped"
@@ -342,15 +361,60 @@ mkdir -p "$MKBIN" "$MKFILES"
   printf 'printf "%%s\\n" "$p"\n'
 } > "$MKBIN/mktemp"
 chmod +x "$MKBIN/mktemp"
-active_log "$W/tmp-cleanup.md" tmp-cleanup
 OLD_PATH="$PATH"
-PATH="$MKBIN:$PATH"
-run_line1 "$D" tmp-cleanup "$(printf "$CLOSED_FMT" tmp-cleanup "$CREATED" "$CLOSED_ON")"
-PATH="$OLD_PATH"
-assert_eq "the line-1 command calls mktemp exactly once" "$(wc -l < "$MKLOG" | tr -d ' ')" '1'
-assert_eq "no temporary file lingers in the private mktemp folder after a successful run" "$(find "$MKFILES" -maxdepth 1 -type f | wc -l | tr -d ' ')" '0'
+# run_line1_private <slug>: runs the line-1 command to close <slug>, with the
+# stand-in mktemp first on PATH; $MKLOG then names only the files of this run.
+run_line1_private() {
+  : > "$MKLOG"
+  PATH="$MKBIN:$OLD_PATH"
+  run_line1 "$D" "$1" "$(closed_line "$1")"
+  PATH="$OLD_PATH"
+}
+# mktemp_calls: the number of files that the stand-in mktemp created in the
+# last run. private_tmp_left: the number of files left in $MKFILES.
+mktemp_calls() { wc -l < "$MKLOG" | tr -d ' '; }
+private_tmp_left() { find "$MKFILES" -maxdepth 1 -type f | wc -l | tr -d ' '; }
+active_log "$W/tmp-cleanup.md" tmp-cleanup
+run_line1_private tmp-cleanup
+assert_eq "the line-1 command calls mktemp exactly once" "$(mktemp_calls)" '1'
+assert_eq "no temporary file lingers in the private mktemp folder after a successful run" "$(private_tmp_left)" '0'
 run_check "$D" tmp-cleanup
 assert_eq "tmp-cleanup: the check command then prints closed" "$OUT" 'closed'
+
+# (d) the rewrite fails: the work log is read-only, so writing it back is
+# refused. The command keeps its temporary copy, prints the copy's path on
+# its last line, and exits with status 1; the work log is unchanged.
+active_log "$W/read-only.md" read-only
+READ_ONLY_SUM=$(cksum < "$W/read-only.md")
+chmod 444 "$W/read-only.md"
+if [ -w "$W/read-only.md" ]; then
+  note "read-only.md stays writable (root user?); the kept-copy check is skipped"
+else
+  run_line1_private read-only
+  KEPT=$(cat "$MKLOG")
+  assert_eq "a failed rewrite: the exit status is 1" "$CODE" '1'
+  assert_eq "a failed rewrite: the last line printed is the path of the copy" "${OUT##*"$NL"}" "$KEPT"
+  assert_eq "a failed rewrite: the copy is kept, with the new line 1" "$(head -n 1 "$KEPT" 2>/dev/null)" "$(closed_line read-only)"
+  assert_eq "a failed rewrite: the work log is unchanged" "$(cksum < "$W/read-only.md")" "$READ_ONLY_SUM"
+  rm -f "$KEPT"
+fi
+chmod 644 "$W/read-only.md"
+
+# (e) awk fails: the work log cannot be read. The command removes its
+# temporary copy and exits with status 1; the work log is unchanged.
+active_log "$W/unreadable.md" unreadable
+UNREADABLE_SUM=$(cksum < "$W/unreadable.md")
+chmod 000 "$W/unreadable.md"
+if [ -r "$W/unreadable.md" ]; then
+  note "unreadable.md stays readable (root user?); the awk-failure check is skipped"
+else
+  run_line1_private unreadable
+  assert_eq "awk fails: the exit status is 1" "$CODE" '1'
+  assert_eq "awk fails: the command called mktemp once" "$(mktemp_calls)" '1'
+  assert_eq "awk fails: the temporary copy is removed" "$(private_tmp_left)" '0'
+fi
+chmod 644 "$W/unreadable.md"
+assert_eq "awk fails: the work log is unchanged" "$(cksum < "$W/unreadable.md")" "$UNREADABLE_SUM"
 
 bold "6b. The slug, check and line-1 commands under zsh"
 if command -v zsh >/dev/null 2>&1; then
@@ -362,7 +426,7 @@ if command -v zsh >/dev/null 2>&1; then
   run_check "$MD" bom; assert_eq "zsh: a line 1 with a byte order mark prints active" "$OUT" 'active'
   run_check "$MD" absent; assert_eq "zsh: a missing file prints missing and the folder it searched" "$OUT" "missing (searched $MW)"
   printf "$ACTIVE_FMT\r\n\r\n# Work log: fixture\r\n" zsh-crlf "$CREATED" > "$W/zsh-crlf.md"
-  run_line1 "$D" zsh-crlf "$(printf "$CLOSED_FMT" zsh-crlf "$CREATED" "$CLOSED_ON")"
+  run_line1 "$D" zsh-crlf "$(closed_line zsh-crlf)"
   run_check "$D" zsh-crlf; assert_eq "zsh: the line-1 command closes a work log with CRLF line ends" "$OUT" 'closed'
   RUN_SHELL=bash
 else
@@ -376,7 +440,7 @@ case "$FRONT" in *'argument-hint: "[new|update|close] [<slug>]"'*) ok "the front
 case "$FRONT" in *disable-model-invocation*) bad "the front matter carries disable-model-invocation" ;; *) ok "the front matter does not carry disable-model-invocation" ;; esac
 PHRASES=(
   'Argument given by the user (may be empty): $ARGUMENTS'
-  '/worklog [new|update|close] [<slug>]'
+  'Grammar: `/worklog [new|update|close] [<slug>]`'
   "The fallback to \`update\` applies only when the user's own message starts with the command"
   'stops with the usage text'
   'A closed work log is never written'

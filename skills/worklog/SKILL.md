@@ -159,22 +159,30 @@ case that this skill corrects. No line other than line 1 may start with
 Placeholders: `<slug>`, and `<line>`, the new line 1 in one of the two valid
 forms. It replaces line 1 only. It keeps a carriage return at the end of line
 1 and a byte order mark at its start, and every other line stays as it was.
-Change line 1 only with this command, then run the check command again. It
-refuses a work log that is a symbolic link: it prints `symlink` and changes
-nothing. It writes its temporary copy outside the `docs/worklogs` folder and
-removes that copy once the file is rewritten. If the rewrite itself fails, it
-keeps the temporary copy and prints one line, the copy's path, so the work
-log can be restored from it. It prints nothing on success.
+Change line 1 only with this command. It refuses a work log that is a
+symbolic link: it prints `symlink` and changes nothing. It writes its
+temporary copy outside the `docs/worklogs` folder and removes that copy once
+the file is rewritten. If the rewrite itself fails, it keeps the temporary
+copy and prints the copy's path on its last line, so the work log can be
+restored from it. It prints nothing on success. Its exit status is 0 on
+success and 1 on every failure. Its redirections are written `>|`, so they
+also write when the shell option `noclobber` is set (that option refuses a
+`>` redirection to a file that exists).
+
+When the command prints nothing, run the check command again. When the
+command prints anything, stop: show its output to the user (a printed path is
+the kept copy of the work log, from which it can be restored) and write
+nothing more.
 
 ```bash
 ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
 F="$ROOT/docs/worklogs/<slug>.md"
-if [ -L "$F" ]; then echo symlink; else
+if [ -L "$F" ]; then echo symlink; false; else
   T="$(mktemp)"
-  if LC_ALL=C awk -v new='<line>' 'NR == 1 { cr = /\r$/; bom = /^\357\273\277/; l = (bom ? "\357\273\277" : "") new (cr ? "\r" : ""); print l; next } { print }' "$F" > "$T"; then
-    if cat "$T" > "$F"; then rm -f "$T"; else echo "$T"; fi
+  if LC_ALL=C awk -v new='<line>' 'NR == 1 { cr = /\r$/; bom = /^\357\273\277/; l = (bom ? "\357\273\277" : "") new (cr ? "\r" : ""); print l; next } { print }' "$F" >| "$T"; then
+    if cat "$T" >| "$F"; then rm -f "$T"; else echo "$T"; false; fi
   else
-    rm -f "$T"
+    rm -f "$T"; false
   fi
 fi
 ```
@@ -195,12 +203,14 @@ order. Each stop writes nothing.
 1. `symlink`: stop; say that a work log must be a regular file.
 2. `missing`: stop; show the listing.
 3. `malformed`: stop; show the two valid forms of line 1. When the command
-   printed a status line with a line number other than 1, say that its
-   position is wrong and that it belongs on line 1.
+   printed a line, other than line 1, whose text after the line number and
+   its colon starts with `<!-- Work log: status=`, say that its position is
+   wrong and that it belongs on line 1.
 4. `closed`: stop; say that the work log is closed. A closed work log is never written: a `slug=` mismatch in it is reported only.
 5. `active`: when the `slug=` field differs from the file name, report the
-   mismatch and correct the field with the line-1 command. Then the command
-   continues.
+   mismatch and correct the field with the line-1 command. When the line-1
+   command prints anything, stop, as "The line-1 command" says. Otherwise
+   the command continues.
 
 **The listing** has one line per regular `*.md` file directly under
 `docs/worklogs/`. Find the files with
@@ -249,8 +259,9 @@ slug and use its word as the label, with `malformed line 1` for `malformed`.
    `Commit` cell stays empty unless the user gave the commit of a `done` part.
    Create the folder `docs/worklogs/` under the root when it does not exist,
    and write the file.
-5. In a git repository, run `git check-ignore -q docs/worklogs/<slug>.md`
-   from the root. Exit 0 means that an ignore rule matches the path: tell the
+5. In a git repository, run
+   `git -C "$(git rev-parse --show-toplevel)" check-ignore -q docs/worklogs/<slug>.md`.
+   Exit 0 means that an ignore rule matches the path: tell the
    user that git ignores the file, so a normal `git add` does not add it. On
    any other exit, say nothing.
 6. Report the path. Say that the file is not committed, and that the
@@ -301,8 +312,10 @@ slug and use its word as the label, with `malformed line 1` for `malformed`.
    (the `git log` read of the full update, step 4), and report the cells that
    stay empty: after closing, `update` no longer writes this file.
 4. Run the line-1 command with line 1 in the closed form: `status=closed`
-   instead of `status=active`, and ` closed=<today>` before ` -->`. Then run
-   the check command; it must print `closed`.
+   instead of `status=active`, and ` closed=<today>` before ` -->`. When the
+   line-1 command prints anything, stop, as "The line-1 command" says.
+   Otherwise run the check command; it must print `closed`. Any other word
+   stops the command: show that word to the user.
 
 ## Updates outside the commands
 

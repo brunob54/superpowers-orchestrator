@@ -277,13 +277,20 @@ if [ -d "$ROOT/docs/worklogs" ]; then
       exit }' {} \; 2>/dev/null | LC_ALL=C sort || true)"
 fi
 worklog_notice=""
+# The notice names at most worklog_paths_max paths.
+worklog_paths_max=3
+# A root longer than worklog_root_max characters keeps only its last
+# worklog_root_max characters, so the notice stays small; the model then
+# cannot open the file from the notice alone.
+worklog_root_max=300
 if [ -n "$LIST" ]; then
-    # LIST is read by splitting on line breaks (IFS/set -f), not by copying the
-    # rest of the text on every pass: that would take time growing with the
-    # square of the path count (34 s measured for 2,000 active work logs in a
-    # UTF-8 locale). No here-string either: hooks/session-start:547-548 records
-    # a bash 5.3+ hang with heredoc expansion, and a here-string uses the same
-    # mechanism.
+    # LIST is read by splitting on line breaks (IFS, the internal field
+    # separator of the shell, with set -f), not by copying the rest of the
+    # text on every pass: that would take time growing with the square of the
+    # path count (34 s measured for 2,000 active work logs in a UTF-8
+    # locale). No here-string either: the printf note of the Output section
+    # records a bash 5.3+ hang with heredoc expansion, and a here-string uses
+    # the same mechanism.
     worklog_count=0
     worklog_paths=""
     worklog_ifs="$IFS"
@@ -291,21 +298,19 @@ if [ -n "$LIST" ]; then
     set -f
     for worklog_path in $LIST; do
         worklog_count=$(( worklog_count + 1 ))
-        if [ "$worklog_count" -le 3 ]; then
+        if [ "$worklog_count" -le "$worklog_paths_max" ]; then
             worklog_paths="${worklog_paths:+${worklog_paths}, }${worklog_path#"$ROOT"/}"
         fi
     done
     set +f
     IFS="$worklog_ifs"
     worklog_more=""
-    if [ "$worklog_count" -gt 3 ]; then
-        worklog_more=" and $(( worklog_count - 3 )) more under docs/worklogs/"
+    if [ "$worklog_count" -gt "$worklog_paths_max" ]; then
+        worklog_more=" and $(( worklog_count - worklog_paths_max )) more under docs/worklogs/"
     fi
-    # A root longer than 300 characters keeps its last 300, so the notice
-    # stays small; the model then cannot open the file from the notice alone.
     worklog_root="$ROOT"
-    if [ "${#worklog_root}" -gt 300 ]; then
-        worklog_root="…${worklog_root: -300}"
+    if [ "${#worklog_root}" -gt "$worklog_root_max" ]; then
+        worklog_root="…${worklog_root: -$worklog_root_max}"
     fi
     worklog_notice="${nl}${nl}<active-work-logs>Active work logs under ${worklog_root}: ${worklog_paths}${worklog_more}. Before you work on one of them, read it with the Read tool and follow its section \"How to maintain this document\". During an orchestrated run or a whole-branch review, do not write it.</active-work-logs>"
 fi
