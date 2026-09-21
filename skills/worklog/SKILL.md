@@ -232,9 +232,12 @@ order. Each stop writes nothing.
    wrong and that it belongs on line 1.
 4. `closed`: stop; say that the work log is closed. A closed work log is never written: a `slug=` mismatch in it is reported only.
 5. `active`: when the `slug=` field differs from the file name, report the
-   mismatch and correct the field with the line-1 command. When the line-1
-   command prints anything, stop, as "The line-1 command" says. Otherwise
-   the command continues.
+   mismatch and correct the field with the line-1 command. Read line 1 (for
+   example with `head -n 1` on the file, or with the Read tool) only to take
+   its `slug=` and `created=` values, and build `<line>` from those values
+   and the file-name slug; the check command's word stays the only judge of
+   validity. When the line-1 command prints anything, stop, as "The line-1
+   command" says. Otherwise the command continues.
 
 **The listing** has one line per regular `*.md` file directly under
 `docs/worklogs/`.

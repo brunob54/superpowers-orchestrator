@@ -18,8 +18,9 @@ for its progress. `state.md` is a snapshot that every save rewrites,
 **Change.** A new skill, `worklog`, creates, fully updates and closes
 `docs/worklogs/<slug>.md`, a document that carries its own update rules. The
 session-start hook names the active work logs in one notice of at most 457
-characters plus the length of the root path, and `/pickup` no longer counts
-an uncommitted work log as unfinished work.
+characters plus the length of the printed root, with fewer than 1,000
+further work logs, and `/pickup` no longer counts an uncommitted work log as
+unfinished work.
 
 **Effect.** Type `/worklog new` to start a work log. Reinstall the plugin.
 Nothing to migrate.
@@ -90,7 +91,8 @@ slug plus `.md` (a file name is text that anyone who can add a file
 controls), and is safe under the hook's `set -euo pipefail`. The fixed text
 of the notice has 248 characters; with three 40-character slugs and the text
 for further work logs, the notice has at most 457 characters plus the length
-of the root. A root longer than 300 characters is cut to its last 300.
+of the printed root, with fewer than 1,000 further work logs. A root longer
+than 300 characters is cut to its last 300.
 
 ### `/pickup`
 

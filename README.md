@@ -102,7 +102,7 @@ flowchart TD
     subgraph SA["UserPromptSubmit — skill-activator.js"]
         Q1{"Micro task?"} -->|yes| Z1["no routing — zero overhead<br/>(e.g. fix typo on line 42)"]
         Q1 -->|no| PG["context-pressure gate: plan-execution starts<br/>blocked at ≥60% of the real model window<br/>(statusline bridge cache when installed)"]
-        PG --> SCORE["score against 27 skill rules →<br/>inject skill suggestions + matching<br/>session-log / known-issues memory"]
+        PG --> SCORE["score against 28 skill rules →<br/>inject skill suggestions + matching<br/>session-log / known-issues memory"]
     end
 
     SA --> RT
