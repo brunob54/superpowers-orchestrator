@@ -77,8 +77,11 @@ fails, the model loaded this skill by itself:
 - If the user asked for no command, run no command and no full update, and say
   so in one line. Read the named work log with the Read tool and follow its
   section `How to maintain this document`.
-- If the user asked for a command in plain words ("close the work log"), run
-  that command.
+- If the user asked for a command in plain words ("close the work log") about
+  this plugin's work log (a document under `docs/worklogs/`), run that
+  command. A plain-words request about another product's worklog (for
+  example a Jira or Tempo time entry) is not this skill's command: say in one
+  line that this skill does not apply, and continue with the user's request.
 
 ## Shell commands
 
@@ -233,7 +236,7 @@ order. Each stop writes nothing.
 4. `closed`: stop; say that the work log is closed. A closed work log is never written: a `slug=` mismatch in it is reported only.
 5. `active`: when the `slug=` field differs from the file name, report the
    mismatch and correct the field with the line-1 command. Read line 1 (for
-   example with `head -n 1` on the file, or with the Read tool) only to take
+   example with the Read tool, limit 1) only to take
    its `slug=` and `created=` values, and build `<line>` from those values
    and the file-name slug; the check command's word stays the only judge of
    validity. When the line-1 command prints anything, stop, as "The line-1
