@@ -35,11 +35,15 @@ SHA_PLACEHOLDER='<sha>'
 SCRIPT_ANCHOR='pre-check script below'
 # The opening fence line of the script, with the indent of its list item.
 FENCE_OPEN='   ```bash'
-SCRIPT_LINE_COUNT=18
+SCRIPT_LINE_COUNT=21
 # The two lines that the script prints about a later commit (rows 79 and 80).
 # The path follows each text.
 GONE_AT_HEAD='in the fix commit, not at HEAD: '
 FOLDER_AT_HEAD='a folder at HEAD, not in the fix commit: '
+# The line that the script prints in a sparse checkout (row 87).
+SPARSE_LINE='a sparse checkout'
+# The shell option that ends a script at the first command that fails.
+ERREXIT_LINE='set -e'
 # The words of the skill that stand directly before the revert command, and
 # the end of that command.
 REVERT_ANCHOR='revert it without a commit of its own'
@@ -112,12 +116,14 @@ later() { add_all; }
 # dirty: change a file that the fix commit does not touch.
 dirty() { printf 'u\nunrelated user work\n' > user.txt; }
 
-# check_case <label> <expected> [<hash>] [<locale>] [<line>]: run the script in
-# the current folder with every shell, and compare the result with <expected>.
+# check_case <label> <expected> [<hash>] [<locale>] [<line>] [<first>]: run the
+# script in the current folder with every shell, and compare the result with
+# <expected>.
 # When <line> is given, the output must also hold <line> as a whole line.
+# When <first> is given, it stands as one more line in front of the script.
 check_case() {
-  local label="$1" expected="$2" hash="${3:-$SHA}" locale="${4:-}" line="${5:-}" shell out got
-  printf '%s\n' "${SCRIPT_TEXT//$SHA_PLACEHOLDER/$hash}" > "$RUN_FILE"
+  local label="$1" expected="$2" hash="${3:-$SHA}" locale="${4:-}" line="${5:-}" first="${6:-}" shell out got
+  printf '%s\n' ${first:+"$first"} "${SCRIPT_TEXT//$SHA_PLACEHOLDER/$hash}" > "$RUN_FILE"
   for shell in "${SHELLS[@]}"; do
     # $shell is not quoted: `zsh -f` must become two words.
     out="$(env ${locale:+LC_ALL=$locale} $shell "$RUN_FILE" 2>&1)"
@@ -275,6 +281,70 @@ newrepo dirback; mkdir d; printf 'x\n' > d/x.txt; add_all; git rm -q d/x.txt; fi
 check_case "the fix deleted the last file of d/, a later commit made d/ again" "$QUIET"
 newrepo rootfix; git checkout -q --orphan alone; fix
 check_case "the fix commit is a root commit" "$QUIET"
+
+bold "Index bits, a sparse checkout, a deleted nested folder (rows 81, 86, 87)"
+
+# Rows 81, 86 and 87. Measured on git 2.50.1 with bash 3.2 and zsh 5.9.
+# Row 81: git does not compare a file that carries the assume-unchanged bit or
+# the skip-worktree bit with the disk, so `git status` hides a local change
+# there. With the assume-unchanged bit the resume commit committed the hidden
+# change of the user, and the undo lost it. With the skip-worktree bit the
+# resume commit ended with exit code 0 and left the path out.
+# `git ls-files -v` prints the letter h or S for such a path, and H for an
+# ordinary path.
+# twofiles <name>: the fix commit changes a.txt and then conf.txt.
+twofiles() {
+  newrepo "$1"; printf '1\n' > a.txt; printf 'v1\n' > conf.txt; add_all
+  printf '2\n' > a.txt; printf 'v2\n' > conf.txt; fix
+}
+twofiles bitassume; git update-index --assume-unchanged conf.txt; printf 'EDIT\n' > conf.txt
+check_alarm_line "assume-unchanged bit and a hidden change on a listed path" "h conf.txt"
+twofiles bitskip; git update-index --skip-worktree conf.txt
+check_alarm_line "skip-worktree bit on a listed path, no change" "S conf.txt"
+# Measured: with `grep -v` in place of `sed`, and with `set -e` in front, the
+# script ends at the first ordinary path and prints nothing. No output means
+# "start the revert", so that form is unsafe. The bit stands on the second path.
+twofiles biterrexit; git update-index --assume-unchanged conf.txt; printf 'EDIT\n' > conf.txt
+check_case "assume-unchanged bit on the second listed path, '$ERREXIT_LINE' in front of the script" "$ALARM" "" "" "h conf.txt" "$ERREXIT_LINE"
+
+# Row 87: a sparse checkout keeps only a part of the tree on disk. The resume
+# commit left a reverted path outside that part out and still ended with exit
+# code 0. When the fix deleted an outside path, `git ls-files -v` prints nothing
+# for it before the revert, so only the configuration value shows the state.
+# sparsebase <name>: two folders, src/ and cfg/, in one base commit.
+sparsebase() {
+  newrepo "$1"; mkdir src cfg; printf '1\n' > src/a.txt; printf '1\n' > cfg/c.txt; printf 'k\n' > cfg/k.txt; add_all
+}
+sparsebase sparsemod; printf '2\n' > src/a.txt; printf '2\n' > cfg/c.txt; fix; git sparse-checkout set src
+check_alarm_line "sparse checkout in cone mode, the fix changed an outside path" "$SPARSE_LINE"
+sparsebase sparsedel; printf '2\n' > src/a.txt; git rm -q cfg/c.txt; fix; git sparse-checkout set --no-cone '/src/'
+check_alarm_line "sparse checkout without cone mode, the fix deleted an outside path" "$SPARSE_LINE"
+# The accepted cost (the user's decision of 2026-09-21): this revert would be
+# complete, and the script still stops it. No fix commit is reverted in a
+# sparse checkout.
+sparsebase sparsein; printf '2\n' > src/a.txt; fix; git sparse-checkout set src
+check_alarm_line "sparse checkout in cone mode, every listed path inside (the accepted cost)" "$SPARSE_LINE"
+# Mutation testing, 2026-09-21: git accepts `yes`, `on` and `1` as true, and
+# `--bool` makes git print `true` for each of them. Without `--bool` the script
+# would be quiet in a repository whose configuration holds such a value. The
+# value is written by hand here: no `git sparse-checkout` command runs.
+newrepo sparseyes; printf 'a\n' > f.txt; add_all; printf 'b\n' > f.txt; fix; git config core.sparseCheckout yes
+check_alarm_line "core.sparseCheckout holds the value yes, written by hand" "$SPARSE_LINE"
+
+# Row 86: the fix deleted the last file of a nested folder, so the folder is
+# gone from disk. For a missing folder below an existing one, the search for
+# untracked files printed a warning on standard error, and the script read
+# that warning as an alarm. The script now runs that search only when the
+# folder of the path stands on disk.
+newrepo nested; mkdir -p d/s; printf 'x\n' > d/s/x.txt; printf 'k\n' > d/k.txt; add_all; git rm -q d/s/x.txt; fix
+check_case "the fix deleted d/s/x.txt, d/k.txt stays" "$QUIET"
+newrepo nested3; mkdir -p d/s/t; printf 'x\n' > d/s/t/x.txt; printf 'y\n' > d/s/t/y.txt; printf 'k\n' > d/k.txt; add_all; git rm -q d/s/t/x.txt d/s/t/y.txt; fix
+check_case "the fix deleted the two files of d/s/t/, d/k.txt stays" "$QUIET"
+# These two cases keep an alarm that the new folder test must not remove.
+filetofolder untrbelow; printf 'u\n' > d/u.txt
+check_alarm_line "the fix replaced the file d by d/x.txt, untracked user file d/u.txt" "?? d/u.txt"
+newrepo userdel; mkdir -p d/s; printf '1\n' > d/s/x.txt; printf 'k\n' > d/k.txt; add_all; printf '2\n' > d/s/x.txt; fix; rm -rf d/s
+check_alarm_line "the user deleted the folder d/s/ of a changed file" " D d/s/x.txt"
 
 bold "The revert command does not follow a folder rename (row 79)"
 

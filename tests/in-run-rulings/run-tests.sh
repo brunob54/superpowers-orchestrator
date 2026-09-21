@@ -2201,8 +2201,31 @@ R74_LIST_COMMAND="\`git show $R74_LIST_TAIL\`"
 # that file. F3: run from a sub-folder, the script reads each path from that
 # folder and is quiet, so its first line reports a wrong current folder. I1: a
 # line added inside the fence passed, so the two fence lines are pinned too.
-assert_in_range_folded_exact "rows 74 and 76 to 80: one list feeds every later rule, and the eight cases of the pre-check script are named" \
-  "$ORCH_SKILL" "Its third line lists the paths the fix commit touched ($R74_LIST_COMMAND lists those paths; \`--no-renames\` makes a renamed file appear under both its names, \`-z\` prints each name unquoted, and every later rule of this revert takes its paths from this one list: the cleanup, the undo before a stop, and the reverted paths that the resume commit names). The script prints a line in eight cases. The current folder is not the top folder of the repository: the script reads each path from the current folder. The name of a listed path holds a character outside letters, digits, \`.\`, \`_\`, \`/\`, \`@\`, \`+\`, \`=\`, \`,\` and \`-\`, or begins with \`-\` or \`=\`: git prints such a name quoted or reads it as a pattern, or the shell expands it, so the commands below, which take a typed name, would miss the file or reach other files. The path carries a local change. An ignored file stands on the path or, when the path is a folder on disk, under it: \`git status --porcelain\` does not list an ignored file, and the revert overwrites or deletes it with no warning. The path stands on disk and does not exist at HEAD: an untracked file, or the same name in another letter case on a file system that ignores case. The path is a folder at HEAD and is not a folder in the fix commit: a later commit put a folder where the fix commit holds a file, or no entry. The path, or a parent folder of the path, exists in the fix commit and does not exist at HEAD: a later commit deleted or renamed it. When the path itself is gone, the revert would stop on a conflict, or change a file outside this list, or change nothing; in the last two cases the resume commit, which names the listed paths, would fail. When only a parent folder is gone, the revert would put the file back into a folder that the branch no longer holds, or, after a rename that changes only the letter case, under the other spelling of the folder name. A parent folder name of the path stands on disk and is not a real folder: the revert would replace that file with a folder and give no warning. Never type a path into the script and never change its letters list: a range such as \`A-Z\` lets an accented letter pass in some shells." \
+# Rows 81, 86 and 87. Measured on git 2.50.1, bash 3.2 and zsh 5.9. Row 81: git
+# does not compare a file that carries the assume-unchanged bit or the
+# skip-worktree bit of the index with the disk, so `git status --porcelain`
+# hides a local change there. With the assume-unchanged bit and a hidden
+# change, the script was quiet, the resume commit committed the user's change,
+# and the undo and the cleanup lost it. With the skip-worktree bit the resume
+# commit ended with exit code 0 and left the path out. `git ls-files -v` prints
+# the letter `H` for an ordinary path and another letter for a path with a bit,
+# so the script deletes the `H` lines with `sed` and prints the rest. The form
+# `grep -v` is unsafe: with `set -e` in front, the script ends at the first
+# ordinary path and prints nothing, and no output means "start the revert".
+# Row 87: in a sparse checkout (git keeps only a part of the tree on disk) the
+# resume commit left a reverted path outside that part out and still ended with
+# exit code 0. When the fix deleted an outside path, `git ls-files -v` prints
+# nothing for it, so script line 2 reads the configuration value instead, and
+# no fix commit is reverted in a sparse checkout. Row 86: the fix deleted the
+# last file of a nested folder; for a missing folder below an existing one, git
+# prints a warning on standard error, which the script read as an alarm. The
+# searches for untracked and ignored files now run only when the folder of the
+# path stands on disk. A first status line with `--untracked-files=no` runs
+# always, so a deleted tracked file still gives an alarm. No status line and no
+# `git ls-files` line sends standard error away: for a folder that git cannot
+# read, standard error is the only alarm.
+assert_in_range_folded_exact "rows 74, 76 to 81, 86 and 87: one list feeds every later rule, and the ten cases of the pre-check script are named" \
+  "$ORCH_SKILL" "Its fourth line lists the paths the fix commit touched ($R74_LIST_COMMAND lists those paths; \`--no-renames\` makes a renamed file appear under both its names, \`-z\` prints each name unquoted, and every later rule of this revert takes its paths from this one list: the cleanup, the undo before a stop, and the reverted paths that the resume commit names). The script prints a line in ten cases. The current folder is not the top folder of the repository: the script reads each path from the current folder. The repository is a sparse checkout (\`core.sparseCheckout\` is true, so git keeps only a part of the tree on disk): the resume commit, which names the listed paths, can leave a reverted path outside that part out, and the commit still ends with exit code 0, so no fix commit is reverted in a sparse checkout. The name of a listed path holds a character outside letters, digits, \`.\`, \`_\`, \`/\`, \`@\`, \`+\`, \`=\`, \`,\` and \`-\`, or begins with \`-\` or \`=\`: git prints such a name quoted or reads it as a pattern, or the shell expands it, so the commands below, which take a typed name, would miss the file or reach other files. The path carries a local change. An ignored file stands on the path or, when the path is a folder on disk, under it: \`git status --porcelain\` does not list an ignored file, and the revert overwrites or deletes it with no warning. The script reads untracked and ignored files only when the folder of the path stands on disk: for a missing folder below an existing one git prints a warning on standard error, which would be a false alarm. The path carries the \`assume-unchanged\` or the \`skip-worktree\` bit of the index (\`git ls-files -v\` prints a letter other than \`H\`): git does not compare such a file with the disk, so \`git status --porcelain\` hides a local change there. On a path that carries only the \`assume-unchanged\` bit the resume commit would commit that change, and the cleanup and the undo would delete it. On a path that carries the \`skip-worktree\` bit the resume commit leaves the path out and still ends with exit code 0, and the \`git checkout\` of the cleanup and of the undo fails with exit code 1 while the path still carries the bit. The path stands on disk and does not exist at HEAD: an untracked file, or the same name in another letter case on a file system that ignores case. The path is a folder at HEAD and is not a folder in the fix commit: a later commit put a folder where the fix commit holds a file, or no entry. The path, or a parent folder of the path, exists in the fix commit and does not exist at HEAD: a later commit deleted or renamed it. When the path itself is gone, the revert would stop on a conflict, or change a file outside this list, or change nothing; in the last two cases the resume commit, which names the listed paths, would fail. When only a parent folder is gone, the revert would put the file back into a folder that the branch no longer holds, or, after a rename that changes only the letter case, under the other spelling of the folder name. A parent folder name of the path stands on disk and is not a real folder: the revert would replace that file with a folder and give no warning. Never type a path into the script and never change its letters list: a range such as \`A-Z\` lets an accented letter pass in some shells." \
   "$RESUME_LINE" "$RULINGS_LINE"
 # Print the number of the first line of file $1, from line $3 up to and not
 # including line $4, that is equal to $2 as a whole line.
@@ -2231,15 +2254,18 @@ assert_consecutive_whole_lines() { # desc file start end line...
     fi
   done
 }
-assert_consecutive_whole_lines "rows 76 to 80: the pre-check script and its fence" "$ORCH_SKILL" "${PRECHECK_ANCHOR_LINE:-$RULINGS_LINE}" "$RULINGS_LINE" \
+assert_consecutive_whole_lines "rows 76 to 81, 86 and 87: the pre-check script and its fence" "$ORCH_SKILL" "${PRECHECK_ANCHOR_LINE:-$RULINGS_LINE}" "$RULINGS_LINE" \
   '   ```bash' \
   '   [ -z "$(git rev-parse --show-prefix)" ] || echo "not the top folder"' \
+  '   [ "$(git config --bool core.sparseCheckout)" != true ] || echo "a sparse checkout"' \
   '   c=<sha>' \
   "   git show -z $R74_SCRIPT_TAIL |" \
   '   while IFS= read -r -d '"''"' p; do' \
   '     case "$p" in -*|[=]*|*[!abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789._/@+=,-]*) echo "special name: $p";; esac' \
-  '     git --literal-pathspecs status --porcelain -- "$p"' \
-  '     git --literal-pathspecs ls-files --others --ignored --exclude-standard -- "$p"' \
+  '     git --literal-pathspecs status --porcelain --untracked-files=no -- "$p"' \
+  '     [ -d "$(dirname -- "$p")" ] && git --literal-pathspecs status --porcelain -- "$p"' \
+  '     [ -d "$(dirname -- "$p")" ] && git --literal-pathspecs ls-files --others --ignored --exclude-standard -- "$p"' \
+  '     git --literal-pathspecs ls-files -v -- "$p" | sed "/^H /d"' \
   '     if [ -e "$p" ] || [ -L "$p" ]; then' \
   '       git rev-parse -q --verify "HEAD:$p" >/dev/null || echo "on disk, not at HEAD: $p"' \
   '     fi' \
@@ -2252,6 +2278,8 @@ assert_consecutive_whole_lines "rows 76 to 80: the pre-check script and its fenc
   '     done' \
   '   done' \
   '   ```'
+assert_absent_in_range_folded "row 81: no line of the Resume range removes lines with 'grep -v'" "$ORCH_SKILL" \
+  'grep -v' "$RESUME_LINE" "$RULINGS_LINE" fragment
 for range in "$RESUME_LINE $RULINGS_LINE" "$READ_EXCEPTION_LINE $READ_EXCEPTION_END"; do
   assert_absent_in_range_folded "row 74: no path list is taken without --no-renames (lines ${range% *} to ${range#* })" "$ORCH_SKILL" \
     '--name-only --format=' ${range% *} ${range#* } fragment
@@ -2261,22 +2289,22 @@ for range in "$RESUME_LINE $RULINGS_LINE" "$READ_EXCEPTION_LINE $READ_EXCEPTION_
     '<those paths>' ${range% *} ${range#* } fragment
 done
 # Rows 76 to 78 replaced `git cat-file -e`, a test that an object exists: it
-# fails on a sub-module path. Rows 79 and 80 (measured): line 11 of the
+# fails on a sub-module path. Rows 79 and 80 (measured): line 14 of the
 # pre-check script reads the TYPE of an object with `git cat-file -t` and
 # sends standard error away; on a sub-module path it prints nothing, which is
 # never `tree`. So the Resume range holds `cat-file` on exactly one line, the
-# pinned line 11 of the script, and never the form `cat-file -e`. The
+# pinned line 14 of the script, and never the form `cat-file -e`. The
 # read-exception range holds no `cat-file` at all.
 R80_TYPE_READ='cat-file'
 assert_absent_in_range_folded "rows 76 to 78: the read-exception range names no '$R80_TYPE_READ' (lines $READ_EXCEPTION_LINE to $READ_EXCEPTION_END)" "$ORCH_SKILL" \
   "$R80_TYPE_READ" "$READ_EXCEPTION_LINE" "$READ_EXCEPTION_END" fragment
 assert_absent_in_range_folded "rows 76 to 80: no existence test '$R80_TYPE_READ -e' stands in the Resume range" "$ORCH_SKILL" \
   "$R80_TYPE_READ -e" "$RESUME_LINE" "$RULINGS_LINE" fragment
-# The count is a count of lines: line 11 holds the text two times.
+# The count is a count of lines: line 14 holds the text two times.
 R80_TYPE_READ_LINES="$(text="$R80_TYPE_READ" awk -v a="$RESUME_LINE" -v b="$RULINGS_LINE" \
   'NR >= a && NR < b && index($0, ENVIRON["text"]) > 0 { n++ } END { print n + 0 }' "$ORCH_SKILL")"
 if [ "$R80_TYPE_READ_LINES" = "1" ]; then
-  ok "rows 79 and 80: one line of the Resume range holds '$R80_TYPE_READ', the pinned line 11 of the script"
+  ok "rows 79 and 80: one line of the Resume range holds '$R80_TYPE_READ', the pinned line 14 of the script"
 else
   bad "rows 79 and 80: one line of the Resume range holds '$R80_TYPE_READ' (found $R80_TYPE_READ_LINES lines)"
 fi
@@ -4226,7 +4254,7 @@ assert_in_range_folded "row 45: the reason a revert is written before this resum
   "$ORCH_SKILL" 'an amendment written first would make that check stop the resume' \
   "$RESUME_LINE" "$RULINGS_LINE"
 assert_in_range_folded "row 59: the reason a retry can succeed, and the causes that stay" \
-  "$ORCH_SKILL" 'What stopped the earlier attempt may have been a local change or a local file in the working tree (a changed, untracked or ignored file, a file that stands where a folder is needed, or a run of the script from a folder that is not the top folder), which can be gone now. It may also have been a property of the fix commit that the pre-check script reports (a special name, a rename that changes only the letter case, a folder that the fix commit replaced by a file or by a symbolic link), which stays. Or it was a later commit of the branch that deleted or renamed a listed path or one of its parent folders, or put a folder on a listed path; that normally stays too, until a still later commit puts the path back. When the cause still stands, the other half'"'"'s own rule takes the `— fix <sha> not reverted` branch again.' \
+  "$ORCH_SKILL" 'What stopped the earlier attempt may have been a local change or a local file in the working tree (a changed, untracked or ignored file, a file that stands where a folder is needed, an index bit on a listed path, a sparse checkout, or a run of the script from a folder that is not the top folder), which can be gone now. It may also have been a property of the fix commit that the pre-check script reports (a special name, a rename that changes only the letter case, a folder that the fix commit replaced by a file or by a symbolic link), which stays. Or it was a later commit of the branch that deleted or renamed a listed path or one of its parent folders, or put a folder on a listed path; that normally stays too, until a still later commit puts the path back. When the cause still stands, the other half'"'"'s own rule takes the `— fix <sha> not reverted` branch again.' \
   "$RESUME_LINE" "$RULINGS_LINE"
 assert_absent_in_range_folded "rows 76 to 78: no sentence says that the cause of a failed revert is never a property of the fix commit" "$ORCH_SKILL" \
   'never a property of the fix commit' "$RESUME_LINE" "$RULINGS_LINE" fragment

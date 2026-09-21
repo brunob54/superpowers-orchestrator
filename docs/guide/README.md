@@ -1040,6 +1040,25 @@ records `fix <sha> not reverted` as before. The run also stops git from
 moving a reverted file into a renamed folder: there the file could
 overwrite an ignored file of yours with no warning.
 
+Since v7.49.0 the script also reads two marks that git keeps for a file in
+its index (the list of files that git tracks) and the sparse-checkout
+setting, and the run does not revert a fix automatically in ten cases. The
+two new cases are these. A path of the fix carries one of the two marks: the
+first is the `assume-unchanged` bit, the second is the `skip-worktree` bit,
+and each tells git not to compare the file with the disk. Git then hides a
+local change of yours on that path. With the first mark the commit that
+resume makes would commit that change, or an undo would delete it; with the
+second mark that commit leaves the path out and git still reports success.
+The repository is a sparse checkout (git keeps only a part of
+the project's files on disk). There the commit that resume makes can leave out
+a reverted path that is not on disk, and git still reports success. So in a
+sparse checkout the run reverts no fix automatically, also when every path
+of the fix is on disk. In both cases the record reads
+`fix <sha> not reverted` as before. One false alarm is gone: when a fix
+deleted the last file of a nested folder such as `d/s/`, and the folder
+above it still holds other files, the script now stays quiet and the run
+reverts the fix.
+
 **Interrupted during plan writing or a review round?** Resume re-enters any
 phase whose completion entry never made it into the orchestration log, but
 how much is redone differs:
