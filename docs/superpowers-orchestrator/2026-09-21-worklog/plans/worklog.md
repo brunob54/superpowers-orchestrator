@@ -92,7 +92,7 @@ Repository premises tested before writing this plan (2026-09-21, branch `feature
   - Verification: Step 2 shows exit 1 while the template is absent; Step 4 shows exit 0; `bash tests/suite-guard/run-tests.sh` passes.
   - Interface not externally pinned — the helper names are descriptive and may change in a fix.
 
-- [ ] **Step 1: Write the failing suite**
+- [x] **Step 1: Write the failing suite**
 
 Create `tests/worklog/run-tests.sh` with this content, then run `chmod +x tests/worklog/run-tests.sh`:
 
@@ -158,12 +158,12 @@ if [ "$FAIL" -gt 0 ]; then
 fi
 ```
 
-- [ ] **Step 2: Run the suite to verify it fails**
+- [x] **Step 2: Run the suite to verify it fails**
 
 Run: `bash tests/worklog/run-tests.sh`
 Expected: FAIL — exit 1, `Results: 1 passed, 11 failed`; "line 1 is the active status line with placeholders" and every other section 1 check fail, because `skills/worklog/template.md` does not exist. The one pass is "the word workstream is not used": `grep` exits 2 on the absent file, and `assert_file_lacks` counts that as absence.
 
-- [ ] **Step 3: Create the template from the spec**
+- [x] **Step 3: Create the template from the spec**
 
 The template is the fenced `markdown` block of the spec's section "Template", copied byte for byte. Create it with this command from the repository root:
 
@@ -173,7 +173,7 @@ awk '/^### Template$/ { t = 1 } t && /^````markdown$/ { c = 1; next } c && /^```
   docs/superpowers-orchestrator/2026-09-21-worklog/specs/worklog-design.md > skills/worklog/template.md
 ```
 
-- [ ] **Step 4: Run the checks to verify they pass**
+- [x] **Step 4: Run the checks to verify they pass**
 
 Run: `S=docs/superpowers-orchestrator/2026-09-21-worklog/specs/worklog-design.md; A=$(grep -n '^````markdown$' "$S" | cut -d: -f1); wc -l < skills/worklog/template.md | tr -d ' ' && diff <(sed -n "$((A + 1)),\$p" "$S" | sed '/^````$/,$d') skills/worklog/template.md && echo TEMPLATE-SAME`
 Expected: `94`, then `TEMPLATE-SAME`. The `diff` compares against a second extraction built with `grep` and `sed`, not with the Step 3 `awk` program, so an error in that program shows here. The spec holds one `` ````markdown `` fence; a second one makes the arithmetic fail loudly.
@@ -184,7 +184,7 @@ Expected: PASS — `Results: 12 passed, 0 failed`, exit 0.
 Run: `bash tests/suite-guard/run-tests.sh`
 Expected: PASS — the new suite loads the guard.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add skills/worklog/template.md tests/worklog/run-tests.sh
