@@ -27,10 +27,13 @@ bounded to the list stated there — nothing else.
 
 Announce: `I'm using orchestrating-development to run this pipeline.`
 
-**Platform check:** this skill requires the Agent tool (with nested
-dispatch). On platforms without it, refuse with one line —
-`orchestrating-development requires subagent dispatch (Agent tool), which
-this platform lacks` — and stop.
+**Platform check:** this skill runs on Claude Code only: it needs the
+Agent tool with nested dispatch, and it has never run on another platform
+(Copilot CLI included). On any other platform, refuse with one line —
+`orchestrating-development runs on Claude Code only` — and stop. On Claude
+Code without the Agent tool, refuse with one line —
+`orchestrating-development needs the Agent tool, which this session lacks` —
+and stop.
 
 **After a compaction summary.** A compaction summary is the text Claude Code
 writes in place of the earlier conversation when the context window fills.
@@ -72,12 +75,8 @@ can land between a ruling's write and its commit.
   notice is delivered to the
   main session, not to the controller — which then ends its turn
   "waiting" and stalls the run (claude-code #75043; measured 2026-08-30).
-  The property is what matters, not the parameter: on a platform whose
-  dispatch tool has no `name` (Copilot CLI: `task`/`agent`), the
-  controller obtains it from the "Waiting on a subagent" rule in its
-  prompt — foreground dispatch, never a background mode. Controllers
-  cannot name their own children (the roster is flat); nested workers
-  stay unnamed.
+  Controllers cannot name their own children (the roster is flat); nested
+  workers stay unnamed.
 - **Prompt files and the pointer.** A controller's instructions are a
   file, not the `prompt` field. Once per session, read as once per
   orchestration invocation — a fresh run, or a Resume, including a

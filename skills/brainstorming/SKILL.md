@@ -472,7 +472,7 @@ After the multi-doc-review loop completes (or is skipped), present this message 
 > Spec written and saved to `<path>`. The review rounds are complete. Choose how to continue:
 >
 > 1. **Review it here** — request changes, or approve to continue to `writing-plans` in this session.
-> 2. **Autonomous pipeline** — run `/clear` (the spec and its review log stay on disk), then paste:
+> 2. **Autonomous pipeline** (Claude Code only) — run `/clear` (the spec and its review log stay on disk), then paste:
 >
 >        orchestrate the development of <path>
 >

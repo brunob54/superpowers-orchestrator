@@ -8,6 +8,94 @@
 > (`REPOZY/superpowers-optimized`) and are kept unchanged as history; any
 > testing they describe was not done here.
 
+## v7.51.0 — orchestration runs on Claude Code only; the usage-limit wait
+
+**Problem.** The orchestration skill's description said "Claude Code only",
+but its dispatch rules and the README gave Copilot CLI a route, and no run
+ever happened there. The guide did not say how to start a long run so that
+Claude Code waits out a usage limit.
+
+**Change.** The skill refuses every platform other than Claude Code, and a
+Claude Code session without the Agent tool; the README, the guide and the
+brainstorming gate say the same. The guide explains the usage-limit wait and
+the cases without it.
+
+**Effect.** Start long runs in a foreground interactive session, not
+`claude --bg` or `claude -p`. Reinstall the plugin. Nothing to migrate.
+
+### Platform: Claude Code only
+
+The description of `orchestrating-development` said "Requires the Agent tool
+with nested dispatch (Claude Code only)". Its Controller Dispatch Rules gave
+a route for Copilot CLI (`task`/`agent`), and the README said that Copilot CLI
+supports the multi-level subagents the orchestration skills need. The
+Copilot CLI documentation does describe nested subagents (default maximum
+depth 4) and task calls that block until they finish. But no orchestrated run
+has ever run on Copilot CLI, the plugin's hooks were never checked there, and
+it is not documented whether a permission prompt raised by a nested subagent
+reaches the user during an unattended run. The user decided on 2026-09-21
+that the skill runs on Claude Code only.
+
+- The platform check refuses every other platform with the line
+  `orchestrating-development runs on Claude Code only`, and a Claude Code
+  session without the Agent tool with the line
+  `orchestrating-development needs the Agent tool, which this session lacks`.
+- The Copilot CLI dispatch note is deleted.
+- Option 2 of the brainstorming spec gate reads "Autonomous pipeline (Claude
+  Code only)".
+- The README says that the skill refuses on Copilot CLI and on OpenCode; the
+  OpenCode depth advice now names only `multi-doc-review` and
+  `multi-code-review`. The guide names all four refused platforms.
+
+The other skills still run on Copilot CLI. Allowing it for orchestration would
+need a change to the skill and a first real run there.
+
+### The usage-limit wait
+
+Claude Code's setting `autoContinueAtUsageLimit` waits for a claude.ai usage
+limit to reset and then continues the session by itself. The Claude Code
+documentation now lists it: on by default in interactive sessions signed in
+with a claude.ai subscription, Claude Code 2.1.234 or later. The guide's
+"Starting a run" section has a new "Usage limits" paragraph:
+
+- Start a long run in an ordinary interactive session, in the foreground. A
+  background session (`claude --bg`, agent view), a `claude -p` run and a
+  reset more than 24 hours away get no automatic wait; the paragraph links
+  the documentation page for the full list.
+- Set the key to `true` in `~/.claude/settings.json` anyway: 18 limit stops
+  of orchestrated runs on Claude Code 2.1.245 to 2.1.258 did not continue by
+  themselves, and the cause is unknown.
+- The controller that the limit stopped gets the orchestrator's one retry.
+
+Measured on 2026-09-21: of the 23 usage-limit stops of the 12 orchestrated
+runs, the setting as documented covers 19; one ran in a background session
+with a weekly reset 35 hours away. One automatic continuation was observed,
+in an ordinary session on 2026-09-16, 1 minute 26 seconds after the reset. The
+probe checklist `tests/claude-code/usage-limit-restart-probe.md` records these
+facts and stays the acceptance check for the next orchestrated run that hits
+a usage limit.
+
+### README release list
+
+The v7.50.0 release commit changed the item "(v7.49.0)" of the README release
+list into "(v7.50.0)" and added no item for v7.50.0. The list now names both.
+
+### Review
+
+One round, two lenses (correctness and adversarial reading), 0 Critical.
+The adversarial lens measured that the first, name-only platform check let a
+Claude Code session without the Agent tool start the run (0 of 4 refused,
+headless); the separate refusal line fixes it. The correctness lens found that
+the brainstorming gate still offered the pipeline on every platform. Both
+lenses found that the first text named "four cases" without a wait, while the
+documentation lists more. All findings were applied. A sentence about Codex
+and OpenCode in the Phase 0 text is now unreachable; it stays, because
+`tests/review-gates` uses it as a range marker.
+
+`tests/orchestrating-development` has 229 checks (217 before); its new section
+12 pins the platform text of the skill, the brainstorming gate, the README and
+the guide, and 11 of its 12 checks failed before the change.
+
 ## v7.50.0 — the orchestrator no longer reverts a fix commit by itself
 
 **Problem.** When a user's answer overturned a ruling, resume reverted the fix
