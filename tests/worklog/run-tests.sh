@@ -314,19 +314,43 @@ else
   note "this file system made no symbolic link in section 3; the line-1 symbolic-link checks are skipped"
 fi
 
-# (c) the temporary file is removed after a successful run. Setting TMPDIR to
-# an empty folder does not pin mktemp's directory on every supported platform
-# (macOS's mktemp with no template prefers _CS_DARWIN_USER_TEMP_DIR over
-# TMPDIR, confirmed via its man page), so this finds mktemp's real directory
-# first (a throwaway file, immediately removed), snapshots the 'tmp.*' names
-# in it (mktemp's own default prefix), runs the real command, and asserts the
-# snapshot is unchanged.
-MKTMPPROBE="$(mktemp)"; MKTMPDIR="$(dirname "$MKTMPPROBE")"; rm -f "$MKTMPPROBE"
-BEFORE_MKTMP="$(find "$MKTMPDIR" -maxdepth 1 -name 'tmp.*' 2>/dev/null | LC_ALL=C sort)"
+# (c) the temporary file that mktemp creates is removed after a successful
+# run. The system's shared temporary folder (on macOS,
+# "/var/folders/.../T/") holds files from every process the user runs, not
+# only this test, so other work can add or remove a "tmp.*" entry there at
+# any moment. Watching that shared folder makes the test fail for a reason
+# outside the command under test. Instead, this builds a private stand-in
+# program named "mktemp": a small script placed in a folder of its own,
+# $MKBIN, that is put first on PATH before the line-1 command runs. The
+# stand-in calls the real mktemp program (found by its full path, with
+# "command -v mktemp", before the stand-in exists) to create each file
+# inside a second private folder, $MKFILES, and it writes the path of every
+# file it creates to a log file, $MKLOG. Two things are then checked: the
+# log holds exactly one line, which proves the line-1 command called
+# mktemp; and $MKFILES is empty afterward, which proves the command removed
+# the file it created.
+REAL_MKTEMP="$(command -v mktemp)"
+MKBIN="$TMP/mkbin"
+MKFILES="$TMP/mkfiles"
+MKLOG="$TMP/mktemp.log"
+mkdir -p "$MKBIN" "$MKFILES"
+: > "$MKLOG"
+{
+  printf '#!/bin/sh\n'
+  printf 'p="$(%s "%s/tmp.XXXXXX")"\n' "$REAL_MKTEMP" "$MKFILES"
+  printf 'printf "%%s\\n" "$p" >> "%s"\n' "$MKLOG"
+  printf 'printf "%%s\\n" "$p"\n'
+} > "$MKBIN/mktemp"
+chmod +x "$MKBIN/mktemp"
 active_log "$W/tmp-cleanup.md" tmp-cleanup
+OLD_PATH="$PATH"
+PATH="$MKBIN:$PATH"
 run_line1 "$D" tmp-cleanup "$(printf "$CLOSED_FMT" tmp-cleanup "$CREATED" "$CLOSED_ON")"
-AFTER_MKTMP="$(find "$MKTMPDIR" -maxdepth 1 -name 'tmp.*' 2>/dev/null | LC_ALL=C sort)"
-assert_eq "no temporary file lingers in mktemp's directory after a successful run" "$AFTER_MKTMP" "$BEFORE_MKTMP"
+PATH="$OLD_PATH"
+assert_eq "the line-1 command calls mktemp exactly once" "$(wc -l < "$MKLOG" | tr -d ' ')" '1'
+assert_eq "no temporary file lingers in the private mktemp folder after a successful run" "$(find "$MKFILES" -maxdepth 1 -type f | wc -l | tr -d ' ')" '0'
+run_check "$D" tmp-cleanup
+assert_eq "tmp-cleanup: the check command then prints closed" "$OUT" 'closed'
 
 bold "6b. The slug, check and line-1 commands under zsh"
 if command -v zsh >/dev/null 2>&1; then
