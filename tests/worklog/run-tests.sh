@@ -399,6 +399,20 @@ case "$TEMPLATE_STEP" in
 esac
 assert_file_lacks "the word workstream is not used" "$SKILL" 'workstream'
 
+bold "8. hooks/session-start holds the list command unchanged"
+# Every line of the list command except its last one, the print line: the
+# hook uses the LIST variable itself.
+HOOK_LIST=$(printf '%s\n' "$LIST_CMD" | sed '$d')
+HOOK_TEXT=$(cat "$REPO/hooks/session-start")
+if [ -n "$HOOK_LIST" ]; then
+  case "$HOOK_TEXT" in
+    *"$HOOK_LIST"*) ok "the hook holds the list command of the skill, line for line" ;;
+    *) bad "the hook holds the list command of the skill, line for line" ;;
+  esac
+else
+  bad "the hook holds the list command of the skill, line for line (the skill text holds no list command)"
+fi
+
 bold ""
 bold "Results: $PASS passed, $FAIL failed"
 if [ "$FAIL" -gt 0 ]; then
