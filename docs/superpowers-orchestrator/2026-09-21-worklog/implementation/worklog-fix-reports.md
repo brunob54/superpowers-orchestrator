@@ -422,3 +422,46 @@ $ bash tests/codex/test-session-start-budget.sh; echo "exit=$?"
   121 passed, 0 failed
 exit=0
 ```
+
+## Round 5
+
+Findings addressed: M1, M2, M3.
+
+Files changed: `skills/worklog/SKILL.md`, `README.md`, `RELEASE-NOTES.md`.
+
+M1: `skills/worklog/SKILL.md`, section "## Choosing a work log", ordered
+check 5 (`active`): added one sentence between the existing "report the
+mismatch and correct the field with the line-1 command" sentence and the
+existing "When the line-1 command prints anything, stop ..." sentence: "Read
+line 1 (for example with `head -n 1` on the file, or with the Read tool)
+only to take its `slug=` and `created=` values, and build `<line>` from
+those values and the file-name slug; the check command's word stays the
+only judge of validity." The check command itself (the fenced shell block
+above, and its five-word output) was not changed.
+
+M2: `README.md:105`, the mermaid diagram node `SCORE`: changed "score
+against 27 skill rules" to "score against 28 skill rules", matching the
+existing count at `README.md:225` ("28 rules covering 27 skills").
+
+M3: `RELEASE-NOTES.md`, the v7.52.0 entry: added the condition "with fewer
+than 1,000 further work logs" to both the three-line summary's **Change**
+paragraph (around line 20-23) and the "The session-start notice" section's
+paragraph (around line 90-93), and reworded "the length of the root" to
+"the length of the printed root" in both places, leaving the fixed
+457-character figure and the 300-character root-cut sentence unchanged.
+Checked the three-line summary (Problem/Change/Effect) word count after the
+edit: 114 words, at or under the 120-word limit.
+
+Covering tests:
+
+```
+$ bash tests/worklog/run-tests.sh; echo "exit=$?"
+...
+Results: 178 passed, 0 failed
+exit=0
+
+$ bash tests/codex/test-session-start-worklog-notice.sh; echo "exit=$?"
+...
+28 passed, 0 failed
+exit=0
+```

@@ -132,3 +132,14 @@ Verification re-review skipped: the effective HEAD had moved past the completion
 
 _Invocation 2 — 2026-09-21 — N=4 M=3 — BASE..HEAD e06a224..bf83855 — branch feature/worklog — gate: orchestration_
 carried findings: none passed — the ledger's 22 `Minor:` lines were triaged in round 1 (invocation 1); round numbering continues, so this invocation has no round 1
+
+## Round 5 — Correctness & spec alignment — opus
+**Reviewers:** M=3, usable 3/3
+**Reviewer verdicts:** r1: 0 Critical, 0 Important, 1 Minor | r2: 0 Critical, 0 Important, 1 Minor | r3: 0 Critical, 0 Important, 2 Minor
+**Sources mapped:** 4/4
+**Reviewer verdict:** 0 Critical, 0 Important, 3 Minor
+**Converged:** no
+### Dispositions
+- [M1] fixed — ordered check 5 now says to read line 1 only to take its `slug=` and `created=` values and to build the corrected line from them and the file-name slug; the check command's word stays the only judge of validity → a18f595 ← 2/3: r1:M1, r2:M1
+- [M2] fixed — the README mermaid diagram now says "28 skill rules", matching the rule count of hooks/skill-rules.json → a18f595 ← 1/3: r3:M1
+- [M3] fixed — the release notes' 457-character figure now names the printed root and the condition "with fewer than 1,000 further work logs", in the summary and in the prose → a18f595 ← 1/3: r3:M2
