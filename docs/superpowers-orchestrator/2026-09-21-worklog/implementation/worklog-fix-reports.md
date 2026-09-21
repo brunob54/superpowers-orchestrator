@@ -36,3 +36,35 @@ $ bash tests/codex/run-unit-tests.sh; echo "exit=$?"
  All unit tests passed.
 exit=0
 ```
+
+## Round 2
+
+Findings addressed: I1, M2.
+
+Files changed: `skills/worklog/SKILL.md`, `tests/worklog/run-tests.sh`.
+
+I1: widened the test that decides whether the user's own message "starts
+with the command" — added a new sentence right after the existing pinned
+sentence in section "## Commands and arguments" of `skills/worklog/SKILL.md`
+saying the message also counts as starting with the command when it holds a
+`<command-name>` tag naming `/worklog` or
+`/superpowers-orchestrator:worklog`, which is how Claude Code delivers a
+typed slash command with no argument. The existing pinned sentence and the
+"only mentions the command" negative-case sentence were left unchanged.
+Added a matching pinned-phrase line to the `PHRASES` array of section 7 in
+`tests/worklog/run-tests.sh` (`grep -F` against the skill file).
+
+M2: added one sentence to the paragraph after the grammar line in
+"## Commands and arguments" of `skills/worklog/SKILL.md`: "More than one
+word after the command word also stops with the usage text and writes
+nothing." This reuses the already-pinned phrase "stops with the usage text",
+so no new test phrase was needed.
+
+Covering tests:
+
+```
+$ bash tests/worklog/run-tests.sh; echo "exit=$?"
+...
+Results: 132 passed, 0 failed
+exit=0
+```

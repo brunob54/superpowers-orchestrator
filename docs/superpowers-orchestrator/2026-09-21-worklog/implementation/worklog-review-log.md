@@ -36,3 +36,14 @@ _Invocation 1 — 2026-09-21 — N=4 M=3 — BASE..HEAD e06a224..1c04872 — bra
 - [L20] carried — the notices sit outside the workspace budget; pack() subtracts the head, so the limit holds
 - [L21] carried — a newline or closing tag in the user's own folder name breaks the notice text
 - [L22] carried — redundant comment in tests/pickup/run-tests.sh case 6c
+
+## Round 2 — Adversarial red-team — opus
+**Reviewers:** M=3, usable 3/3
+**Reviewer verdicts:** r1: 0 Critical, 0 Important, 1 Minor | r2: 0 Critical, 0 Important, 2 Minor | r3: 0 Critical, 1 Important, 1 Minor
+**Sources mapped:** 5/5
+**Reviewer verdict:** 0 Critical, 1 Important, 2 Minor
+**Converged:** no
+### Dispositions
+- [I1] fixed — the bare `/worklog` test now also counts a user message holding a `<command-name>` tag that names `/worklog` or `/superpowers-orchestrator:worklog`, the form in which Claude Code delivers a typed slash command; the pinned sentence is kept and the tag form is pinned in suite section 7 → 54850ef ← 2/3: r2:M1, r3:I1
+- [M1] carried — the binding intent patterns of Global Constraint 12 (`work\s?logs?`) also fire on application-domain prompts such as a Jira or Tempo "worklog"; changing them contradicts Global Constraint 12, and the consequence is one routing suggestion ← 2/3: r1:M1, r3:M1
+- [M2] fixed — more than one word after the command word now stops with the usage text and writes nothing → 54850ef ← 1/3: r2:M2
