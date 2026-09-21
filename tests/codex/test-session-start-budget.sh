@@ -336,5 +336,49 @@ for letter in a b c; do
 done
 assert_contains "three 40-character work logs: the notice is closed" "$ctx_worklogs" "</active-work-logs>"
 
+# ── Case 9: the room left for files must count the notice's own size ───────
+# Reuses the three 40-character work logs of case 8, alone (no other
+# workspace files yet), to measure the room the notice for them leaves:
+# room_with_notice = LIMIT minus the output length with only that notice
+# added. notice_size is how much smaller that room is than free_room (the
+# room with no notice, measured before case 3). A single state.md is then
+# sized to room_with_notice raw characters: its own wrapper (an opening tag
+# and a heading line) always makes the wrapped section a few dozen to about
+# two hundred characters longer than the raw text, which is enough to place
+# it just over the true room (so a budget that counts the notice correctly
+# skips it and stays at or under the limit with the whole notice present),
+# while staying under the true room plus the notice's own size (so a budget
+# that leaves the notice out of its count would find room for it and take
+# the output over the limit). This fails when the budget leaves the notice
+# out of its count, and passes on the branch.
+(
+  cd "$TMP_REPO"
+  mkdir -p docs/worklogs
+  for letter in a b c; do
+    slug="${letter}$(printf '%39s' '' | tr ' ' w)"
+    printf '<!-- Work log: status=active slug=%s created=2026-09-21 -->\n' "$slug" > "docs/worklogs/${slug}.md"
+  done
+)
+room_with_notice=$(( LIMIT - $(run_hook_in "$TMP_REPO" | js_length) ))
+notice_size=$(( free_room - room_with_notice ))
+(
+  cd "$TMP_REPO"
+  { printf 'Current Goal: STATE-SENTINEL room fixture, active task\n'; text_of "$room_with_notice" state; } > state.md
+)
+ctx_room=$(run_hook_in "$TMP_REPO")
+clear_workspace
+rm -rf "$TMP_REPO/docs"
+assert_common "the room left counts the notice" "$ctx_room"
+assert_contains "the room left counts the notice: the notice is injected" "$ctx_room" "<active-work-logs>"
+for letter in a b c; do
+  slug="${letter}$(printf '%39s' '' | tr ' ' w)"
+  assert_contains "the room left counts the notice: the $letter slug is named" "$ctx_room" "docs/worklogs/${slug}.md"
+done
+assert_contains "the room left counts the notice: the notice is closed" "$ctx_room" "</active-work-logs>"
+assert_absent "the room left counts the notice: state.md content is not injected" "$ctx_room" "STATE-SENTINEL"
+room_pointer=$(printf '%s' "$ctx_room" | grep -F -- "$NOT_INJECTED_TAG" || true)
+assert_contains "the room left counts the notice: <not-injected> names state.md" "$room_pointer" "state.md"
+echo "  (room_with_notice=${room_with_notice}, notice_size=${notice_size})"
+
 echo "  ${PASS} passed, ${FAIL} failed"
 [ "$FAIL" -eq 0 ]

@@ -322,7 +322,7 @@ word as the label, with `malformed line 1` for `malformed`.
 
 1. Choose the work log and run the ordered checks of "Choosing a work log" (a
    closed work log stops there).
-2. Read the work log with the Read tool, whole. If a part is neither `done`
+2. Read the work log with the Read tool, whole. Before writing anything, check that the section headings `## Parts`, `## Open items`, `## Accepted limits` and `## Decisions` all stand; when one is missing, stop, name the missing heading, and tell the user to run `/worklog update`, which repairs it — `close` itself never adds a heading or the `Next item number` line. If a part is neither `done`
    nor `dropped`, or `## Open items` has rows, list them and ask the user:
    close anyway, or stop. On "close anyway": each remaining open item becomes
    one line under `## Accepted limits` in the form

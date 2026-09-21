@@ -605,6 +605,7 @@ PHRASES=(
   "git log -n 200 --since=\"<created> 00:00\" --format='%h %cd %s' --date=short HEAD | cat"
   'When the session-start notice or the user names an active work log, read that work log with the Read tool before starting the work, and follow its section `How to maintain this document`.'
   '> A finding becomes an open item only when it blocks a part from reaching the status `done`, or blocks the "done when" condition of the whole work, or when its consequence is lost user work or a wrong commit. Every other finding gets one line under `## Accepted limits`.'
+  'Before writing anything, check that the section headings `## Parts`, `## Open items`, `## Accepted limits` and `## Decisions` all stand; when one is missing, stop, name the missing heading, and tell the user to run `/worklog update`, which repairs it — `close` itself never adds a heading or the `Next item number` line.'
 )
 for phrase in "${PHRASES[@]}"; do
   assert_file_contains "the skill text holds: $phrase" "$SKILL" "$phrase"
