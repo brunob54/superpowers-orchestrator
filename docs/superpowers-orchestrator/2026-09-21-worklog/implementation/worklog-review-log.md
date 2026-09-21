@@ -155,3 +155,13 @@ carried findings: none passed — the ledger's 22 `Minor:` lines were triaged in
 - [M1] fixed — check 5 no longer offers `head -n 1`, which a rule of the plugin's Bash safety hook blocks for a slug holding the word secret or credentials; line 1 is read with the Read tool, limit 1 → 0b7b969 ← 1/3: r1:M1
 - [M2] fixed — the load-by-the-model branch runs a plain-words command only when the request is about this plugin's work log under docs/worklogs/; a request about another product's worklog (a Jira or Tempo time entry) gets one line saying the skill does not apply, and the request continues → 0b7b969 ← 1/3: r3:M1
 - [M3] carried — the rule that the work log goes into the next commit the user requests names no branch, so after a branch switch before the first commit it can be staged into a commit on another branch; the sentence is template text, which Global Constraint 8 makes normative, and the trigger needs a switch before the work log's first commit ← 1/3: r3:M2
+
+## Round 7 — Security — opus
+**Reviewers:** M=3, usable 3/3
+**Reviewer verdicts:** r1: 0 Critical, 0 Important, 2 Minor | r2: 0 Critical, 0 Important, 2 Minor | r3: 0 Critical, 0 Important, 1 Minor
+**Sources mapped:** 5/5
+**Reviewer verdict:** 0 Critical, 0 Important, 2 Minor
+**Converged:** no
+### Dispositions
+- [M1] carried — the session-start notice tells the model to follow the section "How to maintain this document" of any active work log, with no limit on what that repository-written section may ask for, while the file name is filtered as untrusted; the notice text is fixed by Global Constraint 11 and the template is normative (Global Constraint 8); the spec accepts work-log content at the trust level of the project's CLAUDE.md, and the trigger is a hostile contributor (same as invocation 1 round 3 [M2]) ← 3/3: r1:M2, r2:M1, r3:M1
+- [M2] carried — when `docs` or `docs/worklogs` is a committed symbolic link, the check command prints `missing` or `active` instead of `symlink`, so `new` creates a file in the link's target and `update`, `close` and the line-1 command write there; the check command, which gates every command, is fixed byte for byte by Global Constraint 4; the state needs a hostile committed link (same as invocation 1 round 3 [M3]) — harness probe: the Write tool returned success for <A>/docs/worklogs/x.md with docs/worklogs linked to folder B, and x.md appeared in B ← 2/3: r1:M1, r2:M2
