@@ -165,3 +165,17 @@ carried findings: none passed — the ledger's 22 `Minor:` lines were triaged in
 ### Dispositions
 - [M1] carried — the session-start notice tells the model to follow the section "How to maintain this document" of any active work log, with no limit on what that repository-written section may ask for, while the file name is filtered as untrusted; the notice text is fixed by Global Constraint 11 and the template is normative (Global Constraint 8); the spec accepts work-log content at the trust level of the project's CLAUDE.md, and the trigger is a hostile contributor (same as invocation 1 round 3 [M2]) ← 3/3: r1:M2, r2:M1, r3:M1
 - [M2] carried — when `docs` or `docs/worklogs` is a committed symbolic link, the check command prints `missing` or `active` instead of `symlink`, so `new` creates a file in the link's target and `update`, `close` and the line-1 command write there; the check command, which gates every command, is fixed byte for byte by Global Constraint 4; the state needs a hostile committed link (same as invocation 1 round 3 [M3]) — harness probe: the Write tool returned success for <A>/docs/worklogs/x.md with docs/worklogs linked to folder B, and x.md appeared in B ← 2/3: r1:M1, r2:M2
+
+## Round 8 — Test & coverage quality — opus
+**Reviewers:** M=3, usable 3/3
+**Reviewer verdicts:** r1: 0 Critical, 0 Important, 2 Minor | r2: 0 Critical, 0 Important, 2 Minor | r3: 0 Critical, 0 Important, 4 Minor
+**Sources mapped:** 8/8
+**Reviewer verdict:** 0 Critical, 0 Important, 6 Minor
+**Converged:** yes
+### Dispositions
+- [M1] carried — budget case 9 prints `notice_size` but does not assert its own precondition, that the text state.md adds beyond the room is smaller than the notice; measured margin about 223 characters today, so a later shorter notice or longer wrapper could make it pass on a broken budget; the case failed 3 checks on such a broken copy when it was added ← 2/3: r1:M1, r3:M4
+- [M2] carried — the positive routing tests pin only 'update the work log' and 'create a work log'; the one-word form worklog, the verbs start, open, new, close and continue and the article my are routed today but pinned by no test ← 2/3: r1:M2, r2:M2
+- [M3] carried — the zsh runs of the line-1 suite read the user's `~/.zshenv` (and bash reads `$BASH_ENV`), which can put another mktemp before the stand-in and give a false failure (same as invocation 1 round 4 verification 3 [M2]) ← 1/3: r2:M1
+- [M4] carried — the check of exactly seven numbered rules in the template's maintenance section counts only lines numbered 1 to 7, so an eighth rule passes; the pattern is the Task 1 contract's ← 1/3: r3:M1
+- [M5] carried — no fixture runs the `update.md` and `close.md` exclusions of the list and listing commands or of the hook's copy; only `new.md` is tested (same gap as invocation 1 round 4 verification 3 [M3]) ← 1/3: r3:M2
+- [M6] carried — no negative routing prompt tests the final word boundary of the first intent pattern, for example 'create a work logging service' ← 1/3: r3:M3
