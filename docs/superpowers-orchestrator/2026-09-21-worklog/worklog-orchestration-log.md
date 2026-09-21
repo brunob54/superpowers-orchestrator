@@ -12,3 +12,8 @@ readiness owed: 5
 - Task 1: complete — the work log template and the new fast suite (892b9b2..cc5fac0)
 - Task 2: complete — the skill file with its four shell commands (7c75e1c..a2513ae)
 - Task 3: complete — the skill's commands and rules (7fee800..d4f46d9)
+
+## Phase 3 — Batch 2 (tasks 4–6) — COMPLETE — commits 99207f3..24c3baa
+- Task 4: complete — the session-start notice (99207f3..1d40fb8)
+- Task 5: complete — /pickup does not count an uncommitted work log (713961b..adf5cff)
+- Task 6: complete — routing, the worklog rule (5c25aa5..6c8c7d6)
