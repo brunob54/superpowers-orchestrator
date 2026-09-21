@@ -369,6 +369,36 @@ else
   note "zsh is not installed; the zsh checks of section 6b are skipped"
 fi
 
+bold "7. Pinned phrases of skills/worklog/SKILL.md"
+FRONT=$(awk 'NR == 1 && $0 == "---" { f = 1; next } f && $0 == "---" { exit } f { print }' "$SKILL" 2>/dev/null)
+case "$FRONT" in *'name: worklog'*) ok "the front matter names the skill worklog" ;; *) bad "the front matter names the skill worklog" ;; esac
+case "$FRONT" in *'argument-hint: "[new|update|close] [<slug>]"'*) ok "the front matter carries the argument hint" ;; *) bad "the front matter carries the argument hint" ;; esac
+case "$FRONT" in *disable-model-invocation*) bad "the front matter carries disable-model-invocation" ;; *) ok "the front matter does not carry disable-model-invocation" ;; esac
+PHRASES=(
+  'Argument given by the user (may be empty): $ARGUMENTS'
+  '/worklog [new|update|close] [<slug>]'
+  "The fallback to \`update\` applies only when the user's own message starts with the command"
+  'stops with the usage text'
+  'A closed work log is never written'
+  'close anyway'
+  'invalid file name — rename it'
+  'malformed line 1'
+  'Never overwrite a work log'
+  'never commits'
+  "git log -n 200 --since=\"<created> 00:00\" --format='%h %cd %s' --date=short HEAD | cat"
+  'When the session-start notice or the user names an active work log, read that work log with the Read tool before starting the work, and follow its section `How to maintain this document`.'
+  '> A finding becomes an open item only when it blocks a part from reaching the status `done`, or blocks the "done when" condition of the whole work, or when its consequence is lost user work or a wrong commit. Every other finding gets one line under `## Accepted limits`.'
+)
+for phrase in "${PHRASES[@]}"; do
+  assert_file_contains "the skill text holds: $phrase" "$SKILL" "$phrase"
+done
+TEMPLATE_STEP=$(grep -F '<skill-dir>/template.md' "$SKILL" 2>/dev/null)
+case "$TEMPLATE_STEP" in
+  *'with the Read tool'*) ok "the step that names <skill-dir>/template.md reads it with the Read tool" ;;
+  *) bad "the step that names <skill-dir>/template.md reads it with the Read tool" ;;
+esac
+assert_file_lacks "the word workstream is not used" "$SKILL" 'workstream'
+
 bold ""
 bold "Results: $PASS passed, $FAIL failed"
 if [ "$FAIL" -gt 0 ]; then

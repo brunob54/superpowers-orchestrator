@@ -39,6 +39,43 @@ Argument given by the user (may be empty): $ARGUMENTS
 - **`<skill-dir>`**: this skill's base directory. A path under `skills/`
   exists only inside the plugin's own repository, never in a user's project.
 
+## Commands and arguments
+
+Grammar: `/worklog [new|update|close] [<slug>]`
+
+The first word is always read as a command word, never as a slug. When the
+user types `/worklog` with no first word, the command is `update`; the test
+at the end of this section decides whether the user typed the command. Any
+other first word, and a command word
+given as a slug (for example `/worklog new close`), stops with the usage text and writes nothing. The usage text is the grammar line and one line per command:
+
+```text
+/worklog [new|update|close] [<slug>]
+/worklog new [<slug>]       create a work log
+/worklog update [<slug>]    full update; /worklog alone does the same
+/worklog close [<slug>]     close a work log
+```
+
+Every command that gets a slug first tests it by "The slug command" below. A
+result other than `valid` stops the command: say which rule the slug breaks,
+and write nothing. A command word given as a slug in the argument has already
+stopped with the usage text, before this test.
+
+When the argument above is empty and the user's own message starts with the
+command, read the command word and the slug from that message (on Copilot CLI,
+the command-line interface of GitHub Copilot, the argument may not arrive);
+only then fall back to `update`.
+The fallback to `update` applies only when the user's own message starts with the command, written `/worklog` or `/superpowers-orchestrator:worklog`.
+A message that only mentions the command (for example "what does /worklog
+close do?") does not start with it and is not an invocation. When this test
+fails, the model loaded this skill by itself:
+
+- If the user asked for no command, run no command and no full update, and say
+  so in one line. Read the named work log with the Read tool and follow its
+  section `How to maintain this document`.
+- If the user asked for a command in plain words ("close the work log"), run
+  that command.
+
 ## Shell commands
 
 Run these commands with the Bash tool. Replace only the placeholders that a
@@ -141,3 +178,149 @@ if [ -L "$F" ]; then echo symlink; else
   fi
 fi
 ```
+
+## Choosing a work log
+
+`update` and `close` share this rule.
+
+- With a slug: the file `docs/worklogs/<slug>.md` must exist. When the check
+  command prints `missing`, stop, show the listing, and write nothing.
+- With no slug: run the list command. With one path, use that work log. With
+  several, ask the user which one. With none, say that no work log is active,
+  offer `/worklog new`, and write nothing.
+
+Then run the check command on the chosen file and act on its word, in this
+order. Each stop writes nothing.
+
+1. `symlink`: stop; say that a work log must be a regular file.
+2. `missing`: stop; show the listing.
+3. `malformed`: stop; show the two valid forms of line 1. When the command
+   printed a status line with a line number other than 1, say that its
+   position is wrong and that it belongs on line 1.
+4. `closed`: stop; say that the work log is closed. A closed work log is never written: a `slug=` mismatch in it is reported only.
+5. `active`: when the `slug=` field differs from the file name, report the
+   mismatch and correct the field with the line-1 command. Then the command
+   continues.
+
+**The listing** has one line per regular `*.md` file directly under
+`docs/worklogs/`. Find the files with
+`find "$(git rev-parse --show-toplevel 2>/dev/null || pwd)/docs/worklogs" -maxdepth 1 -type f -name '*.md'`.
+The slug of a file is its name without `.md`. Test it with the first test of
+"Shell commands", then with the slug command. A name that fails either test
+breaks the slug rule; the listing then goes on with the next file, because the
+stop of the first test does not apply to a listed name.
+A file whose name breaks the slug rule gets the label `invalid file name — rename it`,
+and it is never chosen. For every other file, run the check command with its
+slug and use its word as the label, with `malformed line 1` for `malformed`.
+
+## `/worklog new [<slug>]` — create a work log
+
+1. Test the slug with the slug command, then run the check command on it. A
+   word other than `missing` stops the command. Never overwrite a work log.
+   With no slug given, ask for the slug in the question batch of step 2, and
+   test it the same way before step 3.
+2. Ask the user, in one question batch: the title, the goal, the "done when"
+   condition, the list of parts, and the admission rule. Offer the default
+   admission rule first:
+
+   > A finding becomes an open item only when it blocks a part from reaching the status `done`, or blocks the "done when" condition of the whole work, or when its consequence is lost user work or a wrong commit. Every other finding gets one line under `## Accepted limits`.
+
+   When the user gives no rule of their own, write the default admission rule.
+   Use and echo the values that the user already stated in this session; do
+   not ask for them again. When the user says that a part is already `done`,
+   ask for its commit in the same batch. Without an answer its `Commit` cell
+   stays empty: the `git log` read of the full update starts at the creation
+   date, so it cannot find an older commit.
+3. In a project that is not a git repository, and also when
+   `git rev-parse --show-prefix` prints a text that is not empty (the current
+   folder stands below the root), show the full target path and ask the user
+   to confirm it before writing.
+4. Read `<skill-dir>/template.md` with the Read tool. Fill these placeholders
+   only: `<slug>` and `<YYYY-MM-DD>` on line 1 (today), `<title>`, the goal,
+   the "done when" condition and the admission rule. Replace the example row
+   of `## Parts` with one row per part, numbered from 1. Remove the example
+   rule, the example limit and the example decision, and keep the section
+   headings `## Rules for the next parts`, `## Accepted limits` and
+   `## Decisions`. The line `### <YYYY-MM-DD> <short title>` belongs to the
+   example decision and is removed with it.
+   Leave every other `<...>` text as it is: it belongs to the document's own
+   rules. Every part starts as `not started`, except a part that the user
+   says is `in progress` or `done`: such a part gets today in `Since`, and its
+   `Commit` cell stays empty unless the user gave the commit of a `done` part.
+   Create the folder `docs/worklogs/` under the root when it does not exist,
+   and write the file.
+5. In a git repository, run `git check-ignore -q docs/worklogs/<slug>.md`
+   from the root. Exit 0 means that an ignore rule matches the path: tell the
+   user that git ignores the file, so a normal `git add` does not add it. On
+   any other exit, say nothing.
+6. Report the path. Say that the file is not committed, and that the
+   session-start notice names it from the next session start on.
+
+## `/worklog` or `/worklog update [<slug>]` — full update
+
+1. Choose the work log and run the ordered checks of "Choosing a work log".
+2. Read the work log with the Read tool, whole.
+3. Repairs, in `update` only. When a section heading of the template, or the
+   line `Next item number`, is missing (the user edited the document), add it
+   at its template position and report it. Rebuild a missing number line as
+   one plus the highest of: the first column of the `## Open items` rows, and
+   every `item #<n>` in the document; with none of these, it is 1. The result
+   is a lower bound, because an item whose fix was committed leaves no number:
+   say so, and ask the user to confirm the value.
+4. Compare the document with the session: the status of each part, problems
+   found, fixes committed, decisions made, conventions that appeared, and
+   empty `Commit` cells of `done` parts. In a git repository, read the commits
+   with this command, where `<created>` is the `created=` date of line 1:
+   `git log -n 200 --since="<created> 00:00" --format='%h %cd %s' --date=short HEAD | cat`
+   The window always starts at the creation of the work log, because a
+   forgotten change can be as old as the work log. The `00:00` is required:
+   with a bare date, git starts at the current time of day of that date. The
+   `| cat` is required too: a Bash output hook of this plugin cuts the output
+   of a plain `git log` command that is longer than 40 lines to its first 30
+   lines, and it never cuts the output of a pipeline. When
+   the command prints 200 commits and a question is still open (an empty
+   `Commit` cell of a `done` part, or an open item whose fix was not found),
+   read the next window with `--skip=200`, then `--skip=400`, at most five
+   windows in all; then say that older commits were not read.
+5. Apply the update rules of the document's section `How to maintain this
+   document`. Report each change in one line, or say that the work log was
+   already up to date.
+
+## `/worklog close [<slug>]` — close a work log
+
+1. Choose the work log and run the ordered checks of "Choosing a work log" (a
+   closed work log stops there).
+2. Read the work log with the Read tool, whole. If a part is neither `done`
+   nor `dropped`, or `## Open items` has rows, list them and ask the user:
+   close anyway, or stop. On "close anyway": each remaining open item becomes
+   one line under `## Accepted limits` in the form
+   `- <today> item #<n>: <item text> — open at closing`, and its row is
+   deleted; the parts keep their status; and one `## Decisions` entry records
+   that the user closed the work log with those parts unfinished.
+3. Fill every empty `Commit` cell of a `done` part that can be filled now
+   (the `git log` read of the full update, step 4), and report the cells that
+   stay empty: after closing, `update` no longer writes this file.
+4. Run the line-1 command with line 1 in the closed form: `status=closed`
+   instead of `status=active`, and ` closed=<today>` before ` -->`. Then run
+   the check command; it must print `closed`.
+
+## Updates outside the commands
+
+When the session-start notice or the user names an active work log, read that work log with the Read tool before starting the work, and follow its section `How to maintain this document`.
+
+## Rules
+
+- This skill never commits. It never reopens a closed work log: the user edits
+  line 1 back to the active form by hand.
+- Every stop writes nothing more. A stop of the grammar, of the slug test or
+  of the ordered checks comes before any write; a stop at step 2 of `close`
+  keeps the `slug=` correction that check 5 already made.
+- In a project that is not a git repository, skip the `git log` read and the
+  `git check-ignore` test, and leave the `Commit` column empty. The root is
+  then the folder of the shell, so `new` always shows the full target path and
+  asks, and `missing` prints the folder that was searched.
+- `docs/worklogs` must be a real folder: the list command does not follow a
+  folder that is a symbolic link.
+- Never reorder or delete user text, except the deletions that a step of this
+  skill or a rule of the work log names (an open-item row that leaves the
+  table).
