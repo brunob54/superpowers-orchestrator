@@ -1566,7 +1566,7 @@ git commit -m "feat(routing): route work log requests to the worklog skill" --tr
   - Invariants: the line stands in `## Routing Guide`, below the marker line; the text above the marker is unchanged (at most 6,400 characters).
   - Verification: `bash tests/codex/test-session-start-budget.sh` passes; the Step 3 `awk` prints `BELOW-MARKER`, and `git diff --numstat` shows one added line and none removed.
 
-- [ ] **Step 1: Write the prompt, the array entry and the guide line**
+- [x] **Step 1: Write the prompt, the array entry and the guide line**
 
 Create `tests/skill-triggering/prompts/worklog.txt` with this one line:
 
@@ -1582,12 +1582,12 @@ In `skills/using-superpowers/SKILL.md`, in `## Routing Guide`, add this line dir
 - Tracking document for one piece of multi-part work across sessions (create, update or close a work log): `worklog`
 ```
 
-- [ ] **Step 2: Run the routing check**
+- [x] **Step 2: Run the routing check**
 
 Run: `node -e 'const { matchSkills } = require("./hooks/skill-activator"); const p = require("fs").readFileSync("tests/skill-triggering/prompts/worklog.txt", "utf8"); console.log(JSON.stringify(matchSkills(p).map((m) => m.skill)))'`
 Expected: `["worklog"]`.
 
-- [ ] **Step 3: Run the budget test**
+- [x] **Step 3: Run the budget test**
 
 Run: `bash tests/codex/test-session-start-budget.sh`
 Expected: PASS — 0 failed; "the injected skill part is <n> characters, at or under 6400".
@@ -1595,12 +1595,12 @@ Expected: PASS — 0 failed; "the injected skill part is <n> characters, at or u
 Run: `awk '/^<!-- session-start-injection-ends/ { m = NR } /^- Tracking document for one piece of multi-part work/ { w = NR } END { print (m > 0 && w > m) ? "BELOW-MARKER" : "NOT-BELOW" }' skills/using-superpowers/SKILL.md; git diff --numstat skills/using-superpowers/SKILL.md; grep -n '"worklog"' tests/skill-triggering/run-all.sh`
 Expected: `BELOW-MARKER`; one line with `1`, `0` and `skills/using-superpowers/SKILL.md`, separated by tabs (one line added, none removed, so the text above the marker is unchanged); one line that holds `"worklog"`.
 
-- [ ] **Step 4: Run the skill-triggering test**
+- [x] **Step 4: Run the skill-triggering test**
 
 Run: `bash tests/skill-triggering/run-test.sh worklog tests/skill-triggering/prompts/worklog.txt 8`
 Expected: `✅ PASS: Skill 'worklog' was triggered` (takes up to 5 minutes; it calls the real `claude` CLI with `--plugin-dir` set to this checkout). Run it with a Bash tool timeout of at least 360000 ms (6 minutes): the default of 120000 ms ends the tool call before the script prints its result, and a tool time-out is not a FAIL. A model run is not deterministic: when it prints FAIL, run it once more; when the second run also fails, stop and report BLOCKED with the log path that the script prints.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add -f tests/skill-triggering/prompts/worklog.txt
