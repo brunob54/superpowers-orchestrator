@@ -696,7 +696,7 @@ git commit -m "feat(worklog): add the skill file with its slug, list, check and 
   - Invariant: it pins at least every skill-text item that the spec's section "Testing strategy" lists — the sentence that starts ``The fallback to `update` applies only when the user's own message starts with the command``, `A closed work log is never written`, `stops with the usage text`, `close anyway`, `invalid file name — rename it`, `with the Read tool` in the step that names `<skill-dir>/template.md`, the `$ARGUMENTS` line, no `disable-model-invocation` in the front matter, `Never overwrite a work log`, `never commits`, the grammar line and the `git log` command with `--since="<created> 00:00"`, pinned together with its `| cat` — plus the sentence of `## Updates outside the commands` and the default admission rule. A fix may add phrases, never remove one of these.
   - Verification: Step 2 fails before the text exists; Step 4 passes.
 
-- [ ] **Step 1: Add the failing section to the suite**
+- [x] **Step 1: Add the failing section to the suite**
 
 Insert this block in `tests/worklog/run-tests.sh` directly before the footer line `bold ""`:
 
@@ -733,12 +733,12 @@ assert_file_lacks "the word workstream is not used" "$SKILL" 'workstream'
 
 ```
 
-- [ ] **Step 2: Run the suite to verify it fails**
+- [x] **Step 2: Run the suite to verify it fails**
 
 Run: `bash tests/worklog/run-tests.sh`
 Expected: FAIL — exit 1; section 7 reports missing phrases such as `stops with the usage text`, `close anyway`, `invalid file name — rename it`, the `git log` command and the admission rule, and the `<skill-dir>/template.md` check fails. The front-matter checks, the `$ARGUMENTS` line and `never commits` already pass.
 
-- [ ] **Step 3: Add the text to the skill**
+- [x] **Step 3: Add the text to the skill**
 
 Insert this section in `skills/worklog/SKILL.md` directly before the line `## Shell commands`, with one empty line after it:
 
@@ -931,7 +931,7 @@ When the session-start notice or the user names an active work log, read that wo
   table).
 ````
 
-- [ ] **Step 4: Run the suite to verify it passes**
+- [x] **Step 4: Run the suite to verify it passes**
 
 Run: `bash tests/worklog/run-tests.sh`
 Expected: PASS — exit 0, 0 failed (the NOTE lines of Task 2 may appear on some platforms).
@@ -939,7 +939,7 @@ Expected: PASS — exit 0, 0 failed (the NOTE lines of Task 2 may appear on some
 Run: `grep -c '^## ' skills/worklog/SKILL.md`
 Expected: `9` (Terms, Commands and arguments, Shell commands, Choosing a work log, the three command sections, Updates outside the commands, Rules; the `# Work log` title is not counted).
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add skills/worklog/SKILL.md tests/worklog/run-tests.sh
