@@ -1465,7 +1465,7 @@ Trigger: `Resume orchestration for <plan-or-spec path>`.
    script reads each path from the current folder.
    The repository is a sparse checkout (`core.sparseCheckout` is true, so
    git keeps only a part of the tree on disk): the resume commit, which
-   names the listed paths, leaves a reverted path outside that part out
+   names the listed paths, can leave a reverted path outside that part out
    and still ends with exit code 0, so no fix commit is reverted in a
    sparse checkout.
    The name of a listed path holds
@@ -1480,14 +1480,16 @@ Trigger: `Resume orchestration for <plan-or-spec path>`.
    file, and the revert overwrites or deletes it with no warning.
    The script reads untracked and ignored files only when the folder of
    the path stands on disk: for a missing folder below an existing one
-   git prints a warning on standard error, and that warning is no alarm.
+   git prints a warning on standard error, which would be a false alarm.
    The path carries the `assume-unchanged` or the `skip-worktree` bit of
    the index (`git ls-files -v` prints a letter other than `H`): git does
    not compare such a file with the disk, so `git status --porcelain`
-   hides a local change there; the resume commit would commit that
-   change, the cleanup and the undo would delete it, and the resume
-   commit leaves a `skip-worktree` path out and still ends with exit
-   code 0.
+   hides a local change there.
+   On an `assume-unchanged` path the resume commit would commit that
+   change, and the cleanup and the undo would delete it.
+   On a `skip-worktree` path the resume commit leaves the path out and
+   still ends with exit code 0, and the `git checkout` of the cleanup and
+   of the undo fails with exit code 1.
    The path stands on disk and
    does not exist at HEAD: an untracked file,
    or the same name in another
