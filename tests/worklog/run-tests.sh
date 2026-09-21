@@ -442,6 +442,7 @@ PHRASES=(
   'Argument given by the user (may be empty): $ARGUMENTS'
   'Grammar: `/worklog [new|update|close] [<slug>]`'
   "The fallback to \`update\` applies only when the user's own message starts with the command"
+  'The message also counts as starting with the command when it holds a'
   'stops with the usage text'
   'A closed work log is never written'
   'close anyway'

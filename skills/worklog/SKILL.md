@@ -47,7 +47,7 @@ The first word is always read as a command word, never as a slug. When the
 user types `/worklog` with no first word, the command is `update`; the test
 at the end of this section decides whether the user typed the command. Any
 other first word, and a command word
-given as a slug (for example `/worklog new close`), stops with the usage text and writes nothing. The usage text is the grammar line and one line per command:
+given as a slug (for example `/worklog new close`), stops with the usage text and writes nothing. More than one word after the command word also stops with the usage text and writes nothing. The usage text is the grammar line and one line per command:
 
 ```text
 /worklog [new|update|close] [<slug>]
@@ -66,6 +66,10 @@ command, read the command word and the slug from that message (on Copilot CLI,
 the command-line interface of GitHub Copilot, the argument may not arrive);
 only then fall back to `update`.
 The fallback to `update` applies only when the user's own message starts with the command, written `/worklog` or `/superpowers-orchestrator:worklog`.
+The message also counts as starting with the command when it holds a
+`<command-name>` tag that names `/worklog` or
+`/superpowers-orchestrator:worklog`, which is how Claude Code delivers a
+typed slash command.
 A message that only mentions the command (for example "what does /worklog
 close do?") does not start with it and is not an invocation. When this test
 fails, the model loaded this skill by itself:
