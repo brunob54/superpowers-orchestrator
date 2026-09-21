@@ -421,62 +421,68 @@ else
   note "this file system made no symbolic link in section 3; the line-1 symbolic-link checks are skipped"
 fi
 
-# (c) the temporary file that mktemp creates is removed after a successful
-# run. The system's shared temporary folder (on macOS,
-# "/var/folders/.../T/") holds files from every process the user runs, not
-# only this test, so other work can add or remove a "tmp.*" entry there at
-# any moment. Watching that shared folder makes the test fail for a reason
-# outside the command under test. Instead, this builds a private stand-in
-# program named "mktemp": a small script placed in a folder of its own,
-# $MKBIN, that is put first on PATH before the line-1 command runs. The
-# stand-in calls the real mktemp program (found by its full path, with
-# "command -v mktemp", before the stand-in exists) to create each file
-# inside a second private folder, $MKFILES, and it writes the path of every
-# file it creates to a log file, $MKLOG. Two things are then checked: the
-# log holds exactly one line, which proves the line-1 command called
-# mktemp; and $MKFILES is empty afterward, which proves the command removed
-# the file it created.
+# (c) the temporary file that mktemp creates is outside the docs/worklogs
+# folder, as the skill states, and is removed after a successful run. The
+# system's shared temporary folder (on macOS, "/var/folders/.../T/") holds
+# files from every process the user runs, not only this test, so other work
+# can add or remove a "tmp.*" entry there at any moment. Watching that
+# shared folder makes the test fail for a reason outside the command under
+# test. Instead, this builds a private stand-in program named "mktemp": a
+# small script placed in a folder of its own, $MKBIN, that is put first on
+# PATH before the line-1 command runs. The stand-in passes its own
+# arguments through to the real mktemp program (found by its full path,
+# with "command -v mktemp", before the stand-in exists), so the file lands
+# exactly where the real command would put it, and it writes the path that
+# call returns to a log file, $MKLOG, one line per call.
 REAL_MKTEMP="$(command -v mktemp)"
 MKBIN="$TMP/mkbin"
-MKFILES="$TMP/mkfiles"
 MKLOG="$TMP/mktemp.log"
-# MKARGS records the argument count ($#) of every stand-in call, one line
-# per call: the skill states that the command writes its temporary copy
-# outside the docs/worklogs folder, which for mktemp means calling it with
-# no argument (a template argument such as "$F.XXXXXX" would place the copy
-# next to the work log instead).
-MKARGS="$TMP/mktemp.args"
-mkdir -p "$MKBIN" "$MKFILES"
+mkdir -p "$MKBIN"
 : > "$MKLOG"
-: > "$MKARGS"
 {
   printf '#!/bin/sh\n'
-  printf 'printf "%%s\\n" "$#" >> "%s"\n' "$MKARGS"
-  printf 'p="$(%s "%s/tmp.XXXXXX")"\n' "$REAL_MKTEMP" "$MKFILES"
+  printf 'p="$(%s "$@")"\n' "$REAL_MKTEMP"
   printf 'printf "%%s\\n" "$p" >> "%s"\n' "$MKLOG"
   printf 'printf "%%s\\n" "$p"\n'
 } > "$MKBIN/mktemp"
 chmod +x "$MKBIN/mktemp"
 OLD_PATH="$PATH"
 # run_line1_private <slug>: runs the line-1 command to close <slug>, with the
-# stand-in mktemp first on PATH; $MKLOG and $MKARGS then name only the calls
-# of this run.
+# stand-in mktemp first on PATH; $MKLOG then names only the calls of this
+# run.
 run_line1_private() {
   : > "$MKLOG"
-  : > "$MKARGS"
   PATH="$MKBIN:$OLD_PATH"
   run_line1 "$D" "$1" "$(closed_line "$1")"
   PATH="$OLD_PATH"
 }
-# mktemp_calls: the number of files that the stand-in mktemp created in the
-# last run. private_tmp_left: the number of files left in $MKFILES.
+# mktemp_calls: the number of times the stand-in mktemp was called in the
+# last run. mktemp_outside: "outside" when every path it logged is not
+# under the fixture's docs/worklogs folder $W, "inside" otherwise (empty
+# input, no logged call, also prints "outside", so callers first check
+# mktemp_calls is not "0"). mktemp_removed: "absent" when every path it
+# logged no longer exists, "present" otherwise.
 mktemp_calls() { wc -l < "$MKLOG" | tr -d ' '; }
-private_tmp_left() { find "$MKFILES" -maxdepth 1 -type f | wc -l | tr -d ' '; }
+mktemp_outside() {
+  local line
+  while IFS= read -r line; do
+    case "$line" in "$W"/*) printf 'inside\n'; return ;; esac
+  done < "$MKLOG"
+  printf 'outside\n'
+}
+mktemp_removed() {
+  local line
+  while IFS= read -r line; do
+    if [ -e "$line" ]; then printf 'present\n'; return; fi
+  done < "$MKLOG"
+  printf 'absent\n'
+}
 active_log "$W/tmp-cleanup.md" tmp-cleanup
 run_line1_private tmp-cleanup
+assert_not_empty "the line-1 command calls mktemp at least once" "$(cat "$MKLOG")"
 assert_eq "the line-1 command calls mktemp exactly once" "$(mktemp_calls)" '1'
-assert_eq "the line-1 command calls mktemp with no argument" "$(cat "$MKARGS")" '0'
-assert_eq "no temporary file lingers in the private mktemp folder after a successful run" "$(private_tmp_left)" '0'
+assert_eq "the path mktemp returns is outside the docs/worklogs folder" "$(mktemp_outside)" 'outside'
+assert_eq "no temporary file lingers after a successful run" "$(mktemp_removed)" 'absent'
 run_check "$D" tmp-cleanup
 assert_eq "tmp-cleanup: the check command then prints closed" "$OUT" 'closed'
 
@@ -524,6 +530,8 @@ line1_cases() {
     kept=$(cat "$MKLOG")
     assert_eq "$l: the exit status is 1" "$CODE" '1'
     assert_eq "$l: the last line printed is the path of the copy" "${OUT##*"$NL"}" "$kept"
+    assert_eq "$l: the kept copy exists" "$([ -f "$kept" ] && printf present || printf absent)" 'present'
+    assert_eq "$l: the kept copy is outside the docs/worklogs folder" "$(mktemp_outside)" 'outside'
     assert_eq "$l: the copy is kept, with the new line 1" "$(head -n 1 "$kept" 2>/dev/null)" "$(closed_line "$s")"
     assert_eq "$l: the work log is unchanged" "$(cksum < "$W/$s.md")" "$sum"
     rm -f "$kept"
@@ -545,7 +553,7 @@ line1_cases() {
     assert_eq "$l: the exit status is 1" "$CODE" '1'
     assert_not_empty "$l: the command prints something" "$OUT"
     assert_eq "$l: the command called mktemp once" "$(mktemp_calls)" '1'
-    assert_eq "$l: the temporary copy is removed" "$(private_tmp_left)" '0'
+    assert_eq "$l: the temporary copy is removed" "$(mktemp_removed)" 'absent'
   fi
   chmod 644 "$W/$s.md"
   assert_eq "$l: the work log is unchanged" "$(cksum < "$W/$s.md")" "$sum"

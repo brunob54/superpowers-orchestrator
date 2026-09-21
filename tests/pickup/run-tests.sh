@@ -285,12 +285,14 @@ printf 'notes\n' > "$D/docs/notes.md"
 scan "$D"
 assert_line "a new file elsewhere under docs/ is dirty" "dirty: 1"
 assert_line "status is CHECK" "status: CHECK"
-# Right after the first /worklog new, before any commit, the scan's
-# pathspec-limited status command reports the new folder as the one
-# untracked line "?? docs/worklogs/" in both of the states below: with no
-# docs/ folder at all yet (the most common first use), and with a docs/
-# folder that already holds a tracked file (docs/README.md here) so that
-# plain git status alone would otherwise report the wider "?? docs/".
+# Right after the first /worklog new, before any commit, git reports the
+# new docs/worklogs folder differently depending on what docs/ already
+# holds: with no docs/ folder at all yet (the most common first use), git
+# collapses it into the one line "?? docs/"; with a docs/ folder that
+# already holds a tracked file (docs/README.md here), git instead prints
+# "?? docs/worklogs/". In both states below, the scan's
+# ":(top,exclude)docs/worklogs" pathspec leaves no line for either form, so
+# the folder is not dirty.
 base_repo worklognofolder
 handoff "$D" "$HANDOFF_FILE" "$(header main "$H")"
 worklog_file w
