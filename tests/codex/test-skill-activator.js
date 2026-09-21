@@ -1427,6 +1427,45 @@ test('"update dependencies to latest" routes to dependency-management, not resea
   assert.ok(!matched.includes('researching-prior-art'), `Unexpected researching-prior-art match: ${JSON.stringify(matched)}`);
 });
 
+// ── worklog routing ───────────────────────────────────────────────────────────
+// The worklog rule stands before brainstorming, refactoring and writing-plans
+// in hooks/skill-rules.json: with equal priority and equal score the sort
+// keeps the file order, and only the first three suggestions are returned.
+
+console.log('\nworklog routing');
+
+const suggested = (prompt) => matchSkills(prompt).map(m => m.skill);
+
+for (const prompt of [
+  'update the work log of the test refactoring',
+  'create a work log for the test refactoring',
+]) {
+  test(`"${prompt}" suggests worklog`, () => {
+    const matched = suggested(prompt);
+    assert.ok(matched.includes('worklog'), `Expected worklog, got: ${JSON.stringify(matched)}`);
+  });
+}
+
+// "network logs" and "framework logs" contain the keyword "work log" as a
+// plain substring (score 1, below the threshold of 2); "worker threads" and
+// "work logging" must not reach an intent pattern.
+for (const prompt of [
+  'check the network logs',
+  'read the framework logs',
+  'keep track of the worker threads',
+  'close work logging when the app shuts down',
+]) {
+  test(`"${prompt}" does NOT suggest worklog`, () => {
+    const matched = suggested(prompt);
+    assert.ok(!matched.includes('worklog'), `Unexpected worklog suggestion: ${JSON.stringify(matched)}`);
+  });
+}
+
+test('a feature request that mentions keeping track still suggests brainstorming', () => {
+  const matched = suggested('add a feature to keep track of the worker threads, write a plan and refactor the pool module');
+  assert.ok(matched.includes('brainstorming'), `Expected brainstorming, got: ${JSON.stringify(matched)}`);
+});
+
 // ── Result ────────────────────────────────────────────────────────────────────
 
 console.log(`\n${'─'.repeat(50)}`);

@@ -36,6 +36,13 @@
       "intentPatterns": ["(design|create|build|implement)\\s+(a\\s+)?system", "should\\s+(we|i)\\s+(really\\s+)?build\\s+this", "(is\\s+(this|it)|are\\s+we)\\s+worth\\s+build", "validate\\s+(the\\s+)?premise", "(before|prior\\s+to)\\s+(design|plan|build)"]
     },
     {
+      "skill": "worklog",
+      "type": "workflow",
+      "priority": "high",
+      "keywords": ["work log", "worklog"],
+      "intentPatterns": ["(create|start|open|new)\\s+(a\\s+|the\\s+)?work\\s?logs?\\b", "(update|close|continue)\\s+(the\\s+|my\\s+)?work\\s?logs?\\b"]
+    },
+    {
       "skill": "brainstorming",
       "type": "workflow",
       "priority": "high",
