@@ -182,3 +182,7 @@ carried findings: none passed — the ledger's 22 `Minor:` lines were triaged in
 
 _Completed — 2026-09-21 — converged — HEAD 0b7b9694613e7b4b58f2175ddcd55a1a2f19b53d_
 Secrets found: none
+
+### Post-loop addendum 1 — 2026-09-21
+Effective HEAD unchanged (0b7b969, the completion marker's HEAD): the decision needs no code change, so no fix runs, no new invocation starts and the completion marker stands.
+- [I1] decided (orchestrator): plan governs: "[Interfaces and contracts] The `hooks/skill-rules.json` entry is: '`skill`: `worklog`; `type`: `workflow`; `priority`: `high`.'" — docs/superpowers-orchestrator/2026-09-21-worklog/plans/worklog.md
