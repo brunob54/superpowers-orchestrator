@@ -30,8 +30,8 @@ this guide documents the stable user surface and links there.
 
 ## 1. Installing and staying up to date
 
-Install and update commands for every platform (Claude Code, Cursor, Codex,
-OpenCode, GitHub Copilot CLI) live in the [main README's Installation
+Install and update commands for every platform (Claude Code, Cursor,
+OpenCode, GitHub Copilot CLI, and Codex, which is no longer supported) live in the [main README's Installation
 section](../../README.md#installation), which also records that only Claude
 Code and GitHub Copilot CLI have actually been used — one source of truth, not duplicated
 here. What the README doesn't tell you:
