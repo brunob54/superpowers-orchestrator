@@ -984,12 +984,22 @@ leave the plan file uncommitted on purpose.
 commit: a commit in which the code-review loop changed code under that
 ruling. When your answer overturns the ruling, the run makes no code change
 itself. It writes `fix <sha> not reverted` into the ruling record, and it adds
-one `Minor:` line that names the fix commit to the ledger
-(`.superpowers/sdd/progress.md`, the progress file of the run). The restored
+one `Minor:` line for each fix commit to the ledger
+(`.superpowers/sdd/progress.md`, the progress file of the run). The line names
+the fix commit and the ruling, and it asks a reviewer to check the branch's
+code against the restored clause and to report code that contradicts the
+clause as a finding. The restored
 plan clause forces a new code review of the whole branch. The reviewers of
-its first round receive that ledger line, and they are asked to report code
-that contradicts the restored clause. The fix subagent of that review then
-removes the wrong code in a normal `review fixes` commit. Until then the
+its first round receive that ledger line. The review is expected to report
+the code that contradicts the restored clause, and its fix subagent is then
+expected to remove the wrong code in a normal `review fixes` commit. This
+outcome is not certain. A reviewer can decide that the code may ship as it
+is. There is also one limit: when the latest review-log entry has no
+completion marker, the run resumes that entry at its next round, and rounds
+after round 1 do not receive the ledger line. For both cases, the Phase 5
+report lists every `fix <sha> not reverted` item with its ruling number, the
+sha and the plan location of the restored clause, so you are the last check
+of that code. Until then the
 branch keeps the change, and the record line and the ledger line make it
 visible. Versions v7.44.0 to v7.49.0 tried to revert such a fix commit
 automatically with `git revert`; that mechanism was removed, because it never

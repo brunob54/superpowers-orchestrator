@@ -2083,8 +2083,8 @@ assert_in_range_folded_exact "reverting a plan amendment does not undo the fix i
 assert_in_range_folded "the fix commit is found by the addendum's fixed line" \
   "$ORCH_SKILL" 'Find the fix commit by the `fixed — <summary> → <sha>` line the review-log addendum recorded for that id.' \
   "$RESUME_LINE" "$RULINGS_LINE"
-assert_in_range_folded "the fix of an overturned ruling is re-raised by the next invocation" \
-  "$ORCH_SKILL" 're-raises the finding against the restored clause' \
+assert_in_range_folded_exact "the next invocation is expected, not certain, to raise the contradiction" \
+  "$ORCH_SKILL" 'is expected to raise the code that contradicts the restored clause as a finding' \
   "$RESUME_LINE" "$RULINGS_LINE"
 # The automatic fix-commit revert is removed. In real runs it ran 0 times, and
 # its pre-check was a deny-list (a list of forbidden cases) that can never be
@@ -2098,24 +2098,45 @@ assert_in_range_folded_exact "every fix commit of an overturned ruling is record
   "$ORCH_SKILL" 'For each such fix commit, record `— fix <sha> not reverted` at the end of the item'"'"'s `**Follow-up:**` line.' \
   "$RESUME_LINE" "$RULINGS_LINE"
 assert_in_range_folded_exact "the ledger line for a fix commit is appended on disk only" \
-  "$ORCH_SKILL" 'Also append one line to `.superpowers/sdd/progress.md` (the ledger), but on disk only — never stage the ledger' \
+  "$ORCH_SKILL" 'Also append one line for each such fix commit to `.superpowers/sdd/progress.md` (the ledger), but on disk only — never stage the ledger' \
   "$RESUME_LINE" "$RULINGS_LINE"
 assert_in_range_folded_exact "the ledger line points a reviewer to the fix commit and asks for a finding" \
-  "$ORCH_SKILL" '`Minor: fix commit <sha> was made under ruling <m>, which a user'"'"'s answer overturned; check its changes against the restored clause at <plan location>, and report code that contradicts the clause as a finding`' \
+  "$ORCH_SKILL" '`Minor: fix commit <sha> was made under ruling <m>, which a user'"'"'s answer overturned; check the branch'"'"'s code against the restored clause at <plan location>, and report code that contradicts the clause as a finding`' \
   "$RESUME_LINE" "$RULINGS_LINE"
 assert_in_range_folded_exact "the reason for the ledger line: round-1 reviewers receive Minor lines as carried findings" \
   "$ORCH_SKILL" 'Round-1 reviewers of the new Phase 4 invocation receive the ledger'"'"'s `Minor:` lines as carried findings' \
   "$RESUME_LINE" "$RULINGS_LINE"
-assert_in_range_folded_exact "the fix subagent of the new invocation undoes the wrong code in a review fixes commit" \
-  "$ORCH_SKILL" 'its fix subagent then undoes the wrong code in a normal `review fixes` commit' \
+assert_in_range_folded_exact "the fix subagent of the new invocation is expected to undo the wrong code in a review fixes commit" \
+  "$ORCH_SKILL" 'its fix subagent is then expected to undo the wrong code in a normal `review fixes` commit' \
   "$RESUME_LINE" "$RULINGS_LINE"
 assert_in_range_folded_exact "the record line and the ledger line make a kept change visible" \
-  "$ORCH_SKILL" 'the record line and the ledger line make that change visible, and the new Phase 4 invocation is what removes it' \
+  "$ORCH_SKILL" 'the record line and the ledger line make that change visible, and the new Phase 4 invocation is expected to remove it' \
   "$RESUME_LINE" "$RULINGS_LINE"
+# Review round 1 of the removal. The skip rule compares the whole ledger line,
+# because one fix commit can serve two rulings. The limit of the mechanism is
+# stated: an interrupted review-log entry resumes after round 1, and only
+# round 1 receives carried lines. The Phase 5 report lists the kept fix
+# commits. The ledger read of the skip rule is pinned with the permitted-reads
+# list (finding 5, below).
+assert_in_range_folded_exact "the skip rule compares the whole ledger line, sha and ruling number" \
+  "$ORCH_SKILL" 'Skip the append for a fix commit when the ledger already holds this same whole `Minor: fix commit <sha>` line — the same `<sha>` and the same ruling number `<m>`.' \
+  "$RESUME_LINE" "$RULINGS_LINE"
+assert_in_range_folded_exact "the skip rule gives its reason: one fix commit can serve two rulings" \
+  "$ORCH_SKILL" 'Compare the whole line, never the `<sha>` alone: one fix commit can serve two rulings, and each ruling needs its own line.' \
+  "$RESUME_LINE" "$RULINGS_LINE"
+assert_in_range_folded_exact "the limit: an interrupted review-log entry resumes after round 1 and gets no carried lines" \
+  "$ORCH_SKILL" 'The limit: when the latest review-log entry has no completion marker, the run resumes that entry at its next round, and rounds after round 1 receive no carried lines; the `not reverted` item of the Phase 5 report (Phase 5 step 3) covers this case.' \
+  "$RESUME_LINE" "$RULINGS_LINE"
+assert_in_range_folded_exact "Phase 5 report lists every fix commit kept under an overturned ruling" \
+  "$ORCH_SKILL" 'and every `— fix <sha> not reverted` item of the ruling record, listed by ruling number with the `<sha>` and the plan location of the restored clause, or `none`' \
+  "$PHASE5_LINE" "$LOG_FORMAT_LINE"
+assert_in_range_folded_exact "Phase 5 gives the reason for the kept-fix item: the user is the last check" \
+  "$ORCH_SKILL" 'a reviewer may triage the carried ledger line as `ship-as-is`, so the user is the last check of that code' \
+  "$PHASE5_LINE" "$LOG_FORMAT_LINE"
 # A stop after the ledger append must leave the ledger as the resume found it:
 # the next resume prompt can carry another answer for the same id.
 assert_in_range_folded_exact "a stop removes the ledger line this resume added" \
-  "$ORCH_SKILL" 'Put back a checkbox this resume unticked, and a ledger line it removed, the same way, and remove a ledger line it added. Only then stop and report.' \
+  "$ORCH_SKILL" 'Put back a checkbox this resume unticked, and a ledger line it removed, the same way, and remove a `Minor: fix commit <sha>` line it added to the ledger. Only then stop and report.' \
   "$RESUME_LINE" "$RULINGS_LINE"
 # No text of the removed mechanism may stay anywhere in the skill file.
 ORCH_TOTAL_LINES="$(wc -l < "$ORCH_SKILL" | tr -d ' ')"
@@ -3542,9 +3563,11 @@ assert_in_range_folded "finding 4: text of another clause this resume reverts is
 # `git show <sha>:<path>` form prints whole files.
 # Mutation testing: a sentence added after the plan scan ("You may also read
 # the files it prints") gave a new read and no check failed. The needle runs
-# into the next list item, so nothing can stand between them.
-assert_in_range_folded_exact "finding 5: the permitted reads end with the plan scan, and the list item ends there" \
-  "$ORCH_SKILL" '`git show <ruling commit>:<plan path>`, and a scan of the whole plan file for an orphan `(amended by ruling <n>)` marker and its `**Amendment <n>` note. 5. Your own ruling record for this run' \
+# into the next list item, so nothing can stand between them. The one
+# sentence that stands there is the ledger read that the skip rule of Resume
+# step 3 needs; the needle holds it whole.
+assert_in_range_folded_exact "finding 5: the permitted reads end with the plan scan and the ledger read of the skip rule, and the list item ends there" \
+  "$ORCH_SKILL" '`git show <ruling commit>:<plan path>`, and a scan of the whole plan file for an orphan `(amended by ruling <n>)` marker and its `**Amendment <n>` note. For the skip rule of Resume step 3, you alone — never a fork — may also read, in `.superpowers/sdd/progress.md` (the ledger), the `Minor: fix commit <sha>` lines, and no other line of that file. 5. Your own ruling record for this run' \
   "$READ_EXCEPTION_LINE" "$READ_EXCEPTION_END"
 assert_in_range_folded_exact "finding 5: the fix-commit line is read only to name a fix commit in the record" \
   "$ORCH_SKILL" 'and only when a ruling that a user'"'"'s answer overturns has a fix commit to name in the record;' \

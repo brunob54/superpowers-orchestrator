@@ -735,7 +735,11 @@ The open-decisions file is `<topic folder>/plans/<slug>-open-decisions.md`.
    `<topic folder>/plans/<slug>-open-decisions.md`, and every entry whose
    Forks line records `contradiction: unsettled`, listed by ruling number,
    or `none`, and every entry whose Resolution line begins with `accept:`,
-   listed by ruling number with its item summary, or `none` — and the
+   listed by ruling number with its item summary, or `none`, and every
+   `— fix <sha> not reverted` item of the ruling record, listed by ruling
+   number with the `<sha>` and the plan location of the restored clause,
+   or `none` (a reviewer may triage the carried ledger line as
+   `ship-as-is`, so the user is the last check of that code) — and the
    three log paths
    (orchestration, plan review, and the code review log at
    `<topic folder>/implementation/<slug>-review-log.md`) — and, under the
@@ -1343,7 +1347,8 @@ Trigger: `Resume orchestration for <plan-or-spec path>`.
    replaced, one clause at a time, using the text you read before you
    changed that clause, so that the plan file reads as it did when this
    resume began. Put back a checkbox this resume unticked, and a ledger
-   line it removed, the same way, and remove a ledger line it added. Only
+   line it removed, the same way, and remove a
+   `Minor: fix commit <sha>` line it added to the ledger. Only
    then stop and report. Never restore
    it by writing a whole file over the plan, and never run `git checkout`
    on the plan file, `git reset --hard` or `git clean`: a whole-file write
@@ -1363,21 +1368,31 @@ Trigger: `Resume orchestration for <plan-or-spec path>`.
    `fixed — <summary> → <sha>` line the review-log addendum recorded for
    that id. For each such fix commit, record `— fix <sha> not reverted`
    at the end of the item's `**Follow-up:**` line. Also append one line
-   to `.superpowers/sdd/progress.md` (the ledger), but on disk only —
+   for each such fix commit to `.superpowers/sdd/progress.md` (the
+   ledger), but on disk only —
    never stage the ledger, for the reason given below for a Phase 3
    ruling:
-   `Minor: fix commit <sha> was made under ruling <m>, which a user's answer overturned; check its changes against the restored clause at <plan location>, and report code that contradicts the clause as a finding`.
+   `Minor: fix commit <sha> was made under ruling <m>, which a user's answer overturned; check the branch's code against the restored clause at <plan location>, and report code that contradicts the clause as a finding`.
    In that line, `<plan location>` is the clause's location as the
    item's `**Follow-up:**` line states it. Round-1 reviewers of the new
    Phase 4 invocation receive the ledger's `Minor:` lines as carried
    findings (findings that an earlier step recorded and handed on), so
-   this line gives them a pointer to the commit. Skip the append when
-   the ledger already holds a line for the same `<sha>`. The new Phase 4
+   this line gives them a pointer to the restored clause. Skip the
+   append for a fix commit when the ledger already holds this same whole
+   `Minor: fix commit <sha>` line — the same `<sha>` and the same ruling
+   number `<m>`. Compare the whole line, never the `<sha>` alone: one fix
+   commit can serve two rulings, and each ruling needs its own line. The
+   new Phase 4
    invocation that the reverted plan file forces (the plan is content
    for the effective-HEAD test) reviews the whole branch under the
-   restored plan and re-raises the finding against the restored clause;
-   its fix subagent then undoes the wrong code in a normal
-   `review fixes` commit. **When
+   restored plan and is expected to raise the code that contradicts the
+   restored clause as a finding;
+   its fix subagent is then expected to undo the wrong code in a normal
+   `review fixes` commit. That outcome is expected, and it is not
+   certain. The limit: when the latest review-log entry has no completion
+   marker, the run resumes that entry at its next round, and rounds after
+   round 1 receive no carried lines; the `not reverted` item of the
+   Phase 5 report (Phase 5 step 3) covers this case. **When
    the reverted ruling was made in Phase 3,
    there is no fix commit to revert at all** — the amended clause was
    implemented by the task's own implementer, inside an ordinary task
@@ -1395,7 +1410,8 @@ Trigger: `Resume orchestration for <plan-or-spec path>`.
    batch loop dispatches it again. Either way the branch can keep, for
    a time, a change the user's decision rejected. For a Phase 4 ruling,
    the record line and the ledger line make that change visible, and
-   the new Phase 4 invocation is what removes it. For a Phase 3 ruling,
+   the new Phase 4 invocation is expected to remove it; the Phase 5
+   report lists it in both cases. For a Phase 3 ruling,
    the task that the batch loop dispatches again replaces it.
    **Finding that commit, and reading it:**
    one return writes one `## RULING` entry and one ruling commit, both
@@ -1736,7 +1752,10 @@ you and your forks may read exactly:
    `git show <ruling commit>:<plan path>`,
    and a scan of the whole plan
    file for an orphan `(amended by ruling <n>)` marker and its
-   `**Amendment <n>` note.
+   `**Amendment <n>` note. For the skip rule of Resume step 3, you
+   alone — never a fork — may also read, in
+   `.superpowers/sdd/progress.md` (the ledger), the
+   `Minor: fix commit <sha>` lines, and no other line of that file.
 5. Your own ruling record for this run,
    `<topic folder>/plans/<slug>-open-decisions.md` — the file you write
    yourself. Guard 4 (below) reads it, before every decision, for an
