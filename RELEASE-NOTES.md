@@ -8,6 +8,83 @@
 > (`REPOZY/superpowers-optimized`) and are kept unchanged as history; any
 > testing they describe was not done here.
 
+## v7.50.0 — the orchestrator no longer reverts a fix commit by itself
+
+**Problem.** When a user's answer overturned a ruling, resume reverted the fix
+commits of that ruling with `git revert`, guarded by a check script. The
+script named unsafe git states one by one, so it was never complete: releases
+v7.44.0 to v7.49.0 added guards, and each review found new states. The
+mechanism ran 0 times in real runs.
+
+**Change.** The mechanism is removed (252 skill lines, the
+`tests/precheck-script` suite). The orchestrator records `— fix <sha> not
+reverted`, gives the next code review a pointer, and the Phase 5 report lists
+every such item.
+
+**Effect.** The rejected code is removed by the next code review, or you see it
+at Phase 5. Reinstall the plugin. Nothing to migrate.
+
+### Why the mechanism was removed
+
+When a user's answer at Resume overturned a ruling that had amended the plan,
+the orchestrator restored the plan clause, and it also reverted the fix
+commits made under that ruling, inside the user's working tree. The rule
+exists since 2026-09-04. Releases v7.44.0 to v7.49.0 added guards to it, and
+from v7.47.0 a check script decided whether the revert was safe. The script
+was a deny-list: a list that names each unsafe state (an index bit set by
+hand, a sparse checkout, an ignored file, a renamed path) and treats silence
+as "safe". The number of git states has no limit, so each review of a guard
+found further states.
+
+Measured on 2026-09-21 over the 12 orchestrated runs of this repository: 30
+rulings, 10 user follow-up lines, 5 resume follow-up commits. All 5 commits
+touch only plan and record files. No run ever reverted a fix commit, and no
+ruling record holds `fix <sha> reverted` or `not reverted`. In the same period
+about 20 worklist rows were written about the mechanism, all from reviews and
+replays in scratch repositories, none from a run.
+
+### What resume does now
+
+The orchestrator makes no code change for a fix commit of an overturned
+ruling. It restores the plan clause as before (the plan revert is a separate
+mechanism and is unchanged). For each fix commit it then does two things:
+
+- It records `— fix <sha> not reverted` at the end of the item's
+  `**Follow-up:**` line in the ruling record. This wording existed before.
+- It appends one line to the ledger `.superpowers/sdd/progress.md`, on disk
+  only: `Minor: fix commit <sha> was made under ruling <m>, which a user's
+  answer overturned; check the branch's code against the restored clause at
+  <plan location>, and report code that contradicts the clause as a finding`.
+  Round-1 reviewers receive the ledger's `Minor:` lines as carried findings.
+  The append is skipped when the same whole line exists, and a stop removes a
+  line that the same resume added.
+
+The changed plan file forces a new code review invocation, as before. That
+invocation is expected to raise the contradicting code, and its fix subagent
+is expected to remove it. This is not certain: a reviewer may triage the
+carried line as `ship-as-is`, and a run that resumes a review-log entry
+without a completion marker starts after round 1, where no carried lines are
+given. For both cases the Phase 5 report now lists every `— fix <sha> not
+reverted` item by ruling number, with the sha and the plan location, or
+`none`. The user is the last check of that code.
+
+### Removed
+
+The check script and its ten cases, the path-list rules, the `git revert`
+command with `merge.directoryRenames=false`, the cleanup after a conflict, the
+undo before a stop, the saved pre-revert state of a fix commit, the stop on an
+unfinished revert (`REVERT_HEAD`), and the matching permitted-reads entries.
+`tests/in-run-rulings` has 883 checks (948 before); `tests/precheck-script`
+(138 checks) is deleted. `docs/guide/README.md` describes the new behaviour.
+
+### Review
+
+One round with two reviewers (correctness against the removal map; an
+adversarial read of the new text). Both found independently that the rejected
+code could reach Phase 5 unseen; the Phase 5 item is the fix. 0 Critical
+findings. The remaining Minor findings (a ledger line that stays after the
+code is fixed, a missing ledger file) cause no loss and were left out.
+
 ## v7.49.0 — the check script reads index bits and the sparse-checkout setting
 
 **Problem.** Two git states hid a wrong result behind exit code 0. With the
