@@ -324,6 +324,12 @@ check_alarm_line "sparse checkout without cone mode, the fix deleted an outside 
 # sparse checkout.
 sparsebase sparsein; printf '2\n' > src/a.txt; fix; git sparse-checkout set src
 check_alarm_line "sparse checkout in cone mode, every listed path inside (the accepted cost)" "$SPARSE_LINE"
+# Mutation testing, 2026-09-21: git accepts `yes`, `on` and `1` as true, and
+# `--bool` makes git print `true` for each of them. Without `--bool` the script
+# would be quiet in a repository whose configuration holds such a value. The
+# value is written by hand here: no `git sparse-checkout` command runs.
+newrepo sparseyes; printf 'a\n' > f.txt; add_all; printf 'b\n' > f.txt; fix; git config core.sparseCheckout yes
+check_alarm_line "core.sparseCheckout holds the value yes, written by hand" "$SPARSE_LINE"
 
 # Row 86: the fix deleted the last file of a nested folder, so the folder is
 # gone from disk. For a missing folder below an existing one, the search for
