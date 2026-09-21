@@ -39,3 +39,5 @@ Re-dispatch: phase 4, in-run resume 2 of 3, return 2 of 6
 
 ## Phase 4 — Code review — rounds 4 — converged — fixes 2 — unresolved 0
 detail: invocation 2 (rounds 5–8, fixes a18f595 and 0b7b969, converged at HEAD 0b7b969); invocation 1 (rounds 1–4, 6 fixes, cap) and its addendum fix bf83855 came before it; rulings 1–4
+
+_Completed — 2026-09-21 — HEAD 1bdf865_
