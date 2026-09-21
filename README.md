@@ -11,7 +11,7 @@
 
 # Superpowers Orchestrator
 
-**Superpowers** is a plugin for coding agents (Claude Code and GitHub Copilot CLI, which are the two it has been used with; Cursor and OpenCode integrations exist but are untested, and Codex is no longer supported — see [Platform status](#installation)) that adds a disciplined development workflow: a design specification first, then a task plan, then test-driven implementation with staged code reviews. The workflow is implemented as *skills* (instruction files the agent follows) and *hooks* (scripts that run automatically at session events).
+**Superpowers** is a plugin for coding agents (Claude Code and GitHub Copilot CLI, which are the two it has been used with — Copilot CLI only up to v7.13.0, so later releases are untested there; Cursor and OpenCode integrations exist but are untested, and Codex is no longer supported — see [Platform status](#installation)) that adds a disciplined development workflow: a design specification first, then a task plan, then test-driven implementation with staged code reviews. The workflow is implemented as *skills* (instruction files the agent follows) and *hooks* (scripts that run automatically at session events).
 
 This repository is a fork of [obra/superpowers](https://github.com/obra/superpowers) via [REPOZY/superpowers-optimized](https://github.com/REPOZY/superpowers-optimized). Its own contribution is **orchestration**: the same workflow can run autonomously from an approved specification to a merge-ready branch, with independent review rounds between stages — see [What this repo adds](#what-this-repo-adds).
 
@@ -427,7 +427,10 @@ This is the full cross-platform hook inventory for the plugin. Claude Code gets 
 used to keep review material out of every reviewer's diff) both need it.
 
 **Platform status:** only **Claude Code** and **GitHub Copilot CLI** have
-actually been used to run this plugin. Every other platform — at present
+actually been used to run this plugin. **Copilot CLI** was last used with
+v7.13.0 (released 2026-09-09): no later release has been tested there, so it
+is not known whether the plugin still works correctly on Copilot CLI. Every
+other platform — at present
 Cursor, Codex (no longer supported), OpenCode and Gemini CLI — was written from that platform's
 documentation and source code and has never been run. If a platform below is
 not one of the two named here, assume its install steps are a starting point
@@ -585,6 +588,10 @@ therefore not supported on OpenCode yet.
 ---
 
 ### GitHub Copilot CLI
+
+**Status: last tested with v7.13.0.** No release after v7.13.0 (2026-09-09)
+has been run on Copilot CLI. It is not known whether the plugin still works
+correctly there.
 
 Copilot CLI reads the same `.claude-plugin/marketplace.json` and
 `plugin.json` as Claude Code, so the install flow is the same two commands.
