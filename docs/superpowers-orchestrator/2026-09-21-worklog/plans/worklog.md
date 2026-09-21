@@ -239,7 +239,7 @@ git commit -m "feat(worklog): add the work log template and its test suite" --tr
   - Invariants: each command is copied out of the skill text by its `### ` heading, never retyped in the suite; section 2 fails when any line of `SKILL.md` holds a `$` directly before a digit; the list command runs as a script under `set -euo pipefail`; when `zsh` is installed, section 3 also runs the list command and section 6b the slug, check and line-1 commands under `zsh`, the shell of the Bash tool on macOS; fixture names never differ by letter case alone; the symbolic-link, unreadable-file, line-break-name and `zsh` checks print a NOTE and are skipped where the platform cannot produce their fixture.
   - Verification: Step 2 fails while `SKILL.md` is absent; Step 4 passes.
 
-- [ ] **Step 1: Add the failing sections to the suite**
+- [x] **Step 1: Add the failing sections to the suite**
 
 In `tests/worklog/run-tests.sh`, insert this block directly after the line `TEMPLATE="$REPO/skills/worklog/template.md"`:
 
@@ -506,12 +506,12 @@ fi
 
 ```
 
-- [ ] **Step 2: Run the suite to verify it fails**
+- [x] **Step 2: Run the suite to verify it fails**
 
 Run: `bash tests/worklog/run-tests.sh`
 Expected: FAIL — exit 1; "the skill text holds SLUG_CMD" (and the five other "the skill text holds" checks) fail, because `skills/worklog/SKILL.md` does not exist. Section 1 still passes.
 
-- [ ] **Step 3: Create the skill file**
+- [x] **Step 3: Create the skill file**
 
 Create `skills/worklog/SKILL.md` with this content. The block under `### The check command` is the spec's second fenced `bash` block byte for byte. The block under `### The list command` is the spec's first fenced `bash` block with one change, `l = $0` written `l = $(0)` (the deliberate spec deviation named in the header's **Assumptions**). If a character differs, copy the blocks from the spec again and apply that one change.
 
@@ -649,7 +649,7 @@ LC_ALL=C awk -v new='<line>' 'NR == 1 { cr = /\r$/; bom = /^\357\273\277/; l = (
 ```
 ````
 
-- [ ] **Step 4: Run the checks to verify they pass**
+- [x] **Step 4: Run the checks to verify they pass**
 
 Run: `S=docs/superpowers-orchestrator/2026-09-21-worklog/specs/worklog-design.md; for n in 1 2; do h=$([ "$n" = 1 ] && echo '### The list command' || echo '### The check command'); diff <(awk -v n="$n" '/^```bash$/ { k++; c = 1; next } c && /^```$/ { c = 0 } c && k == n' "$S" | sed 's/l = \$0;/l = $(0);/') <(awk -v h="$h" '$0 == h { f = 1; next } f && /^```bash$/ { c = 1; next } c && /^```$/ { exit } c' skills/worklog/SKILL.md) && echo "BLOCK-$n-SAME"; done`
 Expected: `BLOCK-1-SAME` (the list command, compared after the one change `l = $0` → `l = $(0)` is applied to the spec's text; the `sed` changes nothing in the check command) and `BLOCK-2-SAME` (the check command), with no diff lines.
@@ -660,7 +660,7 @@ Expected: PASS — exit 0, 0 failed. NOTE lines may appear only on a platform th
 Run: `bash tests/review-gates/run-tests.sh`
 Expected: PASS — the new skill files carry no bare `<d>`, no `<reviewers-per-lens>` and no complete defaults block.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add skills/worklog/SKILL.md tests/worklog/run-tests.sh
