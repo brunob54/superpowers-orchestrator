@@ -353,3 +353,72 @@ $ bash tests/pickup/run-tests.sh; echo "exit=$?"
 Results: 207 passed, 0 failed
 exit=0
 ```
+
+## Round 4
+
+Findings addressed: L12, I1.
+
+Files changed: `skills/worklog/SKILL.md`, `tests/worklog/run-tests.sh`,
+`tests/codex/test-session-start-budget.sh`.
+
+L12: `skills/worklog/SKILL.md`, `/worklog close` section, step 2: before the
+existing "If a part is neither `done` nor `dropped` ..." sentence, added
+"Before writing anything, check that the section headings `## Parts`,
+`## Open items`, `## Accepted limits` and `## Decisions` all stand; when
+one is missing, stop, name the missing heading, and tell the user to run
+`/worklog update`, which repairs it — `close` itself never adds a heading
+or the `Next item number` line." The repair itself stays in `update` only
+(its step 3, unchanged). Pinned the same sentence as a new entry in the
+`PHRASES` array of suite section 7 (`tests/worklog/run-tests.sh`).
+
+I1: `tests/codex/test-session-start-budget.sh`: added case 9. It reuses the
+three 40-character work logs of case 8, first measuring `room_with_notice`
+(the room the notice for those three work logs alone leaves, LIMIT minus
+the output length with only that notice added) and `notice_size` (how much
+smaller that is than `free_room`, the no-notice room measured before case
+3). A single state.md is then sized to `room_with_notice` raw characters:
+its own wrapper text always makes the wrapped section land a bit over the
+true room (so a budget that correctly counts the notice skips it, and the
+output stays at or under the limit with the whole notice present) while
+staying under the true room plus the notice's own size (so a budget that
+leaves the notice out of its count would find room for it and take the
+output over the limit). Case 8 is unchanged.
+
+Verification of I1: built a temporary copy of `hooks/session-start-assemble.js`
+outside the checkout (under a `mktemp -d` directory, never committed) whose
+`remaining` calculation in `pack()` is measured against a `headForBudget`
+that omits the notices part, while the real `head` used for the final
+output still includes it — i.e. "the budget leaves the notice out of its
+count". Copied `hooks/` and `skills/` into a temporary plugin root with
+that one file swapped in, pointed a copy of the test script's `REPO_ROOT`
+at it, and ran the whole (unmodified) `tests/codex/test-session-start-budget.sh`
+against it:
+
+```
+118 passed, 3 failed
+  FAIL - the room left counts the notice: 10135 characters, over 10000
+  FAIL - the room left counts the notice: state.md content is not injected
+  FAIL - the room left counts the notice: <not-injected> names state.md
+```
+
+All 3 failures are in case 9; cases 1-8 passed unchanged. Run against the
+real, unmodified `hooks/session-start-assemble.js` on this branch, the same
+case 9 passes (state.md is skipped, the output is 7951 characters, and the
+whole notice is present). The temporary copy and its plugin-root directory
+were left under the OS temporary directory (never inside this checkout,
+never staged, never committed).
+
+Covering tests:
+
+```
+$ bash tests/worklog/run-tests.sh; echo "exit=$?"
+...
+Results: 178 passed, 0 failed
+exit=0
+
+$ bash tests/codex/test-session-start-budget.sh; echo "exit=$?"
+...
+  (room_with_notice=2231, notice_size=496)
+  121 passed, 0 failed
+exit=0
+```

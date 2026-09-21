@@ -121,3 +121,14 @@ _Invocation 1 — 2026-09-21 — N=4 M=3 — BASE..HEAD e06a224..1c04872 — bra
 
 _Completed — 2026-09-21 — cap reached — HEAD d030fec3e793f1e32f2a82f18fd6e97b6d34e54c_
 Secrets found: none
+
+### Post-loop addendum 1 — 2026-09-21
+Verification re-review skipped: the effective HEAD had moved past the completion marker (29d0eb6, the plan amendment of ruling 3), so invocation 2 reviews the fix.
+- [L12] decided (orchestrator): fix it: before `close` writes anything, it checks that every section heading it reads or writes (`## Parts`, `## Open items`, `## Accepted limits`, `## Decisions`) stands; when one is missing, `close` stops, names the missing heading and tells the user to run `/worklog update`, which repairs it; `close` itself never adds a heading or the `Next item number` line
+- [L12] fixed — before it writes anything, `close` checks that `## Parts`, `## Open items`, `## Accepted limits` and `## Decisions` stand, and otherwise stops, names the missing heading and tells the user to run `/worklog update`; the repair stays in `update`; the sentence is pinned in suite section 7 → bf83855
+- [L18] decided (orchestrator): plan governs: "[Discovery through the session-start hook] 'Run the list command, unchanged: with its folder test, its `|| true` and its file-name filter." — docs/superpowers-orchestrator/2026-09-21-worklog/plans/worklog.md
+- [I1] decided (orchestrator): amend plan: Task 4's Contract bullet for `tests/codex/test-session-start-budget.sh` case 8 also requires a case 9 — the three 40-character work logs of case 8 with workspace files sized so that the room they leave is smaller than the notice; `assert_common` passes and the whole notice is present; case 9 fails when the budget leaves the notice out of its count (Amendment 3 in the plan); fix it: (this answers the round 4 verification 3 user-decision item on budget case 8) add case 9 to `tests/codex/test-session-start-budget.sh` as the amended Contract states, and show once that it fails on a copy of the hook whose budget does not count the notice
+- [I1] fixed — budget case 9 uses the three 40-character work logs of case 8 and a state.md sized from a live run so that the room it leaves is smaller than the notice; it asserts `assert_common`, the whole notice and state.md skipped; it failed 3 checks on a copy of the assembler whose budget leaves the notices part out, and passes on the branch → bf83855
+
+_Invocation 2 — 2026-09-21 — N=4 M=3 — BASE..HEAD e06a224..bf83855 — branch feature/worklog — gate: orchestration_
+carried findings: none passed — the ledger's 22 `Minor:` lines were triaged in round 1 (invocation 1); round numbering continues, so this invocation has no round 1
