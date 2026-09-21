@@ -8,6 +8,120 @@
 > (`REPOZY/superpowers-optimized`) and are kept unchanged as history; any
 > testing they describe was not done here.
 
+## v7.52.0 — the worklog skill: one tracking document per piece of multi-part work
+
+**Problem.** Work with several parts that lasts many sessions had no document
+for its progress. `state.md` is a snapshot that every save rewrites,
+`session-log.md` has no table of parts and no list of open items, and
+`known-issues.md` maps errors to fixes.
+
+**Change.** A new skill, `worklog`, creates, fully updates and closes
+`docs/worklogs/<slug>.md`, a document that carries its own update rules. The
+session-start hook names the active work logs in one notice of at most 457
+characters plus the length of the root path, and `/pickup` no longer counts
+an uncommitted work log as unfinished work.
+
+**Effect.** Type `/worklog new` to start a work log. Reinstall the plugin.
+Nothing to migrate.
+
+### Why a new document
+
+The plugin already writes three memory files, and none of them can hold the
+progress of multi-part work. `state.md` is one file per project, under 100
+lines, and every save-state rewrites it: it is a snapshot of one moment, not a
+history. `session-log.md` holds the decisions of each session in time order;
+it has no table of parts and no list of open items. `known-issues.md` maps a
+recurring error to its solution; it does not track work.
+
+The new skill, the hook change and the `/pickup` change ship inside the
+plugin, so a session uses them only after the plugin is reinstalled.
+
+### What a work log is
+
+A work log is one Markdown file per piece of multi-part work, for example
+four groups of tests that are refactored one group after the other. It lives
+at `docs/worklogs/<slug>.md` under the repository root, and git tracks it. The
+slug is its short name: lowercase letters, digits and single hyphens, at most
+40 characters, and not one of the command words `new`, `update` and `close`.
+Line 1 is a status line written as an HTML comment, which a Markdown viewer
+does not show: `<!-- Work log: status=active slug=<slug> created=<YYYY-MM-DD> -->`.
+It stands on line 1 because a Markdown formatter can insert an empty line
+under a heading, so a status line under the heading would move.
+
+The document has a table of parts, a list of open items with a
+`Next item number` line, a list of accepted limits, and a list of decisions
+whose entries are never rewritten. An admission rule decides which problem
+becomes an open item. The model is `docs/orchestration-issues.md`: measured
+on 2026-09-21, 0 of its rows 41 to 92 came from a real case, because reviews
+filled the worklist before it had an admission rule. The section
+`How to maintain this document` holds seven update rules, so a session that
+reads the file can maintain it even where the plugin is not installed. The
+skill never commits.
+
+### The three commands
+
+- `/worklog new [<slug>]` asks for the title, the goal, the "done when"
+  condition, the parts and the admission rule in one question batch, fills
+  `skills/worklog/template.md`, and writes the file. It never overwrites a
+  work log.
+- `/worklog` or `/worklog update [<slug>]` compares the document with the
+  session and with the commits since its creation date
+  (`git log -n 200 --since="<created> 00:00"`, at most five windows of 200
+  commits), and applies the document's own rules.
+- `/worklog close [<slug>]` asks first when a part is unfinished or an open
+  item remains, fills the last `Commit` cells, and changes line 1 to the
+  closed form.
+
+The skill tests line 1 with a fixed shell command, not by reading it, because
+the Read tool shows neither a carriage return nor a symbolic link. It changes
+line 1 with a second command that keeps a carriage return and a byte order
+mark. The model can load the skill by itself (the skill has no
+`disable-model-invocation` key), and `hooks/skill-rules.json` routes "create
+a work log" and "update the work log" to it.
+
+### The session-start notice
+
+`hooks/session-start` runs the list command of the skill, copied unchanged,
+and names at most three active work logs in one `<active-work-logs>` notice,
+with the root as an absolute path. The notice is appended to the notices,
+which are always included; the content of a work log is never injected. The
+list command reads line 1 only, prints a file only when its name is a valid
+slug plus `.md` (a file name is text that anyone who can add a file
+controls), and is safe under the hook's `set -euo pipefail`. The fixed text
+of the notice has 248 characters; with three 40-character slugs and the text
+for further work logs, the notice has at most 457 characters plus the length
+of the root. A root longer than 300 characters is cut to its last 300.
+
+### `/pickup`
+
+`skills/pickup/scripts/pickup-scan.js` adds `docs/worklogs` to the paths that
+its uncommitted-change check leaves out. A commit made after the handoff
+still gives `CHECK`, also when it touches only `docs/worklogs/`.
+
+### Tests
+
+A new fast suite, `tests/worklog/run-tests.sh`, checks the template, copies
+the slug, list, check and line-1 commands out of the skill text and runs them
+on fixture folders (in `bash`, and in `zsh` when it is installed), checks the
+pinned phrases of the skill, and checks that the hook holds the list command
+unchanged. `tests/codex/test-session-start-worklog-notice.sh` checks the
+exact notice on fixture projects, and `tests/codex/test-session-start-budget.sh`
+keeps the output at or under 10,000 characters with three 40-character work
+logs. `tests/pickup/run-tests.sh` and `tests/codex/test-skill-activator.js`
+gain cases, and `tests/skill-triggering` gains a `worklog` prompt.
+
+### Accepted limits
+
+- The model can forget the update rules in a long session or after a
+  compaction; `/worklog` forces a full update.
+- An orchestrated run and a whole-branch review stop on an uncommitted file
+  that they do not know. The template and the notice ask for a commit before
+  such a run and forbid writes while it runs.
+- On Windows, if a `find` that is not the Git Bash program runs, the list is
+  empty and the hook continues without a notice (not tested there).
+- That a formatter moves a status line below a heading is taken from the
+  tools' documented rules, not replayed.
+
 ## v7.51.0 — orchestration runs on Claude Code only; the usage-limit wait
 
 **Problem.** The orchestration skill's description said "Claude Code only",
