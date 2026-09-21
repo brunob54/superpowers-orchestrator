@@ -105,3 +105,16 @@ _Invocation 1 — 2026-09-21 — N=4 M=3 — BASE..HEAD e06a224..1c04872 — bra
 - [M4] carried — the activator test "a feature request that mentions keeping track still suggests brainstorming" never matches the worklog rule, so it guards no worklog behaviour ← 1/3: r2:M2
 - [M5] carried — no fixture puts a file in a sub-folder of docs/worklogs, so removing `-maxdepth 1` from the list, listing and hook copies passes every suite ← 1/3: r2:M4
 - [M6] carried — the check, line-1 and listing commands never run on a root that holds a space; only the hook's copy is tested with one ← 1/3: r3:M2
+
+## Round 4 verification 3 — Test & coverage quality — opus
+**Reviewers:** M=3, usable 3/3
+**Reviewer verdicts:** r1: 0 Critical, 0 Important, 2 Minor | r2: 0 Critical, 1 Important, 2 Minor | r3: 0 Critical, 0 Important, 2 Minor
+**Sources mapped:** 7/7
+**Reviewer verdict:** 0 Critical, 1 Important, 5 Minor
+### Dispositions
+- [I1] user-decision — budget case 8 cannot fail for any notice the design allows: the plan-mandated oversized fixture of case 5 leaves about 898 characters of room against a largest notice of about 760, so no test checks that the notices part is counted in the budget; a separate near-limit case would not contradict the Contract; three earlier reviewers graded the same gap Minor (round 4 [M7], verification 2 [M1]) (plan-mandated) — at tests/codex/test-session-start-budget.sh:312 — clause: Task 4 "`tests/codex/test-session-start-budget.sh` case 8 (code artifact): with three active 40-character work logs and the oversized workspace files of case 5," ← 1/3: r2:I1
+- [M1] carried — the C-locale sort checks cannot fail on macOS or in a C-locale runner when `LC_ALL=C` is removed from the list, listing or hook copy ← 2/3: r1:M1, r2:M1
+- [M2] carried — the suite's zsh runs read the user's `~/.zshenv`, which can put another mktemp before the stand-in or print text, giving a false failure ← 1/3: r1:M2
+- [M3] carried — no fixture uses `update.md` or `close.md`, or a file in a sub-folder of docs/worklogs, so the command-word tests and `-maxdepth 1` of the filter copies are untested ← 1/3: r2:M2
+- [M4] carried — the root cut is tested at 300 and about 460 characters only, so the threshold could move up to about 460 without a failing test ← 1/3: r3:M1
+- [M5] carried — the line-1 tests still assert that mktemp is called exactly once, a property the skill does not state ← 1/3: r3:M2
