@@ -1785,7 +1785,7 @@ git commit -m "docs: document the worklog skill in the guide and the README" --t
   - Verification: Step 2's word count prints a number at most 120; a reader finds each summary statement in the prose.
 - The README release list item (wording artifact): one new last item `... (v7.52.0)` before ` — are covered in`. Verification: `node tests/codex/test-version-files.js`.
 
-- [ ] **Step 1: Bump the version and write the entry**
+- [x] **Step 1: Bump the version and write the entry**
 
 Change `7.51.0` to `7.52.0` in: `VERSION` (the only line), `.claude-plugin/plugin.json` (`"version"`), `.claude-plugin/marketplace.json` (`"version"` of the first plugin), `plugin.universal.yaml` (`  version: "7.51.0"` under meta), the README badge (`badge/version-7.51.0-white`), and the two README ranges `v6.7.0–v7.51.0` (lines 22 and 24).
 
@@ -1913,7 +1913,7 @@ gain cases, and `tests/skill-triggering` gains a `worklog` prompt.
   tools' documented rules, not replayed.
 ```
 
-- [ ] **Step 2: Verify the release**
+- [x] **Step 2: Verify the release**
 
 Run: `node tests/codex/test-version-files.js`
 Expected: PASS — exit 0, every version place states 7.52.0.
@@ -1924,7 +1924,7 @@ Expected: a number at most 120 (the whole summary, the three bold labels include
 Run: `for s in tests/codex/run-unit-tests.sh tests/smart-compress/run-tests.sh tests/reviewer-templates/run-tests.sh tests/writing-plans/run-tests.sh tests/in-run-rulings/run-tests.sh tests/fill-prompt/run-tests.sh tests/orchestrating-development/run-tests.sh tests/review-gates/run-tests.sh tests/measure-context/run-tests.sh tests/pickup/run-tests.sh tests/analyze-compaction/run-tests.sh tests/sdd-scripts/run-tests.sh tests/suite-guard/run-tests.sh tests/worklog/run-tests.sh; do log=$(mktemp); bash "$s" > "$log" 2>&1 && echo "PASS $s" || { echo "FAIL $s"; tail -20 "$log"; }; rm -f "$log"; done`
 Expected: `PASS` for all 14 suites.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add VERSION .claude-plugin/plugin.json .claude-plugin/marketplace.json plugin.universal.yaml README.md RELEASE-NOTES.md
