@@ -1379,7 +1379,7 @@ git commit -m "feat(session-start): name the active work logs in one notice" --t
   - Verification: `bash tests/pickup/run-tests.sh` case 6c.
 - `tests/pickup/run-tests.sh` case 6c (code artifact): a `FRESH` handoff stays `FRESH` with a changed tracked work log and a new untracked one; a new `docs/notes.md` gives `dirty: 1` and `CHECK`. The case calls no helper defined below it (`add_file` is defined in section 10). Verification: Step 2 fails, Step 4 passes.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 In `tests/pickup/run-tests.sh`, insert this block directly before the line `bold "7. CHECK: a commit on an unmerged other branch while HEAD is on the default branch"`:
 
@@ -1406,12 +1406,12 @@ assert_line "status is CHECK" "status: CHECK"
 
 ```
 
-- [ ] **Step 2: Run the test to verify it fails**
+- [x] **Step 2: Run the test to verify it fails**
 
 Run: `bash tests/pickup/run-tests.sh`
 Expected: FAIL — exit 1; the three case 6c checks "a changed and a new file under docs/worklogs are not dirty" (got `dirty: 2`), "status stays FRESH" and "a new file elsewhere under docs/ is dirty" (got `dirty: 3`) fail.
 
-- [ ] **Step 3: Extend `NOT_WORK`**
+- [x] **Step 3: Extend `NOT_WORK`**
 
 In `skills/pickup/scripts/pickup-scan.js`, replace the two lines
 
@@ -1430,12 +1430,12 @@ with
 const NOT_WORK = [HANDOFF_DIR, 'state.md', 'session-log.md', 'docs/worklogs'];
 ```
 
-- [ ] **Step 4: Run the test to verify it passes**
+- [x] **Step 4: Run the test to verify it passes**
 
 Run: `bash tests/pickup/run-tests.sh`
 Expected: PASS — exit 0, 0 failed.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add skills/pickup/scripts/pickup-scan.js tests/pickup/run-tests.sh
