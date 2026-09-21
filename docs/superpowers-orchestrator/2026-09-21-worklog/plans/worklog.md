@@ -1461,7 +1461,7 @@ git commit -m "feat(pickup): an uncommitted work log is not unfinished work" --t
   - Verification: `node tests/codex/test-skill-activator.js`; Step 4's JSON check.
 - The worklog routing tests in `tests/codex/test-skill-activator.js` (code artifact): the two positive prompts contain `worklog`; the four negative prompts do not; the mixed feature prompt still contains `brainstorming`. Verification: Step 2 fails on the two positive prompts, Step 4 passes.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 In `tests/codex/test-skill-activator.js`, insert this block directly before the line `// ── Result ────────────────────────────────────────────────────────────────────`:
 
@@ -1507,12 +1507,12 @@ test('a feature request that mentions keeping track still suggests brainstorming
 
 ```
 
-- [ ] **Step 2: Run the tests to verify they fail**
+- [x] **Step 2: Run the tests to verify they fail**
 
 Run: `node tests/codex/test-skill-activator.js`
 Expected: FAIL — exit 1; `2 failed`: "update the work log of the test refactoring" suggests worklog, and "create a work log for the test refactoring" suggests worklog.
 
-- [ ] **Step 3: Add the rule**
+- [x] **Step 3: Add the rule**
 
 In `hooks/skill-rules.json`, insert this object between the `},` that closes the `premise-check` entry and the `{` that opens the `brainstorming` entry:
 
@@ -1526,7 +1526,7 @@ In `hooks/skill-rules.json`, insert this object between the `},` that closes the
     },
 ```
 
-- [ ] **Step 4: Run the tests to verify they pass**
+- [x] **Step 4: Run the tests to verify they pass**
 
 Run: `node -e 'const r = require("./hooks/skill-rules.json").rules; const i = r.findIndex((x) => x.skill === "worklog"); console.log(i, r[i + 1].skill, r.length)'`
 Expected: `5 brainstorming 28`.
@@ -1534,7 +1534,7 @@ Expected: `5 brainstorming 28`.
 Run: `node tests/codex/test-skill-activator.js`
 Expected: PASS — exit 0, `152 passed, 0 failed`.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add hooks/skill-rules.json tests/codex/test-skill-activator.js
