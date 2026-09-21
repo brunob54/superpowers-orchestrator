@@ -305,3 +305,51 @@ $ bash tests/codex/test-session-start-worklog-notice.sh; echo "exit=$?"
 28 passed, 0 failed
 exit=0
 ```
+
+## Round 4
+
+Findings addressed: M2, M3.
+
+Files changed: `tests/worklog/run-tests.sh`, `tests/pickup/run-tests.sh`.
+
+M2: `tests/worklog/run-tests.sh` mktemp stand-in (about line 437): the
+stand-in now passes its own arguments through to the real mktemp (resolved
+by full path before the stand-in is put on PATH) instead of always creating
+the file inside a private folder with a fixed template, and it logs the
+path the real command returns instead of the argument count. Dropped
+`MKARGS` and the "calls mktemp with no argument" assertion. Added
+`mktemp_outside` (the logged path is not under the fixture's
+`docs/worklogs` folder `$W`) and `mktemp_removed` (the logged path no
+longer exists), replacing `private_tmp_left`. The `tmp-cleanup` case now
+asserts: at least one call was logged (`assert_not_empty`, so the removal
+check cannot pass on empty input), the existing "exactly once" assertion
+(kept — the line-1 command's script calls `mktemp` exactly one time), the
+path is outside `docs/worklogs`, and the path no longer exists. Case (d)
+(the failed-rewrite branch) gained two assertions: the kept copy exists,
+and it is outside `docs/worklogs`. Case (e) (the awk-failure branch) now
+calls `mktemp_removed` instead of the removed `private_tmp_left`.
+
+M3: `tests/pickup/run-tests.sh:288` comment above the `worklognofolder` and
+`worklogfirst` fixtures of case 6c: the comment had the two git outputs
+swapped. Verified with git in a scratch repository
+(`/private/tmp/.../scratchpad/m3check`): with no `docs/` folder, plain
+`git status --porcelain` and the scan's `-- ':(top)'` pathspec both print
+`?? docs/`, and adding `:(top,exclude)docs/worklogs` prints nothing; with a
+tracked `docs/README.md`, plain status prints `?? docs/worklogs/`, and
+adding the exclude again prints nothing — matching
+`skills/pickup/scripts/pickup-scan.js:243-244`. Rewrote the comment to
+state this correctly.
+
+Covering tests:
+
+```
+$ bash tests/worklog/run-tests.sh; echo "exit=$?"
+...
+Results: 177 passed, 0 failed
+exit=0
+
+$ bash tests/pickup/run-tests.sh; echo "exit=$?"
+...
+Results: 207 passed, 0 failed
+exit=0
+```

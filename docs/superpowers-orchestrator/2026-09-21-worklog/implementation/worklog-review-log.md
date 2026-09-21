@@ -92,3 +92,16 @@ _Invocation 1 — 2026-09-21 — N=4 M=3 — BASE..HEAD e06a224..1c04872 — bra
 - [M5] fixed — the mktemp stand-in records its argument count and the suite asserts the line-1 command calls it with no argument → 226329e ← 1/3: r3:M3
 - [M6] fixed — the usage-text pin is now a phrase unique to the unknown-first-word rule → 226329e ← 1/3: r3:M4
 - [M7] fixed — the notice test's case-1 header now says only the absent folder skips find → 226329e ← 1/3: r3:M6
+
+## Round 4 verification 2 — Test & coverage quality — opus
+**Reviewers:** M=3, usable 3/3
+**Reviewer verdicts:** r1: 0 Critical, 0 Important, 1 Minor | r2: 0 Critical, 0 Important, 4 Minor | r3: 0 Critical, 0 Important, 2 Minor
+**Sources mapped:** 7/7
+**Reviewer verdict:** 0 Critical, 0 Important, 6 Minor
+### Dispositions
+- [M1] carried — budget case 8 never measures the largest notice (a root over 300 characters with the " and <n> more" text); the plan's Task 4 Contract fixes that case's fixture, so the worst case needs a new case ← 2/3: r2:M3, r3:M1
+- [M2] fixed — the private mktemp stand-in passes its arguments to the real mktemp and logs the path; the suite asserts the copy is outside docs/worklogs and removed after success, and that case (d) keeps it outside the folder; the argument-count check is dropped → d030fec ← 1/3: r1:M1
+- [M3] fixed — the comment above the two first-use fixtures of pickup case 6c now states git's output for each state correctly → d030fec ← 1/3: r2:M1
+- [M4] carried — the activator test "a feature request that mentions keeping track still suggests brainstorming" never matches the worklog rule, so it guards no worklog behaviour ← 1/3: r2:M2
+- [M5] carried — no fixture puts a file in a sub-folder of docs/worklogs, so removing `-maxdepth 1` from the list, listing and hook copies passes every suite ← 1/3: r2:M4
+- [M6] carried — the check, line-1 and listing commands never run on a root that holds a space; only the hook's copy is tested with one ← 1/3: r3:M2
