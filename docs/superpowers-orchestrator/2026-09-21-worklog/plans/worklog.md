@@ -6,28 +6,30 @@
 
 **Goal:** Add the `worklog` skill, which creates, fully updates and closes a work log at `docs/worklogs/<slug>.md`, with its session-start notice, its `/pickup` exclusion, its routing, its tests, and the v7.52.0 release.
 **Spec:** `/Users/bruno/Programming/AI/AI_Coding/My_tools/Superpowers/docs/superpowers-orchestrator/2026-09-21-worklog/specs/worklog-design.md` *(multi-doc-review reads this line to locate the spec on direct plan reviews; an old-layout path here would produce a plan whose spec is outside the layout)*
-**Architecture:** The skill is Markdown that a model executes (`skills/worklog/SKILL.md`) plus a template file that it copies (`skills/worklog/template.md`). The skill holds four fixed shell commands — the slug command, the list command, the check command and the line-1 command — that the model runs with the Bash tool; a fast suite copies each command out of the skill text and runs it on fixture folders. `hooks/session-start` holds a verbatim copy of the list command and appends one `<active-work-logs>` notice to its always-included notices part; `skills/pickup/scripts/pickup-scan.js` adds `docs/worklogs` to its `NOT_WORK` list.
+**Architecture:** The skill is Markdown that a model executes (`skills/worklog/SKILL.md`) plus a template file that it copies (`skills/worklog/template.md`). The skill holds four fixed shell commands — the slug command, the list command, the check command and the line-1 command — that the model runs with the Bash tool; a fast suite copies each command out of the skill text and runs it on fixture folders. `hooks/session-start` holds a copy of the list command, every line except its print line, and appends one `<active-work-logs>` notice to its always-included notices part; `skills/pickup/scripts/pickup-scan.js` adds `docs/worklogs` to its `NOT_WORK` list.
 **Tech Stack:** Markdown skills; bash 3.2 or later (macOS `/bin/bash` is 3.2), POSIX `awk`, `find`, `sort`, `grep`; Node.js 16 or later (hooks, `pickup-scan.js`, JavaScript tests); JSON (`hooks/skill-rules.json`).
 **Assumptions:**
 - Assumes the Claude Code Skill tool puts the user's argument into `$ARGUMENTS` — will NOT deliver it on Copilot CLI, where the argument may not arrive; the skill then reads the command word and the slug from the user's own message (spec, "Skill file contract").
 - Assumes `find`, `awk` and `sort` on `PATH` are the POSIX programs (on Windows, the Git Bash programs) — will NOT list any work log where the Windows `System32` `find` runs first; the hook then continues with no notice (spec, "The status line", accepted).
 - Assumes the hook runs in the project directory, as the rest of `hooks/session-start` does — will NOT name the work logs of a repository other than the one that holds the working folder.
 - Assumes the fixture file systems may be case-insensitive (the default on macOS) — the fixtures never use two names that differ by letter case alone (`A.md` never sits next to `a.md`), or a fixture would overwrite its own file.
-- Assumes the pinned `git log` phrase of the spec's testing list (`--since="<date> 00:00"`) names the full command of the spec's section "Commands", `git log -n 200 --since="<created> 00:00" --format='%h %cd %s' --date=short HEAD`; the suite pins that full command.
+- Assumes the pinned `git log` phrase of the spec's testing list (`--since="<date> 00:00"`) names the full command of the spec's section "Commands", `git log -n 200 --since="<created> 00:00" --format='%h %cd %s' --date=short HEAD`; the suite pins that full command, followed by the `| cat` of the skill text.
 - Assumes the README's example project map (line 225, "27 rules covering 26 skills") tracks the real rule count — the spec lists only the three "30 skills" counts, but the new rule makes this line stale too, so Task 8 changes it to "28 rules covering 27 skills".
+- Assumes Claude Code replaces a `$` directly followed by a digit in a skill body with an argument of the invocation (https://code.claude.com/docs/en/skills, "Available string substitutions") — will NOT deliver the spec's list command unchanged, because its awk program holds `l = $0`: `/worklog update` would receive `l = update` and list nothing. The plan therefore deviates from the spec on purpose: every copy of the list command (the skill and the hook) writes `l = $(0)`, which awk reads as the same field, and no line of `skills/worklog/SKILL.md` holds a `$` directly before a digit (Task 2).
+- Assumes the plugin's own Bash output hook keeps its rules (`hooks/bash-compress-hook.js`, rule `git-log` of `hooks/compression-rules.js`: the output of a plain `git log` command longer than 40 lines is cut to 30 lines, and a pipeline is never compressed) — will NOT show the model more than 30 commits of the full update's `git log` read unless the skill pipes it through `cat`; Task 3 therefore runs the spec's command followed by `| cat` (a recorded deviation from the spec's command text).
 - Assumes `CLAUDE.md` stays git-ignored (`.gitignore` line 7, checked with `git check-ignore -v CLAUDE.md`) — its Testing line is edited on disk only and does not ship with the branch.
 **Global Constraints:** (copied from the spec; the spec's section named in brackets)
 1. [Definitions] "**Slug**: the short name of a work log. It must match `^[a-z0-9]+(-[a-z0-9]+)*$` (lowercase ASCII letters, digits, single hyphens), the same rule as the topic slug of the Artifact Layout, and it has at most 40 characters. [...] The **file name is the authority** for the slug; the `slug=` field of the status line repeats it for a human reader. The words `new`, `update` and `close` are the command words and are not valid slugs."
 2. [Location and name] "A work log lives at `docs/worklogs/<slug>.md` under the root. Git tracks the file."
-3. [The status line] Line 1 of every work log is `<!-- Work log: status=active slug=<slug> created=<YYYY-MM-DD> -->`, and after closing `<!-- Work log: status=closed slug=<slug> created=<YYYY-MM-DD> closed=<YYYY-MM-DD> -->`. "No line of a work log other than line 1 may start with `<!-- Work log: status=`."
-4. [The status line] "`update` and `close` test the chosen file with this exact command, which the skill text holds" — the check command of the spec, byte for byte. The list command of the spec is used unchanged: "Every copy of the command keeps both" (the folder test and the `|| true`).
+3. [The status line; the quoted sentence: Template] Line 1 of every work log is `<!-- Work log: status=active slug=<slug> created=<YYYY-MM-DD> -->`, and after closing `<!-- Work log: status=closed slug=<slug> created=<YYYY-MM-DD> closed=<YYYY-MM-DD> -->`. "No line of a work log other than line 1 may start with `<!-- Work log: status=`."
+4. [The status line] "`update` and `close` test the chosen file with this exact command, which the skill text holds" — the check command of the spec, byte for byte. For the list command: "Every copy of the command keeps both" (the folder test and the `|| true`). (Plan note, not a spec quote: the plan's copies of the list command differ from the spec's text in one awk field reference, in the form and for the reason given in **Assumptions**; this is a recorded, deliberate spec deviation.)
 5. [Scope and non-goals] "**No new hook, and no injection of a work log's content.**" "**No pointer in `state.md`.** [...] `context-management` and `state.md` are therefore not changed." "**No automatic commit.** The skill never commits." "**No reopen command.** [...] The skill never does this." "**No migration of `docs/orchestration-issues.md`.**" "The word "workstream" is not used for this feature."
 6. [Discovery through the session-start hook] "`session-start-assemble.js` is not changed." "The Codex adapters under `hooks/codex/` are not changed (Codex is no longer supported)." "`skills/handoff/SKILL.md` is not changed". [Rollout] "Hook wiring is not changed (no new event, no new script), so `hooks/hooks.json`, `hooks/hooks-cursor.json` and `plugin.universal.yaml` need no hook edit."
 7. [Commands] "The frontmatter of `skills/worklog/SKILL.md` does **not** carry `disable-model-invocation: true` [...] It carries `argument-hint: "[new|update|close] [<slug>]"`, and the body holds the line `Argument given by the user (may be empty): $ARGUMENTS`."
-8. [Template] "The template below is the normative text". "The example row in `## Parts`, the example rule, the example limit and the example decision are placeholders. The skill replaces the `## Parts` row with the real parts and removes the three other examples, leaving the headings."
+8. [The document describes itself; Template] "The template below is the normative text". "The example row in `## Parts`, the example rule, the example limit and the example decision are placeholders. The skill replaces the `## Parts` row with the real parts and removes the three other examples, leaving the headings."
 9. [Default admission rule] "When the user gives no rule of their own, the skill writes this one: > A finding becomes an open item only when it blocks a part from reaching the status `done`, or blocks the "done when" condition of the whole work, or when its consequence is lost user work or a wrong commit. Every other finding gets one line under `## Accepted limits`."
-10. [Commands] The full update reads the commits with `git log -n 200 --since="<created> 00:00" --format='%h %cd %s' --date=short HEAD`, "at most five windows in all".
-11. [Discovery through the session-start hook] "Run the list command, unchanged: with its folder test, its `|| true` and its file-name filter. The hook adds no pipeline of its own". "Build one notice, with at most the first three paths. With one path and the root `/home/u/proj` the exact text is: `<active-work-logs>Active work logs under /home/u/proj: docs/worklogs/a.md. Before you work on one of them, read it with the Read tool and follow its section "How to maintain this document". During an orchestrated run or a whole-branch review, do not write it.</active-work-logs>`". "Paths are joined with `, `; the text ` and <n> more under docs/worklogs/` follows the third path; the full stop follows the last of these." "A root longer than 300 characters is cut to its last 300 characters with `…` before them". "Append the notice, after two line breaks, to the `notices` part that the hook already writes for `hooks/session-start-assemble.js`."
+10. [Commands] The full update reads the commits with `git log -n 200 --since="<created> 00:00" --format='%h %cd %s' --date=short HEAD`, "at most five windows in all". (Plan note, not a spec quote: the skill runs this command in a changed form, given with its reason in **Assumptions**; this is a recorded, deliberate spec deviation.)
+11. [Discovery through the session-start hook] "Run the list command, unchanged: with its folder test, its `|| true` and its file-name filter. The hook adds no pipeline of its own". (Plan note, not a spec quote: here "the list command" means the skill's copy, with the one difference from the spec's text named in **Assumptions**; the Task 4 Contract says which of its lines the hook holds.) "Build one notice, with at most the first three paths. With one path and the root `/home/u/proj` the exact text is: `<active-work-logs>Active work logs under /home/u/proj: docs/worklogs/a.md. Before you work on one of them, read it with the Read tool and follow its section "How to maintain this document". During an orchestrated run or a whole-branch review, do not write it.</active-work-logs>`". "Paths are joined with `, `; the text ` and <n> more under docs/worklogs/` follows the third path; the full stop follows the last of these." "A root longer than 300 characters is cut to its last 300 characters with `…` before them". "Append the notice, after two line breaks, to the `notices` part that the hook already writes for `hooks/session-start-assemble.js`."
 12. [Interfaces and contracts] The `hooks/skill-rules.json` entry is: "`skill`: `worklog`; `type`: `workflow`; `priority`: `high`." "`keywords`: `work log`, `worklog`." "`intentPatterns`: `(create|start|open|new)\\s+(a\\s+|the\\s+)?work\\s?logs?\\b` and `(update|close|continue)\\s+(the\\s+|my\\s+)?work\\s?logs?\\b` (written here as they stand in the JSON file, with doubled backslashes)." "the `worklog` rule is placed before the rules `brainstorming`, `refactoring` and `writing-plans` in the JSON file."
 13. [Rollout] "Release v7.52.0 by the release checklist of `CLAUDE.md`. Nothing to migrate." "`docs/FORK-IMPROVEMENTS.md` and `docs/REVIEW-PROCESS-COMPARISON.md` are historical documents and are not updated."
 
@@ -55,13 +57,15 @@
 | `CLAUDE.md` | Modify on disk only (Task 8) | One Testing line; git-ignored, not committed. |
 | `VERSION`, `.claude-plugin/plugin.json`, `.claude-plugin/marketplace.json`, `plugin.universal.yaml`, `README.md`, `RELEASE-NOTES.md` | Modify (Task 9) | Release v7.52.0. |
 
+Task order: run the tasks one after the other, in numeric order; do not group them into parallel waves. Some dependencies share no file: Tasks 2, 3 and 4 extend the suite that Task 1 creates, and Task 4 section 8 needs the list command of Task 2; Task 7 Step 2 needs the rule of Task 6, and Task 7 Step 4 needs the skill of Tasks 2 and 3; the README count "28 rules covering 27 skills" of Task 8 is true only after Task 6; Task 9 runs every suite. Only Tasks 5 and 6 need no earlier task.
+
 Repository premises tested before writing this plan (2026-09-21, branch `feature/worklog` at `4a09d7a`):
 - `git ls-files --error-unmatch` succeeds for every file that a task modifies, except `CLAUDE.md`: `git check-ignore -v CLAUDE.md` prints `.gitignore:7:CLAUDE.md`.
 - `git check-ignore -v tests/skill-triggering/prompts/worklog.txt` prints `.gitignore:18:*.txt` (exit 0); the nine existing prompt files are tracked. `git check-ignore` exits 1 for `skills/worklog/SKILL.md`, `skills/worklog/template.md`, `tests/worklog/run-tests.sh`, `tests/codex/test-session-start-worklog-notice.sh` and `docs/worklogs/x.md`; none of these paths exists yet.
 - `command -v zsh node git awk sort` finds all five; `bash -c 'command -v find'` prints `/usr/bin/find`; `command -v claude` finds the CLI (Task 7).
 - `hooks/session-start` sets `set -euo pipefail` on line 4, defines `nl=$'\n'` on line 13, uses no variable named `ROOT` or `LIST`, and writes the notices part on line 529.
 - `add_file` in `tests/pickup/run-tests.sh` is defined in section 10 (line 435), below section 6b; a case placed after 6b must not call it (the suite guard stops on an undefined command).
-- Every existing fast suite `run-tests.sh` is mode `100755`, and `tests/review-gates/run-tests.sh` scans `skills/*/*.md` for a bare `<d>` placeholder, a `<reviewers-per-lens>` string and a complete `<superpowers-defaults>` block; the new skill files hold none of them.
+- Twelve of the thirteen existing `tests/*/run-tests.sh` files are mode `100755`; `tests/smart-compress/run-tests.sh` is `100644`, and every task runs a suite with `bash <file>`, so the mode does not matter. `tests/review-gates/run-tests.sh` scans `skills/*/*.md` for a bare `<d>` placeholder, a `<reviewers-per-lens>` string and a complete `<superpowers-defaults>` block; the new skill files hold none of them.
 - A replay of the planned rule against `matchSkills` (a scratch copy of `hooks/`) suggested `worklog` for both positive prompts, for none of the four negative prompts, and kept `brainstorming` for the mixed prompt; the existing 145 activator tests still passed.
 
 ---
@@ -75,7 +79,7 @@ Repository premises tested before writing this plan (2026-09-21, branch `feature
 
 **Security flag:** `none`
 
-**Does NOT cover:** the skill text (Tasks 2 and 3). The suite's template checks do not check the wording of the seven rules beyond the phrases named in the contract; byte identity with the spec is checked once, by the Step 4 `diff`, not by the suite.
+**Does NOT cover:** the skill text (Tasks 2 and 3). The suite's template checks do not check the wording of the seven rules beyond the phrases named in the contract; byte identity with the spec is checked once, by the Step 4 `diff` against a second extraction that does not use the Step 3 command, not by the suite.
 
 **Contract:**
 - `skills/worklog/template.md` (wording artifact)
@@ -157,7 +161,7 @@ fi
 - [ ] **Step 2: Run the suite to verify it fails**
 
 Run: `bash tests/worklog/run-tests.sh`
-Expected: FAIL — exit 1; "line 1 is the active status line with placeholders" and the other section 1 checks fail, because `skills/worklog/template.md` does not exist.
+Expected: FAIL — exit 1, `Results: 1 passed, 11 failed`; "line 1 is the active status line with placeholders" and every other section 1 check fail, because `skills/worklog/template.md` does not exist. The one pass is "the word workstream is not used": `grep` exits 2 on the absent file, and `assert_file_lacks` counts that as absence.
 
 - [ ] **Step 3: Create the template from the spec**
 
@@ -171,8 +175,8 @@ awk '/^### Template$/ { t = 1 } t && /^````markdown$/ { c = 1; next } c && /^```
 
 - [ ] **Step 4: Run the checks to verify they pass**
 
-Run: `wc -l skills/worklog/template.md && diff <(awk '/^### Template$/ { t = 1 } t && /^````markdown$/ { c = 1; next } c && /^````$/ { exit } c' docs/superpowers-orchestrator/2026-09-21-worklog/specs/worklog-design.md) skills/worklog/template.md && echo TEMPLATE-SAME`
-Expected: `94 skills/worklog/template.md`, then `TEMPLATE-SAME`.
+Run: `S=docs/superpowers-orchestrator/2026-09-21-worklog/specs/worklog-design.md; A=$(grep -n '^````markdown$' "$S" | cut -d: -f1); wc -l < skills/worklog/template.md | tr -d ' ' && diff <(sed -n "$((A + 1)),\$p" "$S" | sed '/^````$/,$d') skills/worklog/template.md && echo TEMPLATE-SAME`
+Expected: `94`, then `TEMPLATE-SAME`. The `diff` compares against a second extraction built with `grep` and `sed`, not with the Step 3 `awk` program, so an error in that program shows here. The spec holds one `` ````markdown `` fence; a second one makes the arithmetic fail loudly.
 
 Run: `bash tests/worklog/run-tests.sh`
 Expected: PASS — `Results: 12 passed, 0 failed`, exit 0.
@@ -212,27 +216,27 @@ git commit -m "feat(worklog): add the work log template and its test suite" --tr
   - Verification: suite section 2.
   - Interface not externally pinned — the messages are descriptive and may change together with the suite in a fix.
 - The list command, under `### The list command` (code artifact)
-  - Invariant: the block is byte-identical to the first fenced `bash` block of the spec (Global Constraint 4).
+  - Invariant: the block is the first fenced `bash` block of the spec with one change, `l = $0` written `l = $(0)` (the deliberate spec deviation named in the header's **Assumptions**); no line of it holds a `$` directly before a digit.
   - Behaviour: prints the absolute path of every active work log with a valid file name, sorted under `LC_ALL=C`, then a line end; prints one empty line when there is none; exit 0 under `set -euo pipefail` also with the folder absent.
-  - Verification: the Step 4 `diff` prints `LIST-SAME`; suite section 3.
+  - Verification: the Step 4 `diff` prints `BLOCK-1-SAME`; suite section 3.
 - The check command, under `### The check command` (code artifact)
   - Invariant: the block is byte-identical to the second fenced `bash` block of the spec (Global Constraint 4).
   - Behaviour: prints `symlink`, `missing (searched <root>/docs/worklogs)`, `active`, `closed`, or `malformed` followed by every status line with its line number; changes no file.
-  - Verification: the Step 4 `diff` prints `CHECK-SAME`; suite section 5.
+  - Verification: the Step 4 `diff` prints `BLOCK-2-SAME`; suite section 5.
 - The valid forms of line 1, the lines `- active: ` and `- closed: ` under `### Valid forms of line 1` (wording artifact)
   - Must convey: the two valid forms of the spec as extended regular expressions, with the slug pattern and the date pattern `[0-9]{4}-[0-9]{2}-[0-9]{2}`.
   - Invariant: each form accepts its example line and refuses a line without `created=`, a closed line without `closed=`, and the date `2026-9-1`.
   - Verification: suite section 4.
 - The line-1 command, under `### The line-1 command` (code artifact)
   - Inputs: the placeholders `<slug>` and `<line>`. Output: none; the file's line 1 becomes `<line>`.
-  - Invariants: a carriage return at the end of line 1 and a byte order mark at its start are kept; lines 2 and later are byte-identical; the file keeps its permissions (it is rewritten in place with `cat`, not replaced with `mv`).
-  - Verification: suite section 6.
+  - Invariants: a carriage return at the end of line 1 and a byte order mark at its start are kept; lines 2 and later are byte-identical, except that a missing line break at the end of the file is added (awk `print` always ends a line); the file keeps its permissions (it is rewritten in place with `cat`, not replaced with `mv`); the block holds no `$` directly before a digit, because Claude Code replaces `$0`, `$1` and so on in a skill body with the arguments of the invocation (https://code.claude.com/docs/en/skills, "Available string substitutions").
+  - Verification: suite section 6 (the carriage return, the byte order mark, lines 2 and later, the permissions); suite section 2 for the `$`-digit rule. The added final line break is a stated limit and is not checked.
   - Interface not externally pinned.
 - The rest of the Task 2 text of `skills/worklog/SKILL.md` (wording artifact): the front matter and the Terms section.
   - Must convey: the name `worklog`; the argument hint `"[new|update|close] [<slug>]"`; no `disable-model-invocation` key (Global Constraint 7); the `$ARGUMENTS` line; the slug rule, the root, "active", "today", `<skill-dir>`; "This skill never commits".
-  - Verification: suite section 7 (Task 3) checks the front matter and the `$ARGUMENTS` line.
+  - Verification: suite section 7 (Task 3) checks the front matter and the `$ARGUMENTS` line; the Terms section is checked by reading it against the spec's section "Definitions", except the root of a project without git: that clause follows the spec's section "Error handling" ("the folder of the shell at the moment of the command", which is what the `|| pwd` of the commands does), not "Definitions" ("the project directory"). Section 7 does not exist yet during Task 2.
 - `tests/worklog/run-tests.sh` sections 2 to 6 (code artifact)
-  - Invariants: each command is copied out of the skill text by its `### ` heading, never retyped in the suite; the list command runs as a script under `set -euo pipefail`; fixture names never differ by letter case alone; the symbolic-link, unreadable-file, line-break-name and `zsh` checks print a NOTE and are skipped where the platform cannot produce their fixture.
+  - Invariants: each command is copied out of the skill text by its `### ` heading, never retyped in the suite; section 2 fails when any line of `SKILL.md` holds a `$` directly before a digit; the list command runs as a script under `set -euo pipefail`; when `zsh` is installed, section 3 also runs the list command and section 6b the slug, check and line-1 commands under `zsh`, the shell of the Bash tool on macOS; fixture names never differ by letter case alone; the symbolic-link, unreadable-file, line-break-name and `zsh` checks print a NOTE and are skipped where the platform cannot produce their fixture.
   - Verification: Step 2 fails while `SKILL.md` is absent; Step 4 passes.
 
 - [ ] **Step 1: Add the failing sections to the suite**
@@ -300,10 +304,13 @@ printf 'set -euo pipefail\n%s\n' "$LIST_CMD" > "$TMP/list.sh"
 
 # The replacement texts below hold no "&" and no backslash, so bash 5.2's
 # patsub_replacement option cannot change them.
+# RUN_SHELL runs the slug, check and line-1 commands; section 6b sets it to
+# zsh, the shell that the Bash tool runs on macOS.
+RUN_SHELL=bash
 # run_slug <slug>: runs the slug command; sets OUT.
 run_slug() {
   printf '%s\n' "${SLUG_CMD//<slug>/$1}" > "$TMP/slug.sh"
-  OUT=$(bash "$TMP/slug.sh" 2>&1)
+  OUT=$("$RUN_SHELL" "$TMP/slug.sh" 2>&1)
 }
 # run_list <folder> [shell]: runs the list command from <folder>; sets OUT to
 # its output followed by "exit=<status>".
@@ -315,13 +322,13 @@ lines() { printf '%s\n' "$@"; printf 'exit=0'; }
 # run_check <folder> <slug>: runs the check command from <folder>; sets OUT.
 run_check() {
   printf '%s\n' "${CHECK_CMD//<slug>/$2}" > "$TMP/check.sh"
-  OUT=$(cd "$1" && bash "$TMP/check.sh" 2>&1)
+  OUT=$(cd "$1" && "$RUN_SHELL" "$TMP/check.sh" 2>&1)
 }
 # run_line1 <folder> <slug> <new line 1>: runs the line-1 command; sets OUT.
 run_line1() {
   local cmd="${LINE1_CMD//<slug>/$2}"
   printf '%s\n' "${cmd//<line>/$3}" > "$TMP/line1.sh"
-  OUT=$(cd "$1" && bash "$TMP/line1.sh" 2>&1)
+  OUT=$(cd "$1" && "$RUN_SHELL" "$TMP/line1.sh" 2>&1)
 }
 # repo <name>: a git repository with an empty docs/worklogs folder; sets D
 # (the repository) and W (its docs/worklogs folder).
@@ -339,6 +346,9 @@ bold "2. The slug command"
 for name in SLUG_CMD LIST_CMD CHECK_CMD LINE1_CMD ACTIVE_RE CLOSED_RE; do
   if [ -n "${!name}" ]; then ok "the skill text holds $name"; else bad "the skill text holds $name"; fi
 done
+# Claude Code replaces $0, $1 and so on in a skill body with the arguments of
+# the invocation, so a command holding such a token reaches the model changed.
+assert_eq "no line of the skill holds a \$ directly before a digit" "$(grep -nE '\$[0-9]' "$SKILL" 2>/dev/null)" ''
 PATTERN_MSG='breaks the pattern ^[a-z0-9]+(-[a-z0-9]+)*$'
 for s in test-refactor "$S40" 7; do
   run_slug "$s"; assert_eq "slug '$s' is valid" "$OUT" 'valid'
@@ -459,6 +469,9 @@ repo line1
 printf "$ACTIVE_FMT\r\n\r\n# Work log: fixture\r\nrow\r\n" crlf "$CREATED" > "$W/crlf.md"
 { printf '\357\273\277'; printf "$ACTIVE_FMT\n\n# Work log: fixture\n" bom "$CREATED"; } > "$W/bom.md"
 printf "$ACTIVE_FMT\n\n# Work log: fixture\n" wrong-slug "$CREATED" > "$W/plain.md"
+# The command rewrites the file in place, so its mode must not change.
+chmod 640 "$W/plain.md"
+MODE_BEFORE=$(ls -l "$W/plain.md" | cut -c1-10)
 for name in crlf bom plain; do
   REST_SUM=$(tail -n +2 "$W/$name.md" | cksum)
   NEW_LINE=$(printf "$CLOSED_FMT" "$name" "$CREATED" "$CLOSED_ON")
@@ -472,6 +485,24 @@ assert_eq "crlf: line 1 is the new line" "$(head -n 1 "$W/crlf.md" | tr -d '\r')
 assert_eq "crlf: line 1 still ends with a carriage return" "$(head -n 1 "$W/crlf.md" | tail -c 2 | od -An -tx1 | tr -d ' \n')" '0d0a'
 assert_eq "bom: the byte order mark is kept" "$(head -c 3 "$W/bom.md" | od -An -tx1 | tr -d ' \n')" 'efbbbf'
 assert_eq "plain: line 1 is the new line, with no carriage return" "$(head -n 1 "$W/plain.md")" "$(printf "$CLOSED_FMT" plain "$CREATED" "$CLOSED_ON")"
+assert_eq "plain: the file keeps its permissions" "$(ls -l "$W/plain.md" | cut -c1-10)" "$MODE_BEFORE"
+
+bold "6b. The slug, check and line-1 commands under zsh"
+if command -v zsh >/dev/null 2>&1; then
+  RUN_SHELL=zsh
+  run_slug test-refactor; assert_eq "zsh: slug 'test-refactor' is valid" "$OUT" 'valid'
+  run_slug 'café'; assert_eq "zsh: slug 'café' breaks the pattern" "$OUT" "$PATTERN_MSG"
+  run_slug "$S41"; assert_eq "zsh: a slug of 41 characters is too long" "$OUT" 'has more than 40 characters'
+  run_check "$MD" crlf; assert_eq "zsh: a line 1 with a carriage return prints active" "$OUT" 'active'
+  run_check "$MD" bom; assert_eq "zsh: a line 1 with a byte order mark prints active" "$OUT" 'active'
+  run_check "$MD" absent; assert_eq "zsh: a missing file prints missing and the folder it searched" "$OUT" "missing (searched $MW)"
+  printf "$ACTIVE_FMT\r\n\r\n# Work log: fixture\r\n" zsh-crlf "$CREATED" > "$W/zsh-crlf.md"
+  run_line1 "$D" zsh-crlf "$(printf "$CLOSED_FMT" zsh-crlf "$CREATED" "$CLOSED_ON")"
+  run_check "$D" zsh-crlf; assert_eq "zsh: the line-1 command closes a work log with CRLF line ends" "$OUT" 'closed'
+  RUN_SHELL=bash
+else
+  note "zsh is not installed; the zsh checks of section 6b are skipped"
+fi
 
 ```
 
@@ -482,7 +513,7 @@ Expected: FAIL — exit 1; "the skill text holds SLUG_CMD" (and the five other "
 
 - [ ] **Step 3: Create the skill file**
 
-Create `skills/worklog/SKILL.md` with this content. The two blocks under `### The list command` and `### The check command` are the spec's commands byte for byte: copy them from the spec (its first and second fenced `bash` blocks) if a character differs.
+Create `skills/worklog/SKILL.md` with this content. The block under `### The check command` is the spec's second fenced `bash` block byte for byte. The block under `### The list command` is the spec's first fenced `bash` block with one change, `l = $0` written `l = $(0)` (the deliberate spec deviation named in the header's **Assumptions**). If a character differs, copy the blocks from the spec again and apply that one change.
 
 ````markdown
 ---
@@ -551,14 +582,16 @@ It prints the path of every active work log, one per line, in the same order
 in every locale, or one empty line when there is none. It reads line 1 only,
 and it prints a file only when its name is a valid slug plus `.md`. The
 folder test and the `|| true` keep it safe under `set -euo pipefail`; every
-copy of this command keeps both.
+copy of this command keeps both. The awk program writes the whole line as
+`$(0)`: Claude Code replaces a `$` directly followed by a digit in this file
+with an argument of the command, so no line of this file holds one.
 
 ```bash
 ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
 LIST=""
 if [ -d "$ROOT/docs/worklogs" ]; then
   LIST="$(LC_ALL=C find "$ROOT/docs/worklogs" -maxdepth 1 -type f -name '*.md' -exec awk '
-    FNR==1 { l = $0; sub(/^\357\273\277/, "", l)
+    FNR==1 { l = $(0); sub(/^\357\273\277/, "", l)
       if (l ~ /^<!-- Work log: status=active /) {
         n = FILENAME; sub(/.*\//, "", n)
         if (n ~ /^[a-z0-9]+(-[a-z0-9]+)*\.md$/ && length(n) <= 43 &&
@@ -612,14 +645,14 @@ Change line 1 only with this command, then run the check command again.
 ```bash
 ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
 F="$ROOT/docs/worklogs/<slug>.md"
-LC_ALL=C awk -v new='<line>' 'NR == 1 { cr = /\r$/; bom = /^\357\273\277/; $0 = (bom ? "\357\273\277" : "") new (cr ? "\r" : "") } { print }' "$F" > "$F.tmp" && cat "$F.tmp" > "$F" && rm -f "$F.tmp"
+LC_ALL=C awk -v new='<line>' 'NR == 1 { cr = /\r$/; bom = /^\357\273\277/; l = (bom ? "\357\273\277" : "") new (cr ? "\r" : ""); print l; next } { print }' "$F" > "$F.tmp" && cat "$F.tmp" > "$F" && rm -f "$F.tmp"
 ```
 ````
 
 - [ ] **Step 4: Run the checks to verify they pass**
 
-Run: `S=docs/superpowers-orchestrator/2026-09-21-worklog/specs/worklog-design.md; for n in 1 2; do h=$([ "$n" = 1 ] && echo '### The list command' || echo '### The check command'); diff <(awk -v n="$n" '/^```bash$/ { k++; c = 1; next } c && /^```$/ { c = 0 } c && k == n' "$S") <(awk -v h="$h" '$0 == h { f = 1; next } f && /^```bash$/ { c = 1; next } c && /^```$/ { exit } c' skills/worklog/SKILL.md) && echo "BLOCK-$n-SAME"; done`
-Expected: `BLOCK-1-SAME` (the list command, LIST-SAME) and `BLOCK-2-SAME` (the check command, CHECK-SAME), with no diff lines.
+Run: `S=docs/superpowers-orchestrator/2026-09-21-worklog/specs/worklog-design.md; for n in 1 2; do h=$([ "$n" = 1 ] && echo '### The list command' || echo '### The check command'); diff <(awk -v n="$n" '/^```bash$/ { k++; c = 1; next } c && /^```$/ { c = 0 } c && k == n' "$S" | sed 's/l = \$0;/l = $(0);/') <(awk -v h="$h" '$0 == h { f = 1; next } f && /^```bash$/ { c = 1; next } c && /^```$/ { exit } c' skills/worklog/SKILL.md) && echo "BLOCK-$n-SAME"; done`
+Expected: `BLOCK-1-SAME` (the list command, compared after the one change `l = $0` → `l = $(0)` is applied to the spec's text; the `sed` changes nothing in the check command) and `BLOCK-2-SAME` (the check command), with no diff lines.
 
 Run: `bash tests/worklog/run-tests.sh`
 Expected: PASS — exit 0, 0 failed. NOTE lines may appear only on a platform that cannot make a symbolic link, an unreadable file, a file name with a line break, or has no `zsh`.
@@ -654,12 +687,13 @@ git commit -m "feat(worklog): add the skill file with its slug, list, check and 
 
 **Contract:**
 - The Task 3 text of `skills/worklog/SKILL.md`: the section `## Commands and arguments` (inserted between `## Terms` and `## Shell commands`) and the sections `## Choosing a work log`, `/worklog new`, `/worklog update`, `/worklog close`, `## Updates outside the commands` and `## Rules` (appended after `### The line-1 command`) (wording artifact)
-  - Must convey every rule of the spec's sections "Commands", "Updates outside the commands" and "Error handling": the grammar and the usage text; the first word is always a command word; the `$ARGUMENTS` fallback and the load-by-the-model test; slug validation first; the shared choosing rule and the five ordered checks (`symlink`, `missing`, `malformed`, `closed`, `active`), each stop writing nothing; the listing and its four labels; `new` in its steps (no overwrite, one question batch with the default admission rule offered first, confirmation of the target path outside git or below the root, the template read with the Read tool and filled, `git check-ignore -q` with exit 0 meaning ignored, the report); the full update (read, repairs in `update` only, the `git log` window from the creation date with `00:00`, at most five windows of 200, the document's own rules); `close` (close anyway or stop, former items as `- <today> item #<n>: <item text> — open at closing`, the `## Decisions` entry, last `Commit` cells, line 1 changed with the line-1 command); the "Updates outside the commands" step; the skill never commits and never reopens.
-  - Invariants: each pinned phrase of suite section 7 stands on one line of the file, so `grep -F` finds it; the line that names `<skill-dir>/template.md` also says `with the Read tool`; the front matter has no `disable-model-invocation`; the word `workstream` does not occur.
-  - Verification: `bash tests/worklog/run-tests.sh` section 7.
+  - Must convey every rule of the spec's sections "Commands", "Updates outside the commands" and "Error handling": the grammar and the usage text; the first word is always a command word; the `$ARGUMENTS` fallback and the load-by-the-model test; slug validation first; the shared choosing rule and the five ordered checks (`symlink`, `missing`, `malformed`, `closed`, `active`), each stop writing nothing; the listing and its four labels; `new` in its steps (no overwrite, one question batch with the default admission rule offered first and written when the user gives no rule of their own, confirmation of the target path outside git or below the root, the template read with the Read tool and filled, `git check-ignore -q` with exit 0 meaning ignored, the report); the full update (read, repairs in `update` only, the `git log` window from the creation date with `00:00`, piped through `cat` so that the plugin's Bash output hook does not cut it, at most five windows of 200, the document's own rules); `close` (close anyway or stop, former items as `- <today> item #<n>: <item text> — open at closing`, the `## Decisions` entry, last `Commit` cells, line 1 changed with the line-1 command); the "Updates outside the commands" step; the skill never commits and never reopens.
+  - Invariants: each pinned phrase of suite section 7 stands on one line of the file, so `grep -F` finds it; the line that names `<skill-dir>/template.md` also says `with the Read tool`; the front matter has no `disable-model-invocation`; the word `workstream` does not occur; no line holds a `$` directly before a digit (suite section 2).
+  - Verification: `bash tests/worklog/run-tests.sh` section 7 for the pinned phrases and section 2 for the `$`-digit rule; every other "Must convey" item by reading the text against the spec's sections "Commands", "Updates outside the commands" and "Error handling".
   - Sentence wording is free; the properties above bind.
 - `tests/worklog/run-tests.sh` section 7 (code artifact)
   - Output: one PASS or FAIL per pinned phrase and per front-matter property.
+  - Invariant: it pins at least every skill-text item that the spec's section "Testing strategy" lists — the sentence that starts ``The fallback to `update` applies only when the user's own message starts with the command``, `A closed work log is never written`, `stops with the usage text`, `close anyway`, `invalid file name — rename it`, `with the Read tool` in the step that names `<skill-dir>/template.md`, the `$ARGUMENTS` line, no `disable-model-invocation` in the front matter, `Never overwrite a work log`, `never commits`, the grammar line and the `git log` command with `--since="<created> 00:00"`, pinned together with its `| cat` — plus the sentence of `## Updates outside the commands` and the default admission rule. A fix may add phrases, never remove one of these.
   - Verification: Step 2 fails before the text exists; Step 4 passes.
 
 - [ ] **Step 1: Add the failing section to the suite**
@@ -683,7 +717,7 @@ PHRASES=(
   'malformed line 1'
   'Never overwrite a work log'
   'never commits'
-  "git log -n 200 --since=\"<created> 00:00\" --format='%h %cd %s' --date=short HEAD"
+  "git log -n 200 --since=\"<created> 00:00\" --format='%h %cd %s' --date=short HEAD | cat"
   'When the session-start notice or the user names an active work log, read that work log with the Read tool before starting the work, and follow its section `How to maintain this document`.'
   '> A finding becomes an open item only when it blocks a part from reaching the status `done`, or blocks the "done when" condition of the whole work, or when its consequence is lost user work or a wrong commit. Every other finding gets one line under `## Accepted limits`.'
 )
@@ -713,8 +747,10 @@ Insert this section in `skills/worklog/SKILL.md` directly before the line `## Sh
 
 Grammar: `/worklog [new|update|close] [<slug>]`
 
-The first word is always read as a command word, never as a slug. With no
-first word, the command is `update`. Any other first word, and a command word
+The first word is always read as a command word, never as a slug. When the
+user types `/worklog` with no first word, the command is `update`; the test
+at the end of this section decides whether the user typed the command. Any
+other first word, and a command word
 given as a slug (for example `/worklog new close`), stops with the usage text and writes nothing. The usage text is the grammar line and one line per command:
 
 ```text
@@ -726,7 +762,8 @@ given as a slug (for example `/worklog new close`), stops with the usage text an
 
 Every command that gets a slug first tests it by "The slug command" below. A
 result other than `valid` stops the command: say which rule the slug breaks,
-and write nothing.
+and write nothing. A command word given as a slug in the argument has already
+stopped with the usage text, before this test.
 
 When the argument above is empty and the user's own message starts with the
 command, read the command word and the slug from that message (on Copilot CLI,
@@ -773,6 +810,10 @@ order. Each stop writes nothing.
 **The listing** has one line per regular `*.md` file directly under
 `docs/worklogs/`. Find the files with
 `find "$(git rev-parse --show-toplevel 2>/dev/null || pwd)/docs/worklogs" -maxdepth 1 -type f -name '*.md'`.
+The slug of a file is its name without `.md`. Test it with the first test of
+"Shell commands", then with the slug command. A name that fails either test
+breaks the slug rule; the listing then goes on with the next file, because the
+stop of the first test does not apply to a listed name.
 A file whose name breaks the slug rule gets the label `invalid file name — rename it`,
 and it is never chosen. For every other file, run the check command with its
 slug and use its word as the label, with `malformed line 1` for `malformed`.
@@ -789,6 +830,7 @@ slug and use its word as the label, with `malformed line 1` for `malformed`.
 
    > A finding becomes an open item only when it blocks a part from reaching the status `done`, or blocks the "done when" condition of the whole work, or when its consequence is lost user work or a wrong commit. Every other finding gets one line under `## Accepted limits`.
 
+   When the user gives no rule of their own, write the default admission rule.
    Use and echo the values that the user already stated in this session; do
    not ask for them again. When the user says that a part is already `done`,
    ask for its commit in the same batch. Without an answer its `Commit` cell
@@ -802,7 +844,10 @@ slug and use its word as the label, with `malformed line 1` for `malformed`.
    only: `<slug>` and `<YYYY-MM-DD>` on line 1 (today), `<title>`, the goal,
    the "done when" condition and the admission rule. Replace the example row
    of `## Parts` with one row per part, numbered from 1. Remove the example
-   rule, the example limit and the example decision, and keep their headings.
+   rule, the example limit and the example decision, and keep the section
+   headings `## Rules for the next parts`, `## Accepted limits` and
+   `## Decisions`. The line `### <YYYY-MM-DD> <short title>` belongs to the
+   example decision and is removed with it.
    Leave every other `<...>` text as it is: it belongs to the document's own
    rules. Every part starts as `not started`, except a part that the user
    says is `in progress` or `done`: such a part gets today in `Since`, and its
@@ -831,10 +876,13 @@ slug and use its word as the label, with `malformed line 1` for `malformed`.
    found, fixes committed, decisions made, conventions that appeared, and
    empty `Commit` cells of `done` parts. In a git repository, read the commits
    with this command, where `<created>` is the `created=` date of line 1:
-   `git log -n 200 --since="<created> 00:00" --format='%h %cd %s' --date=short HEAD`
+   `git log -n 200 --since="<created> 00:00" --format='%h %cd %s' --date=short HEAD | cat`
    The window always starts at the creation of the work log, because a
    forgotten change can be as old as the work log. The `00:00` is required:
-   with a bare date, git starts at the current time of day of that date. When
+   with a bare date, git starts at the current time of day of that date. The
+   `| cat` is required too: a Bash output hook of this plugin cuts the output
+   of a plain `git log` command that is longer than 40 lines to its first 30
+   lines, and it never cuts the output of a pipeline. When
    the command prints 200 commits and a question is still open (an empty
    `Commit` cell of a `done` part, or an open item whose fix was not found),
    read the next window with `--skip=200`, then `--skip=400`, at most five
@@ -869,14 +917,18 @@ When the session-start notice or the user names an active work log, read that wo
 
 - This skill never commits. It never reopens a closed work log: the user edits
   line 1 back to the active form by hand.
-- Every stop writes nothing.
+- Every stop writes nothing more. A stop of the grammar, of the slug test or
+  of the ordered checks comes before any write; a stop at step 2 of `close`
+  keeps the `slug=` correction that check 5 already made.
 - In a project that is not a git repository, skip the `git log` read and the
   `git check-ignore` test, and leave the `Commit` column empty. The root is
   then the folder of the shell, so `new` always shows the full target path and
   asks, and `missing` prints the folder that was searched.
 - `docs/worklogs` must be a real folder: the list command does not follow a
   folder that is a symbolic link.
-- Never reorder or delete user text.
+- Never reorder or delete user text, except the deletions that a step of this
+  skill or a rule of the work log names (an open-item row that leaves the
+  table).
 ````
 
 - [ ] **Step 4: Run the suite to verify it passes**
@@ -919,7 +971,7 @@ git commit -m "feat(worklog): add the grammar, the three commands and the rules 
 **Contract:**
 - The notice block of `hooks/session-start` (code artifact)
   - Input: the working folder of the hook. Output: the variable `worklog_notice`, empty when the list command prints no path, else two line breaks followed by the notice text of Global Constraint 11 with the hook's root.
-  - Invariants: the lines from `ROOT=` to the closing `fi` of the list command are the skill's list command without its print line, unchanged; the notice names at most the first three paths, relative to the root, joined with `, `, then ` and <n> more under docs/worklogs/` when there are more; the root is absolute, cut to its last 300 characters after `…` when longer; `worklog_notice` is the last part of the text written to `${parts_dir}/notices`; the code after the list command runs no pipeline; the hook still exits 0 on every fixture.
+  - Invariants: the lines from `ROOT=` to the closing `fi` of the list command are the skill's list command without its print line, unchanged (the print line `printf '%s\n' "$LIST"` is left out because the hook's standard output is its JSON output, and the spec's step 2 of "Discovery through the session-start hook" adds nothing to that output when no path is left; the hook reads `LIST` itself); these lines keep the skill's `l = $(0)` where the spec's text has `l = $0` (the deliberate spec deviation named in **Assumptions**: Claude Code replaces `$0` in a skill body, and suite section 8 requires the hook to hold the skill's lines), so "unchanged" in Global Constraint 11 means "the same as the skill's copy"; the notice names at most the first three paths, relative to the root, joined with `, `, then ` and <n> more under docs/worklogs/` when there are more; the root is absolute, cut to its last 300 characters after `…` when longer; `worklog_notice` is the last part of the text written to `${parts_dir}/notices`; the code after the list command runs no pipeline; the hook still exits 0 on every fixture.
   - Verification: `bash tests/codex/test-session-start-worklog-notice.sh`; suite section 8 of `tests/worklog/run-tests.sh`; `bash tests/codex/test-session-start-budget.sh` case 8.
 - `tests/codex/test-session-start-worklog-notice.sh` (code artifact)
   - Output: exit 0 only when all six cases pass; one `ok`/`FAIL` line per check.
@@ -1227,7 +1279,10 @@ In `hooks/session-start`, insert this block directly after the `fi` that closes 
 # Names the active work logs of the project (skills/worklog) in one short
 # notice; the content of a work log is never injected. The lines from ROOT= to
 # the closing fi are the list command of skills/worklog/SKILL.md, copied
-# unchanged (tests/worklog/run-tests.sh compares the two). Its folder test and
+# unchanged (tests/worklog/run-tests.sh compares the two). Like the skill, the
+# awk program reads the whole line as $(0), not $0: Claude Code replaces a "$"
+# followed by a digit in a skill body with an argument, and this copy must
+# stay equal to the skill's copy. Its folder test and
 # its "|| true" keep it safe under the "set -euo pipefail" of line 4: a find
 # on an absent folder exits 1, pipefail passes that status through sort, and
 # set -e would end this hook at the assignment. The code after it runs no
@@ -1238,7 +1293,7 @@ ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
 LIST=""
 if [ -d "$ROOT/docs/worklogs" ]; then
   LIST="$(LC_ALL=C find "$ROOT/docs/worklogs" -maxdepth 1 -type f -name '*.md' -exec awk '
-    FNR==1 { l = $0; sub(/^\357\273\277/, "", l)
+    FNR==1 { l = $(0); sub(/^\357\273\277/, "", l)
       if (l ~ /^<!-- Work log: status=active /) {
         n = FILENAME; sub(/.*\//, "", n)
         if (n ~ /^[a-z0-9]+(-[a-z0-9]+)*\.md$/ && length(n) <= 43 &&
@@ -1505,11 +1560,11 @@ git commit -m "feat(routing): route work log requests to the worklog skill" --tr
   - Must convey: a naive request to start a work log for a multi-session piece of work, without the skill name as a command; `matchSkills` suggests `worklog` for it and does not suggest `brainstorming` (replayed while writing this plan: `["worklog:3"]`).
   - Invariant: git tracks the file although `.gitignore` line 18 (`*.txt`) matches it.
   - Verification: `git ls-files --error-unmatch tests/skill-triggering/prompts/worklog.txt` after Step 5; `bash tests/skill-triggering/run-test.sh worklog tests/skill-triggering/prompts/worklog.txt 8` prints `PASS`.
-- The `SKILLS` array of `tests/skill-triggering/run-all.sh` (code artifact): holds `"worklog"`; the suite runs only the skills that the array names. Verification: `grep -n '"worklog"' tests/skill-triggering/run-all.sh`.
+- The `SKILLS` array of `tests/skill-triggering/run-all.sh` (code artifact): holds `"worklog"`; the suite runs only the skills that the array names. Verification: `grep -n '"worklog"' tests/skill-triggering/run-all.sh` (Step 3).
 - The Routing Guide line in `skills/using-superpowers/SKILL.md` (wording artifact)
   - Must convey: a request to create, update or close a work log routes to `worklog`.
   - Invariants: the line stands in `## Routing Guide`, below the marker line; the text above the marker is unchanged (at most 6,400 characters).
-  - Verification: `bash tests/codex/test-session-start-budget.sh` passes.
+  - Verification: `bash tests/codex/test-session-start-budget.sh` passes; the Step 3 `awk` prints `BELOW-MARKER`, and `git diff --numstat` shows one added line and none removed.
 
 - [ ] **Step 1: Write the prompt, the array entry and the guide line**
 
@@ -1535,12 +1590,15 @@ Expected: `["worklog"]`.
 - [ ] **Step 3: Run the budget test**
 
 Run: `bash tests/codex/test-session-start-budget.sh`
-Expected: PASS — 0 failed; "the injected skill part is <n> characters, at or under 6400" with the same `<n>` as before this task.
+Expected: PASS — 0 failed; "the injected skill part is <n> characters, at or under 6400".
+
+Run: `awk '/^<!-- session-start-injection-ends/ { m = NR } /^- Tracking document for one piece of multi-part work/ { w = NR } END { print (m > 0 && w > m) ? "BELOW-MARKER" : "NOT-BELOW" }' skills/using-superpowers/SKILL.md; git diff --numstat skills/using-superpowers/SKILL.md; grep -n '"worklog"' tests/skill-triggering/run-all.sh`
+Expected: `BELOW-MARKER`; one line with `1`, `0` and `skills/using-superpowers/SKILL.md`, separated by tabs (one line added, none removed, so the text above the marker is unchanged); one line that holds `"worklog"`.
 
 - [ ] **Step 4: Run the skill-triggering test**
 
 Run: `bash tests/skill-triggering/run-test.sh worklog tests/skill-triggering/prompts/worklog.txt 8`
-Expected: `✅ PASS: Skill 'worklog' was triggered` (takes up to 5 minutes; it calls the real `claude` CLI with `--plugin-dir` set to this checkout). A model run is not deterministic: when it prints FAIL, run it once more; when the second run also fails, stop and report BLOCKED with the log path that the script prints.
+Expected: `✅ PASS: Skill 'worklog' was triggered` (takes up to 5 minutes; it calls the real `claude` CLI with `--plugin-dir` set to this checkout). Run it with a Bash tool timeout of at least 360000 ms (6 minutes): the default of 120000 ms ends the tool call before the script prints its result, and a tool time-out is not a FAIL. A model run is not deterministic: when it prints FAIL, run it once more; when the second run also fails, stop and report BLOCKED with the log path that the script prints.
 
 - [ ] **Step 5: Commit**
 
@@ -1570,11 +1628,11 @@ Expected after the last command: it prints `tests/skill-triggering/prompts/workl
 - `docs/guide/README.md` (wording artifact)
   - Must convey: the memory-files table has a row for `docs/worklogs/<slug>.md`; the §6 introduction names the work logs under `docs/worklogs/`; the `/pickup` paragraph says that a change under `docs/worklogs/` is not an uncommitted change; a new subsection at the end of §6 explains what a work log is, the three commands, that the skill never commits, the session-start notice, the branch advice, the worktree advice, the advice to commit before an orchestrated run or a whole-branch review, that `docs/worklogs` must be a real folder, and the manual reopen; the phrase cheat-sheet has a `/worklog` row.
   - Invariant: plain English, a term defined at its first use (the user's writing rules).
-  - Verification: the Step 2 `grep` commands.
+  - Verification: the Step 2 `grep` commands for the table row, the heading and the command strings; the advice items of the new subsection and the `/pickup` sentence by reading the edited text against this "Must convey" list.
 - `README.md` (wording artifact)
   - Must convey: 31 skills in the three count places (lines 68, 220, 330); the example project map line counts 28 rules covering 27 skills; a `worklog` entry in the Core Workflow list after `pickup`.
   - Verification: the Step 2 `grep` commands.
-- `CLAUDE.md` (wording artifact, not committed): one Testing line for `bash tests/worklog/run-tests.sh`. Verification: `grep -n 'tests/worklog/run-tests.sh' CLAUDE.md`.
+- `CLAUDE.md` (wording artifact, not committed): one Testing line for `bash tests/worklog/run-tests.sh`. Verification: `grep -n 'tests/worklog/run-tests.sh' CLAUDE.md`, or, when the implementer declined the edit, the manual step named in its report.
 
 - [ ] **Step 1: Edit the three files**
 
@@ -1594,11 +1652,20 @@ editable, and deletable by you:
 | `docs/worklogs/<slug>.md` | Where one piece of multi-part work stands: its parts, open items, accepted limits and decisions | `/worklog new`; then at each change, by the rules in the file itself; `/worklog` for a full update; `/worklog close` |
 ```
 
-3. In the `/pickup` paragraph, directly after the sentence "The files that `/handoff` itself writes (...) do not count as uncommitted changes." (it ends on line 1194 before this task), add the sentence:
+3. In the `/pickup` paragraph, the sentence "The files that `/handoff` itself writes (...) do not count as uncommitted changes." ends in the middle of line 1194 (before this task), and the next sentence starts on the same line. Replace the two lines 1193 and 1194
 
 ```markdown
-Since v7.52.0, a change under `docs/worklogs/` (a work log, see the end of
-this section) does not count either.
+(`tmp/docs/`, `state.md`, `session-log.md`) do not count as uncommitted
+changes. When the handoff has a `Done when:` line, `/pickup` tests that
+```
+
+with these four lines, so the new sentence stands between the two:
+
+```markdown
+(`tmp/docs/`, `state.md`, `session-log.md`) do not count as uncommitted
+changes. Since v7.52.0, a change under `docs/worklogs/` (a work log, see the
+end of this section) does not count either. When the handoff has a
+`Done when:` line, `/pickup` tests that
 ```
 
 4. Directly before the line `## 7. Context pressure — the "memory almost full" safety gate`, insert this subsection, with one empty line before and after it:
@@ -1610,8 +1677,9 @@ Since v7.52.0, a **work log** records the progress of one piece of work that
 has several parts and lasts many sessions — for example four groups of tests
 that you refactor one group after the other. A work log is one Markdown file,
 `docs/worklogs/<slug>.md`, and git tracks it. A project can hold several. The
-slug is the short name of the work log: lowercase letters, digits and single
-hyphens, at most 40 characters.
+slug is the short name of the work log: lowercase ASCII letters (`a` to `z`),
+digits and single hyphens, at most 40 characters, and not one of the command
+words `new`, `update` and `close`.
 
 The file has a table of parts, a list of open items, a list of accepted
 limits, and a list of decisions. Its header holds its own update rules, so any
@@ -1672,6 +1740,8 @@ What you should know:
 bash tests/worklog/run-tests.sh              # skills/worklog: template, the slug/list/check/line-1 commands copied from the skill text, pinned phrases, the hook's copy of the list command
 ```
 
+If the implementer declines this edit (its own rules may forbid a change to `CLAUDE.md` that another agent asks for), it names the line in its report as a manual step for the user, and the task still counts as done: the file is git-ignored and ships with nothing.
+
 - [ ] **Step 2: Verify the edits**
 
 Run: `grep -c '31 skills' README.md; grep -c '30 skills' README.md; grep -c '28 rules covering 27 skills' README.md; grep -c '^- \*\*worklog\*\*' README.md`
@@ -1681,7 +1751,7 @@ Run: `grep -c 'docs/worklogs' docs/guide/README.md; grep -n '^### Work logs' doc
 Expected: a count of at least `6`; one heading line; `2` (the command table and the cheat-sheet row).
 
 Run: `grep -n 'tests/worklog/run-tests.sh' CLAUDE.md; git status --short CLAUDE.md`
-Expected: one line; `git status` prints nothing (the file is ignored).
+Expected: one line; `git status` prints nothing (the file is ignored). When the edit was declined, the `grep` prints nothing and the report names the manual step instead.
 
 Run: `bash tests/review-gates/run-tests.sh`
 Expected: PASS — section 2d finds no complete defaults block in the documentation.
@@ -1705,13 +1775,13 @@ git commit -m "docs: document the worklog skill in the guide and the README" --t
 
 **Security flag:** `none`
 
-**Does NOT cover:** installing the plugin or pushing; `tests/codex/post-push-validation-checklist.md` (Codex is no longer supported, and no Codex-facing file changes).
+**Does NOT cover:** installing the plugin or pushing; `tests/codex/post-push-validation-checklist.md` (it runs after a push, which this plan does not do, and Codex is no longer supported; no file under `hooks/codex/` changes, but the Codex adapter also reads `hooks/skill-rules.json`, which gains one rule in Task 6).
 
 **Contract:**
 - The version places (code and wording artifacts): `VERSION`, the `version` of `.claude-plugin/plugin.json` and of the first plugin in `.claude-plugin/marketplace.json`, the meta `version` of `plugin.universal.yaml`, the README badge, the two `v6.7.0–v7.52.0` ranges, the last `(vX.Y.Z)` item of the README release list, and the first `## v` heading of `RELEASE-NOTES.md` all state `7.52.0`.
   - Verification: `node tests/codex/test-version-files.js` passes.
 - The `RELEASE-NOTES.md` entry (wording artifact)
-  - Must convey: a three-line summary directly under `## v7.52.0 — ...` (Problem, Change, Effect), near 100 words and at most 120, each statement supported by the entry's prose, and "Nothing to migrate."; prose on what a work log is, the three commands, the session-start notice with its size bound, the `/pickup` change, the tests, and the accepted limits.
+  - Must convey: a three-line summary directly under `## v7.52.0 — ...` (Problem, Change, Effect), near 100 words and at most 120, each statement supported by the entry's prose, and "Nothing to migrate."; prose on why a new document is needed (the limits of `state.md`, `session-log.md` and `known-issues.md`) and why the plugin must be reinstalled, what a work log is, the three commands, the session-start notice with its size bound, the `/pickup` change, the tests, and the accepted limits.
   - Verification: Step 2's word count prints a number at most 120; a reader finds each summary statement in the prose.
 - The README release list item (wording artifact): one new last item `... (v7.52.0)` before ` — are covered in`. Verification: `node tests/codex/test-version-files.js`.
 
@@ -1743,6 +1813,18 @@ an uncommitted work log as unfinished work.
 
 **Effect.** Type `/worklog new` to start a work log. Reinstall the plugin.
 Nothing to migrate.
+
+### Why a new document
+
+The plugin already writes three memory files, and none of them can hold the
+progress of multi-part work. `state.md` is one file per project, under 100
+lines, and every save-state rewrites it: it is a snapshot of one moment, not a
+history. `session-log.md` holds the decisions of each session in time order;
+it has no table of parts and no list of open items. `known-issues.md` maps a
+recurring error to its solution; it does not track work.
+
+The new skill, the hook change and the `/pickup` change ship inside the
+plugin, so a session uses them only after the plugin is reinstalled.
 
 ### What a work log is
 
@@ -1837,7 +1919,7 @@ Run: `node tests/codex/test-version-files.js`
 Expected: PASS — exit 0, every version place states 7.52.0.
 
 Run: `awk '/^## v7.52.0/ { f = 1; next } f && /^### / { exit } f' RELEASE-NOTES.md | wc -w`
-Expected: a number at most 130 (the summary of at most 120 words, plus the three bold labels).
+Expected: a number at most 120 (the whole summary, the three bold labels included; `wc -w` counts each label as one word).
 
 Run: `for s in tests/codex/run-unit-tests.sh tests/smart-compress/run-tests.sh tests/reviewer-templates/run-tests.sh tests/writing-plans/run-tests.sh tests/in-run-rulings/run-tests.sh tests/fill-prompt/run-tests.sh tests/orchestrating-development/run-tests.sh tests/review-gates/run-tests.sh tests/measure-context/run-tests.sh tests/pickup/run-tests.sh tests/analyze-compaction/run-tests.sh tests/sdd-scripts/run-tests.sh tests/suite-guard/run-tests.sh tests/worklog/run-tests.sh; do log=$(mktemp); bash "$s" > "$log" 2>&1 && echo "PASS $s" || { echo "FAIL $s"; tail -20 "$log"; }; rm -f "$log"; done`
 Expected: `PASS` for all 14 suites.
