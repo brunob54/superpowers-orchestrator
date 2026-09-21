@@ -143,3 +143,15 @@ carried findings: none passed — the ledger's 22 `Minor:` lines were triaged in
 - [M1] fixed — ordered check 5 now says to read line 1 only to take its `slug=` and `created=` values and to build the corrected line from them and the file-name slug; the check command's word stays the only judge of validity → a18f595 ← 2/3: r1:M1, r2:M1
 - [M2] fixed — the README mermaid diagram now says "28 skill rules", matching the rule count of hooks/skill-rules.json → a18f595 ← 1/3: r3:M1
 - [M3] fixed — the release notes' 457-character figure now names the printed root and the condition "with fewer than 1,000 further work logs", in the summary and in the prose → a18f595 ← 1/3: r3:M2
+
+## Round 6 — Adversarial red-team — opus
+**Reviewers:** M=3, usable 3/3
+**Reviewer verdicts:** r1: 0 Critical, 1 Important, 1 Minor | r2: 0 Critical, 0 Important, 0 Minor | r3: 0 Critical, 0 Important, 2 Minor
+**Sources mapped:** 4/4
+**Reviewer verdict:** 0 Critical, 1 Important, 3 Minor
+**Converged:** no
+### Dispositions
+- [I1] user-decision — the two `worklog` intent patterns also match the Jira and Tempo term worklog in coding requests; replayed with matchSkills, 'update the worklog of issue PROJ-12 through the Jira REST API' suggests worklog alone, so no brainstorming hint is offered; the fix changes the patterns that Global Constraint 12 fixes; [M2] of this round removes the skill-side consequence (a plain-words request about another product's worklog runs no command); invocation 1 round 2 [M1] carried the same overlap as Minor (plan-mandated) — at hooks/skill-rules.json:43 — clause: Global Constraints "[Interfaces and contracts] The `hooks/skill-rules.json` entry is: '`skill`: `worklog`; `type`: `workflow`; `priority`: `high`.'" ← 1/3: r1:I1
+- [M1] fixed — check 5 no longer offers `head -n 1`, which a rule of the plugin's Bash safety hook blocks for a slug holding the word secret or credentials; line 1 is read with the Read tool, limit 1 → 0b7b969 ← 1/3: r1:M1
+- [M2] fixed — the load-by-the-model branch runs a plain-words command only when the request is about this plugin's work log under docs/worklogs/; a request about another product's worklog (a Jira or Tempo time entry) gets one line saying the skill does not apply, and the request continues → 0b7b969 ← 1/3: r3:M1
+- [M3] carried — the rule that the work log goes into the next commit the user requests names no branch, so after a branch switch before the first commit it can be staged into a commit on another branch; the sentence is template text, which Global Constraint 8 makes normative, and the trigger needs a switch before the work log's first commit ← 1/3: r3:M2

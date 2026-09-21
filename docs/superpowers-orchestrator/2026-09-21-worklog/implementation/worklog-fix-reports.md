@@ -465,3 +465,29 @@ $ bash tests/codex/test-session-start-worklog-notice.sh; echo "exit=$?"
 28 passed, 0 failed
 exit=0
 ```
+
+## Round 6
+
+Findings addressed: M1, M2.
+
+Files changed: `skills/worklog/SKILL.md`.
+
+M1 (skills/worklog/SKILL.md:236, check 5 of "Choosing a work log"): dropped
+the `head -n 1` example from the line-1 read instruction; the sentence now
+names only the Read tool ("Read line 1 (for example with the Read tool,
+limit 1) only to take its `slug=` and `created=` values, ...").
+
+M2 (skills/worklog/SKILL.md:80-83, "Commands and arguments", the
+load-by-the-model branch): the plain-words bullet now runs a command only
+when the request is about this plugin's work log (a document under
+`docs/worklogs/`); a plain-words request about another product's worklog
+(for example a Jira or Tempo time entry) is reported as not this skill's
+command, in one line, and the user's request continues.
+
+Covering tests:
+
+```
+$ bash tests/worklog/run-tests.sh
+...
+Results: 178 passed, 0 failed
+```
