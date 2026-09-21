@@ -950,6 +950,8 @@ git commit -m "feat(worklog): add the grammar, the three commands and the rules 
 
 ### Task 4: The session-start notice
 
+> **Amendment 3 (orchestrator ruling):** opening words "`tests/codex/test-session-start-budget.sh` case 8 (code artifact): with three active 40-character work logs" — the Contract bullet of case 8 gains a case 9 with a near-limit fixture. Before, only case 8 used the three work logs with the oversized fixture of case 5, which leaves about 898 characters of room against a notice of at most about 760, so no case could fail when the budget left the notice out of its count (code review invocation 1, round 4 verification 3 [I1]; ruling 3 of the ruling record).
+
 **Files:**
 - Modify: `hooks/session-start`
 - Create: `tests/codex/test-session-start-worklog-notice.sh`
@@ -978,7 +980,7 @@ git commit -m "feat(worklog): add the grammar, the three commands and the rules 
   - Invariants: runs the hook with `env -i` (no network, a temporary `HOME`, `CLAUDE_PLUGIN_ROOT` set); compares whole outputs for the "identical" cases; builds each expected notice from the fixed tail of Global Constraint 11 and the fixture's real root (`pwd -P`).
   - Verification: Step 2 shows failures on the current hook; Step 4 passes.
 - `tests/codex/run-unit-tests.sh` (code artifact): one `run_test` line registers the new file with the runner `bash`, or it never runs. Verification: the runner lists "session-start (active work log notice)".
-- `tests/codex/test-session-start-budget.sh` case 8 (code artifact): with three active 40-character work logs and the oversized workspace files of case 5, `assert_common` passes and the notice is injected. The case 5 fixture moves into the function `write_oversized_workspace`, which cases 5 and 8 both call (no copied fixture code). Verification: Step 4.
+- `tests/codex/test-session-start-budget.sh` case 8 (code artifact): with three active 40-character work logs and the oversized workspace files of case 5, `assert_common` passes and the notice is injected. The case 5 fixture moves into the function `write_oversized_workspace`, which cases 5 and 8 both call (no copied fixture code). Verification: Step 4. Case 9 of the same file uses the three 40-character work logs of case 8 with workspace files sized so that the room they leave is smaller than the notice: `assert_common` passes and the whole notice is present, and case 9 fails when the budget leaves the notice out of its count. Verification: case 9 fails on a copy of the hook whose budget does not count the notice, and passes on the branch.
 - `tests/worklog/run-tests.sh` section 8 (code artifact): passes only when `hooks/session-start` contains every line of the skill's list command except its last (print) line, as one contiguous block. Verification: Step 2 fails, Step 4 passes.
 
 - [x] **Step 1: Write the failing tests**

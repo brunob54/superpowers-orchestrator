@@ -22,3 +22,11 @@ readiness owed: 5
 - Task 7: complete — skill triggering and the Routing Guide (76a53d1..ebb76ef)
 - Task 8: complete — user documentation (c8ba782..d6f0255)
 - Task 9: complete — release v7.52.0 (71dccaf..51a7306)
+
+## RULING 1 — 2026-09-21 — phase 4 — close stops on a deleted heading; list command unchanged; budget case 9 added
+Items: [L12] forced — fix it: close stops, names a missing heading and sends the user to /worklog update; close never repairs
+Items: [L18] design — plan governs: "[Discovery through the session-start hook] 'Run the list command, unchanged: with its folder test, its `|| true` and its file-name filter." — docs/superpowers-orchestrator/2026-09-21-worklog/plans/worklog.md
+Items: [I1] forced — amend plan: Task 4 Contract requires a near-limit budget case 9 (Amendment 3); fix it: add case 9
+Detail: docs/superpowers-orchestrator/2026-09-21-worklog/plans/worklog-open-decisions.md
+Forks: 3 of 3 (design consistency, implementation practicality, adversarial) — contradiction: settled
+Re-dispatch: phase 4, in-run resume 1 of 3, return 1 of 6
