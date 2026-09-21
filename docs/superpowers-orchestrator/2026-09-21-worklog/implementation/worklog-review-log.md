@@ -78,3 +78,17 @@ _Invocation 1 — 2026-09-21 — N=4 M=3 — BASE..HEAD e06a224..1c04872 — bra
 - [M9] carried — on macOS the C-locale sort checks cannot fail when `LC_ALL=C` is removed, because the fixture names sort the same in the ambient locales ← 1/3: r2:M3
 - [M10] fixed — line-1 case (e) asserts that the failed command prints something → ce6b7e1 ← 1/3: r2:M6
 - [M11] fixed — pickup case 6c also covers an untracked `docs/worklogs/` folder (dirty 0, FRESH) and a later commit under it (CHECK) → ce6b7e1 ← 1/3: r3:M4
+
+## Round 4 verification 1 — Test & coverage quality — opus
+**Reviewers:** M=3, usable 3/3
+**Reviewer verdicts:** r1: 0 Critical, 0 Important, 3 Minor | r2: 0 Critical, 0 Important, 3 Minor | r3: 0 Critical, 0 Important, 6 Minor
+**Sources mapped:** 12/12
+**Reviewer verdict:** 0 Critical, 0 Important, 7 Minor
+### Dispositions
+- [M1] fixed — the refused line-1 forms, trailing text after `-->` and an uppercase `slug=` now run through the check command in section 5, each asserted `malformed` → 226329e ← 3/3: r1:M1, r2:M1, r3:M1
+- [M2] fixed — an activator test asserts that the `worklog` rule stands before `brainstorming`, `refactoring` and `writing-plans` in hooks/skill-rules.json → 226329e ← 2/3: r1:M2, r2:M2
+- [M3] fixed — pickup case 6c adds a project with no `docs/` folder before the first work log (dirty 0, FRESH) and a corrected comment → 226329e ← 2/3: r1:M3, r3:M2
+- [M4] fixed — budget case 8 keeps the plan's fixture, asserts the three names and the closing tag, and its comment no longer claims the longest notice → 226329e ← 2/3: r2:M3, r3:M5
+- [M5] fixed — the mktemp stand-in records its argument count and the suite asserts the line-1 command calls it with no argument → 226329e ← 1/3: r3:M3
+- [M6] fixed — the usage-text pin is now a phrase unique to the unknown-first-word rule → 226329e ← 1/3: r3:M4
+- [M7] fixed — the notice test's case-1 header now says only the absent folder skips find → 226329e ← 1/3: r3:M6

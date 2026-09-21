@@ -220,3 +220,88 @@ $ bash tests/suite-guard/run-tests.sh
 ...
 Results: 116 passed, 0 failed
 ```
+
+## Round 4
+
+Findings addressed: M1, M2, M3, M4, M5, M6, M7.
+
+Files changed: `tests/worklog/run-tests.sh`, `tests/codex/test-skill-activator.js`,
+`tests/pickup/run-tests.sh`, `tests/codex/test-session-start-budget.sh`,
+`tests/codex/test-session-start-worklog-notice.sh`.
+
+M1: `tests/worklog/run-tests.sh` section 4's three refused line-1 examples
+were pulled into a named array `REFUSED_LINES`, reused by section 4's own
+loop. Section 5 now writes each of those three lines, plus a valid active
+line with extra text after `-->`, plus a line with an uppercase `slug=`
+value, as line 1 of five new validly-named fixture files under `$MW`
+(`malformed-no-created.md`, `malformed-no-closed.md`, `malformed-bad-date.md`,
+`malformed-trailing.md`, `malformed-upper-slug.md`), and asserts that
+`run_check` prints `malformed` as its first line for each — pinning the check
+command's own `S=`/`D=` patterns independently of the "### Valid forms of
+line 1" prose lines.
+
+M2: `tests/codex/test-skill-activator.js` worklog block: added a test that
+reads `hooks/skill-rules.json` and asserts the index of the `worklog` rule is
+lower than the indexes of `brainstorming`, `refactoring` and `writing-plans`.
+The existing comment already described this correctly, so it was left as is.
+
+M3: `tests/pickup/run-tests.sh` case 6c: added a new fixture `worklognofolder`
+with no `docs/` folder at all before the first `/worklog new` (a handoff,
+then `docs/worklogs/w.md` created untracked), asserting `dirty: 0` and
+`status: FRESH`. Reworded the comment above the existing `worklogfirst`
+fixture so it describes both fixtures (no folder yet, and a folder that
+already holds a tracked file) and names the scan's pathspec-limited status
+command rather than plain `git status`.
+
+M4: `tests/codex/test-session-start-budget.sh` case 8: added assertions that
+each of the three 40-character slugs is named in the notice and that the
+notice's closing `</active-work-logs>` tag is present, in addition to the
+existing opening-tag check. Reworded the case comment to stop claiming "the
+longest notice that three names can produce" and note that the fixture's
+root is a short temporary path, so the root-truncation branch does not fire.
+
+M5: `tests/worklog/run-tests.sh` mktemp stand-in: added `MKARGS`, a log of
+the stand-in's argument count (`$#`) on every call, reset alongside `MKLOG`
+in `run_line1_private`. Added the assertion that the line-1 command's single
+mktemp call in the `tmp-cleanup` case carries no argument.
+
+M6: `tests/worklog/run-tests.sh` section 7 `PHRASES`: replaced the pinned
+phrase `'stops with the usage text'` (now also contained in the later
+"More than one word..." sentence) with the phrase unique to the original
+rule: `` 'given as a slug (for example `/worklog new close`), stops with the
+usage text' ``.
+
+M7: `tests/codex/test-session-start-worklog-notice.sh:10` header comment of
+case 1: corrected "The folder test of the list command skips find in both
+states" to state that only the absent-folder state skips `find`; with only a
+closed work log, `find` runs and exits 0, and neither state reaches the
+`|| true`.
+
+Covering tests:
+
+```
+$ bash tests/worklog/run-tests.sh; echo "exit=$?"
+...
+Results: 172 passed, 0 failed
+exit=0
+
+$ node tests/codex/test-skill-activator.js; echo "exit=$?"
+...
+skill-activator (UserPromptSubmit): 153 passed, 0 failed
+exit=0
+
+$ bash tests/pickup/run-tests.sh; echo "exit=$?"
+...
+Results: 207 passed, 0 failed
+exit=0
+
+$ bash tests/codex/test-session-start-budget.sh; echo "exit=$?"
+...
+105 passed, 0 failed
+exit=0
+
+$ bash tests/codex/test-session-start-worklog-notice.sh; echo "exit=$?"
+...
+28 passed, 0 failed
+exit=0
+```
