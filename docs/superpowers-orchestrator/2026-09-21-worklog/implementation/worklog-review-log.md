@@ -118,3 +118,6 @@ _Invocation 1 — 2026-09-21 — N=4 M=3 — BASE..HEAD e06a224..1c04872 — bra
 - [M3] carried — no fixture uses `update.md` or `close.md`, or a file in a sub-folder of docs/worklogs, so the command-word tests and `-maxdepth 1` of the filter copies are untested ← 1/3: r2:M2
 - [M4] carried — the root cut is tested at 300 and about 460 characters only, so the threshold could move up to about 460 without a failing test ← 1/3: r3:M1
 - [M5] carried — the line-1 tests still assert that mktemp is called exactly once, a property the skill does not state ← 1/3: r3:M2
+
+_Completed — 2026-09-21 — cap reached — HEAD d030fec3e793f1e32f2a82f18fd6e97b6d34e54c_
+Secrets found: none
