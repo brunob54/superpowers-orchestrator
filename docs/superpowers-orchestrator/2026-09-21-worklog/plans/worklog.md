@@ -981,7 +981,7 @@ git commit -m "feat(worklog): add the grammar, the three commands and the rules 
 - `tests/codex/test-session-start-budget.sh` case 8 (code artifact): with three active 40-character work logs and the oversized workspace files of case 5, `assert_common` passes and the notice is injected. The case 5 fixture moves into the function `write_oversized_workspace`, which cases 5 and 8 both call (no copied fixture code). Verification: Step 4.
 - `tests/worklog/run-tests.sh` section 8 (code artifact): passes only when `hooks/session-start` contains every line of the skill's list command except its last (print) line, as one contiguous block. Verification: Step 2 fails, Step 4 passes.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Create `tests/codex/test-session-start-worklog-notice.sh` with this content, then run `chmod +x tests/codex/test-session-start-worklog-notice.sh`:
 
@@ -1259,7 +1259,7 @@ fi
 
 ```
 
-- [ ] **Step 2: Run the tests to verify they fail**
+- [x] **Step 2: Run the tests to verify they fail**
 
 Run: `bash tests/codex/test-session-start-worklog-notice.sh`
 Expected: FAIL — exit 1, `16 passed, 5 failed`: the notice checks of cases 2, 4 (both), 5 and 6 fail, because the output holds no notice; cases 1 and 3 pass.
@@ -1270,7 +1270,7 @@ Expected: FAIL — exit 1; only "three 40-character work logs: the notice is inj
 Run: `bash tests/worklog/run-tests.sh`
 Expected: FAIL — exit 1; only "the hook holds the list command of the skill, line for line" fails.
 
-- [ ] **Step 3: Add the notice to the hook**
+- [x] **Step 3: Add the notice to the hook**
 
 In `hooks/session-start`, insert this block directly after the `fi` that closes the "Git repository check" block (the `git_notice` assignment), before the line `# ── Legacy skills warning`, with one empty line before and after it:
 
@@ -1338,7 +1338,7 @@ Then change the line that writes the notices part (line 529 before this task):
 printf '%s' "${warning_message}${update_notice}${git_notice}${worklog_notice}" > "${parts_dir}/notices"
 ```
 
-- [ ] **Step 4: Run the tests to verify they pass**
+- [x] **Step 4: Run the tests to verify they pass**
 
 Run: `bash tests/codex/test-session-start-worklog-notice.sh`
 Expected: PASS — `21 passed, 0 failed`, exit 0.
@@ -1352,7 +1352,7 @@ Expected: PASS — exit 0, 0 failed.
 Run: `bash tests/codex/run-unit-tests.sh`
 Expected: PASS — "All unit tests passed."; the list shows "── session-start (active work log notice)".
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add hooks/session-start tests/codex/test-session-start-worklog-notice.sh tests/codex/run-unit-tests.sh tests/codex/test-session-start-budget.sh tests/worklog/run-tests.sh
