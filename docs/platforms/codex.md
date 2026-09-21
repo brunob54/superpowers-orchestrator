@@ -2,6 +2,12 @@
 
 Guide for using Superpowers Orchestrator with OpenAI Codex CLI.
 
+> **No longer supported (since 2026-09-21).** Codex is no longer a supported
+> platform of Superpowers Orchestrator. The Codex files (`.codex/`,
+> `.codex-plugin/`, `hooks/codex/`, `hooks/codex-hooks.json`) stay in the
+> repository, and their unit tests still run, but Codex is no longer
+> maintained or reviewed as a platform. Use Claude Code or GitHub Copilot CLI.
+
 > **Status: never run on Codex.** Everything here was written from the Codex
 > documentation and this repository's own script-level tests. The plugin has
 > not been used inside a live Codex session. A `✅` below means the feature
