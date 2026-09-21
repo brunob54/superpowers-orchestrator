@@ -1768,10 +1768,11 @@ done
 # subjects, and `ruling <n> follow-up` is the one Resume step 3 writes.
 assert_in_range "log format names the follow-up commit subject" \
   "$ORCH_SKILL" 'ruling <n> follow-up' "$LOG_FORMAT_LINE" "$STATE_LINE" exact
-# That subject reads as orchestration bookkeeping, but Resume step 3 folds a
-# code revert into it, so the subject list says the commit may carry source.
-assert_in_range_folded "the boundary-subject list warns that a follow-up commit may carry source" \
-  "$ORCH_SKILL" '**a `ruling <n> follow-up` commit may carry reverted source files**' \
+# That subject reads as orchestration bookkeeping, but Resume step 3 commits
+# the restored clause and the unticked checkboxes of an overturned ruling in
+# it, so the subject list says the commit can carry the plan file.
+assert_in_range_folded "the boundary-subject list warns that a follow-up commit can carry the plan file" \
+  "$ORCH_SKILL" '**a `ruling <n> follow-up` commit carries the ruling record and can carry the plan file**' \
   "$LOG_FORMAT_LINE" "$STATE_LINE"
 # Retained weaker pins: the bare labels alone, in case a later edit moves the
 # example's placeholder tails.
@@ -2074,39 +2075,54 @@ assert_in_range_folded "row 39: the Rulings line text says what <n> means in the
 assert_in_range_folded "row 39: the Rulings line's <count> is the number of Ruling entries" \
   "$ORCH_SKILL" '`<count>` is the number of `## Ruling` entries in the ruling record' \
   "$LOG_ENTRY_LINE" "$LOG_ENTRY_END"
-# Reverting the amendment without reverting the fix it authorised leaves the
-# branch contradicting the clause the user reinstated.
-assert_in_range_folded "reverting a plan amendment also reverts the fix it authorised" \
-  "$ORCH_SKILL" '**Reverting the plan is only half of the revert.**' \
+# Reverting the amendment does not undo the fix that the ruling authorised.
+# The skill must say so, and must say what removes that code.
+assert_in_range_folded_exact "reverting a plan amendment does not undo the fix it authorised" \
+  "$ORCH_SKILL" '**Reverting the plan does not undo the code.**' \
   "$RESUME_LINE" "$RULINGS_LINE"
-# Row 79. Measured on git 2.50.1: `git revert` follows a folder rename and
-# writes a file of the revert into the other folder, a path outside the list.
-# With `merge.directoryRenames=true` it overwrites an ignored file there and
-# ends with exit code 0. It prints a "Path updated" line about the rename on
-# standard output, and no warning about the overwritten file. `-c merge.directoryRenames=false` on
-# the command keeps every change of the revert on the listed paths.
-R79_REVERT_COMMAND='git -c merge.directoryRenames=false revert --no-commit <sha>'
-assert_in_range_folded_exact "the fix commit is found by the addendum's fixed line and reverted into the resume commit, and the revert follows no folder rename" \
-  "$ORCH_SKILL" "revert it without a commit of its own (\`$R79_REVERT_COMMAND\`), staging the result by explicit path." \
+assert_in_range_folded "the fix commit is found by the addendum's fixed line" \
+  "$ORCH_SKILL" 'Find the fix commit by the `fixed — <summary> → <sha>` line the review-log addendum recorded for that id.' \
   "$RESUME_LINE" "$RULINGS_LINE"
-assert_absent_in_range_folded "row 79: the plain revert command is no instruction any more" "$ORCH_SKILL" \
-  '(`git revert --no-commit <sha>`' "$RESUME_LINE" "$RULINGS_LINE" exact
-# The reason stands directly below the command: the range is the line of the
-# command and the 9 lines after it.
-R79_COMMAND_LINE="$(line_containing_after "$ORCH_SKILL" "$R79_REVERT_COMMAND" "$RESUME_LINE")"
-R79_REASON_END="$((${R79_COMMAND_LINE:-0} + 10))"
-assert_in_range_folded_exact "row 79: the rule sentence of the reason" \
-  "$ORCH_SKILL" 'The `-c merge.directoryRenames=false` part stops git from following a folder rename, made by the fix commit or by a later commit, and writing a file of the revert into the other folder:' \
-  "$R79_COMMAND_LINE" "$R79_REASON_END"
-assert_in_range_folded "row 79: the condition of the reason" \
-  "$ORCH_SKILL" 'that path stands outside the list, no line of the pre-check script reads it,' \
-  "$R79_COMMAND_LINE" "$R79_REASON_END"
-assert_in_range_folded_exact "row 79: the consequence of the reason" \
-  "$ORCH_SKILL" 'and git would overwrite an ignored file there; when the configuration of the user says `true`, git does that with exit code 0 and with no warning about the overwritten file. **On a non-zero exit from that command**' \
-  "$R79_COMMAND_LINE" "$R79_REASON_END"
-assert_in_range_folded "an unrevertable fix is re-raised by the next invocation instead" \
+assert_in_range_folded "the fix of an overturned ruling is re-raised by the next invocation" \
   "$ORCH_SKILL" 're-raises the finding against the restored clause' \
   "$RESUME_LINE" "$RULINGS_LINE"
+# The automatic fix-commit revert is removed. In real runs it ran 0 times, and
+# its pre-check was a deny-list (a list of forbidden cases) that can never be
+# complete. The orchestrator now always records the fix commit as not reverted,
+# writes a pointer to it into the ledger, and the new Phase 4 invocation
+# removes the wrong code.
+assert_in_range_folded_exact "the orchestrator never reverts a fix commit itself" \
+  "$ORCH_SKILL" '**You never revert a fix commit yourself, and you make no code change for it at all.**' \
+  "$RESUME_LINE" "$RULINGS_LINE"
+assert_in_range_folded_exact "every fix commit of an overturned ruling is recorded as not reverted" \
+  "$ORCH_SKILL" 'For each such fix commit, record `— fix <sha> not reverted` at the end of the item'"'"'s `**Follow-up:**` line.' \
+  "$RESUME_LINE" "$RULINGS_LINE"
+assert_in_range_folded_exact "the ledger line for a fix commit is appended on disk only" \
+  "$ORCH_SKILL" 'Also append one line to `.superpowers/sdd/progress.md` (the ledger), but on disk only — never stage the ledger' \
+  "$RESUME_LINE" "$RULINGS_LINE"
+assert_in_range_folded_exact "the ledger line points a reviewer to the fix commit and asks for a finding" \
+  "$ORCH_SKILL" '`Minor: fix commit <sha> was made under ruling <m>, which a user'"'"'s answer overturned; check its changes against the restored clause at <plan location>, and report code that contradicts the clause as a finding`' \
+  "$RESUME_LINE" "$RULINGS_LINE"
+assert_in_range_folded_exact "the reason for the ledger line: round-1 reviewers receive Minor lines as carried findings" \
+  "$ORCH_SKILL" 'Round-1 reviewers of the new Phase 4 invocation receive the ledger'"'"'s `Minor:` lines as carried findings' \
+  "$RESUME_LINE" "$RULINGS_LINE"
+assert_in_range_folded_exact "the fix subagent of the new invocation undoes the wrong code in a review fixes commit" \
+  "$ORCH_SKILL" 'its fix subagent then undoes the wrong code in a normal `review fixes` commit' \
+  "$RESUME_LINE" "$RULINGS_LINE"
+assert_in_range_folded_exact "the record line and the ledger line make a kept change visible" \
+  "$ORCH_SKILL" 'the record line and the ledger line make that change visible, and the new Phase 4 invocation is what removes it' \
+  "$RESUME_LINE" "$RULINGS_LINE"
+# A stop after the ledger append must leave the ledger as the resume found it:
+# the next resume prompt can carry another answer for the same id.
+assert_in_range_folded_exact "a stop removes the ledger line this resume added" \
+  "$ORCH_SKILL" 'Put back a checkbox this resume unticked, and a ledger line it removed, the same way, and remove a ledger line it added. Only then stop and report.' \
+  "$RESUME_LINE" "$RULINGS_LINE"
+# No text of the removed mechanism may stay anywhere in the skill file.
+ORCH_TOTAL_LINES="$(wc -l < "$ORCH_SKILL" | tr -d ' ')"
+for removed_text in 'git revert' 'REVERT_HEAD' 'pre-check script' 'saved pre-revert state' 'fix <sha> reverted' 'never silently keeps a change'; do
+  assert_absent_in_range_folded "the removed fix-commit revert: no '$removed_text' stays in the skill" \
+    "$ORCH_SKILL" "$removed_text" 1 "$ORCH_TOTAL_LINES" fragment
+done
 # I3: a Phase 3 ruling's amended clause was implemented inside an ordinary
 # task commit, never through the code-review loop, so there is no fix commit
 # to find or revert; the task must instead be re-implemented against the
@@ -2120,246 +2136,6 @@ assert_in_range_folded "a reverted Phase 3 amendment un-ticks the task and drops
 assert_in_range_folded "the ledger line is removed on disk only, never staged" \
   "$ORCH_SKILL" 'also remove its completed line from `.superpowers/sdd/progress.md` (the ledger), but on disk only' \
   "$RESUME_LINE" "$RULINGS_LINE"
-# `git revert --no-commit` does not leave the tree untouched on a conflict: it
-# writes conflict markers, stages the clean hunks of every other file it
-# touched, and leaves `REVERT_HEAD` behind. The paragraph must name the
-# pre-check, the cleanup and the verification, or "make no code change at all"
-# names no reachable state.
-assert_in_range_folded "the pre-revert state is saved again before each revert" \
-  "$ORCH_SKILL" '**Before starting each revert**, save the tree' \
-  "$RESUME_LINE" "$RULINGS_LINE"
-assert_in_range_folded "the revert runs the pre-check script, unchanged, before it touches any path" \
-  "$ORCH_SKILL" 'output as the pre-revert state. Then run the pre-check script below from the top folder of the repository, in bash or zsh, with the hash of the fix commit in place of `<sha>` and with no other change:' \
-  "$RESUME_LINE" "$RULINGS_LINE"
-assert_in_range_folded "a locally-changed path takes the not-reverted branch without starting the revert" \
-  "$ORCH_SKILL" 'do not start the revert at all' \
-  "$RESUME_LINE" "$RULINGS_LINE"
-# Row 72. Measured on git 2.50.1: `git revert --no-commit` refuses (exit 128,
-# nothing changed, no `REVERT_HEAD`) over an unstaged or untracked change, and
-# exits 0 over a staged one. Only exit 1, a conflict, leaves the checkout
-# mid-revert. No state creates the folder `.git/sequencer`. After a refusal git
-# created no file, so an untracked file at a path of the fix commit is the
-# user's own. Review round 1 (measured): the per-path cleanup after a refusal
-# deletes an unstaged change that the pre-check did not list, so a refusal runs
-# no cleanup at all.
-assert_in_range_folded "the pre-check names what git does over each kind of local change" \
-  "$ORCH_SKILL" 'When the script prints anything at all, on standard output or standard error, do not start the revert at all — `git revert` refuses over an unstaged or untracked change, merges the revert into a staged change or conflicts with it, and overwrites an ignored file with no warning — and take the "not reverted" branch below directly' \
-  "$RESUME_LINE" "$RULINGS_LINE"
-# Rows 74 and 73. Measured on git 2.50.1. Without `--no-renames` the path list
-# of a fix commit that renamed a file holds only the new name (and it depends
-# on the user's `diff.renames` setting). With that list the cleanup after a
-# conflict leaves the old name staged, the undo before a stop does the same,
-# and the resume commit removes the file from the branch. `git status
-# --porcelain` does not list an ignored file, and `git revert` overwrites one
-# with no warning; `git status --porcelain --ignored` prints only the folder
-# for a file inside an ignored folder, `git ls-files --others --ignored
-# --exclude-standard -- <paths>` prints the file. Review round 1 (measured):
-# with no path at all, that `git ls-files` command prints every ignored file of
-# the repository. Verification pass (measured): `-c core.quotePath=false` on the
-# list command alone is wrong. The list then prints `café.txt` while `git status
-# --porcelain` prints the quoted, escaped form, so the pre-check no longer sees
-# a local change on that path and the cleanup after a conflict deletes it.
-# The options and the hash that every path list carries. The pre-check script
-# writes `-z` between `git show` and its tail. Since rows 79 and 80 the script
-# keeps the hash in the variable `c`, so its tail ends in "$c".
-R74_LIST_OPTIONS='--name-only --no-renames --format='
-R74_LIST_TAIL="$R74_LIST_OPTIONS <sha>"
-R74_SCRIPT_TAIL="$R74_LIST_OPTIONS \"\$c\""
-R74_LIST_COMMAND="\`git show $R74_LIST_TAIL\`"
-# Rows 76, 77 and 78. Measured on git 2.50.1, bash 3.2 and zsh 5.9. One fixed
-# script replaces the comparison of names and holds the `git ls-files` read. Row 77:
-# git prints a name with a space or an accent quoted, and reads a name such as
-# `*.txt` as a pattern. Row 78: on a file system that ignores case, a file
-# stands on disk under a path that HEAD does not hold. Row 76: an ignored file
-# stands where the revert needs a folder. The range form `A-Za-z` lets
-# `café.txt` pass under bash 3.2 with a UTF-8 (8-bit Unicode Transformation
-# Format) locale, and zsh fails on a bare `=*` pattern, so the script is pinned
-# line by line.
-# Rows 79 and 80. Measured on git 2.50.1, bash 3.2 and zsh 5.9. Row 80: a
-# later commit renamed or deleted a file of the fix commit. The revert then
-# changes a file outside the list, or changes nothing, and the resume commit,
-# which names the listed paths, fails. Verification pass (measured): a third
-# outcome is a conflict with exit code 1, and no resume commit follows it.
-# The fix changed `m.txt` and a later commit deleted it, alone or with its
-# folder: CONFLICT (modify/delete). The fix added `m.txt` and a later commit
-# renamed it: CONFLICT (rename/delete). Row 79: a later commit renamed a parent
-# folder, and git writes a file of the revert into the other folder. The
-# script reports both: a path, or a parent folder, that the fix commit holds
-# and HEAD does not hold. When only a parent folder is gone, the narrow revert
-# ends with exit code 0 and stays inside the list: it puts the file back into
-# a folder that the branch no longer holds, or, after a rename that changes
-# only the letter case, under the other spelling of the folder name. A later
-# commit can also put a folder where the fix commit holds a file. When that
-# commit moved the file into the folder with equal content, the revert ends
-# with exit code 0 and changes the moved file, outside the list; with other
-# content it ends with exit code 1 and CONFLICT (file/directory). So the
-# script compares the two object types. The hash stands on one line only (`c=<sha>`):
-# a placeholder that nobody replaced is a syntax error, which is output.
-# Review round 1 of rows 76 to 78 (measured). C1: the fix commit replaced the
-# tracked file `d` by `d/x.txt` and the user keeps an ignored `d/junk.dat`;
-# without the `git ls-files` read the script is quiet and the revert deletes
-# that file. F3: run from a sub-folder, the script reads each path from that
-# folder and is quiet, so its first line reports a wrong current folder. I1: a
-# line added inside the fence passed, so the two fence lines are pinned too.
-# Rows 81, 86 and 87. Measured on git 2.50.1, bash 3.2 and zsh 5.9. Row 81: git
-# does not compare a file that carries the assume-unchanged bit or the
-# skip-worktree bit of the index with the disk, so `git status --porcelain`
-# hides a local change there. With the assume-unchanged bit and a hidden
-# change, the script was quiet, the resume commit committed the user's change,
-# and the undo and the cleanup lost it. With the skip-worktree bit the resume
-# commit ended with exit code 0 and left the path out. `git ls-files -v` prints
-# the letter `H` for an ordinary path and another letter for a path with a bit,
-# so the script deletes the `H` lines with `sed` and prints the rest. The form
-# `grep -v` is unsafe: with `set -e` in front, the script ends at the first
-# ordinary path and prints nothing, and no output means "start the revert".
-# Row 87: in a sparse checkout (git keeps only a part of the tree on disk) the
-# resume commit left a reverted path outside that part out and still ended with
-# exit code 0. When the fix deleted an outside path, `git ls-files -v` prints
-# nothing for it, so script line 2 reads the configuration value instead, and
-# no fix commit is reverted in a sparse checkout. Row 86: the fix deleted the
-# last file of a nested folder; for a missing folder below an existing one, git
-# prints a warning on standard error, which the script read as an alarm. The
-# searches for untracked and ignored files now run only when the folder of the
-# path stands on disk. A first status line with `--untracked-files=no` runs
-# always, so a deleted tracked file still gives an alarm. No status line and no
-# `git ls-files` line sends standard error away: for a folder that git cannot
-# read, standard error is the only alarm.
-assert_in_range_folded_exact "rows 74, 76 to 81, 86 and 87: one list feeds every later rule, and the ten cases of the pre-check script are named" \
-  "$ORCH_SKILL" "Its fourth line lists the paths the fix commit touched ($R74_LIST_COMMAND lists those paths; \`--no-renames\` makes a renamed file appear under both its names, \`-z\` prints each name unquoted, and every later rule of this revert takes its paths from this one list: the cleanup, the undo before a stop, and the reverted paths that the resume commit names). The script prints a line in ten cases. The current folder is not the top folder of the repository: the script reads each path from the current folder. The repository is a sparse checkout (\`core.sparseCheckout\` is true, so git keeps only a part of the tree on disk): the resume commit, which names the listed paths, can leave a reverted path outside that part out, and the commit still ends with exit code 0, so no fix commit is reverted in a sparse checkout. The name of a listed path holds a character outside letters, digits, \`.\`, \`_\`, \`/\`, \`@\`, \`+\`, \`=\`, \`,\` and \`-\`, or begins with \`-\` or \`=\`: git prints such a name quoted or reads it as a pattern, or the shell expands it, so the commands below, which take a typed name, would miss the file or reach other files. The path carries a local change. An ignored file stands on the path or, when the path is a folder on disk, under it: \`git status --porcelain\` does not list an ignored file, and the revert overwrites or deletes it with no warning. The script reads untracked and ignored files only when the folder of the path stands on disk: for a missing folder below an existing one git prints a warning on standard error, which would be a false alarm. The path carries the \`assume-unchanged\` or the \`skip-worktree\` bit of the index (\`git ls-files -v\` prints a letter other than \`H\`): git does not compare such a file with the disk, so \`git status --porcelain\` hides a local change there. On a path that carries only the \`assume-unchanged\` bit the resume commit would commit that change, and the cleanup and the undo would delete it. On a path that carries the \`skip-worktree\` bit the resume commit leaves the path out and still ends with exit code 0, and the \`git checkout\` of the cleanup and of the undo fails with exit code 1 while the path still carries the bit. The path stands on disk and does not exist at HEAD: an untracked file, or the same name in another letter case on a file system that ignores case. The path is a folder at HEAD and is not a folder in the fix commit: a later commit put a folder where the fix commit holds a file, or no entry. The path, or a parent folder of the path, exists in the fix commit and does not exist at HEAD: a later commit deleted or renamed it. When the path itself is gone, the revert would stop on a conflict, or change a file outside this list, or change nothing; in the last two cases the resume commit, which names the listed paths, would fail. When only a parent folder is gone, the revert would put the file back into a folder that the branch no longer holds, or, after a rename that changes only the letter case, under the other spelling of the folder name. A parent folder name of the path stands on disk and is not a real folder: the revert would replace that file with a folder and give no warning. Never type a path into the script and never change its letters list: a range such as \`A-Z\` lets an accented letter pass in some shells." \
-  "$RESUME_LINE" "$RULINGS_LINE"
-# Print the number of the first line of file $1, from line $3 up to and not
-# including line $4, that is equal to $2 as a whole line.
-whole_line_number() { # file text start end
-  text="$2" awk -v a="$3" -v b="$4" \
-    'NR >= a && NR < b && $0 == ENVIRON["text"] { print NR; exit }' "$1"
-}
-# The first line of the pre-check script area: the fence lines of the script
-# are not unique in the Resume section, so the search starts at these words.
-PRECHECK_ANCHOR_LINE="$(line_containing_after "$ORCH_SKILL" 'pre-check script below' "$RESUME_LINE")"
-# One check per line of $5 and later: the first line must stand somewhere
-# inside the range $3..$4 of file $2, and every later line must stand on the
-# line directly below the line before it.
-assert_consecutive_whole_lines() { # desc file start end line...
-  local desc="$1" file="$2" from="$3" to="$4" index=0 text found
-  shift 4
-  for text in "$@"; do
-    index=$((index+1))
-    found="$(whole_line_number "$file" "$text" "$from" "$to")"
-    if [ -n "$found" ]; then
-      ok "$desc: line $index stands unchanged (line $found)"
-      from=$((found+1))
-      to=$((found+2))
-    else
-      bad "$desc: line $index does not stand unchanged between lines $from and $to of ${file#$ROOT/}"
-    fi
-  done
-}
-assert_consecutive_whole_lines "rows 76 to 81, 86 and 87: the pre-check script and its fence" "$ORCH_SKILL" "${PRECHECK_ANCHOR_LINE:-$RULINGS_LINE}" "$RULINGS_LINE" \
-  '   ```bash' \
-  '   [ -z "$(git rev-parse --show-prefix)" ] || echo "not the top folder"' \
-  '   [ "$(git config --bool core.sparseCheckout)" != true ] || echo "a sparse checkout"' \
-  '   c=<sha>' \
-  "   git show -z $R74_SCRIPT_TAIL |" \
-  '   while IFS= read -r -d '"''"' p; do' \
-  '     case "$p" in -*|[=]*|*[!abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789._/@+=,-]*) echo "special name: $p";; esac' \
-  '     git --literal-pathspecs status --porcelain --untracked-files=no -- "$p"' \
-  '     [ -d "$(dirname -- "$p")" ] && git --literal-pathspecs status --porcelain -- "$p"' \
-  '     [ -d "$(dirname -- "$p")" ] && git --literal-pathspecs ls-files --others --ignored --exclude-standard -- "$p"' \
-  '     git --literal-pathspecs ls-files -v -- "$p" | sed "/^H /d"' \
-  '     if [ -e "$p" ] || [ -L "$p" ]; then' \
-  '       git rev-parse -q --verify "HEAD:$p" >/dev/null || echo "on disk, not at HEAD: $p"' \
-  '     fi' \
-  '     if [ "$(git cat-file -t "HEAD:$p" 2>/dev/null)" = tree ] && [ "$(git cat-file -t "$c:$p" 2>/dev/null)" != tree ]; then echo "a folder at HEAD, not in the fix commit: $p"; fi' \
-  '     while' \
-  '       if git rev-parse -q --verify "$c:$p" >/dev/null; then git rev-parse -q --verify "HEAD:$p" >/dev/null || echo "in the fix commit, not at HEAD: $p"; fi' \
-  '       p=$(dirname -- "$p"); [ "$p" != . ]' \
-  '     do' \
-  '       if [ -L "$p" ] || { [ -e "$p" ] && [ ! -d "$p" ]; }; then echo "not a folder: $p"; fi' \
-  '     done' \
-  '   done' \
-  '   ```'
-assert_absent_in_range_folded "row 81: no line of the Resume range removes lines with 'grep -v'" "$ORCH_SKILL" \
-  'grep -v' "$RESUME_LINE" "$RULINGS_LINE" fragment
-for range in "$RESUME_LINE $RULINGS_LINE" "$READ_EXCEPTION_LINE $READ_EXCEPTION_END"; do
-  assert_absent_in_range_folded "row 74: no path list is taken without --no-renames (lines ${range% *} to ${range#* })" "$ORCH_SKILL" \
-    '--name-only --format=' ${range% *} ${range#* } fragment
-  assert_absent_in_range_folded "rows 74 and 73: no command changes the spelling of a name on one side of a comparison (lines ${range% *} to ${range#* })" "$ORCH_SKILL" \
-    'core.quotePath' ${range% *} ${range#* } fragment
-  assert_absent_in_range_folded "rows 76 to 78: the pre-check script is the only read of the listed paths, no '<those paths>' (lines ${range% *} to ${range#* })" "$ORCH_SKILL" \
-    '<those paths>' ${range% *} ${range#* } fragment
-done
-# Rows 76 to 78 replaced `git cat-file -e`, a test that an object exists: it
-# fails on a sub-module path. Rows 79 and 80 (measured): line 14 of the
-# pre-check script reads the TYPE of an object with `git cat-file -t` and
-# sends standard error away; on a sub-module path it prints nothing, which is
-# never `tree`. So the Resume range holds `cat-file` on exactly one line, the
-# pinned line 14 of the script, and never the form `cat-file -e`. The
-# read-exception range holds no `cat-file` at all.
-R80_TYPE_READ='cat-file'
-assert_absent_in_range_folded "rows 76 to 78: the read-exception range names no '$R80_TYPE_READ' (lines $READ_EXCEPTION_LINE to $READ_EXCEPTION_END)" "$ORCH_SKILL" \
-  "$R80_TYPE_READ" "$READ_EXCEPTION_LINE" "$READ_EXCEPTION_END" fragment
-assert_absent_in_range_folded "rows 76 to 80: no existence test '$R80_TYPE_READ -e' stands in the Resume range" "$ORCH_SKILL" \
-  "$R80_TYPE_READ -e" "$RESUME_LINE" "$RULINGS_LINE" fragment
-# The count is a count of lines: line 14 holds the text two times.
-R80_TYPE_READ_LINES="$(text="$R80_TYPE_READ" awk -v a="$RESUME_LINE" -v b="$RULINGS_LINE" \
-  'NR >= a && NR < b && index($0, ENVIRON["text"]) > 0 { n++ } END { print n + 0 }' "$ORCH_SKILL")"
-if [ "$R80_TYPE_READ_LINES" = "1" ]; then
-  ok "rows 79 and 80: one line of the Resume range holds '$R80_TYPE_READ', the pinned line 14 of the script"
-else
-  bad "rows 79 and 80: one line of the Resume range holds '$R80_TYPE_READ' (found $R80_TYPE_READ_LINES lines)"
-fi
-# The check above sees one spelling only, so the two counts must also be equal:
-# the lines that hold `--name-only`, and the lines that hold the whole tail of
-# the list command (`--name-only`, `--no-renames`, `--format=` and the hash,
-# which is `<sha>` in the prose and "$c" in the pre-check script).
-# This text scan counts lines, and it cannot see a path list that another
-# command takes.
-if [ "$(grep -c -- '--name-only' "$ORCH_SKILL")" -eq "$(grep -cF -e "$R74_LIST_TAIL" -e "$R74_SCRIPT_TAIL" "$ORCH_SKILL")" ]; then
-  ok "row 74: every line of the skill that holds --name-only holds the whole tail of the list command"
-else
-  bad "row 74: a line of the skill holds --name-only without the whole tail of the list command"
-fi
-assert_in_range_folded "exit 1 leaves the checkout mid-revert, any other non-zero exit leaves it untouched" \
-  "$ORCH_SKILL" '**On a non-zero exit from that command** the exit code names the case. Exit 1 is a conflict, and the checkout is left mid-revert: git writes conflict markers into the conflicting files, stages the clean hunks of every other file the revert touched, and leaves `REVERT_HEAD` behind. Any other non-zero exit is a refusal: git wrote no `REVERT_HEAD` and normally changed nothing. After a refusal run no cleanup at all — no `git reset`, no `git checkout`, no `rm` — and go directly to the status check below: the tree can hold a local change that the pre-check did not list, and the cleanup would delete it; the status check reports the rare refusal that did change the tree, for example when git could not write a file. The cleanup that follows is for exit 1 only. Undo the markers' \
-  "$RESUME_LINE" "$RULINGS_LINE"
-assert_in_range_folded "the status check follows a refusal as well as a cleanup" \
-  "$ORCH_SKILL" 'After that cleanup, or directly after a refusal, and only on this non-zero-exit path, require `git status --porcelain` to print exactly the pre-revert state you saved' \
-  "$RESUME_LINE" "$RULINGS_LINE"
-assert_absent_in_range_folded "no sentence tells the orchestrator to clean up after a refusal" "$ORCH_SKILL" \
-  'Run the same cleanup in both cases' "$RESUME_LINE" "$RULINGS_LINE" fragment
-# A revert of a fix that a later commit already reverted exits 0 and stages
-# nothing (measured), so the success-path sentence must not be absolute.
-assert_in_range_folded "a successful revert normally leaves the reverted hunks staged" \
-  "$ORCH_SKILL" 'a successful revert normally leaves the reverted hunks staged, which does not match the pre-revert state' \
-  "$RESUME_LINE" "$RULINGS_LINE"
-assert_absent_in_range_folded "no revert state is said to leave sequencer state" "$ORCH_SKILL" \
-  'the sequencer state' "$RESUME_LINE" "$RULINGS_LINE" fragment
-assert_absent_in_range_folded "a non-zero exit is no longer said to be never untouched" "$ORCH_SKILL" \
-  'never untouched' "$RESUME_LINE" "$RULINGS_LINE" fragment
-# Row 63, review round 1. The cleanup ran `git revert --quit` first. With an
-# earlier revert of the same resume still staged, that left staged code and no
-# `REVERT_HEAD` (measured), which is the state the row 63 stop cannot see. The
-# cleanup now leaves `REVERT_HEAD` in place: the resume commit deletes it, and
-# a stop runs `git revert --quit` last.
-assert_in_range_folded "the cleanup leaves REVERT_HEAD in place" \
-  "$ORCH_SKILL" 'Undo the markers and the staged hunks with explicit paths only: for each path the fix commit touched, named one at a time, run `git reset -- <path>` and then `git checkout -- <path>`. Do not run `git revert --quit` here: `REVERT_HEAD` must stay while an earlier revert of this resume stands staged, the resume commit deletes it, and a stop runs `git revert --quit` last, as the rule above states. **A path the fix commit deleted is the exception**: `git revert --no-commit` re-created it as a staged addition, so `git reset -- <path>` leaves it untracked and `git checkout -- <path>` then fails with "pathspec did not match any file known to git" — for such a path (one the saved pre-revert state did not list, now untracked after the reset), remove it explicitly with `rm -- <path>` instead of `git checkout -- <path>`, or, when the path exists at HEAD, restore it with `git checkout HEAD -- <path>`.' \
-  "$RESUME_LINE" "$RULINGS_LINE"
-assert_absent_in_range_folded "the cleanup no longer ends the sequencer state first" "$ORCH_SKILL" \
-  'end the sequencer state with' "$RESUME_LINE" "$RULINGS_LINE" fragment
-assert_in_range_folded "the cleanup restores each touched path by name" \
-  "$ORCH_SKILL" 'for each path the fix commit touched, named one at a time, run `git reset -- <path>` and then `git checkout -- <path>`' \
-  "$RESUME_LINE" "$RULINGS_LINE"
-# The three sweeping restores would delete the blocked task's legitimate
-# uncommitted work, which a stop is expected to leave standing.
-assert_in_range_folded "the cleanup forbids the three sweeping restore commands" \
-  "$ORCH_SKILL" '**Never `git reset --hard`, never `git checkout .`, never `git clean`**' \
-  "$RESUME_LINE" "$RULINGS_LINE"
-assert_in_range_folded "the sweeping restores are forbidden because a stop can be over a dirty tree" \
-  "$ORCH_SKILL" "those three would delete the blocked task's legitimate uncommitted work" \
-  "$RESUME_LINE" "$RULINGS_LINE"
-assert_in_range_folded "the pre-revert state must be restored before the not-reverted record is written" \
-  "$ORCH_SKILL" 'require `git status --porcelain` to print exactly the pre-revert state you saved' \
-  "$RESUME_LINE" "$RULINGS_LINE"
 # The follow-up append and its commit are gated on the item having a
 # ruling-record entry: two supported stop kinds produce none, and `<n>` would
 # be undefined for them.
@@ -2367,7 +2143,7 @@ assert_in_range_folded "the follow-up append is gated on the item having a rulin
   "$ORCH_SKILL" 'Append each user answer **that has a ruling-record entry of its own**' \
   "$RESUME_LINE" "$RULINGS_LINE"
 # Staging by explicit path is not enough: a bare `git commit -m ...` commits the
-# whole index, and this path deliberately populates it with the reverted hunks.
+# whole index, and a stop can happen over a tree that holds staged work.
 assert_in_range_folded "the follow-up commit names its paths on the command line" \
   "$ORCH_SKILL" '**That commit names those same paths on the command line**, `git commit -m "…" -- <the same explicit paths>`' \
   "$RESUME_LINE" "$RULINGS_LINE"
@@ -2439,7 +2215,7 @@ assert_in_range_folded "stop policy gives the reason: a bare commit commits the 
   "$ORCH_SKILL" 'a bare `git commit -m …` commits the WHOLE index' \
   "$RULINGS_END" "$GUARD_LINE"
 assert_in_range_folded "the commit-path rule covers the ruling follow-up commit too" \
-  "$ORCH_SKILL" 'the `ruling <n> follow-up` commit of Resume step 3, whose index also holds what `git revert --no-commit` staged' \
+  "$ORCH_SKILL" 'the `ruling <n> follow-up` commit of Resume step 3, and Resume step 3'"'"'s own recovery commit' \
   "$RULINGS_END" "$GUARD_LINE"
 assert_in_range_folded "stop policy names the only file a stopped commit stages" \
   "$ORCH_SKILL" 'The only file it stages is the orchestration log; name it on the command line.' \
@@ -3764,17 +3540,14 @@ assert_in_range_folded "finding 4: text of another clause this resume reverts is
 # Red-team finding 5. The revert was told to read three things the read
 # exception forbids. The widening is for the orchestrator alone: a fork's
 # `git show <sha>:<path>` form prints whole files.
-assert_in_range_folded_exact "finding 5: the permitted reads carry the three commands and the pre-check script the revert runs, ending with the plan scan" \
-  "$ORCH_SKILL" '`git show <ruling commit>:<plan path>`, `git status --porcelain`, `git show --name-only --no-renames --format= <sha>`, the pre-check script of Resume step 3, and a scan of the whole plan' \
+# Mutation testing: a sentence added after the plan scan ("You may also read
+# the files it prints") gave a new read and no check failed. The needle runs
+# into the next list item, so nothing can stand between them.
+assert_in_range_folded_exact "finding 5: the permitted reads end with the plan scan, and the list item ends there" \
+  "$ORCH_SKILL" '`git show <ruling commit>:<plan path>`, and a scan of the whole plan file for an orphan `(amended by ruling <n>)` marker and its `**Amendment <n>` note. 5. Your own ruling record for this run' \
   "$READ_EXCEPTION_LINE" "$READ_EXCEPTION_END"
-# Mutation testing: a sentence added after this one ("You may also read the
-# files it prints") gave a new read and no check failed. The needle runs into
-# the next list item, so nothing can stand between them.
-assert_in_range_folded_exact "rows 73 and 76 to 78: the pre-check script gives one fact only, whether it printed anything, and the list item ends there" \
-  "$ORCH_SKILL" 'Of the pre-check script you use one fact only: whether it printed anything. 5. Your own ruling record for this run' \
-  "$READ_EXCEPTION_LINE" "$READ_EXCEPTION_END"
-assert_in_range_folded "finding 5: the porcelain output is never a source of file names to read" \
-  "$ORCH_SKILL" 'you never read a file name out of it' \
+assert_in_range_folded_exact "finding 5: the fix-commit line is read only to name a fix commit in the record" \
+  "$ORCH_SKILL" 'and only when a ruling that a user'"'"'s answer overturns has a fix commit to name in the record;' \
   "$READ_EXCEPTION_LINE" "$READ_EXCEPTION_END"
 assert_in_range_folded "finding 5: the fix-commit line may be read by the orchestrator alone, never a fork" \
   "$ORCH_SKILL" 'you alone — never a fork — may also read the `fixed — <summary> → <sha>` line' \
@@ -4223,17 +3996,14 @@ assert_absent_in_range_folded_nobacktick "row 45: the revert is never ordered af
   "$ORCH_SKILL" 'after any amendment that a user'"'"'s own `amend plan` answer' \
   "$RESUME_LINE" "$RULINGS_LINE" fragment
 
-# Row 59: the `— fix <sha> not reverted` suffix records that an earlier resume
-# left the fix commit standing. The rule that skips the second half of a later
-# revert did not read it, and its stated reason is false on that branch.
-assert_in_range_folded "row 59: the skip reads the end of the Follow-up line first" \
-  "$ORCH_SKILL" 'read the last `— fix <sha>` item of that line before you skip anything' \
+# Row 59, after the removal of the automatic fix-commit revert: a second
+# resume that finds the same answer on the `**Follow-up:**` line makes no code
+# change and writes nothing again. An old `— fix <sha>` item is history.
+assert_in_range_folded_exact "row 59: a second resume with the same answer writes nothing again" \
+  "$ORCH_SKILL" 'When the item'"'"'s `**Follow-up:**` line already records this same answer, the earlier resume also wrote what remains for this ruling: make no code change, and write no record item and no ledger line for it again.' \
   "$RESUME_LINE" "$RULINGS_LINE"
-assert_in_range_folded "row 59: a not-reverted suffix means the fix commit still stands" \
-  "$ORCH_SKILL" 'records that the earlier resume left the fix commit standing' \
-  "$RESUME_LINE" "$RULINGS_LINE"
-assert_in_range_folded "row 59: a successful later revert appends a reverted item" \
-  "$ORCH_SKILL" 'append `— fix <sha> reverted` after that item, because this record is appended and never rewritten' \
+assert_in_range_folded_exact "row 59: an old fix item on the Follow-up line is history" \
+  "$ORCH_SKILL" 'A `— fix <sha>` item on that line is history: no rule of this step acts on it.' \
   "$RESUME_LINE" "$RULINGS_LINE"
 
 # Row 58: one return writes one ruling commit, so its parent holds the plan
@@ -4253,11 +4023,6 @@ assert_in_range_folded "row 58: the reason an intermediate wording matches nothi
 assert_in_range_folded "row 45: the reason a revert is written before this resume's own amendments" \
   "$ORCH_SKILL" 'an amendment written first would make that check stop the resume' \
   "$RESUME_LINE" "$RULINGS_LINE"
-assert_in_range_folded "row 59: the reason a retry can succeed, and the causes that stay" \
-  "$ORCH_SKILL" 'What stopped the earlier attempt may have been a local change or a local file in the working tree (a changed, untracked or ignored file, a file that stands where a folder is needed, an index bit on a listed path, a sparse checkout, or a run of the script from a folder that is not the top folder), which can be gone now. It may also have been a property of the fix commit that the pre-check script reports (a special name, a rename that changes only the letter case, a folder that the fix commit replaced by a file or by a symbolic link), which stays. Or it was a later commit of the branch that deleted or renamed a listed path or one of its parent folders, or put a folder on a listed path; that normally stays too, until a still later commit puts the path back. When the cause still stands, the other half'"'"'s own rule takes the `— fix <sha> not reverted` branch again.' \
-  "$RESUME_LINE" "$RULINGS_LINE"
-assert_absent_in_range_folded "rows 76 to 78: no sentence says that the cause of a failed revert is never a property of the fix commit" "$ORCH_SKILL" \
-  'never a property of the fix commit' "$RESUME_LINE" "$RULINGS_LINE" fragment
 assert_in_range_folded "row 58: every other outcome of the note search is a major error" \
   "$ORCH_SKILL" 'Every other outcome is a major error — no match, more than one match, or a match on the clause you are reverting' \
   "$RESUME_LINE" "$RULINGS_LINE"
@@ -4384,10 +4149,9 @@ assert_in_range_folded "row 57: the Phase 3 clause takes all four replacements" 
 # before it writes anything, and stops on any change that is not the character
 # inside a task checkbox. The rule has no retry branch and compares no wording.
 R61_ANCHOR='**A plan edit that an earlier session left uncommitted stops the'
-# Row 63: the rule that follows the row 61 paragraph is the stop on an
-# unfinished fix-commit revert, so its opening is the end of the row 61 range.
-R63_ANCHOR='**A fix-commit revert that an earlier session left unfinished stops'
-R61_NEXT_TEXT="$R63_ANCHOR"
+# The paragraph that follows the row 61 paragraph is the rule about the
+# `**Amendment <m>` label, so its opening is the end of the row 61 range.
+R61_NEXT_TEXT='Wherever this step reads a `**Amendment <m>` label'
 R61_PREV_TEXT='amendment written first would make that check stop the resume.'
 R61_FROM="$(line_containing_after "$ORCH_SKILL" "$R61_ANCHOR" "$RESUME_LINE")"
 # Review round 1, F6. The line before the rule is searched after the heading of
@@ -4482,87 +4246,14 @@ for word in 'unless' 'except'; do
     "$word" "$R62_FROM" "$R62_NEXT" fragment
 done
 
-# Row 63: a session can die after `git revert --no-commit` staged a fix-commit
-# revert and before the resume commit. The next resume read the staged changes
-# as local changes of someone else and recorded `not reverted` over them. Git
-# keeps the file REVERT_HEAD while a revert is unfinished, and any commit
-# deletes it. Rule A stops a resume that finds REVERT_HEAD, before any write.
-# Rule B undoes the staged reverts before a stop inside a running resume,
-# because the `stopped` commit would delete REVERT_HEAD and leave the staged
-# code. A limit that no check can close: a commit or a `git reset` that the
-# user runs by hand also deletes REVERT_HEAD.
-R63_NEXT_TEXT='Wherever this step reads a `**Amendment <m>` label'
-R63_FROM="$(line_containing_after "$ORCH_SKILL" "$R63_ANCHOR" "$RESUME_LINE")"
-R63_NEXT="$(line_containing_after "$ORCH_SKILL" "$R63_NEXT_TEXT" "${R63_FROM:-$RESUME_LINE}")"
-# The range of every rule A check: the paragraph and the first line after it.
-R63_LINES=$(( ${R63_NEXT:-0} + 1 - ${R63_FROM:-0} ))
-R63_END=$(( ${R63_FROM:-0} + R63_LINES ))
-if [ -n "$R63_FROM" ] && [ -n "$R61_FROM" ] && [ "$R63_FROM" -gt "$R61_FROM" ] \
-  && [ "$(grep -cF -- "$R63_ANCHOR" "$ORCH_SKILL")" -eq 1 ]; then
-  ok "row 63: the stop rule stands once, after the row 61 rule"
-else
-  bad "row 63: the stop rule is missing, misplaced or repeated (row 61 rule at line '$R61_FROM', row 63 rule at line '$R63_FROM')"
-fi
-R63_A_SENTENCES=(
-  '**A fix-commit revert that an earlier session left unfinished stops the resume.**'
-  'This rule runs on every resume of the `## STOPPED` case, whatever phase its heading names: no phase leaves a revert unfinished on purpose.'
-  'Before this step writes anything, and also when the rule above stops the resume, run `git rev-parse -q --verify REVERT_HEAD`.'
-  'When it prints a hash, an earlier session staged a revert with `git revert --no-commit` and died before its resume commit.'
-  'This is a major error. Stop as the rule above does: write nothing, make no commit and append no log entry.'
-  'Any commit deletes `REVERT_HEAD`, and the staged changes stay.'
-  'Never record `not reverted` over these changes: the record would say that no revert was made while half of it stands staged.'
-  'Never complete that revert and never commit it: `REVERT_HEAD` names only the last commit of several reverts, so no record says which staged change belongs to which answer.'
-  'The report names the hash and the whole `git status --porcelain` output, lists the paths of the unfinished revert, and states the way out: for each listed path, run `git reset -- <path>` and then `git checkout -- <path>`, run `git revert --quit` last, then send the same resume prompt again.'
-  'Take those paths from `git show --name-only --no-renames --format= <sha>`, run for the printed hash and for the fix commit of every ruling that the prompt of this resume overturns, never from the `git status --porcelain` output: that output cannot tell a change of the revert from the staged work of the blocked task.'
-  'For a path that the revert created again, `git checkout -- <path>` fails; the way out removes it with `rm -- <path>`.'
-  'The report also says that these commands delete an edit of the user'"'"'s own on such a path, and that `git revert --abort` is never the way out: it also deletes staged work on every other path.'
-)
-R63_A_WHOLE=''
-for sentence in "${R63_A_SENTENCES[@]}"; do
-  assert_rule_near "row 63, rule A: ${sentence:0:60}" "$R63_ANCHOR" "$R63_LINES" "$sentence"
-  R63_A_WHOLE="$R63_A_WHOLE$sentence "
-done
-assert_in_range_folded_exact "row 63, rule A: the paragraph holds these sentences, in this order, and no other sentence" "$ORCH_SKILL" \
-  "$R63_A_WHOLE$R63_NEXT_TEXT" "$R63_FROM" "$R63_END"
-assert_in_range "row 63, rule A: the command stands on one line" "$ORCH_SKILL" \
-  '   `git rev-parse -q --verify REVERT_HEAD`. When it prints a hash, an' \
-  "$R63_FROM" "$R63_END" exact
-for word in 'unless' 'except' 'does not apply'; do
-  assert_absent_in_range_folded "row 63, rule A: the paragraph never says '$word'" "$ORCH_SKILL" \
-    "$word" "$R63_FROM" "$R63_END" fragment
-done
-assert_in_range_folded "row 63: the permitted reads include the REVERT_HEAD read" "$ORCH_SKILL" \
-  '`git log --merges --format=%h <BASE>..HEAD`, `git rev-parse -q --verify REVERT_HEAD`, `git show <ruling commit>^:<plan path>`,' \
-  "$READ_EXCEPTION_LINE" "$READ_EXCEPTION_END"
-R63_B_ANCHOR='**A stop after this resume staged a fix-commit revert undoes that'
-R63_B_NEXT_TEXT='**Reverting the plan is only half of'
-R63_B_FROM="$(line_containing_after "$ORCH_SKILL" "$R63_B_ANCHOR" "$RESUME_LINE")"
-R63_B_NEXT="$(line_containing_after "$ORCH_SKILL" "$R63_B_NEXT_TEXT" "${R63_B_FROM:-$RESUME_LINE}")"
-R63_B_LINES=$(( ${R63_B_NEXT:-0} + 1 - ${R63_B_FROM:-0} ))
-R63_B_SENTENCES=(
-  '**A stop after this resume staged a fix-commit revert undoes that revert first.**'
-  'A `stopped` commit names its paths, so it leaves the staged changes of the revert in place, and any commit deletes `REVERT_HEAD`: the next resume would find staged code that nothing explains.'
-  'So before such a stop, for each path of each fix commit this resume reverted, named one at a time, run `git reset -- <path>` and then `git checkout -- <path>`, with the rule below for a path the fix commit deleted, and run `git revert --quit` last: `REVERT_HEAD` must stay for as long as one staged change of the revert stays.'
-  'A fix commit whose revert git refused is not one of them: git changed nothing there, and the two commands would delete a local change on its paths.'
-)
-R63_B_WHOLE=''
-for sentence in "${R63_B_SENTENCES[@]}"; do
-  assert_rule_near "row 63, rule B: ${sentence:0:60}" "$R63_B_ANCHOR" "$R63_B_LINES" "$sentence"
-  R63_B_WHOLE="$R63_B_WHOLE$sentence "
-done
-assert_in_range_folded_exact "row 63, rule B: the paragraph holds these sentences, in this order, directly before the fix-commit revert" "$ORCH_SKILL" \
-  "$R63_B_WHOLE$R63_B_NEXT_TEXT" "$R63_B_FROM" "$(( ${R63_B_FROM:-0} + R63_B_LINES ))"
-# Review round 1, F2. A sentence inserted directly before rule B, for example
-# one that makes the rule optional, passed every check above. The end of the
-# put-back paragraph is pinned to the opening of rule B.
-assert_in_range_folded_exact "row 63, rule B: the rule stands directly after the put-back paragraph" "$ORCH_SKILL" \
-  'never reads this revert'"'"'s half-written text as the blocked task'"'"'s own work. '"$R63_B_ANCHOR" \
+# The automatic fix-commit revert is removed, and with it the two row 63 rules
+# about an unfinished revert. A sentence inserted directly after the put-back
+# paragraph, for example one that makes the put-back optional, must not pass:
+# the end of that paragraph is pinned to the opening of the paragraph that
+# follows it now.
+assert_in_range_folded_exact "the paragraph about the code stands directly after the put-back paragraph" "$ORCH_SKILL" \
+  'never reads this revert'"'"'s half-written text as the blocked task'"'"'s own work. **Reverting the plan does not undo the code.**' \
   "$RESUME_LINE" "$RULINGS_LINE"
-if [ "$(grep -cF -- "$R63_B_ANCHOR" "$ORCH_SKILL")" -eq 1 ]; then
-  ok "row 63, rule B: the rule stands once in the skill"
-else
-  bad "row 63, rule B: the rule does not stand exactly once in the skill"
-fi
 
 # --- end of checks ---
 

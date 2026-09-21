@@ -832,9 +832,10 @@ Phase 4, and at completion/stop. Boundary commits use the subject
 boundary: `phase 1 log`, `phase 2 log`, `batch 2 log`, `stopped`,
 `completed`, and for an in-run ruling `ruling <n>` and
 `ruling <n> follow-up` (`## In-run rulings`). One of those subjects is not
-log-only bookkeeping: **a `ruling <n> follow-up` commit may carry reverted
-source files**, because Resume step 3 folds the revert of a ruling's fix
-commit into it, so a reader or a tool filtering on the subject must not
+log-only bookkeeping: **a `ruling <n> follow-up` commit carries the ruling
+record and can carry the plan file**, because Resume step 3 commits the
+restored clause and the unticked checkboxes of an overturned ruling in it,
+so a reader or a tool filtering on the subject must not
 treat it as touching the log alone.
 
 ## state.md Section
@@ -1100,9 +1101,7 @@ Trigger: `Resume orchestration for <plan-or-spec path>`.
    read as its own ruling left it. A later ruling's amendment must therefore
    be undone before an earlier one's. So when one resume reverts more than
    one ruling, take the rulings in descending ruling number, and check the
-   clause again after each restore. Make every ruling's plan revert first,
-   and only then every ruling's fix-commit revert below, so that a stop
-   during the plan reverts has staged no code file.
+   clause again after each restore.
    Write every revert of this resume before any amendment that a user's
    own `amend plan` answer of this same resume makes, so that the plan
    the amendment edits already holds the restored wording. A revert
@@ -1133,36 +1132,6 @@ Trigger: `Resume orchestration for <plan-or-spec path>`.
    wordings can itself be wrong. The report names the changed lines
    and states the way out: restore those lines to their committed
    text, then send the same resume prompt again.
-   **A fix-commit revert that an earlier session left unfinished stops
-   the resume.** This rule runs on every resume of the `## STOPPED`
-   case, whatever phase its heading names: no phase leaves a revert
-   unfinished on purpose. Before this step writes anything, and also
-   when the rule above stops the resume, run
-   `git rev-parse -q --verify REVERT_HEAD`. When it prints a hash, an
-   earlier session staged a revert with `git revert --no-commit` and
-   died before its resume commit. This is a major error. Stop as the
-   rule above does: write nothing, make no commit and append no log
-   entry. Any commit deletes `REVERT_HEAD`, and the staged changes
-   stay. Never record `not reverted` over these changes: the record
-   would say that no revert was made while half of it stands staged.
-   Never complete that revert and never commit it: `REVERT_HEAD` names
-   only the last commit of several reverts, so no record says which
-   staged change belongs to which answer. The report names the hash
-   and the whole `git status --porcelain` output, lists the paths of
-   the unfinished revert, and states the way out: for each listed
-   path, run `git reset -- <path>` and then `git checkout -- <path>`,
-   run `git revert --quit` last, then send the same resume prompt
-   again. Take those paths from
-   `git show --name-only --no-renames --format= <sha>`,
-   run for the printed hash and for the fix commit of every ruling
-   that the prompt of this resume overturns, never from the
-   `git status --porcelain` output: that output cannot tell a change
-   of the revert from the staged work of the blocked task.
-   For a path that the revert created again, `git checkout -- <path>`
-   fails; the way out removes it with `rm -- <path>`. The report also
-   says that these commands delete an edit of the user's own on such a
-   path, and that `git revert --abort` is never the way out: it also
-   deletes staged work on every other path.
    Wherever this step reads a `**Amendment <m>` label, match the whole
    number: `**Amendment 1` is also the opening of `**Amendment 10`, so the
    label matches `<m>` only when a space follows the number.
@@ -1170,34 +1139,11 @@ Trigger: `Resume orchestration for <plan-or-spec path>`.
    the `(amended by ruling <m>)` marker, this amendment was already reverted
    by an earlier resume: make no plan edit for this ruling, and record one
    line in the report you give the user at the end of this resume. When the
-   item's `**Follow-up:**` line already records this same answer, read the
-   last `— fix <sha>` item of that line before you skip anything. An item
-   reading `— fix <sha> not reverted` records that the earlier resume left
-   the fix commit standing. Do not skip the other half of the revert then: make it
-   now for that `<sha>`. What stopped the earlier attempt may have been
-   a local change or a local file in the working tree (a changed,
-   untracked or ignored file, a file that stands where a folder is
-   needed, an index bit on a listed path, a sparse checkout,
-   or a run of the script from a folder that is not the top
-   folder), which can be gone now.
-   It may also have been a property of the fix commit that the pre-check
-   script reports (a special name, a rename that changes only the letter
-   case, a folder that the fix commit replaced by a file or by a
-   symbolic link), which stays.
-   Or it was a later commit of the branch that deleted or renamed a
-   listed path or one of its parent folders, or put a folder on a listed
-   path; that normally stays too, until a still later commit puts the
-   path back.
-   When the cause still stands, the other half's own rule takes
-   the `— fix <sha> not reverted` branch again. When that revert succeeds,
-   append `— fix <sha> reverted` after that item, because this record is
-   appended and never rewritten, so a later resume reads the last item and
-   knows the fix commit is gone. Record one line for that
-   `<sha>` in the report you give the user at the end of this resume. A
-   line whose last `— fix <sha>` item reads `reverted`, and a line carrying
-   no such item, both record that the earlier resume reverted the ruling's
-   fix commit: make no code change for it either, and skip
-   the other half of the revert below. Step 1 above
+   item's `**Follow-up:**` line already records this same answer, the
+   earlier resume also wrote what remains for this ruling: make no code
+   change, and write no record item and no ledger line for it again. A
+   `— fix <sha>` item on that line is history: no rule of this step acts
+   on it. Step 1 above
    has already repaired a ruling whose note was never written, so a missing
    note here means the revert was made, not that the amendment was never
    applied.
@@ -1270,7 +1216,9 @@ Trigger: `Resume orchestration for <plan-or-spec path>`.
    amendment was already reverted. Delete the note and the
    `(amended by ruling <m>)` marker if either still stands. Make no other
    plan edit, record one line in the report you give the user at the end of
-   this resume, and go on to the other half of the revert, below. When
+   this resume, and go on to what remains for this ruling, below: the
+   `not reverted` record and the ledger line for a Phase 4 ruling, the
+   checkbox untick for a Phase 3 ruling. When
    neither comparison holds, the clause changed after the ruling: a later
    ruling amended it, or another actor edited it. This is a major
    error — stop and report it, and never restore over the later text.
@@ -1395,7 +1343,8 @@ Trigger: `Resume orchestration for <plan-or-spec path>`.
    replaced, one clause at a time, using the text you read before you
    changed that clause, so that the plan file reads as it did when this
    resume began. Put back a checkbox this resume unticked, and a ledger
-   line it removed, the same way. Only then stop and report. Never restore
+   line it removed, the same way, and remove a ledger line it added. Only
+   then stop and report. Never restore
    it by writing a whole file over the plan, and never run `git checkout`
    on the plan file, `git reset --hard` or `git clean`: a whole-file write
    would remove every checkbox tick and every later amendment, and those
@@ -1403,175 +1352,32 @@ Trigger: `Resume orchestration for <plan-or-spec path>`.
    must leave the plan file exactly as this resume found it, so that the
    next resume never reads this revert's half-written text as the blocked
    task's own work.
-   **A stop after this resume staged a fix-commit revert undoes that
-   revert first.** A `stopped` commit names its paths, so it leaves the
-   staged changes of the revert in place, and any commit deletes
-   `REVERT_HEAD`: the next resume would find staged code that nothing
-   explains. So before such a stop, for each path of each fix commit
-   this resume reverted, named one at a time, run `git reset -- <path>`
-   and then `git checkout -- <path>`, with the rule below for a path
-   the fix commit deleted, and run `git revert --quit` last:
-   `REVERT_HEAD` must stay for as long as one staged change of the
-   revert stays. A fix commit whose revert git refused is not one of
-   them: git changed nothing there, and the two commands would delete a
-   local change on its paths.
-   **Reverting the plan is only half of
-   the revert.** Which half depends on the reverted ruling's phase: a
-   Phase 4 ruling's other half is a fix commit, covered by the rest of
-   this paragraph; a Phase 3 ruling has no fix commit, and its other half
-   is covered in the paragraph after it. The same ruling's `fix it` half may already have been
-   committed by the loop, and that code change would otherwise stay on
-   the branch against a clause the user has just reinstated. So, in the
-   same resume commit, revert that fix commit too: find it by the
+   **Reverting the plan does not undo the code.** What remains depends
+   on the overturned ruling's phase: a Phase 4 ruling can have a fix
+   commit, covered by the rest of this paragraph; a Phase 3 ruling has no
+   fix commit, and its case is covered in the paragraph after it. The
+   loop may already have committed the same ruling's `fix it` half, and
+   that code change stays on the branch against a clause the user has
+   just reinstated. **You never revert a fix commit yourself, and you
+   make no code change for it at all.** Find the fix commit by the
    `fixed — <summary> → <sha>` line the review-log addendum recorded for
-   that id. **Before starting each revert**, save the tree's current
-   `git status --porcelain` output as the pre-revert state. Then run the
-   pre-check script below from the top folder of the repository, in bash
-   or zsh, with the hash of the fix commit in place of `<sha>` and with
-   no other change:
-
-   ```bash
-   [ -z "$(git rev-parse --show-prefix)" ] || echo "not the top folder"
-   [ "$(git config --bool core.sparseCheckout)" != true ] || echo "a sparse checkout"
-   c=<sha>
-   git show -z --name-only --no-renames --format= "$c" |
-   while IFS= read -r -d '' p; do
-     case "$p" in -*|[=]*|*[!abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789._/@+=,-]*) echo "special name: $p";; esac
-     git --literal-pathspecs status --porcelain --untracked-files=no -- "$p"
-     [ -d "$(dirname -- "$p")" ] && git --literal-pathspecs status --porcelain -- "$p"
-     [ -d "$(dirname -- "$p")" ] && git --literal-pathspecs ls-files --others --ignored --exclude-standard -- "$p"
-     git --literal-pathspecs ls-files -v -- "$p" | sed "/^H /d"
-     if [ -e "$p" ] || [ -L "$p" ]; then
-       git rev-parse -q --verify "HEAD:$p" >/dev/null || echo "on disk, not at HEAD: $p"
-     fi
-     if [ "$(git cat-file -t "HEAD:$p" 2>/dev/null)" = tree ] && [ "$(git cat-file -t "$c:$p" 2>/dev/null)" != tree ]; then echo "a folder at HEAD, not in the fix commit: $p"; fi
-     while
-       if git rev-parse -q --verify "$c:$p" >/dev/null; then git rev-parse -q --verify "HEAD:$p" >/dev/null || echo "in the fix commit, not at HEAD: $p"; fi
-       p=$(dirname -- "$p"); [ "$p" != . ]
-     do
-       if [ -L "$p" ] || { [ -e "$p" ] && [ ! -d "$p" ]; }; then echo "not a folder: $p"; fi
-     done
-   done
-   ```
-
-   Its fourth line lists the paths the fix commit touched
-   (`git show --name-only --no-renames --format= <sha>` lists those paths;
-   `--no-renames` makes a renamed file appear under both its names,
-   `-z` prints each name unquoted, and
-   every later rule of this revert takes its paths from this one list:
-   the cleanup, the undo before a stop, and the reverted paths that the
-   resume commit names). The script prints a line in ten cases.
-   The current folder is not the top folder of the repository: the
-   script reads each path from the current folder.
-   The repository is a sparse checkout (`core.sparseCheckout` is true, so
-   git keeps only a part of the tree on disk): the resume commit, which
-   names the listed paths, can leave a reverted path outside that part out,
-   and the commit still ends with exit code 0, so no fix commit is
-   reverted in a sparse checkout.
-   The name of a listed path holds
-   a character outside letters, digits, `.`, `_`,
-   `/`, `@`, `+`, `=`, `,` and `-`, or begins with `-` or `=`: git
-   prints such a name quoted or reads it as a pattern,
-   or the shell expands it, so the commands
-   below, which take a typed name, would miss the file or reach other
-   files. The path carries a local change.
-   An ignored file stands on the path or, when the path is a folder on
-   disk, under it: `git status --porcelain` does not list an ignored
-   file, and the revert overwrites or deletes it with no warning.
-   The script reads untracked and ignored files only when the folder of
-   the path stands on disk: for a missing folder below an existing one
-   git prints a warning on standard error, which would be a false alarm.
-   The path carries the `assume-unchanged` or the `skip-worktree` bit of
-   the index (`git ls-files -v` prints a letter other than `H`): git does
-   not compare such a file with the disk, so `git status --porcelain`
-   hides a local change there.
-   On a path that carries only the `assume-unchanged` bit the resume
-   commit would commit that change, and the cleanup and the undo would
-   delete it.
-   On a path that carries the `skip-worktree` bit the resume commit
-   leaves the path out and still ends with exit code 0, and the
-   `git checkout` of the cleanup and of the undo fails with exit code 1
-   while the path still carries the bit.
-   The path stands on disk and
-   does not exist at HEAD: an untracked file,
-   or the same name in another
-   letter case on a file system that ignores case.
-   The path is a folder at HEAD and is not a folder in the fix commit:
-   a later commit put a folder where the fix commit holds a file, or no
-   entry. The path, or a parent folder of the path, exists in the fix
-   commit and does not exist at HEAD: a later commit deleted or renamed
-   it. When the path itself is gone, the revert would stop on a
-   conflict, or change a file outside this list, or change nothing; in
-   the last two cases the resume commit, which names the listed paths,
-   would fail.
-   When only a parent folder is gone, the revert would put the file back
-   into a folder that the branch no longer holds, or, after a rename
-   that changes only the letter case, under the other spelling of the
-   folder name. A parent folder name
-   of the path stands on disk and is not a real folder: the revert would
-   replace that file with a folder and give no warning. Never type a
-   path into the script and never change its letters list: a range such
-   as `A-Z` lets an accented letter pass in some shells. When the script
-   prints anything at all, on standard output or standard error,
-   do not start the revert at all —
-   `git revert` refuses over an unstaged or untracked change, merges the
-   revert into a staged change or conflicts with it, and overwrites an
-   ignored file with no warning — and take the
-   "not reverted" branch below
-   directly. Otherwise revert it without a commit of its own
-   (`git -c merge.directoryRenames=false revert --no-commit <sha>`),
-   staging the result by explicit path.
-   The `-c merge.directoryRenames=false` part stops git from following
-   a folder rename, made by the fix commit or by a later commit, and
-   writing a file of the revert into the other folder: that path stands
-   outside the list, no line of the pre-check script reads it, and git
-   would overwrite an ignored file there; when the configuration of the
-   user says `true`, git does that with exit code 0 and with no warning
-   about the overwritten file.
-   **On a non-zero exit from that command** the exit code names the
-   case. Exit 1 is a conflict, and the checkout is left mid-revert: git
-   writes conflict markers into the conflicting files, stages the clean
-   hunks of every other file the revert touched, and leaves `REVERT_HEAD`
-   behind. Any other non-zero exit is a refusal: git wrote no
-   `REVERT_HEAD` and normally changed nothing. After a refusal run no
-   cleanup at all — no
-   `git reset`, no `git checkout`, no `rm` — and go directly to the status
-   check below: the tree can hold a local change that the pre-check did
-   not list, and the cleanup would delete it; the status check reports
-   the rare refusal that did change the tree, for example when git could
-   not write a file. The cleanup that follows is for exit 1 only. Undo
-   the markers and the staged hunks with explicit paths only: for each
-   path the fix commit touched, named one at a time, run
-   `git reset -- <path>` and then `git checkout -- <path>`.
-   Do not run `git revert --quit` here:
-   `REVERT_HEAD` must stay while an earlier revert of this resume
-   stands staged, the resume commit deletes it, and a stop runs
-   `git revert --quit` last, as the rule above states.
-   **A path the fix commit deleted is the
-   exception**: `git revert --no-commit` re-created it as a staged
-   addition, so `git reset -- <path>` leaves it untracked and
-   `git checkout -- <path>` then fails with "pathspec did not match any
-   file known to git" — for such a path (one the saved pre-revert state
-   did not list, now untracked after the reset), remove it explicitly
-   with `rm -- <path>` instead of `git checkout -- <path>`, or, when the
-   path exists at HEAD, restore it with `git checkout HEAD -- <path>`.
-   **Never `git reset --hard`, never
-   `git checkout .`, never `git clean`**: a stop can happen over a
-   deliberately dirty tree, and those three would delete the blocked task's
-   legitimate uncommitted work. After that cleanup, or directly after a
-   refusal, and only on this
-   non-zero-exit path, require `git status --porcelain` to
-   print exactly the pre-revert state you saved; a mismatch is a major
-   error — stop and report both outputs, never commit over it. Only when
-   it matches do you make no code change at all: record `— fix <sha> not
-   reverted` at the end of the item's `**Follow-up:**` line, and the new
-   Phase 4 invocation that the reverted plan file forces (the plan is
-   content for the effective-HEAD test) re-raises the finding against the
-   restored clause. **On the success path — a zero exit from `git revert
-   --no-commit` — skip that status check**: a successful revert normally leaves the
-   reverted hunks staged, which does not match the pre-revert state, and
-   that mismatch is expected, not an error. Stage the reverted paths (already
-   done above) and continue straight to the follow-up commit below. **When
+   that id. For each such fix commit, record `— fix <sha> not reverted`
+   at the end of the item's `**Follow-up:**` line. Also append one line
+   to `.superpowers/sdd/progress.md` (the ledger), but on disk only —
+   never stage the ledger, for the reason given below for a Phase 3
+   ruling:
+   `Minor: fix commit <sha> was made under ruling <m>, which a user's answer overturned; check its changes against the restored clause at <plan location>, and report code that contradicts the clause as a finding`.
+   In that line, `<plan location>` is the clause's location as the
+   item's `**Follow-up:**` line states it. Round-1 reviewers of the new
+   Phase 4 invocation receive the ledger's `Minor:` lines as carried
+   findings (findings that an earlier step recorded and handed on), so
+   this line gives them a pointer to the commit. Skip the append when
+   the ledger already holds a line for the same `<sha>`. The new Phase 4
+   invocation that the reverted plan file forces (the plan is content
+   for the effective-HEAD test) reviews the whole branch under the
+   restored plan and re-raises the finding against the restored clause;
+   its fix subagent then undoes the wrong code in a normal
+   `review fixes` commit. **When
    the reverted ruling was made in Phase 3,
    there is no fix commit to revert at all** — the amended clause was
    implemented by the task's own implementer, inside an ordinary task
@@ -1586,9 +1392,12 @@ Trigger: `Resume orchestration for <plan-or-spec path>`.
    reason `state.md` is never staged (Major-Error Stop Policy, below).
    Unticking the checkboxes alone already makes Phase 3's task-complete
    predicate (all-boxes-checked) stop treating the task as done, so the
-   batch loop dispatches it again. Either way the branch
-   never silently keeps a change
-   the user's decision rejected. **Finding that commit, and reading it:**
+   batch loop dispatches it again. Either way the branch can keep, for
+   a time, a change the user's decision rejected. For a Phase 4 ruling,
+   the record line and the ledger line make that change visible, and
+   the new Phase 4 invocation is what removes it. For a Phase 3 ruling,
+   the task that the batch loop dispatches again replaces it.
+   **Finding that commit, and reading it:**
    one return writes one `## RULING` entry and one ruling commit, both
    numbered with the first ruling number of that return. So the commit of
    the overturned ruling `<m>` can carry a lower number than `<m>`. Find
@@ -1644,9 +1453,7 @@ Trigger: `Resume orchestration for <plan-or-spec path>`.
    really answered keeps no record of the answer. **That commit
    names those same paths on the command line**,
    `git commit -m "…" -- <the same explicit paths>`, under the
-   Major-Error Stop Policy's rule for a commit made over a dirty tree —
-   here most of all, because this path deliberately puts the reverted
-   hunks into the index with `git revert --no-commit`.
+   Major-Error Stop Policy's rule for a commit made over a dirty tree.
    **A stop that made no ruling has no entry to append to and writes no
    follow-up commit.** Two supported stop kinds are of that shape: a
    Phase 1 plan-writer `BLOCKED` question, which `## In-run rulings`
@@ -1922,21 +1729,14 @@ you and your forks may read exactly:
    the permitted form and is never dropped, and the same holds for
    `--first-parent` and `<BASE>..HEAD`),
    `git log --merges --format=%h <BASE>..HEAD`,
-   `git rev-parse -q --verify REVERT_HEAD`,
    `git show <ruling commit>^:<plan path>`,
    `git show --no-ext-diff --no-textconv <ruling commit> -- <plan path>`,
    `git show HEAD:<plan path>`,
    `git diff --no-ext-diff --no-textconv HEAD -- <plan path>`,
    `git show <ruling commit>:<plan path>`,
-   `git status --porcelain`,
-   `git show --name-only --no-renames --format= <sha>`,
-   the pre-check script of Resume step 3,
    and a scan of the whole plan
    file for an orphan `(amended by ruling <n>)` marker and its
-   `**Amendment <n>` note. You compare the `git status --porcelain`
-   output with the saved pre-revert state; you never read a file name out
-   of it. Of the pre-check script you use one fact only: whether it
-   printed anything.
+   `**Amendment <n>` note.
 5. Your own ruling record for this run,
    `<topic folder>/plans/<slug>-open-decisions.md` — the file you write
    yourself. Guard 4 (below) reads it, before every decision, for an
@@ -1976,7 +1776,8 @@ The read that Resume step 3 makes — the review log's completion marker and
 its `decided (…)` lines — belongs to this same exception, so that this
 rule lists every body you read. In that step you alone — never a fork — may
 also read the `fixed — <summary> → <sha>` line of the entry that recorded
-the fix, and only when a ruling's fix commit must be reverted; that line is
+the fix, and only when a ruling that a user's answer overturns has a fix
+commit to name in the record; that line is
 the one exception to "never an earlier entry" above. Neither of a fork's whole-file forms —
 `git show <sha>:<path>` and `git diff <BASE>..HEAD -- <path>` — ever takes
 the review log as its path: both would carry every earlier entry with
@@ -3078,9 +2879,8 @@ staging named its paths. This requirement holds for every commit made over
 a possibly dirty tree — both `stopped` commits below, the
 `chore(orchestration): <slug> ruling <n>` commit of "The RULING log
 entry, the commit and the re-dispatch" above, the
-`ruling <n> follow-up` commit of Resume step 3, whose index also holds
-what `git revert --no-commit` staged, and Resume step 3's own recovery
-commit for a ruling commit that never landed (below). This rule covers both
+`ruling <n> follow-up` commit of Resume step 3, and Resume step 3's own
+recovery commit for a ruling commit that never landed (below). This rule covers both
 `stopped` commits: the one made when a return escalates
 (`## In-run rulings`, "Handling a return as a whole") and the one the
 Resume rebuild path makes for a missing `## STOPPED` entry.
