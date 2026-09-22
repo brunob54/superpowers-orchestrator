@@ -23,6 +23,7 @@ SKILLS=(
     "requesting-code-review"
     "multi-doc-review"
     "multi-code-review"
+    "worklog"
 )
 
 echo "=== Running Skill Triggering Tests ==="

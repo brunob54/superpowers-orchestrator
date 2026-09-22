@@ -1141,7 +1141,8 @@ The same file-based durability serves everyday work:
 
 Sessions start with zero conversational memory. Everything that persists does
 so through plain-text files — five at your project root, plus the handoff
-files under `tmp/docs/` — readable, editable, and deletable by you:
+files under `tmp/docs/` and the work logs under `docs/worklogs/` — readable,
+editable, and deletable by you:
 
 | File | Answers | Written when |
 | --- | --- | --- |
@@ -1150,6 +1151,7 @@ files under `tmp/docs/` — readable, editable, and deletable by you:
 | `known-issues.md` | Errors already solved (symptom → cause → fix) | "save this fix", or after debugging resolves a recurring error |
 | `state.md` | Where mid-flight work stands right now | Batch handoffs (§3), "save state", `/handoff` |
 | `tmp/docs/<date>-handoff-<slug>.md` | A prompt that lets a fresh session continue the work without re-deriving this one's findings | `/handoff [slug]`, before you clear the context window |
+| `docs/worklogs/<slug>.md` | Where one piece of multi-part work stands: its parts, open items, accepted limits and decisions | `/worklog new`; then at each change, by the rules in the file itself; `/worklog` for a full update; `/worklog close` |
 | `context-snapshot.json` | What changed just before this session | Automatically at session start |
 
 Before you clear the context window in the middle of work, type `/handoff`
@@ -1191,7 +1193,9 @@ follows the handoff. `UNKNOWN` means the scan could not decide (for example, the
 folder is not a git repository): `/pickup` tells you what is unknown and
 asks whether to continue. The files that `/handoff` itself writes
 (`tmp/docs/`, `state.md`, `session-log.md`) do not count as uncommitted
-changes. When the handoff has a `Done when:` line, `/pickup` tests that
+changes. Since v7.52.0, a change under `docs/worklogs/` (a work log, see the
+end of this section) does not count either. When the handoff has a
+`Done when:` line, `/pickup` tests that
 condition first and stops if it is already true. A run is never resumed on
 its own: `/pickup` shows the run, asks you once, and on yes sends only the
 bare `Resume orchestration for <path>` line — the orchestrator then asks you
@@ -1246,6 +1250,50 @@ What you should know as the owner of these files:
 - **`state.md` and `.superpowers/` are git-excluded** (the plugin adds the
   exclude entries itself): they survive crashes on the same machine but not a
   fresh clone or `git clean -fdx` — the recovery caveat from §5.
+
+### Work logs — one tracking document for multi-part work
+
+Since v7.52.0, a **work log** records the progress of one piece of work that
+has several parts and lasts many sessions — for example four groups of tests
+that you refactor one group after the other. A work log is one Markdown file,
+`docs/worklogs/<slug>.md`, and git tracks it. A project can hold several. The
+slug is the short name of the work log: lowercase ASCII letters (`a` to `z`),
+digits and single hyphens, at most 40 characters, and not one of the command
+words `new`, `update` and `close`.
+
+The file has a table of parts, a list of open items, a list of accepted
+limits, and a list of decisions. Its header holds its own update rules, so any
+session that reads the file can keep it up to date, also on a computer where
+the plugin is not installed. An **admission rule** (a rule that decides which
+problem becomes an open item) keeps the list of open items short: every other
+correct finding gets one line under `## Accepted limits`.
+
+| Command | What it does |
+| --- | --- |
+| `/worklog new [<slug>]` | Asks for the title, the goal, the "done when" condition, the parts and the admission rule, then writes the file. It never overwrites a file. |
+| `/worklog` or `/worklog update [<slug>]` | A full update: compares the file with the session and with the commits made since the file was created, and applies the file's own rules. |
+| `/worklog close [<slug>]` | Closes the work log. When a part is not finished or an open item remains, it asks you first. |
+
+Without a slug, `update` and `close` use the only active work log, or ask you
+which one. The skill never commits: the work log goes into the next commit that
+you ask for. At each session start, after `/clear` and after a compaction (the
+automatic shortening of a long conversation), the session-start hook names the
+active work logs in one short notice; it never adds their content.
+
+What you should know:
+
+- **Keep the work log on the branch where the work happens.** A session on a
+  branch that does not hold the file cannot see it.
+- **Commit the work log before you create a git worktree** (a second working
+  folder of the same repository). An uncommitted work log is absent there, and
+  two edited copies meet in a merge.
+- **Commit the work log before an orchestrated run or a whole-branch review.**
+  Those tools stop on an uncommitted file that they do not know. While such a
+  run is in progress, the work log is not written.
+- **`docs/worklogs` must be a real folder**, not a symbolic link: the list of
+  active work logs does not follow a folder that is a link.
+- A closed work log is reopened by hand: edit its line 1 back to the active
+  form, `<!-- Work log: status=active slug=<slug> created=<YYYY-MM-DD> -->`.
 
 ## 7. Context pressure — the "memory almost full" safety gate
 
@@ -1396,6 +1444,7 @@ handled by the router (§2) — just describe what you want.
 | "save this fix" | Record symptom → cause → fix in `known-issues.md` | §6 |
 | `/handoff [slug]` (type it; Claude never starts it by itself) | Before you clear the context window: writes a continuation prompt to `tmp/docs/<date>-handoff-<slug>.md`, saves state when the session made decisions, and prints the prompt to copy | §6 |
 | `/pickup [handoff path]` (type it; Claude never starts it by itself) | In a fresh session: continues from the newest handoff or a named one after checking that it is still current, or lists unfinished orchestration runs and asks before resuming one | §6 |
+| `/worklog new [<slug>]`, `/worklog`, `/worklog close [<slug>]` | Create, fully update or close a work log: the tracking document of one piece of multi-part work, under `docs/worklogs/` | §6 |
 | "use `<skill>`" / `/<skill>` | Direct invocation of a skill by name; `/handoff` and `/pickup` start only as slash commands | §2 |
 
 (This table is release-maintained — if a phrase here doesn't work, your

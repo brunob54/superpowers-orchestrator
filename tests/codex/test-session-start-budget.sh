@@ -20,6 +20,8 @@
 #   3. Keep the <superpowers-defaults> block last and complete.
 #   4. Write every section wrapper with real newline bytes, not the two
 #      characters backslash and n (a defect of the older wrappers).
+#   5. Stay at or under the budget when the <active-work-logs> notice names
+#      three work logs with 40-character slugs (case 8).
 # The injected skill part is limited to INJECTION_PIN characters, so that it
 # cannot exceed the budget again without a test failing.
 #
@@ -240,19 +242,24 @@ assert_contains "priority order: <not-injected> gives sizes in characters" "$pri
 # session-log.md, known-issues.md and project-map.md are each larger than
 # the budget on their own and must be named in the <not-injected> line;
 # the small state.md and context-snapshot.json must be injected whole.
-(
-  cd "$TMP_REPO"
-  { printf 'Current Goal: STATE-SENTINEL budget fixture, active task\n'; text_of 500 state; } > state.md
-  {
-    printf '## 2026-01-01 10:00 [saved]\nGoal: SESSION-LOG-SENTINEL one\n'; text_of "$LIMIT" log
-    printf '## 2026-01-02 10:00 [saved]\nGoal: SESSION-LOG-SENTINEL two\n'; text_of "$LIMIT" log
-  } > session-log.md
-  for i in 1 2 3 4 5; do
-    printf '## KNOWN-ISSUES-SENTINEL issue %d\n' "$i"; text_of "$(( LIMIT / 4 ))" issue
-  done > known-issues.md
-  write_map "PROJECT-MAP-SENTINEL${NL}$(text_of "$LIMIT" map)" > project-map.md
-  printf '{"changed_files":["snapshot-sentinel.js"],"recent_commits":["abc1234 init"]}\n' > context-snapshot.json
-)
+# write_oversized_workspace: the workspace files of case 5 in $TMP_REPO;
+# case 8 uses them too.
+write_oversized_workspace() {
+  (
+    cd "$TMP_REPO"
+    { printf 'Current Goal: STATE-SENTINEL budget fixture, active task\n'; text_of 500 state; } > state.md
+    {
+      printf '## 2026-01-01 10:00 [saved]\nGoal: SESSION-LOG-SENTINEL one\n'; text_of "$LIMIT" log
+      printf '## 2026-01-02 10:00 [saved]\nGoal: SESSION-LOG-SENTINEL two\n'; text_of "$LIMIT" log
+    } > session-log.md
+    for i in 1 2 3 4 5; do
+      printf '## KNOWN-ISSUES-SENTINEL issue %d\n' "$i"; text_of "$(( LIMIT / 4 ))" issue
+    done > known-issues.md
+    write_map "PROJECT-MAP-SENTINEL${NL}$(text_of "$LIMIT" map)" > project-map.md
+    printf '{"changed_files":["snapshot-sentinel.js"],"recent_commits":["abc1234 init"]}\n' > context-snapshot.json
+  )
+}
+write_oversized_workspace
 ctx_full=$(run_hook_in "$TMP_REPO")
 clear_workspace
 assert_common "oversized workspace files" "$ctx_full"
@@ -301,6 +308,77 @@ else
   bad "control characters in state.md: the output is not valid JSON"
 fi
 clear_workspace
+
+# ── Case 8: three active work logs with 40-character slugs ─────────────────
+# The <active-work-logs> notice belongs to the notices, which are always
+# included, so its room comes out of the room of the workspace sections.
+# With three active 40-character work logs and the oversized workspace files
+# of case 5, the output must stay at or under the limit and the whole notice
+# must still be present (this fixture's root is a short temporary path, so
+# the root-truncation branch of the notice does not fire here).
+(
+  cd "$TMP_REPO"
+  mkdir -p docs/worklogs
+  for letter in a b c; do
+    slug="${letter}$(printf '%39s' '' | tr ' ' w)"
+    printf '<!-- Work log: status=active slug=%s created=2026-09-21 -->\n' "$slug" > "docs/worklogs/${slug}.md"
+  done
+)
+write_oversized_workspace
+ctx_worklogs=$(run_hook_in "$TMP_REPO")
+clear_workspace
+rm -rf "$TMP_REPO/docs"
+assert_common "three 40-character work logs" "$ctx_worklogs"
+assert_contains "three 40-character work logs: the notice is injected" "$ctx_worklogs" "<active-work-logs>"
+for letter in a b c; do
+  slug="${letter}$(printf '%39s' '' | tr ' ' w)"
+  assert_contains "three 40-character work logs: the $letter slug is named" "$ctx_worklogs" "docs/worklogs/${slug}.md"
+done
+assert_contains "three 40-character work logs: the notice is closed" "$ctx_worklogs" "</active-work-logs>"
+
+# ── Case 9: the room left for files must count the notice's own size ───────
+# Reuses the three 40-character work logs of case 8, alone (no other
+# workspace files yet), to measure the room the notice for them leaves:
+# room_with_notice = LIMIT minus the output length with only that notice
+# added. notice_size is how much smaller that room is than free_room (the
+# room with no notice, measured before case 3). A single state.md is then
+# sized to room_with_notice raw characters: its own wrapper (an opening tag
+# and a heading line) always makes the wrapped section a few dozen to about
+# two hundred characters longer than the raw text, which is enough to place
+# it just over the true room (so a budget that counts the notice correctly
+# skips it and stays at or under the limit with the whole notice present),
+# while staying under the true room plus the notice's own size (so a budget
+# that leaves the notice out of its count would find room for it and take
+# the output over the limit). This fails when the budget leaves the notice
+# out of its count, and passes on the branch.
+(
+  cd "$TMP_REPO"
+  mkdir -p docs/worklogs
+  for letter in a b c; do
+    slug="${letter}$(printf '%39s' '' | tr ' ' w)"
+    printf '<!-- Work log: status=active slug=%s created=2026-09-21 -->\n' "$slug" > "docs/worklogs/${slug}.md"
+  done
+)
+room_with_notice=$(( LIMIT - $(run_hook_in "$TMP_REPO" | js_length) ))
+notice_size=$(( free_room - room_with_notice ))
+(
+  cd "$TMP_REPO"
+  { printf 'Current Goal: STATE-SENTINEL room fixture, active task\n'; text_of "$room_with_notice" state; } > state.md
+)
+ctx_room=$(run_hook_in "$TMP_REPO")
+clear_workspace
+rm -rf "$TMP_REPO/docs"
+assert_common "the room left counts the notice" "$ctx_room"
+assert_contains "the room left counts the notice: the notice is injected" "$ctx_room" "<active-work-logs>"
+for letter in a b c; do
+  slug="${letter}$(printf '%39s' '' | tr ' ' w)"
+  assert_contains "the room left counts the notice: the $letter slug is named" "$ctx_room" "docs/worklogs/${slug}.md"
+done
+assert_contains "the room left counts the notice: the notice is closed" "$ctx_room" "</active-work-logs>"
+assert_absent "the room left counts the notice: state.md content is not injected" "$ctx_room" "STATE-SENTINEL"
+room_pointer=$(printf '%s' "$ctx_room" | grep -F -- "$NOT_INJECTED_TAG" || true)
+assert_contains "the room left counts the notice: <not-injected> names state.md" "$room_pointer" "state.md"
+echo "  (room_with_notice=${room_with_notice}, notice_size=${notice_size})"
 
 echo "  ${PASS} passed, ${FAIL} failed"
 [ "$FAIL" -eq 0 ]

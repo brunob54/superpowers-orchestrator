@@ -257,6 +257,61 @@ assert_exit0
 assert_line "a failed git status is not listed (verification)" "dirty: not-listed"
 assert_line "a failed git status makes CHECK, never UNKNOWN (verification)" "status: CHECK"
 
+bold "6c. An uncommitted work log is not work (skill worklog)"
+# add_file is defined in section 10, below this case, so this case writes its
+# files with the two helpers below.
+# worklog_file <slug>: writes the active work log docs/worklogs/<slug>.md in $D.
+worklog_file() {
+  mkdir -p "$D/docs/worklogs"
+  printf '<!-- Work log: status=active slug=%s created=2026-01-09 -->\n' "$1" > "$D/docs/worklogs/$1.md"
+}
+# commit_file <path> <date>: commits the file <path> of $D at <date>; sets H
+# to the short id of the new commit.
+commit_file() {
+  git -C "$D" add "$1"
+  GIT_AUTHOR_DATE="$2" GIT_COMMITTER_DATE="$2" git -C "$D" commit -q -m "$1"
+  H=$(git -C "$D" rev-parse --short=7 HEAD)
+}
+base_repo worklog
+worklog_file t
+commit_file docs/worklogs/t.md "$BEFORE"
+handoff "$D" "$HANDOFF_FILE" "$(header main "$H")"
+printf 'part 1 done\n' >> "$D/docs/worklogs/t.md"
+printf 'new\n' > "$D/docs/worklogs/u.md"
+scan "$D"
+assert_line "a changed and a new file under docs/worklogs are not dirty" "dirty: 0"
+assert_line "status stays FRESH" "status: FRESH"
+printf 'notes\n' > "$D/docs/notes.md"
+scan "$D"
+assert_line "a new file elsewhere under docs/ is dirty" "dirty: 1"
+assert_line "status is CHECK" "status: CHECK"
+# Right after the first /worklog new, before any commit, git reports the
+# new docs/worklogs folder differently depending on what docs/ already
+# holds: with no docs/ folder at all yet (the most common first use), git
+# collapses it into the one line "?? docs/"; with a docs/ folder that
+# already holds a tracked file (docs/README.md here), git instead prints
+# "?? docs/worklogs/". In both states below, the scan's
+# ":(top,exclude)docs/worklogs" pathspec leaves no line for either form, so
+# the folder is not dirty.
+base_repo worklognofolder
+handoff "$D" "$HANDOFF_FILE" "$(header main "$H")"
+worklog_file w
+scan "$D"
+assert_line "no docs/ folder before the first /worklog new is not dirty" "dirty: 0"
+assert_line "status stays FRESH" "status: FRESH"
+base_repo worklogfirst
+mkdir -p "$D/docs"
+printf 'readme\n' > "$D/docs/README.md"
+commit_file docs/README.md "$BEFORE"
+handoff "$D" "$HANDOFF_FILE" "$(header main "$H")"
+worklog_file w
+scan "$D"
+assert_line "a new docs/worklogs folder, one untracked line for git, is not dirty" "dirty: 0"
+assert_line "status stays FRESH" "status: FRESH"
+commit_file docs/worklogs/w.md "$AFTER"
+scan "$D"
+assert_line "a commit after the handoff that touches only docs/worklogs makes CHECK" "status: CHECK"
+
 bold "7. CHECK: a commit on an unmerged other branch while HEAD is on the default branch"
 base_repo otherbranch
 git -C "$D" checkout -q -b feature/other
