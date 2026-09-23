@@ -3,6 +3,11 @@
 Date: 2026-09-21. Target release: v7.52.0. Status: design approved by the user
 in the brainstorming session of 2026-09-21.
 
+Corrected on 2026-09-23, after the release of v7.52.0: three statements are
+brought in line with the code that shipped — the `$(0)` field of the list
+command, the root of a project without git, and the meaning of `<slug>` on
+line 1. No design decision changed.
+
 ## Problem
 
 A piece of work that has several parts and lasts many sessions needs one
@@ -104,8 +109,10 @@ No decision in this design matched the prior-art trigger predicate.
   session-start hook runs there.
 - **Root**: the repository root, the output of
   `git rev-parse --show-toplevel`; for a project that is not a git repository,
-  the project directory. Every `docs/worklogs/` path of this spec is relative
-  to the root. In the usual layout the project directory is the root.
+  the folder in which the command runs (`pwd`), which is the project directory
+  only while the shell has not moved (see "Error handling"). Every
+  `docs/worklogs/` path of this spec is relative to the root. In the usual
+  layout the project directory is the root.
 
 ## Architecture
 
@@ -139,14 +146,14 @@ documented rules, not replayed here — unverified.)
 
 The active work logs of a project are found with **the list command**. In a
 git repository it can run from any folder, because it builds the path from
-the root; without git it runs from the project directory:
+the root; without git it takes the folder in which it runs:
 
 ```bash
 ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
 LIST=""
 if [ -d "$ROOT/docs/worklogs" ]; then
   LIST="$(LC_ALL=C find "$ROOT/docs/worklogs" -maxdepth 1 -type f -name '*.md' -exec awk '
-    FNR==1 { l = $0; sub(/^\357\273\277/, "", l)
+    FNR==1 { l = $(0); sub(/^\357\273\277/, "", l)
       if (l ~ /^<!-- Work log: status=active /) {
         n = FILENAME; sub(/.*\//, "", n)
         if (n ~ /^[a-z0-9]+(-[a-z0-9]+)*\.md$/ && length(n) <= 43 &&
@@ -157,7 +164,12 @@ fi
 printf '%s\n' "$LIST"
 ```
 
-Three details of this form come from replays on 2026-09-21. `-exec … {} \;`
+Three details of this form come from replays on 2026-09-21, and a fourth was
+corrected later. The whole line is written `$(0)`, not `$0`. Claude Code
+replaces `$0` in a skill body with the first argument of the command, which
+broke `/worklog update` and `/worklog close` when the user gave no slug. In
+POSIX `awk`, `$(0)` names the same whole line. Every copy of the command
+carries this form. `-exec … {} \;`
 starts one `awk` per file: with `{} +`, one unreadable file made `awk` stop
 with a fatal error, and every work log after it was hidden without a message.
 `LC_ALL=C` stands before `find`, so `awk` inherits it: in a UTF-8 locale the
@@ -206,8 +218,11 @@ whatever `bash` is on `PATH`. If the wrong `find` runs, it fails, the
 `2>/dev/null` and `|| true` hide it, the list is empty, and the hook continues
 without a notice.
 
-**Valid forms of line 1.** `<slug>` is the slug rule and `<date>` is
-`[0-9]{4}-[0-9]{2}-[0-9]{2}`:
+**Valid forms of line 1.** In the two forms below, `<slug>` is the slug
+pattern `[a-z0-9]+(-[a-z0-9]+)*` alone, not the whole slug rule. The
+40-character limit and the three refused words are rules of the file name, and
+the list command's filter enforces them. The check command below tests the
+pattern only. `<date>` is `[0-9]{4}-[0-9]{2}-[0-9]{2}`:
 
 - active: `^<!-- Work log: status=active slug=<slug> created=<date> -->$`
 - closed: `^<!-- Work log: status=closed slug=<slug> created=<date> closed=<date> -->$`
