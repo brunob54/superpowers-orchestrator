@@ -688,6 +688,12 @@ for (const scenario of REMINDER_SCENARIOS) {
   });
 }
 
+test('The commit reminder tells the assistant to ask when a project rule requires approval', () => {
+  const result = evaluateStop(REMINDER_SCENARIOS.find(s => s.name === 'commit').arrange);
+  assert.ok((result.reason || '').includes("requires the user's approval before a commit"),
+    `Expected the approval sentence in the commit reminder, got: ${result.reason}`);
+});
+
 test('Names are trimmed and case-insensitive, unknown names are ignored, other reminders stay', () => {
   // The commit scenario plus one source edit makes two reminders due.
   const arrange = (context) => {
@@ -701,6 +707,29 @@ test('Names are trimmed and case-insensitive, unknown names are ignored, other r
     `Expected no commit reminder, got: ${reason}`);
   assert.ok(reason.includes('TDD reminder'),
     `Expected the TDD reminder to stay, got: ${reason}`);
+});
+
+const TDD_SCENARIO = REMINDER_SCENARIOS.find(s => s.name === 'tdd');
+const UNKNOWN_NAME_WARNING = 'Unknown name in SUPERPOWERS_STOP_REMINDERS_OFF';
+
+test('A block names each unknown name in the switch and lists the known names', () => {
+  const result = withRemindersOff('commit,tdd commit, state.md', () => evaluateStop(TDD_SCENARIO.arrange));
+  const reason = result.reason || '';
+  assert.ok(reason.includes(UNKNOWN_NAME_WARNING), `Expected the warning, got: ${reason}`);
+  assert.ok(reason.includes('"tdd commit"') && reason.includes('"state.md"'),
+    `Expected both unknown names, got: ${reason}`);
+  assert.ok(reason.includes('session-log-size'), `Expected the known names, got: ${reason}`);
+});
+
+test('Known names only: the block has no unknown-name warning', () => {
+  const result = withRemindersOff('commit', () => evaluateStop(TDD_SCENARIO.arrange));
+  assert.ok((result.reason || '').includes('TDD reminder'), `Expected a block, got: ${JSON.stringify(result)}`);
+  assert.ok(!result.reason.includes(UNKNOWN_NAME_WARNING), `Expected no warning, got: ${result.reason}`);
+});
+
+test('An unknown name alone never makes the hook block', () => {
+  const result = withRemindersOff('unknown', () => evaluateStop(() => {}));
+  assert.deepStrictEqual(result, {}, `Expected no block, got: ${JSON.stringify(result)}`);
 });
 
 // ── checkSessionLogSize hard cap ─────────────────────────────────────────────

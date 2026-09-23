@@ -35,8 +35,9 @@ const {
 
 // A user switches off individual reminders with a comma-separated list of their
 // names in this environment variable, for example "commit,tdd". Names are not
-// case-sensitive, and an unknown name is ignored. The session summary has no
-// name: it never blocks a stop on its own.
+// case-sensitive. An unknown name switches nothing off; a block names it (see
+// unknownNameWarning). The session summary has no name: it never blocks a
+// stop on its own.
 const REMINDERS_OFF_VARIABLE = 'SUPERPOWERS_STOP_REMINDERS_OFF';
 const REMINDER = Object.freeze({
   TDD: 'tdd',
@@ -46,11 +47,34 @@ const REMINDER = Object.freeze({
   SESSION_LOG_SIZE: 'session-log-size',
 });
 
-function isReminderOn(name) {
-  const namesOff = (process.env[REMINDERS_OFF_VARIABLE] || '')
+const KNOWN_REMINDER_NAMES = Object.values(REMINDER);
+
+function namesSwitchedOff() {
+  return (process.env[REMINDERS_OFF_VARIABLE] || '')
     .split(',')
-    .map(entry => entry.trim().toLowerCase());
-  return !namesOff.includes(name);
+    .map(entry => entry.trim().toLowerCase())
+    .filter(entry => entry.length > 0);
+}
+
+function isReminderOn(name) {
+  return !namesSwitchedOff().includes(name);
+}
+
+/**
+ * A warning that names each unknown name in the switch, or null. A Stop hook
+ * has one visible channel: the reason of a block. Claude Code discards the
+ * systemMessage field for Stop and sends standard error of a hook that exits
+ * 0 to the debug log only. So the warning goes into a block that the hook
+ * makes anyway; an unknown name never makes the hook block on its own.
+ */
+function unknownNameWarning() {
+  const unknownNames = namesSwitchedOff().filter(name => !KNOWN_REMINDER_NAMES.includes(name));
+  if (unknownNames.length === 0) return null;
+  return (
+    `Unknown name in ${REMINDERS_OFF_VARIABLE}: ${unknownNames.map(name => `"${name}"`).join(', ')}. ` +
+    `Separate names with commas. Known names: ${KNOWN_REMINDER_NAMES.join(', ')}. ` +
+    'Tell the user about this; do not change the setting yourself.'
+  );
 }
 
 // Guard: only fire once per session (prevent infinite loop)
@@ -329,7 +353,9 @@ function generateReminders(edits, cwd, sessionId) {
     if (uncommittedCount >= 5) {
       reminders.push(
         `Commit reminder: ${uncommittedCount} files with uncommitted changes. ` +
-        `Consider committing incremental progress to avoid losing work.`
+        `Consider committing incremental progress to avoid losing work. ` +
+        `If a project rule (for example in CLAUDE.md or AGENTS.md) requires the user's approval ` +
+        `before a commit, do not commit: tell the user about the uncommitted changes and wait.`
       );
     }
   }
@@ -498,9 +524,11 @@ function evaluatePayload(data) {
   // Set guard BEFORE outputting — prevents re-entry
   setGuard(sessionId);
 
+  const warning = unknownNameWarning();
   const context = [
     '<stop-hook-reminders>',
     ...reminders,
+    ...(warning ? [warning] : []),
     '</stop-hook-reminders>',
   ].join('\n');
 
