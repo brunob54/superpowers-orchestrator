@@ -8,6 +8,67 @@
 > (`REPOZY/superpowers-optimized`) and are kept unchanged as history; any
 > testing they describe was not done here.
 
+## v7.53.0 — switch off individual stop reminders by name
+
+**Problem.** The stop hook blocked the end of a task with "Commit reminder"
+for a user whose `AGENTS.md` allows a commit only after approval. The only
+way to stop a reminder was `disableAllHooks`, which turns off every hook.
+
+**Change.** A new variable, `SUPERPOWERS_STOP_REMINDERS_OFF`, turns off
+reminders by name (five names). The commit reminder tells the assistant not
+to commit when a project rule requires approval. A block names an unknown
+name in the variable.
+
+**Effect.** Reinstall the plugin. To turn off a reminder, set the variable in
+the `env` block of `settings.json` and restart the CLI. Nothing to migrate.
+
+### Why
+
+A colleague's `AGENTS.md` says that the assistant must show the diff and wait
+for approval before `git commit`. The stop hook (`hooks/stop-reminders.js`)
+counted 6 changed files and returned `decision: "block"` with "Consider
+committing incremental progress". A block means that Claude Code does not let
+the assistant end its turn: the assistant must answer the reminder first. The
+Claude Code documentation has no setting that turns off one hook of a plugin:
+`disableAllHooks` turns off every hook, including the safety hooks and the
+session-start hook.
+
+### What changed
+
+- **`SUPERPOWERS_STOP_REMINDERS_OFF`.** A comma-separated list of reminder
+  names: `tdd`, `commit`, `decision-log`, `state-md`, `session-log-size`.
+  Names are not case-sensitive. A reminder that is turned off is not
+  produced, so it cannot block a stop; the other reminders do not change.
+  When `commit` is off, the hook also skips its `git status` call. Example:
+  `{ "env": { "SUPERPOWERS_STOP_REMINDERS_OFF": "commit" } }`. The Claude
+  Code documentation states that a variable in the `env` block reaches hook
+  processes.
+- **Commit reminder text.** It now adds: "If a project rule (for example in
+  CLAUDE.md or AGENTS.md) requires the user's approval before a commit, do
+  not commit: tell the user about the uncommitted changes and wait." This
+  helps every user who has such a rule, without any setting.
+- **Unknown names.** A name that is not in the list (for example
+  `tdd commit`, separated by a space) turns nothing off. The next block of the
+  hook names it and lists the known names. The hook never blocks only to show
+  this warning. The documentation states that Claude Code discards
+  `systemMessage` for Stop hooks and sends standard error of a hook that exits
+  0 to the debug log, so the block reason is the only visible channel.
+- **Tests.** The two test files that run the stop hook clear the variable
+  when they start: a user who sets it in `settings.json` also passes it to
+  every command the assistant runs, and the suites then failed (31 of 58 tests
+  in one file). The commit test stages its files, so the git setting
+  `status.showUntrackedFiles=no` cannot hide them.
+- **Documentation.** The README lists the variable and which reminder text
+  each name removes; the user guide's Troubleshooting section has an entry for
+  a stop reminder that conflicts with a project rule.
+
+### Limits
+
+- The Codex stop adapter (`hooks/codex/stop-adapter.js`) has its own
+  reminders. It ignores the variable and keeps the old commit text. Codex is
+  no longer a supported platform.
+- An unknown name is reported only when the hook blocks for another reason.
+
 ## v7.52.0 — the worklog skill: one tracking document per piece of multi-part work
 
 **Problem.** Work with several parts that lasts many sessions had no document

@@ -33,6 +33,50 @@ const {
   writeTimeFile,
 } = require('./save-marker');
 
+// A user switches off individual reminders with a comma-separated list of their
+// names in this environment variable, for example "commit,tdd". Names are not
+// case-sensitive. An unknown name switches nothing off; a block names it (see
+// unknownNameWarning). The session summary has no name: it never blocks a
+// stop on its own.
+const REMINDERS_OFF_VARIABLE = 'SUPERPOWERS_STOP_REMINDERS_OFF';
+const REMINDER = Object.freeze({
+  TDD: 'tdd',
+  COMMIT: 'commit',
+  DECISION_LOG: 'decision-log',
+  STATE_MD: 'state-md',
+  SESSION_LOG_SIZE: 'session-log-size',
+});
+
+const KNOWN_REMINDER_NAMES = Object.values(REMINDER);
+
+function namesSwitchedOff() {
+  return (process.env[REMINDERS_OFF_VARIABLE] || '')
+    .split(',')
+    .map(entry => entry.trim().toLowerCase())
+    .filter(entry => entry.length > 0);
+}
+
+function isReminderOn(name) {
+  return !namesSwitchedOff().includes(name);
+}
+
+/**
+ * A warning that names each unknown name in the switch, or null. A Stop hook
+ * has one visible channel: the reason of a block. Claude Code discards the
+ * systemMessage field for Stop and sends standard error of a hook that exits
+ * 0 to the debug log only. So the warning goes into a block that the hook
+ * makes anyway; an unknown name never makes the hook block on its own.
+ */
+function unknownNameWarning() {
+  const unknownNames = namesSwitchedOff().filter(name => !KNOWN_REMINDER_NAMES.includes(name));
+  if (unknownNames.length === 0) return null;
+  return (
+    `Unknown name in ${REMINDERS_OFF_VARIABLE}: ${unknownNames.map(name => `"${name}"`).join(', ')}. ` +
+    `Separate names with commas. Known names: ${KNOWN_REMINDER_NAMES.join(', ')}. ` +
+    'Tell the user about this; do not change the setting yourself.'
+  );
+}
+
 // Guard: only fire once per session (prevent infinite loop)
 // The guard file is created on first fire and checked on subsequent fires.
 // It auto-expires after 2 minutes so subsequent Claude stops can show reminders.
@@ -295,7 +339,7 @@ function generateReminders(edits, cwd, sessionId) {
 
   // TDD reminder: source files changed without corresponding tests
   const untestedSources = sourceFiles.filter(src => !isTestFile(src));
-  if (untestedSources.length > 0 && testFiles.length === 0) {
+  if (isReminderOn(REMINDER.TDD) && untestedSources.length > 0 && testFiles.length === 0) {
     reminders.push(
       `TDD reminder: ${untestedSources.length} source file(s) modified without test changes. ` +
       `Consider running tests or invoking TDD workflow if behavior changed.`
@@ -304,12 +348,14 @@ function generateReminders(edits, cwd, sessionId) {
 
   // Commit reminder: check actual uncommitted changes via git, not just session edits.
   // Using edit-log count was wrong — it fired even after a commit was made mid-session.
-  if (editedPaths.length >= 5) {
+  if (isReminderOn(REMINDER.COMMIT) && editedPaths.length >= 5) {
     const uncommittedCount = getUncommittedCount(cwd);
     if (uncommittedCount >= 5) {
       reminders.push(
         `Commit reminder: ${uncommittedCount} files with uncommitted changes. ` +
-        `Consider committing incremental progress to avoid losing work.`
+        `Consider committing incremental progress to avoid losing work. ` +
+        `If a project rule (for example in CLAUDE.md or AGENTS.md) requires the user's approval ` +
+        `before a commit, do not commit: tell the user about the uncommitted changes and wait.`
       );
     }
   }
@@ -448,7 +494,7 @@ function evaluatePayload(data) {
   // the hook cannot know that the entry already covers the later edits. The
   // reminder therefore names the marker command for that case.
   const editsSinceLastSaved = readSessionEditsAfter(getLastSavedEntryTime(sessionId), sessionId);
-  if (isSignificantSession(editsSinceLastSaved)) {
+  if (isReminderOn(REMINDER.DECISION_LOG) && isSignificantSession(editsSinceLastSaved)) {
     reminders.push(
       'Decision log: This session modified core skill/hook/config files. ' +
       'Before stopping, invoke context-management via the Skill tool to write a [saved] entry ' +
@@ -460,11 +506,11 @@ function evaluatePayload(data) {
   }
 
   // state.md staleness: warn if state.md exists but source files changed after it was written
-  const stateStaleness = checkStateMdStaleness(cwd, edits);
+  const stateStaleness = isReminderOn(REMINDER.STATE_MD) && checkStateMdStaleness(cwd, edits);
   if (stateStaleness) reminders.push(stateStaleness);
 
   // Session-log size guard: warn if last 2 [saved] entries exceed token budget
-  const sizeWarning = checkSessionLogSize(cwd);
+  const sizeWarning = isReminderOn(REMINDER.SESSION_LOG_SIZE) && checkSessionLogSize(cwd);
   if (sizeWarning) reminders.push(sizeWarning);
 
   if (reminders.length === 0) return {};
@@ -478,9 +524,11 @@ function evaluatePayload(data) {
   // Set guard BEFORE outputting — prevents re-entry
   setGuard(sessionId);
 
+  const warning = unknownNameWarning();
   const context = [
     '<stop-hook-reminders>',
     ...reminders,
+    ...(warning ? [warning] : []),
     '</stop-hook-reminders>',
   ].join('\n');
 

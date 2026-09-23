@@ -12,10 +12,17 @@ const assert = require('assert');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
+const { spawnSync } = require('child_process');
 
 const HOOKS_DIR = path.join(__dirname, '../../hooks');
 const HOOK_MODULE_PATH = path.join(HOOKS_DIR, 'stop-reminders.js');
 const SAVE_MARKER_MODULE_PATH = path.join(HOOKS_DIR, 'save-marker.js');
+
+// A user who sets this variable in the settings.json "env" block also passes
+// it to every command the assistant runs, and so to this file. Every test
+// expects the default (all reminders on) unless it sets the variable itself.
+const REMINDERS_OFF_VARIABLE = 'SUPERPOWERS_STOP_REMINDERS_OFF';
+delete process.env[REMINDERS_OFF_VARIABLE];
 
 let passed = 0;
 let failed = 0;
@@ -409,7 +416,7 @@ function evaluateStop(arrange, inspect = () => {}) {
     const hook = loadHookWithHome(homeDir);
     const stop = (sessionId, extraFields = {}) =>
       hook.evaluatePayload({ cwd: cwdDir, session_id: sessionId, ...extraFields });
-    const lastStopFields = arrange({ hook, logDir, stop });
+    const lastStopFields = arrange({ hook, logDir, cwdDir, stop });
     const result = stop(TEST_SESSION_ID, lastStopFields);
     inspect();
     return result;
@@ -599,6 +606,130 @@ test('The decision-log reminder prints the marker command', () => {
   });
   assert.ok(command && (result.reason || '').includes(command),
     `Expected the marker command in the reminder, got: ${result.reason}`);
+});
+
+// ── SUPERPOWERS_STOP_REMINDERS_OFF ───────────────────────────────────────────
+
+console.log('\nSUPERPOWERS_STOP_REMINDERS_OFF switches single reminders off');
+
+
+/** Run `fn` while the switch variable holds `value`; restore it afterwards. */
+function withRemindersOff(value, fn) {
+  const previous = process.env[REMINDERS_OFF_VARIABLE];
+  process.env[REMINDERS_OFF_VARIABLE] = value;
+  try {
+    return fn();
+  } finally {
+    if (previous === undefined) delete process.env[REMINDERS_OFF_VARIABLE];
+    else process.env[REMINDERS_OFF_VARIABLE] = previous;
+  }
+}
+
+const OLD_STATE_MS = 10 * MINUTE_MS;
+const LARGE_SESSION_LOG = '## 2026-04-15 [saved]\nGoal: Test\n' + 'x'.repeat(1600) + '\n';
+
+// Each scenario makes exactly one reminder due, so a block with no reason
+// left proves that the name switched off that reminder and nothing else.
+const REMINDER_SCENARIOS = [
+  {
+    name: 'tdd',
+    text: 'TDD reminder',
+    arrange: ({ logDir }) => writeRecentEdit(logDir, 'src/index.js'),
+  },
+  {
+    name: 'commit',
+    text: 'Commit reminder',
+    arrange: ({ logDir, cwdDir }) => {
+      const files = ['a', 'b', 'c', 'd', 'e', 'f'].map(name => `${name}.txt`);
+      spawnSync('git', ['init', '-q'], { cwd: cwdDir });
+      for (const file of files) fs.writeFileSync(path.join(cwdDir, file), 'x', 'utf8');
+      // Staged files are listed by `git status` even when the user's git
+      // configuration hides untracked files (status.showUntrackedFiles=no).
+      spawnSync('git', ['add', '.'], { cwd: cwdDir });
+      writeRecentEdits(logDir, files.map(file => path.join(cwdDir, file)));
+    },
+  },
+  {
+    name: 'decision-log',
+    text: 'Decision log:',
+    arrange: ({ logDir }) => writeRecentEdit(logDir, SIGNIFICANT_FILE),
+  },
+  {
+    name: 'state-md',
+    text: 'State.md sync',
+    // The source edits also make the TDD reminder due; the test file edit
+    // stops it, because a session that changed a test gets no TDD reminder.
+    arrange: ({ logDir, cwdDir }) => {
+      const stateFile = path.join(cwdDir, 'state.md');
+      fs.writeFileSync(stateFile, '# state\n', 'utf8');
+      setFileAge(stateFile, OLD_STATE_MS);
+      writeRecentEdits(logDir, ['src/a.js', 'src/b.js', 'tests/test-a.js']);
+    },
+  },
+  {
+    name: 'session-log-size',
+    text: 'Session-log size warning',
+    arrange: ({ cwdDir }) =>
+      fs.writeFileSync(path.join(cwdDir, 'session-log.md'), LARGE_SESSION_LOG, 'utf8'),
+  },
+];
+
+for (const scenario of REMINDER_SCENARIOS) {
+  test(`Without the switch, the "${scenario.name}" scenario blocks with its reminder`, () => {
+    const result = evaluateStop(scenario.arrange);
+    assert.ok((result.reason || '').includes(scenario.text),
+      `Expected "${scenario.text}" in the block, got: ${JSON.stringify(result)}`);
+  });
+
+  test(`"${scenario.name}" in the switch removes that reminder and the block`, () => {
+    const result = withRemindersOff(scenario.name, () => evaluateStop(scenario.arrange));
+    assert.deepStrictEqual(result, {},
+      `Expected no block with "${scenario.name}" switched off, got: ${JSON.stringify(result)}`);
+  });
+}
+
+test('The commit reminder tells the assistant to ask when a project rule requires approval', () => {
+  const result = evaluateStop(REMINDER_SCENARIOS.find(s => s.name === 'commit').arrange);
+  assert.ok((result.reason || '').includes("requires the user's approval before a commit"),
+    `Expected the approval sentence in the commit reminder, got: ${result.reason}`);
+});
+
+test('Names are trimmed and case-insensitive, unknown names are ignored, other reminders stay', () => {
+  // The commit scenario plus one source edit makes two reminders due.
+  const arrange = (context) => {
+    REMINDER_SCENARIOS.find(s => s.name === 'commit').arrange(context);
+    fs.appendFileSync(path.join(context.logDir, 'edit-log.txt'),
+      editLogLine(TEST_SESSION_ID, 'src/index.js'), 'utf8');
+  };
+  const result = withRemindersOff(' Commit ,unknown ', () => evaluateStop(arrange));
+  const reason = result.reason || '';
+  assert.ok(!reason.includes('Commit reminder'),
+    `Expected no commit reminder, got: ${reason}`);
+  assert.ok(reason.includes('TDD reminder'),
+    `Expected the TDD reminder to stay, got: ${reason}`);
+});
+
+const TDD_SCENARIO = REMINDER_SCENARIOS.find(s => s.name === 'tdd');
+const UNKNOWN_NAME_WARNING = 'Unknown name in SUPERPOWERS_STOP_REMINDERS_OFF';
+
+test('A block names each unknown name in the switch and lists the known names', () => {
+  const result = withRemindersOff('commit,tdd commit, state.md', () => evaluateStop(TDD_SCENARIO.arrange));
+  const reason = result.reason || '';
+  assert.ok(reason.includes(UNKNOWN_NAME_WARNING), `Expected the warning, got: ${reason}`);
+  assert.ok(reason.includes('"tdd commit"') && reason.includes('"state.md"'),
+    `Expected both unknown names, got: ${reason}`);
+  assert.ok(reason.includes('session-log-size'), `Expected the known names, got: ${reason}`);
+});
+
+test('Known names only: the block has no unknown-name warning', () => {
+  const result = withRemindersOff('commit', () => evaluateStop(TDD_SCENARIO.arrange));
+  assert.ok((result.reason || '').includes('TDD reminder'), `Expected a block, got: ${JSON.stringify(result)}`);
+  assert.ok(!result.reason.includes(UNKNOWN_NAME_WARNING), `Expected no warning, got: ${result.reason}`);
+});
+
+test('An unknown name alone never makes the hook block', () => {
+  const result = withRemindersOff('unknown', () => evaluateStop(() => {}));
+  assert.deepStrictEqual(result, {}, `Expected no block, got: ${JSON.stringify(result)}`);
 });
 
 // ── checkSessionLogSize hard cap ─────────────────────────────────────────────

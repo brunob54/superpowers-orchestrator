@@ -27,6 +27,10 @@ const TRACK_EDITS = path.join(HOOKS_DIR, 'track-edits.js');
 const TRACK_STATS = path.join(HOOKS_DIR, 'track-session-stats.js');
 const STOP_REMINDERS = path.join(HOOKS_DIR, 'stop-reminders.js');
 const SAVE_MARKER = path.join(HOOKS_DIR, 'save-marker.js');
+
+// The stop hook reads this variable. A user who sets it in the settings.json
+// "env" block also passes it to this file; every test expects the default.
+delete process.env.SUPERPOWERS_STOP_REMINDERS_OFF;
 const SKILL_FILE = path.join(REPO_ROOT, 'skills', 'context-management', 'SKILL.md');
 
 const SESSION_A = 'session-a-111';
