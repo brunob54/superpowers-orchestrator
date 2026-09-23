@@ -33,6 +33,26 @@ const {
   writeTimeFile,
 } = require('./save-marker');
 
+// A user switches off single reminders with a comma-separated list of their
+// names in this environment variable, for example "commit,tdd". Names are not
+// case-sensitive, and an unknown name is ignored. The session summary has no
+// name: it never blocks a stop on its own.
+const REMINDERS_OFF_VARIABLE = 'SUPERPOWERS_STOP_REMINDERS_OFF';
+const REMINDER = Object.freeze({
+  TDD: 'tdd',
+  COMMIT: 'commit',
+  DECISION_LOG: 'decision-log',
+  STATE_MD: 'state-md',
+  SESSION_LOG_SIZE: 'session-log-size',
+});
+
+function isReminderOn(name) {
+  const namesOff = (process.env[REMINDERS_OFF_VARIABLE] || '')
+    .split(',')
+    .map(entry => entry.trim().toLowerCase());
+  return !namesOff.includes(name);
+}
+
 // Guard: only fire once per session (prevent infinite loop)
 // The guard file is created on first fire and checked on subsequent fires.
 // It auto-expires after 2 minutes so subsequent Claude stops can show reminders.
@@ -295,7 +315,7 @@ function generateReminders(edits, cwd, sessionId) {
 
   // TDD reminder: source files changed without corresponding tests
   const untestedSources = sourceFiles.filter(src => !isTestFile(src));
-  if (untestedSources.length > 0 && testFiles.length === 0) {
+  if (isReminderOn(REMINDER.TDD) && untestedSources.length > 0 && testFiles.length === 0) {
     reminders.push(
       `TDD reminder: ${untestedSources.length} source file(s) modified without test changes. ` +
       `Consider running tests or invoking TDD workflow if behavior changed.`
@@ -304,7 +324,7 @@ function generateReminders(edits, cwd, sessionId) {
 
   // Commit reminder: check actual uncommitted changes via git, not just session edits.
   // Using edit-log count was wrong — it fired even after a commit was made mid-session.
-  if (editedPaths.length >= 5) {
+  if (isReminderOn(REMINDER.COMMIT) && editedPaths.length >= 5) {
     const uncommittedCount = getUncommittedCount(cwd);
     if (uncommittedCount >= 5) {
       reminders.push(
@@ -448,7 +468,7 @@ function evaluatePayload(data) {
   // the hook cannot know that the entry already covers the later edits. The
   // reminder therefore names the marker command for that case.
   const editsSinceLastSaved = readSessionEditsAfter(getLastSavedEntryTime(sessionId), sessionId);
-  if (isSignificantSession(editsSinceLastSaved)) {
+  if (isReminderOn(REMINDER.DECISION_LOG) && isSignificantSession(editsSinceLastSaved)) {
     reminders.push(
       'Decision log: This session modified core skill/hook/config files. ' +
       'Before stopping, invoke context-management via the Skill tool to write a [saved] entry ' +
@@ -460,11 +480,11 @@ function evaluatePayload(data) {
   }
 
   // state.md staleness: warn if state.md exists but source files changed after it was written
-  const stateStaleness = checkStateMdStaleness(cwd, edits);
+  const stateStaleness = isReminderOn(REMINDER.STATE_MD) && checkStateMdStaleness(cwd, edits);
   if (stateStaleness) reminders.push(stateStaleness);
 
   // Session-log size guard: warn if last 2 [saved] entries exceed token budget
-  const sizeWarning = checkSessionLogSize(cwd);
+  const sizeWarning = isReminderOn(REMINDER.SESSION_LOG_SIZE) && checkSessionLogSize(cwd);
   if (sizeWarning) reminders.push(sizeWarning);
 
   if (reminders.length === 0) return {};
