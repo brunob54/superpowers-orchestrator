@@ -18,6 +18,12 @@ const HOOKS_DIR = path.join(__dirname, '../../hooks');
 const HOOK_MODULE_PATH = path.join(HOOKS_DIR, 'stop-reminders.js');
 const SAVE_MARKER_MODULE_PATH = path.join(HOOKS_DIR, 'save-marker.js');
 
+// A user who sets this variable in the settings.json "env" block also passes
+// it to every command the assistant runs, and so to this file. Every test
+// expects the default (all reminders on) unless it sets the variable itself.
+const REMINDERS_OFF_VARIABLE = 'SUPERPOWERS_STOP_REMINDERS_OFF';
+delete process.env[REMINDERS_OFF_VARIABLE];
+
 let passed = 0;
 let failed = 0;
 
@@ -606,7 +612,6 @@ test('The decision-log reminder prints the marker command', () => {
 
 console.log('\nSUPERPOWERS_STOP_REMINDERS_OFF switches single reminders off');
 
-const REMINDERS_OFF_VARIABLE = 'SUPERPOWERS_STOP_REMINDERS_OFF';
 
 /** Run `fn` while the switch variable holds `value`; restore it afterwards. */
 function withRemindersOff(value, fn) {
@@ -638,6 +643,9 @@ const REMINDER_SCENARIOS = [
       const files = ['a', 'b', 'c', 'd', 'e', 'f'].map(name => `${name}.txt`);
       spawnSync('git', ['init', '-q'], { cwd: cwdDir });
       for (const file of files) fs.writeFileSync(path.join(cwdDir, file), 'x', 'utf8');
+      // Staged files are listed by `git status` even when the user's git
+      // configuration hides untracked files (status.showUntrackedFiles=no).
+      spawnSync('git', ['add', '.'], { cwd: cwdDir });
       writeRecentEdits(logDir, files.map(file => path.join(cwdDir, file)));
     },
   },

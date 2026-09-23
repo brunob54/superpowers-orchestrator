@@ -33,7 +33,7 @@ const {
   writeTimeFile,
 } = require('./save-marker');
 
-// A user switches off single reminders with a comma-separated list of their
+// A user switches off individual reminders with a comma-separated list of their
 // names in this environment variable, for example "commit,tdd". Names are not
 // case-sensitive, and an unknown name is ignored. The session summary has no
 // name: it never blocks a stop on its own.

@@ -1474,6 +1474,17 @@ turn "waiting for" a reviewer and never resumed — is closed in v7.5.0;
 if you still see it, the installed copy is older than that (§1). Until
 you update, sending the stalled controller a message resumes it.
 
+**A stop reminder conflicts with a project rule.** Example: the project's
+`AGENTS.md` says the assistant may commit only after you approve, and at the
+end of a task the stop hook blocks with "Commit reminder: 6 files with
+uncommitted changes". A block means that Claude Code does not let the
+assistant end its turn; the assistant must answer the reminder first. Switch
+off that reminder alone with the variable `SUPERPOWERS_STOP_REMINDERS_OFF` in
+the `env` block of `settings.json`, for example
+`{ "env": { "SUPERPOWERS_STOP_REMINDERS_OFF": "commit" } }`, and restart the
+CLI. The names are `tdd`, `commit`, `decision-log`, `state-md` and
+`session-log-size`; the README lists which reminder text each name removes.
+
 **I updated, but the plugin is still the old version.** Two-step update
 half-done (marketplace refreshed but plugin not updated, or vice versa — §1),
 or the marketplace pointer reverted to a stale repository. Verify what's
