@@ -611,7 +611,7 @@ git commit -m "test(track-edits): drop the TDD reminder from the scratchpad test
 - Verification: before the hook edit, `node tests/codex/test-stop-reminders.js` fails exactly the three tests named in Step 2; after it, the file exits 0; `bash tests/codex/run-unit-tests.sh` exits 0; `git grep -n "TDD\|isTestFile" -- hooks/stop-reminders.js` prints nothing.
 - Wording of the four changed comments is free; the properties above bind.
 
-- [ ] **Step 1: Add the regression tests (they must fail first)**
+- [x] **Step 1: Add the regression tests (they must fail first)**
 
 Insert the following block directly before the line that starts with `// ── No commit reminder while a subagent is still running` (use the Edit tool as in Task 1; the new string is the block, one empty line, and then that comment text; the block comes after the section `Shared behaviour of the reminders`).
 
@@ -654,12 +654,12 @@ and the new text is
     [REMOVED_TDD_REMINDER_TEXT]);
 ```
 
-- [ ] **Step 2: Run the test file and see the failures**
+- [x] **Step 2: Run the test file and see the failures**
 
 Run: `node tests/codex/test-stop-reminders.js`
 Expected: exactly three tests fail, with these labels: `One source edit with no test edit gives no reminder` (the block holds "TDD reminder: 1 source file(s) modified without test changes: /project/src/app.js"), `The name "tdd" is unknown: it switches nothing off, and the block names it` (no unknown-name warning, because `tdd` is still a known name), and `Without a running subagent, the scenario with every reminder gives every reminder` (the block holds "TDD reminder"). The last line is `stop-reminders: <N> passed, 3 failed` (N was 110 when this plan was written), and the exit status is 1. Any other result: stop and report.
 
-- [ ] **Step 3: Remove the TDD reminder from the hook, and the test edit from the state-md scenario**
+- [x] **Step 3: Remove the TDD reminder from the hook, and the test edit from the state-md scenario**
 
 Save this script as `<scratch>/t4-edits.js`. It edits the file that is named in its first argument: the test file (the state-md scenario) or the hook.
 
@@ -744,7 +744,7 @@ Run: `node <scratch>/t4-edits.js tests/codex/test-stop-reminders.js`
 Run: `node <scratch>/t4-edits.js hooks/stop-reminders.js`
 Expected: no output from either command, exit status 0.
 
-- [ ] **Step 4: Run the tests**
+- [x] **Step 4: Run the tests**
 
 Run: `node --check hooks/stop-reminders.js && node tests/codex/test-stop-reminders.js`
 Expected: the last line is `stop-reminders: <N> passed, 0 failed` (N was 113 when this plan was written) and the exit status is 0.
@@ -755,7 +755,7 @@ Expected: no output (exit status 1).
 Run: `bash tests/codex/run-unit-tests.sh`
 Expected: the last lines are `Results: 26 suites passed, 0 suites failed` and `All unit tests passed.`, and the exit status is 0.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add hooks/stop-reminders.js tests/codex/test-stop-reminders.js
