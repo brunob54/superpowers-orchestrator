@@ -600,13 +600,12 @@ const REMINDER_SCENARIOS = [
   {
     name: 'state-md',
     text: 'State.md sync',
-    // The source edits also make the TDD reminder due; the test file edit
-    // stops it, because a session that changed a test gets no TDD reminder.
+    // Two source edits, both later than state.md.
     arrange: ({ logDir, cwdDir }) => {
       const stateFile = path.join(cwdDir, 'state.md');
       fs.writeFileSync(stateFile, '# state\n', 'utf8');
       setFileAge(stateFile, OLD_STATE_MS);
-      writeRecentEdits(logDir, ['src/a.js', 'src/b.js', 'tests/test-a.js']);
+      writeRecentEdits(logDir, ['src/a.js', 'src/b.js']);
     },
   },
   {
@@ -1177,6 +1176,30 @@ test('A React hook file (src/hooks/useAuth.js) does not ask for a decision-log e
   assertCommitReminder(result, COMMIT_THRESHOLD);
 });
 
+// ── The TDD reminder is gone ─────────────────────────────────────────────────
+// Before v7.71.0 the stop hook had a fifth reminder, the "TDD reminder" (TDD
+// means test-driven development), for source files edited without a test edit.
+
+const REMOVED_TDD_REMINDER_TEXT = 'TDD reminder';
+// A fixed absolute path that does not exist on disk. No folder of it is a
+// temporary folder or is named test or tests.
+const SOURCE_FILE_WITHOUT_TEST = '/project/src/app.js';
+
+test('One source edit with no test edit gives no reminder', () => {
+  assertNoReminder(evaluateStop(({ hook, logDir }) => {
+    writeRecentEdit(logDir, SOURCE_FILE_WITHOUT_TEST);
+    // The empty result must not come from an edit log that was never read.
+    assert.strictEqual(hook.getRecentEdits(TEST_SESSION_ID).length, 1,
+      'Expected the edit of the source file in the edit log');
+  }));
+});
+
+test('The name "tdd" is unknown: it switches nothing off, and the block names it', () => {
+  const result = withRemindersOff('tdd', () => evaluateStop(COMMIT_SCENARIO.arrange));
+  assertCommitReminder(result, 6);
+  assertBlockTexts(result.reason || '', [UNKNOWN_NAME_WARNING, '"tdd"']);
+});
+
 // ── No commit reminder while a subagent is still running ─────────────────────
 // Seen in a real session: six stops were blocked with a commit reminder for
 // files that subagents were still editing. Claude Code lists the unfinished
@@ -1259,7 +1282,8 @@ function assertBlockTexts(reason, expectedTexts, missingTexts = []) {
 }
 
 test('Without a running subagent, the scenario with every reminder gives every reminder', () => {
-  assertBlockTexts(evaluateStop(arrangeEveryReminder).reason || '', [COMMIT_SCENARIO.text, ...OTHER_BLOCK_TEXTS]);
+  assertBlockTexts(evaluateStop(arrangeEveryReminder).reason || '', [COMMIT_SCENARIO.text, ...OTHER_BLOCK_TEXTS],
+    [REMOVED_TDD_REMINDER_TEXT]);
 });
 
 test('A running subagent removes the commit reminder and no other line of the block', () => {

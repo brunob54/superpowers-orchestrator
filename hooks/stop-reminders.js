@@ -3,7 +3,7 @@
  * Stop Hook — Contextual Reminders
  *
  * When Claude finishes responding, checks session context and provides
- * gentle reminders about TDD, verification, and commit hygiene.
+ * gentle reminders about uncommitted work, decision records, and session files.
  * These reminders reinforce discipline skills deterministically.
  *
  * Uses a file-based guard to fire only once per session to prevent
@@ -35,13 +35,12 @@ const {
 const { parseNameList, unknownNames } = require('./name-list');
 
 // A user switches off individual reminders with a comma-separated list of their
-// names in this environment variable, for example "commit,tdd". Names are not
+// names in this environment variable, for example "commit,state-md". Names are not
 // case-sensitive. An unknown name switches nothing off; a block names it (see
 // unknownNameWarning). The session summary has no name: it never blocks a
 // stop on its own.
 const REMINDERS_OFF_VARIABLE = 'SUPERPOWERS_STOP_REMINDERS_OFF';
 const REMINDER = Object.freeze({
-  TDD: 'tdd',
   COMMIT: 'commit',
   DECISION_LOG: 'decision-log',
   STATE_MD: 'state-md',
@@ -116,20 +115,6 @@ function setGuard(sessionId) {
   removeOldSessionFiles();
 }
 
-// Common test file patterns
-const TEST_PATTERNS = [
-  /\.test\.[jt]sx?$/,
-  /\.spec\.[jt]sx?$/,
-  /_test\.(go|py|rb)$/,
-  // The file name itself starts with "test_": latest_report.py is no test file.
-  /(?:^|[/\\])test_[^/\\]+\.py$/,
-  /Tests?\.[^/]+$/,
-  /\.test$/,
-  /__tests__\//,
-  /(?:^|[/\\])test[-_][^/\\]+\.[jt]sx?$/i,
-  /[/\\]tests?[/\\]/i,
-];
-
 // Common source file patterns (non-test, non-config)
 const SOURCE_PATTERNS = [
   /\.(js|jsx|ts|tsx|py|rb|go|rs|java|cs|cpp|c|h|hpp|swift|kt|scala|php)$/,
@@ -154,10 +139,6 @@ const CONFIG_PATTERNS = [
   /CLAUDE\.md$/,
   /SKILL\.md$/,
 ];
-
-function isTestFile(filePath) {
-  return TEST_PATTERNS.some(p => p.test(filePath));
-}
 
 function isSourceFile(filePath) {
   return SOURCE_PATTERNS.some(p => p.test(filePath)) && !CONFIG_PATTERNS.some(p => p.test(filePath));
@@ -353,77 +334,6 @@ function gitReaderForFile(realPath, timeoutMs = GIT_TIMEOUT_MS) {
   return (...args) => gitStdout([...GIT_READ_ONE_FILE, ...args, '--', pathFromFolder], folder, timeoutMs);
 }
 
-const SECOND_MS = 1000;
-
-/**
- * Return true when git gives positive proof that an edited file is back at
- * its committed state. Three conditions must hold:
- *   - `git status` reports no change for the file;
- *   - git tracks a file of exactly this name in the folder of the file;
- *   - no commit that a branch, a tag, the stash or a reflog can reach changed
- *     the file since the edit. A reflog is the list that git keeps of the
- *     earlier values of a reference; it holds an older stash entry and a
- *     commit whose branch was deleted.
- * Such a file was edited and then restored. Every other case gives false,
- * because the change of the session may still exist: a file committed after
- * the edit, also on another branch; a file that git does not track (git
- * cannot tell a deleted file from a moved one); a file that git ignores; a
- * file that no longer exists, for example in a worktree that was removed; a
- * file outside a git repository; a git error or time-out.
- *
- * A symbolic link is replaced by the file it points to, because an edit
- * through a link changes that file. git runs in the folder of the file, so
- * the repository of the file decides, not the session folder.
- *
- * `firstEditTimeMs` is the time of the first edit of the file that the
- * reminder counts. git stores a commit time in whole seconds, so the time is
- * rounded down: a commit in the same second counts as a commit since the edit.
- */
-function isBackAtCommittedState(filePath, firstEditTimeMs, cwd) {
-  let realPath;
-  try {
-    realPath = fs.realpathSync(path.resolve(cwd, filePath));
-  } catch {
-    return false;
-  }
-  const gitForFile = gitReaderForFile(realPath);
-  // --ignored lists a file that git ignores, and --untracked-files=all lists
-  // a new file even when the configuration of the user hides untracked files.
-  // `ls-files` prints the name only when git tracks it; null (git failed)
-  // and the empty text both mean "no proof".
-  return gitForFile(...GIT_STATUS, '--ignored', ALL_UNTRACKED_FILES) === '' &&
-    Boolean(gitForFile('ls-files')) &&
-    gitForFile('log', '--all', '--reflog', '-1', '--format=%H',
-      `--since=${Math.floor(firstEditTimeMs / SECOND_MS)}`) === '';
-}
-
-/**
- * Return the time, in milliseconds, of the first of `edits` that names filePath.
- */
-function firstEditTimeMs(edits, filePath) {
-  return Math.min(...edits.filter(e => e.filePath === filePath).map(e => new Date(e.timestamp).getTime()));
-}
-
-// The TDD reminder names at most this many files, so that a long session
-// does not make the block text long.
-const MAX_NAMED_FILES = 5;
-
-/**
- * Return the file names for a reminder: each path relative to cwd, or the
- * full path for a file outside cwd, and "and N more" after MAX_NAMED_FILES.
- * The reminder counts every edit of the last 30 minutes, not only the last
- * turn, so without names the reader cannot tell which edit it counted.
- */
-function formatFileList(filePaths, cwd) {
-  const names = filePaths.slice(0, MAX_NAMED_FILES).map(filePath => {
-    const relative = path.relative(cwd, filePath);
-    const outside = relative === '..' || relative.startsWith(`..${path.sep}`) || path.isAbsolute(relative);
-    return outside ? filePath : relative;
-  });
-  const rest = filePaths.length - names.length;
-  return names.join(', ') + (rest > 0 ? ` and ${rest} more` : '');
-}
-
 /**
  * Return the full path of a logged file as the file system stores it: every
  * symbolic link is resolved, and on a file system that ignores letter case
@@ -522,24 +432,6 @@ function generateReminders(edits, cwd, sessionId, backgroundTasks) {
   if (edits.length === 0) return reminders;
 
   const editedPaths = [...new Set(edits.map(e => e.filePath))];
-  const sourceFiles = editedPaths.filter(isSourceFile);
-  const testFiles = editedPaths.filter(isTestFile);
-
-  // TDD reminder: source files changed without corresponding tests. The edit
-  // log says that a file was edited, not that it is still changed, so git is
-  // asked about each file. git runs only when the reminder is due.
-  const untestedSources = sourceFiles.filter(src => !isTestFile(src));
-  if (isReminderOn(REMINDER.TDD) && untestedSources.length > 0 && testFiles.length === 0) {
-    const changedSources = untestedSources.filter(src =>
-      !isBackAtCommittedState(src, firstEditTimeMs(edits, src), cwd));
-    if (changedSources.length > 0) {
-      reminders.push(
-        `TDD reminder: ${changedSources.length} source file(s) modified without test changes: ` +
-        `${formatFileList(changedSources, cwd)}. ` +
-        `Consider running tests or invoking TDD workflow if behavior changed.`
-      );
-    }
-  }
 
   // Commit reminder: counts the files that this session edited and that git
   // still reports as changed. The edit log alone is not enough (the reminder
@@ -695,8 +587,8 @@ async function main() {
 
 /**
  * Build Claude Stop hook response object from input payload.
- * Only blocks Claude's stop when actionable reminders exist (TDD, commit,
- * decision log, session-log size). Informational stats alone do not block.
+ * Only blocks Claude's stop when actionable reminders exist (commit,
+ * decision log, state.md, session-log size). Informational stats alone do not block.
  */
 function evaluatePayload(data) {
   if (!data || typeof data !== 'object') return {};
@@ -708,7 +600,8 @@ function evaluatePayload(data) {
   // Claude Code says directly that it is continuing because of a stop hook
   // (strictly `true`, as in hooks/codex/stop-adapter.js). The file-based guard
   // stays: it covers a payload without the field, and it limits how often a
-  // reminder that the model cannot clear (the TDD reminder) repeats.
+  // reminder that the model cannot clear (the commit reminder: the user may want
+  // the files uncommitted) repeats.
   if (data.stop_hook_active === true || !shouldFire(sessionId)) return {};
 
   const reminders = generateReminders(edits, cwd, sessionId, data.background_tasks);
@@ -774,8 +667,6 @@ if (require.main === module) {
     generateReminders,
     getLastSavedEntryTime,
     getRecentEdits,
-    isSourceFile,
-    isTestFile,
     matchesSession,
     parseLogLine,
     setGuard,
