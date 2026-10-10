@@ -921,7 +921,7 @@ git commit -m "docs: remove the TDD reminder from the README, the guide and the 
 - Verification of the whole change: every fast suite of `CLAUDE.md` and `tests/context-management/run-tests.sh` exits 0, each run as its own command (Step 5).
 - The wording of the entry is free; the properties above bind.
 
-- [ ] **Step 1: Bump the version strings**
+- [x] **Step 1: Bump the version strings**
 
 Save this script as `<scratch>/t6-bump.js`. It replaces every occurrence of `7.70.0` in the file named by its first argument, and stops with an error unless the number of occurrences is the number given as its second argument.
 
@@ -952,7 +952,7 @@ node <scratch>/t6-bump.js README.md 3
 
 Expected: each command prints `<file>: <n> occurrence(s) changed` with the number it was given (1, 1, 1, 1, 3).
 
-- [ ] **Step 2: Add the release note**
+- [x] **Step 2: Add the release note**
 
 Insert the following entry directly before the line `## v7.70.0 — a per-rule switch for protect-secrets` of `RELEASE-NOTES.md` (use the Edit tool: the old string is that heading line, the new string is the entry, then that heading line). The entry ends with one empty line.
 
@@ -1006,7 +1006,7 @@ A user who set `tdd` should remove it. For a settings file that several installa
 The README (the diagram labels, the list of names, the `track-edits` and `stop-reminders` entries), the guide (the list of names; the two troubleshooting entries about the test-first reminder become one short entry), `docs/architecture/agentic-workflow.md` and `docs/architecture/project-memory.md` no longer describe a TDD reminder. The architecture test `tests/context-management/run-tests.sh` pins the sentence of `project-memory.md` and changes with it.
 ````
 
-- [ ] **Step 3: Check the version files and the entry**
+- [x] **Step 3: Check the version files and the entry**
 
 Run: `node tests/codex/test-version-files.js`
 Expected: the last line is `10 passed, 0 failed` and the exit status is 0.
@@ -1017,14 +1017,14 @@ Expected: no output (exit status 1).
 Run: `awk '/^## v7.71.0/{f=1;next} /^A session runs the installed copy/{f=0} f' RELEASE-NOTES.md | wc -w`
 Expected: a number of 120 or less (119 when this plan was written).
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add VERSION .claude-plugin/plugin.json .claude-plugin/marketplace.json plugin.universal.yaml README.md RELEASE-NOTES.md
 git commit -m "chore(release): v7.71.0" --trailer "Session: remove-tdd-reminder" --trailer "Stage: task 6/6"
 ```
 
-- [ ] **Step 5: Run every fast suite, each as its own command**
+- [x] **Step 5: Run every fast suite, each as its own command**
 
 Run each of these commands on its own, one after the other (not in parallel, not in a loop). Every one must exit 0.
 
