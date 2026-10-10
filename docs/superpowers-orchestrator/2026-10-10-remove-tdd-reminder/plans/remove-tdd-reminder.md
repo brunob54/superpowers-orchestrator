@@ -784,7 +784,7 @@ git commit -m "feat(stop-reminders): remove the TDD reminder" --trailer "Session
 - `docs/architecture/project-memory.md` line 193 and the pinned copy of that line in `tests/context-management/run-tests.sh` (line 870) change together to the same sentence, without "source edits without test changes".
 - Verification: `git grep -n "TDD reminder" -- README.md docs/guide/README.md docs/architecture` prints exactly one line, in `docs/guide/README.md` (the new entry); `git grep -n "tdd" -- README.md docs/architecture` prints nothing; `bash tests/context-management/run-tests.sh` exits 0.
 
-- [ ] **Step 1: Apply the edits**
+- [x] **Step 1: Apply the edits**
 
 Save this script as `<scratch>/t5-docs.js`. It edits the file that is named in its first argument; it chooses the edits by the file name (the README of the repository root and `docs/guide/README.md` have the same base name, and the script tells them apart by the name of the folder).
 
@@ -876,7 +876,7 @@ node <scratch>/t5-docs.js tests/context-management/run-tests.sh
 
 Expected: no output from any of them, exit status 0 each time.
 
-- [ ] **Step 2: Check the documents**
+- [x] **Step 2: Check the documents**
 
 Run: `git grep -n "TDD reminder" -- README.md docs/guide/README.md docs/architecture`
 Expected: one line only, `docs/guide/README.md:1553:**The stop hook asks for tests ("TDD reminder"; TDD means test-driven development).** Example: "TDD reminder: 2`.
@@ -887,12 +887,12 @@ Expected: no output (exit status 1).
 Run: `sed -n 34,46p docs/architecture/agentic-workflow.md`
 Expected: the lines of the two boxes have the same width as before (every line between the box corners ends with `│` in the same column as the line above it); the Stop Hook box holds the line `"Decision log: write a [saved] entry"`.
 
-- [ ] **Step 3: Run the architecture test**
+- [x] **Step 3: Run the architecture test**
 
 Run: `bash tests/context-management/run-tests.sh`
 Expected: the last line shows `Results: 108 passed, 0 failed` (108 when this plan was written) and the exit status is 0.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add README.md docs/guide/README.md docs/architecture/agentic-workflow.md docs/architecture/project-memory.md tests/context-management/run-tests.sh
