@@ -8,6 +8,54 @@
 > (`REPOZY/superpowers-optimized`) and are kept unchanged as history; any
 > testing they describe was not done here.
 
+## v7.71.0 — the stop hook no longer has a TDD reminder
+
+**Problem.** The stop hook's TDD reminder (TDD means test-driven development: the test is written before the code) fired on a comment-only change, missed the 48% of source-file changes made through Bash, and stayed silent under any folder named `test` or `tests`.
+
+**Change.** The reminder is removed, with the code that only it used. `tdd` is no longer a name that the environment variable `SUPERPOWERS_STOP_REMINDERS_OFF` accepts.
+
+**Effect.** The other four reminders are unchanged. Remove `tdd` from the variable: it now shows as an unknown name; where several installations read one settings file, remove it after all of them run v7.71.0 or later. The unsupported Codex adapter (the stop script of the Codex tool) keeps its own copy of the reminder.
+
+A session runs the installed copy of the plugin. The changes below reach a session only after an update of the plugin and a restart of the command-line interface (CLI).
+
+### 1. Why the reminder is removed
+
+The stop hook (`hooks/stop-reminders.js`) runs when Claude finishes a reply. It can block the stop with a list of reminders, and Claude then reads them and writes another reply. The TDD reminder was one of five reminders. Its text was "TDD reminder: N source file(s) modified without test changes: ...". The user decided on 2026-10-10 to remove it completely, with no compatibility alias for its name. The first three reasons below were measured or reproduced on 2026-10-10 in the owner's session; the scripts and test repositories were temporary and are not kept. The fourth reason is a judgment.
+
+- **False alarms are built into the rule.** Only an edited test file silenced the reminder; running the existing tests did not. In a headless run, Claude added one comment line to a source file, the reminder fired, and Claude answered it with a second reply that said a comment needs no test.
+- **It could not see edits made through Bash.** The edit log (the per-session file in which `hooks/track-edits.js` records edits) holds only Edit and Write calls. For a Bash call, Claude Code records the files that the command changed in the field `bashEditDiff` of the tool result. Method: the owner's local transcripts of 2026-09-06 to 2026-10-10 (143 sessions, main sessions and subagents) were read. Each Edit or Write call counted as one file change, and each Bash call whose `bashEditDiff` listed a changed file counted as one. A source file is a file with a code extension (for example `.js`, `.py`, `.go`); files in temporary or scratch folders were left out. In the 46 sessions whose transcripts carry `bashEditDiff`, 162 of 337 source-file changes (48%) were made through Bash.
+- **It had a path defect.** The patterns that recognize a test file were matched against the absolute path, so a repository under any folder named `test` or `tests` (any letter case) never got the reminder. Reproduced in two fresh repositories.
+- **Its gain was small (a judgment, not a measurement).** The workflow skills (`test-driven-development`, and plans with tests first) are the main source of test-first discipline. The reminder was a small addition to them.
+
+### 2. What changed in the code
+
+- **`hooks/stop-reminders.js`.** The block of `generateReminders` that built the TDD reminder is removed. The helpers that only it used are removed too: `isTestFile`, `TEST_PATTERNS`, `isBackAtCommittedState` (the git check that v7.58.0 added), `firstEditTimeMs`, `formatFileList`, `MAX_NAMED_FILES` and `SECOND_MS`. The module no longer exports `isSourceFile` and `isTestFile`. The functions that the other reminders use stay: `isSourceFile` (state-md reminder), the git helpers (commit reminder), the 2-minute guard and the `stop_hook_active` check. The commit, decision-log, state-md and session-log-size reminders keep their conditions, their texts and their order.
+- **`hooks/track-edits.js`.** One header comment changes. It gave the TDD reminder as the reason why a file inside the session scratchpad is not logged. It now names the reasons that still hold: a logged scratch file would trigger the decision-log reminder and the state-md reminder, and it would add to the count of the commit reminder when it lies inside a git repository. The exclusion itself is unchanged.
+- The behaviours that v7.54.0 (the reminder names the files it counts) and v7.58.0 (the reminder leaves out a restored file) gave to the TDD reminder end with it.
+
+### 3. The name `tdd`
+
+`tdd` is now an unknown name, like any other name that is not in the list: it switches nothing off, and the next block of the hook names it in the existing warning: `Unknown name in SUPERPOWERS_STOP_REMINDERS_OFF: "tdd". Separate names with commas. Known names: commit, decision-log, state-md, session-log-size.` followed by an instruction to tell the user. When no reminder is due, nothing blocks, so nothing shows the warning; this is the behaviour for every unknown name. The accepted names are `commit`, `decision-log`, `state-md` and `session-log-size`.
+
+A user who set `tdd` should remove it. For a settings file that several installations read (a committed project `.claude/settings.json`, or a user settings file synchronized between computers), remove it only after every one of them runs v7.71.0 or later. Until then the warning is harmless.
+
+### 4. Tests
+
+- The tests of the TDD reminder itself are deleted: the test-file detection, the naming of files in the reminder text, the restored-file tests, and the `tdd` scenario of the switch tests.
+- A test that used the TDD reminder only as the block it observes is rewritten to observe a reminder that is still produced, and keeps its check: the output shape, the trimmed and case-insensitive names, the unknown-name warning, the 30-minute window of the edits, and the reading of a `src/hooks/useAuth.js` edit. Each rewritten test whose key check is an absence (a block that is not there, or a reminder that is not in the block) has a positive control (the same arrangement without the condition under test, which must still give the result that the test checks for) in its own temporary home folder.
+- Two new tests: one source edit with no test edit gives no reminder (it fails with the TDD reminder in place); and the name `tdd` produces the unknown-name warning next to a due commit reminder. The block with every reminder also asserts that no "TDD reminder" text appears.
+
+### 5. Accepted limits
+
+- **The cleanup of per-session files runs less often.** The 7-day cleanup (`removeOldSessionFiles`) runs only when the hook blocks. The TDD reminder had the widest condition, so the hook now blocks less often. A user whose sessions get none of the other four blocks (for example a user who switched off both `commit` and `decision-log` and has no `state.md` or oversized `session-log.md`) loses the cleanup, and per-session files collect in `~/.claude/hooks-logs/`. Measured on the owner's computer on 2026-10-10: 26 edit logs, about 240 KB in one 7-day window. Only the cleanup reads that folder as a whole, so the effect is disk use only.
+- **The session summary appears less often.** It is shown only inside a block of another reminder, and the hook now blocks less often.
+- **Edits made through Bash stay invisible to the edit log.** Logging them from `tool_response.bashEditDiff.changedFiles` is a separate, later release.
+- **The Codex adapter keeps its own copy of the TDD reminder** (`hooks/codex/stop-adapter.js`). Codex has been documented as unsupported since 2026-09-21, so the adapter, its tests and its documents are not changed.
+
+### 6. Documentation
+
+The README (the diagram labels, the list of names, the `track-edits` and `stop-reminders` entries), the guide (the list of names; the two troubleshooting entries about the test-first reminder become one short entry), `docs/architecture/agentic-workflow.md` and `docs/architecture/project-memory.md` no longer describe a TDD reminder. The architecture test `tests/context-management/run-tests.sh` pins the sentence of `project-memory.md` and changes with it.
+
 ## v7.70.0 — a per-rule switch for protect-secrets
 
 **Problem.** Since v7.61.0 protect-secrets refuses calls such as `grep KEY .env`, `git add .env` and `rg -g '*.env'`. A user whose `.env` files hold no real secret could not let them pass, except by turning off every hook or editing the installed copy.
