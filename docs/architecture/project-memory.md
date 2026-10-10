@@ -190,5 +190,5 @@ This fork (superpowers-orchestrator) implements the same episodic memory concept
 ## See Also
 
 - `skills/context-management/SKILL.md` — full procedure for generating maps, saving state, and reading history
-- `hooks/stop-reminders.js` — the stop hook: when a turn ends, it reminds the AI about source edits without test changes, uncommitted files of the session, a missing `[saved]` entry (the decision-log reminder), a `state.md` older than the latest edits, and large `session-log.md` entries; it writes no session-log entry
+- `hooks/stop-reminders.js` — the stop hook: when a turn ends, it reminds the AI about uncommitted files of the session, a missing `[saved]` entry (the decision-log reminder), a `state.md` older than the latest edits, and large `session-log.md` entries; it writes no session-log entry
 - `docs/superpowers-orchestrator/2026-03-16-meta-memory-behavioral-self-evolution/specs/meta-memory-behavioral-self-evolution-design.md` — proposed future extension: behavioral preference distillation across sessions

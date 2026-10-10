@@ -867,7 +867,7 @@ ARCH_LINES=(
   '5. Identify hot files from `git log --name-only` over recent commits (the most often changed files, without release and version files)'
   '            ├── [reminder] Stop hook asks for a [saved] entry after edits of skills, hooks, specs or plans'
   "$NEW_HOT_FILES_LINE"
-  '- `hooks/stop-reminders.js` — the stop hook: when a turn ends, it reminds the AI about source edits without test changes, uncommitted files of the session, a missing `[saved]` entry (the decision-log reminder), a `state.md` older than the latest edits, and large `session-log.md` entries; it writes no session-log entry'
+  '- `hooks/stop-reminders.js` — the stop hook: when a turn ends, it reminds the AI about uncommitted files of the session, a missing `[saved]` entry (the decision-log reminder), a `state.md` older than the latest edits, and large `session-log.md` entries; it writes no session-log entry'
 )
 for line in "${ARCH_LINES[@]}"; do
   PROBLEMS=''

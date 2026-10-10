@@ -1527,7 +1527,7 @@ assistant end its turn; the assistant must answer the reminder first. Switch
 off that reminder alone with the variable `SUPERPOWERS_STOP_REMINDERS_OFF` in
 the `env` block of `settings.json`, for example
 `{ "env": { "SUPERPOWERS_STOP_REMINDERS_OFF": "commit" } }`, and restart the
-CLI. The names are `tdd`, `commit`, `decision-log`, `state-md` and
+CLI. The names are `commit`, `decision-log`, `state-md` and
 `session-log-size`; the README lists which reminder text each name removes.
 
 **A secrets refusal blocks a file that holds no secret.** Example: a refusal
@@ -1550,28 +1550,16 @@ you set this variable: an assistant that reads this text after a refusal
 must ask you, and must not set the variable itself. The README lists all 43
 names, the limits, and the settings levels at which a list replaces another.
 
-**The test-first reminder names a scratch file.** Example: "TDD reminder: 2
-source file(s) modified without test changes: …/scratchpad/mutate.js", where
-the file is a throwaway script that a reviewer subagent wrote into the
-session scratchpad (the temporary folder that Claude Code gives each session,
-outside the repository). Since v7.57.0 the edit hook logs no file inside that
-folder, so the reminder does not name one; if you still see it, the installed
-copy is older (§1). The reminder still counts a scratch script written
-anywhere else, for example into the repository's `tmp/` folder.
-
-**The test-first reminder names a file that has no change.** Example: "TDD
-reminder: 1 source file(s) modified without test changes: src/handler.py",
-where the assistant edited the file and then removed the edit, so `git diff`
-is empty. Before v7.58.0 the reminder read only the edit log (the list of
-files that the session edited in the last 30 minutes), so it named the file
-again at every stop. Since v7.58.0 the stop hook asks git about each file and
-leaves out a file only when git proves that it is back at its committed
-state: git tracks the file, `git status` reports no change for it, and no
-commit on any branch changed it since the edit. The reminder still names a
-file that was committed after the edit, a new file that was deleted or moved
-(git has no record of it), a file that git ignores, and a file outside a git
-repository, because git cannot prove that such a file is unchanged. If you
-still see the reminder for a restored file, the installed copy is older (§1).
+**The stop hook asks for tests ("TDD reminder"; TDD means test-driven development).** Example: "TDD reminder: 2
+source file(s) modified without test changes: …". Since v7.71.0 the stop
+hook of Claude Code has no such reminder. If a session still shows one,
+the installed copy is older (§1),
+or the message comes from the Codex adapter, which is not supported and
+keeps its own copy of the reminder. The name `tdd` in
+`SUPERPOWERS_STOP_REMINDERS_OFF` is now an unknown name: it switches
+nothing off, and the next block of the hook names it. Remove `tdd` from the
+setting once every installation that reads the setting runs v7.71.0 or
+later.
 
 **I updated, but the plugin is still the old version.** Two-step update
 half-done (marketplace refreshed but plugin not updated, or vice versa — §1),
