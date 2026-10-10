@@ -120,42 +120,6 @@ test('Test-file detection recognizes tests/codex/test-*.js naming', () => {
   }
 });
 
-test('When reminders exist: emits decision+reason, not Stop hookSpecificOutput', () => {
-  const { homeDir, cwdDir, logDir } = makeTempDirs();
-  try {
-    writeRecentEdit(logDir, 'src/index.js');
-    const { evaluatePayload } = loadHookWithHome(homeDir);
-
-    const result = evaluatePayload({ cwd: cwdDir, session_id: TEST_SESSION_ID });
-
-    assert.strictEqual(result.decision, 'block',
-      `Expected decision=block, got: ${JSON.stringify(result)}`);
-    assert.strictEqual(typeof result.reason, 'string',
-      `Expected reason string, got: ${JSON.stringify(result)}`);
-    assert.ok(result.reason.includes('<stop-hook-reminders>'),
-      `Expected stop reminders tag in reason: ${result.reason}`);
-    assert.ok(!result.hookSpecificOutput,
-      `Stop output must not include hookSpecificOutput: ${JSON.stringify(result)}`);
-  } finally {
-    cleanup(homeDir, cwdDir);
-  }
-});
-
-test('Active guard suppresses reminder output', () => {
-  const { homeDir, cwdDir, logDir } = makeTempDirs();
-  try {
-    writeRecentEdit(logDir, 'src/index.js');
-    const { evaluatePayload, guardFile } = loadHookWithHome(homeDir);
-    fs.writeFileSync(guardFile(TEST_SESSION_ID), new Date().toISOString(), 'utf8');
-
-    const result = evaluatePayload({ cwd: cwdDir, session_id: TEST_SESSION_ID });
-    assert.deepStrictEqual(result, {},
-      `Expected empty output while guard is active, got: ${JSON.stringify(result)}`);
-  } finally {
-    cleanup(homeDir, cwdDir);
-  }
-});
-
 test('No reminders available emits {}', () => {
   const { homeDir, cwdDir } = makeTempDirs();
   try {
@@ -388,21 +352,6 @@ for (const [label, filePaths] of COUNTED_EDITS) {
       `Expected the decision log reminder for ${filePaths.join(', ')}: ${reason}`);
   });
 }
-
-// The reminder about source edits reads the edits of the last 30 minutes.
-// Both tests write one source file edit and differ only in its age.
-const SOURCE_EDIT = ['src/index.js'];
-
-test('Counts a source edit that is 10 minutes old', () => {
-  assert.strictEqual(evaluateEdits(SOURCE_EDIT, 10).decision, 'block',
-    'Expected a reminder for an edit inside the 30-minute window');
-});
-
-test('Does not count a source edit that is 31 minutes old', () => {
-  const result = evaluateEdits(SOURCE_EDIT, 31);
-  assert.deepStrictEqual(result, {},
-    `Expected no reminder for an edit outside the 30-minute window, got: ${JSON.stringify(result)}`);
-});
 
 // ── Save marker and stop guard of one session ────────────────────────────────
 // Each session has its own save marker and its own stop guard. The old marker
@@ -705,45 +654,8 @@ test('The commit reminder tells the assistant to ask when a project rule require
     `Expected the approval sentence in the commit reminder, got: ${result.reason}`);
 });
 
-/** The commit scenario plus one source edit: two reminders are due. */
-function arrangeCommitAndTdd(context) {
-  REMINDER_SCENARIOS.find(s => s.name === 'commit').arrange(context);
-  fs.appendFileSync(path.join(context.logDir, 'edit-log.txt'),
-    editLogLine(TEST_SESSION_ID, 'src/index.js'), 'utf8');
-}
-
-test('Names are trimmed and case-insensitive, unknown names are ignored, other reminders stay', () => {
-  const result = withRemindersOff(' Commit ,unknown ', () => evaluateStop(arrangeCommitAndTdd));
-  const reason = result.reason || '';
-  assert.ok(!reason.includes('Commit reminder'),
-    `Expected no commit reminder, got: ${reason}`);
-  assert.ok(reason.includes('TDD reminder'),
-    `Expected the TDD reminder to stay, got: ${reason}`);
-});
-
 const TDD_SCENARIO = REMINDER_SCENARIOS.find(s => s.name === 'tdd');
 const UNKNOWN_NAME_WARNING = 'Unknown name in SUPERPOWERS_STOP_REMINDERS_OFF';
-
-test('A block names each unknown name in the switch and lists the known names', () => {
-  const result = withRemindersOff('commit,tdd commit, state.md', () => evaluateStop(TDD_SCENARIO.arrange));
-  const reason = result.reason || '';
-  assert.ok(reason.includes(UNKNOWN_NAME_WARNING), `Expected the warning, got: ${reason}`);
-  assert.ok(reason.includes('"tdd commit"') && reason.includes('"state.md"'),
-    `Expected both unknown names, got: ${reason}`);
-  assert.ok(reason.includes('session-log-size'), `Expected the known names, got: ${reason}`);
-});
-
-test('Known names only: the block has no unknown-name warning', () => {
-  const result = withRemindersOff('commit', () => evaluateStop(TDD_SCENARIO.arrange));
-  assert.ok((result.reason || '').includes('TDD reminder'), `Expected a block, got: ${JSON.stringify(result)}`);
-  assert.ok(!result.reason.includes(UNKNOWN_NAME_WARNING), `Expected no warning, got: ${result.reason}`);
-});
-
-test('A repeated unknown name is listed twice in the warning (the parser keeps duplicates)', () => {
-  const result = withRemindersOff('foo,foo', () => evaluateStop(TDD_SCENARIO.arrange));
-  const reason = result.reason || '';
-  assert.ok(reason.includes('"foo", "foo"'), `Expected the name twice, got: ${reason}`);
-});
 
 test('An unknown name alone never makes the hook block', () => {
   const result = withRemindersOff('unknown', () => evaluateStop(() => {}));
@@ -820,14 +732,6 @@ test('A source edit next to a latest_report.py edit still gets the TDD reminder'
     writeRecentEdits(logDir, ['src/app.py', 'src/latest_report.py'].map(file => path.join(cwdDir, file))));
   assert.ok((result.reason || '').includes(TDD_SCENARIO.text),
     `Expected the TDD reminder, got: ${JSON.stringify(result)}`);
-});
-
-test('A React hook file (src/hooks/useAuth.js) does not ask for a decision-log entry', () => {
-  const result = evaluateStop(({ logDir, cwdDir }) => writeRecentEdit(logDir, path.join(cwdDir, 'src', 'hooks', 'useAuth.js')));
-  assert.ok(!(result.reason || '').includes(DECISION_LOG),
-    `Expected no decision-log reminder, got: ${JSON.stringify(result)}`);
-  assert.ok((result.reason || '').includes(TDD_SCENARIO.text),
-    `Expected the stop to produce a reminder for the source file, got: ${JSON.stringify(result)}`);
 });
 
 test('A hooks/*.js file beside a hooks.json asks for a decision-log entry', () => {
@@ -1555,6 +1459,115 @@ test('The count of 5 session files does not rewrite the index of the repository'
     indexFile = path.join(cwdDir, '.git', 'index');
     indexBefore = fs.readFileSync(indexFile);
   }, () => assert.ok(indexBefore.equals(fs.readFileSync(indexFile)), 'Expected the index file to be unchanged')));
+});
+
+// ── Shared behaviour of the reminders ────────────────────────────────────────
+// These checks cover behaviour that every reminder shares: the shape of the
+// output, the names of the switch, the 30-minute window of the edits, and the
+// reading of one edit from the edit log. Each check observes the reminder that
+// needs the least set-up: the decision-log reminder (no git), or the commit
+// reminder where the check is about a window or a count of files.
+
+console.log('\nShared behaviour of the reminders');
+
+test('When reminders exist: emits decision+reason, not Stop hookSpecificOutput', () => {
+  const result = evaluateStop(arrangeDueBlock);
+  assert.strictEqual(result.decision, 'block',
+    `Expected decision=block, got: ${JSON.stringify(result)}`);
+  assert.strictEqual(typeof result.reason, 'string',
+    `Expected reason string, got: ${JSON.stringify(result)}`);
+  assert.ok(result.reason.includes('<stop-hook-reminders>'),
+    `Expected stop reminders tag in reason: ${result.reason}`);
+  assert.ok(result.reason.includes(DECISION_LOG),
+    `Expected the decision-log reminder in reason: ${result.reason}`);
+  assert.ok(!result.hookSpecificOutput,
+    `Stop output must not include hookSpecificOutput: ${JSON.stringify(result)}`);
+});
+
+// The commit reminder reads the edits of the last 30 minutes. The two tests
+// below arrange the same 5 modified files and differ only in the age of the
+// edit records.
+const INSIDE_WINDOW_MINUTES = 10;
+const LAST_MINUTES_OF_WINDOW = 29;
+const OUTSIDE_WINDOW_MINUTES = 31;
+
+/** 5 tracked files with a change that git has not committed, and edit records `ageMinutes` old. */
+function arrangeModifiedFilesEditedAgo({ logDir, cwdDir }, ageMinutes) {
+  const { sessionFiles } = repoWithSessionAndOtherFiles(cwdDir, COMMIT_THRESHOLD);
+  modifyFiles(sessionFiles);
+  writeRecentEdits(logDir, sessionFiles, ageMinutes);
+}
+
+test(`Counts edits that are ${INSIDE_WINDOW_MINUTES} minutes old`, () => {
+  assertCommitReminder(evaluateStop(context => arrangeModifiedFilesEditedAgo(context, INSIDE_WINDOW_MINUTES)),
+    COMMIT_THRESHOLD);
+});
+
+test(`Ignores edits that are ${OUTSIDE_WINDOW_MINUTES} minutes old`, () => {
+  // The positive control runs in its own temporary HOME (the environment variable
+  // that names the home folder): its block writes the
+  // 2-minute guard file, which would silence a second stop in the same HOME.
+  assertCommitReminder(evaluateStop(context => arrangeModifiedFilesEditedAgo(context, LAST_MINUTES_OF_WINDOW)),
+    COMMIT_THRESHOLD);
+  assertNoReminder(evaluateStop(context => arrangeModifiedFilesEditedAgo(context, OUTSIDE_WINDOW_MINUTES)));
+});
+
+/** The commit scenario plus one edit of a skill file: the commit and decision-log reminders are due. */
+function arrangeCommitAndDecisionLog(context) {
+  COMMIT_SCENARIO.arrange(context);
+  // The commit scenario rewrites the edit log, so this edit is appended after it.
+  fs.appendFileSync(path.join(context.logDir, 'edit-log.txt'),
+    editLogLine(TEST_SESSION_ID, SIGNIFICANT_FILE), 'utf8');
+}
+
+test('Names are trimmed and case-insensitive, unknown names are ignored, other reminders stay', () => {
+  // Positive control, in its own temporary HOME: without the switch the block holds both reminders.
+  assertBlockTexts(evaluateStop(arrangeCommitAndDecisionLog).reason || '', [COMMIT_SCENARIO.text, DECISION_LOG]);
+  const result = withRemindersOff(' Commit ,unknown ', () => evaluateStop(arrangeCommitAndDecisionLog));
+  assertBlockTexts(result.reason || '', [DECISION_LOG], [COMMIT_SCENARIO.text]);
+});
+
+test('A block names each unknown name in the switch and lists the known names', () => {
+  const result = withRemindersOff('commit,tdd commit, state.md', () => evaluateStop(arrangeDueBlock));
+  const reason = result.reason || '';
+  assert.ok(reason.includes(DECISION_LOG), `Expected the decision-log reminder, got: ${reason}`);
+  assert.ok(reason.includes(UNKNOWN_NAME_WARNING), `Expected the warning, got: ${reason}`);
+  assert.ok(reason.includes('"tdd commit"') && reason.includes('"state.md"'),
+    `Expected both unknown names, got: ${reason}`);
+  assert.ok(reason.includes('session-log-size'), `Expected the known names, got: ${reason}`);
+});
+
+test('Known names only: the block has no unknown-name warning', () => {
+  // Positive control, in its own temporary HOME: the same arrangement with an unknown name gives the warning.
+  const control = withRemindersOff('commit,foo', () => evaluateStop(arrangeDueBlock));
+  assert.ok((control.reason || '').includes(UNKNOWN_NAME_WARNING),
+    `Expected the warning for an unknown name, got: ${JSON.stringify(control)}`);
+  const result = withRemindersOff('commit', () => evaluateStop(arrangeDueBlock));
+  assert.ok((result.reason || '').includes(DECISION_LOG), `Expected a block, got: ${JSON.stringify(result)}`);
+  assert.ok(!result.reason.includes(UNKNOWN_NAME_WARNING), `Expected no warning, got: ${result.reason}`);
+});
+
+test('A repeated unknown name is listed twice in the warning (the parser keeps duplicates)', () => {
+  const result = withRemindersOff('foo,foo', () => evaluateStop(arrangeDueBlock));
+  const reason = result.reason || '';
+  assert.ok(reason.includes(DECISION_LOG), `Expected the decision-log reminder, got: ${reason}`);
+  assert.ok(reason.includes('"foo", "foo"'), `Expected the name twice, got: ${reason}`);
+});
+
+// The pattern `hooks/<name>.js` must not match a React project's folder named
+// hooks. The file counts as an edit that the commit reminder reads: it is one of
+// exactly 5 uncommitted edited files, so a count of 5 proves that the edit was
+// read (an unread edit would give a count of 4).
+test('A React hook file (src/hooks/useAuth.js) does not ask for a decision-log entry', () => {
+  const reactHookFile = path.join('src', 'hooks', 'useAuth.js');
+  const result = evaluateStop(({ logDir, cwdDir }) => {
+    repoWithSessionAndOtherFiles(cwdDir, 1);
+    recordEdits(logDir, writeNewFiles(cwdDir,
+      [reactHookFile, ...numberedNames(path.join('src', 'other'), COMMIT_THRESHOLD - 1)]));
+  });
+  assert.ok(!(result.reason || '').includes(DECISION_LOG),
+    `Expected no decision-log reminder, got: ${JSON.stringify(result)}`);
+  assertCommitReminder(result, COMMIT_THRESHOLD);
 });
 
 // ── No commit reminder while a subagent is still running ─────────────────────
