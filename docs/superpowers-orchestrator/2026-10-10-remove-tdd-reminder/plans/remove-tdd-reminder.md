@@ -309,7 +309,7 @@ git commit -m "test(stop-reminders): observe the shared behaviour through the de
 - Verification: `node tests/codex/test-stop-reminders.js` exits 0 (a use of a deleted name would stop the file with a `ReferenceError` at load time); the search in Step 3 finds no use of any deleted name and at least two occurrences (definition and use) of every kept name; `git diff --stat` lists only `tests/codex/test-stop-reminders.js`.
 - The exact comment wording is free; the properties above bind.
 
-- [ ] **Step 1: Confirm the removal lists by search**
+- [x] **Step 1: Confirm the removal lists by search**
 
 Run: `grep -n "// ── TDD reminder names its files\|// ── Commit reminder counts the files of this session only" tests/codex/test-stop-reminders.js`
 Expected: two lines, the first with the first heading and the second with the second heading. They give the range of line numbers for the next search.
@@ -317,7 +317,7 @@ Expected: two lines, the first with the first heading and the second with the se
 Run: `grep -n "SOURCE_NAME\|OTHER_SOURCE_NAME\|NEW_SOURCE_NAME\|MIDDLE_COMMIT_AGE_MS\|MIDDLE_COMMIT_MINUTES\|repoWithCommittedSource\|recordEditsAtAges\|assertReminderNames\|TDD_SCENARIO\|PYTHON_TEST_FILE_CASES\|isTestFile" tests/codex/test-stop-reminders.js`
 Expected: every hit lies inside the part of the file between the heading `// ── TDD reminder names its files` and the heading `// ── Commit reminder counts the files of this session only`, or is the line `const TDD_SCENARIO = ...`, or is the test "Test-file detection recognizes tests/codex/test-*.js naming" near the top. A hit anywhere else (for example in the commit section) means a name of the delete list is still used: stop and report, and do not remove that name.
 
-- [ ] **Step 2: Apply the deletions**
+- [x] **Step 2: Apply the deletions**
 
 Save this script as `<scratch>/t2-cuts.js`.
 
@@ -434,7 +434,7 @@ fs.writeFileSync(FILE, text, 'utf8');
 Run: `node <scratch>/t2-cuts.js tests/codex/test-stop-reminders.js`
 Expected: no output, exit status 0.
 
-- [ ] **Step 3: Check that nothing is left over and nothing needed was removed**
+- [x] **Step 3: Check that nothing is left over and nothing needed was removed**
 
 Run: `grep -n "SOURCE_NAME\|MIDDLE_COMMIT\|repoWithCommittedSource\|recordEditsAtAges\|assertReminderNames\|TDD_SCENARIO\|PYTHON_TEST_FILE_CASES\|isTestFile" tests/codex/test-stop-reminders.js`
 Expected: no output.
@@ -445,12 +445,12 @@ Expected: every count is 2 or more.
 Run: `grep -n "TDD\|tdd" tests/codex/test-stop-reminders.js`
 Expected: only the lines of the state-md scenario comment (two lines that say "TDD reminder") and the unknown-name test (`'commit,tdd commit, state.md'` and `'"tdd commit"'`).
 
-- [ ] **Step 4: Run the test file**
+- [x] **Step 4: Run the test file**
 
 Run: `node tests/codex/test-stop-reminders.js`
 Expected: the last line is `stop-reminders: <N> passed, 0 failed` (N was 111 when this plan was written) and the exit status is 0.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add tests/codex/test-stop-reminders.js
