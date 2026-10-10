@@ -12,3 +12,8 @@ readiness owed: 2 (see the Owed: block of docs/superpowers-orchestrator/2026-10-
 - Task 1: complete — commits 0643e2c..1c8e43d
 - Task 2: complete — commits 81d8cc2..f3e9d84
 - Task 3: complete — commits 04c0fa1..38f1283
+
+## Phase 3 — Batch 2 (tasks 4–6) — COMPLETE — commits db162aa..75e29e1
+- Task 4: complete — commits db162aa..99dd8c7
+- Task 5: complete — commits 582ccd9..392fed1
+- Task 6: complete — commits 46c18d9..75e29e1
