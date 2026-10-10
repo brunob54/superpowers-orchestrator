@@ -109,17 +109,6 @@ function writePluginHookRegistry(cwdDir) {
 
 console.log('\nStop reminders output contract (Claude)');
 
-test('Test-file detection recognizes tests/codex/test-*.js naming', () => {
-  const { homeDir } = makeTempDirs();
-  try {
-    const { isTestFile } = loadHookWithHome(homeDir);
-    assert.strictEqual(isTestFile('tests/codex/test-stop-reminders.js'), true,
-      'Expected test-*.js under tests/ to be classified as a test file');
-  } finally {
-    cleanup(homeDir);
-  }
-});
-
 test('No reminders available emits {}', () => {
   const { homeDir, cwdDir } = makeTempDirs();
   try {
@@ -181,7 +170,7 @@ test('Commit reminder suppressed when all session edits are committed (git clean
     // The logged files lie in no git repository → no file has an uncommitted change → no commit reminder
     const result = evaluatePayload({ cwd: cwdDir, session_id: TEST_SESSION_ID });
 
-    // May block for TDD reminder (source files, no tests), but must NOT mention "Commit reminder"
+    // Must NOT mention "Commit reminder"
     const reason = result.reason || '';
     assert.ok(!reason.includes('Commit reminder'),
       `Commit reminder must not fire when git reports no uncommitted changes, got: ${reason}`);
@@ -313,7 +302,6 @@ function evaluateEdits(filePaths, ageMinutes = 0) {
 
 const IGNORED_WORKTREE_EDITS = [
   ['a SKILL.md edit', `${AGENT_WORKTREE}/skills/debugging/SKILL.md`],
-  ['a hooks/*.js edit (also a source file for the test-first reminder)', `${AGENT_WORKTREE}/hooks/a.js`],
   ['a Windows path with backslashes', 'C:\\project\\.claude\\worktrees\\agent-a017948ab31bc3287\\skills\\x\\SKILL.md'],
   ['a relative path with no leading separator', '.claude/worktrees/agent-a017948ab31bc3287/skills/x/SKILL.md'],
 ];
@@ -592,11 +580,6 @@ const LARGE_SESSION_LOG = '## 2026-04-15 [saved]\nGoal: Test\n' + 'x'.repeat(160
 // left proves that the name switched off that reminder and nothing else.
 const REMINDER_SCENARIOS = [
   {
-    name: 'tdd',
-    text: 'TDD reminder',
-    arrange: ({ logDir }) => writeRecentEdit(logDir, 'src/index.js'),
-  },
-  {
     name: 'commit',
     text: 'Commit reminder',
     arrange: ({ logDir, cwdDir }) => {
@@ -654,7 +637,6 @@ test('The commit reminder tells the assistant to ask when a project rule require
     `Expected the approval sentence in the commit reminder, got: ${result.reason}`);
 });
 
-const TDD_SCENARIO = REMINDER_SCENARIOS.find(s => s.name === 'tdd');
 const UNKNOWN_NAME_WARNING = 'Unknown name in SUPERPOWERS_STOP_REMINDERS_OFF';
 
 test('An unknown name alone never makes the hook block', () => {
@@ -662,77 +644,13 @@ test('An unknown name alone never makes the hook block', () => {
   assert.deepStrictEqual(result, {}, `Expected no block, got: ${JSON.stringify(result)}`);
 });
 
-// ── TDD reminder names its files ─────────────────────────────────────────────
-
-console.log('\nTDD reminder names the source files it counts');
-
-// Reported by a user: a session edited a Markdown file, and the reminder said
-// "1 source file(s)" without a name. The file counted was an earlier code
-// edit of the same 30-minute window, but the reader could not see that.
-test('The TDD reminder names the counted source file, relative to cwd, and not a Markdown file', () => {
-  const result = evaluateStop(({ logDir, cwdDir }) =>
-    writeRecentEdits(logDir, ['src/app.py', 'docs/notes.md'].map(file => path.join(cwdDir, file))));
-  const reason = result.reason || '';
-  assert.ok(reason.includes(`: ${path.join('src', 'app.py')}.`),
-    `Expected the relative source path in the reminder, got: ${reason}`);
-  assert.ok(!reason.includes('notes.md'), `Expected no Markdown file in the reminder, got: ${reason}`);
-});
-
-test('A source file outside cwd is named with its full path', () => {
-  const outsidePath = path.join(os.tmpdir(), 'elsewhere', 'tool.py');
-  const result = evaluateStop(({ logDir }) => writeRecentEdit(logDir, outsidePath));
-  assert.ok((result.reason || '').includes(outsidePath),
-    `Expected the full path in the reminder, got: ${result.reason}`);
-});
-
-test('The TDD reminder names at most five files and counts the rest', () => {
-  const files = ['a', 'b', 'c', 'd', 'e', 'f', 'g'].map(name => `${name}.js`);
-  const result = evaluateStop(({ logDir, cwdDir }) =>
-    writeRecentEdits(logDir, files.map(file => path.join(cwdDir, file))));
-  const reason = result.reason || '';
-  assert.ok(reason.includes('7 source file(s)') && reason.includes('a.js, b.js, c.js, d.js, e.js and 2 more.'),
-    `Expected five names and "and 2 more", got: ${reason}`);
-  assert.ok(!reason.includes('f.js'), `Expected no sixth name, got: ${reason}`);
-});
-
 // ── File patterns of the reminders ───────────────────────────────────────────
-// Reported in a design review: the Python test pattern `test_[^/]+\.py$`
-// matched any file name that holds "test_" (latest_report.py, contest_utils.py),
-// so one such edit silenced the TDD reminder for every source file; and the
-// hook pattern `hooks/<name>.js` matched any project's folder named hooks (a
-// React project's src/hooks/useAuth.js), which asked for a decision-log
-// entry that had nothing to record.
+// Reported in a design review: the hook pattern `hooks/<name>.js` matched any
+// project's folder named hooks (a React project's src/hooks/useAuth.js), which
+// asked for a decision-log entry that had nothing to record. A folder named
+// hooks counts only beside a hooks.json file.
 
 console.log('\nFile patterns of the reminders');
-
-const PYTHON_TEST_FILE_CASES = [
-  ['/p/src/latest_report.py', false],
-  ['/p/contest_utils.py', false],
-  ['test_x.py', true],
-  // The tests/ folder pattern decides this case, not the test_ file pattern.
-  ['/r/tests/test_x.py', true],
-  ['/r/src/test_x.py', true],
-  ['C:\\r\\test_x.py', true],
-];
-
-for (const [filePath, expected] of PYTHON_TEST_FILE_CASES) {
-  test(`isTestFile(${JSON.stringify(filePath)}) is ${expected}`, () => {
-    const { homeDir } = makeTempDirs();
-    try {
-      const { isTestFile } = loadHookWithHome(homeDir);
-      assert.strictEqual(isTestFile(filePath), expected);
-    } finally {
-      cleanup(homeDir);
-    }
-  });
-}
-
-test('A source edit next to a latest_report.py edit still gets the TDD reminder', () => {
-  const result = evaluateStop(({ logDir, cwdDir }) =>
-    writeRecentEdits(logDir, ['src/app.py', 'src/latest_report.py'].map(file => path.join(cwdDir, file))));
-  assert.ok((result.reason || '').includes(TDD_SCENARIO.text),
-    `Expected the TDD reminder, got: ${JSON.stringify(result)}`);
-});
 
 test('A hooks/*.js file beside a hooks.json asks for a decision-log entry', () => {
   const result = evaluateStop(({ logDir, cwdDir }) => {
@@ -749,20 +667,8 @@ test('A .claude/hooks/*.js file asks for a decision-log entry', () => {
     `Expected the decision-log reminder, got: ${JSON.stringify(result)}`);
 });
 
-// ── TDD reminder leaves out a file that is back at its committed state ───────
-// Reported by a user: a session edited a source file and then removed the
-// edit. `git diff` was empty, but every later stop inside the 30-minute window
-// named the file again, because the reminder read the edit log only. The
-// reminder now asks git. It leaves a file out only when git gives positive
-// proof: git tracks the file, reports no change for it, and no commit on any
-// branch changed it since the edit. A file that was committed without a test
-// is still named, and so is every file that git cannot judge.
+// Git helpers that the commit section below uses.
 
-console.log('\nTDD reminder leaves out a file that is back at its committed state');
-
-const SOURCE_NAME = path.join('src', 'app.js');
-const OTHER_SOURCE_NAME = path.join('src', 'other.js');
-const NEW_SOURCE_NAME = path.join('src', 'new.js');
 const COMMITTED_TEXT = 'module.exports = 1;\n';
 const EDITED_TEXT = 'module.exports = 2;\n';
 const SECOND_MS = 1000;
@@ -771,10 +677,6 @@ const SECOND_MS = 1000;
 // date gets the current time, which is later than the edit.
 const EDIT_AGE_MINUTES = 10;
 const FIRST_COMMIT_AGE_MS = 60 * MINUTE_MS;
-// For a file with two edit records: the commit lies between the two edits.
-const MIDDLE_COMMIT_AGE_MS = 15 * MINUTE_MS;
-const EDIT_BEFORE_MIDDLE_COMMIT_MINUTES = 25;
-const EDIT_AFTER_MIDDLE_COMMIT_MINUTES = 5;
 
 function git(repoDir, args, env = {}) {
   const result = spawnSync('git', args, { cwd: repoDir, encoding: 'utf8', env: { ...process.env, ...env } });
@@ -820,310 +722,13 @@ function repoWithCommittedFiles(repoDir, names) {
   return files;
 }
 
-/** The same with one source file. Returns the full path of the source file. */
-function repoWithCommittedSource(repoDir, name = SOURCE_NAME) {
-  return repoWithCommittedFiles(repoDir, [name])[0];
-}
-
 function recordEdits(logDir, files) {
   writeRecentEdits(logDir, files, EDIT_AGE_MINUTES);
-}
-
-/** Write one edit record per [file, age in minutes] pair. */
-function recordEditsAtAges(logDir, fileAgePairs) {
-  writeEditLog(logDir, fileAgePairs.map(([file, ageMinutes]) =>
-    editLogLine(TEST_SESSION_ID, file, ageMinutes * MINUTE_MS)));
 }
 
 function assertNoReminder(result) {
   assert.deepStrictEqual(result, {}, `Expected no reminder, got: ${JSON.stringify(result)}`);
 }
-
-function assertReminderNames(result, name) {
-  const reason = result.reason || '';
-  assert.ok(reason.includes(TDD_SCENARIO.text) && reason.includes(`1 source file(s) modified without test changes: ${name}.`),
-    `Expected the TDD reminder to name only ${name}, got: ${JSON.stringify(result)}`);
-}
-
-test('A tracked file that was edited and then restored gets no reminder', () => {
-  assertNoReminder(evaluateStop(({ logDir, cwdDir }) => {
-    const file = repoWithCommittedSource(cwdDir);
-    fs.writeFileSync(file, EDITED_TEXT, 'utf8');
-    fs.writeFileSync(file, COMMITTED_TEXT, 'utf8');
-    recordEdits(logDir, [file]);
-  }));
-});
-
-test('A tracked file that is still modified is named', () => {
-  assertReminderNames(evaluateStop(({ logDir, cwdDir }) => {
-    const file = repoWithCommittedSource(cwdDir);
-    fs.writeFileSync(file, EDITED_TEXT, 'utf8');
-    recordEdits(logDir, [file]);
-  }), SOURCE_NAME);
-});
-
-test('A file that was committed after the edit, without a test, is still named', () => {
-  assertReminderNames(evaluateStop(({ logDir, cwdDir }) => {
-    const file = repoWithCommittedSource(cwdDir);
-    fs.writeFileSync(file, EDITED_TEXT, 'utf8');
-    commitAll(cwdDir);
-    recordEdits(logDir, [file]);
-  }), SOURCE_NAME);
-});
-
-// git stores a commit time in whole seconds, and the edit log stores
-// milliseconds. A commit in the same second as the edit counts as "after the
-// edit": a doubtful case keeps the reminder.
-test('A commit in the same second as the edit counts as a commit after the edit', () => {
-  assertReminderNames(evaluateStop(({ logDir, cwdDir }) => {
-    const commitTimeMs = Math.floor(Date.now() / SECOND_MS) * SECOND_MS - EDIT_AGE_MINUTES * MINUTE_MS;
-    const editTimeMs = commitTimeMs + 900;
-    initRepo(cwdDir);
-    const file = writeRepoFile(cwdDir, SOURCE_NAME);
-    commitAll(cwdDir, commitTimeMs);
-    writeEditLog(logDir, [editLogLine(TEST_SESSION_ID, file, Date.now() - editTimeMs)]);
-  }), SOURCE_NAME);
-});
-
-// git has no record of a file that it never tracked. It cannot tell a file
-// that was deleted from a file that was moved to another name, so the
-// reminder stays.
-const DELETED_NEW_FILES = [
-  ['in a folder that still exists', NEW_SOURCE_NAME],
-  ['in a folder that was deleted too', path.join('scratch', 'deep', 'new.js')],
-];
-
-for (const [label, name] of DELETED_NEW_FILES) {
-  test(`A new file that was written and then deleted, ${label}, is still named`, () => {
-    assertReminderNames(evaluateStop(({ logDir, cwdDir }) => {
-      repoWithCommittedSource(cwdDir);
-      recordEdits(logDir, [path.join(cwdDir, name)]);
-    }), name);
-  });
-}
-
-test('A new file that git does not track yet is named', () => {
-  assertReminderNames(evaluateStop(({ logDir, cwdDir }) => {
-    repoWithCommittedSource(cwdDir);
-    recordEdits(logDir, [writeRepoFile(cwdDir, NEW_SOURCE_NAME)]);
-  }), NEW_SOURCE_NAME);
-});
-
-test('A new file is named when the git configuration of the user hides untracked files', () => {
-  assertReminderNames(evaluateStop(({ logDir, cwdDir }) => {
-    repoWithCommittedSource(cwdDir);
-    git(cwdDir, ['config', 'status.showUntrackedFiles', 'no']);
-    recordEdits(logDir, [writeRepoFile(cwdDir, NEW_SOURCE_NAME)]);
-  }), NEW_SOURCE_NAME);
-});
-
-test('A file that git ignores is named: git cannot say whether it changed', () => {
-  const ignoredName = path.join('build', 'out.js');
-  assertReminderNames(evaluateStop(({ logDir, cwdDir }) => {
-    initRepo(cwdDir);
-    writeRepoFile(cwdDir, '.gitignore', 'build/\n');
-    commitAll(cwdDir, Date.now() - FIRST_COMMIT_AGE_MS);
-    recordEdits(logDir, [writeRepoFile(cwdDir, ignoredName)]);
-  }), ignoredName);
-});
-
-test('Of a restored file and a modified file, the reminder counts and names only the modified file', () => {
-  assertReminderNames(evaluateStop(({ logDir, cwdDir }) => {
-    initRepo(cwdDir);
-    const files = [SOURCE_NAME, OTHER_SOURCE_NAME].map(name => writeRepoFile(cwdDir, name));
-    commitAll(cwdDir, Date.now() - FIRST_COMMIT_AGE_MS);
-    fs.writeFileSync(files[1], EDITED_TEXT, 'utf8');
-    recordEdits(logDir, files);
-  }), OTHER_SOURCE_NAME);
-});
-
-test('A restored file in a repository that is not the session folder gets no reminder', () => {
-  assertNoReminder(evaluateStop(({ logDir, cwdDir }) => {
-    recordEdits(logDir, [repoWithCommittedSource(path.join(cwdDir, 'nested-repo'))]);
-  }));
-});
-
-test('A restored file whose record holds a relative path gets no reminder', () => {
-  assertNoReminder(evaluateStop(({ logDir, cwdDir }) => {
-    repoWithCommittedSource(cwdDir);
-    recordEdits(logDir, [SOURCE_NAME]);
-  }));
-});
-
-test('In a repository with no commit, a file that does not exist is still named', () => {
-  assertReminderNames(evaluateStop(({ logDir, cwdDir }) => {
-    initRepo(cwdDir);
-    recordEdits(logDir, [path.join(cwdDir, SOURCE_NAME)]);
-  }), SOURCE_NAME);
-});
-
-// Each state leaves the working file equal to the last commit of the current
-// branch, or leaves no working file, but the change of the session still
-// exists in the repository.
-const CHANGE_STILL_IN_REPOSITORY = [
-  ['whose change is staged and then removed from the working file', (repoDir, file) => {
-    fs.writeFileSync(file, EDITED_TEXT, 'utf8');
-    git(repoDir, ['add', '-A']);
-    fs.writeFileSync(file, COMMITTED_TEXT, 'utf8');
-  }],
-  ['that the session deleted', (repoDir, file) => fs.rmSync(file)],
-  // The reflogs are emptied, so only the branch itself still leads to the commit.
-  ['that was committed on another branch before the first branch was checked out again', (repoDir, file) => {
-    git(repoDir, ['checkout', '-q', '-b', 'feature']);
-    fs.writeFileSync(file, EDITED_TEXT, 'utf8');
-    commitAll(repoDir);
-    git(repoDir, ['checkout', '-q', '-']);
-    git(repoDir, ['reflog', 'expire', '--expire=now', '--all']);
-  }],
-  ['whose change was put away with git stash', (repoDir, file) => {
-    fs.writeFileSync(file, EDITED_TEXT, 'utf8');
-    git(repoDir, ['stash', '-q']);
-  }],
-  // Only the newest stash entry is a reference. git keeps an older entry in
-  // the reflog (the list of the earlier values of a reference).
-  ['whose change is in a stash entry that is not the newest one', (repoDir, file) => {
-    const otherFile = writeRepoFile(repoDir, OTHER_SOURCE_NAME);
-    git(repoDir, ['add', '-A']);
-    git(repoDir, ['stash', '-q']);
-    fs.writeFileSync(file, EDITED_TEXT, 'utf8');
-    git(repoDir, ['stash', '-q']);
-    fs.writeFileSync(otherFile, EDITED_TEXT, 'utf8');
-    git(repoDir, ['add', '-A']);
-    git(repoDir, ['stash', '-q']);
-  }],
-  ['that was committed on a branch that was deleted afterwards', (repoDir, file) => {
-    git(repoDir, ['checkout', '-q', '-b', 'feature']);
-    fs.writeFileSync(file, EDITED_TEXT, 'utf8');
-    commitAll(repoDir);
-    git(repoDir, ['checkout', '-q', '-']);
-    git(repoDir, ['branch', '-q', '-D', 'feature']);
-  }],
-];
-
-for (const [label, change] of CHANGE_STILL_IN_REPOSITORY) {
-  test(`A tracked file ${label} is still named`, () => {
-    assertReminderNames(evaluateStop(({ logDir, cwdDir }) => {
-      const file = repoWithCommittedSource(cwdDir);
-      change(cwdDir, file);
-      recordEdits(logDir, [file]);
-    }), SOURCE_NAME);
-  });
-}
-
-// Reported by two reviewers: the session edits and commits a file inside a
-// git worktree (a second working folder of the same repository), and the
-// worktree is removed afterwards. The folder of the file no longer exists.
-test('A file committed in a worktree that was removed afterwards is still named', () => {
-  const worktreeName = path.join('.claude', 'worktrees', 'feature');
-  assertReminderNames(evaluateStop(({ logDir, cwdDir }) => {
-    repoWithCommittedSource(cwdDir);
-    const worktreeDir = path.join(cwdDir, worktreeName);
-    git(cwdDir, ['worktree', 'add', '-q', '-b', 'feature', worktreeName]);
-    const file = writeRepoFile(worktreeDir, SOURCE_NAME, EDITED_TEXT);
-    commitAll(worktreeDir);
-    git(cwdDir, ['worktree', 'remove', worktreeName]);
-    recordEdits(logDir, [file]);
-  }), path.join(worktreeName, SOURCE_NAME));
-});
-
-// On a file system that ignores letter case (the default on macOS), a record
-// can name the file in another case than git stores. git then reports nothing
-// for the name, also while the file is modified.
-test('A modified file whose record differs in letter case from the tracked name is still named', () => {
-  const recordedName = path.join('src', 'APP.js');
-  assertReminderNames(evaluateStop(({ logDir, cwdDir }) => {
-    fs.writeFileSync(repoWithCommittedSource(cwdDir), EDITED_TEXT, 'utf8');
-    recordEdits(logDir, [path.join(cwdDir, recordedName)]);
-  }), recordedName);
-});
-
-// A symbolic link is a file that points to another file. An edit through the
-// link changes the other file, and git reports no change for the link itself.
-test('A tracked symbolic link whose target was edited through the link is still named', () => {
-  const linkName = path.join('src', 'link.js');
-  assertReminderNames(evaluateStop(({ logDir, cwdDir }) => {
-    initRepo(cwdDir);
-    const target = writeRepoFile(cwdDir, SOURCE_NAME);
-    const link = path.join(cwdDir, linkName);
-    fs.symlinkSync(path.basename(target), link);
-    commitAll(cwdDir, Date.now() - FIRST_COMMIT_AGE_MS);
-    fs.writeFileSync(link, EDITED_TEXT, 'utf8');
-    recordEdits(logDir, [link]);
-  }), linkName);
-});
-
-test('A tracked symbolic link whose target was edited through the link and then restored gets no reminder', () => {
-  assertNoReminder(evaluateStop(({ logDir, cwdDir }) => {
-    initRepo(cwdDir);
-    const target = writeRepoFile(cwdDir, SOURCE_NAME);
-    const link = path.join(cwdDir, 'src', 'link.js');
-    fs.symlinkSync(path.basename(target), link);
-    commitAll(cwdDir, Date.now() - FIRST_COMMIT_AGE_MS);
-    recordEdits(logDir, [link]);
-  }));
-});
-
-// The file has two edit records. The commit lies between them, so only the
-// first record is earlier than the commit.
-test('A file that was edited, committed, edited again and restored is still named: the first edit counts', () => {
-  assertReminderNames(evaluateStop(({ logDir, cwdDir }) => {
-    const file = repoWithCommittedSource(cwdDir);
-    fs.writeFileSync(file, EDITED_TEXT, 'utf8');
-    commitAll(cwdDir, Date.now() - MIDDLE_COMMIT_AGE_MS);
-    recordEditsAtAges(logDir, [[file, EDIT_BEFORE_MIDDLE_COMMIT_MINUTES], [file, EDIT_AFTER_MIDDLE_COMMIT_MINUTES]]);
-  }), SOURCE_NAME);
-});
-
-// The commit changed the second file before the first edit of that file, and
-// after the edit of the first file. Each file is judged with its own edit time.
-test('The first edit time is taken per file: an earlier edit of another file does not keep the reminder', () => {
-  assertNoReminder(evaluateStop(({ logDir, cwdDir }) => {
-    initRepo(cwdDir);
-    const [first, second] = [SOURCE_NAME, OTHER_SOURCE_NAME].map(name => writeRepoFile(cwdDir, name));
-    commitAll(cwdDir, Date.now() - FIRST_COMMIT_AGE_MS);
-    fs.writeFileSync(second, EDITED_TEXT, 'utf8');
-    commitAll(cwdDir, Date.now() - MIDDLE_COMMIT_AGE_MS);
-    recordEditsAtAges(logDir, [[first, EDIT_BEFORE_MIDDLE_COMMIT_MINUTES], [second, EDIT_AFTER_MIDDLE_COMMIT_MINUTES]]);
-  }));
-});
-
-test('A restored file gets no reminder when a commit after the edit changed only another file', () => {
-  assertNoReminder(evaluateStop(({ logDir, cwdDir }) => {
-    const file = repoWithCommittedSource(cwdDir);
-    writeRepoFile(cwdDir, 'README.md', '# readme\n');
-    commitAll(cwdDir);
-    recordEdits(logDir, [file]);
-  }));
-});
-
-// git reads `[id]` in a file name as a pattern that matches the one letter
-// `i` or `d`, unless it is told that such characters have no special meaning.
-test('A restored file whose name holds pattern characters is judged alone, not with the files that the pattern matches', () => {
-  assertNoReminder(evaluateStop(({ logDir, cwdDir }) => {
-    initRepo(cwdDir);
-    const [restored, matchedByPattern] = [path.join('pages', '[id].js'), path.join('pages', 'i.js')]
-      .map(name => writeRepoFile(cwdDir, name));
-    commitAll(cwdDir, Date.now() - FIRST_COMMIT_AGE_MS);
-    fs.writeFileSync(matchedByPattern, EDITED_TEXT, 'utf8');
-    recordEdits(logDir, [restored]);
-  }));
-});
-
-// The index is the file in which git stores the state of every tracked file.
-// A new modification time makes the index entry of the file out of date, and
-// a plain `git status` then writes the index again. The hook must not write
-// into the repository of the user.
-test('The check of a restored file does not rewrite the index of the repository', () => {
-  let indexFile;
-  let indexBefore;
-  assertNoReminder(evaluateStop(({ logDir, cwdDir }) => {
-    const file = repoWithCommittedSource(cwdDir);
-    setFileAge(file, EDIT_AGE_MINUTES * MINUTE_MS);
-    recordEdits(logDir, [file]);
-    indexFile = path.join(cwdDir, '.git', 'index');
-    indexBefore = fs.readFileSync(indexFile);
-  }, () => assert.ok(indexBefore.equals(fs.readFileSync(indexFile)), 'Expected the index file to be unchanged')));
-});
 
 // ── Commit reminder counts the files of this session only ────────────────────
 // Reported by a code review: the reminder counted every line of `git status`
@@ -1447,8 +1052,10 @@ test('With a git that hangs, the count stops at its time limit and uses the file
   assert.ok(elapsedMs < allowedMs, `Expected the stop to take less than ${allowedMs} ms, it took ${elapsedMs} ms`);
 });
 
-// See the test of the restored file above: a new modification time makes a
-// plain `git status` write the index again.
+// The index is the file in which git stores the state of every tracked file.
+// A new modification time makes the index entry of the file out of date, and
+// a plain `git status` then writes the index again. The hook must not write
+// into the repository of the user.
 test('The count of 5 session files does not rewrite the index of the repository', () => {
   let indexFile;
   let indexBefore;
@@ -1637,7 +1244,7 @@ function arrangeEveryReminder(context) {
   scenarioNamed('state-md').arrange(context);
   scenarioNamed('session-log-size').arrange(context);
   COMMIT_SCENARIO.arrange(context);
-  // Two source edits later than state.md, with no test edit, and one skill file.
+  // Two source edits later than state.md, and one skill file.
   fs.appendFileSync(path.join(context.logDir, 'edit-log.txt'),
     ['src/a.js', 'src/b.js', SIGNIFICANT_FILE].map(file => editLogLine(TEST_SESSION_ID, file)).join(''), 'utf8');
   fs.writeFileSync(context.hook.statsFile(TEST_SESSION_ID), JSON.stringify({
