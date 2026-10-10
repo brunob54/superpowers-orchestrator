@@ -7,3 +7,8 @@ plan: docs/superpowers-orchestrator/2026-10-10-remove-tdd-reminder/plans/remove-
 
 ## Phase 2 — Plan review — rounds 2 — converged — unresolved 0
 readiness owed: 2 (see the Owed: block of docs/superpowers-orchestrator/2026-10-10-remove-tdd-reminder/plans/remove-tdd-reminder-review-log.md)
+
+## Phase 3 — Batch 1 (tasks 1–3) — COMPLETE — commits 0643e2c..38f1283
+- Task 1: complete — commits 0643e2c..1c8e43d
+- Task 2: complete — commits 81d8cc2..f3e9d84
+- Task 3: complete — commits 04c0fa1..38f1283
