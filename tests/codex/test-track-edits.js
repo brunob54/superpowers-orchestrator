@@ -458,12 +458,13 @@ console.log('\nEdits inside the session scratchpad');
 // slash, in the /private/tmp form, for the main session and for a subagent
 // alike; `file_path` is absolute in the same form. A headless `claude -p`
 // session has no scratchpad and no such field.
-// A scratch file must not be logged, because the stop hook's test-first
-// reminder (the "TDD reminder"; TDD is test-driven development) names every
-// logged source file that has no test change next to it.
+// A scratch file must not be logged: a logged scratch file would trigger the
+// decision-log reminder (a scratch SKILL.md counts as significant) and the
+// state-md reminder (source files edited after state.md). It would also add to
+// the count of the commit reminder when the file lies inside a git repository,
+// for example a test-fixture repository in the scratchpad.
 const SCRATCHPAD_FIELD = 'scratchpad_dir';
 const SCRATCH_FILE = 'mutate.js';
-const TDD_REMINDER = 'TDD reminder';
 // Values that the documented input never holds in this field. Each one must
 // leave the hook logging as if the field were absent.
 const NON_STRING_FIELD_VALUES = [42, { a: 1 }, ['/x'], true, null];
@@ -492,13 +493,11 @@ function makeScratchpad(homeDir) {
   return { scratchpadDir, siblingDir };
 }
 
-test('T19: a Write of a source file inside the scratchpad is not logged and gives no TDD reminder', () => {
+test('T19: a Write of a source file inside the scratchpad is not logged', () => {
   const { homeDir, cwdDir } = makeHome();
   const { scratchpadDir } = makeScratchpad(homeDir);
   writeWithScratchpad(homeDir, cwdDir, path.join(scratchpadDir, SCRATCH_FILE), scratchpadDir);
   assert.strictEqual(ownEditLogLines(homeDir, SESSION_A), 0, 'The scratch file must not be logged');
-  const reason = stop(homeDir, cwdDir, SESSION_A).reason || '';
-  assert.ok(!reason.includes(TDD_REMINDER), `Expected no TDD reminder, got: ${reason}`);
 });
 
 test('T19b: a scratchpad path with a trailing separator is still recognised', () => {
@@ -513,8 +512,6 @@ test('T20: without the scratchpad field, a source file outside the work folder i
   const { scratchpadDir } = makeScratchpad(homeDir);
   writeWithScratchpad(homeDir, cwdDir, path.join(scratchpadDir, SCRATCH_FILE), undefined);
   assert.strictEqual(ownEditLogLines(homeDir, SESSION_A), 1);
-  const reason = stop(homeDir, cwdDir, SESSION_A).reason || '';
-  assert.ok(reason.includes(TDD_REMINDER), `Expected a TDD reminder, got: ${reason}`);
 });
 
 test('T21: with the scratchpad field, a source file inside the work folder is logged', () => {
