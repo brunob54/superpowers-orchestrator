@@ -32,7 +32,7 @@
 | `tests/codex/test-stop-reminders.js` | Rewrite the shared-behaviour tests (1); delete the tests, helpers and comments that exist only for the TDD reminder (2); add two regression tests and edit the state-md scenario (4) | 1, 2, 4 |
 | `tests/codex/test-track-edits.js` | Remove the second assertion of T19 and T20 and the constant `TDD_REMINDER`; rewrite one comment | 3 |
 | `hooks/track-edits.js` | One header comment | 3 |
-| `hooks/stop-reminders.js` | Remove the TDD reminder and its helpers; five comments | 4 |
+| `hooks/stop-reminders.js` | Remove the TDD reminder and its helpers; four comments | 4 |
 | `README.md`, `docs/guide/README.md`, `docs/architecture/agentic-workflow.md`, `docs/architecture/project-memory.md`, `tests/context-management/run-tests.sh` | Remove the TDD reminder from the documents; the test pins the sentence of `project-memory.md` | 5 |
 | `VERSION`, `.claude-plugin/plugin.json`, `.claude-plugin/marketplace.json`, `plugin.universal.yaml`, `README.md`, `RELEASE-NOTES.md` | Release v7.71.0 | 6 |
 
@@ -58,7 +58,7 @@ Premises tested while writing this plan (each command was run in the repository;
 
 **Contract:** One new section of `tests/codex/test-stop-reminders.js`, placed directly before the heading `// ── No commit reminder while a subagent is still running`, so after the last test of the commit section.
 - Must hold: the section is named `Shared behaviour of the reminders` and holds exactly these tests, in this order: "When reminders exist: emits decision+reason, not Stop hookSpecificOutput", "Counts edits that are 10 minutes old", "Ignores edits that are 31 minutes old", "Names are trimmed and case-insensitive, unknown names are ignored, other reminders stay", "A block names each unknown name in the switch and lists the known names", "Known names only: the block has no unknown-name warning", "A repeated unknown name is listed twice in the warning (the parser keeps duplicates)", "A React hook file (src/hooks/useAuth.js) does not ask for a decision-log entry".
-- Invariants: each test observes the decision-log reminder (through the existing helper `arrangeDueBlock`) or the commit reminder (a git repository with 5 uncommitted edited files); the switch values of the unknown-name tests are the old values (`'commit,tdd commit, state.md'`, `'commit'`, `'foo,foo'`, `' Commit ,unknown '`); the test "Ignores edits that are 31 minutes old" holds a positive control (the same arrangement with 29-minute-old edits must give the commit reminder) in a separate `evaluateStop` call, so in a separate temporary HOME folder; the test of the names holds a positive control (without the switch the block holds both the commit and the decision-log reminder); the React hook test asserts the text "Commit reminder: 5 files", which proves that the edit of `src/hooks/useAuth.js` was read (an unread edit gives a count of 4). The old versions of these tests and the test "Active guard suppresses reminder output" are deleted (T2b already checks the guard after a real first block).
+- Invariants: each test observes the decision-log reminder (through the existing helper `arrangeDueBlock`) or the commit reminder (a git repository with 5 uncommitted edited files); every test that expects a block asserts the text of the reminder it observes (`DECISION_LOG` or the commit reminder text), also the tests of the unknown-name warning; the test "Known names only: the block has no unknown-name warning" has a positive control (the same arrangement with the switch value `'commit,foo'` must give the warning) in a separate `evaluateStop` call, so in a separate temporary HOME folder; the switch values of the unknown-name tests are the old values (`'commit,tdd commit, state.md'`, `'commit'`, `'foo,foo'`, `' Commit ,unknown '`); the test "Ignores edits that are 31 minutes old" holds a positive control (the same arrangement with 29-minute-old edits must give the commit reminder) in a separate `evaluateStop` call, so in a separate temporary HOME folder; the test of the names holds a positive control (without the switch the block holds both the commit and the decision-log reminder); the React hook test asserts the text "Commit reminder: 5 files", which proves that the edit of `src/hooks/useAuth.js` was read (an unread edit gives a count of 4); this exact count is the key check of that test (spec §8 item 2), so the test needs no separate positive control, although its first assertion is an absence of the decision-log reminder. The old versions of these tests and the test "Active guard suppresses reminder output" are deleted (T2b already checks the guard after a real first block).
 - Verification: `node tests/codex/test-stop-reminders.js` exits 0 with the hook unchanged; three mutations of a scratch copy of the hook each make the named test fail (Step 4); `git diff --stat` lists only `tests/codex/test-stop-reminders.js`.
 - The titles and the helper names are descriptive and may change in a fix; the properties above bind.
 
@@ -122,7 +122,7 @@ Expected: no output, exit status 0.
 
 - [ ] **Step 2: Insert the new section**
 
-Insert the following block directly before the line that starts with `// ── No commit reminder while a subagent is still running` (use the Edit tool: the old string is that comment text up to `still running`, the new string is the block, then that same comment text). The block ends with one empty line.
+Insert the following block directly before the line that starts with `// ── No commit reminder while a subagent is still running` (use the Edit tool: the old string is that comment text up to `still running`, the new string is the block, then that same comment text). The new string is the block, one empty line, and then that comment text, so the block is followed by exactly one empty line.
 
 ```js
 // ── Shared behaviour of the reminders ────────────────────────────────────────
@@ -142,6 +142,8 @@ test('When reminders exist: emits decision+reason, not Stop hookSpecificOutput',
     `Expected reason string, got: ${JSON.stringify(result)}`);
   assert.ok(result.reason.includes('<stop-hook-reminders>'),
     `Expected stop reminders tag in reason: ${result.reason}`);
+  assert.ok(result.reason.includes(DECISION_LOG),
+    `Expected the decision-log reminder in reason: ${result.reason}`);
   assert.ok(!result.hookSpecificOutput,
     `Stop output must not include hookSpecificOutput: ${JSON.stringify(result)}`);
 });
@@ -166,7 +168,8 @@ test(`Counts edits that are ${INSIDE_WINDOW_MINUTES} minutes old`, () => {
 });
 
 test(`Ignores edits that are ${OUTSIDE_WINDOW_MINUTES} minutes old`, () => {
-  // The positive control runs in its own temporary HOME: its block writes the
+  // The positive control runs in its own temporary HOME (the environment variable
+  // that names the home folder): its block writes the
   // 2-minute guard file, which would silence a second stop in the same HOME.
   assertCommitReminder(evaluateStop(context => arrangeModifiedFilesEditedAgo(context, LAST_MINUTES_OF_WINDOW)),
     COMMIT_THRESHOLD);
@@ -191,6 +194,7 @@ test('Names are trimmed and case-insensitive, unknown names are ignored, other r
 test('A block names each unknown name in the switch and lists the known names', () => {
   const result = withRemindersOff('commit,tdd commit, state.md', () => evaluateStop(arrangeDueBlock));
   const reason = result.reason || '';
+  assert.ok(reason.includes(DECISION_LOG), `Expected the decision-log reminder, got: ${reason}`);
   assert.ok(reason.includes(UNKNOWN_NAME_WARNING), `Expected the warning, got: ${reason}`);
   assert.ok(reason.includes('"tdd commit"') && reason.includes('"state.md"'),
     `Expected both unknown names, got: ${reason}`);
@@ -198,6 +202,10 @@ test('A block names each unknown name in the switch and lists the known names', 
 });
 
 test('Known names only: the block has no unknown-name warning', () => {
+  // Positive control, in its own temporary HOME: the same arrangement with an unknown name gives the warning.
+  const control = withRemindersOff('commit,foo', () => evaluateStop(arrangeDueBlock));
+  assert.ok((control.reason || '').includes(UNKNOWN_NAME_WARNING),
+    `Expected the warning for an unknown name, got: ${JSON.stringify(control)}`);
   const result = withRemindersOff('commit', () => evaluateStop(arrangeDueBlock));
   assert.ok((result.reason || '').includes(DECISION_LOG), `Expected a block, got: ${JSON.stringify(result)}`);
   assert.ok(!result.reason.includes(UNKNOWN_NAME_WARNING), `Expected no warning, got: ${result.reason}`);
@@ -206,6 +214,7 @@ test('Known names only: the block has no unknown-name warning', () => {
 test('A repeated unknown name is listed twice in the warning (the parser keeps duplicates)', () => {
   const result = withRemindersOff('foo,foo', () => evaluateStop(arrangeDueBlock));
   const reason = result.reason || '';
+  assert.ok(reason.includes(DECISION_LOG), `Expected the decision-log reminder, got: ${reason}`);
   assert.ok(reason.includes('"foo", "foo"'), `Expected the name twice, got: ${reason}`);
 });
 
@@ -301,6 +310,9 @@ git commit -m "test(stop-reminders): observe the shared behaviour through the de
 - The exact comment wording is free; the properties above bind.
 
 - [ ] **Step 1: Confirm the removal lists by search**
+
+Run: `grep -n "// ── TDD reminder names its files\|// ── Commit reminder counts the files of this session only" tests/codex/test-stop-reminders.js`
+Expected: two lines, the first with the first heading and the second with the second heading. They give the range of line numbers for the next search.
 
 Run: `grep -n "SOURCE_NAME\|OTHER_SOURCE_NAME\|NEW_SOURCE_NAME\|MIDDLE_COMMIT_AGE_MS\|MIDDLE_COMMIT_MINUTES\|repoWithCommittedSource\|recordEditsAtAges\|assertReminderNames\|TDD_SCENARIO\|PYTHON_TEST_FILE_CASES\|isTestFile" tests/codex/test-stop-reminders.js`
 Expected: every hit lies inside the part of the file between the heading `// ── TDD reminder names its files` and the heading `// ── Commit reminder counts the files of this session only`, or is the line `const TDD_SCENARIO = ...`, or is the test "Test-file detection recognizes tests/codex/test-*.js naming" near the top. A hit anywhere else (for example in the commit section) means a name of the delete list is still used: stop and report, and do not remove that name.
@@ -568,6 +580,9 @@ Expected: no output from either command, exit status 0.
 Run: `grep -n "TDD" tests/codex/test-track-edits.js hooks/track-edits.js`
 Expected: no output (the command exits with status 1).
 
+Run: `git diff -U0 hooks/track-edits.js | grep '^[-+]' | grep -v '^\(---\|+++\)' | grep -v '^[-+] \*'`
+Expected: no output (the command exits with status 1): every changed line of the hook is a line of the header comment.
+
 Run: `node --check hooks/track-edits.js && node tests/codex/test-track-edits.js`
 Expected: the last line is `save-marker: <N> passed, 0 failed` (N was 63 when this plan was written) and the exit status is 0.
 
@@ -591,19 +606,19 @@ git commit -m "test(track-edits): drop the TDD reminder from the scratchpad test
 **Does NOT cover:** This task does not change the commit, decision-log, state-md or session-log-size reminder (conditions, texts, order), the 2-minute guard, the `stop_hook_active` check, the git helpers or `removeOldSessionFiles`. It does not change `hooks/codex/stop-adapter.js`. It does not make the hook log Bash-made edits. It does not add a compatibility alias for `tdd`: the name becomes an unknown name.
 
 **Contract:**
-- `hooks/stop-reminders.js`: `generateReminders` no longer builds a reminder about source files without test edits; no block text starts with "TDD reminder:" in any state; `REMINDER` holds `COMMIT`, `DECISION_LOG`, `STATE_MD`, `SESSION_LOG_SIZE`, so `KNOWN_REMINDER_NAMES` is `commit, decision-log, state-md, session-log-size` and `tdd` is an unknown name that the existing warning names; the module exports no longer hold `isSourceFile` and `isTestFile`, and all other exports stay; `isSourceFile`, `SOURCE_PATTERNS`, `CONFIG_PATTERNS`, the git helpers and `editedPaths` stay; the header, the comment with the example `"commit,state-md"`, the docstring of `evaluatePayload`, the guard comment and the comment above `SOURCE_PATTERNS` (it said "non-test") name no removed reminder and no test file rule. Interface not externally pinned for the removed helpers (nothing outside the plan imports them; verified by search).
-- Tests: two new tests and one added assertion (the regression tests of spec §6.1): (a) one edit of the fixed absolute path `/project/src/app.js` with no test edit, no significant file and fewer than five files gives `{}`, and `getRecentEdits` returns exactly one entry in the same HOME; (b) with `SUPERPOWERS_STOP_REMINDERS_OFF=tdd` and a due commit reminder, the block holds the commit reminder and the unknown-name warning with `"tdd"`; (c) the block of the scenario with every reminder holds no "TDD reminder". The state-md scenario has no `tests/test-a.js` edit any more.
+- `hooks/stop-reminders.js`: `generateReminders` no longer builds a reminder about source files without test edits; no block text starts with "TDD reminder:" in any state; `REMINDER` holds `COMMIT`, `DECISION_LOG`, `STATE_MD`, `SESSION_LOG_SIZE`, so `KNOWN_REMINDER_NAMES` is `commit, decision-log, state-md, session-log-size` and `tdd` is an unknown name that the existing warning names; the module exports no longer hold `isSourceFile` and `isTestFile`, and all other exports stay; `isSourceFile`, `SOURCE_PATTERNS`, `CONFIG_PATTERNS`, the git helpers and `editedPaths` stay; the header, the comment with the example `"commit,state-md"`, the docstring of `evaluatePayload`, and the guard comment name no removed reminder (spec §3.1 lists these four comments; the comment above `SOURCE_PATTERNS`, which says "non-test", is not changed). Interface not externally pinned for the removed helpers (nothing outside the plan imports them; verified by search).
+- Tests: two new tests and one added assertion (the regression tests of spec §6.1): (a) one edit of the fixed absolute path `/project/src/app.js` with no test edit, no significant file and fewer than five files gives `{}`, and `getRecentEdits` returns exactly one entry in the same HOME; (b) with `SUPERPOWERS_STOP_REMINDERS_OFF=tdd` and a due commit reminder, the block holds the commit reminder and the unknown-name warning with `"tdd"`; (c) the block of the scenario with every reminder holds no "TDD reminder" (this is an added assertion in an existing test, not a third new test; it is an allowed extension of the lists of spec §6.1, because that test passes before and after the change except for this assertion). The state-md scenario has no `tests/test-a.js` edit any more.
 - Verification: before the hook edit, `node tests/codex/test-stop-reminders.js` fails exactly the three tests named in Step 2; after it, the file exits 0; `bash tests/codex/run-unit-tests.sh` exits 0; `git grep -n "TDD\|isTestFile" -- hooks/stop-reminders.js` prints nothing.
-- Wording of the five changed comments is free; the properties above bind.
+- Wording of the four changed comments is free; the properties above bind.
 
 - [ ] **Step 1: Add the regression tests (they must fail first)**
 
-Insert the following block directly before the line that starts with `// ── No commit reminder while a subagent is still running` (use the Edit tool as in Task 1; the block ends with one empty line, and it comes after the section `Shared behaviour of the reminders`).
+Insert the following block directly before the line that starts with `// ── No commit reminder while a subagent is still running` (use the Edit tool as in Task 1; the new string is the block, one empty line, and then that comment text; the block comes after the section `Shared behaviour of the reminders`).
 
 ```js
 // ── The TDD reminder is gone ─────────────────────────────────────────────────
-// Before v7.71.0 the stop hook had a fifth reminder, the "TDD reminder", for
-// source files edited without a test edit.
+// Before v7.71.0 the stop hook had a fifth reminder, the "TDD reminder" (TDD
+// means test-driven development), for source files edited without a test edit.
 
 const REMOVED_TDD_REMINDER_TEXT = 'TDD reminder';
 // A fixed absolute path that does not exist on disk. No folder of it is a
@@ -702,13 +717,12 @@ if (FILE.endsWith('test-stop-reminders.js')) {
     ' * Only blocks Claude\'s stop when actionable reminders exist (commit,\n * decision log, state.md, session-log size).');
   replaceOnce('  // reminder that the model cannot clear (the TDD reminder) repeats.\n',
     '  // reminder that the model cannot clear (the commit reminder: the user may want\n  // the files uncommitted) repeats.\n');
-  replaceOnce('// Common source file patterns (non-test, non-config)\n', '// Common source file patterns\n');
 
   // The name of the reminder.
   replaceOnce("  TDD: 'tdd',\n", '');
 
   // The patterns and the function that only the TDD reminder uses.
-  replaceBetween('// Common test file patterns\n', '// Common source file patterns\n');
+  replaceBetween('// Common test file patterns\n', '// Common source file patterns (non-test, non-config)\n');
   replaceOnce('function isTestFile(filePath) {\n  return TEST_PATTERNS.some(p => p.test(filePath));\n}\n\n', '');
 
   // SECOND_MS, isBackAtCommittedState, firstEditTimeMs, MAX_NAMED_FILES and formatFileList.
@@ -822,10 +836,10 @@ if (FILE_NAME === 'README.md' && IN_DIR !== 'guide') {
   replaceBetween('**The test-first reminder names a scratch file.**',
     '**I updated, but the plugin is still the old version.**',
     [
-      '**The stop hook asks for tests ("TDD reminder").** Example: "TDD reminder: 2',
-      'source file(s) modified without test changes: …". TDD means test-driven',
-      'development. Since v7.71.0 the stop hook of Claude Code has no such',
-      'reminder. If a session still shows one, the installed copy is older (§1),',
+      '**The stop hook asks for tests ("TDD reminder"; TDD means test-driven development).** Example: "TDD reminder: 2',
+      'source file(s) modified without test changes: …". Since v7.71.0 the stop',
+      'hook of Claude Code has no such reminder. If a session still shows one,',
+      'the installed copy is older (§1),',
       'or the message comes from the Codex adapter, which is not supported and',
       'keeps its own copy of the reminder. The name `tdd` in',
       '`SUPERPOWERS_STOP_REMINDERS_OFF` is now an unknown name: it switches',
@@ -865,7 +879,7 @@ Expected: no output from any of them, exit status 0 each time.
 - [ ] **Step 2: Check the documents**
 
 Run: `git grep -n "TDD reminder" -- README.md docs/guide/README.md docs/architecture`
-Expected: one line only, `docs/guide/README.md:1553:**The stop hook asks for tests ("TDD reminder").** Example: "TDD`.
+Expected: one line only, `docs/guide/README.md:1553:**The stop hook asks for tests ("TDD reminder"; TDD means test-driven development).** Example: "TDD reminder: 2`.
 
 Run: `git grep -n "tdd" -- README.md docs/architecture`
 Expected: no output (exit status 1).
@@ -947,9 +961,9 @@ Insert the following entry directly before the line `## v7.70.0 — a per-rule s
 
 **Problem.** The stop hook's TDD reminder (TDD means test-driven development: the test is written before the code) fired on a comment-only change, missed the 48% of source-file changes made through Bash, and stayed silent under any folder named `test` or `tests`.
 
-**Change.** The reminder is removed, with the code that only it used. `tdd` is no longer a name that `SUPERPOWERS_STOP_REMINDERS_OFF` accepts.
+**Change.** The reminder is removed, with the code that only it used. `tdd` is no longer a name that the environment variable `SUPERPOWERS_STOP_REMINDERS_OFF` accepts.
 
-**Effect.** The other four reminders are unchanged. Remove `tdd` from the variable, because it now shows as an unknown name; where several installations read one settings file, remove it after all of them run v7.71.0 or later. The unsupported Codex adapter keeps its own copy of the reminder.
+**Effect.** The other four reminders are unchanged. Remove `tdd` from the variable: it now shows as an unknown name; where several installations read one settings file, remove it after all of them run v7.71.0 or later. The unsupported Codex adapter (the stop script of the Codex tool) keeps its own copy of the reminder.
 
 A session runs the installed copy of the plugin. The changes below reach a session only after an update of the plugin and a restart of the command-line interface (CLI).
 
@@ -958,7 +972,7 @@ A session runs the installed copy of the plugin. The changes below reach a sessi
 The stop hook (`hooks/stop-reminders.js`) runs when Claude finishes a reply. It can block the stop with a list of reminders, and Claude then reads them and writes another reply. The TDD reminder was one of five reminders. Its text was "TDD reminder: N source file(s) modified without test changes: ...". The user decided on 2026-10-10 to remove it completely, with no compatibility alias for its name. The first three reasons below were measured or reproduced on 2026-10-10 in the owner's session; the scripts and test repositories were temporary and are not kept. The fourth reason is a judgment.
 
 - **False alarms are built into the rule.** Only an edited test file silenced the reminder; running the existing tests did not. In a headless run, Claude added one comment line to a source file, the reminder fired, and Claude answered it with a second reply that said a comment needs no test.
-- **It could not see edits made through Bash.** The edit log holds only Edit and Write calls. For a Bash call, Claude Code records the files that the command changed in the field `bashEditDiff` of the tool result. Method: the owner's local transcripts of 2026-09-06 to 2026-10-10 (143 sessions, main sessions and subagents) were read. Each Edit or Write call counted as one file change, and each Bash call whose `bashEditDiff` listed a changed file counted as one. A source file is a file with a code extension (for example `.js`, `.py`, `.go`); files in temporary or scratch folders were left out. In the 46 sessions whose transcripts carry `bashEditDiff`, 162 of 337 source-file changes (48%) were made through Bash.
+- **It could not see edits made through Bash.** The edit log (the per-session file in which `hooks/track-edits.js` records edits) holds only Edit and Write calls. For a Bash call, Claude Code records the files that the command changed in the field `bashEditDiff` of the tool result. Method: the owner's local transcripts of 2026-09-06 to 2026-10-10 (143 sessions, main sessions and subagents) were read. Each Edit or Write call counted as one file change, and each Bash call whose `bashEditDiff` listed a changed file counted as one. A source file is a file with a code extension (for example `.js`, `.py`, `.go`); files in temporary or scratch folders were left out. In the 46 sessions whose transcripts carry `bashEditDiff`, 162 of 337 source-file changes (48%) were made through Bash.
 - **It had a path defect.** The patterns that recognize a test file were matched against the absolute path, so a repository under any folder named `test` or `tests` (any letter case) never got the reminder. Reproduced in two fresh repositories.
 - **Its gain was small (a judgment, not a measurement).** The workflow skills (`test-driven-development`, and plans with tests first) are the main source of test-first discipline. The reminder was a small addition to them.
 
@@ -977,7 +991,7 @@ A user who set `tdd` should remove it. For a settings file that several installa
 ### 4. Tests
 
 - The tests of the TDD reminder itself are deleted: the test-file detection, the naming of files in the reminder text, the restored-file tests, and the `tdd` scenario of the switch tests.
-- A test that used the TDD reminder only as the block it observes is rewritten to observe a reminder that is still produced, and keeps its check: the output shape, the trimmed and case-insensitive names, the unknown-name warning, the 30-minute window of the edits, and the reading of a `src/hooks/useAuth.js` edit. Each rewritten test whose key check is an absence (a block that is not there, or a reminder that is not in the block) has a positive control in its own temporary home folder.
+- A test that used the TDD reminder only as the block it observes is rewritten to observe a reminder that is still produced, and keeps its check: the output shape, the trimmed and case-insensitive names, the unknown-name warning, the 30-minute window of the edits, and the reading of a `src/hooks/useAuth.js` edit. Each rewritten test whose key check is an absence (a block that is not there, or a reminder that is not in the block) has a positive control (the same arrangement without the condition under test, which must still give the result that the test checks for) in its own temporary home folder.
 - Two new tests: one source edit with no test edit gives no reminder (it fails with the TDD reminder in place); and the name `tdd` produces the unknown-name warning next to a due commit reminder. The block with every reminder also asserts that no "TDD reminder" text appears.
 
 ### 5. Accepted limits
@@ -1001,7 +1015,7 @@ Run: `git grep -n "7\.70\.0" -- VERSION .claude-plugin plugin.universal.yaml REA
 Expected: no output (exit status 1).
 
 Run: `awk '/^## v7.71.0/{f=1;next} /^A session runs the installed copy/{f=0} f' RELEASE-NOTES.md | wc -w`
-Expected: a number of 120 or less (about 110 when this plan was written).
+Expected: a number of 120 or less (119 when this plan was written).
 
 - [ ] **Step 4: Commit**
 
