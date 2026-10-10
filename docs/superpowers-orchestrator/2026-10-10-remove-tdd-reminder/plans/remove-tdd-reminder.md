@@ -62,7 +62,7 @@ Premises tested while writing this plan (each command was run in the repository;
 - Verification: `node tests/codex/test-stop-reminders.js` exits 0 with the hook unchanged; three mutations of a scratch copy of the hook each make the named test fail (Step 4); `git diff --stat` lists only `tests/codex/test-stop-reminders.js`.
 - The titles and the helper names are descriptive and may change in a fix; the properties above bind.
 
-- [ ] **Step 1: Delete the old versions of the tests**
+- [x] **Step 1: Delete the old versions of the tests**
 
 Save this script as `<scratch>/t1-cuts.js`. It deletes the old tests 123 and 144 (`When reminders exist ...`, `Active guard suppresses reminder output`), the two tests of the 30-minute window with their comment and constant `SOURCE_EDIT`, the helper `arrangeCommitAndTdd` with the test of the trimmed names, the three tests of the unknown-name warning, and the test of the React hook file. Every anchor must occur exactly once; the script stops with an error otherwise.
 
@@ -120,7 +120,7 @@ fs.writeFileSync(FILE, text, 'utf8');
 Run: `node <scratch>/t1-cuts.js tests/codex/test-stop-reminders.js`
 Expected: no output, exit status 0.
 
-- [ ] **Step 2: Insert the new section**
+- [x] **Step 2: Insert the new section**
 
 Insert the following block directly before the line that starts with `// ── No commit reminder while a subagent is still running` (use the Edit tool: the old string is that comment text up to `still running`, the new string is the block, then that same comment text). The new string is the block, one empty line, and then that comment text, so the block is followed by exactly one empty line.
 
@@ -235,12 +235,12 @@ test('A React hook file (src/hooks/useAuth.js) does not ask for a decision-log e
 });
 ```
 
-- [ ] **Step 3: Run the test file**
+- [x] **Step 3: Run the test file**
 
 Run: `node tests/codex/test-stop-reminders.js`
 Expected: the last line is `stop-reminders: <N> passed, 0 failed` (N was 154 when this plan was written) and the exit status is 0. The hook is unchanged, so the TDD reminder still exists; the rewritten tests pass before and after its removal.
 
-- [ ] **Step 4: Mutation check (the rewritten tests really fire)**
+- [x] **Step 4: Mutation check (the rewritten tests really fire)**
 
 Save this script as `<scratch>/mutate-check.js`. It copies `hooks/` and the test file to a new temporary folder, replaces one text in the copy of the hook, runs the copy of the test file and prints the labels of the failing tests. The repository is not changed.
 
@@ -286,7 +286,7 @@ node <scratch>/mutate-check.js 'matchesSession(entry, sessionId) &&' "matchesSes
 
 Expected: the first prints a list that holds `✗ Ignores edits that are 31 minutes old`; the second prints a list that holds `✗ Names are trimmed and case-insensitive, unknown names are ignored, other reminders stay`; the third prints a list that holds `✗ A React hook file (src/hooks/useAuth.js) does not ask for a decision-log entry`. A command that prints `No test fails.` means the named test does not observe what it claims: stop and report.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add tests/codex/test-stop-reminders.js
