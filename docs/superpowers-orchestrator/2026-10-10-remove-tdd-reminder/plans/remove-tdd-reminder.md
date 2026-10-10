@@ -475,7 +475,7 @@ git commit -m "test(stop-reminders): delete the tests and helpers that only the 
 - Verification: `node tests/codex/test-track-edits.js` exits 0; `grep -n "TDD" tests/codex/test-track-edits.js hooks/track-edits.js` prints nothing; `git diff --stat` lists only the two files, and the diff of `hooks/track-edits.js` touches only lines that start with ` *` inside the header comment.
 - The comment wording is free; the properties above bind.
 
-- [ ] **Step 1: Apply the edits**
+- [x] **Step 1: Apply the edits**
 
 Save this script as `<scratch>/t3-edits.js`. It edits the file that is named in its first argument: the test file or the hook.
 
@@ -575,7 +575,7 @@ Run: `node <scratch>/t3-edits.js tests/codex/test-track-edits.js`
 Run: `node <scratch>/t3-edits.js hooks/track-edits.js`
 Expected: no output from either command, exit status 0.
 
-- [ ] **Step 2: Check the result**
+- [x] **Step 2: Check the result**
 
 Run: `grep -n "TDD" tests/codex/test-track-edits.js hooks/track-edits.js`
 Expected: no output (the command exits with status 1).
@@ -586,7 +586,7 @@ Expected: no output (the command exits with status 1): every changed line of the
 Run: `node --check hooks/track-edits.js && node tests/codex/test-track-edits.js`
 Expected: the last line is `save-marker: <N> passed, 0 failed` (N was 63 when this plan was written) and the exit status is 0.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add tests/codex/test-track-edits.js hooks/track-edits.js
