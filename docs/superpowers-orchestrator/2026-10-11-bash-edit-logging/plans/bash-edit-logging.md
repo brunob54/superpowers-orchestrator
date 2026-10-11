@@ -222,7 +222,7 @@ git commit -m "test(stop-reminders): log helpers take a tool name; Bash lines co
 - Matches that must be lost: `/project/myagents/x.md`, `/project/notes/XSKILL.md`, `/project/notes/MYCLAUDE.md`, `/project/notes/Xskill-rules.json`, `/project/notes/Xplugin.universal.yaml`.
 - Verification: the new tests in `tests/codex/test-stop-reminders.js` (five fail on the old code, seven guard the matches that stay).
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 In `tests/codex/test-stop-reminders.js`, in the section "File patterns of the reminders", directly after the test 'A .claude/hooks/*.js file asks for a decision-log entry', add:
 
@@ -263,12 +263,12 @@ for (const filePath of NAMES_THAT_ARE_SIGNIFICANT) {
 }
 ```
 
-- [ ] **Step 2: Run the tests and see five failures**
+- [x] **Step 2: Run the tests and see five failures**
 
 Run: `node tests/codex/test-stop-reminders.js`
 Expected: FAIL — exactly five new tests fail: the records `/project/myagents/x.md`, `/project/notes/XSKILL.md`, `/project/notes/MYCLAUDE.md`, `/project/notes/Xskill-rules.json` and `/project/notes/Xplugin.universal.yaml` each produce a "Decision log" block ("Expected no reminder"). The seven "asks for a decision-log entry" tests pass.
 
-- [ ] **Step 3: Anchor the five patterns**
+- [x] **Step 3: Anchor the five patterns**
 
 In `isSignificantSession` in `hooks/stop-reminders.js` replace the list `sigPatterns` with:
 
@@ -288,12 +288,12 @@ In `isSignificantSession` in `hooks/stop-reminders.js` replace the list `sigPatt
 
 (`(?:^|[/\\])` means: the start of the text, or a path separator.) Also add one sentence to the docstring of `isSignificantSession`: "A name pattern starts at the beginning of the record or after a path separator, so `XSKILL.md` does not match."
 
-- [ ] **Step 4: Run the tests and see them pass**
+- [x] **Step 4: Run the tests and see them pass**
 
 Run: `node tests/codex/test-stop-reminders.js`
 Expected: PASS — `0 failed`; all twelve new tests pass.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add hooks/stop-reminders.js tests/codex/test-stop-reminders.js
