@@ -725,6 +725,70 @@ for (const filePath of NAMES_THAT_ARE_SIGNIFICANT) {
   });
 }
 
+// ── State-md reminder: file names and distinct files ──────────────────────────
+
+const STATE_MD_REMINDER = 'State.md sync';
+
+function assertStateMdReminder(result) {
+  assert.ok((result.reason || '').includes(STATE_MD_REMINDER),
+    `Expected the state-md reminder, got: ${JSON.stringify(result)}`);
+}
+
+/** The reason of the stop after edits of `filePaths` (full paths) that are newer than state.md. */
+function stateMdResult(filePathsOf, tool = EDIT_TOOL) {
+  return evaluateStop(context => arrangeStaleStateMd(context, filePathsOf(context.cwdDir)), () => {}, tool);
+}
+
+// A folder whose name only starts like a config file name does not make the
+// source files below it configuration.
+const FOLDERS_THAT_ONLY_LOOK_LIKE_CONFIG = ['.envs', 'Dockerfiles', 'docker-compose-x', '.eslintrc-x', '.prettierrc-x'];
+
+for (const folder of FOLDERS_THAT_ONLY_LOOK_LIKE_CONFIG) {
+  test(`Two source files below ${folder}/ give the state-md reminder`, () => {
+    const result = stateMdResult(cwdDir => ['a.js', 'b.js'].map(name => path.join(cwdDir, folder, 'p', 'src', name)));
+    assertStateMdReminder(result);
+  });
+}
+
+// A file name that only starts like a config file name is a source file.
+for (const name of ['app.environment.ts', 'DockerfileParser.ts', 'docker-compose-helper.py']) {
+  test(`${name} and another source file give the state-md reminder`, () => {
+    const result = stateMdResult(cwdDir => [path.join(cwdDir, 'src', 'plain.js'), path.join(cwdDir, 'src', name)]);
+    assertStateMdReminder(result);
+  });
+}
+
+// Config files with a source extension stay configuration. Two distinct files
+// of one name, in two folders (not two edits of one file).
+for (const name of ['.eslintrc.js', '.prettierrc.js', '.env.production.js', 'Dockerfile.build.ts', 'docker-compose.config.js']) {
+  test(`Two ${name} files in two folders give no state-md reminder`, () => {
+    assertNoReminder(stateMdResult(cwdDir => ['one', 'two'].map(folder => path.join(cwdDir, folder, name))));
+  });
+}
+
+// No source extension: these are never source files. This guards the documented behaviour only.
+for (const name of ['.env.local', 'Dockerfile.dev', 'docker-compose.yml']) {
+  test(`Two ${name} files in two folders give no state-md reminder (no source extension)`, () => {
+    assertNoReminder(stateMdResult(cwdDir => ['one', 'two'].map(folder => path.join(cwdDir, folder, name))));
+  });
+}
+
+test('An Edit line and a Bash line for one source file give no state-md reminder', () => {
+  assertNoReminder(evaluateStop(({ logDir, cwdDir }) => {
+    makeStaleStateMd(cwdDir);
+    const sourceFile = path.join(cwdDir, 'src', 'a.js');
+    writeEditLog(logDir, [
+      editLogLine(TEST_SESSION_ID, sourceFile, 0, EDIT_TOOL),
+      editLogLine(TEST_SESSION_ID, sourceFile, 0, BASH_TOOL),
+    ]);
+  }));
+});
+
+test('Two Bash lines for two distinct source files give the state-md reminder', () => {
+  const result = stateMdResult(cwdDir => ['a.js', 'b.js'].map(name => path.join(cwdDir, 'src', name)), BASH_TOOL);
+  assertStateMdReminder(result);
+});
+
 // Git helpers that the commit section below uses.
 
 const COMMITTED_TEXT = 'module.exports = 1;\n';

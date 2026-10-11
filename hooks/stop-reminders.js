@@ -120,16 +120,19 @@ const SOURCE_PATTERNS = [
   /\.(js|jsx|ts|tsx|py|rb|go|rs|java|cs|cpp|c|h|hpp|swift|kt|scala|php)$/,
 ];
 
-// Files that are clearly config/non-source
+// Files that are clearly config/non-source. Each pattern is tested on the file
+// name (the text after the last path separator), not on the whole path: a
+// folder named `.envs` or `Dockerfiles` must not make the source files below
+// it configuration.
 const CONFIG_PATTERNS = [
   /package\.json$/,
   /tsconfig.*\.json$/,
-  /\.eslintrc/,
-  /\.prettierrc/,
+  /^\.eslintrc/,
+  /^\.prettierrc/,
   /\.gitignore$/,
-  /\.env/,
-  /Dockerfile/,
-  /docker-compose/,
+  /^\.env(\.|$)/,
+  /^Dockerfile(\.|$)/,
+  /^docker-compose\./,
   /\.ya?ml$/,
   /\.toml$/,
   /\.cfg$/,
@@ -141,7 +144,8 @@ const CONFIG_PATTERNS = [
 ];
 
 function isSourceFile(filePath) {
-  return SOURCE_PATTERNS.some(p => p.test(filePath)) && !CONFIG_PATTERNS.some(p => p.test(filePath));
+  const fileName = filePath.split(/[/\\]/).pop();
+  return SOURCE_PATTERNS.some(p => p.test(filePath)) && !CONFIG_PATTERNS.some(p => p.test(fileName));
 }
 
 /**
@@ -509,8 +513,8 @@ function isSignificantSession(edits) {
  * edits — a signal that active task state may have drifted since last save.
  * Returns a reminder string if stale, null otherwise.
  *
- * Threshold: state.md older than at least 2 source-file edits that occurred
- * after it was last written. Config-only edits are excluded (noise).
+ * Threshold: state.md older than at least 2 distinct source files that were
+ * edited after it was last written. Config-only edits are excluded (noise).
  */
 function checkStateMdStaleness(cwd, recentEdits) {
   try {
@@ -521,8 +525,11 @@ function checkStateMdStaleness(cwd, recentEdits) {
     const editsAfterState = recentEdits.filter(e =>
       new Date(e.timestamp).getTime() > stateMtime && isSourceFile(e.filePath)
     );
+    // Distinct files, not log lines: an Edit and a formatter run on one file,
+    // or a generated file that every build rewrites, are one file.
+    const editedFiles = new Set(editsAfterState.map(e => e.filePath));
 
-    if (editsAfterState.length >= 2) {
+    if (editedFiles.size >= 2) {
       return (
         'State.md sync: state.md was written before recent code changes in this session. ' +
         'If progress was made on the active task, update state.md via the context-management skill.'
