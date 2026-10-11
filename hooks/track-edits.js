@@ -12,8 +12,12 @@
  *
  * A file inside the session scratchpad (the temporary folder that Claude Code
  * gives a session for throwaway files; the hook input names it in
- * `scratchpad_dir`) is not logged: such a file is not a change to the project,
- * and a logged one made the stop hook ask for tests of a scratch script.
+ * `scratchpad_dir`) is not logged: such a file is not a change to the project.
+ * A logged scratch file would trigger the decision-log reminder (a scratch
+ * SKILL.md, specs/*.md or plans/*.md file counts as significant) and the
+ * state-md reminder (source files edited after state.md). It would also add
+ * to the count of the commit reminder when the file lies inside a git
+ * repository, for example a test-fixture repository in the scratchpad.
  * Without the field (a headless session has no scratchpad) every edit is
  * logged, as before.
  *

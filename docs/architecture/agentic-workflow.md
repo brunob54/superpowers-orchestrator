@@ -32,7 +32,7 @@ User sends a prompt
         │
         ▼  (after Edit, Write, Bash and Skill calls)
 ┌─ Tracking Hooks (PostToolUse) ────────────────────────────┐
-│  track-edits.js → logs file changes for TDD reminders     │
+│  track-edits.js → logs file changes for the reminders     │
 │    after Bash: no log line, only the git exclude entry    │
 │    of a session-log.md written by a redirect              │
 │  track-session-stats.js → logs skill invocations          │
@@ -41,7 +41,7 @@ User sends a prompt
         ▼  (when Claude stops responding)
 ┌─ Stop Hook ───────────────────────────────────────────────┐
 │  stop-reminders.js →                                      │
-│    "5 source files modified without tests"                │
+│    "Decision log: write a [saved] entry"                  │
 │    "12 files changed, consider committing"                │
 │    "Session summary: 8 skill invocations [debugging 3x]"  │
 └───────────────────────────────────────────────────────────┘
