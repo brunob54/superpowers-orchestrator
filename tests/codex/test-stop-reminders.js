@@ -974,6 +974,22 @@ test('5 files with Bash lines, one also with an Edit line: the 4 others are name
   assert.deepStrictEqual(namedFileLines(reason).sort(), expectedLines.sort());
 });
 
+// The path with the NUL character lies in a second repository, so git is asked
+// about it in a call of its own; the other files are in the call of the first one.
+test('A Bash line whose path holds a NUL character does not cancel the commit reminder for the other files', () => {
+  let expectedLines;
+  const reason = evaluateStop(({ logDir, cwdDir }) => {
+    const files = modifiedSessionFiles(cwdDir, COMMIT_THRESHOLD);
+    expectedLines = files.map(file => `- ${namedAs(file)}`);
+    const secondRepoDir = path.join(cwdDir, 'nested-repo');
+    initRepo(secondRepoDir);
+    const pathWithNul = path.join(secondRepoDir, 'bad\u0000name.txt');
+    recordEditsByTool(logDir, [...files, pathWithNul].map(file => [file, BASH_TOOL]));
+  }).reason || '';
+  assert.ok(reason.includes(BASH_ONLY_SENTENCE), `Expected the commit reminder, got: ${reason}`);
+  assert.deepStrictEqual(namedFileLines(reason).sort(), expectedLines.sort());
+});
+
 test('5 files with Edit lines only: no list, and the second sentence follows the first', () => {
   const reason = evaluateStop(({ logDir, cwdDir }) => {
     recordEditsByTool(logDir, modifiedSessionFiles(cwdDir, COMMIT_THRESHOLD).map(file => [file, EDIT_TOOL]));

@@ -300,7 +300,13 @@ const ALL_UNTRACKED_FILES = '--untracked-files=all';
  * within `timeoutMs` milliseconds.
  */
 function gitStdout(args, cwd, timeoutMs = GIT_TIMEOUT_MS) {
-  const result = spawnSync('git', args, { cwd, encoding: 'utf8', timeout: timeoutMs });
+  let result;
+  try {
+    result = spawnSync('git', args, { cwd, encoding: 'utf8', timeout: timeoutMs });
+  } catch {
+    // spawnSync throws, for example, when an argument holds a NUL character.
+    return null;
+  }
   if (result.status !== 0 || result.error) return null;
   return result.stdout || '';
 }
@@ -354,8 +360,7 @@ function storedPath(filePath, cwd) {
 
 // The whole count of the commit reminder may take this long. Each git call
 // has its own limit of GIT_TIMEOUT_MS, so without a limit for the whole count
-// a git that hangs would block the stop for that time once per logged file
-// (measured: 30 seconds for 6 files).
+// a git that hangs would block the stop for that time once per git call.
 const COMMIT_COUNT_TIME_LIMIT_MS = GIT_TIMEOUT_MS;
 
 // A file names its status in `git status --porcelain -z` as two status
