@@ -867,7 +867,7 @@ git commit -m "perf(stop-reminders): count uncommitted files with one git call p
 - Verification: `node tests/codex/test-stop-reminders.js` — the four new text tests and every `assertCommitReminder` test (new expected sentence) pass; the pre-existing test "The commit reminder tells the assistant to ask when a project rule requires approval" stays unchanged and green.
 - Sentence wording beyond the pinned phrases above is free.
 
-- [ ] **Step 1: Change the expected sentence and write the failing tests**
+- [x] **Step 1: Change the expected sentence and write the failing tests**
 
 In `tests/codex/test-stop-reminders.js` replace the body of `assertCommitReminder` so that the expected text is:
 
@@ -963,12 +963,12 @@ test('5 files with Edit lines only: no list, and the second sentence follows the
 });
 ```
 
-- [ ] **Step 2: Run the tests and see the failures**
+- [x] **Step 2: Run the tests and see the failures**
 
 Run: `node tests/codex/test-stop-reminders.js`
 Expected: FAIL — every test that uses `assertCommitReminder` fails (the old text says "all edited in this session"), and the four new tests fail for the same reason or for the missing list. This is the red state.
 
-- [ ] **Step 3: Move `BASH_TOOL` to `hooks/save-marker.js`**
+- [x] **Step 3: Move `BASH_TOOL` to `hooks/save-marker.js`**
 
 In `hooks/save-marker.js`, directly after the `const EDIT_LOG_KIND ...` group of constants (before `// A per-session file is named`), add:
 
@@ -981,7 +981,7 @@ const BASH_TOOL = 'Bash';
 
 and add `BASH_TOOL,` as the first entry of `module.exports` (before `LOG_DIR`).
 
-- [ ] **Step 4: Name the Bash-only files in the commit reminder**
+- [x] **Step 4: Name the Bash-only files in the commit reminder**
 
 In `hooks/stop-reminders.js` add `BASH_TOOL,` to the `require('./save-marker')` list (before `MARKER_COMMAND`). Directly after `const COMMIT_REMINDER_MIN_FILES = 5;` add:
 
@@ -1034,12 +1034,12 @@ function commitReminderText(countedFiles, edits, cwd) {
 
 In `generateReminders` replace the `reminders.push(...)` of the commit reminder with `reminders.push(commitReminderText(uncommittedFiles, edits, cwd));`.
 
-- [ ] **Step 5: Run the file and see it pass**
+- [x] **Step 5: Run the file and see it pass**
 
 Run: `node tests/codex/test-stop-reminders.js`
 Expected: PASS — `0 failed`. Then run `grep -rn "all edited in this session" hooks tests` and expect no output.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add hooks/save-marker.js hooks/stop-reminders.js tests/codex/test-stop-reminders.js
