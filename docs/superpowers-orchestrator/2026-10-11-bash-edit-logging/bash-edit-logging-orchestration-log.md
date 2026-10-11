@@ -16,3 +16,10 @@ plan: docs/superpowers-orchestrator/2026-10-11-bash-edit-logging/plans/bash-edit
 - Task 4: complete — commit count runs one git call per repository
 - Task 5: complete — commit reminder names Bash-only files
 - Task 6: complete — edit-log writer split into appendEditLog and logEdit
+
+## RULING 1 — 2026-10-11 — phase 3 — task 7 conflicts: NUL character and entry cap (plan governs, reader gap carried)
+Items: [task 7/1] design — plan governs: the writer rule stays; the reader gap is carried to the code review
+Items: [task 7/2] design — plan governs: no cap; accepted limit
+Detail: docs/superpowers-orchestrator/2026-10-11-bash-edit-logging/plans/bash-edit-logging-open-decisions.md
+Forks: 3 of 3 (design consistency, implementation practicality, adversarial) — contradiction: settled
+Re-dispatch: phase 3, in-run resume 1 of 3, return 1 of 6
