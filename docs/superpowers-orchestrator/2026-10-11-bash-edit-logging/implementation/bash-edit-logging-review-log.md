@@ -31,3 +31,13 @@ _Invocation 1 — 2026-10-11 — N=4 M=3 — BASE..HEAD 1cc4a4f..2db9db8 — bra
 - [M2] carried — the state-md reminder counts distinct files, so ten edits of one file no longer fire it (plan-mandated change, Global Constraints) ← 1/3: r1:M2
 - [M3] rejected: false positive, the empty relative path cannot occur — relativePathsByTopFolder finds the top folder by walking up from the folder of the file, so the top folder is an ancestor of the file and path.relative never returns an empty string; a listed folder is a documented non-goal (plan Task 4 Does NOT cover) — an empty pathspec makes git fail, a failed chunk adds nothing ← 1/3: r1:M4 (also round 1 [M2])
 - [M4] carried — a Bash-created symbolic link is counted through its target because storedPath resolves it with realpath (the plan pins the comparison as storedPath) ← 1/3: r2:M1
+
+## Round 3 — Security — sonnet (session model)
+**Reviewers:** M=3, usable 3/3
+**Reviewer verdicts:** r1: 0 Critical, 0 Important, 1 Minor | r2: 0 Critical, 0 Important, 2 Minor | r3: 0 Critical, 0 Important, 2 Minor
+**Sources mapped:** 5/5
+**Reviewer verdict:** 0 Critical, 0 Important, 2 Minor
+**Converged:** no
+### Dispositions
+- [M1] carried — a Bash-only file name is printed unchanged in the Stop-hook reason (same defect as round 2 [I1], which stays recorded there as a user-decision; all three reviewers rated it Minor here) ← 3/3: r1:M1, r2:M2, r3:M1
+- [M2] carried — git status and git ls-files run in any repository that holds a Bash-listed file, so a hostile .git/config (core.fsmonitor) in an unpacked archive can run a program; the state is outside the supported environment of the project CLAUDE.md, and the git command is pinned by Global Constraints ← 2/3: r2:M1, r3:M2
