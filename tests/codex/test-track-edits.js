@@ -823,6 +823,90 @@ test('T27l: a listed path in a subagent worktree is logged and ignored at the st
   assert.deepStrictEqual(stop(homeDir, cwdDir, SESSION_A), JSON.parse(EMPTY_HOOK_OUTPUT));
 });
 
+// ── The change-time filter ───────────────────────────────────────────────────
+// The status-change time (ctime) of a file is the time the file system records
+// for the last change of its content, name or attributes. A program cannot set
+// it to an earlier value. The tests state the margin of the hook (2 s) themselves.
+// T27h, T27m and T27o use `duration_ms: 0`, so the hook has 2 s between the change
+// and its start; on a heavily loaded machine a failure of these three tests can
+// be timing and not a logic defect. Do not widen it: T27m needs the narrow window.
+
+const CHANGE_TIME_MARGIN_MS = 2000;
+const AGE_WAIT_MS = CHANGE_TIME_MARGIN_MS + 500;
+
+/** Block the process for `ms` milliseconds (the status-change time cannot be set back). */
+function sleepMs(ms) {
+  Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
+}
+
+let agedFixture = null;
+
+/**
+ * Files that are older than the margin: an old file, and a file that was
+ * created and deleted in the same folder before the wait. Made once for all
+ * tests, because the wait takes 2.5 seconds.
+ */
+function agedFiles() {
+  if (agedFixture === null) {
+    const dir = fs.mkdtempSync(path.join(WORK_ROOT, 'aged-'));
+    const oldFile = newFile(dir, path.join('old', 'old.txt'));
+    const deletedOldFile = newFile(dir, path.join('old', 'deleted.txt'));
+    fs.rmSync(deletedOldFile);
+    sleepMs(AGE_WAIT_MS);
+    agedFixture = { oldFile, deletedOldFile };
+  }
+  return agedFixture;
+}
+
+test('T27h: files that changed before the command are dropped; files that changed during it are logged', () => {
+  const { oldFile, deletedOldFile } = agedFiles();
+  const { homeDir, cwdDir } = makeHome();
+  const newOne = newFile(cwdDir, path.join('new', 'new.txt'));
+  const goneNewOne = newFile(cwdDir, path.join('new', 'gone.txt'));
+  fs.rmSync(goneNewOne);
+  afterBashListing(homeDir, cwdDir, listing([oldFile, deletedOldFile, newOne, goneNewOne]), { duration_ms: 0 });
+  assert.deepStrictEqual(loggedPaths(homeDir), [newOne, goneNewOne]);
+});
+
+test('T27i: without a usable duration, the old file is logged', () => {
+  const { oldFile } = agedFiles();
+  for (const durationExtra of [{ duration_ms: undefined }, { duration_ms: '1000' }, { duration_ms: -1 }, { duration_ms: null }]) {
+    const { homeDir, cwdDir } = makeHome();
+    afterBashListing(homeDir, cwdDir, listing([oldFile]), durationExtra);
+    assert.deepStrictEqual(loggedPaths(homeDir), [oldFile], `duration: ${JSON.stringify(durationExtra)}`);
+  }
+});
+
+test('T27m: a renamed file with an old modification time is logged (a rename sets the status-change time)', () => {
+  if (process.platform === 'win32') {
+    console.log('    (not run on Windows: the status-change time of a rename is not verified there)');
+    return;
+  }
+  const { homeDir, cwdDir } = makeHome();
+  const before = newFile(cwdDir, 'before-rename.txt');
+  const longAgo = new Date('2020-01-01T00:00:00Z');
+  fs.utimesSync(before, longAgo, longAgo);
+  sleepMs(AGE_WAIT_MS);
+  const after = path.join(cwdDir, 'after-rename.txt');
+  fs.renameSync(before, after);
+  afterBashListing(homeDir, cwdDir, listing([after]), { duration_ms: 0 });
+  assert.deepStrictEqual(loggedPaths(homeDir), [after]);
+});
+
+test('T27o: a new symbolic link to an old file is logged (the link itself is read, not its target)', () => {
+  const { oldFile } = agedFiles();
+  const { homeDir, cwdDir } = makeHome();
+  const link = path.join(cwdDir, 'link-to-old.txt');
+  try {
+    fs.symlinkSync(oldFile, link);
+  } catch {
+    console.log('    (no symbolic link on this platform; the case is not checked)');
+    return;
+  }
+  afterBashListing(homeDir, cwdDir, listing([link]), { duration_ms: 0 });
+  assert.deepStrictEqual(loggedPaths(homeDir), [link]);
+});
+
 // ── Session statistics: one file per session ─────────────────────────────────
 
 console.log('\nSession statistics: one file per session');

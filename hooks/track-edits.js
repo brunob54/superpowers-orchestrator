@@ -297,6 +297,48 @@ function isAcceptedBashEntry(entry) {
   return typeof entry === 'string' && path.isAbsolute(entry) && !/[\r\n]/.test(entry);
 }
 
+// A file that Claude Code lists was changed *during* the command, but the list
+// can also hold files that another program changed before the command started
+// (open issues of Claude Code: #97146, #95854, #94571, #100719). The hook drops
+// a file whose status-change time is earlier than the start of the command,
+// less this margin. The margin covers file systems that store times in steps of
+// 1 or 2 seconds, and the start-up of the hook process (measured: at most
+// 0.72 s from the tool call to the hook, command time included).
+const CHANGE_TIME_MARGIN_MS = 2000;
+
+/**
+ * The status-change time (`ctime`) of a file in milliseconds, or of the
+ * nearest existing folder above it when the file no longer exists: removing a
+ * file sets the status-change time of its folder. Null when nothing up to the
+ * root can be read. `lstatSync` reads a symbolic link itself, not its target:
+ * a link that the command created has a new time even when its target is old.
+ */
+function statusChangeTimeMs(entry) {
+  for (let current = entry; ; current = path.dirname(current)) {
+    try {
+      return fs.lstatSync(current).ctimeMs;
+    } catch {
+      if (path.dirname(current) === current) return null;
+    }
+  }
+}
+
+/**
+ * The earliest status-change time that a file changed by the command can have,
+ * or null when the hook input has no usable `duration_ms` (a finite number of
+ * at least 0): the filter then does not run.
+ */
+function commandStartMs(durationMs) {
+  if (!Number.isFinite(durationMs) || durationMs < 0) return null;
+  return Date.now() - durationMs - CHANGE_TIME_MARGIN_MS;
+}
+
+/** True when the file, or the folder of a deleted file, changed before `startMs`. */
+function changedBefore(entry, startMs) {
+  const changeTimeMs = statusChangeTimeMs(entry);
+  return changeTimeMs !== null && changeTimeMs < startMs;
+}
+
 /**
  * The files to log after a Bash call: the entries of
  * `tool_response.bashEditDiff.changedFiles` that Claude Code lists as changed
@@ -307,12 +349,15 @@ function isAcceptedBashEntry(entry) {
  * two cases the listed files are still real changes of this session.
  * A file inside the session scratchpad is not returned.
  * An untracked AI workspace file is not returned (see isUntrackedAiArtifact).
+ * A file that changed before the command started is not returned (see
+ * CHANGE_TIME_MARGIN_MS).
  */
 function bashChangedFiles(data) {
   const diff = data.tool_response?.bashEditDiff;
   if (!diff || typeof diff !== 'object' || diff.skipped === true || !Array.isArray(diff.changedFiles)) {
     return [];
   }
+  const startMs = commandStartMs(data.duration_ms);
   const accepted = [...new Set(diff.changedFiles.filter(isAcceptedBashEntry))];
   return accepted
     .filter(entry => !isInsideScratchpad(entry, data.scratchpad_dir))
@@ -320,7 +365,8 @@ function bashChangedFiles(data) {
     // or Write it gets an exclude entry and git never reports it. A Bash line
     // gets no exclude entry (a Bash list can name a file that another program
     // wrote), so it would make the commit count include an AI artifact.
-    .filter(entry => !isUntrackedAiArtifact(entry));
+    .filter(entry => !isUntrackedAiArtifact(entry))
+    .filter(entry => startMs === null || !changedBefore(entry, startMs));
 }
 
 /**
