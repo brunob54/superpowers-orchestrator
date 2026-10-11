@@ -23,6 +23,7 @@ const fs = require('fs');
 const path = require('path');
 const { spawnSync } = require('child_process');
 const {
+  BASH_TOOL,
   MARKER_COMMAND,
   MAX_AGE_MS,
   editLogFile,
@@ -473,6 +474,51 @@ function hasRunningSubagent(backgroundTasks) {
 // The commit reminder is due from this number of files.
 const COMMIT_REMINDER_MIN_FILES = 5;
 
+// The commit reminder names at most this many of the counted files that only a
+// shell command listed.
+const COMMIT_REMINDER_MAX_NAMED_FILES = 10;
+
+const BASH_ONLY_NOTICE =
+  'These files were listed only by a shell command; another program or session may have changed them. ' +
+  'Do not commit a listed file that you did not change on purpose.';
+
+/**
+ * The counted files that only a Bash line names: no line of `edits` with
+ * another tool names them. The comparison uses stored paths, so a record with
+ * a symbolic link or another letter case still matches.
+ */
+function bashOnlyFiles(countedFiles, edits, cwd) {
+  const namedByOtherTools = new Set(
+    edits.filter(edit => edit.tool !== BASH_TOOL).map(edit => storedPath(edit.filePath, cwd)));
+  return countedFiles.filter(file => !namedByOtherTools.has(file));
+}
+
+/**
+ * The text between the first sentence of the commit reminder and "Consider
+ * committing". One space when no counted file is Bash-only. Otherwise one
+ * space, the notice, a line break, one `- <path>` line for each Bash-only file
+ * (at most COMMIT_REMINDER_MAX_NAMED_FILES), and `- and K more` when files
+ * remain; each line ends with a line break.
+ */
+function bashOnlyListPart(files) {
+  if (files.length === 0) return ' ';
+  const lines = files.slice(0, COMMIT_REMINDER_MAX_NAMED_FILES).map(file => `- ${file}`);
+  const hiddenCount = files.length - COMMIT_REMINDER_MAX_NAMED_FILES;
+  if (hiddenCount > 0) lines.push(`- and ${hiddenCount} more`);
+  return ` ${BASH_ONLY_NOTICE}\n${lines.map(line => `${line}\n`).join('')}`;
+}
+
+function commitReminderText(countedFiles, edits, cwd) {
+  const listPart = bashOnlyListPart(bashOnlyFiles(countedFiles, edits, cwd));
+  return (
+    `Commit reminder: ${countedFiles.length} files with uncommitted changes, ` +
+    `changed by this session's edits or shell commands.${listPart}` +
+    `Consider committing incremental progress to avoid losing work. ` +
+    `If a project rule (for example in CLAUDE.md or AGENTS.md) requires the user's approval ` +
+    `before a commit, do not commit: tell the user about the uncommitted changes and wait.`
+  );
+}
+
 /**
  * Generate contextual reminders based on edit history and session stats.
  * `backgroundTasks` is the field `background_tasks` of the stop payload.
@@ -512,12 +558,7 @@ function generateReminders(edits, cwd, sessionId, backgroundTasks) {
   ) {
     const uncommittedFiles = filesWithUncommittedChanges(editedPaths, cwd);
     if (uncommittedFiles.length >= COMMIT_REMINDER_MIN_FILES) {
-      reminders.push(
-        `Commit reminder: ${uncommittedFiles.length} files with uncommitted changes, all edited in this session. ` +
-        `Consider committing incremental progress to avoid losing work. ` +
-        `If a project rule (for example in CLAUDE.md or AGENTS.md) requires the user's approval ` +
-        `before a commit, do not commit: tell the user about the uncommitted changes and wait.`
-      );
+      reminders.push(commitReminderText(uncommittedFiles, edits, cwd));
     }
   }
 

@@ -895,13 +895,93 @@ function writeNewFiles(repoDir, names) {
 }
 
 function assertCommitReminder(result, count) {
-  const expected = `Commit reminder: ${count} files with uncommitted changes, all edited in this session.`;
+  const expected = `Commit reminder: ${count} files with uncommitted changes, changed by this session's edits or shell commands.`;
   assert.ok((result.reason || '').includes(expected),
     `Expected "${expected}", got: ${JSON.stringify(result)}`);
 }
 
 test('The commit reminder states the number of session files with uncommitted changes', () => {
   assertCommitReminder(evaluateStop(COMMIT_SCENARIO.arrange), 6);
+});
+
+// ── The commit reminder names the files that only a shell command listed ─────
+
+const BASH_ONLY_SENTENCE = 'These files were listed only by a shell command';
+const DO_NOT_COMMIT_PHRASE = 'Do not commit a listed file';
+const CONSIDER_COMMITTING = 'Consider committing';
+const MAX_NAMED_FILES = 10;
+const AND_MORE_LINE = /^- and \d+ more$/;
+
+/** Edit-log lines for [file, tool] pairs, all inside the 30-minute window. */
+function recordEditsByTool(logDir, entries) {
+  writeEditLog(logDir, entries.map(([file, tool]) =>
+    editLogLine(TEST_SESSION_ID, file, EDIT_AGE_MINUTES * MINUTE_MS, tool)));
+}
+
+/** Modified, committed session files `session1.txt` and so on. Returns the full paths. */
+function modifiedSessionFiles(repoDir, count) {
+  const { sessionFiles } = repoWithSessionAndOtherFiles(repoDir, count);
+  modifyFiles(sessionFiles);
+  return sessionFiles;
+}
+
+/** The file as the hook names it: every symbolic link resolved (macOS: /var is /private/var). */
+function namedAs(file) {
+  return fs.realpathSync.native(file);
+}
+
+/** The `- <path>` lines of a reason, without the `- and K more` line. */
+function namedFileLines(reason) {
+  return reason.split('\n').filter(line => line.startsWith('- ') && !AND_MORE_LINE.test(line));
+}
+
+test('5 files that only Bash lines name: the reminder names each of the 5 absolute paths', () => {
+  let expectedLines;
+  const reason = evaluateStop(({ logDir, cwdDir }) => {
+    const files = modifiedSessionFiles(cwdDir, COMMIT_THRESHOLD);
+    expectedLines = files.map(file => `- ${namedAs(file)}`);
+    recordEditsByTool(logDir, files.map(file => [file, BASH_TOOL]));
+  }).reason || '';
+  assert.ok(reason.includes(BASH_ONLY_SENTENCE), `Expected the sentence, got: ${reason}`);
+  assert.ok(reason.includes(DO_NOT_COMMIT_PHRASE), `Expected the instruction not to commit a listed file, got: ${reason}`);
+  assert.deepStrictEqual(namedFileLines(reason).sort(), expectedLines.sort());
+  assert.ok(!reason.includes('- and '), `Expected no "and more" line, got: ${reason}`);
+  assert.ok(reason.split('\n').some(line => line.startsWith(CONSIDER_COMMITTING)),
+    `Expected "${CONSIDER_COMMITTING}" to start a new line, got: ${reason}`);
+});
+
+test('12 files that only Bash lines name: 10 path lines, then "- and 2 more"', () => {
+  let allLines;
+  const reason = evaluateStop(({ logDir, cwdDir }) => {
+    const files = modifiedSessionFiles(cwdDir, MAX_NAMED_FILES + 2);
+    allLines = files.map(file => `- ${namedAs(file)}`);
+    recordEditsByTool(logDir, files.map(file => [file, BASH_TOOL]));
+  }).reason || '';
+  const lines = namedFileLines(reason);
+  assert.strictEqual(lines.length, MAX_NAMED_FILES, `Got: ${reason}`);
+  assert.ok(lines.every(line => allLines.includes(line)), `A line names another file: ${reason}`);
+  const dashLines = reason.split('\n').filter(line => line.startsWith('- '));
+  assert.strictEqual(dashLines[dashLines.length - 1], '- and 2 more', `Expected "- and 2 more" last, got: ${reason}`);
+});
+
+test('5 files with Bash lines, one also with an Edit line: the 4 others are named, that one is not', () => {
+  let expectedLines;
+  const reason = evaluateStop(({ logDir, cwdDir }) => {
+    const files = modifiedSessionFiles(cwdDir, COMMIT_THRESHOLD);
+    expectedLines = files.slice(1).map(file => `- ${namedAs(file)}`);
+    recordEditsByTool(logDir, [...files.map(file => [file, BASH_TOOL]), [files[0], EDIT_TOOL]]);
+  }).reason || '';
+  assert.deepStrictEqual(namedFileLines(reason).sort(), expectedLines.sort());
+});
+
+test('5 files with Edit lines only: no list, and the second sentence follows the first', () => {
+  const reason = evaluateStop(({ logDir, cwdDir }) => {
+    recordEditsByTool(logDir, modifiedSessionFiles(cwdDir, COMMIT_THRESHOLD).map(file => [file, EDIT_TOOL]));
+  }).reason || '';
+  assert.ok(!reason.includes(BASH_ONLY_SENTENCE), `Expected no list sentence, got: ${reason}`);
+  assert.ok(!reason.includes(DO_NOT_COMMIT_PHRASE), `Expected no instruction about a listed file, got: ${reason}`);
+  assert.ok(!reason.split('\n').some(line => line.startsWith('- ')), `Expected no "- " line, got: ${reason}`);
+  assert.ok(reason.includes(`edits or shell commands. ${CONSIDER_COMMITTING}`), `Got: ${reason}`);
 });
 
 test('The session committed its 5 files and the user has 5 modified files: no reminder', () => {
