@@ -29,7 +29,7 @@
 
 const fs = require('fs');
 const path = require('path');
-const { excludeFromGit, git } = require('./git-exclude');
+const { excludeFromGit, git, isTrackedExactName } = require('./git-exclude');
 const { BASH_TOOL, LOG_DIR, editLogFile, markerFile, writeTimeFile } = require('./save-marker');
 
 // AI-generated workspace artifacts that should never be committed
@@ -42,24 +42,32 @@ const AI_ARTIFACTS = ['project-map.md', SESSION_LOG, 'state.md', 'known-issues.m
 const PROJECT_DIR_VARIABLE = 'CLAUDE_PROJECT_DIR';
 
 /**
+ * True when an Edit or Write of this file would give it an exclude entry
+ * according to these checks: the file name is in AI_ARTIFACTS; the file lies
+ * directly in one of the two folders where the skills write these files (the
+ * project folder of the session, or the top folder of the file's git work
+ * tree; a linked worktree has its own top folder); and git tracks the file
+ * neither under another letter case nor under its exact name. A file with the
+ * same name in any other folder, for example `docs/known-issues.md`, is a
+ * document of the user's project: an exclude entry would leave it out of
+ * `git add -A` and of the commit with no message.
+ */
+function isUntrackedAiArtifact(filePath) {
+  const name = path.basename(filePath);
+  if (!AI_ARTIFACTS.includes(name)) return false;
+  const folder = realPath(path.dirname(filePath));
+  if (!isProjectFolder(folder) && !isTopFolderOfWorkTree(folder)) return false;
+  return !isTrackedWhereLetterCaseIsIgnored(folder, name) && !isTrackedExactName(folder, name);
+}
+
+/**
  * Keep an AI artifact file out of `git status` without editing a tracked file.
  * Called after every Edit or Write, and after a Bash command that redirects
- * output into session-log.md; it acts only when the file name is in
- * AI_ARTIFACTS and the file lies directly in one of the two folders where the
- * skills write these files: the project folder of the session, or the top
- * folder of the file's git work tree (the folder that holds the checked-out
- * files; a linked worktree has its own top folder). A file with the same name
- * in any other folder, for example `docs/known-issues.md`, is a document of
- * the user's project: an exclude entry would leave it out of `git add -A` and
- * of the commit with no message.
+ * output into session-log.md; it acts only on a file for which
+ * isUntrackedAiArtifact is true.
  */
 function excludeArtifact(filePath) {
-  const name = path.basename(filePath);
-  if (!AI_ARTIFACTS.includes(name)) return;
-  const folder = realPath(path.dirname(filePath));
-  if (!isProjectFolder(folder) && !isTopFolderOfWorkTree(folder)) return;
-  if (isTrackedWhereLetterCaseIsIgnored(folder, name)) return;
-  excludeFromGit(filePath);
+  if (isUntrackedAiArtifact(filePath)) excludeFromGit(filePath);
 }
 
 /**
@@ -298,6 +306,7 @@ function isAcceptedBashEntry(entry) {
  * `unavailable`, `shared`, `files` and `moreFiles` are not read: in the first
  * two cases the listed files are still real changes of this session.
  * A file inside the session scratchpad is not returned.
+ * An untracked AI workspace file is not returned (see isUntrackedAiArtifact).
  */
 function bashChangedFiles(data) {
   const diff = data.tool_response?.bashEditDiff;
@@ -305,7 +314,13 @@ function bashChangedFiles(data) {
     return [];
   }
   const accepted = [...new Set(diff.changedFiles.filter(isAcceptedBashEntry))];
-  return accepted.filter(entry => !isInsideScratchpad(entry, data.scratchpad_dir));
+  return accepted
+    .filter(entry => !isInsideScratchpad(entry, data.scratchpad_dir))
+    // An untracked AI workspace file is meant to stay out of git: after an Edit
+    // or Write it gets an exclude entry and git never reports it. A Bash line
+    // gets no exclude entry (a Bash list can name a file that another program
+    // wrote), so it would make the commit count include an AI artifact.
+    .filter(entry => !isUntrackedAiArtifact(entry));
 }
 
 /**
