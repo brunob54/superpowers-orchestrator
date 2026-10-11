@@ -1681,7 +1681,7 @@ git commit -m "feat(track-edits): a Bash line is never written for an untracked 
 - `lstatSync` reads a symbolic link itself, not its target.
 - Verification: tests T27h, T27i, T27m, T27o below; T27 to T27l stay green.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 In `tests/codex/test-track-edits.js`, after the test T27l add:
 
@@ -1771,12 +1771,12 @@ test('T27o: a new symbolic link to an old file is logged (the link itself is rea
 });
 ```
 
-- [ ] **Step 2: Run the tests and see the failure**
+- [x] **Step 2: Run the tests and see the failure**
 
 Run: `node tests/codex/test-track-edits.js`
 Expected: FAIL — T27h fails (`Expected [new, gone] ... got [old, deleted, new, gone]`: the old files are logged because no filter exists). T27i, T27m and T27o pass (they hold on the unfiltered code; they guard the filter's boundaries).
 
-- [ ] **Step 3: Implement the filter**
+- [x] **Step 3: Implement the filter**
 
 In `hooks/track-edits.js`, directly after `isAcceptedBashEntry`, add:
 
@@ -1847,12 +1847,12 @@ function bashChangedFiles(data) {
 
 Add to the docstring of `bashChangedFiles`: "A file that changed before the command started is not returned (see CHANGE_TIME_MARGIN_MS)."
 
-- [ ] **Step 4: Run all three hook test files**
+- [x] **Step 4: Run all three hook test files**
 
 Run: `node tests/codex/test-track-edits.js && node tests/codex/test-git-exclude-hooks.js && node tests/codex/test-stop-reminders.js`
 Expected: PASS — `0 failed` for all three. (The track-edits file now takes about 5 seconds longer because of the two 2.5-second waits.)
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add hooks/track-edits.js tests/codex/test-track-edits.js
