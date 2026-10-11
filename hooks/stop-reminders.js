@@ -287,28 +287,28 @@ function formatStatsSummary(stats) {
 }
 
 const GIT_TIMEOUT_MS = 5000;
-const GIT_STATUS = ['status', '--porcelain'];
 // With this option `git status` lists a new file even when the configuration
 // of the user hides untracked files, and it lists each file of a new folder
 // instead of one line for the folder.
 const ALL_UNTRACKED_FILES = '--untracked-files=all';
 
 /**
- * Run one git command in `cwd`. Return its standard output without the
- * surrounding white space, or null when git failed, could not be started, or
- * did not end within `timeoutMs` milliseconds.
+ * Run one git command in `cwd`. Return its standard output exactly as git
+ * wrote it (the leading space of a status such as ` M x.js` is part of the
+ * output), or null when git failed, could not be started, or did not end
+ * within `timeoutMs` milliseconds.
  */
 function gitStdout(args, cwd, timeoutMs = GIT_TIMEOUT_MS) {
   const result = spawnSync('git', args, { cwd, encoding: 'utf8', timeout: timeoutMs });
   if (result.status !== 0 || result.error) return null;
-  return (result.stdout || '').trim();
+  return result.stdout || '';
 }
 
-// Options for a git command that only reads and that names one file: git
-// does not rewrite the index while it reads, so it cannot collide with a git
-// command of the user, and the characters `*`, `?` and `[` in the file name
+// Options for a git command that only reads and that names files: git does not
+// rewrite the index while it reads, so it cannot collide with a git command of
+// the user, and the characters `*`, `?`, `[` and a leading `:` in a file name
 // have no special meaning.
-const GIT_READ_ONE_FILE = ['--no-optional-locks', '--literal-pathspecs'];
+const GIT_READ_NAMED_FILES = ['--no-optional-locks', '--literal-pathspecs'];
 
 /**
  * Return the nearest folder that exists: `folder` itself, or the first
@@ -320,22 +320,6 @@ function nearestExistingFolder(folder) {
     existing = path.dirname(existing);
   }
   return existing;
-}
-
-/**
- * Return a function that runs one read-only git command about one file.
- * `realPath` is the full path of the file with every symbolic link resolved.
- * git runs in the folder of the file, so the repository of the file decides,
- * not the session folder. When that folder no longer exists (it was renamed
- * or deleted), git runs in the nearest folder that exists and gets the rest
- * of the path, with `/` as the separator on every platform. The file is
- * always the one path of the command: a `git status` with no path would
- * report the whole repository. Each call may take `timeoutMs` milliseconds.
- */
-function gitReaderForFile(realPath, timeoutMs = GIT_TIMEOUT_MS) {
-  const folder = nearestExistingFolder(path.dirname(realPath));
-  const pathFromFolder = path.relative(folder, realPath).split(path.sep).join('/');
-  return (...args) => gitStdout([...GIT_READ_ONE_FILE, ...args, '--', pathFromFolder], folder, timeoutMs);
 }
 
 /**
@@ -373,26 +357,97 @@ function storedPath(filePath, cwd) {
 // (measured: 30 seconds for 6 files).
 const COMMIT_COUNT_TIME_LIMIT_MS = GIT_TIMEOUT_MS;
 
+// A file names its status in `git status --porcelain -z` as two status
+// characters and one space, then the path.
+const GIT_STATUS_PATH_OFFSET = 3;
+
+// The paths of one git call. Windows limits a command line to 32,767
+// characters; 100 paths of at most 260 characters (the classic Windows path
+// limit) need at most 26,100 characters with their separators.
+const MAX_PATHS_PER_GIT_CALL = 100;
+
+const GIT_STATUS_OF_NAMED_FILES = [
+  ...GIT_READ_NAMED_FILES, 'status', '--porcelain', '-z', '--no-renames', ALL_UNTRACKED_FILES, '--',
+];
+
 /**
- * Count the files of `editedPaths` for which git reports a change that is not
- * committed: a modified, staged, deleted or new file. One `git status` runs
- * per file, so a changed file that the session did not edit is never counted,
- * and an empty list runs no git command. A file is counted once, also when
- * the list names it under two paths. Not counted: a file that git ignores
- * (it cannot be committed), a file outside a git repository, and a file for
- * which git fails. When COMMIT_COUNT_TIME_LIMIT_MS is used up, the count
- * stops, and the result is the number of files counted until then.
+ * The top folder of the repository that holds `startFolder`: the nearest
+ * folder, from `startFolder` upward, that holds an entry named `.git`. The
+ * entry can be a folder or a file (a linked worktree and a submodule have a
+ * `.git` file). Null when there is none up to the root of the file system. No
+ * process runs.
  */
-function countFilesWithUncommittedChanges(editedPaths, cwd) {
+function findRepositoryTopFolder(startFolder) {
+  for (let folder = startFolder; ; folder = path.dirname(folder)) {
+    if (fs.existsSync(path.join(folder, '.git'))) return folder;
+    if (path.dirname(folder) === folder) return null;
+  }
+}
+
+/**
+ * Group the paths by repository top folder. Returns a Map from each top folder
+ * to the paths below it, relative to it and with `/` as the separator on
+ * every platform. A path outside any repository is left out. The walk to the
+ * top folder is done once for each start folder.
+ */
+function relativePathsByTopFolder(storedPaths) {
+  const topFolderOfStart = new Map();
+  const groups = new Map();
+  for (const file of storedPaths) {
+    const startFolder = nearestExistingFolder(path.dirname(file));
+    if (!topFolderOfStart.has(startFolder)) {
+      topFolderOfStart.set(startFolder, findRepositoryTopFolder(startFolder));
+    }
+    const topFolder = topFolderOfStart.get(startFolder);
+    if (topFolder === null) continue;
+    if (!groups.has(topFolder)) groups.set(topFolder, []);
+    groups.get(topFolder).push(path.relative(topFolder, file).split(path.sep).join('/'));
+  }
+  return groups;
+}
+
+/**
+ * The distinct absolute paths that the output of one `git status --porcelain
+ * -z` call lists. git prints the paths relative to the top folder of the
+ * repository. A path can be listed twice (`D  f` and `?? f` after
+ * `git rm --cached f`).
+ */
+function changedPathsOfStatusOutput(output, topFolder) {
+  const paths = output.split('\0').filter(Boolean)
+    .map(entry => path.join(topFolder, entry.slice(GIT_STATUS_PATH_OFFSET)));
+  return [...new Set(paths)];
+}
+
+/**
+ * The files of `editedPaths` for which git reports a change that is not
+ * committed (a modified, staged, deleted or new file), as absolute paths. The
+ * count is the length of the list. git is asked about the logged files only,
+ * so a changed file that the session did not edit is never counted, and an
+ * empty list runs no git command. One `git status` runs for each repository
+ * top folder and each 100 paths, in the top folder, so the repository of the
+ * file decides, not the session folder. A file is counted once, also when the
+ * list names it under two paths. Not counted: a file that git ignores (it
+ * cannot be committed), a file outside a git repository, and a file of a git
+ * call that fails. When COMMIT_COUNT_TIME_LIMIT_MS is used up, the count stops,
+ * and the result holds the files counted until then.
+ */
+function filesWithUncommittedChanges(editedPaths, cwd) {
   const storedPaths = new Set(editedPaths.map(filePath => storedPath(filePath, cwd)).filter(Boolean));
   const deadlineMs = Date.now() + COMMIT_COUNT_TIME_LIMIT_MS;
-  let count = 0;
-  for (const file of storedPaths) {
-    const remainingMs = deadlineMs - Date.now();
-    if (remainingMs <= 0) break;
-    if (gitReaderForFile(file, remainingMs)(...GIT_STATUS, ALL_UNTRACKED_FILES)) count += 1;
+  // A Set keeps each absolute path once over all chunks, in the order of first appearance.
+  const counted = new Set();
+  for (const [topFolder, relativePaths] of relativePathsByTopFolder(storedPaths)) {
+    for (let from = 0; from < relativePaths.length; from += MAX_PATHS_PER_GIT_CALL) {
+      const remainingMs = deadlineMs - Date.now();
+      if (remainingMs <= 0) return [...counted];
+      const chunk = relativePaths.slice(from, from + MAX_PATHS_PER_GIT_CALL);
+      const output = gitStdout([...GIT_STATUS_OF_NAMED_FILES, ...chunk], topFolder, remainingMs);
+      if (output !== null) {
+        for (const file of changedPathsOfStatusOutput(output, topFolder)) counted.add(file);
+      }
+    }
   }
-  return count;
+  return [...counted];
 }
 
 const SUBAGENT_TASK_TYPE = 'subagent';
@@ -442,8 +497,9 @@ function generateReminders(edits, cwd, sessionId, backgroundTasks) {
   // would stay after a commit), and `git status` of the whole repository is
   // not enough either (it counts unfinished files of the user, and a model
   // that follows the reminder would commit them).
-  // Accepted limit: a file that was changed only through the Bash tool is not
-  // in the edit log, so it is not counted.
+  // A file that a Bash command changed is counted only when Claude Code listed
+  // it in the Bash tool result (see track-edits.js); in a permission mode
+  // where Claude Code does not fill that list, it is not counted.
   // While a subagent is still running, the reminder is postponed: the files
   // that the subagent edits are in the edit log of this session, and they are
   // not ready for a commit. The next stop without a running subagent gives
@@ -454,10 +510,10 @@ function generateReminders(edits, cwd, sessionId, backgroundTasks) {
     editedPaths.length >= COMMIT_REMINDER_MIN_FILES &&
     !hasRunningSubagent(backgroundTasks)
   ) {
-    const uncommittedCount = countFilesWithUncommittedChanges(editedPaths, cwd);
-    if (uncommittedCount >= COMMIT_REMINDER_MIN_FILES) {
+    const uncommittedFiles = filesWithUncommittedChanges(editedPaths, cwd);
+    if (uncommittedFiles.length >= COMMIT_REMINDER_MIN_FILES) {
       reminders.push(
-        `Commit reminder: ${uncommittedCount} files with uncommitted changes, all edited in this session. ` +
+        `Commit reminder: ${uncommittedFiles.length} files with uncommitted changes, all edited in this session. ` +
         `Consider committing incremental progress to avoid losing work. ` +
         `If a project rule (for example in CLAUDE.md or AGENTS.md) requires the user's approval ` +
         `before a commit, do not commit: tell the user about the uncommitted changes and wait.`

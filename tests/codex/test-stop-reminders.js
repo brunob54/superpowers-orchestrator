@@ -941,8 +941,8 @@ test('New session files are counted when the git configuration of the user hides
   }), 6);
 });
 
-// Accepted limit: a file that was changed only through the Bash tool is not in
-// the edit log, so it is not counted. Here 2 logged files and 4 files that the
+// A file that a shell command changed and that Claude Code did not list is not
+// in the edit log, so it is not counted. Here 2 logged files and 4 files that the
 // log does not name are changed: `git status` prints 6 lines, the count is 2.
 test('5 logged files of which 3 are committed, and 4 changed files that the log does not name: no reminder', () => {
   assertNoReminder(evaluateStop(({ logDir, cwdDir }) => {
@@ -1160,7 +1160,10 @@ test('With a git that hangs, the count stops at its time limit and uses the file
   let elapsedMs;
   try {
     assertCommitReminder(evaluateStop(({ logDir, cwdDir }) => {
-      const { sessionFiles } = repoWithSessionAndOtherFiles(cwdDir, LOGGED_FILES_FOR_SLOW_GIT);
+      // One repository for each file, made before the fake git enters PATH: the
+      // count runs one git call for each repository, so it runs 9 calls.
+      const sessionFiles = Array.from({ length: LOGGED_FILES_FOR_SLOW_GIT }, (_, index) =>
+        repoWithCommittedFiles(path.join(cwdDir, `repo${index + 1}`), ['session.txt'])[0]);
       modifyFiles(sessionFiles);
       recordEdits(logDir, sessionFiles);
       const binDir = path.join(path.dirname(logDir), 'fake-bin');
@@ -1188,6 +1191,148 @@ test('The count of 5 session files does not rewrite the index of the repository'
     indexFile = path.join(cwdDir, '.git', 'index');
     indexBefore = fs.readFileSync(indexFile);
   }, () => assert.ok(indexBefore.equals(fs.readFileSync(indexFile)), 'Expected the index file to be unchanged')));
+});
+
+// ── The count runs one git call for each repository top folder and 100 paths ──
+// The test states the value 100 itself, as the hanging-git test states the time limit.
+
+const MAX_PATHS_PER_GIT_CALL = 100;
+
+/**
+ * Write a program named `git` into binDir. It appends one line to a file for
+ * each `status` call: the number of arguments after `--`. Then it runs the
+ * real git. Call it before PATH is changed: realGitPath() reads PATH.
+ */
+function writeRecordingGit(binDir) {
+  const callsFile = path.join(binDir, 'status-calls');
+  fs.mkdirSync(binDir, { recursive: true });
+  fs.writeFileSync(path.join(binDir, 'git'), [
+    '#!/bin/sh',
+    'is_status=0; after_separator=0; paths=0',
+    'for argument in "$@"; do',
+    '  if [ "$after_separator" = 1 ]; then paths=$((paths + 1)); fi',
+    '  if [ "$argument" = "--" ]; then after_separator=1; fi',
+    '  if [ "$argument" = "status" ]; then is_status=1; fi',
+    'done',
+    `if [ "$is_status" = 1 ]; then echo "$paths" >> '${callsFile}'; fi`,
+    `exec '${realGitPath()}' "$@"`,
+    '',
+  ].join('\n'), { mode: 0o755 });
+  return callsFile;
+}
+
+/**
+ * Like evaluateStop, with a recording git in PATH while the stop runs.
+ * Returns the hook result and the path counts of the `status` calls, in order.
+ */
+function evaluateStopRecordingStatusCalls(arrange) {
+  const pathBefore = process.env.PATH;
+  let callsFile;
+  let pathCounts = [];
+  try {
+    const result = evaluateStop(context => {
+      arrange(context);
+      callsFile = writeRecordingGit(path.join(path.dirname(context.logDir), 'recording-bin'));
+      process.env.PATH = path.dirname(callsFile) + path.delimiter + pathBefore;
+    }, () => {
+      pathCounts = fs.existsSync(callsFile)
+        ? fs.readFileSync(callsFile, 'utf8').split('\n').filter(Boolean).map(Number)
+        : [];
+    });
+    return { result, pathCounts };
+  } finally {
+    process.env.PATH = pathBefore;
+  }
+}
+
+function skipOnWindows() {
+  if (process.platform !== 'win32') return false;
+  console.log('    (not run on Windows: the test uses a shell script, or a file name that Windows cannot hold)');
+  return true;
+}
+
+test('101 modified session files in one folder are counted as 101, in git calls of 100 and 1 paths', () => {
+  if (skipOnWindows()) return;
+  const { result, pathCounts } = evaluateStopRecordingStatusCalls(({ logDir, cwdDir }) => {
+    const { sessionFiles } = repoWithSessionAndOtherFiles(cwdDir, MAX_PATHS_PER_GIT_CALL + 1);
+    modifyFiles(sessionFiles);
+    recordEdits(logDir, sessionFiles);
+  });
+  assertCommitReminder(result, MAX_PATHS_PER_GIT_CALL + 1);
+  assert.deepStrictEqual(pathCounts, [MAX_PATHS_PER_GIT_CALL, 1]);
+});
+
+test('150 modified session files over 30 folders of one repository: two git calls, of 100 and 50 paths', () => {
+  if (skipOnWindows()) return;
+  const { result, pathCounts } = evaluateStopRecordingStatusCalls(({ logDir, cwdDir }) => {
+    const names = Array.from({ length: 30 }, (_, index) =>
+      numberedNames(path.join(`folder${index + 1}`, 'session'), 5)).flat();
+    const files = repoWithCommittedFiles(cwdDir, names);
+    modifyFiles(files);
+    recordEdits(logDir, files);
+  });
+  assertCommitReminder(result, 150);
+  assert.deepStrictEqual(pathCounts, [MAX_PATHS_PER_GIT_CALL, 50]);
+});
+
+// Needs a temporary folder (`os.tmpdir()`) outside any git work tree (see Assumptions).
+test('Five logged files outside any git repository: no git call and no reminder', () => {
+  if (skipOnWindows()) return;
+  const { result, pathCounts } = evaluateStopRecordingStatusCalls(({ logDir, cwdDir }) => {
+    const files = numberedNames('plain', COMMIT_THRESHOLD).map(name => {
+      const file = path.join(cwdDir, name);
+      fs.writeFileSync(file, 'text\n');
+      return file;
+    });
+    recordEdits(logDir, files);
+  });
+  assertNoReminder(result);
+  assert.deepStrictEqual(pathCounts, []);
+});
+
+// The relative text `src/a.js` is the same in both repositories. A set of
+// relative output paths that is shared between the groups would count 3, not 5.
+test('Two repositories that hold a modified file of one relative name count the files of both', () => {
+  const sharedNames = ['a.js', 'b.js', 'c.js'].map(name => path.join('src', name));
+  assertCommitReminder(evaluateStop(({ logDir, cwdDir }) => {
+    const first = repoWithCommittedFiles(path.join(cwdDir, 'first'), sharedNames);
+    const second = repoWithCommittedFiles(path.join(cwdDir, 'second'), sharedNames.slice(0, 2));
+    modifyFiles([...first, ...second]);
+    recordEdits(logDir, [...first, ...second]);
+  }), 5);
+});
+
+// After `git rm --cached f` with f still on disk, git lists `D  f` and `?? f`.
+test('A session file that git lists twice (removed from the index, kept on disk) is counted once', () => {
+  assertCommitReminder(evaluateStop(({ logDir, cwdDir }) => {
+    const { sessionFiles } = repoWithSessionAndOtherFiles(cwdDir, COMMIT_THRESHOLD);
+    modifyFiles(sessionFiles.slice(1));
+    git(cwdDir, ['rm', '--cached', '-q', '--', path.basename(sessionFiles[0])]);
+    recordEdits(logDir, sessionFiles);
+  }), COMMIT_THRESHOLD);
+});
+
+// git reads `*` in a name as a pattern that matches `xa.txt` and `xb.txt`. The
+// two modified files are not in the log, so they must not be counted.
+test('A committed session file named x*.txt is not counted for the files that the pattern matches', () => {
+  if (skipOnWindows()) return;
+  assertNoReminder(evaluateStop(({ logDir, cwdDir }) => {
+    const [patternFile, ...others] = repoWithCommittedFiles(cwdDir,
+      ['x*.txt', 'xa.txt', 'xb.txt', ...numberedNames('session', COMMIT_THRESHOLD - 1)]);
+    modifyFiles(others);
+    recordEdits(logDir, [patternFile, ...others.slice(2)]);
+  }));
+});
+
+// git reads a leading `:` as the start of a pathspec magic word; `:x.txt` would match `x.txt`.
+test('A committed session file named :x.txt is not counted for the file that the pattern matches', () => {
+  if (skipOnWindows()) return;
+  assertNoReminder(evaluateStop(({ logDir, cwdDir }) => {
+    const [patternFile, ...others] = repoWithCommittedFiles(cwdDir,
+      [':x.txt', 'x.txt', ...numberedNames('session', COMMIT_THRESHOLD - 1)]);
+    modifyFiles(others);
+    recordEdits(logDir, [patternFile, ...others.slice(1)]);
+  }));
 });
 
 // ── Shared behaviour of the reminders ────────────────────────────────────────
