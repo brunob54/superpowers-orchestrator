@@ -2005,7 +2005,7 @@ git commit -m "docs: Bash-changed files in the edit log, the commit reminder lis
 - `RELEASE-NOTES.md` gets an entry `## v7.72.0 — <title>` directly above the `## v7.71.0` entry, starting with the three labelled lines **Problem.**, **Change.**, **Effect.** (the summary, at most 120 words in total) and followed by the full prose; every statement in it is supported by the spec and by the entry's own prose (the repository rule for release notes).
 - Verification: `node tests/codex/test-version-files.js` passes; the word-count command in Step 3; every fast suite exits 0 (Step 4).
 
-- [ ] **Step 1: Bump the version places**
+- [x] **Step 1: Bump the version places**
 
 Run these commands in the repository root (the second and third use the exact old text, so a miss shows as an unchanged count):
 
@@ -2021,7 +2021,7 @@ grep -c "v6.7.0–v7.72.0" README.md
 
 Expected: the four `grep -c "7.71.0"` counts are `0` (`grep -c` exits with status 1 when a count is 0; that exit status is expected, so read the printed counts); the last count is `2`. (Check `VERSION` is exactly `7.72.0` plus one line end: the first line of `od -c VERSION` shows the characters `7 . 7 2 . 0 \n`. Do not use a pipeline that rewrites a file with its own content.)
 
-- [ ] **Step 2: Add the release entry**
+- [x] **Step 2: Add the release entry**
 
 In `RELEASE-NOTES.md` insert the following directly above the line `## v7.71.0 — the stop hook no longer has a TDD reminder`:
 
@@ -2053,14 +2053,14 @@ Claude Code fills the list only in the `auto` and `bypassPermissions` modes unle
 
 ```
 
-- [ ] **Step 3: Check the summary length and the version check**
+- [x] **Step 3: Check the summary length and the version check**
 
 Run: `awk '/^## v7.72.0/{f=1;next} /^## v7.71.0/{f=0} f && /^\*\*(Problem|Change|Effect)\.\*\*/' RELEASE-NOTES.md | wc -w`
 Expected: a number from 90 to 120. Run the same command with `| wc -l` in place of `| wc -w` — Expected: `3` (a different number means that the heading or a label is wrong, and the word count above measured nothing).
 Run: `node tests/codex/test-version-files.js`
 Expected: PASS — `0 failed`.
 
-- [ ] **Step 4: Run every fast suite**
+- [x] **Step 4: Run every fast suite**
 
 Run each of these as its own command and expect exit code 0 for every one (the first line runs the three changed test files):
 
@@ -2085,7 +2085,7 @@ bash tests/context-management/run-tests.sh
 
 Expected: all sixteen exit 0. A test that is not named in the spec and fails stops the run for a ruling; do not change it to make it pass.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add VERSION .claude-plugin/plugin.json .claude-plugin/marketplace.json plugin.universal.yaml README.md RELEASE-NOTES.md
