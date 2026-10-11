@@ -64,7 +64,7 @@ Task order matters: Task 5 creates the `BASH_TOOL` export that Task 6 and later 
 - Invariant: every existing call that passes no tool behaves as before.
 - Verification: `node tests/codex/test-stop-reminders.js` passes all old tests plus three new tests, "The \"<name>\" scenario with Bash lines blocks with its reminder", for `commit`, `decision-log` and `state-md`.
 
-- [ ] **Step 1: Add the tool constants and the tool argument to the log helpers**
+- [x] **Step 1: Add the tool constants and the tool argument to the log helpers**
 
 Before the first edit, run the sixteen commands of Task 11 Step 4 once. If any of them exits with a code other than 0, stop for a ruling before Task 1: a suite that already fails cannot show whether a later change broke it.
 
@@ -98,7 +98,7 @@ function writeRecentEdit(logDir, filePath, tool = EDIT_TOOL) {
 
 (`writeEditLog` keeps its body; only its position next to the others is shown.)
 
-- [ ] **Step 2: Forward the tool through `evaluateStop`**
+- [x] **Step 2: Forward the tool through `evaluateStop`**
 
 Replace the whole function `evaluateStop` (the function after `const DECISION_LOG = 'Decision log';`) so that it reads:
 
@@ -121,7 +121,7 @@ function evaluateStop(arrange, inspect = () => {}, tool = EDIT_TOOL) {
 
 Update the docstring line "`arrange` prepares the log folder" to add: "`tool` is the tool name that the log lines of the scenario carry (default `Edit`)."
 
-- [ ] **Step 3: Forward the tool in the three scenarios and add `arrangeStaleStateMd`**
+- [x] **Step 3: Forward the tool in the three scenarios and add `arrangeStaleStateMd`**
 
 Directly after `const LARGE_SESSION_LOG = ...;` (before `REMINDER_SCENARIOS`) add:
 
@@ -171,7 +171,7 @@ In `REMINDER_SCENARIOS` change the three `arrange` functions to:
 
 Leave the `session-log-size` scenario as it is.
 
-- [ ] **Step 4: Add the characterization tests**
+- [x] **Step 4: Add the characterization tests**
 
 Directly after the `for (const scenario of REMINDER_SCENARIOS) { ... }` loop (the one that ends before the test "The commit reminder tells the assistant to ask when a project rule requires approval") add:
 
@@ -192,12 +192,12 @@ for (const name of EDIT_LOG_SCENARIO_NAMES) {
 
 `scenarioNamed` is a function declaration later in the file, so it is available here.
 
-- [ ] **Step 5: Run the file**
+- [x] **Step 5: Run the file**
 
 Run: `node tests/codex/test-stop-reminders.js`
 Expected: PASS — `stop-reminders: 116 passed, 0 failed` (113 old tests plus 3 new ones). The three new tests pass without any hook change; that is the intended result.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add tests/codex/test-stop-reminders.js
