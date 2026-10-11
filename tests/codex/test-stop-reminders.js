@@ -79,25 +79,27 @@ function loadHookWithHome(homeDir) {
 }
 
 const TEST_SESSION_ID = 'test-session-abc123';
+const EDIT_TOOL = 'Edit';
+const BASH_TOOL = 'Bash';
 
 const MINUTE_MS = 60 * 1000;
 const DAY_MS = 24 * 60 * MINUTE_MS;
 
-function editLogLine(sessionId, filePath, ageMs = 0) {
-  return `${new Date(Date.now() - ageMs).toISOString()} | ${sessionId} | Edit | ${filePath}\n`;
+function editLogLine(sessionId, filePath, ageMs = 0, tool = EDIT_TOOL) {
+  return `${new Date(Date.now() - ageMs).toISOString()} | ${sessionId} | ${tool} | ${filePath}\n`;
 }
 
 function writeEditLog(logDir, lines) {
   fs.writeFileSync(path.join(logDir, 'edit-log.txt'), lines.join(''), 'utf8');
 }
 
-function writeRecentEdits(logDir, filePaths, ageMinutes = 0) {
+function writeRecentEdits(logDir, filePaths, ageMinutes = 0, tool = EDIT_TOOL) {
   writeEditLog(logDir, filePaths.map(filePath =>
-    editLogLine(TEST_SESSION_ID, filePath, ageMinutes * MINUTE_MS)));
+    editLogLine(TEST_SESSION_ID, filePath, ageMinutes * MINUTE_MS, tool)));
 }
 
-function writeRecentEdit(logDir, filePath) {
-  writeRecentEdits(logDir, [filePath]);
+function writeRecentEdit(logDir, filePath, tool = EDIT_TOOL) {
+  writeRecentEdits(logDir, [filePath], 0, tool);
 }
 
 /** Create `hooks/hooks.json` under `cwdDir`: the folder is then a plugin's hook folder. */
@@ -356,15 +358,16 @@ const DECISION_LOG = 'Decision log';
  * Run one scenario: `arrange` prepares the log folder, then the stop hook
  * evaluates a stop of TEST_SESSION_ID. `inspect` runs after the stop, while
  * the temporary folders still exist. Returns the hook result. An object that
- * `arrange` returns is added to the payload of that last stop.
+ * `arrange` returns is added to the payload of that last stop. `tool` is the
+ * tool name that the log lines of the scenario carry (default `Edit`).
  */
-function evaluateStop(arrange, inspect = () => {}) {
+function evaluateStop(arrange, inspect = () => {}, tool = EDIT_TOOL) {
   const { homeDir, cwdDir, logDir } = makeTempDirs();
   try {
     const hook = loadHookWithHome(homeDir);
     const stop = (sessionId, extraFields = {}) =>
       hook.evaluatePayload({ cwd: cwdDir, session_id: sessionId, ...extraFields });
-    const lastStopFields = arrange({ hook, logDir, cwdDir, stop });
+    const lastStopFields = arrange({ hook, logDir, cwdDir, stop, tool });
     const result = stop(TEST_SESSION_ID, lastStopFields);
     inspect();
     return result;
@@ -576,37 +579,45 @@ function withRemindersOff(value, fn) {
 const OLD_STATE_MS = 10 * MINUTE_MS;
 const LARGE_SESSION_LOG = '## 2026-04-15 [saved]\nGoal: Test\n' + 'x'.repeat(1600) + '\n';
 
+/** A state.md in cwdDir that is OLD_STATE_MS old. */
+function makeStaleStateMd(cwdDir) {
+  const stateFile = path.join(cwdDir, 'state.md');
+  fs.writeFileSync(stateFile, '# state\n', 'utf8');
+  setFileAge(stateFile, OLD_STATE_MS);
+}
+
+/** A stale state.md, and one log line for each of `filePaths`, all newer than it. */
+function arrangeStaleStateMd({ logDir, cwdDir, tool }, filePaths) {
+  makeStaleStateMd(cwdDir);
+  writeRecentEdits(logDir, filePaths, 0, tool);
+}
+
 // Each scenario makes exactly one reminder due, so a block with no reason
 // left proves that the name switched off that reminder and nothing else.
 const REMINDER_SCENARIOS = [
   {
     name: 'commit',
     text: 'Commit reminder',
-    arrange: ({ logDir, cwdDir }) => {
+    arrange: ({ logDir, cwdDir, tool }) => {
       const files = ['a', 'b', 'c', 'd', 'e', 'f'].map(name => `${name}.txt`);
       git(cwdDir, ['init', '-q']);
       for (const file of files) fs.writeFileSync(path.join(cwdDir, file), 'x', 'utf8');
       // Staged files are listed by `git status` even when the user's git
       // configuration hides untracked files (status.showUntrackedFiles=no).
       git(cwdDir, ['add', '.']);
-      writeRecentEdits(logDir, files.map(file => path.join(cwdDir, file)));
+      writeRecentEdits(logDir, files.map(file => path.join(cwdDir, file)), 0, tool);
     },
   },
   {
     name: 'decision-log',
     text: 'Decision log:',
-    arrange: ({ logDir }) => writeRecentEdit(logDir, SIGNIFICANT_FILE),
+    arrange: ({ logDir, tool }) => writeRecentEdit(logDir, SIGNIFICANT_FILE, tool),
   },
   {
     name: 'state-md',
     text: 'State.md sync',
     // Two source edits, both later than state.md.
-    arrange: ({ logDir, cwdDir }) => {
-      const stateFile = path.join(cwdDir, 'state.md');
-      fs.writeFileSync(stateFile, '# state\n', 'utf8');
-      setFileAge(stateFile, OLD_STATE_MS);
-      writeRecentEdits(logDir, ['src/a.js', 'src/b.js']);
-    },
+    arrange: context => arrangeStaleStateMd(context, ['src/a.js', 'src/b.js']),
   },
   {
     name: 'session-log-size',
@@ -627,6 +638,19 @@ for (const scenario of REMINDER_SCENARIOS) {
     const result = withRemindersOff(scenario.name, () => evaluateStop(scenario.arrange));
     assert.deepStrictEqual(result, {},
       `Expected no block with "${scenario.name}" switched off, got: ${JSON.stringify(result)}`);
+  });
+}
+
+// A Bash call writes a log line with the tool name `Bash`. Three reminders read
+// the edit log, and each must count such a line like an Edit line.
+const EDIT_LOG_SCENARIO_NAMES = ['commit', 'decision-log', 'state-md'];
+
+for (const name of EDIT_LOG_SCENARIO_NAMES) {
+  test(`The "${name}" scenario with Bash lines blocks with its reminder`, () => {
+    const scenario = scenarioNamed(name);
+    const result = evaluateStop(scenario.arrange, () => {}, BASH_TOOL);
+    assert.ok((result.reason || '').includes(scenario.text),
+      `Expected "${scenario.text}" for Bash lines, got: ${JSON.stringify(result)}`);
   });
 }
 
