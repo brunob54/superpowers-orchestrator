@@ -28,3 +28,7 @@ Re-dispatch: phase 3, in-run resume 1 of 3, return 1 of 6
 - Task 7: complete — log the files that Claude Code lists after a Bash call (ruling 1 and 2: plan governs)
 - Task 8: complete — no Bash line for an untracked AI workspace file
 - Task 9: complete — drop a listed file that changed before the command started
+
+## Phase 3 — Batch 4 (tasks 10–11) — COMPLETE — commits b7e3b69..65dcb35
+- Task 10: complete — documentation and comments
+- Task 11: complete — release v7.72.0
