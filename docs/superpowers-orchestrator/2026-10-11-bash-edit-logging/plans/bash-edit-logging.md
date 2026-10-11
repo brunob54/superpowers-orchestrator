@@ -318,7 +318,7 @@ git commit -m "fix(stop-reminders): decision-log patterns match a whole file nam
 - `checkStateMdStaleness(cwd, recentEdits)` returns the reminder only when the edits newer than `state.md` hold at least 2 distinct `filePath` values that are source files.
 - Verification: new tests in `tests/codex/test-stop-reminders.js`; those for the five folders, the three names and the distinct-file rule fail on the old code.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 In `tests/codex/test-stop-reminders.js`, at the end of the section "File patterns of the reminders" (after the tests added in Task 2), add:
 
@@ -388,12 +388,12 @@ test('Two Bash lines for two distinct source files give the state-md reminder', 
 });
 ```
 
-- [ ] **Step 2: Run the tests and see the failures**
+- [x] **Step 2: Run the tests and see the failures**
 
 Run: `node tests/codex/test-stop-reminders.js`
 Expected: FAIL — these new tests fail on the old code: the five "Two source files below <folder>/" tests, the three "<name> and another source file" tests (the old pattern reads the whole path, so only one source file counts), and "An Edit line and a Bash line for one source file give no state-md reminder" (two log lines are counted as two edits). The "no state-md reminder" tests for config names and the Bash-lines test pass.
 
-- [ ] **Step 3: Change the patterns and the count**
+- [x] **Step 3: Change the patterns and the count**
 
 In `hooks/stop-reminders.js` replace `CONFIG_PATTERNS` and `isSourceFile` with:
 
@@ -449,12 +449,12 @@ The `return null;` that follows the `if` in the existing code stays; do not add 
 
 Update the threshold sentence in the docstring of `checkStateMdStaleness`: "Threshold: state.md older than at least 2 distinct source files that were edited after it was last written."
 
-- [ ] **Step 4: Run the tests and see them pass**
+- [x] **Step 4: Run the tests and see them pass**
 
 Run: `node tests/codex/test-stop-reminders.js`
 Expected: PASS — `0 failed`.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add hooks/stop-reminders.js tests/codex/test-stop-reminders.js
