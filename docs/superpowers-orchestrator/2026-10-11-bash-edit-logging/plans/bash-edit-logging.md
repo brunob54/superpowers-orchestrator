@@ -1492,7 +1492,7 @@ git commit -m "feat(track-edits): log the files that Claude Code lists after a B
 - Invariants: a Bash line gives no exclude entry; a tracked `project-map.md` stays in the list when `core.ignorecase` is `false` (only the exact-name check keeps it); a file `docs/known-issues.md` stays in the list.
 - Verification: `node tests/codex/test-git-exclude-hooks.js` (new tests below) and `node tests/codex/test-track-edits.js`.
 
-- [ ] **Step 1: Write the tests**
+- [x] **Step 1: Write the tests**
 
 In `tests/codex/test-git-exclude-hooks.js`:
 
@@ -1572,12 +1572,12 @@ for (const [label, ignoreCase] of [['default core.ignorecase', undefined], ['cor
 
 (`makeRepoWith`, `writeArtifact`, `commitFile`, `runHook`, `DOCS_FOLDER`, `folderCount` and `WORK_ROOT` exist earlier in the file; `folderCount` makes the session id different for each case. The session id `bash-list-<number>` has only characters that survive `cleanSessionId`.)
 
-- [ ] **Step 2: Run the tests and see the failures**
+- [x] **Step 2: Run the tests and see the failures**
 
 Run: `node tests/codex/test-git-exclude-hooks.js`
 Expected: FAIL — both T27n cases fail (`state.md` and `known-issues.md` are logged: the deep-equal shows four paths instead of two). The test 'a state.md and a known-issues.md that Bash lists ... get no exclude entry' passes already: it guards that Bash lines never create an exclude entry.
 
-- [ ] **Step 3: Add `isTrackedExactName` to `hooks/git-exclude.js`**
+- [x] **Step 3: Add `isTrackedExactName` to `hooks/git-exclude.js`**
 
 Directly after `gitSucceeds` add:
 
@@ -1600,7 +1600,7 @@ In `excludeFromGit` replace
 
 with `if (isTrackedExactName(dir, name)) return;`, and change the export to `module.exports = { excludeFromGit, git, isTrackedExactName };`.
 
-- [ ] **Step 4: Add `isUntrackedAiArtifact` and use it**
+- [x] **Step 4: Add `isUntrackedAiArtifact` and use it**
 
 In `hooks/track-edits.js` change the import to `const { excludeFromGit, git, isTrackedExactName } = require('./git-exclude');`. Replace `excludeArtifact` (docstring and function) with:
 
@@ -1650,12 +1650,12 @@ In `bashChangedFiles` replace the last two statements with:
 
 and add a sentence to its docstring: "An untracked AI workspace file is not returned (see isUntrackedAiArtifact)."
 
-- [ ] **Step 5: Run the tests and see them pass**
+- [x] **Step 5: Run the tests and see them pass**
 
 Run: `node tests/codex/test-git-exclude-hooks.js && node tests/codex/test-track-edits.js`
 Expected: PASS — `0 failed` for both.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add hooks/git-exclude.js hooks/track-edits.js tests/codex/test-git-exclude-hooks.js
