@@ -14,6 +14,8 @@
 - Assumes the file system writes the status-change time (`ctime`) with a clock within the 2-second margin of the hook's clock. Will NOT filter correctly on a network or shared file system whose clock differs by more than the margin (spec section 2, accepted limit).
 - Assumes macOS or Linux for the shell-script tests (fake `git` wrappers) and for the rename test T27m. Those tests print a note and return on Windows.
 - Assumes the commit reminder threshold of 5 files (`COMMIT_REMINDER_MIN_FILES`) stays. Because of it, the spec's test "two repositories, one relative name: the count is 2" cannot be observed through the reminder; Task 4 uses 3 + 2 files (5 distinct files in total) and expects "5 files". A shared set of relative paths would give 3 and fail the test.
+- Assumes the temporary folder of the tests (`os.tmpdir()`, or `TMPDIR`) lies outside any git work tree. The no-repository test of Task 4 and the test T27j of Task 7 fail on a machine where it does not; a failure of one of them there is a test environment problem, not a hook defect.
+- Assumes the sixteen commands of Task 11 Step 4 all exit with code 0 before Task 1 starts. Task 1 Step 1 checks this and stops for a ruling when one of them does not.
 **Global Constraints:**
 - Release v7.72.0; base is `main` at `b8acc43` (v7.71.0). All decisions in the spec were made by the user on 2026-10-11 and are binding.
 - Accepted-entry rule for a Bash-listed path (spec section 4.1, steps 1 to 6): the entry is a string, `path.isAbsolute(entry)` is true, and it holds no `\n` and no `\r` (never resolved against `cwd`); duplicates (exact text) removed with a `Set`; an entry inside the session scratchpad is dropped (`isInsideScratchpad`); an untracked AI workspace file is dropped (the name is in `AI_ARTIFACTS`, the folder is the project folder or the top folder of its git work tree, and git does not track the file, also not in another letter case); change-time filter only when `data.duration_ms` is a finite number of at least 0: `commandStartMs = Date.now() - duration_ms - CHANGE_TIME_MARGIN_MS` with `CHANGE_TIME_MARGIN_MS = 2000`, drop an entry whose `fs.lstatSync(entry).ctimeMs` is earlier than `commandStartMs`; for an entry that cannot be lstat'ed use the nearest existing ancestor folder, keep the entry when no ancestor can be lstat'ed. `unavailable`, `shared`, `files` and `moreFiles` are not read. A `skipped` of exactly `true` gives no line.
@@ -64,6 +66,8 @@ Task order matters: Task 5 creates the `BASH_TOOL` export that Task 6 and later 
 
 - [ ] **Step 1: Add the tool constants and the tool argument to the log helpers**
 
+Before the first edit, run the sixteen commands of Task 11 Step 4 once. If any of them exits with a code other than 0, stop for a ruling before Task 1: a suite that already fails cannot show whether a later change broke it.
+
 In `tests/codex/test-stop-reminders.js`, directly after `const TEST_SESSION_ID = 'test-session-abc123';` add:
 
 ```js
@@ -71,7 +75,7 @@ const EDIT_TOOL = 'Edit';
 const BASH_TOOL = 'Bash';
 ```
 
-Replace the four helpers `editLogLine`, `writeRecentEdits`, `writeRecentEdit` (they follow `DAY_MS`) with:
+Replace the four helpers `editLogLine`, `writeEditLog`, `writeRecentEdits`, `writeRecentEdit` (they follow `DAY_MS`; `writeEditLog` stays as it is) with:
 
 ```js
 function editLogLine(sessionId, filePath, ageMs = 0, tool = EDIT_TOOL) {
@@ -96,7 +100,7 @@ function writeRecentEdit(logDir, filePath, tool = EDIT_TOOL) {
 
 - [ ] **Step 2: Forward the tool through `evaluateStop`**
 
-Replace the head of `evaluateStop` (the function after `const DECISION_LOG = 'Decision log';`) so that it reads:
+Replace the whole function `evaluateStop` (the function after `const DECISION_LOG = 'Decision log';`) so that it reads:
 
 ```js
 function evaluateStop(arrange, inspect = () => {}, tool = EDIT_TOOL) {
@@ -122,11 +126,16 @@ Update the docstring line "`arrange` prepares the log folder" to add: "`tool` is
 Directly after `const LARGE_SESSION_LOG = ...;` (before `REMINDER_SCENARIOS`) add:
 
 ```js
-/** A state.md that is OLD_STATE_MS old, and one log line for each of `filePaths`, all newer than it. */
-function arrangeStaleStateMd({ logDir, cwdDir, tool }, filePaths) {
+/** A state.md in cwdDir that is OLD_STATE_MS old. */
+function makeStaleStateMd(cwdDir) {
   const stateFile = path.join(cwdDir, 'state.md');
   fs.writeFileSync(stateFile, '# state\n', 'utf8');
   setFileAge(stateFile, OLD_STATE_MS);
+}
+
+/** A stale state.md, and one log line for each of `filePaths`, all newer than it. */
+function arrangeStaleStateMd({ logDir, cwdDir, tool }, filePaths) {
+  makeStaleStateMd(cwdDir);
   writeRecentEdits(logDir, filePaths, 0, tool);
 }
 ```
@@ -209,23 +218,25 @@ git commit -m "test(stop-reminders): log helpers take a tool name; Bash lines co
 
 **Contract:** `isSignificantSession` patterns in `hooks/stop-reminders.js`
 - Invariant: a record counts for `SKILL.md`, `skill-rules.json`, `CLAUDE.md`, `agents/*.md` or `plugin.universal.yaml` only when the name starts the record or follows a path separator.
-- Matches that must stay: `/project/agents/x.md`, `/project/CLAUDE.md`, the bare relative `CLAUDE.md` and `agents/x.md`, `skills/x/SKILL.md`.
-- Matches that must be lost: `/project/myagents/x.md`, `/project/notes/XSKILL.md`, `/project/notes/MYCLAUDE.md`.
-- Verification: the new tests in `tests/codex/test-stop-reminders.js` (three fail on the old code, five guard the matches that stay).
+- Matches that must stay: `/project/agents/x.md`, `/project/CLAUDE.md`, the bare relative `CLAUDE.md` and `agents/x.md`, `skills/x/SKILL.md`, `/project/hooks/skill-rules.json`, the bare relative `plugin.universal.yaml`.
+- Matches that must be lost: `/project/myagents/x.md`, `/project/notes/XSKILL.md`, `/project/notes/MYCLAUDE.md`, `/project/notes/Xskill-rules.json`, `/project/notes/Xplugin.universal.yaml`.
+- Verification: the new tests in `tests/codex/test-stop-reminders.js` (five fail on the old code, seven guard the matches that stay).
 
 - [ ] **Step 1: Write the failing tests**
 
 In `tests/codex/test-stop-reminders.js`, in the section "File patterns of the reminders", directly after the test 'A .claude/hooks/*.js file asks for a decision-log entry', add:
 
 ```js
-// A name pattern must match the whole name: `XSKILL.md` and `MYCLAUDE.md` are
-// not the files that the decision-log reminder is about.
+// A name pattern must match the whole name: `XSKILL.md`, `MYCLAUDE.md`,
+// `Xskill-rules.json` and `Xplugin.universal.yaml` are not the files that the decision-log reminder is about.
 const NAMES_THAT_ARE_NOT_SIGNIFICANT = [
   '/project/myagents/x.md',
   '/project/notes/XSKILL.md',
   '/project/notes/MYCLAUDE.md',
+  '/project/notes/Xskill-rules.json',
+  '/project/notes/Xplugin.universal.yaml',
 ];
-// `CLAUDE.md` and `agents/x.md` are bare relative records (no folder before
+// `CLAUDE.md`, `agents/x.md` and `plugin.universal.yaml` are bare relative records (no folder before
 // the name); the others lie below a folder.
 const NAMES_THAT_ARE_SIGNIFICANT = [
   '/project/agents/x.md',
@@ -233,6 +244,8 @@ const NAMES_THAT_ARE_SIGNIFICANT = [
   'CLAUDE.md',
   'agents/x.md',
   'skills/x/SKILL.md',
+  '/project/hooks/skill-rules.json',
+  'plugin.universal.yaml',
 ];
 
 for (const filePath of NAMES_THAT_ARE_NOT_SIGNIFICANT) {
@@ -250,10 +263,10 @@ for (const filePath of NAMES_THAT_ARE_SIGNIFICANT) {
 }
 ```
 
-- [ ] **Step 2: Run the tests and see three failures**
+- [ ] **Step 2: Run the tests and see five failures**
 
 Run: `node tests/codex/test-stop-reminders.js`
-Expected: FAIL — exactly three new tests fail: the records `/project/myagents/x.md`, `/project/notes/XSKILL.md` and `/project/notes/MYCLAUDE.md` each produce a "Decision log" block ("Expected no reminder"). The five "asks for a decision-log entry" tests pass.
+Expected: FAIL — exactly five new tests fail: the records `/project/myagents/x.md`, `/project/notes/XSKILL.md`, `/project/notes/MYCLAUDE.md`, `/project/notes/Xskill-rules.json` and `/project/notes/Xplugin.universal.yaml` each produce a "Decision log" block ("Expected no reminder"). The seven "asks for a decision-log entry" tests pass.
 
 - [ ] **Step 3: Anchor the five patterns**
 
@@ -278,7 +291,7 @@ In `isSignificantSession` in `hooks/stop-reminders.js` replace the list `sigPatt
 - [ ] **Step 4: Run the tests and see them pass**
 
 Run: `node tests/codex/test-stop-reminders.js`
-Expected: PASS — `0 failed`; all eight new tests pass.
+Expected: PASS — `0 failed`; all twelve new tests pass.
 
 - [ ] **Step 5: Commit**
 
@@ -297,7 +310,7 @@ git commit -m "fix(stop-reminders): decision-log patterns match a whole file nam
 
 **Security flag:** `none`
 
-**Does NOT cover:** `SOURCE_PATTERNS` (tests only the extension; unchanged); the eleven `CONFIG_PATTERNS` entries that are not in the table of the spec (they end in `$` after a non-source name or extension and keep their meaning); the state-md reminder's other conditions (`state.md` must exist in `cwd`; the edits must be newer than its modification time). Lost exclusions (spec 4.3, Minor): `config.env.js` and source files inside a folder named `.env/` become source files.
+**Does NOT cover:** the identity of a distinct file (the state-md reminder compares the recorded text: an Edit line with a path through a symbolic link and a Bash line with the resolved path of the same file count as two files, which gives at worst one extra reminder); `SOURCE_PATTERNS` (tests only the extension; unchanged); the eleven `CONFIG_PATTERNS` entries that are not in the table of the spec (they end in `$` after a non-source name or extension and keep their meaning); the state-md reminder's other conditions (`state.md` must exist in `cwd`; the edits must be newer than its modification time). Lost exclusions (spec 4.3, Minor): `config.env.js` and source files inside a folder named `.env/` become source files.
 
 **Contract:** `isSourceFile` and `checkStateMdStaleness` in `hooks/stop-reminders.js`
 - `isSourceFile(filePath)`: true when the extension is a source extension and no `CONFIG_PATTERNS` entry matches the **file name** (`filePath.split(/[/\\]/).pop()`).
@@ -314,6 +327,11 @@ In `tests/codex/test-stop-reminders.js`, at the end of the section "File pattern
 
 const STATE_MD_REMINDER = 'State.md sync';
 
+function assertStateMdReminder(result) {
+  assert.ok((result.reason || '').includes(STATE_MD_REMINDER),
+    `Expected the state-md reminder, got: ${JSON.stringify(result)}`);
+}
+
 /** The reason of the stop after edits of `filePaths` (full paths) that are newer than state.md. */
 function stateMdResult(filePathsOf, tool = EDIT_TOOL) {
   return evaluateStop(context => arrangeStaleStateMd(context, filePathsOf(context.cwdDir)), () => {}, tool);
@@ -326,8 +344,7 @@ const FOLDERS_THAT_ONLY_LOOK_LIKE_CONFIG = ['.envs', 'Dockerfiles', 'docker-comp
 for (const folder of FOLDERS_THAT_ONLY_LOOK_LIKE_CONFIG) {
   test(`Two source files below ${folder}/ give the state-md reminder`, () => {
     const result = stateMdResult(cwdDir => ['a.js', 'b.js'].map(name => path.join(cwdDir, folder, 'p', 'src', name)));
-    assert.ok((result.reason || '').includes(STATE_MD_REMINDER),
-      `Expected the state-md reminder, got: ${JSON.stringify(result)}`);
+    assertStateMdReminder(result);
   });
 }
 
@@ -335,8 +352,7 @@ for (const folder of FOLDERS_THAT_ONLY_LOOK_LIKE_CONFIG) {
 for (const name of ['app.environment.ts', 'DockerfileParser.ts', 'docker-compose-helper.py']) {
   test(`${name} and another source file give the state-md reminder`, () => {
     const result = stateMdResult(cwdDir => [path.join(cwdDir, 'src', 'plain.js'), path.join(cwdDir, 'src', name)]);
-    assert.ok((result.reason || '').includes(STATE_MD_REMINDER),
-      `Expected the state-md reminder, got: ${JSON.stringify(result)}`);
+    assertStateMdReminder(result);
   });
 }
 
@@ -357,9 +373,7 @@ for (const name of ['.env.local', 'Dockerfile.dev', 'docker-compose.yml']) {
 
 test('An Edit line and a Bash line for one source file give no state-md reminder', () => {
   assertNoReminder(evaluateStop(({ logDir, cwdDir }) => {
-    const stateFile = path.join(cwdDir, 'state.md');
-    fs.writeFileSync(stateFile, '# state\n', 'utf8');
-    setFileAge(stateFile, OLD_STATE_MS);
+    makeStaleStateMd(cwdDir);
     const sourceFile = path.join(cwdDir, 'src', 'a.js');
     writeEditLog(logDir, [
       editLogLine(TEST_SESSION_ID, sourceFile, 0, EDIT_TOOL),
@@ -370,8 +384,7 @@ test('An Edit line and a Bash line for one source file give no state-md reminder
 
 test('Two Bash lines for two distinct source files give the state-md reminder', () => {
   const result = stateMdResult(cwdDir => ['a.js', 'b.js'].map(name => path.join(cwdDir, 'src', name)), BASH_TOOL);
-  assert.ok((result.reason || '').includes(STATE_MD_REMINDER),
-    `Expected the state-md reminder, got: ${JSON.stringify(result)}`);
+  assertStateMdReminder(result);
 });
 ```
 
@@ -430,8 +443,9 @@ In `checkStateMdStaleness` replace the lines from `const editsAfterState = ...` 
         'If progress was made on the active task, update state.md via the context-management skill.'
       );
     }
-    return null;
 ```
+
+The `return null;` that follows the `if` in the existing code stays; do not add a second one.
 
 Update the threshold sentence in the docstring of `checkStateMdStaleness`: "Threshold: state.md older than at least 2 distinct source files that were edited after it was last written."
 
@@ -457,13 +471,13 @@ git commit -m "fix(stop-reminders): state-md counts distinct files; config patte
 
 **Security flag:** `none`
 
-**Does NOT cover:** the commit reminder text and the list of Bash-only files (Task 5). Files outside any git repository are not counted (as before). Two accepted differences (spec 4.2, Minor): git stops its upward search at `GIT_CEILING_DIRECTORIES` and at a file-system boundary, and the node walk does not; and an empty `.git` folder makes the printed names relative to another folder.
+**Does NOT cover:** the commit reminder text and the list of Bash-only files (Task 5); a logged path that is a folder (git prints every changed file below it and all are counted, where the old per-file code counted the folder once). The two-repository test uses 3 + 2 files and expects "5 files" in place of the spec's "the count is 2", because the reminder fires only from 5 files (see Assumptions). Files outside any git repository are not counted (as before). Two accepted differences (spec 4.2, Minor): git stops its upward search at `GIT_CEILING_DIRECTORIES` and at a file-system boundary, and the node walk does not; and an empty `.git` folder makes the printed names relative to another folder.
 
 **Contract:** `filesWithUncommittedChanges(editedPaths, cwd)` in `hooks/stop-reminders.js`
 - Inputs: logged paths (absolute or relative to `cwd`), the session folder. Output: an array of the counted files as absolute paths; its length is the count.
-- Invariants: the count equals the count of the old per-file code for every case of the existing commit tests; each stored path is in exactly one chunk; each chunk holds at most 100 paths; a chunk runs in its repository top folder with `--literal-pathspecs`; two files with the same relative text in two repositories count twice; a path that git lists twice (`D  f` and `?? f` after `git rm --cached f`) counts once; the whole count stops at `COMMIT_COUNT_TIME_LIMIT_MS` and returns what it counted; a failed chunk adds nothing; a path with no `.git` entry above it runs no git call.
+- Invariants: the count equals the count of the old per-file code for every case of the existing commit tests; each stored path is in exactly one chunk; each chunk holds at most 100 paths; a chunk runs in its repository top folder with `--literal-pathspecs`; two files with the same relative text in two repositories count twice; a path that git lists twice (`D  f` and `?? f` after `git rm --cached f`) counts once; the whole count stops at `COMMIT_COUNT_TIME_LIMIT_MS` and returns what it counted; a failed chunk adds nothing (checked by reading the `result.status !== 0 || result.error` branch; no test runs a failing git); a path with no `.git` entry above it runs no git call (checked by the no-repository test).
 - `gitStdout` no longer trims; `gitReaderForFile` and `GIT_STATUS` are removed; `GIT_READ_ONE_FILE` becomes `GIT_READ_NAMED_FILES`.
-- Verification: `node tests/codex/test-stop-reminders.js` — the two recording-git tests fail on the old code (101 calls of one path), all other commit tests stay green.
+- Verification: `node tests/codex/test-stop-reminders.js` — three new tests fail on the old code (the recording-git tests with 101 and 150 files, 101 and 150 calls of one path, and the no-repository test, which records one call for each file), all other commit tests stay green.
 
 - [ ] **Step 1: Move the hanging-git test to one repository per file**
 
@@ -548,7 +562,7 @@ function evaluateStopRecordingStatusCalls(arrange) {
 
 function skipOnWindows() {
   if (process.platform !== 'win32') return false;
-  console.log('    (not run on Windows: the wrapper is a shell script)');
+  console.log('    (not run on Windows: the test uses a shell script, or a file name that Windows cannot hold)');
   return true;
 }
 
@@ -576,6 +590,21 @@ test('150 modified session files over 30 folders of one repository: two git call
   assert.deepStrictEqual(pathCounts, [MAX_PATHS_PER_GIT_CALL, 50]);
 });
 
+// Needs a temporary folder (`os.tmpdir()`) outside any git work tree (see Assumptions).
+test('Five logged files outside any git repository: no git call and no reminder', () => {
+  if (skipOnWindows()) return;
+  const { result, pathCounts } = evaluateStopRecordingStatusCalls(({ logDir, cwdDir }) => {
+    const files = numberedNames('plain', COMMIT_THRESHOLD).map(name => {
+      const file = path.join(cwdDir, name);
+      fs.writeFileSync(file, 'text\n');
+      return file;
+    });
+    recordEdits(logDir, files);
+  });
+  assertNoReminder(result);
+  assert.deepStrictEqual(pathCounts, []);
+});
+
 // The relative text `src/a.js` is the same in both repositories. A set of
 // relative output paths that is shared between the groups would count 3, not 5.
 test('Two repositories that hold a modified file of one relative name count the files of both', () => {
@@ -601,7 +630,7 @@ test('A session file that git lists twice (removed from the index, kept on disk)
 // git reads `*` in a name as a pattern that matches `xa.txt` and `xb.txt`. The
 // two modified files are not in the log, so they must not be counted.
 test('A committed session file named x*.txt is not counted for the files that the pattern matches', () => {
-  if (process.platform === 'win32') return;
+  if (skipOnWindows()) return;
   assertNoReminder(evaluateStop(({ logDir, cwdDir }) => {
     const [patternFile, ...others] = repoWithCommittedFiles(cwdDir,
       ['x*.txt', 'xa.txt', 'xb.txt', ...numberedNames('session', COMMIT_THRESHOLD - 1)]);
@@ -612,7 +641,7 @@ test('A committed session file named x*.txt is not counted for the files that th
 
 // git reads a leading `:` as the start of a pathspec magic word; `:x.txt` would match `x.txt`.
 test('A committed session file named :x.txt is not counted for the file that the pattern matches', () => {
-  if (process.platform === 'win32') return;
+  if (skipOnWindows()) return;
   assertNoReminder(evaluateStop(({ logDir, cwdDir }) => {
     const [patternFile, ...others] = repoWithCommittedFiles(cwdDir,
       [':x.txt', 'x.txt', ...numberedNames('session', COMMIT_THRESHOLD - 1)]);
@@ -624,10 +653,10 @@ test('A committed session file named :x.txt is not counted for the file that the
 
 (The last two tests guard behavior the old code already has: `--literal-pathspecs` was already used.)
 
-- [ ] **Step 4: Run the tests and see two failures**
+- [ ] **Step 4: Run the tests and see three failures**
 
 Run: `node tests/codex/test-stop-reminders.js`
-Expected: FAIL — exactly the two recording-git tests fail: `Expected values to be strictly deep-equal` with 101 and 150 calls of one path each, instead of `[100, 1]` and `[100, 50]`. The other new tests pass.
+Expected: FAIL — exactly three new tests fail: the two recording-git tests with 101 and 150 files (`Expected values to be strictly deep-equal` with 101 and 150 calls of one path each, instead of `[100, 1]` and `[100, 50]`) and the no-repository test (the old code runs `git status` once for each of the 5 files, so the recorded counts are `[1, 1, 1, 1, 1]`, not `[]`). The other new tests pass.
 
 - [ ] **Step 5: Replace the git helpers**
 
@@ -743,17 +772,20 @@ function changedPathsOfStatusOutput(output, topFolder) {
 function filesWithUncommittedChanges(editedPaths, cwd) {
   const storedPaths = new Set(editedPaths.map(filePath => storedPath(filePath, cwd)).filter(Boolean));
   const deadlineMs = Date.now() + COMMIT_COUNT_TIME_LIMIT_MS;
-  const counted = [];
+  // A Set keeps each absolute path once over all chunks, in the order of first appearance.
+  const counted = new Set();
   for (const [topFolder, relativePaths] of relativePathsByTopFolder(storedPaths)) {
     for (let from = 0; from < relativePaths.length; from += MAX_PATHS_PER_GIT_CALL) {
       const remainingMs = deadlineMs - Date.now();
-      if (remainingMs <= 0) return counted;
+      if (remainingMs <= 0) return [...counted];
       const chunk = relativePaths.slice(from, from + MAX_PATHS_PER_GIT_CALL);
       const output = gitStdout([...GIT_STATUS_OF_NAMED_FILES, ...chunk], topFolder, remainingMs);
-      if (output !== null) counted.push(...changedPathsOfStatusOutput(output, topFolder));
+      if (output !== null) {
+        for (const file of changedPathsOfStatusOutput(output, topFolder)) counted.add(file);
+      }
     }
   }
-  return counted;
+  return [...counted];
 }
 ```
 
@@ -772,7 +804,37 @@ and replace the two lines that call the count and test it with:
     if (uncommittedFiles.length >= COMMIT_REMINDER_MIN_FILES) {
 ```
 
-and the text line `` `Commit reminder: ${uncommittedCount} files ...` `` with `` `Commit reminder: ${uncommittedFiles.length} files with uncommitted changes, all edited in this session. ` + ``. (Task 5 replaces the text.)
+and replace the line
+
+```js
+        `Commit reminder: ${uncommittedCount} files with uncommitted changes, all edited in this session. ` +
+```
+
+with
+
+```js
+        `Commit reminder: ${uncommittedFiles.length} files with uncommitted changes, all edited in this session. ` +
+```
+
+(Task 5 replaces the text.)
+
+(g) In `tests/codex/test-stop-reminders.js` replace the three comment lines above the test '5 logged files of which 3 are committed, and 4 changed files that the log does not name: no reminder', which read
+
+```js
+// Accepted limit: a file that was changed only through the Bash tool is not in
+// the edit log, so it is not counted. Here 2 logged files and 4 files that the
+// log does not name are changed: `git status` prints 6 lines, the count is 2.
+```
+
+with
+
+```js
+// A file that a shell command changed and that Claude Code did not list is not
+// in the edit log, so it is not counted. Here 2 logged files and 4 files that
+// the log does not name are changed: `git status` prints 6 lines, the count is 2.
+```
+
+This is a comment-only edit; it does not change a test.
 
 - [ ] **Step 6: Run the file and see it pass**
 
@@ -797,11 +859,11 @@ git commit -m "perf(stop-reminders): count uncommitted files with one git call p
 
 **Security flag:** `none`
 
-**Does NOT cover:** telling apart a Bash-only file that the model changed on purpose from one that another program changed (the model judges each named file); a foreign change to a file that the model also changed with Edit or Write (not named). The Copilot CLI and Codex stop adapters keep their own text.
+**Does NOT cover:** a repository where the letter case of a file in the git index differs from its letter case on disk (for example after a case-only rename on macOS): a file edited with Edit or Write can then be named as Bash-only (accepted limit: one extra name in the list, no wrong count), and the same for a file name whose Unicode form differs between the file system and git (for example a decomposed name on macOS); the 30-minute window of the "Bash-only" judgement (a file that Edit changed 31 minutes before a Bash command is named as Bash-only); a file name is copied into the reminder text unchanged, and the notice sentence is the only defence against a name that reads like an instruction; telling apart a Bash-only file that the model changed on purpose from one that another program changed (the model judges each named file); a foreign change to a file that the model also changed with Edit or Write (not named). The Copilot CLI and Codex stop adapters keep their own text.
 
 **Contract:** commit reminder text in `hooks/stop-reminders.js`
-- Must convey: the count, "changed by this session's edits or shell commands", and the unchanged approval sentence; when at least one counted file is Bash-only (no non-Bash line of the 30-minute window names it, compared as `storedPath`), one sentence starting "These files were listed only by a shell command", then one `- <absolute path>` line for each such file in the order of the returned list, at most 10 lines, then `- and K more` only when K (the number of Bash-only files minus 10) is greater than 0.
-- Invariants: with no Bash-only file the sentence "Consider committing" follows the first sentence after one space and no `- ` line appears; with a list, "Consider committing" starts a new line; the prefix `Commit reminder: N files with uncommitted changes` is unchanged; the constant `BASH_TOOL` is written once, in `hooks/save-marker.js`, and `hooks/track-edits.js` and `hooks/stop-reminders.js` import it (Task 6 changes `track-edits.js`).
+- Must convey: the count, "changed by this session's edits or shell commands", and the unchanged approval sentence; when at least one counted file is Bash-only (no non-Bash line of the 30-minute window names it, compared as `storedPath`), one sentence starting "These files were listed only by a shell command", then one `- <absolute path>` line for each such file (the tests sort these lines and do not pin their order; the code lists them in the order of the returned list, as spec section 5.2 sets), at most 10 lines, then `- and K more` as the last `- ` line only when K (the number of Bash-only files minus 10) is greater than 0; the same notice also tells the assistant not to commit a listed file that it did not change on purpose (the phrase "Do not commit a listed file").
+- Invariants: with no Bash-only file the sentence "Consider committing" follows the first sentence after one space and no `- ` line appears; with a list, "Consider committing" starts a new line; the prefix `Commit reminder: N files with uncommitted changes` is unchanged; after Task 5 `hooks/stop-reminders.js` defines no `BASH_TOOL` of its own and imports it from `hooks/save-marker.js`; after Task 6 `hooks/track-edits.js` does the same; `hooks/safety/hook-io.js` keeps its own `BASH_TOOL` and is not changed.
 - Verification: `node tests/codex/test-stop-reminders.js` — the four new text tests and every `assertCommitReminder` test (new expected sentence) pass; the pre-existing test "The commit reminder tells the assistant to ask when a project rule requires approval" stays unchanged and green.
 - Sentence wording beyond the pinned phrases above is free.
 
@@ -823,6 +885,8 @@ Directly after the test 'The commit reminder states the number of session files 
 // ── The commit reminder names the files that only a shell command listed ─────
 
 const BASH_ONLY_SENTENCE = 'These files were listed only by a shell command';
+const DO_NOT_COMMIT_PHRASE = 'Do not commit a listed file';
+const CONSIDER_COMMITTING = 'Consider committing';
 const MAX_NAMED_FILES = 10;
 const AND_MORE_LINE = /^- and \d+ more$/;
 
@@ -857,8 +921,11 @@ test('5 files that only Bash lines name: the reminder names each of the 5 absolu
     recordEditsByTool(logDir, files.map(file => [file, BASH_TOOL]));
   }).reason || '';
   assert.ok(reason.includes(BASH_ONLY_SENTENCE), `Expected the sentence, got: ${reason}`);
+  assert.ok(reason.includes(DO_NOT_COMMIT_PHRASE), `Expected the instruction not to commit a listed file, got: ${reason}`);
   assert.deepStrictEqual(namedFileLines(reason).sort(), expectedLines.sort());
   assert.ok(!reason.includes('- and '), `Expected no "and more" line, got: ${reason}`);
+  assert.ok(reason.split('\n').some(line => line.startsWith(CONSIDER_COMMITTING)),
+    `Expected "${CONSIDER_COMMITTING}" to start a new line, got: ${reason}`);
 });
 
 test('12 files that only Bash lines name: 10 path lines, then "- and 2 more"', () => {
@@ -871,7 +938,8 @@ test('12 files that only Bash lines name: 10 path lines, then "- and 2 more"', (
   const lines = namedFileLines(reason);
   assert.strictEqual(lines.length, MAX_NAMED_FILES, `Got: ${reason}`);
   assert.ok(lines.every(line => allLines.includes(line)), `A line names another file: ${reason}`);
-  assert.ok(reason.split('\n').includes('- and 2 more'), `Expected "- and 2 more", got: ${reason}`);
+  const dashLines = reason.split('\n').filter(line => line.startsWith('- '));
+  assert.strictEqual(dashLines[dashLines.length - 1], '- and 2 more', `Expected "- and 2 more" last, got: ${reason}`);
 });
 
 test('5 files with Bash lines, one also with an Edit line: the 4 others are named, that one is not', () => {
@@ -889,8 +957,9 @@ test('5 files with Edit lines only: no list, and the second sentence follows the
     recordEditsByTool(logDir, modifiedSessionFiles(cwdDir, COMMIT_THRESHOLD).map(file => [file, EDIT_TOOL]));
   }).reason || '';
   assert.ok(!reason.includes(BASH_ONLY_SENTENCE), `Expected no list sentence, got: ${reason}`);
+  assert.ok(!reason.includes(DO_NOT_COMMIT_PHRASE), `Expected no instruction about a listed file, got: ${reason}`);
   assert.ok(!reason.split('\n').some(line => line.startsWith('- ')), `Expected no "- " line, got: ${reason}`);
-  assert.ok(reason.includes('edits or shell commands. Consider committing'), `Got: ${reason}`);
+  assert.ok(reason.includes(`edits or shell commands. ${CONSIDER_COMMITTING}`), `Got: ${reason}`);
 });
 ```
 
@@ -992,7 +1061,7 @@ git commit -m "feat(stop-reminders): commit reminder names the files that only a
 - `appendEditLog`: for an empty list it does nothing and creates no log folder; otherwise it creates the log folder when needed and appends one line `<ISO time> | <session id or empty> | <tool> | <path>\n` per path with one `fs.appendFileSync` call; all lines of one call carry the same timestamp; it throws on an error.
 - `logEdit` keeps its signature and its export; inside its try/catch it resolves the path against `cwd`, calls `appendEditLog(tool, [resolved], sessionId)`, then `excludeArtifact(resolved)`; an error stays silent.
 - `BASH_TOOL` is imported from `./save-marker`; the local `const BASH_TOOL = 'Bash';` is removed.
-- Verification: `node tests/codex/test-track-edits.js` and `node tests/codex/test-git-exclude-hooks.js` pass before and after.
+- Verification: `node tests/codex/test-track-edits.js` and `node tests/codex/test-git-exclude-hooks.js` pass before and after. The clause "one `fs.appendFileSync` call" has no test at all (no test can see how many writes made the lines) and rests on the spec's note "Assumed, unverified" (spec section 3.5); the clause "empty list" is a property of the code that this task checks by reading `appendEditLog`; the same-timestamp clause and the empty list of a Bash call are first observable through the T26 and T27 tests of Task 7.
 
 - [ ] **Step 1: Run the locking tests before the change**
 
@@ -1208,7 +1277,7 @@ function assertValidListingIsLogged() {
 }
 ```
 
-Keep the tests T26, T26b and T26c exactly as they are, with their calls `afterBash(homeDir, cwdDir, SESSION_A, ...)`; they use the first four arguments and the fifth (`{ file_path: ... }`) only. Rename the text of the comment above T26c if it still says "a Bash call is not an edit" so that it reads "The documented input of a Bash call holds no `file_path`. If one arrives, the call still logs nothing without a listing."
+Keep the tests T26, T26b and T26c exactly as they are, with their calls `afterBash(homeDir, cwdDir, SESSION_A, ...)`; they use the first four arguments and the fifth (`{ file_path: ... }`) only. Leave the comment above T26c as it is.
 
 - [ ] **Step 2: Write the failing tests (T27 series)**
 
@@ -1292,7 +1361,8 @@ test('T27g: a listed scratchpad file is dropped; a file in scratchpad-2 is logge
 test('T27j: a listed session log with [saved] does not move the save marker', () => {
   const { homeDir, cwdDir } = makeHome();
   // The project folder is another folder and cwd is not a git repository, so
-  // the rule for AI workspace files (Task 8) keeps session-log.md in the list.
+  // the rule for untracked artificial intelligence (AI) workspace files keeps
+  // session-log.md in the list.
   const otherProjectDir = fs.mkdtempSync(path.join(WORK_ROOT, 'project-'));
   trackEdit(homeDir, cwdDir, SESSION_A, 'Edit', SIGNIFICANT_FILE, { old_string: 'a', new_string: 'b' });
   const sessionLog = path.join(cwdDir, SESSION_LOG);
@@ -1381,7 +1451,7 @@ In `main`, replace the Bash branch (the comment and `if (tool_name === BASH_TOOL
 
 (The following `if (tool_name !== 'Edit' && tool_name !== 'Write')` block already prints `{}` and returns, so the Bash branch never reaches the save-marker code.)
 
-Rewrite the comments: the header line 5 becomes " * After every Edit, Write or Bash tool use, logs the file path and timestamp"; replace the sentence at the end of the header ("The hook also runs after every Bash tool use. A Bash call is never logged; ...") with:
+Rewrite the comments: the header line " * After every Edit|Write tool use, logs the file path and timestamp" becomes " * After every Edit, Write or Bash tool use, logs the file path and timestamp"; replace the sentence at the end of the header ("The hook also runs after every Bash tool use. A Bash call is never logged; ...") with:
 
 ```
  * After a Bash tool use, the hook logs each file that Claude Code lists in
@@ -1413,11 +1483,11 @@ git commit -m "feat(track-edits): log the files that Claude Code lists after a B
 
 **Security flag:** `none`
 
-**Does NOT cover:** a *tracked* AI-named file (logged and counted as a normal project file, also after an Edit); a file with such a name in a folder that is neither the project folder nor the top folder of a work tree (for example `docs/known-issues.md`: logged, a user document); `excludeFromGit` keeps all its own checks (`hooks/context-engine.js` and `skills/context-management/scripts/archive-session-log.js` also call it). A Bash-written untracked `state.md` therefore does not count (spec accepted limit).
+**Does NOT cover:** the `git check-ignore` check and the work-tree check of `excludeFromGit`, which stay only there (`isUntrackedAiArtifact` does not repeat them); an Edit or Write of an untracked AI workspace file runs the tracking check twice, which costs one git process and changes no result; a *tracked* AI-named file (logged and counted as a normal project file, also after an Edit); a file with such a name in a folder that is neither the project folder nor the top folder of a work tree (for example `docs/known-issues.md`: logged, a user document); `excludeFromGit` keeps all its own checks (`hooks/context-engine.js` and `skills/context-management/scripts/archive-session-log.js` also call it). A Bash-written untracked `state.md` therefore does not count (spec accepted limit).
 
 **Contract:** `isUntrackedAiArtifact(filePath)` in `hooks/track-edits.js` and `isTrackedExactName(folder, name)` in `hooks/git-exclude.js`
 - `isTrackedExactName(folder, name)`: true when git tracks a file named exactly `name` directly in `folder` (`git --literal-pathspecs ls-files --error-unmatch -- <name>` succeeds); exported; `excludeFromGit` calls it and behaves as before.
-- `isUntrackedAiArtifact(filePath)`: true exactly when an Edit or Write of the file would produce an exclude entry as far as these checks go: the name is in `AI_ARTIFACTS`; the real folder is the project folder or the top folder of its git work tree; git does not track the file in another letter case (`isTrackedWhereLetterCaseIsIgnored` false) and not under the exact name (`isTrackedExactName` false). `excludeArtifact` calls it, then `excludeFromGit`.
+- `isUntrackedAiArtifact(filePath)`: true when an Edit or Write of the file would produce an exclude entry according to these checks: the name is in `AI_ARTIFACTS`; the real folder is the project folder or the top folder of its git work tree; git does not track the file in another letter case (`isTrackedWhereLetterCaseIsIgnored` false) and not under the exact name (`isTrackedExactName` false). `excludeArtifact` calls it, then `excludeFromGit`.
 - `bashChangedFiles` drops an entry for which `isUntrackedAiArtifact` is true.
 - Invariants: a Bash line gives no exclude entry; a tracked `project-map.md` stays in the list when `core.ignorecase` is `false` (only the exact-name check keeps it); a file `docs/known-issues.md` stays in the list.
 - Verification: `node tests/codex/test-git-exclude-hooks.js` (new tests below) and `node tests/codex/test-track-edits.js`.
@@ -1536,8 +1606,8 @@ In `hooks/track-edits.js` change the import to `const { excludeFromGit, git, isT
 
 ```js
 /**
- * True when an Edit or Write of this file would give it an exclude entry, as
- * far as these checks go: the file name is in AI_ARTIFACTS; the file lies
+ * True when an Edit or Write of this file would give it an exclude entry
+ * according to these checks: the file name is in AI_ARTIFACTS; the file lies
  * directly in one of the two folders where the skills write these files (the
  * project folder of the session, or the top folder of the file's git work
  * tree; a linked worktree has its own top folder); and git tracks the file
@@ -1620,6 +1690,9 @@ In `tests/codex/test-track-edits.js`, after the test T27l add:
 // The status-change time (ctime) of a file is the time the file system records
 // for the last change of its content, name or attributes. A program cannot set
 // it to an earlier value. The tests state the margin of the hook (2 s) themselves.
+// T27h, T27m and T27o use `duration_ms: 0`, so the hook has 2 s between the change
+// and its start; on a heavily loaded machine a failure of these three tests can
+// be timing and not a logic defect. Do not widen it: T27m needs the narrow window.
 
 const CHANGE_TIME_MARGIN_MS = 2000;
 const AGE_WAIT_MS = CHANGE_TIME_MARGIN_MS + 500;
@@ -1660,7 +1733,7 @@ test('T27h: files that changed before the command are dropped; files that change
 
 test('T27i: without a usable duration, the old file is logged', () => {
   const { oldFile } = agedFiles();
-  for (const durationExtra of [{ duration_ms: undefined }, { duration_ms: '1000' }]) {
+  for (const durationExtra of [{ duration_ms: undefined }, { duration_ms: '1000' }, { duration_ms: -1 }, { duration_ms: null }]) {
     const { homeDir, cwdDir } = makeHome();
     afterBashListing(homeDir, cwdDir, listing([oldFile]), durationExtra);
     assert.deepStrictEqual(loggedPaths(homeDir), [oldFile], `duration: ${JSON.stringify(durationExtra)}`);
@@ -1803,7 +1876,7 @@ git commit -m "feat(track-edits): drop a listed file that changed before the com
 
 **Contract:** wording of the documents
 - README `track-edits` bullet: no longer says "a Bash call is never logged"; says that after a Bash call the hook logs each file listed in `tool_response.bashEditDiff.changedFiles` (not scratchpad files, not untracked AI workspace files such as `state.md`, not files whose status-change time is before the command started) and gives such a file no git exclude entry; states the permission modes, the setting `bashEditDiffEnabled` and its places, the environment variable `CLAUDE_CODE_BASH_EDIT_DIFF`, Claude Code 2.1.269 or later, public beta, the measured 45 of 190 main-session transcripts (24 percent), that Copilot CLI has no such field, and that the plugin changes no settings.
-- README `stop-reminders` bullet: one added sentence (commit, decision-log and state-md count Bash-changed files when the list is filled; the commit reminder names the counted Bash-only files and asks not to commit one that the assistant did not change on purpose; the state-md reminder counts distinct files).
+- README `stop-reminders` bullet: added text of two sentences (commit, decision-log and state-md count Bash-changed files when the list is filled; the commit reminder names the counted Bash-only files and asks not to commit one that the assistant did not change on purpose; the state-md reminder counts distinct files).
 - `docs/architecture/agentic-workflow.md`: the box lines say that after Bash the hook logs the files that Claude Code lists as changed, and writes a git exclude entry only for a `session-log.md` written by a redirect; the right border of the box stays aligned.
 - `docs/guide/README.md`: a new entry "The commit reminder counts a file that the assistant did not change" after the entry that quotes the unchanged prefix.
 - Comments in `hooks/save-marker.js` and `plugin.universal.yaml`: the edit log also holds one line per file that Claude Code lists as changed by a Bash call.
@@ -1821,7 +1894,7 @@ In `README.md`, in the bullet that starts with `- **track-edits** (PostToolUse: 
 
 - [ ] **Step 2: README, `stop-reminders` bullet**
 
-In the bullet that starts with `- **stop-reminders** (Stop)`, insert directly before the sentence `The session summary is shown only inside a block of another reminder;`:
+In the bullet that starts with `- **stop-reminders** (Stop)`, insert directly before the sentence `The session summary is shown only inside a block of another reminder;` (the inserted text ends with one space, so that the next sentence follows after a space):
 
 ```
 Since v7.72.0 the commit, decision-log and state.md reminders also count the files that a Bash command changed, when Claude Code lists them (see track-edits). The commit reminder names the counted files that only a shell command listed (at most 10) and asks the assistant not to commit such a file that it did not change on purpose; the state.md reminder counts distinct files, not log lines. 
@@ -1844,7 +1917,11 @@ with
 │    written by a redirect                                  │
 ```
 
-Check the alignment: `node -e "const l=require('fs').readFileSync('docs/architecture/agentic-workflow.md','utf8').split('\n').slice(30,42).filter(x=>x.startsWith('│')||x.startsWith('┌')||x.startsWith('└')).map(x=>[...x].length); console.log(l.join(','))"` must print equal numbers for all box lines. If the numbers differ, pad the new lines with spaces before the closing `│` until they match.
+Check the alignment with the command below. It finds the three new lines by their text, prints their lengths in characters, and exits with status 1 unless all three are 61 characters long (the width of the other box lines). If it exits with status 1, pad the new lines with spaces before the closing `│` until it exits with status 0.
+
+```bash
+node -e "const L=require('fs').readFileSync('docs/architecture/agentic-workflow.md','utf8').split('\n');const i=L.findIndex(x=>x.includes('after Bash: logs the files'));const n=[L[i],L[i+1],L[i+2]].map(x=>[...x].length);console.log(n.join(','));process.exit(n.every(w=>w===61)?0:1)"
+```
 
 - [ ] **Step 4: Guide entry**
 
@@ -1881,7 +1958,7 @@ with
  *     track-edits.js appends to it; stop-reminders.js reads it.
 ```
 
-In `plugin.universal.yaml` replace the two comment lines above the `track-edits` entry (`# Claude Code only: track file edits; after Bash, only the git exclude` and `# entry of session-log.md, and only when the command redirects into it`) with:
+In `plugin.universal.yaml` replace the two comment lines above the `track-edits` entry (the file indents them by two spaces; keep that indent on every new line) (`# Claude Code only: track file edits; after Bash, only the git exclude` and `# entry of session-log.md, and only when the command redirects into it`) with:
 
 ```
   # Claude Code only: track file edits; after Bash, log the files that Claude
@@ -1892,11 +1969,13 @@ In `plugin.universal.yaml` replace the two comment lines above the `track-edits`
 - [ ] **Step 6: Verify**
 
 Run: `grep -c "a Bash call is never logged" README.md` — Expected: `0`.
-Run: `grep -c "bashEditDiff" README.md` — Expected: at least `1`.
+Run: `grep -c "bashEditDiffEnabled" README.md`, `grep -c "CLAUDE_CODE_BASH_EDIT_DIFF" README.md`, `grep -c "2.1.269" README.md` and `grep -c "45 of 190" README.md` — Expected: at least `1` for each.
+Run: `grep -c "asks the assistant not to commit such a file" README.md` — Expected: `1`. Run: `grep -c "not log lines. The session summary is shown only" README.md` — Expected: `1` (the inserted text of Step 2 ends with one space).
+Run: `grep -c "one line for each file that Claude Code lists" hooks/save-marker.js` and `grep -c "log the files that Claude" plugin.universal.yaml` — Expected: `1` for each.
 Run: `grep -c "Since v7.72.0 the commit" README.md` — Expected: `1`.
-Run: `grep -n "no log line, only" docs/architecture/agentic-workflow.md` — Expected: no output.
+Run: `grep -n "no log line, only" docs/architecture/agentic-workflow.md` — Expected: no output. Run the alignment command of Step 3 again — Expected: exit status 0.
 Run: `grep -c "The commit reminder counts a file that the assistant did not change" docs/guide/README.md` — Expected: `1`.
-Run: `node tests/codex/test-version-files.js && node tests/codex/test-git-exclude-hooks.js` — Expected: PASS (`0 failed`; the second file reads `plugin.universal.yaml`-independent hooks.json only, and the first checks that no version place was damaged).
+Run: `node tests/codex/test-version-files.js && node tests/codex/test-git-exclude-hooks.js` — Expected: PASS (`0 failed`). The first command checks that no version place was damaged. The second checks that the hooks still behave as before; it does not check the documents.
 
 - [ ] **Step 7: Commit**
 
@@ -1919,11 +1998,11 @@ git commit -m "docs: Bash-changed files in the edit log, the commit reminder lis
 
 **Security flag:** `none`
 
-**Does NOT cover:** reinstalling the local plugin and restarting the CLI (done by the user after the merge); `tests/codex/post-push-validation-checklist.md` (this release is not Codex-facing); a push or a merge (the orchestrator ends before them).
+**Does NOT cover:** reinstalling the local plugin and restarting the CLI (done by the user after the merge); a live check of the hook input (every test feeds the hook a synthetic payload; after the reinstall, in a session in the `auto` or `bypassPermissions` mode, a Bash command that changes a file, such as `sed -i`, must add a `| Bash |` line to `~/.claude/hooks-logs/edit-log-<session id>.txt`, and the user makes this check); `tests/codex/post-push-validation-checklist.md` (this release is not Codex-facing); a push or a merge (the orchestrator ends before them).
 
 **Contract:** version places and release entry
 - Every place states `7.72.0`: `VERSION` (line 1), `.claude-plugin/plugin.json` (`version`), `.claude-plugin/marketplace.json` (`version`), `plugin.universal.yaml` (`meta.version`), the README badge (`version-7.72.0-white`), and the two ranges `v6.7.0–v7.72.0` in the README.
-- `RELEASE-NOTES.md` gets an entry `## v7.72.0 — <title>` directly above the `## v7.71.0` entry, starting with the three labelled lines **Problem.**, **Change.**, **Effect.** (the summary, at most 120 words in total) and followed by the full prose; every statement in it is supported by the spec.
+- `RELEASE-NOTES.md` gets an entry `## v7.72.0 — <title>` directly above the `## v7.71.0` entry, starting with the three labelled lines **Problem.**, **Change.**, **Effect.** (the summary, at most 120 words in total) and followed by the full prose; every statement in it is supported by the spec and by the entry's own prose (the repository rule for release notes).
 - Verification: `node tests/codex/test-version-files.js` passes; the word-count command in Step 3; every fast suite exits 0 (Step 4).
 
 - [ ] **Step 1: Bump the version places**
@@ -1940,7 +2019,7 @@ grep -c "7.71.0" VERSION .claude-plugin/plugin.json .claude-plugin/marketplace.j
 grep -c "v6.7.0–v7.72.0" README.md
 ```
 
-Expected: the four `grep -c "7.71.0"` counts are `0`; the last count is `2`. (Check `VERSION` is exactly `7.72.0` plus one line end: `cat -A VERSION` prints `7.72.0$`. Do not use a pipeline that rewrites a file with its own content.)
+Expected: the four `grep -c "7.71.0"` counts are `0` (`grep -c` exits with status 1 when a count is 0; that exit status is expected, so read the printed counts); the last count is `2`. (Check `VERSION` is exactly `7.72.0` plus one line end: the first line of `od -c VERSION` shows the characters `7 . 7 2 . 0 \n`. Do not use a pipeline that rewrites a file with its own content.)
 
 - [ ] **Step 2: Add the release entry**
 
@@ -1959,13 +2038,13 @@ A session runs the installed copy of the plugin. The changes below reach a sessi
 
 ### 1. Why
 
-The edit log (the per-session file in which `hooks/track-edits.js` records edits) held only Edit and Write calls. In 35 days of the owner's transcripts (143 sessions), 33.4 percent of the file changes outside scratch folders came from the field `bashEditDiff` of a Bash result, and 48.1 percent of the source-file changes in the sessions that had the field. Claude Code reports the files that a Bash command changed in `tool_response.bashEditDiff.changedFiles` of the PostToolUse input (hooks reference, section "Bash"). Three reminders read the edit log: commit, decision-log and state.md. None of them saw a Bash change. The figures are approximate: the measuring script was temporary and was not kept.
+The edit log (the per-session file in which `hooks/track-edits.js` records edits) held only Edit and Write calls. In 35 days of the owner's transcripts (143 sessions), 33.4 percent of the file changes outside scratch folders came from the field `bashEditDiff` of a Bash result, and 48.1 percent of the source-file changes in the sessions that had the field. The field `bashEditDiff` was present in 45 of the 190 main-session transcripts (24 percent) of the same 35 days. The measurements were made on 2026-10-10. Claude Code reports the files that a Bash command changed in `tool_response.bashEditDiff.changedFiles` of the PostToolUse input (hooks reference, section "Bash"). Three reminders read the edit log: commit, decision-log and state.md. None of them saw a Bash change. The figures are approximate: the measuring script was temporary and was not kept.
 
 ### 2. What changed
 
 - **Bash lines.** After a Bash call, `track-edits.js` appends one `Bash` line for each accepted entry of `changedFiles` in one write. An entry is accepted when it is an absolute path without a line break, is not inside the session scratchpad, is not an untracked AI workspace file (`state.md`, `known-issues.md`, `session-log.md`, `project-map.md` in the project folder or the top folder of the work tree), and did not change before the command started. The last check compares the status-change time of the file (of its nearest existing folder for a deleted file) with the start of the command, less a margin of 2 seconds. A Bash line gives no git exclude entry and never moves the save marker.
 - **Commit reminder.** The text says "changed by this session's edits or shell commands". It names each counted file that only a shell command listed (at most 10, then "and K more") and asks the assistant not to commit such a file that it did not change on purpose. The count runs `git status` once for each repository top folder and each 100 paths, instead of once for each logged file (measured on a 500-file repository: 1.91 s for 200 calls, 0.03 s for one call with the 200 paths).
-- **State.md reminder.** It counts distinct files, not log lines. Five configuration patterns (`.eslintrc`, `.prettierrc`, `.env`, `Dockerfile`, `docker-compose`) are tested on the file name, so a source file below a folder such as `.envs/` or `Dockerfiles/` is a source file again.
+- **State.md reminder.** It counts distinct files, not log lines. The configuration patterns are tested on the file name, and five of them (`.eslintrc`, `.prettierrc`, `.env`, `Dockerfile`, `docker-compose`) are anchored at its start, so a source file below a folder such as `.envs/` or `Dockerfiles/` is a source file again.
 - **Decision-log reminder.** The patterns for `SKILL.md`, `skill-rules.json`, `CLAUDE.md`, `agents/*.md` and `plugin.universal.yaml` match a whole name, so `XSKILL.md` and `MYCLAUDE.md` no longer match.
 
 ### 3. Accepted limits
@@ -1977,7 +2056,7 @@ Claude Code fills the list only in the `auto` and `bypassPermissions` modes unle
 - [ ] **Step 3: Check the summary length and the version check**
 
 Run: `awk '/^## v7.72.0/{f=1;next} /^## v7.71.0/{f=0} f && /^\*\*(Problem|Change|Effect)\.\*\*/' RELEASE-NOTES.md | wc -w`
-Expected: a number of at most 120.
+Expected: a number from 90 to 120. Run the same command with `| wc -l` in place of `| wc -w` — Expected: `3` (a different number means that the heading or a label is wrong, and the word count above measured nothing).
 Run: `node tests/codex/test-version-files.js`
 Expected: PASS — `0 failed`.
 
