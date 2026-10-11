@@ -2,7 +2,7 @@
 /**
  * PostToolUse Hook — File Edit Tracking
  *
- * After every Edit|Write tool use, logs the file path and timestamp
+ * After every Edit, Write or Bash tool use, logs the file path and timestamp
  * to a session-scoped edit log. This log feeds downstream hooks
  * (stop-reminders) to know what was changed during the session.
  *
@@ -21,9 +21,10 @@
  * Without the field (a headless session has no scratchpad) every edit is
  * logged, as before.
  *
- * The hook also runs after every Bash tool use. A Bash call is never logged;
- * the hook only writes the git exclude entry of a session-log.md that the
- * command redirects output into (see excludeSessionLogWrittenBy).
+ * After a Bash tool use, the hook logs each file that Claude Code lists in
+ * `tool_response.bashEditDiff.changedFiles` (see bashChangedFiles), with the
+ * tool name `Bash`. It also writes the git exclude entry of a session-log.md
+ * that the command redirects output into (see excludeSessionLogWrittenBy).
  */
 
 const fs = require('fs');
@@ -279,6 +280,35 @@ function resolveAgainstCwd(filePath, cwd) {
 }
 
 /**
+ * True when a changed-file entry of the Bash tool result can be logged: a
+ * string, an absolute path, and no line break. A line break in a path would
+ * write a second line into the edit log. An entry is never resolved against
+ * `cwd`, which follows the `cd` of the assistant.
+ */
+function isAcceptedBashEntry(entry) {
+  return typeof entry === 'string' && path.isAbsolute(entry) && !/[\r\n]/.test(entry);
+}
+
+/**
+ * The files to log after a Bash call: the entries of
+ * `tool_response.bashEditDiff.changedFiles` that Claude Code lists as changed
+ * by the command, without duplicates, in input order. Nothing is returned for
+ * a payload without that field, for a git command that Claude Code marks as
+ * `skipped` (strictly `true`), and for a value of another shape.
+ * `unavailable`, `shared`, `files` and `moreFiles` are not read: in the first
+ * two cases the listed files are still real changes of this session.
+ * A file inside the session scratchpad is not returned.
+ */
+function bashChangedFiles(data) {
+  const diff = data.tool_response?.bashEditDiff;
+  if (!diff || typeof diff !== 'object' || diff.skipped === true || !Array.isArray(diff.changedFiles)) {
+    return [];
+  }
+  const accepted = [...new Set(diff.changedFiles.filter(isAcceptedBashEntry))];
+  return accepted.filter(entry => !isInsideScratchpad(entry, data.scratchpad_dir));
+}
+
+/**
  * Append one line for each path to the edit log of the session, with one
  * write, so the lines of one call stay together when parallel subagents of one
  * session append to the same file. The log is never rewritten or trimmed here;
@@ -321,9 +351,16 @@ async function main() {
     const data = JSON.parse(input);
     const { tool_name, tool_input, cwd, session_id, scratchpad_dir } = data;
 
-    // A Bash call is not logged as an edit, and it does not move the save
-    // marker: only the exclude entry of a session log that the command wrote.
+    // A Bash call logs the files that Claude Code lists as changed by the
+    // command. The two steps write different files, and each has its own
+    // try/catch, so an error in one does not stop the other. The call never
+    // moves the save marker: only an Edit or a Write of session-log.md does.
     if (tool_name === BASH_TOOL) {
+      try {
+        appendEditLog(BASH_TOOL, bashChangedFiles(data), session_id);
+      } catch {
+        // Silently ignore logging errors — never block the tool
+      }
       excludeSessionLogWrittenBy(tool_input?.command, cwd, scratchpad_dir);
     }
 
