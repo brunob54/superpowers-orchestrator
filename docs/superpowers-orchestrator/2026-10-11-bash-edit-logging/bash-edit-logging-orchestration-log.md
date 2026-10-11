@@ -23,3 +23,8 @@ Items: [task 7/2] design — plan governs: no cap; accepted limit
 Detail: docs/superpowers-orchestrator/2026-10-11-bash-edit-logging/plans/bash-edit-logging-open-decisions.md
 Forks: 3 of 3 (design consistency, implementation practicality, adversarial) — contradiction: settled
 Re-dispatch: phase 3, in-run resume 1 of 3, return 1 of 6
+
+## Phase 3 — Batch 3 (tasks 7–9) — COMPLETE — commits 9921fef..2cae803
+- Task 7: complete — log the files that Claude Code lists after a Bash call (ruling 1 and 2: plan governs)
+- Task 8: complete — no Bash line for an untracked AI workspace file
+- Task 9: complete — drop a listed file that changed before the command started
