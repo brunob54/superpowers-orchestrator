@@ -11,3 +11,8 @@ plan: docs/superpowers-orchestrator/2026-10-11-bash-edit-logging/plans/bash-edit
 - Task 1: complete — test helpers take a tool name
 - Task 2: complete — decision-log patterns match a whole name
 - Task 3: complete — state-md reminder counts distinct files
+
+## Phase 3 — Batch 2 (tasks 4–6) — COMPLETE — commits e0f568c..514ab7e
+- Task 4: complete — commit count runs one git call per repository
+- Task 5: complete — commit reminder names Bash-only files
+- Task 6: complete — edit-log writer split into appendEditLog and logEdit
