@@ -64,3 +64,6 @@ _Invocation 1 — 2026-10-11 — N=4 M=3 — BASE..HEAD 1cc4a4f..2db9db8 — bra
 
 _Completed — 2026-10-11 — converged — HEAD 6319fb8e9c0c0a32deec2b0e66cb0e82363cbcf7_
 Secrets found: none
+
+### Post-loop addendum 1 — 2026-10-11
+- [I1] decided (orchestrator): plan governs: "All decisions in the spec were made by the user on 2026-10-11 and are binding." — /Users/bruno/Programming/AI/AI_Coding/My_tools/Superpowers/docs/superpowers-orchestrator/2026-10-11-bash-edit-logging/plans/bash-edit-logging.md
