@@ -1063,12 +1063,12 @@ git commit -m "feat(stop-reminders): commit reminder names the files that only a
 - `BASH_TOOL` is imported from `./save-marker`; the local `const BASH_TOOL = 'Bash';` is removed.
 - Verification: `node tests/codex/test-track-edits.js` and `node tests/codex/test-git-exclude-hooks.js` pass before and after. The clause "one `fs.appendFileSync` call" has no test at all (no test can see how many writes made the lines) and rests on the spec's note "Assumed, unverified" (spec section 3.5); the clause "empty list" is a property of the code that this task checks by reading `appendEditLog`; the same-timestamp clause and the empty list of a Bash call are first observable through the T26 and T27 tests of Task 7.
 
-- [ ] **Step 1: Run the locking tests before the change**
+- [x] **Step 1: Run the locking tests before the change**
 
 Run: `node tests/codex/test-track-edits.js && node tests/codex/test-git-exclude-hooks.js`
 Expected: PASS — `0 failed` for both (63 and 181 tests).
 
-- [ ] **Step 2: Import `BASH_TOOL` and split the writer**
+- [x] **Step 2: Import `BASH_TOOL` and split the writer**
 
 In `hooks/track-edits.js` change the save-marker import to:
 
@@ -1115,12 +1115,12 @@ function logEdit(tool, filePath, cwd, sessionId) {
 }
 ```
 
-- [ ] **Step 3: Run the locking tests after the change**
+- [x] **Step 3: Run the locking tests after the change**
 
 Run: `node tests/codex/test-track-edits.js && node tests/codex/test-git-exclude-hooks.js`
 Expected: PASS — `0 failed` for both, the same counts as in Step 1.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add hooks/track-edits.js
