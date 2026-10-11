@@ -494,9 +494,21 @@ const SCRATCHPAD_FIELD = 'scratchpad_dir';
 const PROJECT_DOCUMENT = 'design.md';
 const APPEND_TO_SESSION_LOG = `printf x >> ${SESSION_LOG_FILE}`;
 
-/** The input that Claude Code gives the hook after a Bash call. */
-function bashInput(toolInput, cwd) {
-  return { tool_name: BASH_TOOL, tool_input: toolInput, cwd, session_id: TEST_SESSION };
+const BASH_COMMAND_DURATION_MS = 60000;
+
+/**
+ * The input that Claude Code gives the hook after a Bash call. `changedFiles`,
+ * when given, is the list in `tool_response.bashEditDiff`; the duration is long
+ * enough that no listed file counts as changed before the command.
+ */
+function bashInput(toolInput, cwd, changedFiles, sessionId = TEST_SESSION) {
+  const input = { tool_name: BASH_TOOL, tool_input: toolInput, cwd, session_id: sessionId };
+  if (changedFiles === undefined) return input;
+  return {
+    ...input,
+    tool_response: { stdout: '', stderr: '', bashEditDiff: { files: [], moreFiles: 0, changedFiles } },
+    duration_ms: BASH_COMMAND_DURATION_MS,
+  };
 }
 
 /** Run track-edits after a Bash call that ended in the folder `cwd`. */
@@ -537,8 +549,8 @@ function assertHookChangesNothing(repo, input, projectDir, processCwd = repo) {
 }
 
 /** The same check for a Bash call that ended in the top folder of `repo`. */
-function assertBashChangesNothing(repo, toolInput, projectDir) {
-  assertHookChangesNothing(repo, bashInput(toolInput, repo), projectDir);
+function assertBashChangesNothing(repo, toolInput, projectDir, changedFiles) {
+  assertHookChangesNothing(repo, bashInput(toolInput, repo, changedFiles), projectDir);
 }
 
 /** A new repository whose top folder holds the untracked files `names`. */
@@ -574,6 +586,46 @@ test('hooks.json runs track-edits.js after Bash, Edit and Write', () => {
   assert.deepStrictEqual(entries[0].matcher.split('|').sort(), [BASH_TOOL, EDIT_TOOL, WRITE_TOOL]);
   assert.strictEqual(entries[0].hooks.length, 1, 'Another hook would run after Bash too');
 });
+
+test('a state.md and a known-issues.md that Bash lists at the repository top get no exclude entry', () => {
+  const repo = makeRepoWith(STATE_FILE, KNOWN_ISSUES_FILE);
+  // A Write of the same file gets the entry (see the test at the top of this file); a Bash list does not.
+  assertBashChangesNothing(repo, { command: 'npm run format' }, repo,
+    [STATE_FILE, KNOWN_ISSUES_FILE].map(name => path.join(repo, name)));
+});
+
+// ── T27n: an AI workspace file that Bash lists ──────────────────────────────
+
+const PROJECT_MAP_FILE = 'project-map.md';
+
+/** The paths in the edit log of a session; the hook ran with HOME set to WORK_ROOT. */
+function loggedEditPaths(sessionId) {
+  const file = path.join(WORK_ROOT, '.claude', 'hooks-logs', `edit-log-${sessionId}.txt`);
+  if (!fs.existsSync(file)) return [];
+  return fs.readFileSync(file, 'utf8').split('\n').filter(Boolean).map(line => line.split(' | ').slice(3).join(' | '));
+}
+
+// The second case sets core.ignorecase to false. On macOS the default is true,
+// and the letter-case check alone keeps the tracked project-map.md; with
+// false only the exact-name check keeps it.
+for (const [label, ignoreCase] of [['default core.ignorecase', undefined], ['core.ignorecase false', 'false']]) {
+  test(`T27n: an untracked AI workspace file listed by Bash gives no edit-log line (${label})`, () => {
+    const repo = makeRepo();
+    if (ignoreCase !== undefined) git(repo, 'config', 'core.ignorecase', ignoreCase);
+    writeArtifact(repo, STATE_FILE);
+    writeArtifact(repo, KNOWN_ISSUES_FILE);
+    commitFile(repo, PROJECT_MAP_FILE, FILE_TEXT);
+    fs.writeFileSync(path.join(repo, PROJECT_MAP_FILE), 'changed\n');
+    writeArtifact(path.join(repo, DOCS_FOLDER), KNOWN_ISSUES_FILE);
+    const listed = [STATE_FILE, KNOWN_ISSUES_FILE, PROJECT_MAP_FILE, path.join(DOCS_FOLDER, KNOWN_ISSUES_FILE)]
+      .map(relativePath => path.join(repo, relativePath));
+    const sessionId = `bash-list-${folderCount}`;
+    const output = runHook(TRACK_EDITS, repo, bashInput({ command: 'npm run format' }, repo, listed, sessionId), repo);
+    assert.strictEqual(output, EMPTY_HOOK_OUTPUT);
+    // Only the tracked project-map.md and the user document docs/known-issues.md get a line.
+    assert.deepStrictEqual(loggedEditPaths(sessionId), [listed[2], listed[3]]);
+  });
+}
 
 // ── The save command of the skill ────────────────────────────────────────────
 

@@ -79,25 +79,27 @@ function loadHookWithHome(homeDir) {
 }
 
 const TEST_SESSION_ID = 'test-session-abc123';
+const EDIT_TOOL = 'Edit';
+const BASH_TOOL = 'Bash';
 
 const MINUTE_MS = 60 * 1000;
 const DAY_MS = 24 * 60 * MINUTE_MS;
 
-function editLogLine(sessionId, filePath, ageMs = 0) {
-  return `${new Date(Date.now() - ageMs).toISOString()} | ${sessionId} | Edit | ${filePath}\n`;
+function editLogLine(sessionId, filePath, ageMs = 0, tool = EDIT_TOOL) {
+  return `${new Date(Date.now() - ageMs).toISOString()} | ${sessionId} | ${tool} | ${filePath}\n`;
 }
 
 function writeEditLog(logDir, lines) {
   fs.writeFileSync(path.join(logDir, 'edit-log.txt'), lines.join(''), 'utf8');
 }
 
-function writeRecentEdits(logDir, filePaths, ageMinutes = 0) {
+function writeRecentEdits(logDir, filePaths, ageMinutes = 0, tool = EDIT_TOOL) {
   writeEditLog(logDir, filePaths.map(filePath =>
-    editLogLine(TEST_SESSION_ID, filePath, ageMinutes * MINUTE_MS)));
+    editLogLine(TEST_SESSION_ID, filePath, ageMinutes * MINUTE_MS, tool)));
 }
 
-function writeRecentEdit(logDir, filePath) {
-  writeRecentEdits(logDir, [filePath]);
+function writeRecentEdit(logDir, filePath, tool = EDIT_TOOL) {
+  writeRecentEdits(logDir, [filePath], 0, tool);
 }
 
 /** Create `hooks/hooks.json` under `cwdDir`: the folder is then a plugin's hook folder. */
@@ -356,15 +358,16 @@ const DECISION_LOG = 'Decision log';
  * Run one scenario: `arrange` prepares the log folder, then the stop hook
  * evaluates a stop of TEST_SESSION_ID. `inspect` runs after the stop, while
  * the temporary folders still exist. Returns the hook result. An object that
- * `arrange` returns is added to the payload of that last stop.
+ * `arrange` returns is added to the payload of that last stop. `tool` is the
+ * tool name that the log lines of the scenario carry (default `Edit`).
  */
-function evaluateStop(arrange, inspect = () => {}) {
+function evaluateStop(arrange, inspect = () => {}, tool = EDIT_TOOL) {
   const { homeDir, cwdDir, logDir } = makeTempDirs();
   try {
     const hook = loadHookWithHome(homeDir);
     const stop = (sessionId, extraFields = {}) =>
       hook.evaluatePayload({ cwd: cwdDir, session_id: sessionId, ...extraFields });
-    const lastStopFields = arrange({ hook, logDir, cwdDir, stop });
+    const lastStopFields = arrange({ hook, logDir, cwdDir, stop, tool });
     const result = stop(TEST_SESSION_ID, lastStopFields);
     inspect();
     return result;
@@ -576,37 +579,45 @@ function withRemindersOff(value, fn) {
 const OLD_STATE_MS = 10 * MINUTE_MS;
 const LARGE_SESSION_LOG = '## 2026-04-15 [saved]\nGoal: Test\n' + 'x'.repeat(1600) + '\n';
 
+/** A state.md in cwdDir that is OLD_STATE_MS old. */
+function makeStaleStateMd(cwdDir) {
+  const stateFile = path.join(cwdDir, 'state.md');
+  fs.writeFileSync(stateFile, '# state\n', 'utf8');
+  setFileAge(stateFile, OLD_STATE_MS);
+}
+
+/** A stale state.md, and one log line for each of `filePaths`, all newer than it. */
+function arrangeStaleStateMd({ logDir, cwdDir, tool }, filePaths) {
+  makeStaleStateMd(cwdDir);
+  writeRecentEdits(logDir, filePaths, 0, tool);
+}
+
 // Each scenario makes exactly one reminder due, so a block with no reason
 // left proves that the name switched off that reminder and nothing else.
 const REMINDER_SCENARIOS = [
   {
     name: 'commit',
     text: 'Commit reminder',
-    arrange: ({ logDir, cwdDir }) => {
+    arrange: ({ logDir, cwdDir, tool }) => {
       const files = ['a', 'b', 'c', 'd', 'e', 'f'].map(name => `${name}.txt`);
       git(cwdDir, ['init', '-q']);
       for (const file of files) fs.writeFileSync(path.join(cwdDir, file), 'x', 'utf8');
       // Staged files are listed by `git status` even when the user's git
       // configuration hides untracked files (status.showUntrackedFiles=no).
       git(cwdDir, ['add', '.']);
-      writeRecentEdits(logDir, files.map(file => path.join(cwdDir, file)));
+      writeRecentEdits(logDir, files.map(file => path.join(cwdDir, file)), 0, tool);
     },
   },
   {
     name: 'decision-log',
     text: 'Decision log:',
-    arrange: ({ logDir }) => writeRecentEdit(logDir, SIGNIFICANT_FILE),
+    arrange: ({ logDir, tool }) => writeRecentEdit(logDir, SIGNIFICANT_FILE, tool),
   },
   {
     name: 'state-md',
     text: 'State.md sync',
     // Two source edits, both later than state.md.
-    arrange: ({ logDir, cwdDir }) => {
-      const stateFile = path.join(cwdDir, 'state.md');
-      fs.writeFileSync(stateFile, '# state\n', 'utf8');
-      setFileAge(stateFile, OLD_STATE_MS);
-      writeRecentEdits(logDir, ['src/a.js', 'src/b.js']);
-    },
+    arrange: context => arrangeStaleStateMd(context, ['src/a.js', 'src/b.js']),
   },
   {
     name: 'session-log-size',
@@ -627,6 +638,19 @@ for (const scenario of REMINDER_SCENARIOS) {
     const result = withRemindersOff(scenario.name, () => evaluateStop(scenario.arrange));
     assert.deepStrictEqual(result, {},
       `Expected no block with "${scenario.name}" switched off, got: ${JSON.stringify(result)}`);
+  });
+}
+
+// A Bash call writes a log line with the tool name `Bash`. Three reminders read
+// the edit log, and each must count such a line like an Edit line.
+const EDIT_LOG_SCENARIO_NAMES = ['commit', 'decision-log', 'state-md'];
+
+for (const name of EDIT_LOG_SCENARIO_NAMES) {
+  test(`The "${name}" scenario with Bash lines blocks with its reminder`, () => {
+    const scenario = scenarioNamed(name);
+    const result = evaluateStop(scenario.arrange, () => {}, BASH_TOOL);
+    assert.ok((result.reason || '').includes(scenario.text),
+      `Expected "${scenario.text}" for Bash lines, got: ${JSON.stringify(result)}`);
   });
 }
 
@@ -664,6 +688,105 @@ test('A .claude/hooks/*.js file asks for a decision-log entry', () => {
   const result = evaluateStop(({ logDir }) => writeRecentEdit(logDir, '/project/.claude/hooks/x.js'));
   assert.ok((result.reason || '').includes(DECISION_LOG),
     `Expected the decision-log reminder, got: ${JSON.stringify(result)}`);
+});
+
+// A name pattern must match the whole name: `XSKILL.md`, `MYCLAUDE.md`,
+// `Xskill-rules.json` and `Xplugin.universal.yaml` are not the files that the decision-log reminder is about.
+const NAMES_THAT_ARE_NOT_SIGNIFICANT = [
+  '/project/myagents/x.md',
+  '/project/notes/XSKILL.md',
+  '/project/notes/MYCLAUDE.md',
+  '/project/notes/Xskill-rules.json',
+  '/project/notes/Xplugin.universal.yaml',
+];
+// `CLAUDE.md`, `agents/x.md` and `plugin.universal.yaml` are bare relative records (no folder before
+// the name); the others lie below a folder.
+const NAMES_THAT_ARE_SIGNIFICANT = [
+  '/project/agents/x.md',
+  '/project/CLAUDE.md',
+  'CLAUDE.md',
+  'agents/x.md',
+  'skills/x/SKILL.md',
+  '/project/hooks/skill-rules.json',
+  'plugin.universal.yaml',
+];
+
+for (const filePath of NAMES_THAT_ARE_NOT_SIGNIFICANT) {
+  test(`A record ${filePath} gives no decision-log reminder`, () => {
+    assertNoReminder(evaluateStop(({ logDir }) => writeRecentEdit(logDir, filePath)));
+  });
+}
+
+for (const filePath of NAMES_THAT_ARE_SIGNIFICANT) {
+  test(`A record ${filePath} asks for a decision-log entry`, () => {
+    const result = evaluateStop(({ logDir }) => writeRecentEdit(logDir, filePath));
+    assert.ok((result.reason || '').includes(DECISION_LOG),
+      `Expected the decision-log reminder, got: ${JSON.stringify(result)}`);
+  });
+}
+
+// ── State-md reminder: file names and distinct files ──────────────────────────
+
+const STATE_MD_REMINDER = 'State.md sync';
+
+function assertStateMdReminder(result) {
+  assert.ok((result.reason || '').includes(STATE_MD_REMINDER),
+    `Expected the state-md reminder, got: ${JSON.stringify(result)}`);
+}
+
+/** The reason of the stop after edits of `filePaths` (full paths) that are newer than state.md. */
+function stateMdResult(filePathsOf, tool = EDIT_TOOL) {
+  return evaluateStop(context => arrangeStaleStateMd(context, filePathsOf(context.cwdDir)), () => {}, tool);
+}
+
+// A folder whose name only starts like a config file name does not make the
+// source files below it configuration.
+const FOLDERS_THAT_ONLY_LOOK_LIKE_CONFIG = ['.envs', 'Dockerfiles', 'docker-compose-x', '.eslintrc-x', '.prettierrc-x'];
+
+for (const folder of FOLDERS_THAT_ONLY_LOOK_LIKE_CONFIG) {
+  test(`Two source files below ${folder}/ give the state-md reminder`, () => {
+    const result = stateMdResult(cwdDir => ['a.js', 'b.js'].map(name => path.join(cwdDir, folder, 'p', 'src', name)));
+    assertStateMdReminder(result);
+  });
+}
+
+// A file name that only starts like a config file name is a source file.
+for (const name of ['app.environment.ts', 'DockerfileParser.ts', 'docker-compose-helper.py']) {
+  test(`${name} and another source file give the state-md reminder`, () => {
+    const result = stateMdResult(cwdDir => [path.join(cwdDir, 'src', 'plain.js'), path.join(cwdDir, 'src', name)]);
+    assertStateMdReminder(result);
+  });
+}
+
+// Config files with a source extension stay configuration. Two distinct files
+// of one name, in two folders (not two edits of one file).
+for (const name of ['.eslintrc.js', '.prettierrc.js', '.env.production.js', 'Dockerfile.build.ts', 'docker-compose.config.js']) {
+  test(`Two ${name} files in two folders give no state-md reminder`, () => {
+    assertNoReminder(stateMdResult(cwdDir => ['one', 'two'].map(folder => path.join(cwdDir, folder, name))));
+  });
+}
+
+// No source extension: these are never source files. This guards the documented behaviour only.
+for (const name of ['.env.local', 'Dockerfile.dev', 'docker-compose.yml']) {
+  test(`Two ${name} files in two folders give no state-md reminder (no source extension)`, () => {
+    assertNoReminder(stateMdResult(cwdDir => ['one', 'two'].map(folder => path.join(cwdDir, folder, name))));
+  });
+}
+
+test('An Edit line and a Bash line for one source file give no state-md reminder', () => {
+  assertNoReminder(evaluateStop(({ logDir, cwdDir }) => {
+    makeStaleStateMd(cwdDir);
+    const sourceFile = path.join(cwdDir, 'src', 'a.js');
+    writeEditLog(logDir, [
+      editLogLine(TEST_SESSION_ID, sourceFile, 0, EDIT_TOOL),
+      editLogLine(TEST_SESSION_ID, sourceFile, 0, BASH_TOOL),
+    ]);
+  }));
+});
+
+test('Two Bash lines for two distinct source files give the state-md reminder', () => {
+  const result = stateMdResult(cwdDir => ['a.js', 'b.js'].map(name => path.join(cwdDir, 'src', name)), BASH_TOOL);
+  assertStateMdReminder(result);
 });
 
 // Git helpers that the commit section below uses.
@@ -772,13 +895,109 @@ function writeNewFiles(repoDir, names) {
 }
 
 function assertCommitReminder(result, count) {
-  const expected = `Commit reminder: ${count} files with uncommitted changes, all edited in this session.`;
+  const expected = `Commit reminder: ${count} files with uncommitted changes, changed by this session's edits or shell commands.`;
   assert.ok((result.reason || '').includes(expected),
     `Expected "${expected}", got: ${JSON.stringify(result)}`);
 }
 
 test('The commit reminder states the number of session files with uncommitted changes', () => {
   assertCommitReminder(evaluateStop(COMMIT_SCENARIO.arrange), 6);
+});
+
+// ── The commit reminder names the files that only a shell command listed ─────
+
+const BASH_ONLY_SENTENCE = 'These files were listed only by a shell command';
+const DO_NOT_COMMIT_PHRASE = 'Do not commit a listed file';
+const CONSIDER_COMMITTING = 'Consider committing';
+const MAX_NAMED_FILES = 10;
+const AND_MORE_LINE = /^- and \d+ more$/;
+
+/** Edit-log lines for [file, tool] pairs, all inside the 30-minute window. */
+function recordEditsByTool(logDir, entries) {
+  writeEditLog(logDir, entries.map(([file, tool]) =>
+    editLogLine(TEST_SESSION_ID, file, EDIT_AGE_MINUTES * MINUTE_MS, tool)));
+}
+
+/** Modified, committed session files `session1.txt` and so on. Returns the full paths. */
+function modifiedSessionFiles(repoDir, count) {
+  const { sessionFiles } = repoWithSessionAndOtherFiles(repoDir, count);
+  modifyFiles(sessionFiles);
+  return sessionFiles;
+}
+
+/** The file as the hook names it: every symbolic link resolved (macOS: /var is /private/var). */
+function namedAs(file) {
+  return fs.realpathSync.native(file);
+}
+
+/** The `- <path>` lines of a reason, without the `- and K more` line. */
+function namedFileLines(reason) {
+  return reason.split('\n').filter(line => line.startsWith('- ') && !AND_MORE_LINE.test(line));
+}
+
+test('5 files that only Bash lines name: the reminder names each of the 5 absolute paths', () => {
+  let expectedLines;
+  const reason = evaluateStop(({ logDir, cwdDir }) => {
+    const files = modifiedSessionFiles(cwdDir, COMMIT_THRESHOLD);
+    expectedLines = files.map(file => `- ${namedAs(file)}`);
+    recordEditsByTool(logDir, files.map(file => [file, BASH_TOOL]));
+  }).reason || '';
+  assert.ok(reason.includes(BASH_ONLY_SENTENCE), `Expected the sentence, got: ${reason}`);
+  assert.ok(reason.includes(DO_NOT_COMMIT_PHRASE), `Expected the instruction not to commit a listed file, got: ${reason}`);
+  assert.deepStrictEqual(namedFileLines(reason).sort(), expectedLines.sort());
+  assert.ok(!reason.includes('- and '), `Expected no "and more" line, got: ${reason}`);
+  assert.ok(reason.split('\n').some(line => line.startsWith(CONSIDER_COMMITTING)),
+    `Expected "${CONSIDER_COMMITTING}" to start a new line, got: ${reason}`);
+});
+
+test('12 files that only Bash lines name: 10 path lines, then "- and 2 more"', () => {
+  let allLines;
+  const reason = evaluateStop(({ logDir, cwdDir }) => {
+    const files = modifiedSessionFiles(cwdDir, MAX_NAMED_FILES + 2);
+    allLines = files.map(file => `- ${namedAs(file)}`);
+    recordEditsByTool(logDir, files.map(file => [file, BASH_TOOL]));
+  }).reason || '';
+  const lines = namedFileLines(reason);
+  assert.strictEqual(lines.length, MAX_NAMED_FILES, `Got: ${reason}`);
+  assert.ok(lines.every(line => allLines.includes(line)), `A line names another file: ${reason}`);
+  const dashLines = reason.split('\n').filter(line => line.startsWith('- '));
+  assert.strictEqual(dashLines[dashLines.length - 1], '- and 2 more', `Expected "- and 2 more" last, got: ${reason}`);
+});
+
+test('5 files with Bash lines, one also with an Edit line: the 4 others are named, that one is not', () => {
+  let expectedLines;
+  const reason = evaluateStop(({ logDir, cwdDir }) => {
+    const files = modifiedSessionFiles(cwdDir, COMMIT_THRESHOLD);
+    expectedLines = files.slice(1).map(file => `- ${namedAs(file)}`);
+    recordEditsByTool(logDir, [...files.map(file => [file, BASH_TOOL]), [files[0], EDIT_TOOL]]);
+  }).reason || '';
+  assert.deepStrictEqual(namedFileLines(reason).sort(), expectedLines.sort());
+});
+
+// The path with the NUL character lies in a second repository, so git is asked
+// about it in a call of its own; the other files are in the call of the first one.
+test('A Bash line whose path holds a NUL character does not cancel the commit reminder for the other files', () => {
+  let expectedLines;
+  const reason = evaluateStop(({ logDir, cwdDir }) => {
+    const files = modifiedSessionFiles(cwdDir, COMMIT_THRESHOLD);
+    expectedLines = files.map(file => `- ${namedAs(file)}`);
+    const secondRepoDir = path.join(cwdDir, 'nested-repo');
+    initRepo(secondRepoDir);
+    const pathWithNul = path.join(secondRepoDir, 'bad\u0000name.txt');
+    recordEditsByTool(logDir, [...files, pathWithNul].map(file => [file, BASH_TOOL]));
+  }).reason || '';
+  assert.ok(reason.includes(BASH_ONLY_SENTENCE), `Expected the commit reminder, got: ${reason}`);
+  assert.deepStrictEqual(namedFileLines(reason).sort(), expectedLines.sort());
+});
+
+test('5 files with Edit lines only: no list, and the second sentence follows the first', () => {
+  const reason = evaluateStop(({ logDir, cwdDir }) => {
+    recordEditsByTool(logDir, modifiedSessionFiles(cwdDir, COMMIT_THRESHOLD).map(file => [file, EDIT_TOOL]));
+  }).reason || '';
+  assert.ok(!reason.includes(BASH_ONLY_SENTENCE), `Expected no list sentence, got: ${reason}`);
+  assert.ok(!reason.includes(DO_NOT_COMMIT_PHRASE), `Expected no instruction about a listed file, got: ${reason}`);
+  assert.ok(!reason.split('\n').some(line => line.startsWith('- ')), `Expected no "- " line, got: ${reason}`);
+  assert.ok(reason.includes(`edits or shell commands. ${CONSIDER_COMMITTING}`), `Got: ${reason}`);
 });
 
 test('The session committed its 5 files and the user has 5 modified files: no reminder', () => {
@@ -818,8 +1037,8 @@ test('New session files are counted when the git configuration of the user hides
   }), 6);
 });
 
-// Accepted limit: a file that was changed only through the Bash tool is not in
-// the edit log, so it is not counted. Here 2 logged files and 4 files that the
+// A file that a shell command changed and that Claude Code did not list is not
+// in the edit log, so it is not counted. Here 2 logged files and 4 files that the
 // log does not name are changed: `git status` prints 6 lines, the count is 2.
 test('5 logged files of which 3 are committed, and 4 changed files that the log does not name: no reminder', () => {
   assertNoReminder(evaluateStop(({ logDir, cwdDir }) => {
@@ -1037,7 +1256,10 @@ test('With a git that hangs, the count stops at its time limit and uses the file
   let elapsedMs;
   try {
     assertCommitReminder(evaluateStop(({ logDir, cwdDir }) => {
-      const { sessionFiles } = repoWithSessionAndOtherFiles(cwdDir, LOGGED_FILES_FOR_SLOW_GIT);
+      // One repository for each file, made before the fake git enters PATH: the
+      // count runs one git call for each repository, so it runs 9 calls.
+      const sessionFiles = Array.from({ length: LOGGED_FILES_FOR_SLOW_GIT }, (_, index) =>
+        repoWithCommittedFiles(path.join(cwdDir, `repo${index + 1}`), ['session.txt'])[0]);
       modifyFiles(sessionFiles);
       recordEdits(logDir, sessionFiles);
       const binDir = path.join(path.dirname(logDir), 'fake-bin');
@@ -1065,6 +1287,148 @@ test('The count of 5 session files does not rewrite the index of the repository'
     indexFile = path.join(cwdDir, '.git', 'index');
     indexBefore = fs.readFileSync(indexFile);
   }, () => assert.ok(indexBefore.equals(fs.readFileSync(indexFile)), 'Expected the index file to be unchanged')));
+});
+
+// ── The count runs one git call for each repository top folder and 100 paths ──
+// The test states the value 100 itself, as the hanging-git test states the time limit.
+
+const MAX_PATHS_PER_GIT_CALL = 100;
+
+/**
+ * Write a program named `git` into binDir. It appends one line to a file for
+ * each `status` call: the number of arguments after `--`. Then it runs the
+ * real git. Call it before PATH is changed: realGitPath() reads PATH.
+ */
+function writeRecordingGit(binDir) {
+  const callsFile = path.join(binDir, 'status-calls');
+  fs.mkdirSync(binDir, { recursive: true });
+  fs.writeFileSync(path.join(binDir, 'git'), [
+    '#!/bin/sh',
+    'is_status=0; after_separator=0; paths=0',
+    'for argument in "$@"; do',
+    '  if [ "$after_separator" = 1 ]; then paths=$((paths + 1)); fi',
+    '  if [ "$argument" = "--" ]; then after_separator=1; fi',
+    '  if [ "$argument" = "status" ]; then is_status=1; fi',
+    'done',
+    `if [ "$is_status" = 1 ]; then echo "$paths" >> '${callsFile}'; fi`,
+    `exec '${realGitPath()}' "$@"`,
+    '',
+  ].join('\n'), { mode: 0o755 });
+  return callsFile;
+}
+
+/**
+ * Like evaluateStop, with a recording git in PATH while the stop runs.
+ * Returns the hook result and the path counts of the `status` calls, in order.
+ */
+function evaluateStopRecordingStatusCalls(arrange) {
+  const pathBefore = process.env.PATH;
+  let callsFile;
+  let pathCounts = [];
+  try {
+    const result = evaluateStop(context => {
+      arrange(context);
+      callsFile = writeRecordingGit(path.join(path.dirname(context.logDir), 'recording-bin'));
+      process.env.PATH = path.dirname(callsFile) + path.delimiter + pathBefore;
+    }, () => {
+      pathCounts = fs.existsSync(callsFile)
+        ? fs.readFileSync(callsFile, 'utf8').split('\n').filter(Boolean).map(Number)
+        : [];
+    });
+    return { result, pathCounts };
+  } finally {
+    process.env.PATH = pathBefore;
+  }
+}
+
+function skipOnWindows() {
+  if (process.platform !== 'win32') return false;
+  console.log('    (not run on Windows: the test uses a shell script, or a file name that Windows cannot hold)');
+  return true;
+}
+
+test('101 modified session files in one folder are counted as 101, in git calls of 100 and 1 paths', () => {
+  if (skipOnWindows()) return;
+  const { result, pathCounts } = evaluateStopRecordingStatusCalls(({ logDir, cwdDir }) => {
+    const { sessionFiles } = repoWithSessionAndOtherFiles(cwdDir, MAX_PATHS_PER_GIT_CALL + 1);
+    modifyFiles(sessionFiles);
+    recordEdits(logDir, sessionFiles);
+  });
+  assertCommitReminder(result, MAX_PATHS_PER_GIT_CALL + 1);
+  assert.deepStrictEqual(pathCounts, [MAX_PATHS_PER_GIT_CALL, 1]);
+});
+
+test('150 modified session files over 30 folders of one repository: two git calls, of 100 and 50 paths', () => {
+  if (skipOnWindows()) return;
+  const { result, pathCounts } = evaluateStopRecordingStatusCalls(({ logDir, cwdDir }) => {
+    const names = Array.from({ length: 30 }, (_, index) =>
+      numberedNames(path.join(`folder${index + 1}`, 'session'), 5)).flat();
+    const files = repoWithCommittedFiles(cwdDir, names);
+    modifyFiles(files);
+    recordEdits(logDir, files);
+  });
+  assertCommitReminder(result, 150);
+  assert.deepStrictEqual(pathCounts, [MAX_PATHS_PER_GIT_CALL, 50]);
+});
+
+// Needs a temporary folder (`os.tmpdir()`) outside any git work tree (see Assumptions).
+test('Five logged files outside any git repository: no git call and no reminder', () => {
+  if (skipOnWindows()) return;
+  const { result, pathCounts } = evaluateStopRecordingStatusCalls(({ logDir, cwdDir }) => {
+    const files = numberedNames('plain', COMMIT_THRESHOLD).map(name => {
+      const file = path.join(cwdDir, name);
+      fs.writeFileSync(file, 'text\n');
+      return file;
+    });
+    recordEdits(logDir, files);
+  });
+  assertNoReminder(result);
+  assert.deepStrictEqual(pathCounts, []);
+});
+
+// The relative text `src/a.js` is the same in both repositories. A set of
+// relative output paths that is shared between the groups would count 3, not 5.
+test('Two repositories that hold a modified file of one relative name count the files of both', () => {
+  const sharedNames = ['a.js', 'b.js', 'c.js'].map(name => path.join('src', name));
+  assertCommitReminder(evaluateStop(({ logDir, cwdDir }) => {
+    const first = repoWithCommittedFiles(path.join(cwdDir, 'first'), sharedNames);
+    const second = repoWithCommittedFiles(path.join(cwdDir, 'second'), sharedNames.slice(0, 2));
+    modifyFiles([...first, ...second]);
+    recordEdits(logDir, [...first, ...second]);
+  }), 5);
+});
+
+// After `git rm --cached f` with f still on disk, git lists `D  f` and `?? f`.
+test('A session file that git lists twice (removed from the index, kept on disk) is counted once', () => {
+  assertCommitReminder(evaluateStop(({ logDir, cwdDir }) => {
+    const { sessionFiles } = repoWithSessionAndOtherFiles(cwdDir, COMMIT_THRESHOLD);
+    modifyFiles(sessionFiles.slice(1));
+    git(cwdDir, ['rm', '--cached', '-q', '--', path.basename(sessionFiles[0])]);
+    recordEdits(logDir, sessionFiles);
+  }), COMMIT_THRESHOLD);
+});
+
+// git reads `*` in a name as a pattern that matches `xa.txt` and `xb.txt`. The
+// two modified files are not in the log, so they must not be counted.
+test('A committed session file named x*.txt is not counted for the files that the pattern matches', () => {
+  if (skipOnWindows()) return;
+  assertNoReminder(evaluateStop(({ logDir, cwdDir }) => {
+    const [patternFile, ...others] = repoWithCommittedFiles(cwdDir,
+      ['x*.txt', 'xa.txt', 'xb.txt', ...numberedNames('session', COMMIT_THRESHOLD - 1)]);
+    modifyFiles(others);
+    recordEdits(logDir, [patternFile, ...others.slice(2)]);
+  }));
+});
+
+// git reads a leading `:` as the start of a pathspec magic word; `:x.txt` would match `x.txt`.
+test('A committed session file named :x.txt is not counted for the file that the pattern matches', () => {
+  if (skipOnWindows()) return;
+  assertNoReminder(evaluateStop(({ logDir, cwdDir }) => {
+    const [patternFile, ...others] = repoWithCommittedFiles(cwdDir,
+      [':x.txt', 'x.txt', ...numberedNames('session', COMMIT_THRESHOLD - 1)]);
+    modifyFiles(others);
+    recordEdits(logDir, [patternFile, ...others.slice(1)]);
+  }));
 });
 
 // ── Shared behaviour of the reminders ────────────────────────────────────────

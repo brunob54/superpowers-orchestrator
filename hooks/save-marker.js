@@ -7,7 +7,8 @@
  *     it; stop-reminders.js reads it.
  *   - the stop guard holds the time of the last stop that stop-reminders.js
  *     blocked.
- *   - the edit log holds one line for each Edit or Write of the session.
+ *   - the edit log holds one line for each Edit or Write of the session, and
+ *     one line for each file that Claude Code lists as changed by a Bash call.
  *     track-edits.js appends to it; stop-reminders.js reads it.
  *   - the statistics file counts the Skill calls of the session.
  *     track-session-stats.js writes it; stop-reminders.js reads it.
@@ -32,6 +33,11 @@ const GUARD_KIND = { prefix: 'stop-hook-fired', extension: '.lock' };
 const EDIT_LOG_KIND = { prefix: 'edit-log', extension: '.txt' };
 const STATS_KIND = { prefix: 'session-stats', extension: '.json' };
 const FILE_KINDS = [MARKER_KIND, GUARD_KIND, EDIT_LOG_KIND, STATS_KIND];
+
+// The name that Claude Code gives the shell tool. track-edits.js logs a line
+// with this tool name for each file a shell command changed; stop-reminders.js
+// reads it to find the files that only a shell command listed.
+const BASH_TOOL = 'Bash';
 
 // A per-session file is named `<prefix>-<clean id><extension>`.
 const ID_SEPARATOR = '-';
@@ -140,6 +146,7 @@ const MARKER_COMMAND =
   `fs.writeFileSync(path.join(dir,'${MARKER_KIND.prefix}'+(id?'${ID_SEPARATOR}'+id:'')+'${MARKER_KIND.extension}'),new Date().toISOString())"`;
 
 module.exports = {
+  BASH_TOOL,
   LOG_DIR,
   MARKER_COMMAND,
   MAX_AGE_MS,

@@ -23,6 +23,7 @@ const fs = require('fs');
 const path = require('path');
 const { spawnSync } = require('child_process');
 const {
+  BASH_TOOL,
   MARKER_COMMAND,
   MAX_AGE_MS,
   editLogFile,
@@ -120,16 +121,19 @@ const SOURCE_PATTERNS = [
   /\.(js|jsx|ts|tsx|py|rb|go|rs|java|cs|cpp|c|h|hpp|swift|kt|scala|php)$/,
 ];
 
-// Files that are clearly config/non-source
+// Files that are clearly config/non-source. Each pattern is tested on the file
+// name (the text after the last path separator), not on the whole path: a
+// folder named `.envs` or `Dockerfiles` must not make the source files below
+// it configuration.
 const CONFIG_PATTERNS = [
   /package\.json$/,
   /tsconfig.*\.json$/,
-  /\.eslintrc/,
-  /\.prettierrc/,
+  /^\.eslintrc/,
+  /^\.prettierrc/,
   /\.gitignore$/,
-  /\.env/,
-  /Dockerfile/,
-  /docker-compose/,
+  /^\.env(\.|$)/,
+  /^Dockerfile(\.|$)/,
+  /^docker-compose\./,
   /\.ya?ml$/,
   /\.toml$/,
   /\.cfg$/,
@@ -141,7 +145,8 @@ const CONFIG_PATTERNS = [
 ];
 
 function isSourceFile(filePath) {
-  return SOURCE_PATTERNS.some(p => p.test(filePath)) && !CONFIG_PATTERNS.some(p => p.test(filePath));
+  const fileName = filePath.split(/[/\\]/).pop();
+  return SOURCE_PATTERNS.some(p => p.test(filePath)) && !CONFIG_PATTERNS.some(p => p.test(fileName));
 }
 
 /**
@@ -283,28 +288,34 @@ function formatStatsSummary(stats) {
 }
 
 const GIT_TIMEOUT_MS = 5000;
-const GIT_STATUS = ['status', '--porcelain'];
 // With this option `git status` lists a new file even when the configuration
 // of the user hides untracked files, and it lists each file of a new folder
 // instead of one line for the folder.
 const ALL_UNTRACKED_FILES = '--untracked-files=all';
 
 /**
- * Run one git command in `cwd`. Return its standard output without the
- * surrounding white space, or null when git failed, could not be started, or
- * did not end within `timeoutMs` milliseconds.
+ * Run one git command in `cwd`. Return its standard output exactly as git
+ * wrote it (the leading space of a status such as ` M x.js` is part of the
+ * output), or null when git failed, could not be started, or did not end
+ * within `timeoutMs` milliseconds.
  */
 function gitStdout(args, cwd, timeoutMs = GIT_TIMEOUT_MS) {
-  const result = spawnSync('git', args, { cwd, encoding: 'utf8', timeout: timeoutMs });
+  let result;
+  try {
+    result = spawnSync('git', args, { cwd, encoding: 'utf8', timeout: timeoutMs });
+  } catch {
+    // spawnSync throws, for example, when an argument holds a NUL character.
+    return null;
+  }
   if (result.status !== 0 || result.error) return null;
-  return (result.stdout || '').trim();
+  return result.stdout || '';
 }
 
-// Options for a git command that only reads and that names one file: git
-// does not rewrite the index while it reads, so it cannot collide with a git
-// command of the user, and the characters `*`, `?` and `[` in the file name
+// Options for a git command that only reads and that names files: git does not
+// rewrite the index while it reads, so it cannot collide with a git command of
+// the user, and the characters `*`, `?`, `[` and a leading `:` in a file name
 // have no special meaning.
-const GIT_READ_ONE_FILE = ['--no-optional-locks', '--literal-pathspecs'];
+const GIT_READ_NAMED_FILES = ['--no-optional-locks', '--literal-pathspecs'];
 
 /**
  * Return the nearest folder that exists: `folder` itself, or the first
@@ -316,22 +327,6 @@ function nearestExistingFolder(folder) {
     existing = path.dirname(existing);
   }
   return existing;
-}
-
-/**
- * Return a function that runs one read-only git command about one file.
- * `realPath` is the full path of the file with every symbolic link resolved.
- * git runs in the folder of the file, so the repository of the file decides,
- * not the session folder. When that folder no longer exists (it was renamed
- * or deleted), git runs in the nearest folder that exists and gets the rest
- * of the path, with `/` as the separator on every platform. The file is
- * always the one path of the command: a `git status` with no path would
- * report the whole repository. Each call may take `timeoutMs` milliseconds.
- */
-function gitReaderForFile(realPath, timeoutMs = GIT_TIMEOUT_MS) {
-  const folder = nearestExistingFolder(path.dirname(realPath));
-  const pathFromFolder = path.relative(folder, realPath).split(path.sep).join('/');
-  return (...args) => gitStdout([...GIT_READ_ONE_FILE, ...args, '--', pathFromFolder], folder, timeoutMs);
 }
 
 /**
@@ -365,30 +360,100 @@ function storedPath(filePath, cwd) {
 
 // The whole count of the commit reminder may take this long. Each git call
 // has its own limit of GIT_TIMEOUT_MS, so without a limit for the whole count
-// a git that hangs would block the stop for that time once per logged file
-// (measured: 30 seconds for 6 files).
+// a git that hangs would block the stop for that time once per git call.
 const COMMIT_COUNT_TIME_LIMIT_MS = GIT_TIMEOUT_MS;
 
+// A file names its status in `git status --porcelain -z` as two status
+// characters and one space, then the path.
+const GIT_STATUS_PATH_OFFSET = 3;
+
+// The paths of one git call. Windows limits a command line to 32,767
+// characters; 100 paths of at most 260 characters (the classic Windows path
+// limit) need at most 26,100 characters with their separators.
+const MAX_PATHS_PER_GIT_CALL = 100;
+
+const GIT_STATUS_OF_NAMED_FILES = [
+  ...GIT_READ_NAMED_FILES, 'status', '--porcelain', '-z', '--no-renames', ALL_UNTRACKED_FILES, '--',
+];
+
 /**
- * Count the files of `editedPaths` for which git reports a change that is not
- * committed: a modified, staged, deleted or new file. One `git status` runs
- * per file, so a changed file that the session did not edit is never counted,
- * and an empty list runs no git command. A file is counted once, also when
- * the list names it under two paths. Not counted: a file that git ignores
- * (it cannot be committed), a file outside a git repository, and a file for
- * which git fails. When COMMIT_COUNT_TIME_LIMIT_MS is used up, the count
- * stops, and the result is the number of files counted until then.
+ * The top folder of the repository that holds `startFolder`: the nearest
+ * folder, from `startFolder` upward, that holds an entry named `.git`. The
+ * entry can be a folder or a file (a linked worktree and a submodule have a
+ * `.git` file). Null when there is none up to the root of the file system. No
+ * process runs.
  */
-function countFilesWithUncommittedChanges(editedPaths, cwd) {
+function findRepositoryTopFolder(startFolder) {
+  for (let folder = startFolder; ; folder = path.dirname(folder)) {
+    if (fs.existsSync(path.join(folder, '.git'))) return folder;
+    if (path.dirname(folder) === folder) return null;
+  }
+}
+
+/**
+ * Group the paths by repository top folder. Returns a Map from each top folder
+ * to the paths below it, relative to it and with `/` as the separator on
+ * every platform. A path outside any repository is left out. The walk to the
+ * top folder is done once for each start folder.
+ */
+function relativePathsByTopFolder(storedPaths) {
+  const topFolderOfStart = new Map();
+  const groups = new Map();
+  for (const file of storedPaths) {
+    const startFolder = nearestExistingFolder(path.dirname(file));
+    if (!topFolderOfStart.has(startFolder)) {
+      topFolderOfStart.set(startFolder, findRepositoryTopFolder(startFolder));
+    }
+    const topFolder = topFolderOfStart.get(startFolder);
+    if (topFolder === null) continue;
+    if (!groups.has(topFolder)) groups.set(topFolder, []);
+    groups.get(topFolder).push(path.relative(topFolder, file).split(path.sep).join('/'));
+  }
+  return groups;
+}
+
+/**
+ * The distinct absolute paths that the output of one `git status --porcelain
+ * -z` call lists. git prints the paths relative to the top folder of the
+ * repository. A path can be listed twice (`D  f` and `?? f` after
+ * `git rm --cached f`).
+ */
+function changedPathsOfStatusOutput(output, topFolder) {
+  const paths = output.split('\0').filter(Boolean)
+    .map(entry => path.join(topFolder, entry.slice(GIT_STATUS_PATH_OFFSET)));
+  return [...new Set(paths)];
+}
+
+/**
+ * The files of `editedPaths` for which git reports a change that is not
+ * committed (a modified, staged, deleted or new file), as absolute paths. The
+ * count is the length of the list. git is asked about the logged files only,
+ * so a changed file that the session did not edit is never counted, and an
+ * empty list runs no git command. One `git status` runs for each repository
+ * top folder and each 100 paths, in the top folder, so the repository of the
+ * file decides, not the session folder. A file is counted once, also when the
+ * list names it under two paths. Not counted: a file that git ignores (it
+ * cannot be committed), a file outside a git repository, and a file of a git
+ * call that fails. When COMMIT_COUNT_TIME_LIMIT_MS is used up, the count stops,
+ * and the result holds the files counted until then.
+ */
+function filesWithUncommittedChanges(editedPaths, cwd) {
   const storedPaths = new Set(editedPaths.map(filePath => storedPath(filePath, cwd)).filter(Boolean));
   const deadlineMs = Date.now() + COMMIT_COUNT_TIME_LIMIT_MS;
-  let count = 0;
-  for (const file of storedPaths) {
-    const remainingMs = deadlineMs - Date.now();
-    if (remainingMs <= 0) break;
-    if (gitReaderForFile(file, remainingMs)(...GIT_STATUS, ALL_UNTRACKED_FILES)) count += 1;
+  // A Set keeps each absolute path once over all chunks, in the order of first appearance.
+  const counted = new Set();
+  for (const [topFolder, relativePaths] of relativePathsByTopFolder(storedPaths)) {
+    for (let from = 0; from < relativePaths.length; from += MAX_PATHS_PER_GIT_CALL) {
+      const remainingMs = deadlineMs - Date.now();
+      if (remainingMs <= 0) return [...counted];
+      const chunk = relativePaths.slice(from, from + MAX_PATHS_PER_GIT_CALL);
+      const output = gitStdout([...GIT_STATUS_OF_NAMED_FILES, ...chunk], topFolder, remainingMs);
+      if (output !== null) {
+        for (const file of changedPathsOfStatusOutput(output, topFolder)) counted.add(file);
+      }
+    }
   }
-  return count;
+  return [...counted];
 }
 
 const SUBAGENT_TASK_TYPE = 'subagent';
@@ -414,6 +479,51 @@ function hasRunningSubagent(backgroundTasks) {
 // The commit reminder is due from this number of files.
 const COMMIT_REMINDER_MIN_FILES = 5;
 
+// The commit reminder names at most this many of the counted files that only a
+// shell command listed.
+const COMMIT_REMINDER_MAX_NAMED_FILES = 10;
+
+const BASH_ONLY_NOTICE =
+  'These files were listed only by a shell command; another program or session may have changed them. ' +
+  'Do not commit a listed file that you did not change on purpose.';
+
+/**
+ * The counted files that only a Bash line names: no line of `edits` with
+ * another tool names them. The comparison uses stored paths, so a record with
+ * a symbolic link or another letter case still matches.
+ */
+function bashOnlyFiles(countedFiles, edits, cwd) {
+  const namedByOtherTools = new Set(
+    edits.filter(edit => edit.tool !== BASH_TOOL).map(edit => storedPath(edit.filePath, cwd)));
+  return countedFiles.filter(file => !namedByOtherTools.has(file));
+}
+
+/**
+ * The text between the first sentence of the commit reminder and "Consider
+ * committing". One space when no counted file is Bash-only. Otherwise one
+ * space, the notice, a line break, one `- <path>` line for each Bash-only file
+ * (at most COMMIT_REMINDER_MAX_NAMED_FILES), and `- and K more` when files
+ * remain; each line ends with a line break.
+ */
+function bashOnlyListPart(files) {
+  if (files.length === 0) return ' ';
+  const lines = files.slice(0, COMMIT_REMINDER_MAX_NAMED_FILES).map(file => `- ${file}`);
+  const hiddenCount = files.length - COMMIT_REMINDER_MAX_NAMED_FILES;
+  if (hiddenCount > 0) lines.push(`- and ${hiddenCount} more`);
+  return ` ${BASH_ONLY_NOTICE}\n${lines.map(line => `${line}\n`).join('')}`;
+}
+
+function commitReminderText(countedFiles, edits, cwd) {
+  const listPart = bashOnlyListPart(bashOnlyFiles(countedFiles, edits, cwd));
+  return (
+    `Commit reminder: ${countedFiles.length} files with uncommitted changes, ` +
+    `changed by this session's edits or shell commands.${listPart}` +
+    `Consider committing incremental progress to avoid losing work. ` +
+    `If a project rule (for example in CLAUDE.md or AGENTS.md) requires the user's approval ` +
+    `before a commit, do not commit: tell the user about the uncommitted changes and wait.`
+  );
+}
+
 /**
  * Generate contextual reminders based on edit history and session stats.
  * `backgroundTasks` is the field `background_tasks` of the stop payload.
@@ -438,8 +548,9 @@ function generateReminders(edits, cwd, sessionId, backgroundTasks) {
   // would stay after a commit), and `git status` of the whole repository is
   // not enough either (it counts unfinished files of the user, and a model
   // that follows the reminder would commit them).
-  // Accepted limit: a file that was changed only through the Bash tool is not
-  // in the edit log, so it is not counted.
+  // A file that a Bash command changed is counted only when Claude Code listed
+  // it in the Bash tool result (see track-edits.js); in a permission mode
+  // where Claude Code does not fill that list, it is not counted.
   // While a subagent is still running, the reminder is postponed: the files
   // that the subagent edits are in the edit log of this session, and they are
   // not ready for a commit. The next stop without a running subagent gives
@@ -450,14 +561,9 @@ function generateReminders(edits, cwd, sessionId, backgroundTasks) {
     editedPaths.length >= COMMIT_REMINDER_MIN_FILES &&
     !hasRunningSubagent(backgroundTasks)
   ) {
-    const uncommittedCount = countFilesWithUncommittedChanges(editedPaths, cwd);
-    if (uncommittedCount >= COMMIT_REMINDER_MIN_FILES) {
-      reminders.push(
-        `Commit reminder: ${uncommittedCount} files with uncommitted changes, all edited in this session. ` +
-        `Consider committing incremental progress to avoid losing work. ` +
-        `If a project rule (for example in CLAUDE.md or AGENTS.md) requires the user's approval ` +
-        `before a commit, do not commit: tell the user about the uncommitted changes and wait.`
-      );
+    const uncommittedFiles = filesWithUncommittedChanges(editedPaths, cwd);
+    if (uncommittedFiles.length >= COMMIT_REMINDER_MIN_FILES) {
+      reminders.push(commitReminderText(uncommittedFiles, edits, cwd));
     }
   }
 
@@ -486,18 +592,20 @@ function isPluginHookScript(filePath) {
  * Detect sessions where significant architectural decisions were made.
  * These are sessions that modified skill files, hooks, or plugin config —
  * places where the "why" matters and would be costly to rediscover.
+ * A name pattern starts at the beginning of the record or after a path
+ * separator, so `XSKILL.md` does not match.
  */
 function isSignificantSession(edits) {
   const sigPatterns = [
-    /SKILL\.md$/i,
+    /(?:^|[/\\])SKILL\.md$/i,
     /[/\\]\.claude[/\\]hooks[/\\][^/\\]+\.js$/,
     /[/\\]hooks[/\\]session-start$/,
-    /skill-rules\.json$/,
-    /CLAUDE\.md$/i,
-    /agents[/\\][^/\\]+\.md$/i,
+    /(?:^|[/\\])skill-rules\.json$/,
+    /(?:^|[/\\])CLAUDE\.md$/i,
+    /(?:^|[/\\])agents[/\\][^/\\]+\.md$/i,
     /[/\\]specs[/\\][^/\\]+\.md$/i,
     /[/\\]plans[/\\][^/\\]+\.md$/i,
-    /plugin\.universal\.yaml$/,
+    /(?:^|[/\\])plugin\.universal\.yaml$/,
   ];
   return edits.some(e => sigPatterns.some(p => p.test(e.filePath)) || isPluginHookScript(e.filePath));
 }
@@ -507,8 +615,8 @@ function isSignificantSession(edits) {
  * edits — a signal that active task state may have drifted since last save.
  * Returns a reminder string if stale, null otherwise.
  *
- * Threshold: state.md older than at least 2 source-file edits that occurred
- * after it was last written. Config-only edits are excluded (noise).
+ * Threshold: state.md older than at least 2 distinct source files that were
+ * edited after it was last written. Config-only edits are excluded (noise).
  */
 function checkStateMdStaleness(cwd, recentEdits) {
   try {
@@ -519,8 +627,11 @@ function checkStateMdStaleness(cwd, recentEdits) {
     const editsAfterState = recentEdits.filter(e =>
       new Date(e.timestamp).getTime() > stateMtime && isSourceFile(e.filePath)
     );
+    // Distinct files, not log lines: an Edit and a formatter run on one file,
+    // or a generated file that every build rewrites, are one file.
+    const editedFiles = new Set(editsAfterState.map(e => e.filePath));
 
-    if (editsAfterState.length >= 2) {
+    if (editedFiles.size >= 2) {
       return (
         'State.md sync: state.md was written before recent code changes in this session. ' +
         'If progress was made on the active task, update state.md via the context-management skill.'

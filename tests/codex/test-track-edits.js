@@ -43,6 +43,9 @@ const HOSTILE_MARKER_NAME = 'last-saved-entry-______evil.txt';
 const LONG_ID = 'long-id-'.repeat(13).slice(0, 100);
 const SESSION_ID_VARIABLE = 'CLAUDE_CODE_SESSION_ID';
 const SESSION_LOG = 'session-log.md';
+const BASH_TOOL = 'Bash';
+// Claude Code sets this variable for every hook: the folder where the session started.
+const PROJECT_DIR_VARIABLE = 'CLAUDE_PROJECT_DIR';
 const SIGNIFICANT_FILE = 'skills/x/SKILL.md';
 const DECISION_LOG = 'Decision log';
 const EMPTY_HOOK_OUTPUT = '{}';
@@ -76,10 +79,19 @@ function makeHome() {
   return { homeDir, cwdDir };
 }
 
-/** The environment of a child process whose HOME is homeDir. */
+/**
+ * The environment of a child process whose HOME is homeDir. An inherited
+ * CLAUDE_PROJECT_DIR and every inherited GIT_* variable are removed (a test
+ * that needs one sets it in `extra`): a value from the Claude Code session or
+ * the git hook that runs this file would name another project.
+ */
 function envWithHome(homeDir, extra = {}) {
   const env = { ...process.env, HOME: homeDir, USERPROFILE: homeDir, ...extra };
   if (!(SESSION_ID_VARIABLE in extra)) delete env[SESSION_ID_VARIABLE];
+  if (!(PROJECT_DIR_VARIABLE in extra)) delete env[PROJECT_DIR_VARIABLE];
+  for (const name of Object.keys(env)) {
+    if (name.startsWith('GIT_') && !(name in extra)) delete env[name];
+  }
   return env;
 }
 
@@ -103,10 +115,10 @@ function markerPaths(homeDir, sessionId) {
     '{ logDir: m.LOG_DIR, marker: m.markerFile(id), guard: m.guardFile(id), command: m.MARKER_COMMAND }');
 }
 
-function runHook(script, payload, homeDir) {
+function runHook(script, payload, homeDir, extraEnv = {}) {
   const result = spawnSync(process.execPath, [script], {
     input: JSON.stringify(payload),
-    env: envWithHome(homeDir),
+    env: envWithHome(homeDir, extraEnv),
     encoding: 'utf8',
   });
   assert.strictEqual(result.status, 0, `${path.basename(script)} exited with ${result.status}: ${result.stderr}`);
@@ -469,11 +481,19 @@ const SCRATCH_FILE = 'mutate.js';
 // leave the hook logging as if the field were absent.
 const NON_STRING_FIELD_VALUES = [42, { a: 1 }, ['/x'], true, null];
 
+/** The parsed lines of the edit log of this session (an empty list when there is none). */
+function ownEditLogEntries(homeDir, sessionId) {
+  const ownLog = evaluateInHome(homeDir, SAVE_MARKER, sessionId, 'm.editLogFile(id)');
+  if (!fs.existsSync(ownLog)) return [];
+  return fs.readFileSync(ownLog, 'utf8').split('\n').filter(Boolean).map(line => {
+    const [timestamp, sessionIdField, tool, ...pathParts] = line.split(' | ');
+    return { timestamp, sessionId: sessionIdField, tool, filePath: pathParts.join(' | ') };
+  });
+}
+
 /** The number of lines in the edit log of this session (0 when there is none). */
 function ownEditLogLines(homeDir, sessionId) {
-  const ownLog = evaluateInHome(homeDir, SAVE_MARKER, sessionId, 'm.editLogFile(id)');
-  if (!fs.existsSync(ownLog)) return 0;
-  return fs.readFileSync(ownLog, 'utf8').split('\n').filter(Boolean).length;
+  return ownEditLogEntries(homeDir, sessionId).length;
 }
 
 /** A Write of a source file at filePath, with the scratchpad named in the payload. */
@@ -607,24 +627,67 @@ test('T23b: a scratch file that does not exist is matched through its parent fol
   assert.strictEqual(ownEditLogLines(homeDir, SESSION_A), 0, 'The scratch file must not be logged');
 });
 
-// ── A Bash call is not an edit ───────────────────────────────────────────────
+// ── A Bash call logs the files that Claude Code lists ────────────────────────
 
-console.log('\nA Bash call is not an edit');
+console.log('\nA Bash call logs the files that Claude Code lists');
 
-// track-edits.js also runs after the Bash tool, to keep a session log that a
-// command wrote out of `git status` (tests/codex/test-git-exclude-hooks.js).
-// The stop hook counts the lines of the edit log, and it reads the save marker.
-// A Bash call must change neither: the save command of the skill writes the
-// marker itself when it runs, and a command is not an edit of a file.
+// track-edits.js also runs after the Bash tool. It logs each file that Claude
+// Code lists in `tool_response.bashEditDiff.changedFiles`, and it keeps a
+// session log that a command wrote out of `git status`
+// (tests/codex/test-git-exclude-hooks.js). A Bash call never moves the save
+// marker: the save command of the skill writes the marker itself when it runs.
+// A payload without that field writes nothing.
 
-function afterBash(homeDir, cwdDir, sessionId, command, toolInputExtra = {}) {
+const COMMAND_DURATION_MS = 1000;
+
+function afterBash(homeDir, cwdDir, sessionId, command, toolInputExtra = {}, payloadExtra = {}, extraEnv = {}) {
   const output = runHook(TRACK_EDITS, {
-    tool_name: 'Bash',
+    tool_name: BASH_TOOL,
     tool_input: { command, ...toolInputExtra },
     cwd: cwdDir,
     session_id: sessionId,
-  }, homeDir);
+    ...payloadExtra,
+  }, homeDir, extraEnv);
   assert.deepStrictEqual(output, JSON.parse(EMPTY_HOOK_OUTPUT), 'track-edits must never block');
+}
+
+/** The `tool_response` of a Bash call, as the hooks reference describes it. */
+function bashResponse(bashEditDiff) {
+  return { stdout: '', stderr: '', interrupted: false, isImage: false, noOutputExpected: false, bashEditDiff };
+}
+
+/** The `bashEditDiff` object. `files` stays empty: the hook does not read it. */
+function listing(changedFiles, extraFields = {}) {
+  return { files: [], moreFiles: 0, changedFiles, ...extraFields };
+}
+
+/** A Bash call (session A) after which Claude Code listed `bashEditDiff`. */
+function afterBashListing(homeDir, cwdDir, bashEditDiff, payloadExtra = {}, extraEnv = {}) {
+  afterBash(homeDir, cwdDir, SESSION_A, 'npm run format', {},
+    { tool_response: bashResponse(bashEditDiff), duration_ms: COMMAND_DURATION_MS, ...payloadExtra }, extraEnv);
+}
+
+/** Write a new file (with its folders) below dir. Returns its full path. */
+function newFile(dir, relativePath) {
+  const file = path.join(dir, relativePath);
+  fs.mkdirSync(path.dirname(file), { recursive: true });
+  fs.writeFileSync(file, 'content\n');
+  return file;
+}
+
+function loggedPaths(homeDir) {
+  return ownEditLogEntries(homeDir, SESSION_A).map(entry => entry.filePath);
+}
+
+/**
+ * The positive control of a test that expects no line: in a separate HOME, the
+ * same kind of call with one valid, new, listed file gives one line.
+ */
+function assertValidListingIsLogged() {
+  const { homeDir, cwdDir } = makeHome();
+  const file = newFile(cwdDir, 'control.txt');
+  afterBashListing(homeDir, cwdDir, listing([file]));
+  assert.deepStrictEqual(loggedPaths(homeDir), [file], 'The positive control must log its file');
 }
 
 test('T26: after a Bash call with the save command, the log folder holds no file', () => {
@@ -653,6 +716,195 @@ test('T26c: a Bash call whose input also holds a file path adds no edit-log line
   const { homeDir, cwdDir } = makeHome();
   afterBash(homeDir, cwdDir, SESSION_A, 'npm test', { file_path: path.join(cwdDir, SIGNIFICANT_FILE) });
   assert.strictEqual(ownEditLogLines(homeDir, SESSION_A), 0);
+});
+
+test('T27: a Bash call logs each listed file, with tool Bash and one timestamp', () => {
+  const { homeDir, cwdDir } = makeHome();
+  const first = newFile(cwdDir, 'src/one.js');
+  const second = newFile(cwdDir, 'src/two.js');
+  afterBashListing(homeDir, cwdDir, listing([first, second]));
+  const entries = ownEditLogEntries(homeDir, SESSION_A);
+  assert.deepStrictEqual(entries.map(entry => entry.filePath), [first, second]);
+  assert.ok(entries.every(entry => entry.tool === BASH_TOOL && entry.sessionId === SESSION_A));
+  assert.strictEqual(entries[0].timestamp, entries[1].timestamp, 'one call gives one timestamp');
+});
+
+test('T27b: a file listed twice gives one line', () => {
+  const { homeDir, cwdDir } = makeHome();
+  const file = newFile(cwdDir, 'twice.js');
+  afterBashListing(homeDir, cwdDir, listing([file, file]));
+  assert.deepStrictEqual(loggedPaths(homeDir), [file]);
+});
+
+for (const [label, bashEditDiff] of [
+  ['a list', (file) => listing([file], { skipped: true })],
+  ['no list', () => ({ skipped: true })],
+]) {
+  test(`T27c: a skipped git command with ${label} logs nothing`, () => {
+    const { homeDir, cwdDir } = makeHome();
+    afterBashListing(homeDir, cwdDir, bashEditDiff(newFile(cwdDir, 'skipped.js')));
+    assert.strictEqual(ownEditLogLines(homeDir, SESSION_A), 0);
+    assertValidListingIsLogged();
+  });
+}
+
+for (const flag of ['unavailable', 'shared']) {
+  test(`T27d: the flag ${flag} does not stop logging`, () => {
+    const { homeDir, cwdDir } = makeHome();
+    const file = newFile(cwdDir, `${flag}.js`);
+    afterBashListing(homeDir, cwdDir, listing([file], { [flag]: true }));
+    assert.deepStrictEqual(loggedPaths(homeDir), [file]);
+  });
+}
+
+test('T27e: entries that break the rule are dropped and only the valid path is logged', () => {
+  const { homeDir, cwdDir } = makeHome();
+  const valid = newFile(cwdDir, 'valid.js');
+  const entries = [42, { a: 1 }, null, '', 'src/relative.js',
+    path.join(cwdDir, 'a\nb.js'), path.join(cwdDir, 'a\rb.js'), valid];
+  afterBashListing(homeDir, cwdDir, listing(entries));
+  assert.deepStrictEqual(loggedPaths(homeDir), [valid]);
+});
+
+const NON_ARRAY_LISTS = [...NON_STRING_FIELD_VALUES.filter(value => !Array.isArray(value)), '/not/a/list'];
+for (const value of NON_ARRAY_LISTS) {
+  test(`T27f: changedFiles set to ${JSON.stringify(value)} logs nothing`, () => {
+    const { homeDir, cwdDir } = makeHome();
+    afterBashListing(homeDir, cwdDir, listing(value));
+    assert.strictEqual(ownEditLogLines(homeDir, SESSION_A), 0);
+    assertValidListingIsLogged();
+  });
+}
+
+test('T27f: bashEditDiff that is a string logs nothing', () => {
+  const { homeDir, cwdDir } = makeHome();
+  afterBashListing(homeDir, cwdDir, 'not an object');
+  assert.strictEqual(ownEditLogLines(homeDir, SESSION_A), 0);
+  assertValidListingIsLogged();
+});
+
+test('T27g: a listed scratchpad file is dropped; a file in scratchpad-2 is logged', () => {
+  const { homeDir, cwdDir } = makeHome();
+  const { scratchpadDir, siblingDir } = makeScratchpad(homeDir);
+  const scratchFile = newFile(scratchpadDir, SCRATCH_FILE);
+  const siblingFile = newFile(siblingDir, SCRATCH_FILE);
+  afterBashListing(homeDir, cwdDir, listing([scratchFile, siblingFile]), { [SCRATCHPAD_FIELD]: scratchpadDir });
+  assert.deepStrictEqual(loggedPaths(homeDir), [siblingFile]);
+});
+
+test('T27j: a listed session log with [saved] does not move the save marker', () => {
+  const { homeDir, cwdDir } = makeHome();
+  // The project folder is another folder and cwd is not a git repository, so
+  // the rule for untracked artificial intelligence (AI) workspace files keeps
+  // session-log.md in the list.
+  const otherProjectDir = fs.mkdtempSync(path.join(WORK_ROOT, 'project-'));
+  trackEdit(homeDir, cwdDir, SESSION_A, 'Edit', SIGNIFICANT_FILE, { old_string: 'a', new_string: 'b' });
+  const sessionLog = path.join(cwdDir, SESSION_LOG);
+  fs.writeFileSync(sessionLog, SAVED_HEADING);
+  afterBash(homeDir, cwdDir, SESSION_A, saveCommandWithEntry(ENTRY_TEXT), {},
+    { tool_response: bashResponse(listing([sessionLog])), duration_ms: COMMAND_DURATION_MS },
+    { [PROJECT_DIR_VARIABLE]: otherProjectDir });
+  assert.strictEqual(ownEditLogLines(homeDir, SESSION_A), 2);
+  assert.strictEqual(fs.existsSync(markerPaths(homeDir, SESSION_A).marker), false, 'The hook wrote the save marker');
+  expectDecisionLogBlock(stop(homeDir, cwdDir, SESSION_A), 'session A');
+});
+
+test('T27k: a listed SKILL.md gives the decision-log block', () => {
+  const { homeDir, cwdDir } = makeHome();
+  afterBashListing(homeDir, cwdDir, listing([newFile(cwdDir, SIGNIFICANT_FILE)]));
+  expectDecisionLogBlock(stop(homeDir, cwdDir, SESSION_A), 'a SKILL.md that Bash listed');
+});
+
+test('T27l: a listed path in a subagent worktree is logged and ignored at the stop', () => {
+  const { homeDir, cwdDir } = makeHome();
+  const worktreeFile = newFile(cwdDir, path.join('.claude', 'worktrees', 'agent-a017948ab31bc3287', SIGNIFICANT_FILE));
+  afterBashListing(homeDir, cwdDir, listing([worktreeFile]));
+  assert.deepStrictEqual(loggedPaths(homeDir), [worktreeFile]);
+  assert.deepStrictEqual(stop(homeDir, cwdDir, SESSION_A), JSON.parse(EMPTY_HOOK_OUTPUT));
+});
+
+// ── The change-time filter ───────────────────────────────────────────────────
+// The status-change time (ctime) of a file is the time the file system records
+// for the last change of its content, name or attributes. A program cannot set
+// it to an earlier value. The tests state the margin of the hook (2 s) themselves.
+// T27h, T27m and T27o use `duration_ms: 0`, so the hook has 2 s between the change
+// and its start; on a heavily loaded machine a failure of these three tests can
+// be timing and not a logic defect. Do not widen it: T27m needs the narrow window.
+
+const CHANGE_TIME_MARGIN_MS = 2000;
+const AGE_WAIT_MS = CHANGE_TIME_MARGIN_MS + 500;
+
+/** Block the process for `ms` milliseconds (the status-change time cannot be set back). */
+function sleepMs(ms) {
+  Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
+}
+
+let agedFixture = null;
+
+/**
+ * Files that are older than the margin: an old file, and a file that was
+ * created and deleted in the same folder before the wait. Made once for all
+ * tests, because the wait takes 2.5 seconds.
+ */
+function agedFiles() {
+  if (agedFixture === null) {
+    const dir = fs.mkdtempSync(path.join(WORK_ROOT, 'aged-'));
+    const oldFile = newFile(dir, path.join('old', 'old.txt'));
+    const deletedOldFile = newFile(dir, path.join('old', 'deleted.txt'));
+    fs.rmSync(deletedOldFile);
+    sleepMs(AGE_WAIT_MS);
+    agedFixture = { oldFile, deletedOldFile };
+  }
+  return agedFixture;
+}
+
+test('T27h: files that changed before the command are dropped; files that changed during it are logged', () => {
+  const { oldFile, deletedOldFile } = agedFiles();
+  const { homeDir, cwdDir } = makeHome();
+  const newOne = newFile(cwdDir, path.join('new', 'new.txt'));
+  const goneNewOne = newFile(cwdDir, path.join('new', 'gone.txt'));
+  fs.rmSync(goneNewOne);
+  afterBashListing(homeDir, cwdDir, listing([oldFile, deletedOldFile, newOne, goneNewOne]), { duration_ms: 0 });
+  assert.deepStrictEqual(loggedPaths(homeDir), [newOne, goneNewOne]);
+});
+
+test('T27i: without a usable duration, the old file is logged', () => {
+  const { oldFile } = agedFiles();
+  for (const durationExtra of [{ duration_ms: undefined }, { duration_ms: '1000' }, { duration_ms: -1 }, { duration_ms: null }]) {
+    const { homeDir, cwdDir } = makeHome();
+    afterBashListing(homeDir, cwdDir, listing([oldFile]), durationExtra);
+    assert.deepStrictEqual(loggedPaths(homeDir), [oldFile], `duration: ${JSON.stringify(durationExtra)}`);
+  }
+});
+
+test('T27m: a renamed file with an old modification time is logged (a rename sets the status-change time)', () => {
+  if (process.platform === 'win32') {
+    console.log('    (not run on Windows: the status-change time of a rename is not verified there)');
+    return;
+  }
+  const { homeDir, cwdDir } = makeHome();
+  const before = newFile(cwdDir, 'before-rename.txt');
+  const longAgo = new Date('2020-01-01T00:00:00Z');
+  fs.utimesSync(before, longAgo, longAgo);
+  sleepMs(AGE_WAIT_MS);
+  const after = path.join(cwdDir, 'after-rename.txt');
+  fs.renameSync(before, after);
+  afterBashListing(homeDir, cwdDir, listing([after]), { duration_ms: 0 });
+  assert.deepStrictEqual(loggedPaths(homeDir), [after]);
+});
+
+test('T27o: a new symbolic link to an old file is logged (the link itself is read, not its target)', () => {
+  const { oldFile } = agedFiles();
+  const { homeDir, cwdDir } = makeHome();
+  const link = path.join(cwdDir, 'link-to-old.txt');
+  try {
+    fs.symlinkSync(oldFile, link);
+  } catch {
+    console.log('    (no symbolic link on this platform; the case is not checked)');
+    return;
+  }
+  afterBashListing(homeDir, cwdDir, listing([link]), { duration_ms: 0 });
+  assert.deepStrictEqual(loggedPaths(homeDir), [link]);
 });
 
 // ── Session statistics: one file per session ─────────────────────────────────

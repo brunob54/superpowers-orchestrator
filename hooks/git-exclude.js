@@ -40,6 +40,15 @@ function gitSucceeds(args, cwd) {
 }
 
 /**
+ * True when git tracks a file named exactly `name` directly in `folder`.
+ * `--literal-pathspecs` makes `*`, `?`, `[` and a leading `:` in the name
+ * literal.
+ */
+function isTrackedExactName(folder, name) {
+  return gitSucceeds(['--literal-pathspecs', 'ls-files', '--error-unmatch', '--', name], folder);
+}
+
+/**
  * Add an exclude entry for `filePath` (absolute) when git neither tracks nor
  * ignores the file yet. Call it before the file is written, when possible:
  * then `git status` never shows the file, not even for a moment.
@@ -68,7 +77,7 @@ function excludeFromGit(filePath) {
 
     // A tracked file never shows as untracked, and an entry would hide it
     // without any message if the user untracks it later.
-    if (gitSucceeds(['--literal-pathspecs', 'ls-files', '--error-unmatch', '--', name], dir)) return;
+    if (isTrackedExactName(dir, name)) return;
 
     // Already ignored by any source: a .gitignore, the exclude file, or the
     // global excludes file.
@@ -89,4 +98,4 @@ function excludeFromGit(filePath) {
   }
 }
 
-module.exports = { excludeFromGit, git };
+module.exports = { excludeFromGit, git, isTrackedExactName };

@@ -2,7 +2,7 @@
 /**
  * PostToolUse Hook — File Edit Tracking
  *
- * After every Edit|Write tool use, logs the file path and timestamp
+ * After every Edit, Write or Bash tool use, logs the file path and timestamp
  * to a session-scoped edit log. This log feeds downstream hooks
  * (stop-reminders) to know what was changed during the session.
  *
@@ -21,15 +21,16 @@
  * Without the field (a headless session has no scratchpad) every edit is
  * logged, as before.
  *
- * The hook also runs after every Bash tool use. A Bash call is never logged;
- * the hook only writes the git exclude entry of a session-log.md that the
- * command redirects output into (see excludeSessionLogWrittenBy).
+ * After a Bash tool use, the hook logs each file that Claude Code lists in
+ * `tool_response.bashEditDiff.changedFiles` (see bashChangedFiles), with the
+ * tool name `Bash`. It also writes the git exclude entry of a session-log.md
+ * that the command redirects output into (see excludeSessionLogWrittenBy).
  */
 
 const fs = require('fs');
 const path = require('path');
-const { excludeFromGit, git } = require('./git-exclude');
-const { LOG_DIR, editLogFile, markerFile, writeTimeFile } = require('./save-marker');
+const { excludeFromGit, git, isTrackedExactName } = require('./git-exclude');
+const { BASH_TOOL, LOG_DIR, editLogFile, markerFile, writeTimeFile } = require('./save-marker');
 
 // AI-generated workspace artifacts that should never be committed
 const SESSION_LOG = 'session-log.md';
@@ -41,24 +42,32 @@ const AI_ARTIFACTS = ['project-map.md', SESSION_LOG, 'state.md', 'known-issues.m
 const PROJECT_DIR_VARIABLE = 'CLAUDE_PROJECT_DIR';
 
 /**
+ * True when an Edit or Write of this file would give it an exclude entry
+ * according to these checks: the file name is in AI_ARTIFACTS; the file lies
+ * directly in one of the two folders where the skills write these files (the
+ * project folder of the session, or the top folder of the file's git work
+ * tree; a linked worktree has its own top folder); and git tracks the file
+ * neither under another letter case nor under its exact name. A file with the
+ * same name in any other folder, for example `docs/known-issues.md`, is a
+ * document of the user's project: an exclude entry would leave it out of
+ * `git add -A` and of the commit with no message.
+ */
+function isUntrackedAiArtifact(filePath) {
+  const name = path.basename(filePath);
+  if (!AI_ARTIFACTS.includes(name)) return false;
+  const folder = realPath(path.dirname(filePath));
+  if (!isProjectFolder(folder) && !isTopFolderOfWorkTree(folder)) return false;
+  return !isTrackedWhereLetterCaseIsIgnored(folder, name) && !isTrackedExactName(folder, name);
+}
+
+/**
  * Keep an AI artifact file out of `git status` without editing a tracked file.
  * Called after every Edit or Write, and after a Bash command that redirects
- * output into session-log.md; it acts only when the file name is in
- * AI_ARTIFACTS and the file lies directly in one of the two folders where the
- * skills write these files: the project folder of the session, or the top
- * folder of the file's git work tree (the folder that holds the checked-out
- * files; a linked worktree has its own top folder). A file with the same name
- * in any other folder, for example `docs/known-issues.md`, is a document of
- * the user's project: an exclude entry would leave it out of `git add -A` and
- * of the commit with no message.
+ * output into session-log.md; it acts only on a file for which
+ * isUntrackedAiArtifact is true.
  */
 function excludeArtifact(filePath) {
-  const name = path.basename(filePath);
-  if (!AI_ARTIFACTS.includes(name)) return;
-  const folder = realPath(path.dirname(filePath));
-  if (!isProjectFolder(folder) && !isTopFolderOfWorkTree(folder)) return;
-  if (isTrackedWhereLetterCaseIsIgnored(folder, name)) return;
-  excludeFromGit(filePath);
+  if (isUntrackedAiArtifact(filePath)) excludeFromGit(filePath);
 }
 
 /**
@@ -80,8 +89,6 @@ function isTrackedWhereLetterCaseIsIgnored(folder, name) {
     return false;
   }
 }
-
-const BASH_TOOL = 'Bash';
 
 // Text of a shell command in which no character has a special meaning: a text
 // in single quotes, a text in double quotes, or a character after a backslash.
@@ -281,22 +288,114 @@ function resolveAgainstCwd(filePath, cwd) {
 }
 
 /**
- * Append an entry to the edit log of the session. The log is never rewritten
- * or trimmed here; save-marker.js deletes a log that is older than 7 days.
+ * True when a changed-file entry of the Bash tool result can be logged: a
+ * string, an absolute path, and no line break. A line break in a path would
+ * write a second line into the edit log. An entry is never resolved against
+ * `cwd`, which follows the `cd` of the assistant.
+ */
+function isAcceptedBashEntry(entry) {
+  return typeof entry === 'string' && path.isAbsolute(entry) && !/[\r\n]/.test(entry);
+}
+
+// A file that Claude Code lists was changed *during* the command, but the list
+// can also hold files that another program changed before the command started
+// (open issues of Claude Code: #97146, #95854, #94571, #100719). The hook drops
+// a file whose status-change time is earlier than the start of the command,
+// less this margin. The margin covers file systems that store times in steps of
+// 1 or 2 seconds, and the start-up of the hook process (measured: at most
+// 0.72 s from the tool call to the hook, command time included).
+const CHANGE_TIME_MARGIN_MS = 2000;
+
+/**
+ * The status-change time (`ctime`) of a file in milliseconds, or of the
+ * nearest existing folder above it when the file no longer exists: removing a
+ * file sets the status-change time of its folder. Null when nothing up to the
+ * root can be read. `lstatSync` reads a symbolic link itself, not its target:
+ * a link that the command created has a new time even when its target is old.
+ */
+function statusChangeTimeMs(entry) {
+  for (let current = entry; ; current = path.dirname(current)) {
+    try {
+      return fs.lstatSync(current).ctimeMs;
+    } catch {
+      if (path.dirname(current) === current) return null;
+    }
+  }
+}
+
+/**
+ * The earliest status-change time that a file changed by the command can have,
+ * or null when the hook input has no usable `duration_ms` (a finite number of
+ * at least 0): the filter then does not run.
+ */
+function commandStartMs(durationMs) {
+  if (!Number.isFinite(durationMs) || durationMs < 0) return null;
+  return Date.now() - durationMs - CHANGE_TIME_MARGIN_MS;
+}
+
+/** True when the file, or the folder of a deleted file, changed before `startMs`. */
+function changedBefore(entry, startMs) {
+  const changeTimeMs = statusChangeTimeMs(entry);
+  return changeTimeMs !== null && changeTimeMs < startMs;
+}
+
+/**
+ * The files to log after a Bash call: the entries of
+ * `tool_response.bashEditDiff.changedFiles` that Claude Code lists as changed
+ * by the command, without duplicates, in input order. Nothing is returned for
+ * a payload without that field, for a git command that Claude Code marks as
+ * `skipped` (strictly `true`), and for a value of another shape.
+ * `unavailable`, `shared`, `files` and `moreFiles` are not read: in the first
+ * two cases the listed files are still real changes of this session.
+ * A file inside the session scratchpad is not returned.
+ * An untracked AI workspace file is not returned (see isUntrackedAiArtifact).
+ * A file that changed before the command started is not returned (see
+ * CHANGE_TIME_MARGIN_MS).
+ */
+function bashChangedFiles(data) {
+  const diff = data.tool_response?.bashEditDiff;
+  if (!diff || typeof diff !== 'object' || diff.skipped === true || !Array.isArray(diff.changedFiles)) {
+    return [];
+  }
+  const startMs = commandStartMs(data.duration_ms);
+  const accepted = [...new Set(diff.changedFiles.filter(isAcceptedBashEntry))];
+  return accepted
+    .filter(entry => !isInsideScratchpad(entry, data.scratchpad_dir))
+    // An untracked AI workspace file is meant to stay out of git: after an Edit
+    // or Write it gets an exclude entry and git never reports it. A Bash line
+    // gets no exclude entry (a Bash list can name a file that another program
+    // wrote), so it would make the commit count include an AI artifact.
+    .filter(entry => !isUntrackedAiArtifact(entry))
+    .filter(entry => startMs === null || !changedBefore(entry, startMs));
+}
+
+/**
+ * Append one line for each path to the edit log of the session, with one
+ * write, so the lines of one call stay together when parallel subagents of one
+ * session append to the same file. The log is never rewritten or trimmed here;
+ * save-marker.js deletes a log that is older than 7 days.
  * Format: ISO-timestamp | session_id | tool | file_path
  * (Legacy format without session_id is still accepted on read)
+ * An empty list writes nothing and creates no folder. Throws on an error.
+ */
+function appendEditLog(tool, filePaths, sessionId) {
+  if (filePaths.length === 0) return;
+  fs.mkdirSync(LOG_DIR, { recursive: true });
+  const timestamp = new Date().toISOString();
+  const sid = sessionId || '';
+  const entries = filePaths.map(filePath => `${timestamp} | ${sid} | ${tool} | ${filePath}\n`).join('');
+  fs.appendFileSync(editLogFile(sessionId), entries);
+}
+
+/**
+ * Log one Edit or Write of a file and keep an AI workspace artifact out of git
+ * status on its first write. The path is made absolute against `cwd`. An
+ * error is ignored: a hook never blocks the tool.
  */
 function logEdit(tool, filePath, cwd, sessionId) {
   try {
-    if (!fs.existsSync(LOG_DIR)) {
-      fs.mkdirSync(LOG_DIR, { recursive: true });
-    }
-
     const resolved = resolveAgainstCwd(filePath, cwd);
-
-    const sid = sessionId || '';
-    const entry = `${new Date().toISOString()} | ${sid} | ${tool} | ${resolved}\n`;
-    fs.appendFileSync(editLogFile(sessionId), entry);
+    appendEditLog(tool, [resolved], sessionId);
 
     // Keep AI workspace artifacts out of git status on first write
     excludeArtifact(resolved);
@@ -313,9 +412,16 @@ async function main() {
     const data = JSON.parse(input);
     const { tool_name, tool_input, cwd, session_id, scratchpad_dir } = data;
 
-    // A Bash call is not logged as an edit, and it does not move the save
-    // marker: only the exclude entry of a session log that the command wrote.
+    // A Bash call logs the files that Claude Code lists as changed by the
+    // command. The two steps write different files, and each has its own
+    // try/catch, so an error in one does not stop the other. The call never
+    // moves the save marker: only an Edit or a Write of session-log.md does.
     if (tool_name === BASH_TOOL) {
+      try {
+        appendEditLog(BASH_TOOL, bashChangedFiles(data), session_id);
+      } catch {
+        // Silently ignore logging errors — never block the tool
+      }
       excludeSessionLogWrittenBy(tool_input?.command, cwd, scratchpad_dir);
     }
 

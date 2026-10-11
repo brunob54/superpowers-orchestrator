@@ -8,6 +8,31 @@
 > (`REPOZY/superpowers-optimized`) and are kept unchanged as history; any
 > testing they describe was not done here.
 
+## v7.72.0 — the stop reminders see the files that Bash commands change
+
+**Problem.** The stop reminders saw only Edit and Write calls. About one third of file changes, and about half of source-file changes, go through Bash (measured 2026-10-10). Five state.md patterns also matched parent folders, and decision-log patterns matched names such as `XSKILL.md`.
+
+**Change.** `track-edits.js` logs each file that Claude Code lists in `bashEditDiff.changedFiles`, after a change-time check. The commit reminder names files that only a shell command listed; its count runs git once per repository and 100 files. Patterns are anchored.
+
+**Effect.** Bash-changed files count when Claude Code fills the list (24 percent of main sessions in 35 days): `auto` or `bypassPermissions` mode, or `bashEditDiffEnabled: true` in user settings. Reinstall the plugin. Nothing to migrate.
+
+A session runs the installed copy of the plugin. The changes below reach a session only after an update of the plugin and a restart of the command-line interface (CLI).
+
+### 1. Why
+
+The edit log (the per-session file in which `hooks/track-edits.js` records edits) held only Edit and Write calls. In 35 days of the owner's transcripts (143 sessions), 33.4 percent of the file changes outside scratch folders came from the field `bashEditDiff` of a Bash result, and 48.1 percent of the source-file changes in the sessions that had the field. The field `bashEditDiff` was present in 45 of the 190 main-session transcripts (24 percent) of the same 35 days. The measurements were made on 2026-10-10. Claude Code reports the files that a Bash command changed in `tool_response.bashEditDiff.changedFiles` of the PostToolUse input (hooks reference, section "Bash"). Three reminders read the edit log: commit, decision-log and state.md. None of them saw a Bash change. The figures are approximate: the measuring script was temporary and was not kept.
+
+### 2. What changed
+
+- **Bash lines.** After a Bash call, `track-edits.js` appends one `Bash` line for each accepted entry of `changedFiles` in one write. An entry is accepted when it is an absolute path without a line break, is not inside the session scratchpad, is not an untracked AI workspace file (`state.md`, `known-issues.md`, `session-log.md`, `project-map.md` in the project folder or the top folder of the work tree), and did not change before the command started. The last check compares the status-change time of the file (of its nearest existing folder for a deleted file) with the start of the command, less a margin of 2 seconds. A Bash line gives no git exclude entry and never moves the save marker.
+- **Commit reminder.** The text says "changed by this session's edits or shell commands". It names each counted file that only a shell command listed (at most 10, then "and K more") and asks the assistant not to commit such a file that it did not change on purpose. The count runs `git status` once for each repository top folder and each 100 paths, instead of once for each logged file (measured on a 500-file repository: 1.91 s for 200 calls, 0.03 s for one call with the 200 paths).
+- **State.md reminder.** It counts distinct files, not log lines. The configuration patterns are tested on the file name, and five of them (`.eslintrc`, `.prettierrc`, `.env`, `Dockerfile`, `docker-compose`) are anchored at its start, so a source file below a folder such as `.envs/` or `Dockerfiles/` is a source file again.
+- **Decision-log reminder.** The patterns for `SKILL.md`, `skill-rules.json`, `CLAUDE.md`, `agents/*.md` and `plugin.universal.yaml` match a whole name, so `XSKILL.md` and `MYCLAUDE.md` no longer match.
+
+### 3. Accepted limits
+
+Claude Code fills the list only in the `auto` and `bypassPermissions` modes unless `bashEditDiffEnabled` is `true`; a failing command, a background command, a git-ignored file and a file outside a repository are never listed. Claude Code can list a file that another program changed while the command ran; the commit reminder therefore names the Bash-only files and asks the assistant to judge each one. The Copilot CLI input has no such field, and the unsupported Codex adapter is unchanged. The full list is in the design document `docs/superpowers-orchestrator/2026-10-11-bash-edit-logging/specs/bash-edit-logging-design.md`, section 2.
+
 ## v7.71.0 — the stop hook no longer has a TDD reminder
 
 **Problem.** The stop hook's TDD reminder (TDD means test-driven development: the test is written before the code) fired on a comment-only change, missed the 48% of source-file changes made through Bash, and stayed silent under any folder named `test` or `tests`.
