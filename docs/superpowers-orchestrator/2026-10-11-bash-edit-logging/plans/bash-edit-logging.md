@@ -479,7 +479,7 @@ git commit -m "fix(stop-reminders): state-md counts distinct files; config patte
 - `gitStdout` no longer trims; `gitReaderForFile` and `GIT_STATUS` are removed; `GIT_READ_ONE_FILE` becomes `GIT_READ_NAMED_FILES`.
 - Verification: `node tests/codex/test-stop-reminders.js` — three new tests fail on the old code (the recording-git tests with 101 and 150 files, 101 and 150 calls of one path, and the no-repository test, which records one call for each file), all other commit tests stay green.
 
-- [ ] **Step 1: Move the hanging-git test to one repository per file**
+- [x] **Step 1: Move the hanging-git test to one repository per file**
 
 The new code makes one git call per repository, so the existing hanging-git test must put each of its files in its own repository to keep counting one call per file. In `tests/codex/test-stop-reminders.js`, in the test 'With a git that hangs, the count stops at its time limit and uses the files counted so far', replace the line
 
@@ -498,12 +498,12 @@ with
 
 Its constants and its expected count `ANSWERED_GIT_CALLS` (5) stay.
 
-- [ ] **Step 2: Run the file; the changed test passes on the old code**
+- [x] **Step 2: Run the file; the changed test passes on the old code**
 
 Run: `node tests/codex/test-stop-reminders.js`
 Expected: PASS — `0 failed` (the old code runs one git call per file, so 9 repositories still give 9 calls).
 
-- [ ] **Step 3: Write the failing tests**
+- [x] **Step 3: Write the failing tests**
 
 In `tests/codex/test-stop-reminders.js`, directly after the test 'The count of 5 session files does not rewrite the index of the repository', add:
 
@@ -653,12 +653,12 @@ test('A committed session file named :x.txt is not counted for the file that the
 
 (The last two tests guard behavior the old code already has: `--literal-pathspecs` was already used.)
 
-- [ ] **Step 4: Run the tests and see three failures**
+- [x] **Step 4: Run the tests and see three failures**
 
 Run: `node tests/codex/test-stop-reminders.js`
 Expected: FAIL — exactly three new tests fail: the two recording-git tests with 101 and 150 files (`Expected values to be strictly deep-equal` with 101 and 150 calls of one path each, instead of `[100, 1]` and `[100, 50]`) and the no-repository test (the old code runs `git status` once for each of the 5 files, so the recorded counts are `[1, 1, 1, 1, 1]`, not `[]`). The other new tests pass.
 
-- [ ] **Step 5: Replace the git helpers**
+- [x] **Step 5: Replace the git helpers**
 
 In `hooks/stop-reminders.js`:
 
@@ -836,12 +836,12 @@ with
 
 This is a comment-only edit; it does not change a test.
 
-- [ ] **Step 6: Run the file and see it pass**
+- [x] **Step 6: Run the file and see it pass**
 
 Run: `node tests/codex/test-stop-reminders.js`
 Expected: PASS — `0 failed`. Also run `grep -n "gitReaderForFile\|GIT_STATUS\b\|GIT_READ_ONE_FILE\|countFilesWithUncommittedChanges" hooks/stop-reminders.js` and expect no output.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add hooks/stop-reminders.js tests/codex/test-stop-reminders.js
