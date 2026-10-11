@@ -1145,7 +1145,7 @@ git commit -m "refactor(track-edits): split the edit-log writer into appendEditL
 - Invariants: a Bash payload without `tool_response` writes no line and creates no log folder (T26, T26b, T26c stay green); the output is always `{}`.
 - Verification: `node tests/codex/test-track-edits.js` — the T27 tests below, T26, T26b and T26c.
 
-- [ ] **Step 1: Extend the test helpers**
+- [x] **Step 1: Extend the test helpers**
 
 In `tests/codex/test-track-edits.js`:
 
@@ -1279,7 +1279,7 @@ function assertValidListingIsLogged() {
 
 Keep the tests T26, T26b and T26c exactly as they are, with their calls `afterBash(homeDir, cwdDir, SESSION_A, ...)`; they use the first four arguments and the fifth (`{ file_path: ... }`) only. Leave the comment above T26c as it is.
 
-- [ ] **Step 2: Write the failing tests (T27 series)**
+- [x] **Step 2: Write the failing tests (T27 series)**
 
 Directly after T26c (before the heading "Session statistics: one file per session") add:
 
@@ -1392,12 +1392,12 @@ test('T27l: a listed path in a subagent worktree is logged and ignored at the st
 
 `NON_STRING_FIELD_VALUES`, `makeScratchpad`, `SCRATCH_FILE`, `SCRATCHPAD_FIELD`, `SIGNIFICANT_FILE`, `saveCommandWithEntry`, `ENTRY_TEXT`, `SAVED_HEADING`, `expectDecisionLogBlock` and `trackEdit` already exist earlier in the file.
 
-- [ ] **Step 3: Run the tests and see the failures**
+- [x] **Step 3: Run the tests and see the failures**
 
 Run: `node tests/codex/test-track-edits.js`
 Expected: FAIL — T27, T27b, T27d, T27e, T27g, T27j, T27k and T27l fail (no line is written); the "logs nothing" tests (T27c, T27f) fail at their positive control (`assertValidListingIsLogged`: expected one line, got none). T26, T26b and T26c pass.
 
-- [ ] **Step 4: Implement `bashChangedFiles` and the Bash branch**
+- [x] **Step 4: Implement `bashChangedFiles` and the Bash branch**
 
 In `hooks/track-edits.js`, directly after the function `resolveAgainstCwd`, add:
 
@@ -1460,12 +1460,12 @@ Rewrite the comments: the header line " * After every Edit|Write tool use, logs 
  * that the command redirects output into (see excludeSessionLogWrittenBy).
 ```
 
-- [ ] **Step 5: Run the tests and see them pass**
+- [x] **Step 5: Run the tests and see them pass**
 
 Run: `node tests/codex/test-track-edits.js && node tests/codex/test-git-exclude-hooks.js`
 Expected: PASS — `0 failed` for both.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add hooks/track-edits.js tests/codex/test-track-edits.js
