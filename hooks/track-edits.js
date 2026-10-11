@@ -29,7 +29,7 @@
 const fs = require('fs');
 const path = require('path');
 const { excludeFromGit, git } = require('./git-exclude');
-const { LOG_DIR, editLogFile, markerFile, writeTimeFile } = require('./save-marker');
+const { BASH_TOOL, LOG_DIR, editLogFile, markerFile, writeTimeFile } = require('./save-marker');
 
 // AI-generated workspace artifacts that should never be committed
 const SESSION_LOG = 'session-log.md';
@@ -80,8 +80,6 @@ function isTrackedWhereLetterCaseIsIgnored(folder, name) {
     return false;
   }
 }
-
-const BASH_TOOL = 'Bash';
 
 // Text of a shell command in which no character has a special meaning: a text
 // in single quotes, a text in double quotes, or a character after a backslash.
@@ -281,22 +279,32 @@ function resolveAgainstCwd(filePath, cwd) {
 }
 
 /**
- * Append an entry to the edit log of the session. The log is never rewritten
- * or trimmed here; save-marker.js deletes a log that is older than 7 days.
+ * Append one line for each path to the edit log of the session, with one
+ * write, so the lines of one call stay together when parallel subagents of one
+ * session append to the same file. The log is never rewritten or trimmed here;
+ * save-marker.js deletes a log that is older than 7 days.
  * Format: ISO-timestamp | session_id | tool | file_path
  * (Legacy format without session_id is still accepted on read)
+ * An empty list writes nothing and creates no folder. Throws on an error.
+ */
+function appendEditLog(tool, filePaths, sessionId) {
+  if (filePaths.length === 0) return;
+  fs.mkdirSync(LOG_DIR, { recursive: true });
+  const timestamp = new Date().toISOString();
+  const sid = sessionId || '';
+  const entries = filePaths.map(filePath => `${timestamp} | ${sid} | ${tool} | ${filePath}\n`).join('');
+  fs.appendFileSync(editLogFile(sessionId), entries);
+}
+
+/**
+ * Log one Edit or Write of a file and keep an AI workspace artifact out of git
+ * status on its first write. The path is made absolute against `cwd`. An
+ * error is ignored: a hook never blocks the tool.
  */
 function logEdit(tool, filePath, cwd, sessionId) {
   try {
-    if (!fs.existsSync(LOG_DIR)) {
-      fs.mkdirSync(LOG_DIR, { recursive: true });
-    }
-
     const resolved = resolveAgainstCwd(filePath, cwd);
-
-    const sid = sessionId || '';
-    const entry = `${new Date().toISOString()} | ${sid} | ${tool} | ${resolved}\n`;
-    fs.appendFileSync(editLogFile(sessionId), entry);
+    appendEditLog(tool, [resolved], sessionId);
 
     // Keep AI workspace artifacts out of git status on first write
     excludeArtifact(resolved);
