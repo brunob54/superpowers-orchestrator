@@ -7,7 +7,8 @@
  *     it; stop-reminders.js reads it.
  *   - the stop guard holds the time of the last stop that stop-reminders.js
  *     blocked.
- *   - the edit log holds one line for each Edit or Write of the session.
+ *   - the edit log holds one line for each Edit or Write of the session, and
+ *     one line for each file that Claude Code lists as changed by a Bash call.
  *     track-edits.js appends to it; stop-reminders.js reads it.
  *   - the statistics file counts the Skill calls of the session.
  *     track-session-stats.js writes it; stop-reminders.js reads it.

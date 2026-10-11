@@ -33,8 +33,9 @@ User sends a prompt
         ▼  (after Edit, Write, Bash and Skill calls)
 ┌─ Tracking Hooks (PostToolUse) ────────────────────────────┐
 │  track-edits.js → logs file changes for the reminders     │
-│    after Bash: no log line, only the git exclude entry    │
-│    of a session-log.md written by a redirect              │
+│    after Bash: logs the files that Claude Code lists as   │
+│    changed; a git exclude entry only for a session-log.md │
+│    written by a redirect                                  │
 │  track-session-stats.js → logs skill invocations          │
 └───────────────────────────────────────────────────────────┘
         │

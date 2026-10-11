@@ -1530,6 +1530,17 @@ the `env` block of `settings.json`, for example
 CLI. The names are `commit`, `decision-log`, `state-md` and
 `session-log-size`; the README lists which reminder text each name removes.
 
+**The commit reminder counts a file that the assistant did not change.**
+Claude Code can list a file that another program changed while a Bash
+command ran (a second session, an editor, a file watcher). The commit
+reminder counts such a file when it is in the list. To limit a wrong commit,
+the reminder names each counted file that only a shell command listed (at
+most 10) and asks the assistant not to commit such a file that it did not
+change on purpose. Untracked build output that git does not ignore (for
+example `__pycache__/*.pyc` with no ignore rule) is named the same way and
+needs an ignore rule, for example in `.gitignore`. Switch the reminder off
+with the name `commit`, as described in the entry above.
+
 **A secrets refusal blocks a file that holds no secret.** Example: a refusal
 that starts with `[env-file] ... would use the secret file`, where the
 project keeps only harmless defaults in `.env`. The hook `protect-secrets`
