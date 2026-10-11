@@ -1882,7 +1882,7 @@ git commit -m "feat(track-edits): drop a listed file that changed before the com
 - Comments in `hooks/save-marker.js` and `plugin.universal.yaml`: the edit log also holds one line per file that Claude Code lists as changed by a Bash call.
 - Verification: the commands in the steps below.
 
-- [ ] **Step 1: README, `track-edits` bullet**
+- [x] **Step 1: README, `track-edits` bullet**
 
 In `README.md`, in the bullet that starts with `- **track-edits** (PostToolUse: Edit/Write/Bash)`, replace the text `; a Bash call is never logged.` with the following (the bullet stays one paragraph; the sentence "After an Edit or a Write of an AI workspace artifact ..." that follows stays):
 
@@ -1892,7 +1892,7 @@ In `README.md`, in the bullet that starts with `- **track-edits** (PostToolUse: 
 
 (The original sentence before the removed text ends with "(the folder named in the hook input's `scratchpad_dir`; since v7.57.0)"; the replacement starts with `. After a Bash call` so the sentence ends there.)
 
-- [ ] **Step 2: README, `stop-reminders` bullet**
+- [x] **Step 2: README, `stop-reminders` bullet**
 
 In the bullet that starts with `- **stop-reminders** (Stop)`, insert directly before the sentence `The session summary is shown only inside a block of another reminder;` (the inserted text ends with one space, so that the next sentence follows after a space):
 
@@ -1900,7 +1900,7 @@ In the bullet that starts with `- **stop-reminders** (Stop)`, insert directly be
 Since v7.72.0 the commit, decision-log and state.md reminders also count the files that a Bash command changed, when Claude Code lists them (see track-edits). The commit reminder names the counted files that only a shell command listed (at most 10) and asks the assistant not to commit such a file that it did not change on purpose; the state.md reminder counts distinct files, not log lines. 
 ```
 
-- [ ] **Step 3: Architecture document**
+- [x] **Step 3: Architecture document**
 
 In `docs/architecture/agentic-workflow.md` replace the two box lines
 
@@ -1923,7 +1923,7 @@ Check the alignment with the command below. It finds the three new lines by thei
 node -e "const L=require('fs').readFileSync('docs/architecture/agentic-workflow.md','utf8').split('\n');const i=L.findIndex(x=>x.includes('after Bash: logs the files'));const n=[L[i],L[i+1],L[i+2]].map(x=>[...x].length);console.log(n.join(','));process.exit(n.every(w=>w===61)?0:1)"
 ```
 
-- [ ] **Step 4: Guide entry**
+- [x] **Step 4: Guide entry**
 
 In `docs/guide/README.md`, directly before the line that starts `**A secrets refusal blocks a file that holds no secret.**`, add:
 
@@ -1941,7 +1941,7 @@ with the name `commit`, as described in the entry above.
 
 ```
 
-- [ ] **Step 5: Comments**
+- [x] **Step 5: Comments**
 
 In `hooks/save-marker.js` replace the two comment lines
 
@@ -1966,7 +1966,7 @@ In `plugin.universal.yaml` replace the two comment lines above the `track-edits`
   # when the command redirects into it
 ```
 
-- [ ] **Step 6: Verify**
+- [x] **Step 6: Verify**
 
 Run: `grep -c "a Bash call is never logged" README.md` — Expected: `0`.
 Run: `grep -c "bashEditDiffEnabled" README.md`, `grep -c "CLAUDE_CODE_BASH_EDIT_DIFF" README.md`, `grep -c "2.1.269" README.md` and `grep -c "45 of 190" README.md` — Expected: at least `1` for each.
@@ -1977,7 +1977,7 @@ Run: `grep -n "no log line, only" docs/architecture/agentic-workflow.md` — Exp
 Run: `grep -c "The commit reminder counts a file that the assistant did not change" docs/guide/README.md` — Expected: `1`.
 Run: `node tests/codex/test-version-files.js && node tests/codex/test-git-exclude-hooks.js` — Expected: PASS (`0 failed`). The first command checks that no version place was damaged. The second checks that the hooks still behave as before; it does not check the documents.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add README.md docs/architecture/agentic-workflow.md docs/guide/README.md hooks/save-marker.js plugin.universal.yaml
