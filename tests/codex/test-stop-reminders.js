@@ -690,6 +690,41 @@ test('A .claude/hooks/*.js file asks for a decision-log entry', () => {
     `Expected the decision-log reminder, got: ${JSON.stringify(result)}`);
 });
 
+// A name pattern must match the whole name: `XSKILL.md`, `MYCLAUDE.md`,
+// `Xskill-rules.json` and `Xplugin.universal.yaml` are not the files that the decision-log reminder is about.
+const NAMES_THAT_ARE_NOT_SIGNIFICANT = [
+  '/project/myagents/x.md',
+  '/project/notes/XSKILL.md',
+  '/project/notes/MYCLAUDE.md',
+  '/project/notes/Xskill-rules.json',
+  '/project/notes/Xplugin.universal.yaml',
+];
+// `CLAUDE.md`, `agents/x.md` and `plugin.universal.yaml` are bare relative records (no folder before
+// the name); the others lie below a folder.
+const NAMES_THAT_ARE_SIGNIFICANT = [
+  '/project/agents/x.md',
+  '/project/CLAUDE.md',
+  'CLAUDE.md',
+  'agents/x.md',
+  'skills/x/SKILL.md',
+  '/project/hooks/skill-rules.json',
+  'plugin.universal.yaml',
+];
+
+for (const filePath of NAMES_THAT_ARE_NOT_SIGNIFICANT) {
+  test(`A record ${filePath} gives no decision-log reminder`, () => {
+    assertNoReminder(evaluateStop(({ logDir }) => writeRecentEdit(logDir, filePath)));
+  });
+}
+
+for (const filePath of NAMES_THAT_ARE_SIGNIFICANT) {
+  test(`A record ${filePath} asks for a decision-log entry`, () => {
+    const result = evaluateStop(({ logDir }) => writeRecentEdit(logDir, filePath));
+    assert.ok((result.reason || '').includes(DECISION_LOG),
+      `Expected the decision-log reminder, got: ${JSON.stringify(result)}`);
+  });
+}
+
 // Git helpers that the commit section below uses.
 
 const COMMITTED_TEXT = 'module.exports = 1;\n';

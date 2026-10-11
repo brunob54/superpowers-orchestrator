@@ -486,18 +486,20 @@ function isPluginHookScript(filePath) {
  * Detect sessions where significant architectural decisions were made.
  * These are sessions that modified skill files, hooks, or plugin config —
  * places where the "why" matters and would be costly to rediscover.
+ * A name pattern starts at the beginning of the record or after a path
+ * separator, so `XSKILL.md` does not match.
  */
 function isSignificantSession(edits) {
   const sigPatterns = [
-    /SKILL\.md$/i,
+    /(?:^|[/\\])SKILL\.md$/i,
     /[/\\]\.claude[/\\]hooks[/\\][^/\\]+\.js$/,
     /[/\\]hooks[/\\]session-start$/,
-    /skill-rules\.json$/,
-    /CLAUDE\.md$/i,
-    /agents[/\\][^/\\]+\.md$/i,
+    /(?:^|[/\\])skill-rules\.json$/,
+    /(?:^|[/\\])CLAUDE\.md$/i,
+    /(?:^|[/\\])agents[/\\][^/\\]+\.md$/i,
     /[/\\]specs[/\\][^/\\]+\.md$/i,
     /[/\\]plans[/\\][^/\\]+\.md$/i,
-    /plugin\.universal\.yaml$/,
+    /(?:^|[/\\])plugin\.universal\.yaml$/,
   ];
   return edits.some(e => sigPatterns.some(p => p.test(e.filePath)) || isPluginHookScript(e.filePath));
 }
