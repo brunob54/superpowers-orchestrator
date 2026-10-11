@@ -17,3 +17,12 @@
 - **Defensible answers:** (1) plan governs: no cap; (2) amend plan: count cap 1000 and length cap 4096 with tests; (3) no cap, record the limit in docs/orchestration-issues.md Accepted limits
 - **Forks:** 3 of 3 — design consistency: outcome 1; implementation practicality: outcome 2 with the cap applied first; adversarial: outcome 1; contradiction: settled — spec section 2 (The 200-file cap) states that Claude Code lists at most 200 files per command and section 5.1 sizes a call at about 30 KB, so a 1500-entry list is outside the supported environment and the finding is Minor under the project CLAUDE.md supported-environment rule; a cap would also change spec 4.1 and 5.1
 - **Resolution:** plan governs: no count cap and no length cap — the finding is recorded as an accepted limit
+
+## Ruling 3 — 2026-10-11 — phase 4 — [I1] Bash-only file name printed unchanged in the Stop-hook reason
+
+- **Class:** design
+- **Item:** [I1 inv 1] Important hooks/stop-reminders.js:510 — a Bash-only file name is printed unchanged as a `- <path>` line of the Stop-hook reason, so text inside a file name reaches the model as hook feedback; the spec fixes the line as an absolute path (plan-mandated)
+- **Contract clause:** "All decisions in the spec were made by the user on 2026-10-11 and are binding." — docs/superpowers-orchestrator/2026-10-11-bash-edit-logging/plans/bash-edit-logging.md, Global Constraints
+- **Defensible answers:** (1) plan governs: keep the `- <path>` line as spec 5.2 fixes it, record an accepted limit; (2) amend plan; fix it: sanitize or quote the printed name, which changes the Global Constraints, Task 5 and spec 5.2
+- **Forks:** 3 of 3 — design consistency: outcome 1; implementation practicality: outcome 1; adversarial: outcome 1; contradiction: none
+- **Resolution:** plan governs — spec 5.2 fixes the printed line as an absolute path, spec section 2 names the model-must-judge risk, the writer rejects line breaks in an entry, and the defect needs a hostile file name from third-party content (rated Minor in rounds 1, 3 and 4); the finding is recorded as an accepted limit

@@ -32,3 +32,9 @@ Re-dispatch: phase 3, in-run resume 1 of 3, return 1 of 6
 ## Phase 3 — Batch 4 (tasks 10–11) — COMPLETE — commits b7e3b69..65dcb35
 - Task 10: complete — documentation and comments
 - Task 11: complete — release v7.72.0
+
+## RULING 3 — 2026-10-11 — phase 4 — code review item [I1]: Bash-only file name printed unchanged (plan governs)
+Items: [I1 inv 1] design — plan governs: the printed line stays an absolute path; accepted limit
+Detail: docs/superpowers-orchestrator/2026-10-11-bash-edit-logging/plans/bash-edit-logging-open-decisions.md
+Forks: 3 of 3 (design consistency, implementation practicality, adversarial) — contradiction: none
+Re-dispatch: phase 4, in-run resume 1 of 3, return 1 of 6
