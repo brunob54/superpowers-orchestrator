@@ -8,6 +8,20 @@
 > (`REPOZY/superpowers-optimized`) and are kept unchanged as history; any
 > testing they describe was not done here.
 
+## v7.72.1 — Bash-edit logging needs the setting `bashEditDiffEnabled`
+
+**Problem.** The v7.72.0 text said that Claude Code fills `bashEditDiff.changedFiles` in the permission modes `auto` and `bypassPermissions`. A live check on 2026-10-12 showed that `auto` mode alone does not: no Bash call produced a log line.
+
+**Change.** The README bullet of `track-edits`, the guide and the research note now state that the setting `bashEditDiffEnabled: true` is needed. No code changed.
+
+**Effect.** Set `"bashEditDiffEnabled": true` in the user settings (`~/.claude/settings.json`), then restart the CLI; without it v7.72.0 and later log no Bash change. Reinstall the plugin.
+
+### What was measured
+
+The check ran on Claude Code 2.1.296 with plugin 7.72.0. A probe hook (a small script that wrote the PostToolUse input of each Bash call to a file) was started with `claude --settings`. Session in `auto` mode, without the setting: two Bash calls (a `sed -i` and an `rm`), the `tool_response` keys were `stdout, stderr, interrupted, isImage, noOutputExpected`, the field `bashEditDiff` was absent, the edit log had no `Bash` line. Session in `auto` mode, with `bashEditDiffEnabled: true`: the same two calls carried `bashEditDiff` with `files`, `moreFiles` and `changedFiles`, and the edit log gained two lines `<time> | <session id> | Bash | <absolute path>`. So the hook code reads the real payload correctly. The mode `bypassPermissions` was not tested. The research note had marked the second part of the binary's condition (`e7t()`) as unknown; it explains the result.
+
+The text of the entry v7.72.0 below is kept as it was written. Its statement about the `auto` and `bypassPermissions` modes is wrong for `auto`.
+
 ## v7.72.0 — the stop reminders see the files that Bash commands change
 
 **Problem.** The stop reminders saw only Edit and Write calls. About one third of file changes, and about half of source-file changes, go through Bash (measured 2026-10-10). Five state.md patterns also matched parent folders, and decision-log patterns matched names such as `XSKILL.md`.

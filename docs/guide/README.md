@@ -1530,6 +1530,15 @@ the `env` block of `settings.json`, for example
 CLI. The names are `commit`, `decision-log`, `state-md` and
 `session-log-size`; the README lists which reminder text each name removes.
 
+**A change made with a Bash command is not counted.** The stop reminders see a
+Bash change only when Claude Code lists the changed files in the hook input
+(`tool_response.bashEditDiff.changedFiles`). Claude Code does this only when
+the setting `bashEditDiffEnabled` is `true`. The permission mode `auto` is
+not enough (live check of 2026-10-12, Claude Code 2.1.296). Add
+`"bashEditDiffEnabled": true` to `~/.claude/settings.json` and restart the
+CLI. Check it: after a Bash command that changes a file, a line with `| Bash |`
+appears in `~/.claude/hooks-logs/edit-log-<session id>.txt`.
+
 **The commit reminder counts a file that the assistant did not change.**
 Claude Code can list a file that another program changed while a Bash
 command ran (a second session, an editor, a file watcher). The commit
