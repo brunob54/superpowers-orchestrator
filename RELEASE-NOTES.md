@@ -8,6 +8,18 @@
 > (`REPOZY/superpowers-optimized`) and are kept unchanged as history; any
 > testing they describe was not done here.
 
+## v7.72.2 — `bypassPermissions` also needs the setting `bashEditDiffEnabled`
+
+**Problem.** The v7.72.1 text said that the mode `bypassPermissions` was not tested. Bash-edit logging worked only if that mode filled the field without the setting.
+
+**Change.** The README bullet of `track-edits`, the guide and the research note now state that `bypassPermissions` does not fill the field either. No code changed.
+
+**Effect.** The setting `"bashEditDiffEnabled": true` is needed in every permission mode. Reinstall the plugin. Nothing to migrate.
+
+### What was measured
+
+On 2026-10-12, Claude Code 2.1.296, the key `bashEditDiffEnabled` was removed from the user settings for a few minutes (and put back, byte-identical). Two headless runs (`claude -p`, one with `--permission-mode bypassPermissions`, one with `auto`) ran a `sed -i` in a scratch git repository with a probe hook. Both inputs lacked `bashEditDiff` (`tool_response` keys: `stdout, stderr, interrupted, isImage, noOutputExpected`). The runs were headless, not interactive. An earlier try with `--setting-sources project` did not exclude the user setting and proved nothing.
+
 ## v7.72.1 — Bash-edit logging needs the setting `bashEditDiffEnabled`
 
 **Problem.** The v7.72.0 text said that Claude Code fills `bashEditDiff.changedFiles` in the permission modes `auto` and `bypassPermissions`. A live check on 2026-10-12 showed that `auto` mode alone does not: no Bash call produced a log line.
