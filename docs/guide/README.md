@@ -1570,12 +1570,13 @@ you set this variable: an assistant that reads this text after a refusal
 must ask you, and must not set the variable itself. The README lists all 43
 names, the limits, and the settings levels at which a list replaces another.
 
-**The stop hook asks for tests ("TDD reminder"; TDD means test-driven development).** Example: "TDD reminder: 2
-source file(s) modified without test changes: …". Since v7.71.0 the stop
-hook of Claude Code has no such reminder. If a session still shows one,
-the installed copy is older (§1),
-or the message comes from the Codex adapter, which is not supported and
-keeps its own copy of the reminder. The name `tdd` in
+**The stop hook asks for tests ("TDD reminder"; TDD means test-driven
+development).** Example: "TDD reminder: 2 source file(s) modified without
+test changes: …". Since v7.71.0 the stop hook of Claude Code has no such
+reminder. If a session still shows one, the installed copy is older (§1),
+or the message comes from the Codex adapter (the stop script of the Codex
+tool, `hooks/codex/stop-adapter.js`). The Codex adapter is not supported
+and keeps its own copy of the reminder. The name `tdd` in
 `SUPERPOWERS_STOP_REMINDERS_OFF` is now an unknown name: it switches
 nothing off, and the next block of the hook names it. Remove `tdd` from the
 setting once every installation that reads the setting runs v7.71.0 or
