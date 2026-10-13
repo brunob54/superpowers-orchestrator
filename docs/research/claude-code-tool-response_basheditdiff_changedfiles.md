@@ -28,7 +28,7 @@ Source: https://code.claude.com/docs/en/hooks.md, Bash tool section.
 
 ## When it is filled
 
-- **Live result 2026-10-12 (Claude Code 2.1.296): `auto` mode without the setting gave NO field; with `bashEditDiffEnabled: true` it did.** Treat the setting as required. `bypassPermissions` was not tested.
+- **Live result 2026-10-12 (Claude Code 2.1.296): `auto` mode without the setting gave NO field; with `bashEditDiffEnabled: true` it did.** Treat the setting as required. `bypassPermissions` gave NO field either without the setting (two headless `claude -p` runs, one per mode, key removed from the user settings for the test; the `e7t()` part of the binary gate is therefore not satisfied in these runs).
 - Default: auto and `bypassPermissions` modes only, "and only when Claude
   Code directs Claude to edit files through Bash" (hooks docs). Binary gate:
   `(e==="auto"||e==="bypassPermissions")&&e7t()`; `e7t()` is unknown.
