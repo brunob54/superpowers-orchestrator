@@ -42,7 +42,7 @@ User sends a prompt
         ▼  (when Claude stops responding)
 ┌─ Stop Hook ───────────────────────────────────────────────┐
 │  stop-reminders.js →                                      │
-│    "Decision log: write a [saved] entry"                  │
-│    "12 files changed, consider committing"                │
 │    "Session summary: 8 skill invocations [debugging 3x]"  │
+│    "12 files changed, consider committing"                │
+│    "Decision log: write a [saved] entry"                  │
 └───────────────────────────────────────────────────────────┘
