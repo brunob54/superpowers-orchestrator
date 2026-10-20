@@ -932,7 +932,7 @@ git commit -m "feat(dashboard): drop session open items from the extractor; sess
   - Must convey: the dropped or rewritten cases are exactly those of the open-item card, the open-item line and the "Mark resolved" control (with the write counts that included the open item); every `set-part` case and every case of another card stays.
   - Verification: both files pass; the task review compares the removed and changed lines of `git diff -- tests/dashboard/test-07-template.js tests/dashboard/test-08-template-edits.js` with this list.
 
-- [ ] **Step 1: Write the failing test changes in `tests/dashboard/test-07-template.js`**
+- [x] **Step 1: Write the failing test changes in `tests/dashboard/test-07-template.js`**
 
 In `sample()`, replace the `sessionOpenItems: { … },` line with:
 
@@ -957,7 +957,7 @@ h.eq('an entry with no date and time, or no entry: the goal alone', [app.itemLin
 
 In the async part, replace the two expectations `[false, 5]` (in `a private page shows the banner and its sections`) and `5` (in `the fetched data renders its sections`) with `[false, 4]` and `4`.
 
-- [ ] **Step 2: Write the failing test changes in `tests/dashboard/test-08-template-edits.js`**
+- [x] **Step 2: Write the failing test changes in `tests/dashboard/test-08-template-edits.js`**
 
 - Replace `const { fakeDocument, load, settle } = require('./fake-page');` with `const { TEMPLATE, fakeDocument, load, settle } = require('./fake-page');`.
 - Delete the line `const OPEN_ID = 'o'.repeat(40);`.
@@ -1020,12 +1020,12 @@ h.check('the template has no "Mark resolved" control', !TEMPLATE.includes('Mark 
 
 - Replace the two `OPEN_ID` uses in `listedRuntime` (the store list and its expectation) with `PART_ID`.
 
-- [ ] **Step 3: Run the tests to verify they fail**
+- [x] **Step 3: Run the tests to verify they fail**
 
 Run: `node tests/dashboard/test-07-template.js | grep FAIL; node tests/dashboard/test-08-template-edits.js | grep FAIL`
 Expected: test-07 FAIL for `tab 1 sections, in order`, `a session line starts with the date and time of its entry`, `a private page shows the banner and its sections` and `the fetched data renders its sections` (the old `TABS` still lists `sessionOpenItems`, so the first tab has 5 cards); test-08 FAIL for `the template has no "Mark resolved" control`. (The other test-08 checks already pass: the data no longer holds an open item.)
 
-- [ ] **Step 4: Implement in `skills/dashboard/template.html`**
+- [x] **Step 4: Implement in `skills/dashboard/template.html`**
 
 Search first (Global Constraint 2) for the two names that the searches of Task 1 and Task 2 do not cover, the kind string `open-item` and the label `Mark resolved`:
 
@@ -1116,7 +1116,7 @@ In `editControls`, replace the lines from `const start = item.kind === ITEM_KIND
     });
 ```
 
-- [ ] **Step 5: Run the tests to verify they pass**
+- [x] **Step 5: Run the tests to verify they pass**
 
 Run: `node tests/dashboard/test-07-template.js | tail -1; node tests/dashboard/test-08-template-edits.js | tail -1; grep -c -E "Mark resolved|resolve-open-item|sessionOpenItems|olderUnresolved|'open-item'" skills/dashboard/template.html`
 Expected: two lines `<n> passed, 0 failed`; then `0`.
@@ -1124,7 +1124,7 @@ Expected: two lines `<n> passed, 0 failed`; then `0`.
 Run: `bash tests/dashboard/run-tests.sh | tail -1`
 Expected: `dashboard suite: every test file passed`
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add skills/dashboard/template.html tests/dashboard/test-07-template.js tests/dashboard/test-08-template-edits.js
