@@ -2413,12 +2413,12 @@ git commit -m "docs(dashboard): report the shared-page line; share keeps shared.
   - Verification: `grep -c "^Amended in 7.73.0 by docs/superpowers-orchestrator/2026-10-19-dashboard-sources/specs/dashboard-sources-design.md: " docs/superpowers-orchestrator/2026-09-29-dashboard/specs/dashboard-design.md` prints `5`; `git diff --numstat -- docs/superpowers-orchestrator/2026-09-29-dashboard/specs/dashboard-design.md` shows `10	0` (five lines plus five blank lines added, none removed).
 - `hooks/skill-rules.json`: none — the dashboard entry's keywords (`project dashboard`, `status dashboard`, `dashboard page`) and its three intent patterns name no session open item (checked on 2026-10-20), so the file is not changed.
 
-- [ ] **Step 1: Check `hooks/skill-rules.json`**
+- [x] **Step 1: Check `hooks/skill-rules.json`**
 
 Run: `node -e "const r=require('./hooks/skill-rules.json').rules.find((x)=>x.skill==='dashboard'); const text=JSON.stringify([r.keywords, r.intentPatterns]); console.log(r.keywords.length > 0, /open item|session|resolve/i.test(text))"`
 Expected: `true false` (the entry exists and has keywords; no keyword or pattern fits only session open items; no edit). A failure of the command prints a stack trace, never `true false`.
 
-- [ ] **Step 2: Edit `docs/guide/README.md`**
+- [x] **Step 2: Edit `docs/guide/README.md`**
 
 Replace the first paragraph of "### The project dashboard — a status page on claude.ai" (from `Since v7.56.0, the \`dashboard\` skill` through `is a view of them, as of its last refresh.`) with:
 
@@ -2491,13 +2491,13 @@ A proposal from a page older than v7.73.0 that marked a session open item as
 resolved is reported by `sync` as invalid; reject it there.
 ```
 
-- [ ] **Step 3: Edit `README.md`**
+- [x] **Step 3: Edit `README.md`**
 
 On line 39, replace `(unfinished runs, branches, work logs, open items, releases)` with `(unfinished runs, branches, work logs and their open items, releases)`.
 
 On line 370, replace `(unfinished runs, branches, work logs, open items, releases, commits)` with `(unfinished runs, branches, work logs and their open items, releases, commits)`.
 
-- [ ] **Step 4: Add the five amendment lines to the old spec**
+- [x] **Step 4: Add the five amendment lines to the old spec**
 
 In `docs/superpowers-orchestrator/2026-09-29-dashboard/specs/dashboard-design.md`, insert each line below followed by one blank line:
 
@@ -2534,12 +2534,12 @@ Amended in 7.73.0 by docs/superpowers-orchestrator/2026-10-19-dashboard-sources/
 Run: `F=docs/superpowers-orchestrator/2026-09-29-dashboard/specs/dashboard-design.md; for h in '^### 5\.1 JSON shape' '^### 5\.2 Sections' '^\| .set-part. \|' '^## 8\. .sync.' '^## 11\. Testing and rollout'; do grep -A2 -E "$h" "$F" | tail -1 | grep -q '^Amended in 7.73.0 by ' || echo "MISPLACED $h"; done`
 Expected: no output (each amendment line stands two lines below its own anchor: the anchor, one blank line, the amendment line).
 
-- [ ] **Step 5: Verify**
+- [x] **Step 5: Verify**
 
 Run: `grep -c -E "Mark resolved|open items of the recent" docs/guide/README.md; for t in 'Source:' 'shared-ref line' 'Sharing is off' 'older branches' '\[current\]' 'tracked files changed' '14 days' 'next .refresh.'; do grep -q -E "$t" docs/guide/README.md || echo "MISSING $t"; done; grep -n "dashboard" README.md | grep -c "work logs and their open items"; grep -c "^Amended in 7.73.0 by docs/superpowers-orchestrator/2026-10-19-dashboard-sources/specs/dashboard-sources-design.md: " docs/superpowers-orchestrator/2026-09-29-dashboard/specs/dashboard-design.md; git diff --numstat -- docs/superpowers-orchestrator/2026-09-29-dashboard/specs/dashboard-design.md`
 Expected: `0`; no `MISSING` line; `2`; `5`; `10	0	docs/superpowers-orchestrator/2026-09-29-dashboard/specs/dashboard-design.md`.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add docs/guide/README.md README.md docs/superpowers-orchestrator/2026-09-29-dashboard/specs/dashboard-design.md
