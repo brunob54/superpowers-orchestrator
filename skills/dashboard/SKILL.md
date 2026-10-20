@@ -1,7 +1,7 @@
 ---
 name: dashboard
 description: >
-  Shows the status of this repository on a claude.ai Artifact page — unfinished orchestration runs, branches, work logs, open items of recent sessions, releases, commits — and copies the owner's edits made on the page back into the Markdown files after the owner approves each one. Commands — refresh (extract, render and publish the private page), sync (apply the approved edit proposals), share (publish a second page with pushed content only), share off, local (write a read-only HTML file). Triggers on: "refresh the dashboard", "project dashboard", "status dashboard", "sync the dashboard", "share the dashboard".
+  Shows the status of this repository on a claude.ai Artifact page — unfinished orchestration runs, branches, work logs, releases, commits — and copies the owner's edits made on the page back into the Markdown files after the owner approves each one. Commands — refresh (extract, render and publish the private page), sync (apply the approved edit proposals), share (publish a second page with pushed content only), share off, local (write a read-only HTML file). Triggers on: "refresh the dashboard", "project dashboard", "status dashboard", "sync the dashboard", "share the dashboard".
 argument-hint: "refresh [--url <url>] [--shared-url <url>] | sync | share [--ref <remote>/<branch>] | share off | local"
 ---
 
@@ -194,7 +194,10 @@ audience (`privateUrl` or `sharedUrl`).
    ```
 
    Exit code 2 of the extractor (not a git repository, no commit yet) stops
-   the refresh with its message; nothing is published.
+   the refresh with its message; nothing is published. When a shared page is
+   configured (sharing on, or a shared page left from an earlier share), the
+   extractor also prints one line on standard error that starts with
+   `dashboard-extract: shared page:`; keep it for the report of step 8.
 5. Publish the private audience ("Publish one audience").
 6. When `sharing` is `on`: extract, render and publish the shared audience.
    When the extractor stops (exit code 2, for example "the shared ref … no
@@ -219,7 +222,9 @@ audience (`privateUrl` or `sharedUrl`).
    `<scratchpad>/dashboard/shared.json` to `<state>/shared.json`.
 8. Report in a few lines: the output of `--diff`, the size of
    `dashboard-data.json` from the renderer's `written` line, and the URL of
-   each page that was published. Do not describe the content of the page.
+   each page that was published. When step 4 printed a line that starts with
+   `dashboard-extract: shared page:`, repeat that line in the report without
+   its `dashboard-extract: ` prefix. Do not describe the content of the page.
 
 ### The stored URL no longer works
 
@@ -377,7 +382,14 @@ old page's proposals.
 4. Only after that answer, store `'sharedRef=<ref>'` and then `'sharing=on'`
    with `--config-set`.
 5. Run step 6 of `refresh` (extract, render and publish the shared audience;
-   store `sharedUrl` at once when the page is new).
+   store `sharedUrl` at once when the page is new). Only when it published
+   the shared page, keep its data as `refresh` step 7 does, so that the
+   private page can say when the shared page was last published:
+
+   ```bash
+   cp "<scratchpad>/dashboard/shared.json" "<state>/shared.json"
+   ```
+
 6. Only when step 5 published the shared page, print its exact URL and say:
    "Make only this URL public." The user makes it public from the page's
    Share control. Otherwise print no URL, say that the shared page was not

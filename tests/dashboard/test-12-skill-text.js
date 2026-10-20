@@ -172,4 +172,13 @@ flatHas('partial read', 'Never act on a first page alone');
 flatHas('empty id list', 'Skip this command when the list of accepted ids is empty');
 flatHas('empty id list', 'Skip this command when the list of marked ids is empty');
 
+// The shared-ref line of the private extract is repeated in the refresh
+// report, and share keeps the data of a shared publish in the state folder
+// (spec dashboard-sources, sections 4.5 and 4.7).
+const SHARED_LINE = 'shared-ref line and the shared publish';
+flatHas(SHARED_LINE, 'repeat that line in the report without its `dashboard-extract: ` prefix');
+const SHARE_SECTION = FLAT.slice(FLAT.indexOf('## `share`'), FLAT.indexOf('## `share off`'));
+h.check(`${SHARED_LINE}: share copies shared.json to the state folder`, SHARE_SECTION.includes('cp "<scratchpad>/dashboard/shared.json" "<state>/shared.json"'));
+h.check(`${SHARED_LINE}: the description names no session open items`, !front.includes('open items of recent sessions'));
+
 h.finish();
