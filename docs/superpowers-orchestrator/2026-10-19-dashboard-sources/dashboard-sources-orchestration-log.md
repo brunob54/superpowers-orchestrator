@@ -35,3 +35,5 @@ Re-dispatch: phase 3, in-run resume 1 of 3, return 1 of 6
 - Task 12: complete — release 7.73.0
 
 ## Phase 4 — Code review — rounds 3 — converged — fixes 2 — unresolved 0
+
+_Completed — 2026-10-20 — HEAD 8fae82c_
