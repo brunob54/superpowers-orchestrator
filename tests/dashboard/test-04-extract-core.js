@@ -261,6 +261,18 @@ h.git(sr, 'update-ref', 'refs/remotes/origin/tree', h.git(sr, 'rev-parse', 'HEAD
 setKey('sharedRef=origin/tree');
 h.eq('a ref that is not a commit', withData()[0].error, 'origin/tree is not a commit');
 setKey('sharedRef=origin/main');
+// A file in the repository root whose name equals a ref must not make git
+// refuse the ref as ambiguous: a file HEAD (commit.date) and a file
+// refs/remotes/origin/main (the shared-ref line).
+h.write(sr, 'HEAD', 'not a ref\n');
+h.write(sr, 'refs/remotes/origin/main', 'not a ref\n');
+setKey('sharedRef=origin/main');
+const ambiguous = sharedRefRun(['--data-dir', srData]);
+h.check('a file named like a ref: the private extract exits 0 and the shared-ref line is normal', typeof ambiguous[0] === 'object' && !('error' in ambiguous[0]) && /^\d{4}-\d{2}-\d{2}$/.test(ambiguous[0].date), JSON.stringify(ambiguous));
+const ambiguousDoc = JSON.parse(h.node(sr, [EXTRACT, '--audience', 'private'], TOKYO).out || 'null');
+h.check('a file named HEAD: commit.date is a date', /^\d{4}-\d{2}-\d{2}$/.test((ambiguousDoc && ambiguousDoc.commit.date) || ''));
+fs.rmSync(path.join(sr, 'HEAD'), { force: true });
+fs.rmSync(path.join(sr, 'refs'), { recursive: true, force: true });
 h.git(sr, 'remote', 'remove', 'origin');
 h.eq('a removed remote: the ref is missing', withData()[0].missing, true);
 h.check('every private run exits 0', exits.every((code) => code === 0), exits.join(','));

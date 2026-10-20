@@ -463,7 +463,7 @@ function sharedBranches(context) {
     if (merged === null) throw new Error('git merge-base failed');
     if (merged) continue;
     const shown = remoteName(upstream);
-    const date = must(['log', '-1', '--format=%cd', `--date=${LOCAL_DATE}`, upstream]);
+    const date = must(['log', '-1', '--format=%cd', `--date=${LOCAL_DATE}`, upstream, '--']);
     items.push(keyItem(context, SECTION.git, shown, null, { kind: KIND.branch, name: shown, date }));
   }
   return okSection(items, { ahead: null, dirty: null });
@@ -704,7 +704,7 @@ function followedRef(context, name) {
     return {
       short: must(['rev-parse', `${ref}^{commit}`]).slice(0, SHORT_LENGTH),
       // --no-walk, as in commitMeta: read only the tip, never its parents.
-      date: must(['log', '-1', '--no-walk', '--format=%cd', `--date=${LOCAL_DATE}`, ref]),
+      date: must(['log', '-1', '--no-walk', '--format=%cd', `--date=${LOCAL_DATE}`, ref, '--']),
       notShown,
       oldestNotShown: notShown ? mustLines(['log', '--reverse', '--format=%cd', `--date=${LOCAL_DATE}`, range])[0] : null,
     };
@@ -769,7 +769,7 @@ function commitMeta(context) {
     short: sha.slice(0, SHORT_LENGTH),
     // --no-walk: read only this commit, never its parents (a missing parent
     // object must not stop the extract).
-    date: must(['log', '-1', '--no-walk', '--format=%cd', `--date=${LOCAL_DATE}`, context.ref]),
+    date: must(['log', '-1', '--no-walk', '--format=%cd', `--date=${LOCAL_DATE}`, context.ref, '--']),
     branch: context.shared ? remoteName(context.ref) : (current === DETACHED ? null : current),
     ref: context.ref,
     defaultBranch: context.shared ? null : defaultBranch(),

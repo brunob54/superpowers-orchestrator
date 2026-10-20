@@ -202,6 +202,9 @@ audience (`privateUrl` or `sharedUrl`).
 6. When `sharing` is `on`: extract, render and publish the shared audience.
    When the extractor stops (exit code 2, for example "the shared ref … no
    longer exists"), report it: the shared page was not updated.
+   When the stored `sharedRef` contains a single quote, do not run these
+   commands: report that the stored sharedRef is invalid, and that the shared
+   page was not updated.
 
    ```bash
    node "<skill-dir>/scripts/dashboard-extract.js" --data-dir "${CLAUDE_PLUGIN_DATA}" --audience shared --ref '<sharedRef>' --out "<scratchpad>/dashboard/shared.json"

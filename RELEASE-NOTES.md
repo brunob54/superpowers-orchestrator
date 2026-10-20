@@ -25,7 +25,7 @@ On 2026-10-19 the private page of one repository listed 11 open items of recent 
 - **Session open items are removed** from the page, with the "Mark resolved" control and the `sync` kind `resolve-open-item`. `context-management` is not changed: it still writes `Open:` lines, and the session-start hook still shows the last two saved entries to the model. A `resolve-open-item` proposal that still waits in the page database gets the verdict `invalid` with the reason `resolve-open-item was removed in 7.73.0; reject this proposal`; the owner may reject it in `sync` step 3. A proposal left in `applying` by an interrupted sync is reported `invalid` too; rejecting it does not undo a `[resolved` mark that the interrupted sync already wrote into `session-log.md`.
 - **Recent sessions** are listed newest first, each as `<date and time of the entry> · <goal>`.
 - **Every card has a "Source:" line** that names the file, folder or git command it reads and the rule that selects its items. On the shared page, the unfinished runs, the Git card and the recent commits name the shared run's own source. A test keeps the numbers in these sentences (10 entries, 20 commits, 15 releases) equal to the extractor's limits.
-- **The "as of" line** shows the commit date, then the build time, and on the private page ` · N tracked files changed, not committed` when N > 0. A detached HEAD now shows the build time too (before, it showed only the commit short name). Every date that the extractor computes is now in the local time zone (`--date=short-local`).
+- **The "as of" line** shows the commit date, then the build time, and on the private page ` · N tracked files changed, not committed` when N > 0. A detached HEAD now shows the build time too (before, it showed only the commit short name). Every date that the extractor computes itself is now in the local time zone (`--date=short-local`); the dates of unfinished runs are the exception (see Accepted limits).
 - **The shared-ref line** on the private page names the shared ref and the date of its last commit, the commits of the checked-out branch that are not in it, and the time of the last shared publish from this machine. It is a warning when the oldest of those commits is more than 14 days old, when the last shared publish lies more than 14 days before the previous private publish (or never happened), or when the ref is missing or cannot be read. The extractor reads it from `config.json` and the state files through `--data-dir` (no new option) and repeats it on standard error as `dashboard-extract: shared page: <line>`; `refresh` repeats it in its report. `share` now keeps `shared.json` in the state folder after a successful publish. `--verify` refuses shared data that holds this field.
 - **The Git card** is sorted by date (newest first), marks the checked-out branch with `[current]`, and folds branches with no commit in the last 90 days into one `<details>` element; the checked-out branch is never folded. Branch names now come from `%(refname:lstrip=2)`, so a tag with the name of a branch no longer turns the name into `heads/<name>`.
 
@@ -34,7 +34,7 @@ On 2026-10-19 the private page of one repository listed 11 open items of recent 
 The first `refresh` prints these lines once, in the `--diff` output of its renderer step, and they are expected:
 
     sessionOpenItems: 0 added, <n> removed
-    sessionOpenItems: status ok → absent
+    sessionOpenItems: status <ok, not-found or error> → absent
 
 (The first line appears only when the old section held items.)
 
