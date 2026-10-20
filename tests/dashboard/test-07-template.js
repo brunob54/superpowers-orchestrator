@@ -20,7 +20,7 @@ function sample(audience, branch) {
     commit: { sha: 'a'.repeat(40), short: 'aaaaaaa', branch, ref: 'HEAD', defaultBranch: 'main' },
     sections: {
       git: { status: 'ok', note: '', ahead: 2, dirty: 1, items: [{ id: '1'.repeat(40), visibility: 'tracked', source: source(null), kind: 'branch', name: `feature/${PAYLOAD}`, date: '2026-01-01' }] },
-      sessionOpenItems: { status: 'ok', note: '', olderUnresolved: 3, items: [{ id: '2'.repeat(40), visibility: 'private', source: source('session-log.md'), kind: 'open-item', text: PAYLOAD, continuation: [] }] },
+      sessions: { status: 'ok', note: '', items: [{ id: '2'.repeat(40), visibility: 'private', source: source('session-log.md'), kind: 'session', entry: '## 2026-09-28 10:00 [saved]', goal: PAYLOAD }] },
       commits: { status: 'ok', note: '', items: [{ id: '3'.repeat(40), visibility: 'tracked', source: source(null), kind: 'commit', sha: 'b'.repeat(40), short: 'bbbbbbb', date: '2026-01-01', subject: PAYLOAD }] },
       knownIssues: { status: 'not-found', note: 'known-issues.md not found', items: [] },
     },
@@ -50,7 +50,7 @@ h.eq('the title line holds the repository name as text', doc.getElementById('pag
 h.eq('the as-of line on a branch', doc.getElementById('as-of').textContent, 'as of commit aaaaaaa on branch main, built 2026-09-29 20:40');
 h.eq('the as-of line on a detached HEAD', app.asOfLine(sample('private', null)), 'as of commit aaaaaaa (detached HEAD)');
 const order = (panel) => doc.getElementById(panel).children.map((card) => card.getAttribute('data-section'));
-h.eq('tab 1 sections, in order', order('panel-waits'), ['unfinishedRuns', 'git', 'activeWorklogs', 'sessionOpenItems', 'currentGoal']);
+h.eq('tab 1 sections, in order', order('panel-waits'), ['unfinishedRuns', 'git', 'activeWorklogs', 'currentGoal']);
 h.eq('tab 2 sections, in order', order('panel-history'), ['releases', 'runHistory', 'closedWorklogs', 'commits', 'sessions', 'knownIssues']);
 const locks = doc.created.filter((node) => node.getAttribute('class') === 'lock');
 h.eq('one lock sign, on the private item only', locks.length, 1);
@@ -77,7 +77,10 @@ h.write(noIssuesFile, 'file.txt', 'x\n');
 h.commit(noIssuesFile, 'base', ['file.txt']);
 const extracted = JSON.parse(h.node(noIssuesFile, [h.script('dashboard-extract.js'), '--audience', 'private']).out).sections[KNOWN_ISSUES];
 h.eq('the extractor\'s section of a missing source is shown as an empty section', sectionLines(extracted), missingLines(extracted));
-h.check('the git counts and the older open items are shown', doc.getElementById('panel-waits').textContent.includes('2 commits not pushed') && doc.getElementById('panel-waits').textContent.includes('3 more unresolved open items in older entries'));
+h.check('the git counts are shown', doc.getElementById('panel-waits').textContent.includes('2 commits not pushed'));
+const SESSION = { kind: 'session', goal: 'Rename the RDKit helper' };
+h.eq('a session line starts with the date and time of its entry', app.itemLines(Object.assign({ entry: '## 2026-10-14 12:00 [saved]' }, SESSION)), ['2026-10-14 12:00 · Rename the RDKit helper']);
+h.eq('an entry with no date and time, or no entry: the goal alone', [app.itemLines(Object.assign({ entry: '## Notes' }, SESSION)), app.itemLines(SESSION)], [['Rename the RDKit helper'], ['Rename the RDKit helper']]);
 
 // 3. Boot with inline data: the audience check and the banner.
 async function boot(pageAudience, data) {
@@ -88,7 +91,7 @@ async function boot(pageAudience, data) {
 }
 (async () => {
   const own = await boot('private', sample('private', 'main'));
-  h.eq('a private page shows the banner and its sections', [own.getElementById('private-banner').hidden, own.getElementById('panel-waits').children.length], [false, 5]);
+  h.eq('a private page shows the banner and its sections', [own.getElementById('private-banner').hidden, own.getElementById('panel-waits').children.length], [false, 4]);
   // A click on the History tab shows its panel and hides the other one.
   own.getElementById('tab-history').listeners.click();
   h.eq('a click on the History tab selects it', [own.getElementById('panel-history').hidden, own.getElementById('panel-waits').hidden, own.getElementById('tab-history').getAttribute('aria-selected'), own.getElementById('tab-waits').getAttribute('aria-selected')], [false, true, 'true', 'false']);
@@ -113,7 +116,7 @@ async function boot(pageAudience, data) {
     return { ok: true, status: 200, json: async () => sample('private', 'main') };
   });
   h.eq('the page requests the data file that the renderer publishes', requested, [dataFile]);
-  h.eq('the fetched data renders its sections', fetched.getElementById('panel-waits').children.length, 5);
+  h.eq('the fetched data renders its sections', fetched.getElementById('panel-waits').children.length, 4);
   const notFound = await bootFetch('private', async () => ({ ok: false, status: 404, json: async () => ({}) }));
   h.eq('an HTTP error shows the banner with the status and no section', [notFound.getElementById('load-error').hidden, notFound.getElementById('load-error').textContent.includes('The dashboard data could not be loaded') && notFound.getElementById('load-error').textContent.includes('HTTP 404'), notFound.getElementById('panel-waits').children.length], [false, true, 0]);
   h.eq('a private page keeps its banner on an HTTP error', notFound.getElementById('private-banner').hidden, false);

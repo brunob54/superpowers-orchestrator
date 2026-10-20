@@ -5,14 +5,13 @@
 // status rules with dashboard-parse.js.
 const path = require('path');
 const h = require('./helpers');
-const { fakeDocument, load, settle } = require('./fake-page');
+const { TEMPLATE, fakeDocument, load, settle } = require('./fake-page');
 const parse = require(path.join(h.SCRIPTS, 'dashboard-parse.js'));
 
 const BUILT = '2026-09-29T20:40:00+02:00';
 const EARLIER = '2026-09-29T18:00:00+02:00';
 const LATER = '2026-09-29T21:00:00+02:00';
 const NOW = '2026-09-30T00:30:00+02:00';
-const OPEN_ID = 'o'.repeat(40);
 const PART_ID = 'p'.repeat(40);
 const PART_LINE = '| 2 | b | in progress | | | |';
 const PROPOSALS = 'proposals';
@@ -64,7 +63,7 @@ h.eq('labels', [
   app.proposalLabel(existing('applied', LATER), BUILT), app.proposalLabel(existing('rejected', LATER), BUILT), app.proposalLabel(existing('rejected', EARLIER), BUILT),
 ], ['', 'pending sync', 'sync in progress', 'applied — refresh to update', 'rejected', '']);
 const part = { kind: 'part', status: 'in progress', note: 'n' };
-h.eq('changesSomething', [app.changesSomething(part, { status: 'in progress' }), app.changesSomething(part, { note: 'n' }), app.changesSomething(part, { status: 'done' }), app.changesSomething({ kind: 'open-item' }, {})], [false, false, true, true]);
+h.eq('changesSomething', [app.changesSomething(part, { status: 'in progress' }), app.changesSomething(part, { note: 'n' }), app.changesSomething(part, { status: 'done' })], [false, false, true]);
 h.eq('noteProblem', [app.noteProblem('fine'), app.noteProblem('a|b') !== null, app.noteProblem('[x]') !== null, app.noteProblem('x'.repeat(201)) !== null], [null, true, true, true]);
 
 // 3. Controls.
@@ -75,7 +74,6 @@ function data(branch, partStatus) {
     commit: { sha: 'c'.repeat(40), short: 'ccccccc', branch, ref: 'HEAD', defaultBranch: 'main' },
     sections: {
       activeWorklogs: { status: 'ok', note: '', items: [{ id: PART_ID, visibility: 'tracked', source: source('docs/worklogs/w.md', '## Parts', PART_LINE), kind: 'part', worklog: 'w', number: '2', part: 'b', status: partStatus || 'in progress', since: '', commit: '', note: '' }] },
-      sessionOpenItems: { status: 'ok', note: '', items: [{ id: OPEN_ID, visibility: 'private', source: source('session-log.md', '## E', '- fix x'), kind: 'open-item', text: 'fix x', continuation: [] }] },
       commits: { status: 'ok', note: '', items: [{ id: 'k'.repeat(40), visibility: 'tracked', source: source(null, null, null), kind: 'commit', sha: 'd'.repeat(40), short: 'ddddddd', date: '2026-01-01', subject: 's' }] },
     },
   };
@@ -98,10 +96,11 @@ function browserSelect(doc) {
 // A store that lists nothing: the Contract allows no control without a store.
 const idleStore = { list: async () => new Map(), write: async () => {} };
 h.eq('no control when editing is off', buttons(render('main', false, null)).length, 0);
-h.eq('controls on the part and the open item only', buttons(render('main', true, idleStore)).map((b) => b.textContent), ['Propose change', 'Mark resolved']);
-h.eq('a detached HEAD: no part control', buttons(render(null, true, idleStore)).map((b) => b.textContent), ['Mark resolved']);
-const busy = render('main', true, idleStore, new Map([[OPEN_ID, { doc: { state: 'applying', closedAt: null } }]]));
-h.eq('an applying proposal: its label and no control', [buttons(busy).map((b) => b.textContent), nodes(busy, 'SPAN').some((n) => n.textContent === 'sync in progress')], [['Propose change'], true]);
+h.eq('a control on the part only', buttons(render('main', true, idleStore)).map((b) => b.textContent), ['Propose change']);
+h.eq('a detached HEAD: no control', buttons(render(null, true, idleStore)).length, 0);
+const busy = render('main', true, idleStore, new Map([[PART_ID, { doc: { state: 'applying', closedAt: null } }]]));
+h.eq('an applying proposal: its label and no control', [buttons(busy).length, nodes(busy, 'SPAN').some((n) => n.textContent === 'sync in progress')], [0, true]);
+h.check('the template has no "Mark resolved" control', !TEMPLATE.includes('Mark resolved'));
 const dropped = browserSelect(render('main', true, idleStore, null, 'dropped'));
 h.eq('a status outside the list: a "(current)" option that sets no status', [dropped.value, dropped.children[0].textContent, dropped.children.length], ['', 'dropped (current)', 4]);
 
@@ -118,20 +117,15 @@ h.eq('a status outside the list: a "(current)" option that sets no status', [dro
   h.eq('a part edit writes one pending set-part proposal', [writes.length, first.id, first.listed, first.generatedAt, first.doc.kind, first.doc.status, first.doc.note, first.doc.state, first.doc.branch, first.doc.file, first.doc.anchor.part, first.doc.anchor.line], [1, PART_ID, undefined, BUILT, 'set-part', 'done', 'finished', 'pending', 'main', 'docs/worklogs/w.md', '2', PART_LINE]);
   h.check('createdAt is local time with its offset', /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}[+-]\d{2}:\d{2}$/.test(first.doc.createdAt || ''));
   doc = render('main', true, store);
-  buttons(doc)[1].listeners.click();
+  nodes(doc, 'INPUT')[0].value = 'a | b';
+  buttons(doc)[0].listeners.click();
   await settle();
-  const second = writes[1] || { doc: { anchor: {} } };
-  h.eq('a resolve edit with no note', [second.doc.kind, second.doc.note, second.doc.anchor.occurrence, second.doc.baseCommit], ['resolve-open-item', undefined, 1, 'c'.repeat(40)]);
-  doc = render('main', true, store);
-  nodes(doc, 'INPUT')[1].value = 'a | b';
-  buttons(doc)[1].listeners.click();
-  await settle();
-  h.eq('a note with | is not written', writes.length, 2);
+  h.eq('a note with | is not written', writes.length, 1);
   doc = render('main', true, store);
   nodes(doc, 'SELECT')[0].value = 'in progress';
   buttons(doc)[0].listeners.click();
   await settle();
-  h.eq('an edit that changes nothing is not written', writes.length, 2);
+  h.eq('an edit that changes nothing is not written', writes.length, 1);
 
   // A note-only edit sends no status: the list starts at the pending status.
   const pendingDone = { doc: { kind: 'set-part', state: 'pending', closedAt: null, createdAt: EARLIER, status: 'done' } };
@@ -140,15 +134,15 @@ h.eq('a status outside the list: a "(current)" option that sets no status', [dro
   nodes(doc, 'INPUT')[0].value = 'added a note';
   buttons(doc)[0].listeners.click();
   await settle();
-  const noteOnPending = writes[2] || { doc: {} };
-  h.eq('a note-only edit keeps the pending status', [writes.length, noteOnPending.doc.status, noteOnPending.doc.note], [3, 'done', 'added a note']);
+  const noteOnPending = writes[1] || { doc: {} };
+  h.eq('a note-only edit keeps the pending status', [writes.length, noteOnPending.doc.status, noteOnPending.doc.note], [2, 'done', 'added a note']);
   doc = render('main', true, store, null, 'dropped');
   browserSelect(doc);
   nodes(doc, 'INPUT')[0].value = 'why';
   buttons(doc)[0].listeners.click();
   await settle();
-  const noteOnDropped = writes[3] || { doc: {} };
-  h.eq('a note-only edit on a dropped part writes no status', [writes.length, 'status' in noteOnDropped.doc, noteOnDropped.doc.note], [4, false, 'why']);
+  const noteOnDropped = writes[2] || { doc: {} };
+  h.eq('a note-only edit on a dropped part writes no status', [writes.length, 'status' in noteOnDropped.doc, noteOnDropped.doc.note], [3, false, 'why']);
 
   // The item's controls are disabled while its write runs.
   let refuse;
@@ -164,7 +158,8 @@ h.eq('a status outside the list: a "(current)" option that sets no status', [dro
   h.eq('a refused write enables the controls again and says "not saved"', [controls(), messages(doc)], [[false, false, false], ['not saved: boom — reload the page and try again']]);
   const listFails = { list: async () => { throw new Error('offline'); }, write: async () => {} };
   doc = render('main', true, listFails);
-  buttons(doc)[1].listeners.click();
+  nodes(doc, 'SELECT')[0].value = 'done';
+  buttons(doc)[0].listeners.click();
   await settle();
   h.eq('a saved write whose list fails says it was saved', messages(doc), ['saved, but the proposals could not be read again: offline — reload the page']);
 
@@ -176,8 +171,8 @@ h.eq('a status outside the list: a "(current)" option that sets no status', [dro
     return bootDoc;
   }
   const rendered = (bootDoc) => bootDoc.getElementById('panel-waits').children.length > 0;
-  const owner = await boot(fakeRuntime(true, [{ id: OPEN_ID, doc: { state: 'pending', closedAt: null } }], []));
-  h.eq('the owner gets the controls and the pending label', [buttons(owner).length, nodes(owner, 'SPAN').some((n) => n.textContent === 'pending sync'), owner.getElementById('viewer-warning').hidden], [2, true, true]);
+  const owner = await boot(fakeRuntime(true, [{ id: PART_ID, doc: { state: 'pending', closedAt: null } }], []));
+  h.eq('the owner gets the control and the pending label', [buttons(owner).length, nodes(owner, 'SPAN').some((n) => n.textContent === 'pending sync'), owner.getElementById('viewer-warning').hidden], [1, true, true]);
   const viewer = await boot(fakeRuntime(false, [], []));
   h.eq('another viewer gets the warning and no control', [viewer.getElementById('viewer-warning').hidden, buttons(viewer).length], [false, 0]);
   const noUser = await boot({ use: async () => null });
@@ -225,8 +220,8 @@ h.eq('a status outside the list: a "(current)" option that sets no status', [dro
   h.eq('a re-read from the local cache (metadata.fromCache true), otherwise unchanged: refused, nothing written', await adapterWrite(LISTED, reread({}), true), [0, CHANGED]);
   h.eq('a new document whose re-read finds one: refused', await adapterWrite(undefined, LISTED.doc), [0, CHANGED]);
   h.eq('a listed entry that carries a version is still re-read', await adapterWrite({ doc: LISTED.doc, version: 4 }, reread({ state: 'applying' })), [0, BLOCKED]);
-  const listedRuntime = app.createStore(fakeRuntime(true, [{ id: OPEN_ID, doc: LISTED.doc }], []));
-  h.eq('list gives each document by its id', Array.from((await listedRuntime.list()).entries()), [[OPEN_ID, { doc: LISTED.doc }]]);
+  const listedRuntime = app.createStore(fakeRuntime(true, [{ id: PART_ID, doc: LISTED.doc }], []));
+  h.eq('list gives each document by its id', Array.from((await listedRuntime.list()).entries()), [[PART_ID, { doc: LISTED.doc }]]);
 
   // 7. Parity of the page's copy with dashboard-parse.js (ruling [task 3/1]).
   h.eq('parity: the part statuses', Array.from(app.PART_STATUSES), parse.PART_STATUSES);

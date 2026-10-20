@@ -106,12 +106,12 @@ h2 { font-size: 1.05rem; margin: 0 0 8px; }
   const STATUS_NOT_FOUND = 'not-found';
   const NOTHING_HERE = 'nothing here';
   const TABS = [
-    { tab: 'tab-waits', panel: 'panel-waits', sections: ['unfinishedRuns', 'git', 'activeWorklogs', 'sessionOpenItems', 'currentGoal'] },
+    { tab: 'tab-waits', panel: 'panel-waits', sections: ['unfinishedRuns', 'git', 'activeWorklogs', 'currentGoal'] },
     { tab: 'tab-history', panel: 'panel-history', sections: ['releases', 'runHistory', 'closedWorklogs', 'commits', 'sessions', 'knownIssues'] },
   ];
   const TITLES = {
     unfinishedRuns: 'Unfinished orchestration runs', git: 'Git', activeWorklogs: 'Active work logs',
-    sessionOpenItems: 'Open items of recent sessions', currentGoal: 'Current goal', releases: 'Releases',
+    currentGoal: 'Current goal', releases: 'Releases',
     runHistory: 'Orchestration topics', closedWorklogs: 'Closed work logs', commits: 'Recent commits',
     sessions: 'Recent sessions', knownIssues: 'Known issues',
   };
@@ -127,8 +127,11 @@ h2 { font-size: 1.05rem; margin: 0 0 8px; }
   const NOTE_FORBIDDEN = /[|[\]\u0000-\u001f\u007f-\u009f\u200e\u200f\u2028\u2029\u202a-\u202e\u2066-\u2069]/;
   const NOTE_HINT = 'note (optional, one line)';
   const STATE = { pending: 'pending', applying: 'applying', applied: 'applied', rejected: 'rejected' };
-  const EDIT_KIND = { resolve: 'resolve-open-item', setPart: 'set-part' };
-  const ITEM_KIND = { openItem: 'open-item', part: 'part' };
+  const EDIT_KIND = { setPart: 'set-part' };
+  const ITEM_KIND = { part: 'part' };
+  // The "YYYY-MM-DD HH:MM" at the start of a session-log entry heading, for
+  // example "## 2026-10-14 12:00 [saved]".
+  const ENTRY_TIME = /^## (\d{4}-\d{2}-\d{2} \d{2}:\d{2})/;
   const ACTION = { write: 'write', refuse: 'refuse' };
   // The value of the "(current)" option of the status list: no status change.
   const NO_STATUS_CHANGE = '';
@@ -158,6 +161,13 @@ h2 { font-size: 1.05rem; margin: 0 0 8px; }
     return node;
   }
 
+  // One session line: the date and time of its entry, then the goal; the
+  // goal alone when the entry heading does not start with a date and time.
+  function sessionLine(item) {
+    const time = ENTRY_TIME.exec(text(item.entry));
+    return time ? `${time[1]} · ${text(item.goal)}` : text(item.goal);
+  }
+
   function itemLines(item) {
     switch (item.kind) {
       case 'run': return [`${text(item.branch)} — ${text(item.mark)}`, `${text(item.lastHeading) || 'no ## heading'} · last commit ${text(item.lastCommitDate)}`];
@@ -166,12 +176,11 @@ h2 { font-size: 1.05rem; margin: 0 0 8px; }
       case 'worklog-file': return [`${text(item.path)} — ${text(item.note)}`];
       case 'part': return [`${text(item.worklog)} · part ${text(item.number)}: ${text(item.part)} — ${text(item.status)}`, text(item.note)];
       case 'worklog-open-item': return [`${text(item.worklog)} · item #${text(item.number)}: ${text(item.item)}`, `part ${text(item.part) || '—'} · blocks ${text(item.blocks) || '—'}`];
-      case 'open-item': return [text(item.text)].concat((item.continuation || []).map(text));
       case 'goal': return [text(item.text)];
       case 'release': return [text(item.heading)];
       case 'topic': return [`${text(item.date)} ${text(item.slug)} · ${(item.stages || []).map(text).join(', ') || 'no stage folder'}`, `${text(item.lastHeading) || 'no orchestration log'} · ${text(item.rulings)} rulings, ${text(item.stops)} stops`];
       case 'commit': return [`${text(item.short)} ${text(item.date)} ${text(item.subject)}`];
-      case 'session': return [text(item.goal)];
+      case 'session': return [sessionLine(item)];
       case 'known-issue': return [text(item.title)];
       default: return [text(item.text)];
     }
@@ -181,7 +190,6 @@ h2 { font-size: 1.05rem; margin: 0 0 8px; }
     const lines = [];
     if (id === 'git' && typeof section.ahead === 'number') lines.push(`${section.ahead} commits not pushed`);
     if (id === 'git' && typeof section.dirty === 'number') lines.push(`${section.dirty} tracked files with uncommitted changes`);
-    if (id === 'sessionOpenItems' && section.olderUnresolved) lines.push(`${section.olderUnresolved} more unresolved open items in older entries`);
     if (id === 'releases' && section.version) lines.push(`version ${text(section.version)}`);
     return lines;
   }
@@ -257,10 +265,9 @@ h2 { font-size: 1.05rem; margin: 0 0 8px; }
     return '';
   }
 
-  // An open item always changes; a part changes when a given status or note
-  // differs from the current cell.
+  // A part edit changes something when a given status or note differs from
+  // the current cell.
   function changesSomething(item, fields) {
-    if (item.kind !== ITEM_KIND.part) return true;
     return (fields.status !== undefined && fields.status !== item.status) || (fields.note !== undefined && fields.note !== item.note);
   }
 
@@ -271,21 +278,17 @@ h2 { font-size: 1.05rem; margin: 0 0 8px; }
   }
 
   function proposalBase(item, data) {
-    const anchor = { heading: item.source.heading, headingOrdinal: item.source.headingOrdinal, line: item.source.line, occurrence: item.source.occurrence };
-    if (item.kind === ITEM_KIND.part) anchor.part = item.number;
     return {
-      kind: item.kind === ITEM_KIND.part ? EDIT_KIND.setPart : EDIT_KIND.resolve,
+      kind: EDIT_KIND.setPart,
       file: item.source.file,
       branch: data.commit.branch,
       baseCommit: data.commit.sha,
-      anchor,
+      anchor: { heading: item.source.heading, headingOrdinal: item.source.headingOrdinal, line: item.source.line, occurrence: item.source.occurrence, part: item.number },
     };
   }
 
   function canEditItem(item, ctx) {
-    if (!ctx.canEdit) return false;
-    if (item.kind === ITEM_KIND.openItem) return true;
-    return item.kind === ITEM_KIND.part && ctx.data.commit.branch !== null;
+    return ctx.canEdit && item.kind === ITEM_KIND.part && ctx.data.commit.branch !== null;
   }
 
   // Validates and writes one edit. <form> is { status, noteText, message,
@@ -354,16 +357,16 @@ h2 { font-size: 1.05rem; margin: 0 0 8px; }
     const label = proposalLabel(existing, ctx.data.generatedAt);
     if (label) box.appendChild(el('span', { className: 'badge', text: label }));
     if (existing && blocksWrite(existing.doc, ctx.data.generatedAt)) return box;
-    const start = item.kind === ITEM_KIND.part ? startStatus(item, existing) : null;
-    const status = start === null ? null : statusList(start);
+    const start = startStatus(item, existing);
+    const status = statusList(start);
     const note = el('input', { type: 'text', maxlength: NOTE_LIMIT, placeholder: NOTE_HINT, 'aria-label': 'note' });
     const message = el('span', { className: 'muted', role: 'status' });
-    const button = el('button', { type: 'button', text: status ? 'Propose change' : 'Mark resolved' });
-    const inputs = [status, note, button].filter(Boolean);
+    const button = el('button', { type: 'button', text: 'Propose change' });
+    const inputs = [status, note, button];
     button.addEventListener('click', () => {
       // A browser list always has a value: only a chosen status that differs
       // from the start status is a status change.
-      const chosen = status ? status.value : NO_STATUS_CHANGE;
+      const chosen = status.value;
       const change = chosen !== NO_STATUS_CHANGE && chosen !== start ? chosen : undefined;
       submitEdit(item, ctx, { status: change, noteText: note.value || '', message, inputs });
     });
