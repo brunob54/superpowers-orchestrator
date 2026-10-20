@@ -122,6 +122,33 @@ h2 { font-size: 1.05rem; margin: 0 0 8px; }
     runHistory: 'Orchestration topics', closedWorklogs: 'Closed work logs', commits: 'Recent commits',
     sessions: 'Recent sessions', knownIssues: 'Known issues',
   };
+  const SHARED = 'shared';
+  // The "Source:" line of each card: where the card reads its items, and the
+  // rule that selects them. Paths are relative to the repository root.
+  // tests/dashboard/test-08-template-edits.js checks that the numbers below
+  // equal SESSION_ENTRIES, COMMIT_LIMIT and RELEASE_LIMIT of
+  // scripts/dashboard-extract.js.
+  const SOURCE_PREFIX = 'Source: ';
+  const SOURCE_CLASS = 'muted source';
+  const SOURCES = {
+    unfinishedRuns: 'The orchestration logs in docs/superpowers-orchestrator/ on the local feature/<slug> branches that are not merged into the default branch; a branch is listed while its one log has no "_Completed — " line, or when it has more than one log.',
+    git: 'Local branches that are not merged into the default branch, with the date of their last commit (git for-each-ref); the commits of the checked-out branch that are not in its upstream (git rev-list) and the tracked files with uncommitted changes (git status).',
+    activeWorklogs: 'Work logs in docs/worklogs/ whose line 1 says status=active: their parts that are not started or in progress, and the rows of their open items table; a file that cannot be read as a work log is listed with a note.',
+    currentGoal: 'The text under the ## Current Goal heading of state.md.',
+    releases: 'The version in VERSION (or in package.json) and the first 15 headings of the form ## v<version> or ## [<version>], in file order, of RELEASE-NOTES.md (or CHANGELOG.md).',
+    runHistory: 'Topic folders <date>-<slug> in docs/superpowers-orchestrator/: their specs, plans and implementation folders, and the ## headings of their orchestration logs.',
+    closedWorklogs: 'Work logs in docs/worklogs/ whose line 1 says status=closed.',
+    commits: 'The last 20 commits of the checked-out branch or commit (git log).',
+    sessions: 'The Goal: lines of the last 10 entries of session-log.md that are not superseded, newest first.',
+    knownIssues: 'The ## headings of known-issues.md.',
+  };
+  // The sentence of the shared page for the sections that the shared run
+  // reads from another place; it is shown instead of the SOURCES sentence.
+  const SHARED_SOURCES = {
+    unfinishedRuns: 'The orchestration logs in docs/superpowers-orchestrator/ on the upstreams, on the shared remote, of the local feature/<slug> branches, when the upstream is not merged into the upstream of the default branch; a branch is listed while its one log has no "_Completed — " line, or when it has more than one log.',
+    git: 'The upstreams on the shared remote of the local branches, other than the shared ref, that are not merged into the upstream of the default branch, with the date of their last commit (git log).',
+    commits: 'The last 20 commits of the shared ref (git log).',
+  };
   const PROPOSALS = 'proposals';
   // The part statuses and the note rule. skills/dashboard/scripts/
   // dashboard-parse.js holds the only other copy of these three values (the
@@ -505,8 +532,14 @@ h2 { font-size: 1.05rem; margin: 0 0 8px; }
     return blocks;
   }
 
+  // The Source line of a card, or null when the section has no sentence.
+  function sourceLine(id, audience) {
+    const sentence = audience === SHARED && SHARED_SOURCES[id] ? SHARED_SOURCES[id] : SOURCES[id];
+    return sentence ? el('p', { className: SOURCE_CLASS, text: `${SOURCE_PREFIX}${sentence}` }) : null;
+  }
+
   function renderSection(id, section, ctx) {
-    const card = el('article', { className: 'card', 'data-section': id }, [el('h2', { text: TITLES[id] || id })]);
+    const card = el('article', { className: 'card', 'data-section': id }, [el('h2', { text: TITLES[id] || id }), sourceLine(id, ctx.data.audience)]);
     if (!section) {
       card.appendChild(el('p', { className: 'muted', text: 'not in this data' }));
       return card;
@@ -604,7 +637,7 @@ h2 { font-size: 1.05rem; margin: 0 0 8px; }
   globalThis.DashboardApp = {
     itemLines, asOfLine, renderPage, renderSection, renderItem,
     planWrite, proposalLabel, changesSomething, noteProblem, proposalBase, createStore, ownerState, localIso,
-    PART_STATUSES, NOTE_LIMIT, NOTE_FORBIDDEN,
+    PART_STATUSES, NOTE_LIMIT, NOTE_FORBIDDEN, SOURCES, SHARED_SOURCES,
   };
   if (!globalThis.DASHBOARD_NO_BOOT) boot();
 })();

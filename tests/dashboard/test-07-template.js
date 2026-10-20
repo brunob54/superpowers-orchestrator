@@ -67,7 +67,8 @@ h.eq('one lock sign, on the private item only', locks.length, 1);
 // The lines under the title of a section card: [class, text] of each one.
 const VIEW = { data: sample('private', 'main'), canEdit: false, proposals: new Map(), store: null };
 const KNOWN_ISSUES = 'knownIssues';
-const cardLines = (card) => card.children.slice(1).map((line) => [line.getAttribute('class'), line.textContent]);
+// children[0] is the title and children[1] the Source line.
+const cardLines = (card) => card.children.slice(2).map((line) => [line.getAttribute('class'), line.textContent]);
 const sectionLines = (section) => cardLines(app.renderSection(KNOWN_ISSUES, section, VIEW));
 const emptySection = (status, note) => ({ status, note, items: [] });
 const MUTED = 'muted';
@@ -115,6 +116,31 @@ h.eq('git card: newest first, then by name; no date last; the current branch nev
 h.eq('git card: the shared page sorts and folds the same way', gitCard(BRANCHES, SHARED_VIEW), EXPECTED_CARD);
 h.eq('git card: one old branch', gitCard([branchItem('a', daysBefore(1)), branchItem('old', daysBefore(91))]).summary, '1 older branch (no commit in the last 90 days)');
 h.eq('git card: no old branch makes no details element', gitCard([branchItem('a', daysBefore(90))]), { shown: ['a'], summary: null, folded: [] });
+// The Source line (spec section 4.3): directly after the title, in every state.
+const SECTION_IDS = ['unfinishedRuns', 'git', 'activeWorklogs', 'currentGoal', 'releases', 'runHistory', 'closedWorklogs', 'commits', 'sessions', 'knownIssues'];
+const SOURCE_STATES = {
+  'with items': { status: 'ok', note: '', items: [{ id: 'i'.repeat(40), visibility: 'tracked', source: source(null), kind: 'known-issue', title: 't' }] },
+  empty: { status: 'ok', note: '', items: [] },
+  'not found': { status: 'not-found', note: 'x not found', items: [] },
+  failed: { status: 'error', note: 'git command failed', items: [] },
+  absent: undefined,
+};
+const sourceOf = (id, state, view) => {
+  const card = app.renderSection(id, state, view);
+  return [card.children[0].tagName, card.children[1].getAttribute('class'), card.children[1].textContent, card.textContent.split('Source: ').length - 1];
+};
+h.check('every section has a sentence', SECTION_IDS.every((id) => typeof app.SOURCES[id] === 'string' && app.SOURCES[id].length > 0));
+for (const id of SECTION_IDS) {
+  for (const [label, state] of Object.entries(SOURCE_STATES)) {
+    h.eq(`the Source line of ${id}, ${label}`, sourceOf(id, state, VIEW), ['H2', 'muted source', `Source: ${app.SOURCES[id]}`, 1]);
+  }
+  const sharedSentence = app.SHARED_SOURCES[id] || app.SOURCES[id];
+  h.eq(`the shared Source line of ${id}`, sourceOf(id, SOURCE_STATES.empty, SHARED_VIEW), ['H2', 'muted source', `Source: ${sharedSentence}`, 1]);
+  if (app.SHARED_SOURCES[id]) h.check(`the shared card of ${id} does not show the private sentence`, !app.renderSection(id, SOURCE_STATES.empty, SHARED_VIEW).textContent.includes(app.SOURCES[id]));
+}
+h.eq('SHARED_SOURCES replaces the sentences of unfinishedRuns, git and commits', Object.keys(app.SHARED_SOURCES).sort(), ['commits', 'git', 'unfinishedRuns']);
+const ALL_SENTENCES = Object.values(app.SOURCES).concat(Object.values(app.SHARED_SOURCES));
+h.check('no sentence holds an absolute path or a home folder', ALL_SENTENCES.every((sentence) => !/(^|\s|\()(\/|~|[A-Za-z]:[\\/])/.test(sentence)));
 const SESSION = { kind: 'session', goal: 'Rename the RDKit helper' };
 h.eq('a session line starts with the date and time of its entry', app.itemLines(Object.assign({ entry: '## 2026-10-14 12:00 [saved]' }, SESSION)), ['2026-10-14 12:00 · Rename the RDKit helper']);
 h.eq('an entry with no date and time, or no entry: the goal alone', [app.itemLines(Object.assign({ entry: '## Notes' }, SESSION)), app.itemLines(SESSION)], [['Rename the RDKit helper'], ['Rename the RDKit helper']]);

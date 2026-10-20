@@ -3,6 +3,7 @@
 // 7, the labels, the controls, submitted edits, the owner check at boot, the
 // adapter's write path, and the parity of the page's copy of the note and
 // status rules with dashboard-parse.js.
+const fs = require('fs');
 const path = require('path');
 const h = require('./helpers');
 const { TEMPLATE, fakeDocument, load, settle } = require('./fake-page');
@@ -229,5 +230,20 @@ h.eq('a status outside the list: a "(current)" option that sets no status', [dro
   h.eq('parity: the note rule', [app.NOTE_FORBIDDEN.source, app.NOTE_FORBIDDEN.flags], [parse.NOTE_FORBIDDEN.source, parse.NOTE_FORBIDDEN.flags]);
   const dates = [new Date(2026, 0, 2, 3, 4, 5), new Date(2026, 6, 15, 23, 59, 59), new Date(0)];
   h.eq('parity: localIso', dates.map((date) => app.localIso(date)), dates.map((date) => parse.localIso(date)));
+  // 8. The numbers of the Source sentences equal the limits of the extractor
+  // (spec section 4.3). The extractor exports nothing, so the test reads its
+  // source text: an accepted exception to the rule of spec section 6.
+  const extractSource = fs.readFileSync(path.join(h.SCRIPTS, 'dashboard-extract.js'), 'utf8');
+  const limitOf = (name) => Number((extractSource.match(new RegExp(`^const ${name} = (\\d+);$`, 'm')) || [])[1]);
+  const NUMBERED = [
+    ['sessions', 'SESSION_ENTRIES', [app.SOURCES]],
+    ['commits', 'COMMIT_LIMIT', [app.SOURCES, app.SHARED_SOURCES]],
+    ['releases', 'RELEASE_LIMIT', [app.SOURCES]],
+  ];
+  for (const [id, name, tables] of NUMBERED) {
+    const value = limitOf(name);
+    h.check(`${name} is read from the extractor source`, Number.isInteger(value), String(value));
+    tables.forEach((table, i) => h.check(`the ${i ? 'shared ' : ''}sentence of ${id} names ${name} = ${value}`, new RegExp(`\\b${value}\\b`).test(String(table && table[id]))));
+  }
   h.finish();
 })();
