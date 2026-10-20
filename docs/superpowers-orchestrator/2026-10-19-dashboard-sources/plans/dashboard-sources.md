@@ -2315,7 +2315,7 @@ git commit -m "feat(dashboard): --verify refuses sharedRef in shared data" --tra
   - Verification: `node tests/dashboard/test-12-skill-text.js`.
   - Sentence wording is free, except for three strings that the new checks of Step 1 read word for word: the `refresh` text holds `` repeat that line in the report without its `dashboard-extract: ` prefix ``; the `share` section holds the line `cp "<scratchpad>/dashboard/shared.json" "<state>/shared.json"`; the description does not hold `open items of recent sessions`.
 
-- [ ] **Step 1: Write the failing tests in `tests/dashboard/test-12-skill-text.js`**
+- [x] **Step 1: Write the failing tests in `tests/dashboard/test-12-skill-text.js`**
 
 Before `h.finish();` add:
 
@@ -2330,12 +2330,12 @@ h.check(`${SHARED_LINE}: share copies shared.json to the state folder`, SHARE_SE
 h.check(`${SHARED_LINE}: the description names no session open items`, !front.includes('open items of recent sessions'));
 ```
 
-- [ ] **Step 2: Run the test to verify it fails**
+- [x] **Step 2: Run the test to verify it fails**
 
 Run: `node tests/dashboard/test-12-skill-text.js | grep FAIL`
 Expected: FAIL for the three new checks.
 
-- [ ] **Step 3: Implement in `skills/dashboard/SKILL.md`**
+- [x] **Step 3: Implement in `skills/dashboard/SKILL.md`**
 
 In the description (line 4), replace `unfinished orchestration runs, branches, work logs, open items of recent sessions, releases, commits` with `unfinished orchestration runs, branches, work logs, releases, commits`.
 
@@ -2372,7 +2372,7 @@ Replace `share` step 5 with:
    ```
 ````
 
-- [ ] **Step 4: Run the test to verify it passes**
+- [x] **Step 4: Run the test to verify it passes**
 
 Run: `node tests/dashboard/test-12-skill-text.js | tail -1`
 Expected: `<n> passed, 0 failed`
@@ -2380,7 +2380,7 @@ Expected: `<n> passed, 0 failed`
 Run: `bash tests/dashboard/run-tests.sh | tail -1`
 Expected: `dashboard suite: every test file passed`
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add skills/dashboard/SKILL.md tests/dashboard/test-12-skill-text.js
