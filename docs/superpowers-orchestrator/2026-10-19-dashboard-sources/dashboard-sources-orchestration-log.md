@@ -17,3 +17,9 @@ readiness owed: 2
 - Task 4: complete — commit date, local dates and the current branch mark; lstrip=2 names
 - Task 5: complete — true as-of line; Git card by date with current mark and fold
 - Task 6: complete — a Source line on every card
+
+## RULING 1 — 2026-10-20 — phase 3 — Task 8 shared-ref line duplication: plan governs
+Items: [task 8/1] forced — plan governs: Task 8 Contract (template builds the line; spec 4.5 Report mandates both copies)
+Detail: docs/superpowers-orchestrator/2026-10-19-dashboard-sources/plans/dashboard-sources-open-decisions.md
+Forks: none — contradiction: none
+Re-dispatch: phase 3, in-run resume 1 of 3, return 1 of 6
