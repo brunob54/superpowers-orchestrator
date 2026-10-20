@@ -17,7 +17,7 @@ function sample(audience, branch) {
     audience,
     generatedAt: '2026-09-29T20:40:00+02:00',
     repo: { name: `repo${PAYLOAD}` },
-    commit: { sha: 'a'.repeat(40), short: 'aaaaaaa', branch, ref: 'HEAD', defaultBranch: 'main' },
+    commit: { sha: 'a'.repeat(40), short: 'aaaaaaa', date: '2026-09-29', branch, ref: 'HEAD', defaultBranch: 'main' },
     sections: {
       git: { status: 'ok', note: '', ahead: 2, dirty: 1, items: [{ id: '1'.repeat(40), visibility: 'tracked', source: source(null), kind: 'branch', name: `feature/${PAYLOAD}`, date: '2026-01-01' }] },
       sessions: { status: 'ok', note: '', items: [{ id: '2'.repeat(40), visibility: 'private', source: source('session-log.md'), kind: 'session', entry: '## 2026-09-28 10:00 [saved]', goal: PAYLOAD }] },
@@ -47,8 +47,18 @@ app.renderPage({ data: sample('private', 'main'), canEdit: false, proposals: new
 h.check('no element is created from the text', doc.created.every((node) => !['IMG', 'SCRIPT', 'IFRAME'].includes(node.tagName)));
 h.check('the markup is shown as text', doc.getElementById('panel-waits').textContent.includes(PAYLOAD) && doc.getElementById('panel-history').textContent.includes(PAYLOAD));
 h.eq('the title line holds the repository name as text', doc.getElementById('page-title').textContent, `repo${PAYLOAD} dashboard`);
-h.eq('the as-of line on a branch', doc.getElementById('as-of').textContent, 'as of commit aaaaaaa on branch main, built 2026-09-29 20:40');
-h.eq('the as-of line on a detached HEAD', app.asOfLine(sample('private', null)), 'as of commit aaaaaaa (detached HEAD)');
+const BUILT_PART = ' · built 2026-09-29 20:40';
+const asOf = (audience, branch, dirty) => {
+  const data = sample(audience, branch);
+  data.sections.git.dirty = dirty;
+  return app.asOfLine(data);
+};
+h.eq('the as-of line of the rendered page', doc.getElementById('as-of').textContent, `as of commit aaaaaaa (2026-09-29) on branch main${BUILT_PART} · 1 tracked file changed, not committed`);
+h.eq('the as-of line: detached with 2 changed files, a branch with none, the shared page', [asOf('private', null, 2), asOf('private', 'main', 0), asOf('shared', 'origin/main', null)], [
+  `as of commit aaaaaaa (2026-09-29), detached HEAD${BUILT_PART} · 2 tracked files changed, not committed`,
+  `as of commit aaaaaaa (2026-09-29) on branch main${BUILT_PART}`,
+  `as of commit aaaaaaa (2026-09-29) on branch origin/main${BUILT_PART}`,
+]);
 const order = (panel) => doc.getElementById(panel).children.map((card) => card.getAttribute('data-section'));
 h.eq('tab 1 sections, in order', order('panel-waits'), ['unfinishedRuns', 'git', 'activeWorklogs', 'currentGoal']);
 h.eq('tab 2 sections, in order', order('panel-history'), ['releases', 'runHistory', 'closedWorklogs', 'commits', 'sessions', 'knownIssues']);
@@ -78,6 +88,33 @@ h.commit(noIssuesFile, 'base', ['file.txt']);
 const extracted = JSON.parse(h.node(noIssuesFile, [h.script('dashboard-extract.js'), '--audience', 'private']).out).sections[KNOWN_ISSUES];
 h.eq('the extractor\'s section of a missing source is shown as an empty section', sectionLines(extracted), missingLines(extracted));
 h.check('the git counts are shown', doc.getElementById('panel-waits').textContent.includes('2 commits not pushed'));
+// The Git card (spec section 4.6): order, [current], the fold at 90 days.
+const DAY_MS = 24 * 60 * 60 * 1000;
+const SAMPLE_DAY = Date.UTC(2026, 8, 29);
+const daysBefore = (n) => new Date(SAMPLE_DAY - n * DAY_MS).toISOString().slice(0, 10);
+const branchItem = (name, date, extra) => Object.assign({ id: `b-${name}`, visibility: 'tracked', source: source(null), kind: 'branch', name }, date === undefined ? {} : { date }, extra || {});
+const SHARED_VIEW = { data: sample('shared', 'origin/main'), canEdit: false, proposals: new Map(), store: null };
+function gitCard(items, view) {
+  const card = app.renderSection('git', { status: 'ok', note: '', ahead: null, dirty: null, items }, view || VIEW);
+  const names = (list) => list.children.map((li) => li.children[0].textContent.split(' · ')[0]);
+  const list = card.children.find((node) => node.tagName === 'UL');
+  const details = card.children.find((node) => node.tagName === 'DETAILS');
+  return { shown: list ? names(list) : [], summary: details ? details.children[0].textContent : null, folded: details ? names(details.children[1]) : [] };
+}
+const BRANCHES = [
+  branchItem('x-empty', ''), branchItem('old91', daysBefore(91)), branchItem('b-new', daysBefore(1)), branchItem('y-null', null),
+  branchItem('cur', daysBefore(300), { current: true }), branchItem('a-new', daysBefore(1)), branchItem('edge90', daysBefore(90)),
+  branchItem('z-missing'), branchItem('older200', daysBefore(200)),
+];
+const EXPECTED_CARD = {
+  shown: ['a-new', 'b-new', 'edge90', 'cur [current]', 'x-empty', 'y-null', 'z-missing'],
+  summary: '2 older branches (no commit in the last 90 days)',
+  folded: ['old91', 'older200'],
+};
+h.eq('git card: newest first, then by name; no date last; the current branch never folded; old branches folded in order', gitCard(BRANCHES), EXPECTED_CARD);
+h.eq('git card: the shared page sorts and folds the same way', gitCard(BRANCHES, SHARED_VIEW), EXPECTED_CARD);
+h.eq('git card: one old branch', gitCard([branchItem('a', daysBefore(1)), branchItem('old', daysBefore(91))]).summary, '1 older branch (no commit in the last 90 days)');
+h.eq('git card: no old branch makes no details element', gitCard([branchItem('a', daysBefore(90))]), { shown: ['a'], summary: null, folded: [] });
 const SESSION = { kind: 'session', goal: 'Rename the RDKit helper' };
 h.eq('a session line starts with the date and time of its entry', app.itemLines(Object.assign({ entry: '## 2026-10-14 12:00 [saved]' }, SESSION)), ['2026-10-14 12:00 · Rename the RDKit helper']);
 h.eq('an entry with no date and time, or no entry: the goal alone', [app.itemLines(Object.assign({ entry: '## Notes' }, SESSION)), app.itemLines(SESSION)], [['Rename the RDKit helper'], ['Rename the RDKit helper']]);
