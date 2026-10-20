@@ -12,3 +12,8 @@ readiness owed: 2
 - Task 1: complete — sync keeps only set-part; resolve-open-item proposal invalid
 - Task 2: complete — extractor drops session open items; sessions newest first
 - Task 3: complete — page drops the open-item card and control; session lines dated
+
+## Phase 3 — Batch 2 (tasks 4–6) — COMPLETE — commits 44c499a..ce8b8f5
+- Task 4: complete — commit date, local dates and the current branch mark; lstrip=2 names
+- Task 5: complete — true as-of line; Git card by date with current mark and fold
+- Task 6: complete — a Source line on every card
