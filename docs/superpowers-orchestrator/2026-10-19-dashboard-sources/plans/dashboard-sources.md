@@ -1976,7 +1976,7 @@ git commit -m "feat(dashboard): the private extract computes the shared-ref stat
   - Invariant: the fake document starts the element hidden, as the template does.
   - Verification: the hidden checks of test-07.
 
-- [ ] **Step 1: Edit `tests/dashboard/fake-page.js`**
+- [x] **Step 1: Edit `tests/dashboard/fake-page.js`**
 
 Replace the two constants with:
 
@@ -1986,7 +1986,7 @@ const STATIC_IDS = ['page-title', 'as-of', 'shared-ref', 'private-banner', 'view
 const HIDDEN_IDS = ['shared-ref', 'private-banner', 'viewer-warning', 'load-error', 'panel-history'];
 ```
 
-- [ ] **Step 2: Write the failing tests in `tests/dashboard/test-07-template.js`**
+- [x] **Step 2: Write the failing tests in `tests/dashboard/test-07-template.js`**
 
 After the Source block of Task 6, add:
 
@@ -2084,12 +2084,12 @@ wordingSet('sharedUrl=https://claude.ai/code/artifact/shared');
 sameWording('sharing off');
 ```
 
-- [ ] **Step 3: Run the test to verify it fails**
+- [x] **Step 3: Run the test to verify it fails**
 
 Run: `node tests/dashboard/test-07-template.js | grep FAIL`
 Expected: FAIL for every shared-ref check except those that expect a hidden, empty element (before the change the element stays empty and hidden and has no class, so the checks of a class fail too, also those that expect the information style), for `the template places id="shared-ref" …`, and for the five `same wording` checks (got `''` against the extractor's line).
 
-- [ ] **Step 4: Implement in `skills/dashboard/template.html`**
+- [x] **Step 4: Implement in `skills/dashboard/template.html`**
 
 In the header, replace `<p id="as-of" class="muted"></p>` with:
 
@@ -2178,7 +2178,7 @@ In `renderPage`, after `document.getElementById('as-of').textContent = asOfLine(
     renderSharedRef(data);
 ```
 
-- [ ] **Step 5: Run the tests to verify they pass**
+- [x] **Step 5: Run the tests to verify they pass**
 
 Run: `node tests/dashboard/test-07-template.js | tail -1; node tests/dashboard/test-08-template-edits.js | tail -1`
 Expected: two lines `<n> passed, 0 failed`.
@@ -2186,7 +2186,7 @@ Expected: two lines `<n> passed, 0 failed`.
 Run: `bash tests/dashboard/run-tests.sh | tail -1`
 Expected: `dashboard suite: every test file passed`
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add skills/dashboard/template.html tests/dashboard/fake-page.js tests/dashboard/test-07-template.js
