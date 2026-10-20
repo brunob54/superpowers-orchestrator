@@ -80,6 +80,18 @@ h.check('every shared item is tracked', Object.values(s).every((section) => sect
 h.check('(10) the whole shared output holds neither the repository root nor the home folder', !result.out.includes(h.ROOT) && !result.out.includes(h.HOME));
 h.check('(10) no section note holds a machine path', Object.values(s).every((section) => !section.note.includes(h.ROOT) && !section.note.includes(h.HOME)));
 
+// The shared run never computes the shared-ref line and never marks the
+// current branch, also with a configuration whose sharing is on and with an
+// unmerged branch checked out (spec sections 4.5 and 4.6).
+const privacyData = path.join(h.ROOT, 'privacy-data');
+run(d, ['--data-dir', privacyData, '--config-set', 'sharing=on']);
+run(d, ['--data-dir', privacyData, '--config-set', 'sharedRef=origin/main']);
+h.git(d, 'checkout', '-q', 'feature/run');
+const configured = run(d, ['--data-dir', privacyData, '--audience', 'shared', '--ref', 'origin/main']);
+const configuredDoc = configured.code === 0 ? JSON.parse(configured.out) : { sections: { git: { items: [] } } };
+h.eq('the shared output: exit 0, no sharedRef key, no current field, no shared-page line', [configured.code, 'sharedRef' in configuredDoc, configuredDoc.sections.git.items.some((i) => 'current' in i), configured.err.includes('shared page:')], [0, false, false, false]);
+h.git(d, 'checkout', '-q', 'main');
+
 // A local branch named like a remote-tracking ref must not pass as the shared ref.
 h.git(d, 'branch', 'refs/remotes/origin/guess', 'feature/secret');
 const guessed = shared(d, 'origin/guess');

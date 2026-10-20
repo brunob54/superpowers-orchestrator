@@ -86,7 +86,7 @@ h.addRemote(d, 'render-remote');
 h.write(d, 'RELEASE-NOTES.md', '## v1.0.0 — pushed\n');
 h.commit(d, 'base', ['RELEASE-NOTES.md']);
 h.git(d, 'push', '-q', '-u', 'origin', 'main');
-h.write(d, 'session-log.md', `## 2026-01-01 [saved]\nOpen: ${MARKER}\n`);
+h.write(d, 'session-log.md', `## 2026-01-01 [saved]\nGoal: ${MARKER}\n`);
 h.write(d, 'RELEASE-NOTES.md', `## v2.0.0 — ${MARKER}\n## v1.0.0 — pushed\n`);
 h.node(d, [EXTRACT, '--audience', 'shared', '--ref', 'origin/main', '--out', scratch('real-shared.json')]);
 render(d, ['--audience', 'shared', '--in', scratch('real-shared.json'), '--out', scratch('real-shared')]);
@@ -128,5 +128,27 @@ for (const value of ['null', '0', '[]']) {
   fs.writeFileSync(path.join(dir, 'dashboard-data.json'), value);
   h.eq(`verify refuses a data file holding ${value}`, render(h.ROOT, ['--verify', dir, '--audience', 'shared']).code, 1);
 }
+
+// --verify refuses shared data that holds the private-only key sharedRef,
+// whatever its value; the private audience accepts it.
+const REFUSED_KEY = 'refused: the shared data contains sharedRef';
+const SHARED_DOC_FILE = 'shared4.json';
+// Control check: freshly rendered shared data without sharedRef still verifies,
+// so a verify that always refused would not pass the checks below.
+const freshDir = scratch('shared-ref-fresh');
+render(h.ROOT, ['--audience', 'shared', '--in', writeJson(SHARED_DOC_FILE, sharedDoc), '--out', freshDir]);
+const fresh = render(h.ROOT, ['--verify', freshDir, '--audience', 'shared']);
+h.eq('verify accepts shared data without sharedRef', [fresh.code, fresh.out.trim()], [0, 'verified shared']);
+for (const [label, value] of [['null', null], ['sharing off', { off: true, published: null }]]) {
+  const dir = scratch(`shared-ref-${label.replace(' ', '-')}`);
+  render(h.ROOT, ['--audience', 'shared', '--in', writeJson(SHARED_DOC_FILE, sharedDoc), '--out', dir]);
+  const dataFile = path.join(dir, 'dashboard-data.json');
+  fs.writeFileSync(dataFile, JSON.stringify(Object.assign(JSON.parse(read(dataFile)), { sharedRef: value })));
+  const refused = render(h.ROOT, ['--verify', dir, '--audience', 'shared']);
+  h.eq(`verify refuses shared data with sharedRef ${label}`, [refused.code, refused.out.trim()], [1, REFUSED_KEY]);
+}
+const privateWithRef = scratch('private-with-ref');
+render(h.ROOT, ['--audience', 'private', '--in', writeJson('private2.json', Object.assign({}, privateDoc, { sharedRef: null })), '--out', privateWithRef]);
+h.eq('verify accepts private data with sharedRef', render(h.ROOT, ['--verify', privateWithRef, '--audience', 'private']).out.trim(), 'verified private');
 
 h.finish();

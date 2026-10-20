@@ -36,6 +36,9 @@ const HTML_ESCAPES = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'
 // command (Global Constraint 10).
 const OPTIONS = { values: ['--audience', '--in', '--out', '--verify', '--diff', '--data-dir'], flags: ['--local'] };
 const NO_SECTION = { status: 'absent', items: [] };
+// The top-level key that only the private data may hold (the shared-ref
+// line of the private page).
+const PRIVATE_ONLY_KEY = 'sharedRef';
 
 function stop(message) {
   process.stderr.write(`dashboard-render: ${message}\n`);
@@ -165,6 +168,7 @@ function verify(dir, audience) {
   if (doc && audience === AUDIENCE.shared) {
     const untracked = Object.values(doc.sections || {}).reduce((n, section) => n + untrackedItems(section).length, 0);
     if (untracked) reasons.push(`${untracked} items are not tracked`);
+    if (Object.prototype.hasOwnProperty.call(doc, PRIVATE_ONLY_KEY)) reasons.push(`the shared data contains ${PRIVATE_ONLY_KEY}`);
   }
   if (reasons.length) {
     console.log(`refused: ${reasons.join('; ')}`);
