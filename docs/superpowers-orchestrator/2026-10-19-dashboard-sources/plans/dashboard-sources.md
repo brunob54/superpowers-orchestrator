@@ -12,6 +12,7 @@
 - Assumes git accepts `--date=short-local` and `%(committerdate:short-local)` (checked on 2026-10-20 with git 2.50.1: a commit at `2026-01-09T23:30:00+00:00` prints `2026-01-09` with `short` and `2026-01-10` with `short-local` under `TZ=Asia/Tokyo`) — will NOT give local dates on a git version without the `-local` suffix (oldest such version unverified, spec section 4.5).
 - Assumes `%(refname:lstrip=2)` prints `main` where `%(refname:short)` prints `heads/main` because a tag `main` exists (checked on 2026-10-20 with git 2.50.1) — will NOT strip correctly for a ref outside `refs/heads/`, which the Git card never lists.
 - Assumes `git update-ref refs/remotes/origin/tree <tree id>` succeeds and `git rev-parse --verify --quiet refs/remotes/origin/tree^{commit}` then fails (checked on 2026-10-20) — the "not a commit" test case depends on it.
+- Assumes git honours the IANA zone name in `TZ=Asia/Tokyo` (true on macOS and Linux; not checked for Git for Windows, whose native git may read only the POSIX form such as `JST-9`) — the local-date cases of test-04 sections 10 and 11 will NOT pass on a git that ignores the name.
 - Assumes Node honours a change of `process.env.TZ` at run time (Node >= 13) — the daylight-saving test of Task 8 will NOT exercise a time-zone change on an older Node.
 - Assumes the dashboard suite is green before Task 1 (checked on 2026-10-20: 13 test files, 0 failures).
 - Assumes every file this plan edits is tracked by git and none is ignored (checked on 2026-10-20 with `git ls-files --error-unmatch` on all 26 files and `git check-ignore -v` on the plan path).
@@ -51,7 +52,7 @@
 | `docs/guide/README.md`, `README.md`, `hooks/skill-rules.json`, `docs/superpowers-orchestrator/2026-09-29-dashboard/specs/dashboard-design.md` | User documents and the old spec's amendment lines | 11 |
 | `VERSION`, `.claude-plugin/plugin.json`, `.claude-plugin/marketplace.json`, `plugin.universal.yaml`, `README.md`, `RELEASE-NOTES.md` | Release 7.73.0 | 12 |
 
-Task order matters: tasks 3, 5, 6 and 8 edit `template.html` and `tests/dashboard/test-07-template.js` in sequence; tasks 2, 4 and 7 edit `dashboard-extract.js` in sequence; Task 8 uses the extractor output of Task 7; Task 7 uses the constants `LATE`, `TOKYO` and `LOCAL_DAY` that Task 4 adds to `test-04-extract-core.js`. Run the tasks in number order.
+Task order matters: tasks 3, 5, 6 and 8 edit `template.html` and `tests/dashboard/test-07-template.js` in sequence; tasks 2, 4 and 7 edit `dashboard-extract.js` in sequence; Task 8 uses the extractor output of Task 7; Task 7 uses the constants `LATE`, `TOKYO` and `LOCAL_DAY` that Task 4 adds to `test-04-extract-core.js`. Run the tasks in number order. Run every task alone, one after another, never in a parallel wave: each task runs the whole dashboard suite while the new tests of another task fail on purpose, and Task 2 removes `lineAtOccurrence` and `RESOLVED_MARK` from `dashboard-parse.js`, which `dashboard-sync.js` uses until Task 1 is done.
 
 All test commands run from the repository root. One test file runs alone with `node tests/dashboard/<file>`; it prints `PASS:`/`FAIL:` lines and `<n> passed, <m> failed`, and exits 1 on any failure.
 
@@ -80,7 +81,7 @@ All test commands run from the repository root. One test file runs alone with `n
 - `tests/dashboard/test-10-sync-check.js` and `tests/dashboard/test-11-sync-apply.js` (rewritten)
   - Must convey: every case that was built on `resolve-open-item` now runs on `set-part`, and the security cases keep their coverage.
   - Invariant: neither file builds a proposal of kind `resolve-open-item` except the one that checks the removed-kind reason.
-  - Verification: `grep -c "resolve-open-item" tests/dashboard/test-10-sync-check.js tests/dashboard/test-11-sync-apply.js` prints `test-10…:2` (the helper and the reason constant) and `test-11…:2`.
+  - Verification: `grep -c "kind: 'resolve-open-item'" tests/dashboard/test-10-sync-check.js tests/dashboard/test-11-sync-apply.js` prints `1` for each file (the one proposal builder of the removed kind; a comment or a reason text that names the kind does not count). The security sections stay: `grep -c -E "^// 7[a-e]\." tests/dashboard/test-10-sync-check.js` prints `5` and `grep -c -E "^// 1[0-5]\." tests/dashboard/test-11-sync-apply.js` prints `6` (the same counts as at 971beb2b).
 
 - [ ] **Step 1: Rewrite `tests/dashboard/test-10-sync-check.js` on `set-part`**
 
@@ -310,10 +311,10 @@ const hiddenInNote = {
   escapeNote: setPart(4, { note: 'a\u001b(0b' }),
   deleteNote: setPart(4, { note: 'a\u007fb' }),
   nextLineNote: setPart(4, { note: 'a\u0085b' }),
-  lineSeparatorNote: setPart(4, { note: 'a b' }),
-  paragraphSeparatorNote: setPart(4, { note: 'a b' }),
-  rightToLeftNote: setPart(4, { note: 'a‮b' }),
-  isolateNote: setPart(4, { note: 'a⁦b' }),
+  lineSeparatorNote: setPart(4, { note: 'a\u2028b' }),
+  paragraphSeparatorNote: setPart(4, { note: 'a\u2029b' }),
+  rightToLeftNote: setPart(4, { note: 'a\u202eb' }),
+  isolateNote: setPart(4, { note: 'a\u2066b' }),
 };
 // 7b. The anchor fields and the branch hold no line break or control
 // character, so one proposal cannot print a forged verdict block.
@@ -479,10 +480,10 @@ h.eq('the row is rewritten', rowsOf(d)[AT4], '| 4 | fourth | done | 2026-09-29 |
 h.eq('a tracked file is named as tracked', lines(result)[1], `changed ${W} (tracked)`);
 
 // 4. Carriage returns and a byte order mark are kept.
-d = freshRepo('apply-crlf', `﻿${WORKLOG.split('\n').join('\r\n')}`);
+d = freshRepo('apply-crlf', `\ufeff${WORKLOG.split('\n').join('\r\n')}`);
 apply(d, folderOf({ c: done(5) }), ['c']);
 const raw = read(d, W);
-h.eq('byte order mark, carriage returns, changed line', [raw.startsWith('﻿'), raw.split('\n').slice(0, -1).every((line) => line.endsWith('\r')), raw.split('\r\n')[AT5]], [true, true, DONE5]);
+h.eq('byte order mark, carriage returns, changed line', [raw.startsWith('\ufeff'), raw.split('\n').slice(0, -1).every((line) => line.endsWith('\r')), raw.split('\r\n')[AT5]], [true, true, DONE5]);
 
 // 5. The file changes between the read and the rename: the check runs again.
 d = freshRepo('apply-race');
@@ -625,14 +626,14 @@ h.finish();
 - [ ] **Step 3: Run the two test files to verify they fail**
 
 Run: `node tests/dashboard/test-10-sync-check.js | grep FAIL; node tests/dashboard/test-11-sync-apply.js | grep FAIL`
-Expected: FAIL lines for `the kind rules give their own reasons` (got the old reason `kind is not resolve-open-item or set-part` or the old `resolve-open-item allows only session-log.md`) and `an applying proposal of the removed kind: invalid with its reason, nothing written`.
+Expected: FAIL lines for `every rule gives invalid` and `the kind rules give their own reasons` (the old `basicInvalid` accepts `oldResolve()`, and `evaluate` then gives it the verdict `file-missing`, because the fixture has no `session-log.md`), and `an applying proposal of the removed kind: invalid with its reason, nothing written`.
 
 - [ ] **Step 4: Implement the change in `skills/dashboard/scripts/dashboard-sync.js`**
 
 Before removing, search the repository for each name (Global Constraint 2):
 
-Run: `git grep -n -E "findResolveTarget|DEFAULT_NOTE|KIND\.resolve" -- skills tests`
-Expected: hits in `skills/dashboard/scripts/dashboard-sync.js`, and one hit in `skills/dashboard/template.html` (`EDIT_KIND.resolve`, a different constant of the page, which Task 3 removes). No other caller of the sync names.
+Run: `git grep -n -E "findResolveTarget|DEFAULT_NOTE|KIND\.resolve"` (the whole repository, no pathspec)
+Expected: hits in `skills/dashboard/scripts/dashboard-sync.js`, and one hit in `skills/dashboard/template.html` (`EDIT_KIND.resolve`, a different constant of the page, which Task 3 removes). No other caller of the sync names. Hits in documents under `docs/` (specs, plans, review logs and acceptance notes, this plan and its spec included) are not callers and do not count.
 
 Replace the line `const KIND = { resolve: 'resolve-open-item', setPart: 'set-part' };` with:
 
@@ -749,7 +750,7 @@ git commit -m "feat(dashboard): sync keeps only set-part; a resolve-open-item pr
   - Interface not externally pinned.
 - Removal in `dashboard-parse.js` of `openItems`, `openItemText`, `lineAtOccurrence`, `RESOLVED_MARK`, `OPEN_LIST`, `OPEN_ONE_LINE`, `ONE_LINE_PREFIX`, `LIST_END`, `BULLET`, `CONTINUATION` and their exports
   - Invariants: `normalizeLine`, `occurrenceOf`, `lineItemId` are byte-for-byte unchanged; every other export stays.
-  - Verification: `git diff 971beb2b -- skills/dashboard/scripts/dashboard-parse.js | grep -E "^[-+].*(function normalizeLine|function occurrenceOf|function lineItemId|RESOLVED_SUFFIX =|SUPERSEDED_MARK =|ID_SEPARATOR =|SESSION_LOG =)"` prints nothing; `node tests/dashboard/test-02-parse.js` passes.
+  - Verification: `for f in normalizeLine occurrenceOf lineItemId; do diff <(git show 971beb2b:skills/dashboard/scripts/dashboard-parse.js | sed -n "/^function $f(/,/^}/p") <(sed -n "/^function $f(/,/^}/p" skills/dashboard/scripts/dashboard-parse.js) || echo "CHANGED: $f"; done` prints nothing (each of the three function texts, from its `function` line to its closing `}`, is compared whole with its text at 971beb2b); `git diff 971beb2b -- skills/dashboard/scripts/dashboard-parse.js | grep -E "^[-+].*(RESOLVED_SUFFIX =|SUPERSEDED_MARK =|ID_SEPARATOR =|SESSION_LOG =)"` prints nothing; `node tests/dashboard/test-02-parse.js` passes.
 - `tests/dashboard/test-02-parse.js`, `test-05-extract-files.js`, `test-06-privacy.js` (edited)
   - Must convey: the dropped cases are exactly the open-item and `lineAtOccurrence` cases; the `normalizeLine` cases and the cases of every kept function stay.
   - Verification: `grep -n -E "openItems|openItemText|lineAtOccurrence|sessionOpenItems" tests/dashboard/test-02-parse.js tests/dashboard/test-05-extract-files.js tests/dashboard/test-06-privacy.js` prints only the two test-05 lines that assert the section is absent.
@@ -805,8 +806,8 @@ Expected: FAIL for `no sessionOpenItems section`, `sessions: the Goal lines of t
 
 Search first (Global Constraint 2):
 
-Run: `git grep -l -w -E "sessionOpenItems|openItem|olderUnresolved|openItems|openItemText|lineAtOccurrence|RESOLVED_MARK|OPEN_LIST|OPEN_ONE_LINE|ONE_LINE_PREFIX|LIST_END|BULLET|CONTINUATION" -- skills hooks tests`
-Expected: exactly these files: `skills/dashboard/scripts/dashboard-extract.js`, `skills/dashboard/scripts/dashboard-parse.js`, `skills/dashboard/template.html` (Task 3 removes its names), `tests/dashboard/test-05-extract-files.js` (the two absence checks of Step 1), `tests/dashboard/test-07-template.js` and `tests/dashboard/test-08-template-edits.js` (Task 3 changes both). No other caller. (`-w` matches whole words only, so names such as `SHARED_BULLET` in other suites do not count.)
+Run: `git grep -l -w -E "sessionOpenItems|openItem|olderUnresolved|openItems|openItemText|lineAtOccurrence|RESOLVED_MARK|OPEN_LIST|OPEN_ONE_LINE|ONE_LINE_PREFIX|LIST_END|BULLET|CONTINUATION"` (the whole repository, no pathspec)
+Expected: exactly these files: `skills/dashboard/scripts/dashboard-extract.js`, `skills/dashboard/scripts/dashboard-parse.js`, `skills/dashboard/template.html` (Task 3 removes its names), `tests/dashboard/test-05-extract-files.js` (the two absence checks of Step 1), `tests/dashboard/test-07-template.js` and `tests/dashboard/test-08-template-edits.js` (Task 3 changes both). No other caller. (`-w` matches whole words only, so names such as `SHARED_BULLET` in other suites do not count.) Hits in documents under `docs/` (specs, plans, review logs and acceptance notes, this plan and its spec included) are not callers and do not count. This search also covers some names that Task 3 removes from the template (`EDIT_KIND.resolve` is covered by the search of Task 1; `ITEM_KIND.openItem` and the `sessionOpenItems` entries of `TABS` and `TITLES` by this one). The kind string `open-item` and the label `Mark resolved` are not matched by `-w openItem`; Task 3 Step 4 searches for them.
 
 In `SECTION`, remove `sessionOpenItems: 'sessionOpenItems', `:
 
@@ -892,8 +893,8 @@ module.exports = {
 
 - [ ] **Step 6: Run the tests to verify they pass**
 
-Run: `node tests/dashboard/test-02-parse.js | tail -1; node tests/dashboard/test-05-extract-files.js | tail -1; node tests/dashboard/test-06-privacy.js | tail -1; git diff 971beb2b -- skills/dashboard/scripts/dashboard-parse.js | grep -E "^[-+].*(function normalizeLine|function occurrenceOf|function lineItemId|RESOLVED_SUFFIX =|SUPERSEDED_MARK =|ID_SEPARATOR =|SESSION_LOG =)"`
-Expected: three lines `<n> passed, 0 failed`; the grep prints nothing.
+Run: `node tests/dashboard/test-02-parse.js | tail -1; node tests/dashboard/test-05-extract-files.js | tail -1; node tests/dashboard/test-06-privacy.js | tail -1; for f in normalizeLine occurrenceOf lineItemId; do diff <(git show 971beb2b:skills/dashboard/scripts/dashboard-parse.js | sed -n "/^function $f(/,/^}/p") <(sed -n "/^function $f(/,/^}/p" skills/dashboard/scripts/dashboard-parse.js) || echo "CHANGED: $f"; done; git diff 971beb2b -- skills/dashboard/scripts/dashboard-parse.js | grep -E "^[-+].*(RESOLVED_SUFFIX =|SUPERSEDED_MARK =|ID_SEPARATOR =|SESSION_LOG =)"`
+Expected: three lines `<n> passed, 0 failed`; the loop and the grep print nothing.
 
 Run: `bash tests/dashboard/run-tests.sh | tail -1`
 Expected: `dashboard suite: every test file passed`
@@ -921,12 +922,15 @@ git commit -m "feat(dashboard): drop session open items from the extractor; sess
 **Contract:**
 - Template removals (`sessionOpenItems` in `TABS` and `TITLES`, the `open-item` case of `itemLines`, the `olderUnresolved` extra, the "Mark resolved" button, `EDIT_KIND.resolve`, `ITEM_KIND.openItem`, the resolve branches of `changesSomething`, `proposalBase`, `canEditItem`)
   - Invariants: the "Waits for me" tab holds `unfinishedRuns`, `git`, `activeWorklogs`, `currentGoal` in this order; the template text holds neither `Mark resolved` nor `resolve-open-item` nor `sessionOpenItems` nor `olderUnresolved`; `proposalBase` always builds a `set-part` proposal with `anchor.part` set; only a `part` item on a branch gets edit controls; a `set-part` edit still writes one pending proposal.
-  - Verification: `node tests/dashboard/test-07-template.js`, `node tests/dashboard/test-08-template-edits.js`, and `grep -c -E "Mark resolved|resolve-open-item|sessionOpenItems|olderUnresolved|open-item'" skills/dashboard/template.html` prints `0`.
+  - Verification: `node tests/dashboard/test-07-template.js`, `node tests/dashboard/test-08-template-edits.js`, and `grep -c -E "Mark resolved|resolve-open-item|sessionOpenItems|olderUnresolved|'open-item'" skills/dashboard/template.html` prints `0` (the opening quote of `'open-item'` keeps the work-log case `case 'worklog-open-item'`, which stays, out of the count).
 - `sessionLine(item)` (the `session` case of `itemLines`)
   - Inputs: a `session` item with `entry` and `goal`. Output: one line.
   - Invariants: `entry` that starts with `## YYYY-MM-DD HH:MM` → `YYYY-MM-DD HH:MM · <goal>`; any other `entry`, or none → `<goal>`; never throws.
   - Verification: the two session checks of test-07.
   - Interface not externally pinned.
+- `tests/dashboard/test-07-template.js` and `tests/dashboard/test-08-template-edits.js` (edited)
+  - Must convey: the dropped or rewritten cases are exactly those of the open-item card, the open-item line and the "Mark resolved" control (with the write counts that included the open item); every `set-part` case and every case of another card stays.
+  - Verification: both files pass; the task review compares the removed and changed lines of `git diff -- tests/dashboard/test-07-template.js tests/dashboard/test-08-template-edits.js` with this list.
 
 - [ ] **Step 1: Write the failing test changes in `tests/dashboard/test-07-template.js`**
 
@@ -1007,7 +1011,7 @@ h.check('the template has no "Mark resolved" control', !TEMPLATE.includes('Mark 
   buttons(doc)[0].listeners.click();
 ```
 
-- Replace the boot owner lines with:
+- Replace the two boot owner lines (the line that starts `const owner = await boot(fakeRuntime(true, [{ id: OPEN_ID,` and the check `h.eq('the owner gets the controls and the pending label', …)` after it) with:
 
 ```js
   const owner = await boot(fakeRuntime(true, [{ id: PART_ID, doc: { state: 'pending', closedAt: null } }], []));
@@ -1022,6 +1026,11 @@ Run: `node tests/dashboard/test-07-template.js | grep FAIL; node tests/dashboard
 Expected: test-07 FAIL for `tab 1 sections, in order`, `a session line starts with the date and time of its entry`, `a private page shows the banner and its sections` and `the fetched data renders its sections` (the old `TABS` still lists `sessionOpenItems`, so the first tab has 5 cards); test-08 FAIL for `the template has no "Mark resolved" control`. (The other test-08 checks already pass: the data no longer holds an open item.)
 
 - [ ] **Step 4: Implement in `skills/dashboard/template.html`**
+
+Search first (Global Constraint 2) for the two names that the searches of Task 1 and Task 2 do not cover, the kind string `open-item` and the label `Mark resolved`:
+
+Run: `git grep -l -E "'open-item'|\"open-item\"|Mark resolved"` (the whole repository, no pathspec)
+Expected: outside `docs/`, only `skills/dashboard/template.html` (the names this step removes) and the test files that Steps 1 and 2 changed (`tests/dashboard/test-07-template.js`, `tests/dashboard/test-08-template-edits.js`), where a hit can only be a check that the control or the card is absent. Task 2 has already removed the extractor's `openItem` kind and the test-05 lines that named it. Hits in documents under `docs/` are not callers and do not count.
 
 Replace `TABS` and `TITLES` with:
 
@@ -1063,7 +1072,7 @@ In `itemLines`, delete the line `case 'open-item': return [text(item.text)].conc
 
 In `sectionExtras`, delete the line `if (id === 'sessionOpenItems' && section.olderUnresolved) lines.push(…);`.
 
-Replace `changesSomething`, `proposalBase` and `canEditItem` with:
+Replace `changesSomething`, `proposalBase` and `canEditItem`, each with the comment block directly above it (the comment above `changesSomething` starts `// An open item always changes;`), with:
 
 ```js
   // A part edit changes something when a given status or note differs from
@@ -1109,7 +1118,7 @@ In `editControls`, replace the lines from `const start = item.kind === ITEM_KIND
 
 - [ ] **Step 5: Run the tests to verify they pass**
 
-Run: `node tests/dashboard/test-07-template.js | tail -1; node tests/dashboard/test-08-template-edits.js | tail -1; grep -c -E "Mark resolved|resolve-open-item|sessionOpenItems|olderUnresolved|open-item'" skills/dashboard/template.html`
+Run: `node tests/dashboard/test-07-template.js | tail -1; node tests/dashboard/test-08-template-edits.js | tail -1; grep -c -E "Mark resolved|resolve-open-item|sessionOpenItems|olderUnresolved|'open-item'" skills/dashboard/template.html`
 Expected: two lines `<n> passed, 0 failed`; then `0`.
 
 Run: `bash tests/dashboard/run-tests.sh | tail -1`
@@ -1132,10 +1141,10 @@ git commit -m "feat(dashboard): remove the open-item card and control; date the 
 
 **Security flag:** `none`
 
-**Does NOT cover:** the template's use of these fields (Task 5). The shared run never sets `current`. A branch literally named `detached` is not told apart from a detached HEAD (the existing `currentBranch()` of `git-runs.js` has the same limit; `git-runs.js` is not changed, Global Constraint 7). The checked-out branch is listed only when it is unmerged (no change to the selection).
+**Does NOT cover:** the template's use of these fields (Task 5). The shared run never sets `current`. On a detached HEAD no item is marked: `currentBranch()` of `git-runs.js` returns the constant `DETACHED` (`'detached'`) there, so the code compares with the branch name only when `current` is not `DETACHED`. As a result, a checked-out branch literally named `detached` gets no mark (the same limit that `commit.branch` already has; `git-runs.js` is not changed, Global Constraint 7). The checked-out branch is listed only when it is unmerged (no change to the selection).
 
 **Contract:**
-- `commitMeta(context)`: adds `date` = `git log -1 --format=%cd --date=short-local <context.ref>`, in both audiences.
+- `commitMeta(context)`: adds `date` = `git log -1 --no-walk --format=%cd --date=short-local <context.ref>`, in both audiences. `--no-walk` keeps git from reading the parent commits: without it, `git log -1` exits 128 on a history whose parent commit object is missing (checked on 2026-10-20 with git 2.50.1), and `commitMeta` runs outside the error handling of `buildSections`, so the extract would stop with a stack trace instead of giving the existing error sections that test-04 section 8 and test-06 case (10) expect. Where the command succeeds, its output is the same as without `--no-walk`.
 - `commits(context)`: dates with `--date=short-local`.
 - `localBranches(context)`: names with `%(refname:lstrip=2)`, dates with `%(committerdate:short-local)`; the item whose name equals the checked-out branch gets `current: true`, all others have no `current` field.
 - `sharedBranches(context)`: dates with `--date=short-local`; never a `current` field.
@@ -1209,10 +1218,12 @@ Replace the `items` statement of `localBranches` with:
 
 ```js
   const current = currentBranch();
+  // On a detached HEAD, currentBranch() returns DETACHED: no item is current.
+  const isCurrent = (name) => current !== DETACHED && name === current;
   const items = mustLines(['for-each-ref', ...filter, `--format=%(refname:lstrip=2)%09%(committerdate:${LOCAL_DATE})`, HEADS])
     .map((row) => row.split('\t'))
     .filter(([name]) => name !== base)
-    .map(([name, date]) => keyItem(context, SECTION.git, name, null, Object.assign({ kind: KIND.branch, name, date }, name === current ? { current: true } : {})));
+    .map(([name, date]) => keyItem(context, SECTION.git, name, null, Object.assign({ kind: KIND.branch, name, date }, isCurrent(name) ? { current: true } : {})));
 ```
 
 In `sharedBranches`, replace `const date = must(['log', '-1', '--format=%cd', '--date=short', upstream]);` with:
@@ -1233,7 +1244,9 @@ function commitMeta(context) {
   return {
     sha,
     short: sha.slice(0, SHORT_LENGTH),
-    date: must(['log', '-1', '--format=%cd', `--date=${LOCAL_DATE}`, context.ref]),
+    // --no-walk: read only this commit, never its parents (a missing parent
+    // object must not stop the extract).
+    date: must(['log', '-1', '--no-walk', '--format=%cd', `--date=${LOCAL_DATE}`, context.ref]),
     branch: context.shared ? remoteName(context.ref) : (current === DETACHED ? null : current),
     ref: context.ref,
     defaultBranch: context.shared ? null : defaultBranch(),
@@ -1349,7 +1362,7 @@ h.eq('git card: no old branch makes no details element', gitCard([branchItem('a'
 - [ ] **Step 2: Run the test to verify it fails**
 
 Run: `node tests/dashboard/test-07-template.js | grep FAIL`
-Expected: FAIL for the two as-of checks and the four git-card checks (got the old `, built` form and the extractor order with no `<details>`).
+Expected: FAIL for the two as-of checks and for three of the four git-card checks (got the old `, built` form and the extractor order with no `<details>`). The check `git card: no old branch makes no details element` already passes before the change: the old page also makes no `<details>` element.
 
 - [ ] **Step 3: Implement in `skills/dashboard/template.html`**
 
@@ -1458,6 +1471,9 @@ In `renderSection`, replace the last list line `if (section.items.length) card.a
 Run: `node tests/dashboard/test-07-template.js | tail -1; node tests/dashboard/test-08-template-edits.js | tail -1`
 Expected: two lines `<n> passed, 0 failed`.
 
+Run: `bash tests/dashboard/run-tests.sh | tail -1`
+Expected: `dashboard suite: every test file passed`
+
 - [ ] **Step 5: Commit**
 
 ```bash
@@ -1483,7 +1499,7 @@ git commit -m "feat(dashboard): true as-of line; Git card by date with current m
   - Must convey: for each section, where its items are read (file, folder or git command; for `unfinishedRuns` and `runHistory` the folder and the kind of refs scanned) and the rule that selects them; on the shared page, the shared run's own source for `unfinishedRuns`, `git` and `commits`.
   - Invariants: Global Constraint 6. The Source line is `card.children[1]` (directly after `<h2>`) with class `muted source` in all five states; exactly one `Source: ` line per card; on the shared page a `SHARED_SOURCES` sentence replaces the `SOURCES` one; no sentence holds an absolute path; the sentences of `sessions`, `commits` (both tables) and `releases` contain the values of `SESSION_ENTRIES`, `COMMIT_LIMIT`, `RELEASE_LIMIT` read from the extractor source.
   - Verification: the Source checks of test-07 and the numbers check of test-08.
-  - Sentence wording is free within these rules; the reference sentences below were checked against the builders of `dashboard-extract.js` and `scanRuns` of `skills/pickup/scripts/git-runs.js`.
+  - Sentence wording is free within these rules; the reference sentences below were checked against the builders of `dashboard-extract.js` and `scanRuns` of `skills/pickup/scripts/git-runs.js`. No test reads the selection rule of a sentence (spec section 7, failure mode 2): an implementer who changes a reference sentence checks the new text against the builder of its section, and the whole-branch code review checks every changed sentence the same way.
 
 - [ ] **Step 1: Write the failing tests**
 
@@ -1699,21 +1715,30 @@ h.eq('following, nothing not shown: the fields, in local dates', fieldsOf(info),
 h.eq('following, nothing not shown: the report line', reports, [`The shared page follows origin/main, last commit ${LOCAL_DAY}. ${NEVER}`]);
 h.write(sr, 'file.txt', 'one\n');
 h.commit(sr, 'not shown 1', ['file.txt'], '2026-01-11T23:30:00+00:00');
-[info] = withData();
+[info, reports] = withData();
 h.eq('one commit not shown, with its local date', [info.notShown, info.oldestNotShown], [1, '2026-01-12']);
+h.eq('one commit not shown: the report line', reports, [`The shared page follows origin/main, last commit ${LOCAL_DAY}. 1 commit of this branch is not in origin/main; it is from 2026-01-12. ${NEVER}`]);
 h.write(sr, 'file.txt', 'two\n');
 h.commit(sr, 'not shown 2', ['file.txt'], '2026-01-14T12:00:00+00:00');
 [info, reports] = withData();
 h.eq('two commits not shown: the count and the oldest date', [info.notShown, info.oldestNotShown], [2, '2026-01-12']);
 h.eq('two commits not shown: the report line', reports, [`The shared page follows origin/main, last commit ${LOCAL_DAY}. 2 commits of this branch are not in origin/main; the oldest is from 2026-01-12. ${NEVER}`]);
+// A tag with the same name as the shared value: git resolves a bare
+// "origin/main" to the tag (refs/tags comes before refs/remotes), so this
+// case fails any command that does not name refs/remotes/origin/main.
+h.git(sr, 'tag', 'origin/main', 'HEAD');
+[info] = withData();
+h.eq('a tag with the same name as the shared value is not followed', [info.short, info.notShown], [tip, 2]);
+h.git(sr, 'tag', '-d', 'origin/main');
 stateFile('shared.json', JSON.stringify({ generatedAt: '2026-10-01T10:05:00+02:00' }));
 stateFile('private.json', JSON.stringify({ generatedAt: '2026-10-15T09:00:00+02:00' }));
-[info] = withData();
+[info, reports] = withData();
 h.eq('published and previousBuild come from the state files', [info.published, info.previousBuild], ['2026-10-01 10:05', '2026-10-15 09:00']);
+h.eq('published: the report line', reports, [`The shared page follows origin/main, last commit ${LOCAL_DAY}. 2 commits of this branch are not in origin/main; the oldest is from 2026-01-12. Last published 2026-10-01 10:05.`]);
 stateFile('shared.json', 'not json');
 stateFile('private.json', '{');
 [info] = withData();
-h.eq('state files that are not valid JSON give null', [info.published, info.previousBuild], [null, null]);
+h.eq('state files that are not valid JSON give null', [typeof info, info.published, info.previousBuild], ['object', null, null]);
 removeState('shared.json', 'private.json');
 setKey('sharedRef=origin/gone');
 [info] = withData();
@@ -1738,7 +1763,7 @@ Expected: FAIL for every section-11 check except `every private run exits 0`: th
 
 - [ ] **Step 3: Implement in `skills/dashboard/scripts/dashboard-extract.js`**
 
-Extend the usage comment at the top, after the line `// repository name, and fails closed. The state folder`… block, by adding these lines before `// Exit status:`:
+Extend the usage comment at the top, after the line `// repo.name, and fails closed. The state folder`… block, by adding these lines before `// Exit status:`:
 
 ```js
 // The private run with --data-dir also reads config.json and the last
@@ -1811,7 +1836,8 @@ function followedRef(context, name) {
     const notShown = Number(must(['rev-list', '--count', range]));
     return {
       short: must(['rev-parse', `${ref}^{commit}`]).slice(0, SHORT_LENGTH),
-      date: must(['log', '-1', '--format=%cd', `--date=${LOCAL_DATE}`, ref]),
+      // --no-walk, as in commitMeta: read only the tip, never its parents.
+      date: must(['log', '-1', '--no-walk', '--format=%cd', `--date=${LOCAL_DATE}`, ref]),
       notShown,
       oldestNotShown: notShown ? mustLines(['log', '--reverse', '--format=%cd', `--date=${LOCAL_DATE}`, range])[0] : null,
     };
@@ -2009,12 +2035,16 @@ twiceApp.renderPage(twiceView);
 twiceApp.renderPage(twiceView);
 h.eq('two renders: no created shared-ref element, one line in the static one', [twice.created.filter((node) => node.getAttribute('id') === 'shared-ref').length, twice.getElementById('shared-ref').textContent], [0, `${FOLLOWS} ${LAST}`]);
 h.check('the template places id="shared-ref" directly after id="as-of"', /<p id="as-of" class="muted"><\/p>\s*<p id="shared-ref" hidden><\/p>/.test(TEMPLATE));
-// Days are calendar days, also across a daylight-saving change (Europe/Berlin
-// moves its clocks on 2026-03-29).
+// Days are calendar days, also across a daylight-saving change. Europe/Berlin
+// moves its clocks back on 2026-10-25: a count of local midnights gives
+// 14.04 days from 2026-10-12 to 2026-10-26, which would wrongly be a warning,
+// so this case fails a count that divides a difference of local times. (The
+// spring change of 2026-03-29 gives 13.96 and 14.96 days, which round the
+// same way as the calendar count, so it cannot catch that defect.)
 const savedZone = process.env.TZ;
 process.env.TZ = 'Europe/Berlin';
-const DST_BUILT = '2026-03-30T12:00:00+02:00';
-h.eq('across a daylight-saving change: 14 days is information, 15 days a warning', [refLine(follow({ notShown: 1, oldestNotShown: '2026-03-16' }), 'main', DST_BUILT)[1], refLine(follow({ notShown: 1, oldestNotShown: '2026-03-15' }), 'main', DST_BUILT)[1]], [INFO, WARN]);
+const DST_BUILT = '2026-10-26T12:00:00+01:00';
+h.eq('across a daylight-saving change: 14 days is information, 15 days a warning', [refLine(follow({ notShown: 1, oldestNotShown: '2026-10-12' }), 'main', DST_BUILT)[1], refLine(follow({ notShown: 1, oldestNotShown: '2026-10-11' }), 'main', DST_BUILT)[1]], [INFO, WARN]);
 if (savedZone === undefined) delete process.env.TZ; else process.env.TZ = savedZone;
 
 // The same wording (spec section 6): the extractor's report line and the page
@@ -2057,7 +2087,7 @@ sameWording('sharing off');
 - [ ] **Step 3: Run the test to verify it fails**
 
 Run: `node tests/dashboard/test-07-template.js | grep FAIL`
-Expected: FAIL for every shared-ref check that expects a visible line (the element stays empty and hidden), for `the template places id="shared-ref" …`, and for the five `same wording` checks (got `''` against the extractor's line).
+Expected: FAIL for every shared-ref check except those that expect a hidden, empty element (before the change the element stays empty and hidden and has no class, so the checks of a class fail too, also those that expect the information style), for `the template places id="shared-ref" …`, and for the five `same wording` checks (got `''` against the extractor's line).
 
 - [ ] **Step 4: Implement in `skills/dashboard/template.html`**
 
@@ -2184,6 +2214,8 @@ git commit -m "feat(dashboard): the shared-ref line on the private page" --trail
   - Invariants: no top-level `sharedRef` key and no `current` field on any git item, also with `--data-dir` naming a configuration whose sharing is on and with an unmerged branch checked out; no `shared page:` line on standard error.
   - Verification: `node tests/dashboard/test-06-privacy.js`.
 - `tests/dashboard/test-09-render.js` session fixture: moved from an `Open:` line to a `Goal:` line (a kept kind, `session`).
+  - Invariant: the edit only keeps the fixture in a form the extractor still parses after Task 2. The check `(1) no marker in the shared page files` tests that the shared extract reads only the pushed ref: `session-log.md` is written after the push and never committed, so its marker reaches no data with either line, and no private data is built in that case.
+  - Verification: `node tests/dashboard/test-09-render.js`.
 
 - [ ] **Step 1: Write the failing tests**
 
@@ -2274,14 +2306,14 @@ git commit -m "feat(dashboard): --verify refuses sharedRef in shared data" --tra
 
 **Security flag:** `none`
 
-**Does NOT cover:** SKILL.md `sync` (no change: step 3 already lets the owner reject an `invalid` proposal). `share off` (it stores `sharing=off` only; the private page shows "Sharing is off" from the next `refresh` on).
+**Does NOT cover:** SKILL.md `sync` (no change: step 3 already lets the owner reject an `invalid` proposal). `share off` (it stores `sharing=off` only; the private page shows "Sharing is off" from the next `refresh` on). SKILL.md `local` (no change: its private extract also computes `sharedRef`, so the local file shows the shared-ref line, and the extractor prints the `dashboard-extract: shared page:` line on standard error with exit 0; that line is information, not an error, and `local` does not repeat it, because its report is only the file path).
 
 **Contract:**
 - SKILL.md wording (description line 4, `refresh` steps 4 and 8, `share` step 5)
   - Must convey: the description no longer lists "open items of recent sessions"; the model repeats the extractor's `dashboard-extract: shared page:` line, without the `dashboard-extract: ` prefix, in the `refresh` report; after a successful shared publish, `share` copies `<scratchpad>/dashboard/shared.json` to `<state>/shared.json`, as `refresh` step 7 does.
   - Invariants: every script command line still carries `--data-dir "${CLAUDE_PLUGIN_DATA}"`; every existing pinned phrase of test-12 stays.
   - Verification: `node tests/dashboard/test-12-skill-text.js`.
-  - Sentence wording is free; the pinned phrases of Step 1 bind as test strings.
+  - Sentence wording is free, except for three strings that the new checks of Step 1 read word for word: the `refresh` text holds `` repeat that line in the report without its `dashboard-extract: ` prefix ``; the `share` section holds the line `cp "<scratchpad>/dashboard/shared.json" "<state>/shared.json"`; the description does not hold `open items of recent sessions`.
 
 - [ ] **Step 1: Write the failing tests in `tests/dashboard/test-12-skill-text.js`**
 
@@ -2311,8 +2343,9 @@ In `refresh` step 4, replace the paragraph after the code block with:
 
 ```markdown
    Exit code 2 of the extractor (not a git repository, no commit yet) stops
-   the refresh with its message; nothing is published. When sharing is set
-   up, the extractor also prints one line on standard error that starts with
+   the refresh with its message; nothing is published. When a shared page is
+   configured (sharing on, or a shared page left from an earlier share), the
+   extractor also prints one line on standard error that starts with
    `dashboard-extract: shared page:`; keep it for the report of step 8.
 ```
 
@@ -2344,6 +2377,9 @@ Replace `share` step 5 with:
 Run: `node tests/dashboard/test-12-skill-text.js | tail -1`
 Expected: `<n> passed, 0 failed`
 
+Run: `bash tests/dashboard/run-tests.sh | tail -1`
+Expected: `dashboard suite: every test file passed`
+
 - [ ] **Step 5: Commit**
 
 ```bash
@@ -2368,7 +2404,7 @@ git commit -m "docs(dashboard): report the shared-page line; share keeps shared.
 **Contract:**
 - `docs/guide/README.md`, dashboard passage
   - Must convey: no session open items and no "Mark resolved" control; the "Source:" line of each card; the commit date and the changed-file count in the "as of" line; the shared-ref line with its texts, its two warning rules (old work not shown for more than 14 days, shared publish failing) and the fact that it updates only at `refresh`; the "sharing off" line; the folded old branches and `[current]` of the Git card.
-  - Verification: `grep -c -E "Mark resolved|open items of the recent" docs/guide/README.md` prints `0`; `grep -c -E "Source:|shared-ref line|Sharing is off|older branches|\[current\]|tracked files changed" docs/guide/README.md` prints at least `6`.
+  - Verification: `grep -c -E "Mark resolved|open items of the recent" docs/guide/README.md` prints `0`; `for t in 'Source:' 'shared-ref line' 'Sharing is off' 'older branches' '\[current\]' 'tracked files changed' '14 days' 'next .refresh.'; do grep -q -E "$t" docs/guide/README.md || echo "MISSING $t"; done` prints nothing (each of the eight terms is checked on its own).
 - `README.md` lines 39 and 370
   - Must convey: "open items" in the dashboard bullets means work-log open items.
   - Verification: `grep -n "dashboard" README.md | grep -c "work logs and their open items"` prints `2`.
@@ -2379,8 +2415,8 @@ git commit -m "docs(dashboard): report the shared-page line; share keeps shared.
 
 - [ ] **Step 1: Check `hooks/skill-rules.json`**
 
-Run: `node -e "const r=require('./hooks/skill-rules.json').rules.find((x)=>x.skill==='dashboard'); console.log(JSON.stringify([r.keywords, r.intentPatterns]))" | grep -c -i -E "open item|session|resolve"`
-Expected: `0` (no keyword or pattern fits only session open items; no edit).
+Run: `node -e "const r=require('./hooks/skill-rules.json').rules.find((x)=>x.skill==='dashboard'); const text=JSON.stringify([r.keywords, r.intentPatterns]); console.log(r.keywords.length > 0, /open item|session|resolve/i.test(text))"`
+Expected: `true false` (the entry exists and has keywords; no keyword or pattern fits only session open items; no edit). A failure of the command prints a stack trace, never `true false`.
 
 - [ ] **Step 2: Edit `docs/guide/README.md`**
 
@@ -2398,11 +2434,12 @@ orchestration topic folders, the closed work logs, the recent commits, the
 goals of the recent sessions (newest first, each with the date and time of its
 `session-log.md` entry) and the known issues. The repository files stay the
 only source of truth: the page is a view of them, as of its last refresh.
-Since v7.73.0 the page no longer lists the open items of `session-log.md`: no
-tool marked them as closed, so the page showed items that were already fixed.
+Since v7.73.0 the page no longer lists the open items of `session-log.md`:
+the skill that writes them never marks them as closed (only the dashboard's
+own `sync` did), so the page showed items that were already fixed.
 ```
 
-After the "**Two pages.**" paragraph (it ends with `make only the shared page's link public.`), insert:
+After the "**Two pages.**" paragraph (it ends with `make only the shared page's link public.`, which spans two lines in the file; the insertion point is directly before the line that starts `**Edits.**`), insert:
 
 ```markdown
 **What the page says about itself** (since v7.73.0):
@@ -2440,7 +2477,7 @@ After the "**Two pages.**" paragraph (it ends with `make only the shared page's 
   90 days)"; the checked-out branch is never folded.
 ```
 
-Replace the start of the "**Edits.**" paragraph, `**Edits.** On the private page you can mark an open item of \`session-log.md\` as resolved, or change the status or the note of a part of a work log.` (it spans two lines in the file), with:
+Replace the start of the "**Edits.**" paragraph, `**Edits.** On the private page you can mark an open item of \`session-log.md\` as resolved, or change the status or the note of a part of a work log.` (it spans two lines in the file), with the block below. Replace only the text up to and including `work log.`: the words ` The page` that follow it on the same line of the file stay, so the next sentence ("The page stores each edit as a proposal.") keeps its subject.
 
 ```markdown
 **Edits.** On the private page you can change the status or the note of a
@@ -2494,10 +2531,13 @@ After the heading `## 11. Testing and rollout` and its blank line:
 Amended in 7.73.0 by docs/superpowers-orchestrator/2026-10-19-dashboard-sources/specs/dashboard-sources-design.md: the session-log open-item cases and the `resolve-open-item` sync cases are removed; the sync cases run on `set-part`.
 ```
 
+Run: `F=docs/superpowers-orchestrator/2026-09-29-dashboard/specs/dashboard-design.md; for h in '^### 5\.1 JSON shape' '^### 5\.2 Sections' '^\| .set-part. \|' '^## 8\. .sync.' '^## 11\. Testing and rollout'; do grep -A2 -E "$h" "$F" | tail -1 | grep -q '^Amended in 7.73.0 by ' || echo "MISPLACED $h"; done`
+Expected: no output (each amendment line stands two lines below its own anchor: the anchor, one blank line, the amendment line).
+
 - [ ] **Step 5: Verify**
 
-Run: `grep -c -E "Mark resolved|open items of the recent" docs/guide/README.md; grep -c -E "Source:|shared-ref line|Sharing is off|older branches|\[current\]|tracked files changed" docs/guide/README.md; grep -n "dashboard" README.md | grep -c "work logs and their open items"; grep -c "^Amended in 7.73.0 by docs/superpowers-orchestrator/2026-10-19-dashboard-sources/specs/dashboard-sources-design.md: " docs/superpowers-orchestrator/2026-09-29-dashboard/specs/dashboard-design.md; git diff --numstat -- docs/superpowers-orchestrator/2026-09-29-dashboard/specs/dashboard-design.md`
-Expected: `0`; a number >= `6`; `2`; `5`; `10	0	docs/superpowers-orchestrator/2026-09-29-dashboard/specs/dashboard-design.md`.
+Run: `grep -c -E "Mark resolved|open items of the recent" docs/guide/README.md; for t in 'Source:' 'shared-ref line' 'Sharing is off' 'older branches' '\[current\]' 'tracked files changed' '14 days' 'next .refresh.'; do grep -q -E "$t" docs/guide/README.md || echo "MISSING $t"; done; grep -n "dashboard" README.md | grep -c "work logs and their open items"; grep -c "^Amended in 7.73.0 by docs/superpowers-orchestrator/2026-10-19-dashboard-sources/specs/dashboard-sources-design.md: " docs/superpowers-orchestrator/2026-09-29-dashboard/specs/dashboard-design.md; git diff --numstat -- docs/superpowers-orchestrator/2026-09-29-dashboard/specs/dashboard-design.md`
+Expected: `0`; no `MISSING` line; `2`; `5`; `10	0	docs/superpowers-orchestrator/2026-09-29-dashboard/specs/dashboard-design.md`.
 
 - [ ] **Step 6: Commit**
 
@@ -2524,7 +2564,7 @@ git commit -m "docs(dashboard): guide, README and spec amendments for 7.73.0" --
 - `RELEASE-NOTES.md` entry `## v7.73.0 — …`
   - Must convey: the three-line summary (Problem / Change / Effect, near 100 words, 120 at most, each statement backed by the entry's prose); the removed open items and control; the Source lines; the "as of" line; the shared-ref line and its two warning rules; the Git card; the expected first-`refresh` `--diff` lines `sessionOpenItems: 0 added, <n> removed` and `sessionOpenItems: status ok → absent`; that old `resolve-open-item` proposals are rejected at the next `sync`, and that rejecting one left in `applying` does not undo a `[resolved` mark already written into `session-log.md`; the accepted limits (unfinished-run dates in the committer's time zone; squash or rebase merges).
   - Invariant: the entry is placed directly above `## v7.72.2`; the summary's three labels are `**Problem.**`, `**Change.**`, `**Effect.**` in this order.
-  - Verification: `awk '/^## v7.73.0/{f=1;next} /^## v7.72.2/{f=0} f' RELEASE-NOTES.md | grep -c -E "^\*\*(Problem|Change|Effect)\.\*\*"` prints `3`; `awk '/^## v7.73.0/{f=1;next} /^### /{f=0} f' RELEASE-NOTES.md | wc -w` prints at most `125` (summary plus labels).
+  - Verification: `awk '/^## v7.73.0/{f=1;next} /^## v7.72.2/{f=0} f' RELEASE-NOTES.md | grep -c -E "^\*\*(Problem|Change|Effect)\.\*\*"` prints `3`; `awk '/^## v7.73.0/{f=1;next} /^### /{f=0} f' RELEASE-NOTES.md | wc -w` prints at most `123` (the summary plus its three labels, each one word for `wc -w`: 120 summary words + 3, Global Constraint 1).
   - Sentence wording is free; the properties above bind.
 
 - [ ] **Step 1: Bump the version lines**
@@ -2567,7 +2607,7 @@ On 2026-10-19 the private page of one repository listed 11 open items of recent 
 
 ### What you will see at the first refresh
 
-`refresh --diff` prints these lines once, and they are expected:
+The first `refresh` prints these lines once, in the `--diff` output of its renderer step, and they are expected:
 
     sessionOpenItems: 0 added, <n> removed
     sessionOpenItems: status ok → absent
@@ -2581,9 +2621,9 @@ On 2026-10-19 the private page of one repository listed 11 open items of recent 
 ```
 
 Run: `awk '/^## v7.73.0/{f=1;next} /^## v7.72.2/{f=0} f' RELEASE-NOTES.md | grep -c -E "^\*\*(Problem|Change|Effect)\.\*\*"; awk '/^## v7.73.0/{f=1;next} /^### /{f=0} f' RELEASE-NOTES.md | wc -w`
-Expected: `3`; a number at most `125`.
+Expected: `3`; a number at most `123`.
 
-- [ ] **Step 3: Run every fast suite of the repository**
+- [ ] **Step 3: Run every fast suite listed in the repository `CLAUDE.md`**
 
 Run: `for s in codex/run-unit-tests.sh smart-compress/run-tests.sh reviewer-templates/run-tests.sh writing-plans/run-tests.sh in-run-rulings/run-tests.sh fill-prompt/run-tests.sh orchestrating-development/run-tests.sh review-gates/run-tests.sh measure-context/run-tests.sh pickup/run-tests.sh analyze-compaction/run-tests.sh sdd-scripts/run-tests.sh suite-guard/run-tests.sh worklog/run-tests.sh dashboard/run-tests.sh finishing-branch/run-tests.sh using-git-worktrees/run-tests.sh skill-test-runner/run-tests.sh find-polluter/run-tests.sh verification-before-completion/run-tests.sh; do bash "tests/$s" >/dev/null 2>&1 && echo "ok $s" || echo "FAILED $s"; done`
 Expected: 20 lines that start with `ok `, none with `FAILED`.
