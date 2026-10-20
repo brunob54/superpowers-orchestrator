@@ -50,6 +50,10 @@ const KEY_HEX_DIGITS = 12;
 const STALE_MS = 24 * 60 * 60 * 1000;
 const COMMIT_LIMIT = 20;
 const FIELD_SEPARATOR = '\x1f';
+// Every date that the extractor computes is a date in the local time zone,
+// the zone of generatedAt (spec section 4.4).
+const LOCAL_DATE = 'short-local';
+const SHORT_LENGTH = 7;
 const OPTIONS = {
   values: ['--audience', '--ref', '--out', '--data-dir', '--config-set', '--check-shared-ref', '--remote-url'],
   flags: ['--state-dir', '--config', '--default-shared-ref'],
@@ -373,10 +377,13 @@ function localBranches(context) {
   const notes = [];
   if (!base) notes.push('no default branch: merge information is not available');
   const filter = base ? [`--no-merged=${HEADS}${base}`] : [];
-  const items = mustLines(['for-each-ref', ...filter, '--format=%(refname:short)%09%(committerdate:short)', HEADS])
+  const current = currentBranch();
+  // On a detached HEAD, currentBranch() returns DETACHED: no item is current.
+  const isCurrent = (name) => current !== DETACHED && name === current;
+  const items = mustLines(['for-each-ref', ...filter, `--format=%(refname:lstrip=2)%09%(committerdate:${LOCAL_DATE})`, HEADS])
     .map((row) => row.split('\t'))
     .filter(([name]) => name !== base)
-    .map(([name, date]) => keyItem(context, SECTION.git, name, null, { kind: KIND.branch, name, date }));
+    .map(([name, date]) => keyItem(context, SECTION.git, name, null, Object.assign({ kind: KIND.branch, name, date }, isCurrent(name) ? { current: true } : {})));
   const ahead = git(['rev-list', '--count', '@{upstream}..HEAD']);
   if (!ahead.ok) notes.push('no upstream branch: the number of unpushed commits is omitted');
   const dirty = mustLines(['status', '--porcelain', '--untracked-files=no']).length;
@@ -442,7 +449,7 @@ function sharedBranches(context) {
     if (merged === null) throw new Error('git merge-base failed');
     if (merged) continue;
     const shown = remoteName(upstream);
-    const date = must(['log', '-1', '--format=%cd', '--date=short', upstream]);
+    const date = must(['log', '-1', '--format=%cd', `--date=${LOCAL_DATE}`, upstream]);
     items.push(keyItem(context, SECTION.git, shown, null, { kind: KIND.branch, name: shown, date }));
   }
   return okSection(items, { ahead: null, dirty: null });
@@ -454,7 +461,7 @@ function gitSection(context) {
 
 function commits(context) {
   const format = ['%H', '%h', '%cd', '%s'].join('%x1f');
-  const items = mustLines(['log', `-${COMMIT_LIMIT}`, `--format=${format}`, '--date=short', context.ref]).map((row) => {
+  const items = mustLines(['log', `-${COMMIT_LIMIT}`, `--format=${format}`, `--date=${LOCAL_DATE}`, context.ref]).map((row) => {
     const [sha, short, date, subject] = row.split(FIELD_SEPARATOR);
     return keyItem(context, SECTION.commits, sha, null, { kind: KIND.commit, sha, short, date, subject });
   });
@@ -651,7 +658,10 @@ function commitMeta(context) {
   const current = context.shared ? null : currentBranch();
   return {
     sha,
-    short: sha.slice(0, 7),
+    short: sha.slice(0, SHORT_LENGTH),
+    // --no-walk: read only this commit, never its parents (a missing parent
+    // object must not stop the extract).
+    date: must(['log', '-1', '--no-walk', '--format=%cd', `--date=${LOCAL_DATE}`, context.ref]),
     branch: context.shared ? remoteName(context.ref) : (current === DETACHED ? null : current),
     ref: context.ref,
     defaultBranch: context.shared ? null : defaultBranch(),
@@ -704,7 +714,7 @@ function writeDocument(doc, out) {
 }
 
 function localBranchNames() {
-  return mustLines(['for-each-ref', '--format=%(refname:short)', HEADS]);
+  return mustLines(['for-each-ref', '--format=%(refname:lstrip=2)', HEADS]);
 }
 
 // The counted upstream of the default branch (refs/remotes/<remote>/<branch>),

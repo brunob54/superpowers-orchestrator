@@ -53,6 +53,7 @@ let doc = extract(d);
 h.eq('document head', [doc.schemaVersion, doc.audience, doc.repo.name, doc.commit.branch, doc.commit.ref, doc.commit.defaultBranch], [1, 'private', 'core', 'main', 'HEAD', 'main']);
 h.check('generatedAt is local time with its offset', /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}[+-]\d{2}:\d{2}$/.test(doc.generatedAt));
 h.check('commit sha and short hash', /^[0-9a-f]{40}$/.test(doc.commit.sha) && doc.commit.short === doc.commit.sha.slice(0, 7));
+h.check('commit.date is a date', /^\d{4}-\d{2}-\d{2}$/.test(doc.commit.date || ''), String(doc.commit.date));
 h.eq('unfinishedRuns: branches and marks', doc.sections.unfinishedRuns.items.map((i) => [i.branch, i.mark]), [
   ['feature/fresh', 'in progress'],
   ['feature/old', 'no commit since 2026-01-09 — may need resume'],
@@ -61,6 +62,7 @@ h.eq('unfinishedRuns: branches and marks', doc.sections.unfinishedRuns.items.map
 ]);
 h.eq('a stopped run shows its last heading', doc.sections.unfinishedRuns.items[2].lastHeading, STOPPED);
 h.eq('git: unmerged local branches, the default branch excluded', doc.sections.git.items.map((i) => i.name), ['feature/done', 'feature/fresh', 'feature/old', 'feature/stopped', 'feature/twin']);
+h.eq('git: with the default branch checked out no item is marked current', doc.sections.git.items.some((i) => 'current' in i), false);
 h.eq('git: no upstream gives a null count and a note', [doc.sections.git.ahead, /no upstream/.test(doc.sections.git.note)], [null, true]);
 h.eq('git: a clean tree has no uncommitted change', doc.sections.git.dirty, 0);
 h.eq('commits: the last 20, newest first', [doc.sections.commits.items.length, doc.sections.commits.items[0].subject, doc.sections.commits.items[19].subject], [20, 'commit 24', 'commit 5']);
@@ -78,6 +80,11 @@ fs.unlinkSync(path.join(d, 'new.txt'));
 h.git(d, 'checkout', '-q', 'feature/stopped');
 doc = extract(d);
 h.eq('the checked-out run branch is still an unfinished run', [doc.commit.branch, doc.sections.unfinishedRuns.items.some((i) => i.branch === 'feature/stopped')], ['feature/stopped', true]);
+const currentItems = (sections) => sections.git.items.filter((i) => 'current' in i).map((i) => [i.name, i.current]);
+h.eq('git: only the checked-out unmerged branch is marked current', currentItems(doc.sections), [['feature/stopped', true]]);
+h.git(d, 'tag', 'feature/stopped');
+h.eq('a tag with the name of the branch: the plain name, still current', currentItems(extract(d).sections), [['feature/stopped', true]]);
+h.git(d, 'tag', '-d', 'feature/stopped');
 h.git(d, 'checkout', '-q', '--detach', 'main');
 h.eq('a detached HEAD gives branch null', extract(d).commit.branch, null);
 h.git(d, 'checkout', '-q', 'main');
@@ -153,5 +160,22 @@ fs.writeFileSync(path.join(lost, '.git', 'objects', 'info', 'alternates'), `${fs
 const lostRuns = extract(lost).sections.unfinishedRuns;
 h.eq('a failed git command of the run scan gives an error section', lostRuns.status, 'error');
 h.check('the scan error note writes the repository root as <repo>', lostRuns.note.includes('<repo>') && !lostRuns.note.includes(fs.realpathSync(lost)));
+
+// 10. Local dates (spec section 4.4): a commit at 23:30 UTC is on the next
+// day in Tokyo (UTC+9). `--date=short` would print the committer's date;
+// `short-local` prints the local date.
+const LATE = '2026-01-09T23:30:00+00:00';
+const TOKYO = { TZ: 'Asia/Tokyo' };
+const LOCAL_DAY = '2026-01-10';
+const tz = h.repo('core-local-dates');
+h.write(tz, 'file.txt', 'base\n');
+h.commit(tz, 'late base', ['file.txt'], LATE);
+h.git(tz, 'checkout', '-q', '-b', 'feature/late');
+h.write(tz, 'file.txt', 'late\n');
+h.commit(tz, 'late branch', ['file.txt'], LATE);
+const tzRun = h.node(tz, [EXTRACT, '--audience', 'private'], TOKYO);
+const tzDoc = tzRun.code === 0 ? JSON.parse(tzRun.out) : null;
+h.eq('local dates: commit.date, the branch date and the commit dates', tzDoc && [tzDoc.commit.date, tzDoc.sections.git.items.map((i) => i.date), tzDoc.sections.commits.items.map((i) => i.date)], [LOCAL_DAY, [LOCAL_DAY], [LOCAL_DAY, LOCAL_DAY]]);
+h.git(tz, 'checkout', '-q', 'main');
 
 h.finish();
