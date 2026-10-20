@@ -1300,7 +1300,7 @@ git commit -m "feat(dashboard): commit date, local dates and the current branch 
   - Verification: the git-card checks of test-07.
   - Interface not externally pinned.
 
-- [ ] **Step 1: Write the failing tests in `tests/dashboard/test-07-template.js`**
+- [x] **Step 1: Write the failing tests in `tests/dashboard/test-07-template.js`**
 
 In `sample()`, replace the `commit:` line with:
 
@@ -1359,12 +1359,12 @@ h.eq('git card: no old branch makes no details element', gitCard([branchItem('a'
 
 (`VIEW`, `source` and `sample` are defined earlier in the file; place this block after the line that defines `VIEW`.)
 
-- [ ] **Step 2: Run the test to verify it fails**
+- [x] **Step 2: Run the test to verify it fails**
 
 Run: `node tests/dashboard/test-07-template.js | grep FAIL`
 Expected: FAIL for the two as-of checks and for three of the four git-card checks (got the old `, built` form and the extractor order with no `<details>`). The check `git card: no old branch makes no details element` already passes before the change: the old page also makes no `<details>` element.
 
-- [ ] **Step 3: Implement in `skills/dashboard/template.html`**
+- [x] **Step 3: Implement in `skills/dashboard/template.html`**
 
 Add after `const NOTHING_HERE = 'nothing here';`:
 
@@ -1466,7 +1466,7 @@ In `renderSection`, replace the last list line `if (section.items.length) card.a
     itemBlocks(id, section.items, ctx).forEach((node) => card.appendChild(node));
 ```
 
-- [ ] **Step 4: Run the tests to verify they pass**
+- [x] **Step 4: Run the tests to verify they pass**
 
 Run: `node tests/dashboard/test-07-template.js | tail -1; node tests/dashboard/test-08-template-edits.js | tail -1`
 Expected: two lines `<n> passed, 0 failed`.
@@ -1474,7 +1474,7 @@ Expected: two lines `<n> passed, 0 failed`.
 Run: `bash tests/dashboard/run-tests.sh | tail -1`
 Expected: `dashboard suite: every test file passed`
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add skills/dashboard/template.html tests/dashboard/test-07-template.js
