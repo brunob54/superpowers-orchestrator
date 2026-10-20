@@ -755,7 +755,7 @@ git commit -m "feat(dashboard): sync keeps only set-part; a resolve-open-item pr
   - Must convey: the dropped cases are exactly the open-item and `lineAtOccurrence` cases; the `normalizeLine` cases and the cases of every kept function stay.
   - Verification: `grep -n -E "openItems|openItemText|lineAtOccurrence|sessionOpenItems" tests/dashboard/test-02-parse.js tests/dashboard/test-05-extract-files.js tests/dashboard/test-06-privacy.js` prints only the two test-05 lines that assert the section is absent.
 
-- [ ] **Step 1: Write the failing test changes in `tests/dashboard/test-05-extract-files.js`**
+- [x] **Step 1: Write the failing test changes in `tests/dashboard/test-05-extract-files.js`**
 
 Replace the block from `h.eq('sessionOpenItems: kinds and texts of the 10 recent entries', …` through `h.eq('sessions: the Goal lines of the same 10 entries', …);` (lines 78–89 at commit 971beb2b, nine statements) with:
 
@@ -782,7 +782,7 @@ h.eq('a missing session-log.md gives no sessionOpenItems section', Object.protot
 
 (The fixture keeps `session-log.md` with its `Open:` lines; the existing `activeWorklogs` assertion `['raw', null, null]` keeps the malformed-row `kind: 'raw'` check.)
 
-- [ ] **Step 2: Edit `tests/dashboard/test-06-privacy.js` and `tests/dashboard/test-02-parse.js`**
+- [x] **Step 2: Edit `tests/dashboard/test-06-privacy.js` and `tests/dashboard/test-02-parse.js`**
 
 In `test-06-privacy.js`, replace `h.eq('untracked sources are not-found', [s.sessionOpenItems.status, s.currentGoal.status, s.knownIssues.status], ['not-found', 'not-found', 'not-found']);` with:
 
@@ -797,12 +797,12 @@ In `test-02-parse.js`:
 
 Keep both `normalizeLine` checks and the `lineItemId uses the normalized line` check.
 
-- [ ] **Step 3: Run the tests to verify they fail**
+- [x] **Step 3: Run the tests to verify they fail**
 
 Run: `node tests/dashboard/test-05-extract-files.js | grep FAIL`
 Expected: FAIL for `no sessionOpenItems section`, `sessions: the Goal lines of the last 10 entries, newest first`, `sessions: each item keeps its entry heading`, `the second equal heading has ordinal 2` and `a missing session-log.md gives no sessionOpenItems section`.
 
-- [ ] **Step 4: Implement in `skills/dashboard/scripts/dashboard-extract.js`**
+- [x] **Step 4: Implement in `skills/dashboard/scripts/dashboard-extract.js`**
 
 Search first (Global Constraint 2):
 
@@ -857,7 +857,7 @@ In `BUILDERS`, replace `{ ids: [SECTION.sessionOpenItems, SECTION.sessions], bui
   { ids: [SECTION.sessions], build: sessionLog },
 ```
 
-- [ ] **Step 5: Implement in `skills/dashboard/scripts/dashboard-parse.js`**
+- [x] **Step 5: Implement in `skills/dashboard/scripts/dashboard-parse.js`**
 
 In the header comment, replace `// table rows, the open items of a session-log entry, the Node copy of the` with `// table rows, the Node copy of the`.
 
@@ -891,7 +891,7 @@ module.exports = {
 };
 ```
 
-- [ ] **Step 6: Run the tests to verify they pass**
+- [x] **Step 6: Run the tests to verify they pass**
 
 Run: `node tests/dashboard/test-02-parse.js | tail -1; node tests/dashboard/test-05-extract-files.js | tail -1; node tests/dashboard/test-06-privacy.js | tail -1; for f in normalizeLine occurrenceOf lineItemId; do diff <(git show 971beb2b:skills/dashboard/scripts/dashboard-parse.js | sed -n "/^function $f(/,/^}/p") <(sed -n "/^function $f(/,/^}/p" skills/dashboard/scripts/dashboard-parse.js) || echo "CHANGED: $f"; done; git diff 971beb2b -- skills/dashboard/scripts/dashboard-parse.js | grep -E "^[-+].*(RESOLVED_SUFFIX =|SUPERSEDED_MARK =|ID_SEPARATOR =|SESSION_LOG =)"`
 Expected: three lines `<n> passed, 0 failed`; the loop and the grep print nothing.
@@ -899,7 +899,7 @@ Expected: three lines `<n> passed, 0 failed`; the loop and the grep print nothin
 Run: `bash tests/dashboard/run-tests.sh | tail -1`
 Expected: `dashboard suite: every test file passed`
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add skills/dashboard/scripts/dashboard-extract.js skills/dashboard/scripts/dashboard-parse.js tests/dashboard/test-02-parse.js tests/dashboard/test-05-extract-files.js tests/dashboard/test-06-privacy.js
