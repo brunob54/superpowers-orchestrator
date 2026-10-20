@@ -1663,7 +1663,7 @@ git commit -m "feat(dashboard): a Source line on every card" --trailer "Session:
   - Invariant: the same names pass and stop as before.
   - Verification: `node tests/dashboard/test-06-privacy.js` (the malformed-ref and shell-character cases) passes unchanged.
 
-- [ ] **Step 1: Write the failing tests in `tests/dashboard/test-04-extract-core.js`**
+- [x] **Step 1: Write the failing tests in `tests/dashboard/test-04-extract-core.js`**
 
 Before `h.finish();` (after section 10 of Task 4) add:
 
@@ -1756,12 +1756,12 @@ h.eq('a removed remote: the ref is missing', withData()[0].missing, true);
 h.check('every private run exits 0', exits.every((code) => code === 0), exits.join(','));
 ```
 
-- [ ] **Step 2: Run the test to verify it fails**
+- [x] **Step 2: Run the test to verify it fails**
 
 Run: `node tests/dashboard/test-04-extract-core.js | grep FAIL`
 Expected: FAIL for every section-11 check except `every private run exits 0`: the field is absent (each run gives `no sharedRef key`), and no report line exists. A check that reads a field of `info` may stop the file with a `TypeError`; the file then reports `finish() was never called`, which is the expected failure too.
 
-- [ ] **Step 3: Implement in `skills/dashboard/scripts/dashboard-extract.js`**
+- [x] **Step 3: Implement in `skills/dashboard/scripts/dashboard-extract.js`**
 
 Extend the usage comment at the top, after the line `// repo.name, and fails closed. The state folder`… block, by adding these lines before `// Exit status:`:
 
@@ -1939,7 +1939,7 @@ In `main()`, replace the last line `writeDocument(extract(audience, args['--ref'
   if (doc.sharedRef) process.stderr.write(`${MESSAGE_PREFIX}${SHARED_PAGE_REPORT}${sharedRefLine(doc.sharedRef, doc.commit.branch)}\n`);
 ```
 
-- [ ] **Step 4: Run the tests to verify they pass**
+- [x] **Step 4: Run the tests to verify they pass**
 
 Run: `node tests/dashboard/test-04-extract-core.js | tail -1; node tests/dashboard/test-06-privacy.js | tail -1`
 Expected: two lines `<n> passed, 0 failed`.
@@ -1947,7 +1947,7 @@ Expected: two lines `<n> passed, 0 failed`.
 Run: `bash tests/dashboard/run-tests.sh | tail -1`
 Expected: `dashboard suite: every test file passed`
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add skills/dashboard/scripts/dashboard-extract.js tests/dashboard/test-04-extract-core.js
