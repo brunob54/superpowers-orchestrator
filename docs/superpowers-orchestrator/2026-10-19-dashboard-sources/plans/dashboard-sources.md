@@ -2567,7 +2567,7 @@ git commit -m "docs(dashboard): guide, README and spec amendments for 7.73.0" --
   - Verification: `awk '/^## v7.73.0/{f=1;next} /^## v7.72.2/{f=0} f' RELEASE-NOTES.md | grep -c -E "^\*\*(Problem|Change|Effect)\.\*\*"` prints `3`; `awk '/^## v7.73.0/{f=1;next} /^### /{f=0} f' RELEASE-NOTES.md | wc -w` prints at most `123` (the summary plus its three labels, each one word for `wc -w`: 120 summary words + 3, Global Constraint 1).
   - Sentence wording is free; the properties above bind.
 
-- [ ] **Step 1: Bump the version lines**
+- [x] **Step 1: Bump the version lines**
 
 - `VERSION`: replace `7.72.2` with `7.73.0`.
 - `.claude-plugin/plugin.json`: replace `"version": "7.72.2",` with `"version": "7.73.0",`.
@@ -2579,7 +2579,7 @@ git commit -m "docs(dashboard): guide, README and spec amendments for 7.73.0" --
 Run: `grep -c "7\.72\.2" VERSION .claude-plugin/plugin.json .claude-plugin/marketplace.json plugin.universal.yaml README.md; grep -c "7\.73\.0" README.md`
 Expected: `VERSION:0`, `.claude-plugin/plugin.json:0`, `.claude-plugin/marketplace.json:0`, `plugin.universal.yaml:0`, `README.md:0`; then `3`.
 
-- [ ] **Step 2: Add the `RELEASE-NOTES.md` entry**
+- [x] **Step 2: Add the `RELEASE-NOTES.md` entry**
 
 Insert directly above the line `## v7.72.2 — \`bypassPermissions\` also needs the setting \`bashEditDiffEnabled\``:
 
@@ -2623,14 +2623,14 @@ The first `refresh` prints these lines once, in the `--diff` output of its rende
 Run: `awk '/^## v7.73.0/{f=1;next} /^## v7.72.2/{f=0} f' RELEASE-NOTES.md | grep -c -E "^\*\*(Problem|Change|Effect)\.\*\*"; awk '/^## v7.73.0/{f=1;next} /^### /{f=0} f' RELEASE-NOTES.md | wc -w`
 Expected: `3`; a number at most `123`.
 
-- [ ] **Step 3: Run every fast suite listed in the repository `CLAUDE.md`**
+- [x] **Step 3: Run every fast suite listed in the repository `CLAUDE.md`**
 
 Run: `for s in codex/run-unit-tests.sh smart-compress/run-tests.sh reviewer-templates/run-tests.sh writing-plans/run-tests.sh in-run-rulings/run-tests.sh fill-prompt/run-tests.sh orchestrating-development/run-tests.sh review-gates/run-tests.sh measure-context/run-tests.sh pickup/run-tests.sh analyze-compaction/run-tests.sh sdd-scripts/run-tests.sh suite-guard/run-tests.sh worklog/run-tests.sh dashboard/run-tests.sh finishing-branch/run-tests.sh using-git-worktrees/run-tests.sh skill-test-runner/run-tests.sh find-polluter/run-tests.sh verification-before-completion/run-tests.sh; do bash "tests/$s" >/dev/null 2>&1 && echo "ok $s" || echo "FAILED $s"; done`
 Expected: 20 lines that start with `ok `, none with `FAILED`.
 
 (If a harness check refuses this loop as a removal-style command, run the 20 commands one by one; the expected result is the same.)
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add VERSION .claude-plugin/plugin.json .claude-plugin/marketplace.json plugin.universal.yaml README.md RELEASE-NOTES.md
