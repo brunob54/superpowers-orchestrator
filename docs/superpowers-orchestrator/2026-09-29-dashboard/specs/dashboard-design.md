@@ -185,6 +185,8 @@ Rules for the units:
 
 ### 5.1 JSON shape
 
+Amended in 7.73.0 by docs/superpowers-orchestrator/2026-10-19-dashboard-sources/specs/dashboard-sources-design.md: the section `sessionOpenItems` is removed; `commit` gains `date`; the private data gains the top-level field `sharedRef`; a branch item of the private run can carry `current: true`.
+
 ```json
 {
   "schemaVersion": 1,
@@ -251,6 +253,8 @@ number of cells differs from the table's header row. Every other line of a sourc
 orchestration log other than the last one) is not read and gives no item.
 
 ### 5.2 Sections
+
+Amended in 7.73.0 by docs/superpowers-orchestrator/2026-10-19-dashboard-sources/specs/dashboard-sources-design.md: `sessionOpenItems` is removed; `sessions` lists its items newest first; branch dates and commit dates are local dates (`short-local`).
 
 Terms used below:
 
@@ -527,6 +531,8 @@ item 3). The proposal document id is the item `id`.
 | `resolve-open-item` | an open item of `session-log.md` | append ` [resolved <date>: <note>]` at the end of the item's bullet line (or of the one-line `Open:` line), the form the log already uses; `<note>` defaults to `from the dashboard` |
 | `set-part` | a row of the `## Parts` table of a work log | when `status` is given and differs from the current Status cell: set the Status cell and set the Since cell to `<date>`; when `status` equals the current Status: change nothing in these two cells; when `note` is given: set the Note cell. Other cells, the Commit cell included, are not changed |
 
+Amended in 7.73.0 by docs/superpowers-orchestrator/2026-10-19-dashboard-sources/specs/dashboard-sources-design.md: the kind `resolve-open-item` and its "Mark resolved" control are removed; `set-part` is the only kind.
+
 **Dates.** The page writes `createdAt` as local time with its UTC offset
 (for example `2026-09-29T00:30:00+02:00`). `<date>` is the first 10
 characters of `createdAt`: the owner's local calendar date. `sync` never
@@ -606,6 +612,8 @@ A proposal document:
   follows.
 
 ## 8. `sync`
+
+Amended in 7.73.0 by docs/superpowers-orchestrator/2026-10-19-dashboard-sources/specs/dashboard-sources-design.md: `sync` knows only `set-part`; a `resolve-open-item` proposal gets the verdict `invalid` with the reason `resolve-open-item was removed in 7.73.0; reject this proposal`.
 
 1. **Read.** Query the proposals whose `state` is `pending` or `applying`
    through the
@@ -768,6 +776,8 @@ publishes; the model does not read the source files or the JSON.
 | An ArtifactData write fails on `if_version` | That proposal is not applied in this sync, is reported, and stays as the page left it (section 8 steps 4 and 6) |
 
 ## 11. Testing and rollout
+
+Amended in 7.73.0 by docs/superpowers-orchestrator/2026-10-19-dashboard-sources/specs/dashboard-sources-design.md: the session-log open-item cases and the `resolve-open-item` sync cases are removed; the sync cases run on `set-part`.
 
 A new fast suite, `tests/dashboard/run-tests.sh`, that loads
 `tests/lib/undefined-command-guard.sh` like every suite:

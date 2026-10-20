@@ -1357,12 +1357,15 @@ claude.ai **Artifact page**: a web page that a Claude Code session publishes to
 claude.ai with its Artifact tool, private to you at first. The page answers two
 questions in two tabs. **Waits for me** lists the unfinished orchestration runs
 (a stopped run is marked "stopped — waits for you"), the local branches that
-are not merged, the active work logs with their open parts and open items, the
-open items of the recent `session-log.md` entries, and the current goal of
-`state.md`. **History** lists the releases, the orchestration topic folders,
-the closed work logs, the recent commits, the goals of the recent sessions and
-the known issues. The repository files stay the only source of truth: the page
-is a view of them, as of its last refresh.
+are not merged, the active work logs with their open parts and open items, and
+the current goal of `state.md`. **History** lists the releases, the
+orchestration topic folders, the closed work logs, the recent commits, the
+goals of the recent sessions (newest first, each with the date and time of its
+`session-log.md` entry) and the known issues. The repository files stay the
+only source of truth: the page is a view of them, as of its last refresh.
+Since v7.73.0 the page no longer lists the open items of `session-log.md`:
+the skill that writes them never marks them as closed (only the dashboard's
+own `sync` did), so the page showed items that were already fixed.
 
 | Command | What it does |
 | --- | --- |
@@ -1388,12 +1391,48 @@ It never reads your working folder. On the Pro and Max plans a public link is th
 page, and anyone who has that link can read it; make only the shared page's
 link public.
 
-**Edits.** On the private page you can mark an open item of `session-log.md`
-as resolved, or change the status or the note of a part of a work log. The page
+**What the page says about itself** (since v7.73.0):
+
+- Every card starts with a **Source:** line. It names the file, the folder or
+  the git command that the card reads, and the rule that selects its items.
+  On the shared page, the three cards that read another place (the
+  unfinished runs, the Git card and the recent commits) name that place.
+- The **"as of" line** names the commit that the page shows and the date of
+  that commit, for example
+  `as of commit 4aebf3a (2026-10-19) on branch main · built 2026-10-19 16:43`.
+  On the private page it adds, for example,
+  ` · 3 tracked files changed, not committed` when files that git tracks have
+  changes that are not committed. Files that git does not track are not
+  counted.
+- When sharing is on, the private page shows a **shared-ref line** under the
+  "as of" line. It names the shared branch and the date of its last commit,
+  how many commits of your checked-out branch are not in the shared branch
+  and the date of the oldest one, and when the shared page was last
+  published from this computer ("Never published from this machine." before
+  the first publish). The line becomes a warning in two cases: work has been
+  missing from the shared page for more than 14 days (the oldest commit that
+  is not in the shared branch is more than 14 days old), or the shared page
+  is not republished (it was never published, or its last publish lies more
+  than 14 days before the last publish of the private page). It is also a
+  warning when the shared branch no longer exists or its state cannot be
+  read. The line is computed at each `refresh`: after `share`,
+  `share --ref` or `share off` it shows the new state from the next `refresh`
+  on.
+- After `share off`, the line says: "Sharing is off. The shared page from an
+  earlier share is still published and is no longer updated."
+- The **Git card** lists the branches newest first and marks the checked-out
+  branch with `[current]`. Branches with no commit in the last 90 days are
+  folded under one line, for example "4 older branches (no commit in the last
+  90 days)"; the checked-out branch is never folded.
+
+**Edits.** On the private page you can change the status or the note of a
+part of a work log. The page
 stores each edit as a proposal. `sync` shows the change as a diff (the removed and added lines side by side), writes it
 only after you accept it, and never commits. When `sync` changed a file that
 git tracks (a work log), commit or stash it before you switch branches or
 resume an orchestrated run.
+A proposal from a page older than v7.73.0 that marked a session open item as
+resolved is reported by `sync` as invalid; reject it there.
 
 What you should know:
 
