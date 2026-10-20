@@ -14,6 +14,10 @@
 // pushed ref refs/remotes/<remote>/<branch>, and the URL of that remote for
 // repo.name, and fails closed. The state folder
 // <data dir>/dashboard/<repo key>/ lies outside the repository.
+// The private run with --data-dir also reads config.json and the last
+// shared.json and private.json of the state folder, for the shared-ref line
+// (spec section 4.5 of dashboard-sources); it writes that line on standard
+// error as "dashboard-extract: shared page: <line>" and still exits 0.
 // Exit status: 0 on success; 2 when the command cannot run (not a git
 // repository, no commit, a bad argument, a data folder that is not set, an
 // output file inside the repository).
@@ -43,6 +47,16 @@ const HOME_TOKEN = '~';
 const DATA_DIR_UNSET = '${CLAUDE_PLUGIN_DATA}';
 const STATE_ROOT = 'dashboard';
 const CONFIG_FILE = 'config.json';
+const MESSAGE_PREFIX = 'dashboard-extract: ';
+const SHARED_PAGE_REPORT = 'shared page: ';
+const SHARING_ON = 'on';
+const STATE_FILES = { shared: 'shared.json', private: 'private.json' };
+// The start of a generatedAt time: YYYY-MM-DDTHH:MM.
+const TIME_OF_DATA = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/;
+const SHARED_REF_TEXT = {
+  off: 'Sharing is off. The shared page from an earlier share is still published and is no longer updated.',
+  never: 'Never published from this machine.',
+};
 // Allowed config keys; a list names the only allowed values.
 const CONFIG_KEYS = { privateUrl: null, sharedUrl: null, sharing: ['on', 'off'], sharedRef: null };
 const KEY_HEX_DIGITS = 12;
@@ -125,7 +139,7 @@ const WORKLOG_NOTE = {
 };
 
 function stop(message) {
-  process.stderr.write(`dashboard-extract: ${message}\n`);
+  process.stderr.write(`${MESSAGE_PREFIX}${message}\n`);
   process.exit(EXIT_STOP);
 }
 
@@ -650,6 +664,100 @@ const BUILDERS = [
   { ids: [SECTION.knownIssues], build: knownIssues },
 ];
 
+// ---- the shared-ref line of the private page (spec section 4.5) ----
+
+function readJsonOrNull(file) {
+  try {
+    return JSON.parse(fs.readFileSync(file, 'utf8'));
+  } catch (error) {
+    return null;
+  }
+}
+
+// The generatedAt of the state file <name> in <dir>, cut to
+// "YYYY-MM-DD HH:MM"; null when the file is missing, is not valid JSON or
+// holds no such time.
+function publishTime(dir, name) {
+  const doc = readJsonOrNull(path.join(dir, name));
+  const at = doc && typeof doc.generatedAt === 'string' && TIME_OF_DATA.test(doc.generatedAt) ? doc.generatedAt : null;
+  return at === null ? null : `${at.slice(0, 10)} ${at.slice(11, 16)}`;
+}
+
+// A message as one line: sanitized (no repository or home folder), then its
+// first non-empty line.
+function oneLine(context, message) {
+  return sanitize(context, String(message)).split('\n').map((line) => line.trim()).find(Boolean) || '';
+}
+
+// The checks of checkSharedName, as tests that return a result instead of
+// stopping; the first failing check decides. Every command names the ref by
+// its full name refs/remotes/<name>: a bare <remote>/<branch> could resolve
+// to a local branch or tag through git's name guessing.
+function followedRef(context, name) {
+  if (!sharedRefForm(name)) return { error: oneLine(context, `${name} is not of the form <remote>/<branch>`) };
+  const ref = remoteRef(name);
+  if (!git(['show-ref', '--verify', '--quiet', ref]).ok) return { missing: true };
+  if (!git(['rev-parse', '--verify', '--quiet', `${ref}^{commit}`]).ok) return { error: oneLine(context, `${name} is not a commit`) };
+  try {
+    const range = `${ref}..${HEAD_REF}`;
+    const notShown = Number(must(['rev-list', '--count', range]));
+    return {
+      short: must(['rev-parse', `${ref}^{commit}`]).slice(0, SHORT_LENGTH),
+      // --no-walk, as in commitMeta: read only the tip, never its parents.
+      date: must(['log', '-1', '--no-walk', '--format=%cd', `--date=${LOCAL_DATE}`, ref]),
+      notShown,
+      oldestNotShown: notShown ? mustLines(['log', '--reverse', '--format=%cd', `--date=${LOCAL_DATE}`, range])[0] : null,
+    };
+  } catch (error) {
+    return { error: oneLine(context, error.message) };
+  }
+}
+
+// The sharedRef field of the private data, or null when the page shows no
+// line. <dataDir> is the --data-dir value. Nothing here stops the extract.
+function sharedRefState(context, dataDir) {
+  if (!dataDir || dataDir.includes(DATA_DIR_UNSET)) return null;
+  const dir = stateDir(dataDir, context.top);
+  const config = readJsonOrNull(path.join(dir, CONFIG_FILE));
+  if (!config || typeof config !== 'object') return null;
+  const published = publishTime(dir, STATE_FILES.shared);
+  const name = config.sharedRef;
+  if (config.sharing === SHARING_ON && typeof name === 'string' && name) {
+    return Object.assign({ name }, followedRef(context, name), { published, previousBuild: publishTime(dir, STATE_FILES.private) });
+  }
+  if (config.sharing !== SHARING_ON && config.sharedUrl) return { off: true, published };
+  return null;
+}
+
+// The "not shown" part of the line. <branch> is null on a detached HEAD.
+function notShownText(info, branch) {
+  const { notShown, name, oldestNotShown } = info;
+  if (branch === null) {
+    return notShown === 1
+      ? `The checked-out commit has 1 commit that is not in ${name}; it is from ${oldestNotShown}.`
+      : `The checked-out commit has ${notShown} commits that are not in ${name}; the oldest is from ${oldestNotShown}.`;
+  }
+  return notShown === 1
+    ? `1 commit of this branch is not in ${name}; it is from ${oldestNotShown}.`
+    : `${notShown} commits of this branch are not in ${name}; the oldest is from ${oldestNotShown}.`;
+}
+
+// The shared-ref line. template.html builds the same text from the same
+// fields (the page cannot load this file); tests/dashboard/test-07-template.js
+// compares the two.
+function sharedRefLine(info, branch) {
+  const parts = [];
+  if (info.off) parts.push(SHARED_REF_TEXT.off);
+  else if (info.missing) parts.push(`The shared page follows ${info.name}, which no longer exists. The shared page cannot be updated.`);
+  else if (info.error !== undefined) parts.push(`The state of the shared ref could not be read: ${info.error}.`);
+  else {
+    parts.push(`The shared page follows ${info.name}, last commit ${info.date}.`);
+    if (info.notShown > 0) parts.push(notShownText(info, branch));
+  }
+  parts.push(info.published ? `Last published ${info.published}.` : SHARED_REF_TEXT.never);
+  return parts.join(' ');
+}
+
 // ---- the document ----
 
 function commitMeta(context) {
@@ -680,7 +788,7 @@ function buildSections(context) {
   return sections;
 }
 
-function extract(audience, sharedName, top) {
+function extract(audience, sharedName, top, dataDir) {
   const shared = audience === AUDIENCE.shared;
   const ref = shared ? remoteRef(sharedName) : HEAD_REF;
   // base: the ref against which the shared run decides "merged" (null: no
@@ -695,6 +803,9 @@ function extract(audience, sharedName, top) {
     generatedAt: parse.localIso(new Date()),
     repo: { name: shared ? sharedRepoName(sharedName, context.remote) : path.basename(top) },
     commit: commitMeta(context),
+    // Only the private data has this key; dashboard-render.js --verify
+    // refuses shared data that holds it.
+    ...(shared ? {} : { sharedRef: sharedRefState(context, dataDir) }),
     sections: buildSections(context),
   };
 }
@@ -734,8 +845,13 @@ function printDefaultSharedRef() {
   console.log(name);
 }
 
+// true when <name> has the form <remote>/<branch> (SHARED_REF_NAME, no "..").
+function sharedRefForm(name) {
+  return SHARED_REF_NAME.test(name) && !name.includes('..');
+}
+
 function requireSharedRefForm(name, label) {
-  if (!SHARED_REF_NAME.test(name) || name.includes('..')) stop(`${label} is not of the form <remote>/<branch>`);
+  if (!sharedRefForm(name)) stop(`${label} is not of the form <remote>/<branch>`);
 }
 
 function checkSharedRef(name) {
@@ -796,7 +912,9 @@ function main() {
   if (audience === AUDIENCE.shared) checkSharedName(args['--ref']);
   const out = args['--out'];
   if (out && parse.isInside(out, top)) stop(`--out ${out} lies inside the repository; write into the session scratchpad folder`);
-  writeDocument(extract(audience, args['--ref'], top), out);
+  const doc = extract(audience, args['--ref'], top, args['--data-dir']);
+  writeDocument(doc, out);
+  if (doc.sharedRef) process.stderr.write(`${MESSAGE_PREFIX}${SHARED_PAGE_REPORT}${sharedRefLine(doc.sharedRef, doc.commit.branch)}\n`);
 }
 
 main();

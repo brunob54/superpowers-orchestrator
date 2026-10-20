@@ -178,4 +178,91 @@ const tzDoc = tzRun.code === 0 ? JSON.parse(tzRun.out) : null;
 h.eq('local dates: commit.date, the branch date and the commit dates', tzDoc && [tzDoc.commit.date, tzDoc.sections.git.items.map((i) => i.date), tzDoc.sections.commits.items.map((i) => i.date)], [LOCAL_DAY, [LOCAL_DAY], [LOCAL_DAY, LOCAL_DAY]]);
 h.git(tz, 'checkout', '-q', 'main');
 
+// 11. The shared-ref line of the private run (spec section 4.5): read from
+// config.json and the state files through --data-dir; never a stop.
+const sr = h.repo('core-shared-ref');
+h.addRemote(sr, 'core-shared-ref-remote');
+h.write(sr, 'file.txt', 'base\n');
+h.commit(sr, 'base', ['file.txt'], LATE);
+h.git(sr, 'push', '-q', '-u', 'origin', 'main');
+const srData = path.join(h.ROOT, 'shared-ref-data');
+const REPORT = 'dashboard-extract: shared page: ';
+const exits = [];
+// One private run in <sr> with <args>, in Tokyo time; gives
+// [the sharedRef value, the report lines without their prefix]. A document
+// without the key gives a text, so that "absent" never passes as null.
+const NO_KEY = 'no sharedRef key';
+function sharedRefRun(args) {
+  const result = h.node(sr, [EXTRACT, '--audience', 'private', ...args], TOKYO);
+  exits.push(result.code);
+  const reports = result.err.split('\n').filter((line) => line.startsWith(REPORT)).map((line) => line.slice(REPORT.length));
+  if (result.code !== 0) return [`exit ${result.code}: ${result.err}`, reports];
+  const parsed = JSON.parse(result.out);
+  return [Object.prototype.hasOwnProperty.call(parsed, 'sharedRef') ? parsed.sharedRef : NO_KEY, reports];
+}
+const withData = () => sharedRefRun(['--data-dir', srData]);
+const setKey = (assignment) => run(sr, ['--data-dir', srData, '--config-set', assignment]);
+const srState = run(sr, ['--data-dir', srData, '--state-dir']).out.trim();
+const stateFile = (name, content) => fs.writeFileSync(path.join(srState, name), content);
+const removeState = (...names) => names.forEach((name) => fs.rmSync(path.join(srState, name), { force: true }));
+const NEVER = 'Never published from this machine.';
+
+h.eq('no line: no --data-dir', sharedRefRun([]), [null, []]);
+h.eq('no line: no config.json', withData(), [null, []]);
+stateFile('config.json', 'not json');
+h.eq('no line: a config.json that is not valid JSON', withData(), [null, []]);
+removeState('config.json');
+setKey('sharing=off');
+h.eq('no line: sharing off without sharedUrl', withData(), [null, []]);
+setKey('sharedUrl=https://claude.ai/code/artifact/shared');
+h.eq('sharing off with sharedUrl', withData(), [{ off: true, published: null }, [`Sharing is off. The shared page from an earlier share is still published and is no longer updated. ${NEVER}`]]);
+setKey('sharing=on');
+setKey('sharedRef=origin/main');
+const tip = h.git(sr, 'rev-parse', 'HEAD').slice(0, 7);
+let [info, reports] = withData();
+const fieldsOf = (value) => [value.name, value.short, value.date, value.notShown, value.oldestNotShown, value.published, value.previousBuild];
+h.eq('following, nothing not shown: the fields, in local dates', fieldsOf(info), ['origin/main', tip, LOCAL_DAY, 0, null, null, null]);
+h.eq('following, nothing not shown: the report line', reports, [`The shared page follows origin/main, last commit ${LOCAL_DAY}. ${NEVER}`]);
+h.write(sr, 'file.txt', 'one\n');
+h.commit(sr, 'not shown 1', ['file.txt'], '2026-01-11T23:30:00+00:00');
+[info, reports] = withData();
+h.eq('one commit not shown, with its local date', [info.notShown, info.oldestNotShown], [1, '2026-01-12']);
+h.eq('one commit not shown: the report line', reports, [`The shared page follows origin/main, last commit ${LOCAL_DAY}. 1 commit of this branch is not in origin/main; it is from 2026-01-12. ${NEVER}`]);
+h.write(sr, 'file.txt', 'two\n');
+h.commit(sr, 'not shown 2', ['file.txt'], '2026-01-14T12:00:00+00:00');
+[info, reports] = withData();
+h.eq('two commits not shown: the count and the oldest date', [info.notShown, info.oldestNotShown], [2, '2026-01-12']);
+h.eq('two commits not shown: the report line', reports, [`The shared page follows origin/main, last commit ${LOCAL_DAY}. 2 commits of this branch are not in origin/main; the oldest is from 2026-01-12. ${NEVER}`]);
+// A tag with the same name as the shared value: git resolves a bare
+// "origin/main" to the tag (refs/tags comes before refs/remotes), so this
+// case fails any command that does not name refs/remotes/origin/main.
+h.git(sr, 'tag', 'origin/main', 'HEAD');
+[info] = withData();
+h.eq('a tag with the same name as the shared value is not followed', [info.short, info.notShown], [tip, 2]);
+h.git(sr, 'tag', '-d', 'origin/main');
+stateFile('shared.json', JSON.stringify({ generatedAt: '2026-10-01T10:05:00+02:00' }));
+stateFile('private.json', JSON.stringify({ generatedAt: '2026-10-15T09:00:00+02:00' }));
+[info, reports] = withData();
+h.eq('published and previousBuild come from the state files', [info.published, info.previousBuild], ['2026-10-01 10:05', '2026-10-15 09:00']);
+h.eq('published: the report line', reports, [`The shared page follows origin/main, last commit ${LOCAL_DAY}. 2 commits of this branch are not in origin/main; the oldest is from 2026-01-12. Last published 2026-10-01 10:05.`]);
+stateFile('shared.json', 'not json');
+stateFile('private.json', '{');
+[info] = withData();
+h.eq('state files that are not valid JSON give null', [typeof info, info.published, info.previousBuild], ['object', null, null]);
+removeState('shared.json', 'private.json');
+setKey('sharedRef=origin/gone');
+[info] = withData();
+h.eq('a missing ref', [info.name, info.missing, info.published, info.previousBuild, 'error' in info], ['origin/gone', true, null, null, false]);
+setKey('sharedRef=main');
+h.eq('a value of the wrong form', withData()[0].error, 'main is not of the form <remote>/<branch>');
+setKey("sharedRef=origin/a'b");
+h.eq('a value with a single quote', withData()[0].error, "origin/a'b is not of the form <remote>/<branch>");
+h.git(sr, 'update-ref', 'refs/remotes/origin/tree', h.git(sr, 'rev-parse', 'HEAD^{tree}'));
+setKey('sharedRef=origin/tree');
+h.eq('a ref that is not a commit', withData()[0].error, 'origin/tree is not a commit');
+setKey('sharedRef=origin/main');
+h.git(sr, 'remote', 'remove', 'origin');
+h.eq('a removed remote: the ref is missing', withData()[0].missing, true);
+h.check('every private run exits 0', exits.every((code) => code === 0), exits.join(','));
+
 h.finish();
