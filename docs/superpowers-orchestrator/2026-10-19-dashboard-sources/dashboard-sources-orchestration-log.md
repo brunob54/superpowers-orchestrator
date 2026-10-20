@@ -28,3 +28,8 @@ Re-dispatch: phase 3, in-run resume 1 of 3, return 1 of 6
 - Task 7: complete — private extract computes sharedRef and reports the shared-page line on stderr
 - Task 8: complete — shared-ref line on the private page (after ruling 1)
 - Task 9: complete — --verify refuses sharedRef in shared data
+
+## Phase 3 — Batch 4 (tasks 10–12) — COMPLETE — commits fb728cf..f61e946
+- Task 10: complete — SKILL.md reports the shared-page line; share keeps shared.json
+- Task 11: complete — guide, README and old-spec amendments
+- Task 12: complete — release 7.73.0
