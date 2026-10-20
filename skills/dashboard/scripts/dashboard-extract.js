@@ -57,8 +57,10 @@ const SHARED_REF_TEXT = {
   off: 'Sharing is off. The shared page from an earlier share is still published and is no longer updated.',
   never: 'Never published from this machine.',
 };
+// The config key that names the remote-tracking ref the shared page follows.
+const SHARED_REF_KEY = 'sharedRef';
 // Allowed config keys; a list names the only allowed values.
-const CONFIG_KEYS = { privateUrl: null, sharedUrl: null, sharing: ['on', 'off'], sharedRef: null };
+const CONFIG_KEYS = { privateUrl: null, sharedUrl: null, sharing: ['on', 'off'], [SHARED_REF_KEY]: null };
 const KEY_HEX_DIGITS = 12;
 // A run with no commit for this long may need a resume (spec section 5.2).
 const STALE_MS = 24 * 60 * 60 * 1000;
@@ -191,6 +193,9 @@ function setConfig(config, assignment) {
   if (!Object.prototype.hasOwnProperty.call(CONFIG_KEYS, key)) stop(`unknown config key: ${key}`);
   if (!value) stop(`${key} needs a value`);
   if (CONFIG_KEYS[key] && !CONFIG_KEYS[key].includes(value)) stop(`${key} must be one of: ${CONFIG_KEYS[key].join(', ')}`);
+  // The same form check as --check-shared-ref. A value written by hand into
+  // config.json skips this check; followedRef checks the form again.
+  if (key === SHARED_REF_KEY) requireSharedRefForm(value, `--config-set ${assignment}`);
   config[key] = value;
 }
 
@@ -721,7 +726,7 @@ function sharedRefState(context, dataDir) {
   const config = readJsonOrNull(path.join(dir, CONFIG_FILE));
   if (!config || typeof config !== 'object') return null;
   const published = publishTime(dir, STATE_FILES.shared);
-  const name = config.sharedRef;
+  const name = config[SHARED_REF_KEY];
   if (config.sharing === SHARING_ON && typeof name === 'string' && name) {
     return Object.assign({ name }, followedRef(context, name), { published, previousBuild: publishTime(dir, STATE_FILES.private) });
   }

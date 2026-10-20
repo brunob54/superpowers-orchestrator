@@ -8,6 +8,38 @@
 > (`REPOZY/superpowers-optimized`) and are kept unchanged as history; any
 > testing they describe was not done here.
 
+## v7.73.1 — dashboard: `--config-set` checks the form of `sharedRef`
+
+**Problem.** `--config-set` stored any non-empty `sharedRef` value, also one with a single quote; only a prose rule of `refresh` step 6 kept such a value out of a shell command. Separately, after a 7.72 `share`, 7.73 refreshes can show "Never published from this machine." or an older publish time on the shared-ref line until the shared page is published again.
+
+**Change.** `--config-set` now applies the form check of `--check-shared-ref` to `sharedRef`: a value that is not `<remote>/<branch>` stops with exit code 2 and is not stored. The second issue is documented below; no code changed for it.
+
+**Effect.** Reinstall the plugin. Nothing to migrate: `share` stores only a value that already passed this check.
+
+### What changed
+
+- `setConfig` in `skills/dashboard/scripts/dashboard-extract.js` checked only the key name, an empty value and the allowed values of `sharing`, so a `sharedRef` with a single quote could be stored. Only the prose rule of `refresh` step 6 then kept that value out of the shell command `--ref '<sharedRef>'`. For `sharedRef`, `setConfig` now runs `requireSharedRefForm`, the check of `--check-shared-ref`: ASCII letters, digits, `.`, `_`, `-` and `/` only, a `/` between the remote and the branch, and no `..`. A refused value prints `dashboard-extract: --config-set sharedRef=<value> is not of the form <remote>/<branch>`, exits with code 2 and leaves `config.json` unchanged.
+- `share` stores the ref that step 2 accepted with `--check-shared-ref` or `--default-shared-ref`, so `share` behaves as before.
+- The later checks stay, because a value written by hand into `config.json` does not pass through `--config-set`: the private run still checks the form and shows the error on the shared-ref line, and `refresh` step 6 still refuses a stored value with a single quote.
+- `tests/dashboard/test-04-extract-core.js` runs `--config-set` with `main` and with `origin/a'b`, with no stored value and after `origin/main` is stored: each exits 2, prints the form error and keeps the stored value. The tests of the shared-ref line for a bad value now write `config.json` directly.
+
+### The shared-ref line after a 7.72 `share`
+
+A `share` of 7.72 did not copy `shared.json` to the state folder; 7.73.0 added that copy in `share` step 5. A 7.72 `refresh` copied it only when it published both pages: its step 7 runs only after the private publish, and copies `shared.json` only when the shared page was published too. The extractor reads the time of the last shared publish from the `generatedAt` field of that copy.
+
+So the line can be wrong on a machine where the last sharing command under 7.72 was `share`, with no later 7.72 `refresh` that published the shared page:
+
+- When no 7.72 `refresh` ever published the shared page, the line says "Never published from this machine.". With sharing on, this line is a warning.
+- When an earlier 7.72 `refresh` had published the shared page, the line shows the time of that refresh, not the time of the later `share`. With sharing on, this line is a warning when that time lies more than 14 days before the last private publish.
+
+With sharing on, no action is needed. A `refresh` computes the line before it publishes the shared page, so the first 7.73 `refresh` still shows the old state. When that refresh publishes both pages, it keeps `shared.json`, and the next `refresh` shows the right time. With sharing off (a `share off` after that 7.72 `share`), the line says "Sharing is off. …" followed by the same old state, as an information line, not a warning. It stays until a `share` publishes the shared page again.
+
+### Known limits
+
+- The form check accepts some values that cannot name a remote-tracking branch: `x//` and `origin/x.lock` are not valid git ref names, and in `-/-` the branch part `-` is not a valid branch name. Such a value is not a danger for the shell: the allowed characters have no special meaning inside the single quotes of the `refresh` step 6 command, and the extractor passes the value to git only after the prefix `refs/remotes/`, so git never reads it as an option. `refresh` step 6 then stops with "the shared ref … no longer exists", and the private page shows the ref as missing.
+- The refusal message prints the value as it was given. The check refuses a value with a line break or another control character, but the message still shows that character unchanged in the terminal.
+- The update does not check a `sharedRef` that `--config-set` of 7.73.0 or older stored. Each private run checks its form again and shows the error on the shared-ref line; the shared extract (`--ref`) stops on it with exit code 2; and `refresh` step 6 refuses a value with a single quote by the prose rule of SKILL.md.
+
 ## v7.73.0 — dashboard: a Source line on every card, a true "as of" line, the shared-ref line, a short Git card
 
 **Problem.** A private dashboard page showed 11 "open items of recent sessions" that were all fixed, and its shared page was 25 days old with no warning. No card said what it reads, and old branches filled the Git card.
@@ -37,6 +69,8 @@ The first `refresh` prints these lines once, in the `--diff` output of its rende
     sessionOpenItems: status <ok, not-found or error> → absent
 
 (The first line appears only when the old section held items.)
+
+After a `share` made under 7.72, the shared-ref line can show "Never published from this machine." or an older publish time until the shared page is published again; see v7.73.1.
 
 ### Accepted limits
 

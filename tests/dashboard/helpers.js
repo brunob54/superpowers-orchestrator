@@ -116,6 +116,23 @@ function script(name) {
   return path.join(SCRIPTS, name);
 }
 
+// The config file of the dashboard state folder.
+const CONFIG_FILE = 'config.json';
+// The config key that names the remote-tracking ref the shared page follows.
+const SHARED_REF_KEY = 'sharedRef';
+
+// Sets <key> to <value> in the config.json of the dashboard state folder of
+// <dir> (plugin data folder <dataDir>) by writing the file directly, as a
+// hand edit does. --config-set refuses some values that a hand edit can
+// still store; tests use this function to store such values.
+function handEditConfig(dir, dataDir, key, value) {
+  const extract = script('dashboard-extract.js');
+  const stateDir = node(dir, [extract, '--data-dir', dataDir, '--state-dir']).out.trim();
+  const config = JSON.parse(node(dir, [extract, '--data-dir', dataDir, '--config']).out);
+  config[key] = value;
+  fs.writeFileSync(path.join(stateDir, CONFIG_FILE), JSON.stringify(config));
+}
+
 // scanRuns(<options>) of git-runs.js, run inside <dir>. The result is the
 // list of runs; its "errors" property (a list of { command, message }) is
 // returned as the "errors" property of the parsed list too.
@@ -160,5 +177,5 @@ function proposalFile(folder, id, body, version) {
 module.exports = {
   REPO, SCRIPTS, GIT_RUNS, OLD_DATE, ROOT, HOME, ENV,
   check, eq, finish, git, gitIn, repo, addRemote, write, commit, node, script, scan, runLog, logPath,
-  proposalFile, versionsFile,
+  proposalFile, versionsFile, CONFIG_FILE, SHARED_REF_KEY, handEditConfig,
 };

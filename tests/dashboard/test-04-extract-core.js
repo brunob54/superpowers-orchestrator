@@ -120,11 +120,36 @@ h.check('--state-dir creates the folder', fs.existsSync(path.join(data, 'dashboa
 h.eq('an empty --data-dir stops', run(d, ['--data-dir', '', '--state-dir']).code, 2);
 h.eq('an unsubstituted --data-dir stops', run(d, ['--data-dir', '${CLAUDE_PLUGIN_DATA}', '--state-dir']).code, 2);
 h.eq('--config with no config.json prints {}', run(d, ['--data-dir', data, '--config']).out.trim(), '{}');
+// --config-set applies to sharedRef the form check of --check-shared-ref:
+// a refused value exits 2, prints the form error and leaves config.json as
+// it was. A first refusal runs before any store (no config.json yet); then a
+// round runs with no stored sharedRef, and a round after a valid value is
+// stored.
+const BAD_SHARED_REFS = ['main', "origin/a'b"];
+const VALID_SHARED_REF = 'origin/main';
+const readConfig = () => run(d, ['--data-dir', data, '--config']).out;
+const setSharedRef = (value) => run(d, ['--data-dir', data, '--config-set', `${h.SHARED_REF_KEY}=${value}`]);
+const storedSharedRef = () => JSON.parse(readConfig())[h.SHARED_REF_KEY];
+function checkRefusedSharedRefs(stored) {
+  const label = stored === undefined ? 'nothing stored' : `stored: ${stored}`;
+  for (const value of BAD_SHARED_REFS) {
+    const assignment = `${h.SHARED_REF_KEY}=${value}`;
+    const refused = setSharedRef(value);
+    h.eq(`--config-set ${assignment} stops with the form error (${label})`, [refused.code, refused.err], [2, `dashboard-extract: --config-set ${assignment} is not of the form <remote>/<branch>\n`]);
+    h.eq(`--config-set ${assignment} keeps the stored value (${label})`, storedSharedRef(), stored);
+  }
+}
+const firstRefused = setSharedRef(BAD_SHARED_REFS[0]);
+h.eq('a refused sharedRef before any store: exit 2, --config prints {}, no config.json', [firstRefused.code, readConfig().trim(), fs.existsSync(path.join(state.out.trim(), h.CONFIG_FILE))], [2, '{}', false]);
 run(d, ['--data-dir', data, '--config-set', 'privateUrl=https://claude.ai/code/artifact/x']);
 const set = run(d, ['--data-dir', data, '--config-set', 'sharing=on']);
 h.eq('--config-set keeps the earlier keys', JSON.parse(set.out), { privateUrl: 'https://claude.ai/code/artifact/x', sharing: 'on' });
 h.eq('an unknown key stops', run(d, ['--data-dir', data, '--config-set', 'colour=red']).code, 2);
 h.eq('a sharing value other than on or off stops', run(d, ['--data-dir', data, '--config-set', 'sharing=maybe']).code, 2);
+checkRefusedSharedRefs(undefined);
+const validSet = setSharedRef(VALID_SHARED_REF);
+h.eq('a sharedRef of the form <remote>/<branch> is stored', [validSet.code, storedSharedRef()], [0, VALID_SHARED_REF]);
+checkRefusedSharedRefs(VALID_SHARED_REF);
 const withDataDir = run(d, ['--data-dir', '', '--audience', 'private', '--out', outside]);
 h.check('an extraction that carries --data-dir (even empty) still writes the document', withDataDir.code === 0 && withDataDir.out.startsWith(`written ${outside} `));
 
@@ -204,14 +229,15 @@ const withData = () => sharedRefRun(['--data-dir', srData]);
 const setKey = (assignment) => run(sr, ['--data-dir', srData, '--config-set', assignment]);
 const srState = run(sr, ['--data-dir', srData, '--state-dir']).out.trim();
 const stateFile = (name, content) => fs.writeFileSync(path.join(srState, name), content);
+const handEditConfig = (key, value) => h.handEditConfig(sr, srData, key, value);
 const removeState = (...names) => names.forEach((name) => fs.rmSync(path.join(srState, name), { force: true }));
 const NEVER = 'Never published from this machine.';
 
 h.eq('no line: no --data-dir', sharedRefRun([]), [null, []]);
 h.eq('no line: no config.json', withData(), [null, []]);
-stateFile('config.json', 'not json');
+stateFile(h.CONFIG_FILE, 'not json');
 h.eq('no line: a config.json that is not valid JSON', withData(), [null, []]);
-removeState('config.json');
+removeState(h.CONFIG_FILE);
 setKey('sharing=off');
 h.eq('no line: sharing off without sharedUrl', withData(), [null, []]);
 setKey('sharedUrl=https://claude.ai/code/artifact/shared');
@@ -253,9 +279,9 @@ removeState('shared.json', 'private.json');
 setKey('sharedRef=origin/gone');
 [info] = withData();
 h.eq('a missing ref', [info.name, info.missing, info.published, info.previousBuild, 'error' in info], ['origin/gone', true, null, null, false]);
-setKey('sharedRef=main');
+handEditConfig(h.SHARED_REF_KEY, 'main');
 h.eq('a value of the wrong form', withData()[0].error, 'main is not of the form <remote>/<branch>');
-setKey("sharedRef=origin/a'b");
+handEditConfig(h.SHARED_REF_KEY, "origin/a'b");
 h.eq('a value with a single quote', withData()[0].error, "origin/a'b is not of the form <remote>/<branch>");
 h.git(sr, 'update-ref', 'refs/remotes/origin/tree', h.git(sr, 'rev-parse', 'HEAD^{tree}'));
 setKey('sharedRef=origin/tree');

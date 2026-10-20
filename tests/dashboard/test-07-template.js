@@ -227,7 +227,7 @@ sameWording('checks passing on a detached HEAD');
 h.git(wording, 'checkout', '-q', 'main');
 wordingSet('sharedRef=origin/gone');
 sameWording('a missing ref');
-wordingSet('sharedRef=main');
+h.handEditConfig(wording, wordingData, h.SHARED_REF_KEY, 'main');
 sameWording('an error');
 wordingSet('sharing=off');
 wordingSet('sharedUrl=https://claude.ai/code/artifact/shared');

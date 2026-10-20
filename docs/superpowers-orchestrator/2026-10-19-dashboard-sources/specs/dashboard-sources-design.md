@@ -318,8 +318,8 @@ this order, and the first failing check decides the result:
 
 1. The form check of `requireSharedRefForm`, as a test that returns true
    or false. Failure → `error` with the message `<value> is not of the form
-   <remote>/<branch>` (a value stored by hand with `--config-set` can have
-   any form).
+   <remote>/<branch>` (`--config-set` refuses such a value since v7.73.1,
+   but a value written by hand into `config.json` can have any form).
 2. `git show-ref --verify --quiet refs/remotes/<name>` (the exact-name
    check). Non-zero exit → `missing`.
 3. `git rev-parse --verify --quiet refs/remotes/<name>^{commit}`. Failure
