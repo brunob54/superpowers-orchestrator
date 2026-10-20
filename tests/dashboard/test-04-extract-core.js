@@ -271,6 +271,7 @@ const ambiguous = sharedRefRun(['--data-dir', srData]);
 h.check('a file named like a ref: the private extract exits 0 and the shared-ref line is normal', typeof ambiguous[0] === 'object' && !('error' in ambiguous[0]) && /^\d{4}-\d{2}-\d{2}$/.test(ambiguous[0].date), JSON.stringify(ambiguous));
 const ambiguousDoc = JSON.parse(h.node(sr, [EXTRACT, '--audience', 'private'], TOKYO).out || 'null');
 h.check('a file named HEAD: commit.date is a date', /^\d{4}-\d{2}-\d{2}$/.test((ambiguousDoc && ambiguousDoc.commit.date) || ''));
+h.eq('a file named HEAD: the commits section is ok', ambiguousDoc && ambiguousDoc.sections.commits.status, 'ok');
 fs.rmSync(path.join(sr, 'HEAD'), { force: true });
 fs.rmSync(path.join(sr, 'refs'), { recursive: true, force: true });
 h.git(sr, 'remote', 'remove', 'origin');

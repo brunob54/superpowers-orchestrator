@@ -227,7 +227,10 @@ audience (`privateUrl` or `sharedUrl`).
    `dashboard-data.json` from the renderer's `written` line, and the URL of
    each page that was published. When step 4 printed a line that starts with
    `dashboard-extract: shared page:`, repeat that line in the report without
-   its `dashboard-extract: ` prefix. Do not describe the content of the page.
+   its `dashboard-extract: ` prefix. When step 6 published the shared page in
+   this refresh, add "(state before this refresh; the shared page was published
+   now)" at the end of that line, because step 4 computed the line before the
+   publish. Do not describe the content of the page.
 
 ### The stored URL no longer works
 

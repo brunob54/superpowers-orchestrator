@@ -475,7 +475,7 @@ function gitSection(context) {
 
 function commits(context) {
   const format = ['%H', '%h', '%cd', '%s'].join('%x1f');
-  const items = mustLines(['log', `-${COMMIT_LIMIT}`, `--format=${format}`, `--date=${LOCAL_DATE}`, context.ref]).map((row) => {
+  const items = mustLines(['log', `-${COMMIT_LIMIT}`, `--format=${format}`, `--date=${LOCAL_DATE}`, context.ref, '--']).map((row) => {
     const [sha, short, date, subject] = row.split(FIELD_SEPARATOR);
     return keyItem(context, SECTION.commits, sha, null, { kind: KIND.commit, sha, short, date, subject });
   });
