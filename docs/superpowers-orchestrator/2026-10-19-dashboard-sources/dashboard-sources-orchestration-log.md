@@ -33,3 +33,5 @@ Re-dispatch: phase 3, in-run resume 1 of 3, return 1 of 6
 - Task 10: complete — SKILL.md reports the shared-page line; share keeps shared.json
 - Task 11: complete — guide, README and old-spec amendments
 - Task 12: complete — release 7.73.0
+
+## Phase 4 — Code review — rounds 3 — converged — fixes 2 — unresolved 0
