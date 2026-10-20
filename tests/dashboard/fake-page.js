@@ -9,9 +9,9 @@ const h = require('./helpers');
 
 const TEMPLATE = fs.readFileSync(path.join(h.REPO, 'skills', 'dashboard', 'template.html'), 'utf8');
 const APP = (TEMPLATE.match(/<script id="dashboard-app">([\s\S]*?)<\/script>/) || [])[1] || '';
-const STATIC_IDS = ['page-title', 'as-of', 'private-banner', 'viewer-warning', 'load-error', 'tab-waits', 'tab-history', 'panel-waits', 'panel-history'];
+const STATIC_IDS = ['page-title', 'as-of', 'shared-ref', 'private-banner', 'viewer-warning', 'load-error', 'tab-waits', 'tab-history', 'panel-waits', 'panel-history'];
 // The static elements that the template marks "hidden".
-const HIDDEN_IDS = ['private-banner', 'viewer-warning', 'load-error', 'panel-history'];
+const HIDDEN_IDS = ['shared-ref', 'private-banner', 'viewer-warning', 'load-error', 'panel-history'];
 
 class FakeNode {
   constructor(doc, tag) {

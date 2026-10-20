@@ -141,6 +141,97 @@ for (const id of SECTION_IDS) {
 h.eq('SHARED_SOURCES replaces the sentences of unfinishedRuns, git and commits', Object.keys(app.SHARED_SOURCES).sort(), ['commits', 'git', 'unfinishedRuns']);
 const ALL_SENTENCES = Object.values(app.SOURCES).concat(Object.values(app.SHARED_SOURCES));
 h.check('no sentence holds an absolute path or a home folder', ALL_SENTENCES.every((sentence) => !/(^|\s|\()(\/|~|[A-Za-z]:[\\/])/.test(sentence)));
+// The shared-ref line (spec section 4.5): texts, classes, the hidden state.
+const WARN = 'shared-ref banner warn';
+const INFO = 'shared-ref muted';
+const REF_BUILT = '2026-10-19T16:43:00+02:00';
+const FOLLOW = { name: 'origin/main', short: '1234567', date: '2026-10-01', notShown: 0, oldestNotShown: null, published: '2026-10-19 16:40', previousBuild: '2026-10-19 16:30' };
+const FOLLOWS = 'The shared page follows origin/main, last commit 2026-10-01.';
+const LAST = 'Last published 2026-10-19 16:40.';
+const NEVER = 'Never published from this machine.';
+const follow = (fields) => Object.assign({}, FOLLOW, fields);
+// The shared-ref element after one render: [text, class, hidden].
+function refLine(info, branch, generatedAt, audience) {
+  const pageDoc = fakeDocument(audience || 'private');
+  const data = sample(audience || 'private', branch === undefined ? 'main' : branch);
+  data.generatedAt = generatedAt || REF_BUILT;
+  if (info !== undefined) data.sharedRef = info;
+  load(pageDoc).DashboardApp.renderPage({ data, canEdit: false, proposals: new Map(), store: null });
+  const node = pageDoc.getElementById('shared-ref');
+  return [node.textContent, node.getAttribute('class'), node.hidden];
+}
+h.eq('following, nothing not shown', refLine(FOLLOW), [`${FOLLOWS} ${LAST}`, INFO, false]);
+h.eq('2 commits not shown, the oldest 14 days old: information', refLine(follow({ notShown: 2, oldestNotShown: '2026-10-05' })), [`${FOLLOWS} 2 commits of this branch are not in origin/main; the oldest is from 2026-10-05. ${LAST}`, INFO, false]);
+h.eq('the oldest not shown 15 days old: warning', refLine(follow({ notShown: 2, oldestNotShown: '2026-10-04' }))[1], WARN);
+h.eq('1 commit not shown', refLine(follow({ notShown: 1, oldestNotShown: '2026-10-05' }))[0], `${FOLLOWS} 1 commit of this branch is not in origin/main; it is from 2026-10-05. ${LAST}`);
+h.eq('detached HEAD, 2 not shown', refLine(follow({ notShown: 2, oldestNotShown: '2026-10-05' }), null)[0], `${FOLLOWS} The checked-out commit has 2 commits that are not in origin/main; the oldest is from 2026-10-05. ${LAST}`);
+h.eq('detached HEAD, 1 not shown', refLine(follow({ notShown: 1, oldestNotShown: '2026-10-05' }), null)[0], `${FOLLOWS} The checked-out commit has 1 commit that is not in origin/main; it is from 2026-10-05. ${LAST}`);
+h.eq('a ref tip 30 days old with nothing not shown: information', refLine(follow({ date: '2026-09-19' }))[1], INFO);
+h.eq('never published: warning', refLine(follow({ published: null })), [`${FOLLOWS} ${NEVER}`, WARN, false]);
+h.eq('a gap of 14 days to the previous private publish: information', refLine(follow({ published: '2026-10-01 10:00', previousBuild: '2026-10-15 10:00' }))[1], INFO);
+h.eq('a gap of 15 days: warning', refLine(follow({ published: '2026-10-01 10:00', previousBuild: '2026-10-16 10:00' }))[1], WARN);
+h.eq('both times 30 days old and equal: information', refLine(follow({ published: '2026-09-19 10:00', previousBuild: '2026-09-19 10:00' }))[1], INFO);
+h.eq('a missing ref: warning', refLine({ name: 'origin/main', missing: true, published: FOLLOW.published, previousBuild: FOLLOW.previousBuild }), [`The shared page follows origin/main, which no longer exists. The shared page cannot be updated. ${LAST}`, WARN, false]);
+h.eq('an error: warning', refLine({ name: 'main', error: 'main is not of the form <remote>/<branch>', published: FOLLOW.published, previousBuild: FOLLOW.previousBuild }), [`The state of the shared ref could not be read: main is not of the form <remote>/<branch>. ${LAST}`, WARN, false]);
+h.eq('sharing off: information', refLine({ off: true, published: null }), [`Sharing is off. The shared page from an earlier share is still published and is no longer updated. ${NEVER}`, INFO, false]);
+const hiddenOf = (line) => [line[0], line[2]];
+h.eq('no sharedRef key: hidden and empty', hiddenOf(refLine(undefined)), ['', true]);
+h.eq('sharedRef null: hidden and empty', hiddenOf(refLine(null)), ['', true]);
+h.eq('the shared page: hidden and empty', hiddenOf(refLine(undefined, 'origin/main', REF_BUILT, 'shared')), ['', true]);
+const twice = fakeDocument('private');
+const twiceApp = load(twice).DashboardApp;
+const twiceView = { data: Object.assign(sample('private', 'main'), { sharedRef: FOLLOW }), canEdit: false, proposals: new Map(), store: null };
+twiceApp.renderPage(twiceView);
+twiceApp.renderPage(twiceView);
+h.eq('two renders: no created shared-ref element, one line in the static one', [twice.created.filter((node) => node.getAttribute('id') === 'shared-ref').length, twice.getElementById('shared-ref').textContent], [0, `${FOLLOWS} ${LAST}`]);
+h.check('the template places id="shared-ref" directly after id="as-of"', /<p id="as-of" class="muted"><\/p>\s*<p id="shared-ref" hidden><\/p>/.test(TEMPLATE));
+// Days are calendar days, also across a daylight-saving change. Europe/Berlin
+// moves its clocks back on 2026-10-25: a count of local midnights gives
+// 14.04 days from 2026-10-12 to 2026-10-26, which would wrongly be a warning,
+// so this case fails a count that divides a difference of local times. (The
+// spring change of 2026-03-29 gives 13.96 and 14.96 days, which round the
+// same way as the calendar count, so it cannot catch that defect.)
+const savedZone = process.env.TZ;
+process.env.TZ = 'Europe/Berlin';
+const DST_BUILT = '2026-10-26T12:00:00+01:00';
+h.eq('across a daylight-saving change: 14 days is information, 15 days a warning', [refLine(follow({ notShown: 1, oldestNotShown: '2026-10-12' }), 'main', DST_BUILT)[1], refLine(follow({ notShown: 1, oldestNotShown: '2026-10-11' }), 'main', DST_BUILT)[1]], [INFO, WARN]);
+if (savedZone === undefined) delete process.env.TZ; else process.env.TZ = savedZone;
+
+// The same wording (spec section 6): the extractor's report line and the page
+// line built from the extractor's data, for each case of section 4.5.
+const EXTRACT = h.script('dashboard-extract.js');
+const REPORT = 'dashboard-extract: shared page: ';
+const wording = h.repo('template-shared-ref');
+h.addRemote(wording, 'template-shared-ref-remote');
+h.write(wording, 'file.txt', 'base\n');
+h.commit(wording, 'base', ['file.txt']);
+h.git(wording, 'push', '-q', '-u', 'origin', 'main');
+h.write(wording, 'file.txt', 'one\n');
+h.commit(wording, 'one', ['file.txt']);
+h.write(wording, 'file.txt', 'two\n');
+h.commit(wording, 'two', ['file.txt']);
+const wordingData = path.join(h.ROOT, 'template-shared-ref-data');
+const wordingSet = (assignment) => h.node(wording, [EXTRACT, '--data-dir', wordingData, '--config-set', assignment]);
+function sameWording(label) {
+  const result = h.node(wording, [EXTRACT, '--audience', 'private', '--data-dir', wordingData]);
+  const said = result.err.split('\n').filter((line) => line.startsWith(REPORT)).map((line) => line.slice(REPORT.length));
+  const pageDoc = fakeDocument('private');
+  load(pageDoc).DashboardApp.renderPage({ data: JSON.parse(result.out), canEdit: false, proposals: new Map(), store: null });
+  h.eq(`same wording, ${label}`, [said.length, pageDoc.getElementById('shared-ref').textContent], [1, said[0]]);
+}
+wordingSet('sharing=on');
+wordingSet('sharedRef=origin/main');
+sameWording('checks passing on a branch');
+h.git(wording, 'checkout', '-q', '--detach', 'HEAD');
+sameWording('checks passing on a detached HEAD');
+h.git(wording, 'checkout', '-q', 'main');
+wordingSet('sharedRef=origin/gone');
+sameWording('a missing ref');
+wordingSet('sharedRef=main');
+sameWording('an error');
+wordingSet('sharing=off');
+wordingSet('sharedUrl=https://claude.ai/code/artifact/shared');
+sameWording('sharing off');
 const SESSION = { kind: 'session', goal: 'Rename the RDKit helper' };
 h.eq('a session line starts with the date and time of its entry', app.itemLines(Object.assign({ entry: '## 2026-10-14 12:00 [saved]' }, SESSION)), ['2026-10-14 12:00 · Rename the RDKit helper']);
 h.eq('an entry with no date and time, or no entry: the goal alone', [app.itemLines(Object.assign({ entry: '## Notes' }, SESSION)), app.itemLines(SESSION)], [['Rename the RDKit helper'], ['Rename the RDKit helper']]);

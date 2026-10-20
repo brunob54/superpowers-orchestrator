@@ -79,6 +79,7 @@ h2 { font-size: 1.05rem; margin: 0 0 8px; }
   <header>
     <h1 id="page-title">Dashboard</h1>
     <p id="as-of" class="muted"></p>
+    <p id="shared-ref" hidden></p>
     <p id="private-banner" class="banner danger" hidden>Private page — do not make it public</p>
     <p id="viewer-warning" class="banner warn" hidden>This page is not meant to be shared: it belongs to its owner and holds private data.</p>
     <p id="load-error" class="banner danger" hidden></p>
@@ -110,6 +111,17 @@ h2 { font-size: 1.05rem; margin: 0 0 8px; }
   const BRANCH_FOLD_DAYS = 90;
   const FOLD_REASON = `(no commit in the last ${BRANCH_FOLD_DAYS} days)`;
   const CURRENT_MARK = ' [current]';
+  const SHARED_REF_ID = 'shared-ref';
+  // A day count above this many days makes the shared-ref line a warning.
+  const SHARED_STALE_DAYS = 14;
+  const SHARED_REF_CLASS = { warn: 'shared-ref banner warn', info: 'shared-ref muted' };
+  // skills/dashboard/scripts/dashboard-extract.js holds the only other copy
+  // of these texts (the page cannot load shared code);
+  // tests/dashboard/test-07-template.js checks that both give one line.
+  const SHARED_REF_TEXT = {
+    off: 'Sharing is off. The shared page from an earlier share is still published and is no longer updated.',
+    never: 'Never published from this machine.',
+  };
   const DAY_MS = 24 * 60 * 60 * 1000;
   const DATE_PART = /^(\d{4})-(\d{2})-(\d{2})/;
   const TABS = [
@@ -554,10 +566,65 @@ h2 { font-size: 1.05rem; margin: 0 0 8px; }
     return card;
   }
 
+  // The "not shown" part of the shared-ref line. <branch> is null on a
+  // detached HEAD.
+  function notShownText(info, branch) {
+    const notShown = info.notShown;
+    const name = text(info.name);
+    const oldest = text(info.oldestNotShown);
+    if (branch === null) {
+      return notShown === 1
+        ? `The checked-out commit has 1 commit that is not in ${name}; it is from ${oldest}.`
+        : `The checked-out commit has ${notShown} commits that are not in ${name}; the oldest is from ${oldest}.`;
+    }
+    return notShown === 1
+      ? `1 commit of this branch is not in ${name}; it is from ${oldest}.`
+      : `${notShown} commits of this branch are not in ${name}; the oldest is from ${oldest}.`;
+  }
+
+  // The shared-ref line (spec section 4.5, "Page").
+  function sharedRefLine(info, branch) {
+    const parts = [];
+    if (info.off) parts.push(SHARED_REF_TEXT.off);
+    else if (info.missing) parts.push(`The shared page follows ${text(info.name)}, which no longer exists. The shared page cannot be updated.`);
+    else if (info.error !== undefined) parts.push(`The state of the shared ref could not be read: ${text(info.error)}.`);
+    else {
+      parts.push(`The shared page follows ${text(info.name)}, last commit ${text(info.date)}.`);
+      if (info.notShown > 0) parts.push(notShownText(info, branch));
+    }
+    parts.push(info.published ? `Last published ${text(info.published)}.` : SHARED_REF_TEXT.never);
+    return parts.join(' ');
+  }
+
+  // true when the line is a warning: old work not shown, a shared publish
+  // that keeps failing, a missing ref or an error (spec section 4.5,
+  // "Style"). Sharing off is always an information line.
+  function sharedRefWarns(info, generatedAt) {
+    if (info.off) return false;
+    if (info.missing || info.error !== undefined) return true;
+    const waiting = calendarDays(info.oldestNotShown, generatedAt);
+    if (waiting !== null && waiting > SHARED_STALE_DAYS) return true;
+    if (!info.published) return true;
+    const gap = calendarDays(info.published, info.previousBuild);
+    return gap !== null && gap > SHARED_STALE_DAYS;
+  }
+
+  // Sets the static shared-ref element: renderPage runs several times, so it
+  // never creates the element, only sets its text, class and hidden state.
+  function renderSharedRef(data) {
+    const node = document.getElementById(SHARED_REF_ID);
+    const info = data.sharedRef;
+    const shown = info !== null && info !== undefined;
+    node.textContent = shown ? sharedRefLine(info, data.commit.branch) : '';
+    node.setAttribute('class', shown && sharedRefWarns(info, data.generatedAt) ? SHARED_REF_CLASS.warn : SHARED_REF_CLASS.info);
+    node.hidden = !shown;
+  }
+
   function renderPage(ctx) {
     const data = ctx.data;
     document.getElementById('page-title').textContent = `${text(data.repo && data.repo.name)} dashboard`;
     document.getElementById('as-of').textContent = asOfLine(data);
+    renderSharedRef(data);
     TABS.forEach((tab) => {
       document.getElementById(tab.panel).replaceChildren(...tab.sections.map((id) => renderSection(id, data.sections[id], ctx)));
     });
