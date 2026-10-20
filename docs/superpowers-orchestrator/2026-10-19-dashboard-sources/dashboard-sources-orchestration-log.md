@@ -23,3 +23,8 @@ Items: [task 8/1] forced — plan governs: Task 8 Contract (template builds the 
 Detail: docs/superpowers-orchestrator/2026-10-19-dashboard-sources/plans/dashboard-sources-open-decisions.md
 Forks: none — contradiction: none
 Re-dispatch: phase 3, in-run resume 1 of 3, return 1 of 6
+
+## Phase 3 — Batch 3 (tasks 7–9) — COMPLETE — commits d4daa64..a7673eb
+- Task 7: complete — private extract computes sharedRef and reports the shared-page line on stderr
+- Task 8: complete — shared-ref line on the private page (after ruling 1)
+- Task 9: complete — --verify refuses sharedRef in shared data
