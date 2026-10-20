@@ -36,7 +36,11 @@ const VERSION_LINE = /^(\S+) ([1-9][0-9]*)$/;
 // The exit status of "git ls-files --error-unmatch" for a file that git does
 // not track; any other non-zero status is a failure of git.
 const LS_FILES_NOT_TRACKED = 1;
-const KIND = { resolve: 'resolve-open-item', setPart: 'set-part' };
+const KIND = { setPart: 'set-part' };
+// The proposal kind that 7.73.0 removed. A page database can still hold
+// proposals of this kind; they get this reason, and the owner rejects them.
+const REMOVED_KIND = 'resolve-open-item';
+const REMOVED_KIND_REASON = `${REMOVED_KIND} was removed in 7.73.0; reject this proposal`;
 const VERDICT = {
   unique: 'unique', alreadyApplied: 'already-applied', none: 'none', several: 'several',
   invalid: 'invalid', fileMissing: 'file-missing', wrongBranch: 'wrong-branch', heldRun: 'held-run',
@@ -44,7 +48,6 @@ const VERDICT = {
 const DONE = 'done';
 const WORKLOG_FILE = /^docs\/worklogs\/[a-z0-9]+(-[a-z0-9]+)*\.md$/;
 const CREATED_AT = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2}(\.\d+)?)?[+-]\d{2}:\d{2}$/;
-const DEFAULT_NOTE = 'from the dashboard';
 const ITEM_REFERENCE = 'item #';
 const DATE_LENGTH = 10;
 // The header of skills/worklog/template.md, used when the file has no
@@ -213,28 +216,26 @@ const safeText = (value) => typeof value === 'string' && !parse.UNSAFE_CHARACTER
 
 // The rules of spec section 8 step 2.1 that need no file.
 function basicInvalid(p) {
-  if (p.kind !== KIND.resolve && p.kind !== KIND.setPart) return 'kind is not resolve-open-item or set-part';
+  if (p.kind === REMOVED_KIND) return REMOVED_KIND_REASON;
+  if (p.kind !== KIND.setPart) return 'kind is not set-part';
   if (typeof p.file !== 'string' || !p.file || path.isAbsolute(p.file) || p.file.includes('\\') || p.file.split('/').includes('..')) {
     return 'file is not a relative path inside the repository';
   }
-  if (p.kind === KIND.resolve && p.file !== parse.SESSION_LOG) return 'resolve-open-item allows only session-log.md';
-  if (p.kind === KIND.setPart && !WORKLOG_FILE.test(p.file)) return 'set-part allows only docs/worklogs/<slug>.md';
-  if (p.status !== undefined && (p.kind !== KIND.setPart || !parse.PART_STATUSES.includes(p.status))) return 'status must be not started, in progress or done, on set-part only';
+  if (!WORKLOG_FILE.test(p.file)) return 'set-part allows only docs/worklogs/<slug>.md';
+  if (p.status !== undefined && !parse.PART_STATUSES.includes(p.status)) return 'status must be not started, in progress or done, on set-part only';
   if (p.note !== undefined && (typeof p.note !== 'string' || p.note.length > parse.NOTE_LIMIT || parse.NOTE_FORBIDDEN.test(p.note))) {
     return `note must be one line of at most ${parse.NOTE_LIMIT} characters without | [ ] or control characters`;
   }
-  if (p.kind === KIND.setPart && p.status === undefined && p.note === undefined) return 'set-part needs a status or a note';
+  if (p.status === undefined && p.note === undefined) return 'set-part needs a status or a note';
   const a = p.anchor;
   const anchorOk = Boolean(a) && safeText(a.heading) && a.heading.startsWith(parse.HEADING_PREFIX)
     && Number.isInteger(a.headingOrdinal) && a.headingOrdinal >= 1 && safeText(a.line)
-    && (p.kind === KIND.setPart
-      ? a.heading === parse.PARTS_HEADING && safeText(a.part)
-      : Number.isInteger(a.occurrence) && a.occurrence >= 1);
+    && a.heading === parse.PARTS_HEADING && safeText(a.part);
   if (!anchorOk) return 'the anchor fields are missing or wrong';
-  if (p.kind === KIND.setPart && (typeof p.branch !== 'string' || !p.branch)) {
+  if (typeof p.branch !== 'string' || !p.branch) {
     return 'set-part needs the branch of the page (a page built on a detached HEAD cannot propose work-log edits)';
   }
-  if (typeof p.branch === 'string' && !safeText(p.branch)) return 'the branch holds a line break or a control character';
+  if (!safeText(p.branch)) return 'the branch holds a line break or a control character';
   if (typeof p.createdAt !== 'string' || !CREATED_AT.test(p.createdAt)) return 'createdAt is not a local time with its offset';
   return null;
 }
@@ -243,10 +244,6 @@ function basicInvalid(p) {
 // owner saw) and its own fields only, so it is the same on every run.
 function expectedChange(p, header) {
   const date = p.createdAt.slice(0, DATE_LENGTH);
-  if (p.kind === KIND.resolve) {
-    const note = p.note === undefined ? DEFAULT_NOTE : p.note;
-    return { changed: !p.anchor.line.includes(parse.RESOLVED_MARK), line: `${p.anchor.line} [resolved ${date}: ${note}]` };
-  }
   const columns = parse.columnIndex(header, parse.PART_COLUMNS) ? header : DEFAULT_PART_HEADER;
   const col = parse.columnIndex(columns, parse.PART_COLUMNS);
   const cells = parse.splitRow(p.anchor.line);
@@ -282,14 +279,6 @@ function partWarnings(p, lines, expected) {
     warnings.push('an open item blocks this part; the work-log rules say that a blocked part keeps its status');
   }
   return warnings;
-}
-
-function findResolveTarget(p, lines, section, expected) {
-  const index = parse.lineAtOccurrence(lines, section, parse.normalizeLine(p.anchor.line), p.anchor.occurrence);
-  if (index === -1) return verdict(VERDICT.none, 'the line is no longer at its place');
-  if (lines[index] === p.anchor.line) return target(index, p.anchor.line, expected.line, []);
-  if (lines[index] === expected.line) return verdict(VERDICT.alreadyApplied, 'the line already holds this change');
-  return verdict(VERDICT.none, 'the line changed after the refresh');
 }
 
 function findPartTarget(p, lines, section, expected) {
@@ -345,16 +334,16 @@ function evaluate(proposal, env, read) {
   const text = read(full);
   const lines = text === null ? null : parse.splitLines(text);
   const section = lines ? parse.findSection(lines, p.anchor.heading, p.anchor.headingOrdinal) : null;
-  const header = section && p.kind === KIND.setPart ? parse.sectionTable(lines, section).header : [];
+  const header = section ? parse.sectionTable(lines, section).header : [];
   const expected = expectedChange(p, header);
   if (expected.error) return verdict(VERDICT.invalid, expected.error);
   if (!expected.changed) return verdict(VERDICT.invalid, 'the proposal changes nothing');
   if (text === null) return verdict(VERDICT.fileMissing, `${p.file} does not exist in the working tree`);
-  if (p.kind === KIND.setPart && p.branch !== env.branch) return verdict(VERDICT.wrongBranch, `the page was built on ${p.branch}; check out that branch and sync again`);
+  if (p.branch !== env.branch) return verdict(VERDICT.wrongBranch, `the page was built on ${p.branch}; check out that branch and sync again`);
   const tracked = env.tracked(full);
   if (env.held && tracked) return verdict(VERDICT.heldRun, `${env.held}: an uncommitted change to a tracked file would reach that run`);
   if (!section) return verdict(VERDICT.none, `no heading "${p.anchor.heading}" number ${p.anchor.headingOrdinal}`);
-  const found = p.kind === KIND.resolve ? findResolveTarget(p, lines, section, expected) : findPartTarget(p, lines, section, expected);
+  const found = findPartTarget(p, lines, section, expected);
   return Object.assign(found, { file: p.file, tracked });
 }
 
