@@ -48,3 +48,14 @@ _Invocation 1 — 2026-10-20 — N=4 M=3 — BASE..HEAD d36133f..f07637c — bra
 - [carried task 11 review] carried — pre-existing long line in docs/guide/README.md
 - [carried task 12 review] carried — RELEASE-NOTES Problem line not directly supported by Why
 - [carried task 12 review] carried — "the same week" and "25 days" spec incident figures
+
+## Round 2 — Adversarial red-team — opus
+**Reviewers:** M=3, usable 3/3
+**Reviewer verdicts:** r1: 0 Critical, 0 Important, 1 Minor | r2: 0 Critical, 0 Important, 1 Minor | r3: 0 Critical, 0 Important, 1 Minor
+**Sources mapped:** 3/3
+**Reviewer verdict:** 0 Critical, 0 Important, 3 Minor
+**Converged:** no
+### Dispositions
+- [M1] fixed — refresh step 8 repeats the step-4 shared-ref line next to a shared URL just published, so its Last published part is one refresh old; step 8 now says the line is the state before this refresh → 934c1734 ← 1/3: r1:M1
+- [M2] carried — first refresh after upgrading from a 7.72 share shows a false Never published warning on the private page until the next refresh (spec section 4.5 accepts the one-refresh delay of published; the report part is covered by the M1 wording) ← 1/3: r2:M1
+- [M3] fixed — commits() git log still had no `--`; a root file HEAD turned the commits section into an error and the new test did not check it → 934c1734 ← 1/3: r3:M1
