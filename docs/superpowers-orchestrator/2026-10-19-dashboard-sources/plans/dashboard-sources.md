@@ -83,7 +83,7 @@ All test commands run from the repository root. One test file runs alone with `n
   - Invariant: neither file builds a proposal of kind `resolve-open-item` except the one that checks the removed-kind reason.
   - Verification: `grep -c "kind: 'resolve-open-item'" tests/dashboard/test-10-sync-check.js tests/dashboard/test-11-sync-apply.js` prints `1` for each file (the one proposal builder of the removed kind; a comment or a reason text that names the kind does not count). The security sections stay: `grep -c -E "^// 7[a-e]\." tests/dashboard/test-10-sync-check.js` prints `5` and `grep -c -E "^// 1[0-5]\." tests/dashboard/test-11-sync-apply.js` prints `6` (the same counts as at 971beb2b).
 
-- [ ] **Step 1: Rewrite `tests/dashboard/test-10-sync-check.js` on `set-part`**
+- [x] **Step 1: Rewrite `tests/dashboard/test-10-sync-check.js` on `set-part`**
 
 Replace the whole file with:
 
@@ -392,7 +392,7 @@ h.eq('a failed git ls-files: exit 2, no verdict, no absolute path', failedRun(in
 h.finish();
 ```
 
-- [ ] **Step 2: Rewrite `tests/dashboard/test-11-sync-apply.js` on `set-part`**
+- [x] **Step 2: Rewrite `tests/dashboard/test-11-sync-apply.js` on `set-part`**
 
 Replace the whole file with:
 
@@ -623,12 +623,12 @@ h.eq('batches: the stop message holds the escaped id on one line', [result.code,
 h.finish();
 ```
 
-- [ ] **Step 3: Run the two test files to verify they fail**
+- [x] **Step 3: Run the two test files to verify they fail**
 
 Run: `node tests/dashboard/test-10-sync-check.js | grep FAIL; node tests/dashboard/test-11-sync-apply.js | grep FAIL`
 Expected: FAIL lines for `every rule gives invalid` and `the kind rules give their own reasons` (the old `basicInvalid` accepts `oldResolve()`, and `evaluate` then gives it the verdict `file-missing`, because the fixture has no `session-log.md`), and `an applying proposal of the removed kind: invalid with its reason, nothing written`.
 
-- [ ] **Step 4: Implement the change in `skills/dashboard/scripts/dashboard-sync.js`**
+- [x] **Step 4: Implement the change in `skills/dashboard/scripts/dashboard-sync.js`**
 
 Before removing, search the repository for each name (Global Constraint 2):
 
@@ -712,7 +712,7 @@ with, in the same places:
   const found = findPartTarget(p, lines, section, expected);
 ```
 
-- [ ] **Step 5: Run the tests to verify they pass**
+- [x] **Step 5: Run the tests to verify they pass**
 
 Run: `node tests/dashboard/test-10-sync-check.js | tail -1; node tests/dashboard/test-11-sync-apply.js | tail -1; grep -n -E "lineAtOccurrence|RESOLVED_MARK|SESSION_LOG|KIND\.resolve|DEFAULT_NOTE|findResolveTarget" skills/dashboard/scripts/dashboard-sync.js`
 Expected: two lines `<n> passed, 0 failed`; the grep prints nothing.
@@ -720,7 +720,7 @@ Expected: two lines `<n> passed, 0 failed`; the grep prints nothing.
 Run: `bash tests/dashboard/run-tests.sh | tail -1`
 Expected: `dashboard suite: every test file passed`
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add skills/dashboard/scripts/dashboard-sync.js tests/dashboard/test-10-sync-check.js tests/dashboard/test-11-sync-apply.js
