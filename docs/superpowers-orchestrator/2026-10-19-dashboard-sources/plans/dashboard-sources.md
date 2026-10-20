@@ -1153,7 +1153,7 @@ git commit -m "feat(dashboard): remove the open-item card and control; date the 
   - Verification: `node tests/dashboard/test-04-extract-core.js`; `grep -c "refname:short\|--date=short'\|committerdate:short)" skills/dashboard/scripts/dashboard-extract.js` prints `0`.
   - Interface not externally pinned.
 
-- [ ] **Step 1: Write the failing tests in `tests/dashboard/test-04-extract-core.js`**
+- [x] **Step 1: Write the failing tests in `tests/dashboard/test-04-extract-core.js`**
 
 After `h.check('commit sha and short hash', …);` add:
 
@@ -1198,12 +1198,12 @@ h.eq('local dates: commit.date, the branch date and the commit dates', tzDoc && 
 h.git(tz, 'checkout', '-q', 'main');
 ```
 
-- [ ] **Step 2: Run the test to verify it fails**
+- [x] **Step 2: Run the test to verify it fails**
 
 Run: `node tests/dashboard/test-04-extract-core.js | grep FAIL`
 Expected: FAIL for `commit.date is a date`, `git: only the checked-out unmerged branch is marked current`, `a tag with the name of the branch: the plain name, still current` (got `heads/feature/stopped` or no item) and `local dates: …` (got `2026-01-09` dates and no `commit.date`).
 
-- [ ] **Step 3: Implement in `skills/dashboard/scripts/dashboard-extract.js`**
+- [x] **Step 3: Implement in `skills/dashboard/scripts/dashboard-extract.js`**
 
 Add after `const FIELD_SEPARATOR = '\x1f';`:
 
@@ -1260,7 +1260,7 @@ Replace the body of `localBranchNames` with:
   return mustLines(['for-each-ref', '--format=%(refname:lstrip=2)', HEADS]);
 ```
 
-- [ ] **Step 4: Run the tests to verify they pass**
+- [x] **Step 4: Run the tests to verify they pass**
 
 Run: `node tests/dashboard/test-04-extract-core.js | tail -1; grep -c "refname:short\|--date=short'\|committerdate:short)" skills/dashboard/scripts/dashboard-extract.js`
 Expected: `<n> passed, 0 failed`; then `0`.
@@ -1268,7 +1268,7 @@ Expected: `<n> passed, 0 failed`; then `0`.
 Run: `bash tests/dashboard/run-tests.sh | tail -1`
 Expected: `dashboard suite: every test file passed`
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add skills/dashboard/scripts/dashboard-extract.js tests/dashboard/test-04-extract-core.js
