@@ -1501,7 +1501,7 @@ git commit -m "feat(dashboard): true as-of line; Git card by date with current m
   - Verification: the Source checks of test-07 and the numbers check of test-08.
   - Sentence wording is free within these rules; the reference sentences below were checked against the builders of `dashboard-extract.js` and `scanRuns` of `skills/pickup/scripts/git-runs.js`. No test reads the selection rule of a sentence (spec section 7, failure mode 2): an implementer who changes a reference sentence checks the new text against the builder of its section, and the whole-branch code review checks every changed sentence the same way.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 In `tests/dashboard/test-07-template.js`, replace `const cardLines = (card) => card.children.slice(1).map((line) => [line.getAttribute('class'), line.textContent]);` with:
 
@@ -1560,14 +1560,14 @@ In `tests/dashboard/test-08-template-edits.js`, add `const fs = require('fs');` 
   }
 ```
 
-- [ ] **Step 2: Run the tests to verify they fail**
+- [x] **Step 2: Run the tests to verify they fail**
 
 Run: `node tests/dashboard/test-07-template.js | grep -c FAIL; node tests/dashboard/test-08-template-edits.js | grep FAIL`
 Expected: a non-zero count for test-07 (`every section has a sentence` and every Source check fail: `app.SOURCES` is undefined, so the checks throw or fail); test-08 FAIL lines for the four `sentence of …` checks.
 
 (If test-07 stops at a thrown `TypeError` on `app.SOURCES[id]` before `finish()`, the file reports `finish() was never called`; that is the expected failure too.)
 
-- [ ] **Step 3: Implement in `skills/dashboard/template.html`**
+- [x] **Step 3: Implement in `skills/dashboard/template.html`**
 
 Add after the `TITLES` constant:
 
@@ -1623,7 +1623,7 @@ In the `globalThis.DashboardApp` export, replace `PART_STATUSES, NOTE_LIMIT, NOT
     PART_STATUSES, NOTE_LIMIT, NOTE_FORBIDDEN, SOURCES, SHARED_SOURCES,
 ```
 
-- [ ] **Step 4: Run the tests to verify they pass**
+- [x] **Step 4: Run the tests to verify they pass**
 
 Run: `node tests/dashboard/test-07-template.js | tail -1; node tests/dashboard/test-08-template-edits.js | tail -1`
 Expected: two lines `<n> passed, 0 failed`.
@@ -1631,7 +1631,7 @@ Expected: two lines `<n> passed, 0 failed`.
 Run: `bash tests/dashboard/run-tests.sh | tail -1`
 Expected: `dashboard suite: every test file passed`
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add skills/dashboard/template.html tests/dashboard/test-07-template.js tests/dashboard/test-08-template-edits.js
