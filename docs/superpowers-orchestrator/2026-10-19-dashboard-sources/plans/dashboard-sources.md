@@ -2217,7 +2217,7 @@ git commit -m "feat(dashboard): the shared-ref line on the private page" --trail
   - Invariant: the edit only keeps the fixture in a form the extractor still parses after Task 2. The check `(1) no marker in the shared page files` tests that the shared extract reads only the pushed ref: `session-log.md` is written after the push and never committed, so its marker reaches no data with either line, and no private data is built in that case.
   - Verification: `node tests/dashboard/test-09-render.js`.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 In `tests/dashboard/test-09-render.js`, replace `h.write(d, 'session-log.md', `## 2026-01-01 [saved]\nOpen: ${MARKER}\n`);` with:
 
@@ -2260,12 +2260,12 @@ h.eq('the shared output: exit 0, no sharedRef key, no current field, no shared-p
 h.git(d, 'checkout', '-q', 'main');
 ```
 
-- [ ] **Step 2: Run the tests to verify they fail**
+- [x] **Step 2: Run the tests to verify they fail**
 
 Run: `node tests/dashboard/test-09-render.js | grep FAIL; node tests/dashboard/test-06-privacy.js | grep FAIL`
 Expected: test-09 FAIL for the two `verify refuses shared data with sharedRef …` checks (got `[0, "verified shared"]`); test-06 prints no FAIL line (the shared run already has neither field after Tasks 4 and 7; this check guards against a regression).
 
-- [ ] **Step 3: Implement in `skills/dashboard/scripts/dashboard-render.js`**
+- [x] **Step 3: Implement in `skills/dashboard/scripts/dashboard-render.js`**
 
 Add after `const NO_SECTION = { status: 'absent', items: [] };`:
 
@@ -2281,7 +2281,7 @@ In `verify`, inside the block `if (doc && audience === AUDIENCE.shared) {`, afte
     if (Object.prototype.hasOwnProperty.call(doc, PRIVATE_ONLY_KEY)) reasons.push(`the shared data contains ${PRIVATE_ONLY_KEY}`);
 ```
 
-- [ ] **Step 4: Run the tests to verify they pass**
+- [x] **Step 4: Run the tests to verify they pass**
 
 Run: `node tests/dashboard/test-09-render.js | tail -1; node tests/dashboard/test-06-privacy.js | tail -1`
 Expected: two lines `<n> passed, 0 failed`.
@@ -2289,7 +2289,7 @@ Expected: two lines `<n> passed, 0 failed`.
 Run: `bash tests/dashboard/run-tests.sh | tail -1`
 Expected: `dashboard suite: every test file passed`
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add skills/dashboard/scripts/dashboard-render.js tests/dashboard/test-09-render.js tests/dashboard/test-06-privacy.js
