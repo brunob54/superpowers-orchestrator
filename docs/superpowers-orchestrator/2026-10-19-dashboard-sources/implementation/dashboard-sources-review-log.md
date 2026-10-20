@@ -59,3 +59,15 @@ _Invocation 1 — 2026-10-20 — N=4 M=3 — BASE..HEAD d36133f..f07637c — bra
 - [M1] fixed — refresh step 8 repeats the step-4 shared-ref line next to a shared URL just published, so its Last published part is one refresh old; step 8 now says the line is the state before this refresh → 934c1734 ← 1/3: r1:M1
 - [M2] carried — first refresh after upgrading from a 7.72 share shows a false Never published warning on the private page until the next refresh (spec section 4.5 accepts the one-refresh delay of published; the report part is covered by the M1 wording) ← 1/3: r2:M1
 - [M3] fixed — commits() git log still had no `--`; a root file HEAD turned the commits section into an error and the new test did not check it → 934c1734 ← 1/3: r3:M1
+
+## Round 3 — Security — opus
+**Reviewers:** M=3, usable 3/3
+**Reviewer verdicts:** r1: 0 Critical, 0 Important, 0 Minor | r2: 0 Critical, 0 Important, 0 Minor | r3: 0 Critical, 0 Important, 1 Minor
+**Sources mapped:** 1/1
+**Reviewer verdict:** 0 Critical, 0 Important, 1 Minor
+**Converged:** yes
+### Dispositions
+- [M1] carried — --config-set stores any sharedRef value (setConfig does not apply sharedRefForm), so the single-quote guard of refresh step 6 is a prose rule only; share stores a ref only after --check-shared-ref, so a bad value needs a hand edit ← 1/3: r3:M1
+
+_Completed — 2026-10-20 — converged — HEAD 934c1734c6a63a6fb7654f7f1434b2cd113e58a4_
+Secrets found: none
