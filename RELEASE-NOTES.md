@@ -8,6 +8,41 @@
 > (`REPOZY/superpowers-optimized`) and are kept unchanged as history; any
 > testing they describe was not done here.
 
+## v7.73.0 — dashboard: a Source line on every card, a true "as of" line, the shared-ref line, a short Git card
+
+**Problem.** A private dashboard page showed 11 "open items of recent sessions" that were all fixed, and its shared page was 25 days old with no warning. No card said what it reads, and old branches filled the Git card.
+
+**Change.** Session open items and the "Mark resolved" control are removed. Every card has a "Source:" line; the "as of" line shows the commit date; the private page shows the state of the shared ref and of the last shared publish; the Git card is sorted by date and folds old branches.
+
+**Effect.** Reinstall the plugin. Reject old `resolve-open-item` proposals at the next `sync`. Nothing else to migrate.
+
+### Why
+
+On 2026-10-19 the private page of one repository listed 11 open items of recent sessions; all 11 were already fixed. The extractor took every `Open:` line of the last 10 `session-log.md` entries, and a line stayed open until it held `[resolved`. The skill that writes these entries, `context-management`, never writes `[resolved`; only the dashboard's own `sync` did. In the same week the shared page was 25 days old: work had moved to another branch, and the "as of" line showed the build time, not the date of the commit, so the old page looked current.
+
+### What changed
+
+- **Session open items are removed** from the page, with the "Mark resolved" control and the `sync` kind `resolve-open-item`. `context-management` is not changed: it still writes `Open:` lines, and the session-start hook still shows the last two saved entries to the model. A `resolve-open-item` proposal that still waits in the page database gets the verdict `invalid` with the reason `resolve-open-item was removed in 7.73.0; reject this proposal`; the owner may reject it in `sync` step 3. A proposal left in `applying` by an interrupted sync is reported `invalid` too; rejecting it does not undo a `[resolved` mark that the interrupted sync already wrote into `session-log.md`.
+- **Recent sessions** are listed newest first, each as `<date and time of the entry> · <goal>`.
+- **Every card has a "Source:" line** that names the file, folder or git command it reads and the rule that selects its items. On the shared page, the unfinished runs, the Git card and the recent commits name the shared run's own source. A test keeps the numbers in these sentences (10 entries, 20 commits, 15 releases) equal to the extractor's limits.
+- **The "as of" line** shows the commit date, then the build time, and on the private page ` · N tracked files changed, not committed` when N > 0. A detached HEAD now shows the build time too (before, it showed only the commit short name). Every date that the extractor computes is now in the local time zone (`--date=short-local`).
+- **The shared-ref line** on the private page names the shared ref and the date of its last commit, the commits of the checked-out branch that are not in it, and the time of the last shared publish from this machine. It is a warning when the oldest of those commits is more than 14 days old, when the last shared publish lies more than 14 days before the previous private publish (or never happened), or when the ref is missing or cannot be read. The extractor reads it from `config.json` and the state files through `--data-dir` (no new option) and repeats it on standard error as `dashboard-extract: shared page: <line>`; `refresh` repeats it in its report. `share` now keeps `shared.json` in the state folder after a successful publish. `--verify` refuses shared data that holds this field.
+- **The Git card** is sorted by date (newest first), marks the checked-out branch with `[current]`, and folds branches with no commit in the last 90 days into one `<details>` element; the checked-out branch is never folded. Branch names now come from `%(refname:lstrip=2)`, so a tag with the name of a branch no longer turns the name into `heads/<name>`.
+
+### What you will see at the first refresh
+
+The first `refresh` prints these lines once, in the `--diff` output of its renderer step, and they are expected:
+
+    sessionOpenItems: 0 added, <n> removed
+    sessionOpenItems: status ok → absent
+
+(The first line appears only when the old section held items.)
+
+### Accepted limits
+
+- The dates of unfinished runs come from `skills/pickup/scripts/git-runs.js`, which `/pickup` shares; they stay in the committer's time zone (at most one day apart near midnight).
+- After a squash or rebase merge, the branch's own commits are still "not in" the shared ref, and the shared-ref line says so literally; checking out the shared branch, or deleting the merged branch, ends it.
+
 ## v7.72.2 — `bypassPermissions` also needs the setting `bashEditDiffEnabled`
 
 **Problem.** The v7.72.1 text said that the mode `bypassPermissions` was not tested. Bash-edit logging worked only if that mode filled the field without the setting.
