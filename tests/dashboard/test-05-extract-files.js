@@ -75,18 +75,11 @@ h.git(d, 'merge', '-q', '--no-edit', 'feature/merged');
 h.write(d, `${R}/2026-09-02-beta/specs/beta-design.md`, '# untracked spec\n');
 
 const s = extract(d);
-h.eq('sessionOpenItems: kinds and texts of the 10 recent entries', pick(s.sessionOpenItems, ['kind', 'text']), [
-  ['open-item', 'fine item'], ['raw', 'oops not a bullet'], ['open-item', 'first item'],
-  ['open-item', 'same item'], ['open-item', 'same item'], ['open-item', 'one-line item'],
-]);
-const same = s.sessionOpenItems.items.filter((item) => item.text === 'same item');
-h.eq('two equal lines: occurrences 1 and 2 and two ids', [same[0].source.occurrence, same[1].source.occurrence, same[0].id !== same[1].id], [1, 2, true]);
-h.eq('the second equal heading has ordinal 2', s.sessionOpenItems.items[5].source.headingOrdinal, 2);
-h.eq('a continuation line stays with its item', s.sessionOpenItems.items[2].continuation, ['  continued here']);
-h.eq('the anchor line is the exact raw line', s.sessionOpenItems.items[2].source.line, '- first item');
-h.eq('older unresolved open items are counted', s.sessionOpenItems.olderUnresolved, 2);
-h.eq('an untracked session-log.md gives private items', s.sessionOpenItems.items[0].visibility, 'private');
-h.eq('sessions: the Goal lines of the same 10 entries', s.sessions.items.map((item) => item.goal), ['goal 3', 'goal 4', 'goal 6', 'goal 7', 'goal 8', 'goal 9', 'goal 10', 'goal 11', 'goal 12', 'goal 13']);
+h.eq('no sessionOpenItems section', Object.prototype.hasOwnProperty.call(s, 'sessionOpenItems'), false);
+h.eq('sessions: the Goal lines of the last 10 entries, newest first', s.sessions.items.map((item) => item.goal), ['goal 13', 'goal 12', 'goal 11', 'goal 10', 'goal 9', 'goal 8', 'goal 7', 'goal 6', 'goal 4', 'goal 3']);
+h.eq('sessions: each item keeps its entry heading', [s.sessions.items[0].entry, s.sessions.items[9].entry], ['## 2026-01-13 [saved]', '## 2026-01-03 [saved]']);
+h.eq('the second equal heading has ordinal 2', s.sessions.items[1].source.headingOrdinal, 2);
+h.eq('an untracked session-log.md gives private items', s.sessions.items[0].visibility, 'private');
 h.eq('currentGoal: 300 characters, no carriage return', [s.currentGoal.items[0].text.length, s.currentGoal.items[0].text.includes('\r')], [300, false]);
 h.eq('knownIssues: the ## titles', s.knownIssues.items.map((item) => item.title), ['First problem', 'Second problem']);
 h.eq('releases: version, 15 headings, file order', [s.releases.version, s.releases.items.length, s.releases.items[0].heading], ['7.1.0', 15, '## v7.0.16 — release 16']);
@@ -109,14 +102,15 @@ h.eq('runHistory: folders, stages, last heading, counts', pick(s.runHistory, ['s
 h.eq('a merged log is history only', s.unfinishedRuns.items.length, 0);
 
 h.commit(d, 'session log', ['session-log.md']);
-h.eq('a committed session-log.md gives tracked items', extract(d).sessionOpenItems.items[0].visibility, 'tracked');
+h.eq('a committed session-log.md gives tracked items', extract(d).sessions.items[0].visibility, 'tracked');
 
 // 6. Missing sources, and the release fallbacks.
 const m = h.repo('nothing');
 h.write(m, 'file.txt', 'x\n');
 h.commit(m, 'base', ['file.txt']);
 const ms = extract(m);
-const FILE_SECTIONS = ['activeWorklogs', 'closedWorklogs', 'sessionOpenItems', 'sessions', 'currentGoal', 'releases', 'runHistory', 'knownIssues'];
+const FILE_SECTIONS = ['activeWorklogs', 'closedWorklogs', 'sessions', 'currentGoal', 'releases', 'runHistory', 'knownIssues'];
+h.eq('a missing session-log.md gives no sessionOpenItems section', Object.prototype.hasOwnProperty.call(ms, 'sessionOpenItems'), false);
 h.eq('missing sources give not-found', FILE_SECTIONS.map((id) => ms[id].status), FILE_SECTIONS.map(() => 'not-found'));
 h.eq('the other sections still build', [ms.commits.status, ms.git.status, ms.unfinishedRuns.status], ['ok', 'ok', 'ok']);
 

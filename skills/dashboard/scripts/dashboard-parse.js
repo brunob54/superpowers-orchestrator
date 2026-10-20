@@ -1,7 +1,7 @@
 // Parsing rules shared by dashboard-extract.js and dashboard-sync.js, so that
 // the sync script finds exactly the line that the extractor anchored:
 // normalization of lines and headings, "## " sections, item ids, Markdown
-// table rows, the open items of a session-log entry, the Node copy of the
+// table rows, the Node copy of the
 // work-log rules of skills/worklog/SKILL.md (sections "The check command",
 // "Valid forms of line 1" and "The listing command"), argument parsing and
 // local ISO 8601 times. The parsing functions are pure: text in, data out.
@@ -15,15 +15,8 @@ const { HEADING_PREFIX } = require('../../pickup/scripts/git-runs');
 const BYTE_ORDER_MARK = /^\uFEFF/;
 const SUPERSEDED_SUFFIX = / \[superseded[^\]]*\]$/;
 const RESOLVED_SUFFIX = / \[resolved[^\]]*\]$/;
-const RESOLVED_MARK = '[resolved';
 const SUPERSEDED_MARK = '[superseded';
 const ID_SEPARATOR = '\n';
-const OPEN_LIST = /^Open:\s*$/;
-const OPEN_ONE_LINE = /^Open: (.*\S.*)$/;
-const ONE_LINE_PREFIX = 'Open: ';
-const LIST_END = /^[A-Za-z][A-Za-z0-9_-]*:/;
-const BULLET = '- ';
-const CONTINUATION = /^[ \t]+\S/;
 const TABLE_ROW = /^\s*\|/;
 const TABLE_SEPARATOR = /^\s*\|[\s|:-]*-[\s|:-]*$/;
 const WORKLOG_SLUG = '[a-z0-9]+(-[a-z0-9]+)*';
@@ -109,67 +102,6 @@ function occurrenceOf(lines, section, index) {
     if (normalizeLine(lines[i]) === target) count += 1;
   }
   return count;
-}
-
-function lineAtOccurrence(lines, section, normalized, occurrence) {
-  let count = 0;
-  for (let i = section.index + 1; i < section.end; i += 1) {
-    if (normalizeLine(lines[i]) !== normalized) continue;
-    count += 1;
-    if (count === occurrence) return i;
-  }
-  return -1;
-}
-
-// The open items of the lines [start, end) of one entry, in order. An item is
-// a bullet line inside an "Open:" list with its indented continuation lines,
-// or a one-line "Open: <text>" line. A list ends at a blank line, at a line
-// that starts with a word followed by ":", or at the end. A line inside a
-// list that is neither a bullet nor a continuation is a raw item.
-function openItems(lines, start, end) {
-  const items = [];
-  let inList = false;
-  let current = null;
-  for (let i = start; i < end; i += 1) {
-    const line = lines[i];
-    if (inList) {
-      if (!line.trim()) {
-        inList = false;
-        current = null;
-        continue;
-      }
-      if (line.startsWith(BULLET)) {
-        current = { index: i, line, continuation: [], raw: false };
-        items.push(current);
-        continue;
-      }
-      if (current && CONTINUATION.test(line)) {
-        current.continuation.push(line);
-        continue;
-      }
-      if (!LIST_END.test(line)) {
-        items.push({ index: i, line, continuation: [], raw: true });
-        current = null;
-        continue;
-      }
-      inList = false;
-      current = null;
-    }
-    if (OPEN_LIST.test(line)) {
-      inList = true;
-    } else if (OPEN_ONE_LINE.test(line)) {
-      items.push({ index: i, line, continuation: [], raw: false });
-    }
-  }
-  return items.map((item) => Object.assign(item, {
-    resolved: !item.raw && [item.line, ...item.continuation].some((text) => text.includes(RESOLVED_MARK)),
-  }));
-}
-
-function openItemText(line) {
-  if (line.startsWith(BULLET)) return line.slice(BULLET.length);
-  if (line.startsWith(ONE_LINE_PREFIX)) return line.slice(ONE_LINE_PREFIX.length);
-  return line;
 }
 
 // A table row split on "|" after the leading and the trailing "|" are
@@ -303,11 +235,11 @@ function parseArguments(argv, options, stop) {
 }
 
 module.exports = {
-  HEADING_PREFIX, RESOLVED_MARK, SUPERSEDED_MARK, WORKLOG_CLASS,
+  HEADING_PREFIX, SUPERSEDED_MARK, WORKLOG_CLASS,
   SESSION_LOG, WORKLOG_DIR, PARTS_HEADING, OPEN_ITEMS_HEADING, PART_COLUMNS, OPEN_ITEM_COLUMNS,
   PART_STATUSES, NOTE_LIMIT, NOTE_FORBIDDEN, UNSAFE_CHARACTER,
-  splitLines, normalizeHeading, normalizeLine, headings, findSection, occurrenceOf, lineAtOccurrence,
-  openItems, openItemText, splitRow, joinRow, sectionTable, columnIndex,
+  splitLines, normalizeHeading, normalizeLine, headings, findSection, occurrenceOf,
+  splitRow, joinRow, sectionTable, columnIndex,
   itemId, lineItemId, keyItemId, worklogLine1, worklogClass, worklogNameValid, listingName,
   localIso, parseArguments, realPath, isInside,
 };

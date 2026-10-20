@@ -73,7 +73,7 @@ h.eq('(6, 8) git lists only counted upstreams', s.git.items.map((i) => i.name), 
 h.eq('git has no unpushed count and no uncommitted count', [s.git.ahead, s.git.dirty], [null, null]);
 h.eq('(4) releases come from the pushed ref', s.releases.items.map((i) => i.heading), ['## v1.0.0 — pushed']);
 h.eq('(2, 3) work logs come from the pushed ref; the link is skipped', s.activeWorklogs.items.map((i) => (i.kind === 'part' ? i.part : i.path)), ['docs/worklogs/pushed.md', 'pushed part']);
-h.eq('untracked sources are not-found', [s.sessionOpenItems.status, s.currentGoal.status, s.knownIssues.status], ['not-found', 'not-found', 'not-found']);
+h.eq('untracked sources are not-found', [s.sessions.status, s.currentGoal.status, s.knownIssues.status], ['not-found', 'not-found', 'not-found']);
 h.eq('runHistory lists only pushed topic folders', s.runHistory.items.map((i) => i.slug), ['alpha']);
 h.eq('commits are those of the shared ref', s.commits.items.map((i) => i.subject), ['pushed base']);
 h.check('every shared item is tracked', Object.values(s).every((section) => section.items.every((i) => i.visibility === 'tracked')));

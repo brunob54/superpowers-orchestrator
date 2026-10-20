@@ -1,5 +1,5 @@
 'use strict';
-// dashboard-parse.js: normalization, sections, ids, tables, open items,
+// dashboard-parse.js: normalization, sections, ids, tables,
 // work-log rules, local ISO time, arguments.
 const crypto = require('crypto');
 const h = require('./helpers');
@@ -24,31 +24,7 @@ const hs = p.headings(log);
 h.eq('headings: normalized text and ordinals', hs.map((x) => [x.heading, x.ordinal, x.index, x.end]), [['## E [saved]', 1, 1, 5], ['## E [saved]', 2, 5, 6], ['## E [saved]', 3, 6, 8]]);
 const first = p.findSection(log, '## E [saved]', 1);
 h.eq('occurrenceOf counts equal normalized lines of the section', [p.occurrenceOf(log, first, 3), p.occurrenceOf(log, first, 4), p.occurrenceOf(log, first, 1)], [1, 2, 1]);
-h.eq('lineAtOccurrence finds the second equal line', p.lineAtOccurrence(log, first, '- same', 2), 4);
-h.eq('lineAtOccurrence gives -1 past the last', p.lineAtOccurrence(log, first, '- same', 3), -1);
 h.eq('findSection gives null for a missing ordinal', p.findSection(log, '## E [saved]', 4), null);
-
-const entry = [
-  '## X',
-  'Goal: g',
-  'Open:',
-  '- first item',
-  '  continued here',
-  '- done item [resolved 2026-01-02: ok]',
-  'not a bullet',
-  '- second item',
-  'Rejected: something',
-  '- after the list',
-  'Open: one-line item',
-  'Open:',
-  '- third',
-  '',
-  '- after a blank line',
-];
-const items = p.openItems(entry, 1, entry.length);
-h.eq('openItems: lines, raw marks and resolved marks', items.map((i) => [i.index, i.raw, i.resolved]), [[3, false, false], [5, false, true], [6, true, false], [7, false, false], [10, false, false], [12, false, false]]);
-h.eq('openItems: a continuation line belongs to its item', items[0].continuation, ['  continued here']);
-h.eq('openItemText strips the bullet and the one-line prefix', [p.openItemText('- first item'), p.openItemText('Open: one-line item')], ['first item', 'one-line item']);
 
 h.eq('splitRow trims cells and keeps empty ones', p.splitRow('|  1 | x | not started | | | |'), ['1', 'x', 'not started', '', '', '']);
 h.eq('joinRow writes single spaces', p.joinRow(['1', 'x', 'done', '2026-01-01', '', 'n']), '| 1 | x | done | 2026-01-01 |  | n |');

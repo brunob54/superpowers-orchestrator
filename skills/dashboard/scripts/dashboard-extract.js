@@ -89,13 +89,13 @@ const BLOB = 'blob';
 const NO_SOURCE = { file: null, heading: null, headingOrdinal: null, line: null, occurrence: null, lineNumber: null };
 const MARK = { stopped: 'stopped — waits for you', ambiguous: 'ambiguous — waits for you', inProgress: 'in progress' };
 const SECTION = {
-  unfinishedRuns: 'unfinishedRuns', git: 'git', activeWorklogs: 'activeWorklogs', sessionOpenItems: 'sessionOpenItems',
+  unfinishedRuns: 'unfinishedRuns', git: 'git', activeWorklogs: 'activeWorklogs',
   currentGoal: 'currentGoal', releases: 'releases', runHistory: 'runHistory', closedWorklogs: 'closedWorklogs',
   commits: 'commits', sessions: 'sessions', knownIssues: 'knownIssues',
 };
 const KIND = {
   run: 'run', branch: 'branch', commit: 'commit', worklog: 'worklog', worklogFile: 'worklog-file', part: 'part',
-  worklogOpenItem: 'worklog-open-item', openItem: 'open-item', raw: 'raw', goal: 'goal', release: 'release',
+  worklogOpenItem: 'worklog-open-item', raw: 'raw', goal: 'goal', release: 'release',
   topic: 'topic', session: 'session', knownIssue: 'known-issue',
 };
 const ENTRY = { file: 'file', dir: 'dir', symlink: 'symlink', other: 'other' };
@@ -461,35 +461,22 @@ function commits(context) {
   return { [SECTION.commits]: okSection(items) };
 }
 
+// The Goal: lines of the last SESSION_ENTRIES entries that are not
+// superseded, newest entry first.
 function sessionLog(context) {
   const text = context.source.read(parse.SESSION_LOG);
-  if (text === null) {
-    const missing = notFound(parse.SESSION_LOG);
-    return { [SECTION.sessionOpenItems]: missing, [SECTION.sessions]: missing };
-  }
+  if (text === null) return { [SECTION.sessions]: notFound(parse.SESSION_LOG) };
   const lines = parse.splitLines(text);
   const entries = parse.headings(lines).filter((entry) => !entry.raw.includes(parse.SUPERSEDED_MARK));
-  const split = Math.max(0, entries.length - SESSION_ENTRIES);
-  const itemsOf = (entry) => parse.openItems(lines, entry.index + 1, entry.end);
-  const open = [];
   const sessions = [];
-  for (const entry of entries.slice(split)) {
-    for (const item of itemsOf(entry)) {
-      if (item.resolved) continue;
-      const fields = item.raw
-        ? { kind: KIND.raw, text: item.line }
-        : { kind: KIND.openItem, entry: entry.raw, text: parse.openItemText(item.line), continuation: item.continuation };
-      open.push(lineItem(context, parse.SESSION_LOG, lines, entry, item.index, fields));
-    }
+  for (const entry of entries.slice(-SESSION_ENTRIES)) {
     const goal = lines.slice(entry.index + 1, entry.end).findIndex((line) => line.startsWith(GOAL_PREFIX));
     if (goal !== -1) {
       const index = entry.index + 1 + goal;
       sessions.push(lineItem(context, parse.SESSION_LOG, lines, entry, index, { kind: KIND.session, entry: entry.raw, goal: lines[index].slice(GOAL_PREFIX.length) }));
     }
   }
-  const olderUnresolved = entries.slice(0, split)
-    .reduce((count, entry) => count + itemsOf(entry).filter((item) => !item.raw && !item.resolved).length, 0);
-  return { [SECTION.sessionOpenItems]: okSection(open, { olderUnresolved }), [SECTION.sessions]: okSection(sessions) };
+  return { [SECTION.sessions]: okSection(sessions.reverse()) };
 }
 
 function currentGoal(context) {
@@ -648,7 +635,7 @@ const BUILDERS = [
   { ids: [SECTION.unfinishedRuns], build: unfinishedRuns },
   { ids: [SECTION.git], build: gitSection },
   { ids: [SECTION.activeWorklogs, SECTION.closedWorklogs], build: worklogs },
-  { ids: [SECTION.sessionOpenItems, SECTION.sessions], build: sessionLog },
+  { ids: [SECTION.sessions], build: sessionLog },
   { ids: [SECTION.currentGoal], build: currentGoal },
   { ids: [SECTION.releases], build: releases },
   { ids: [SECTION.runHistory], build: runHistory },
