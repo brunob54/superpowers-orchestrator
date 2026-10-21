@@ -893,7 +893,8 @@ as a major error and retries the batch once. The retried controller first
 checks that the branch still descends from the HEAD of the last completed
 task in the ledger `.superpowers/sdd/progress.md`; when it does not, the
 retry returns the same kind of line at once, and the orchestrator stops and
-reports the error. That check stops for one of two causes. Either the
+reports the error. When no task of the run is complete yet, there is no
+ledger HEAD to check, and the retry runs the task again. That check stops for one of two causes. Either the
 branch was switched, reset, or rewritten: repair the branch, then resume
 the run. Or the ledger is left from an abandoned or earlier run of the same
 plan (abandoning a run deletes its branch, but not the ledger): remove or

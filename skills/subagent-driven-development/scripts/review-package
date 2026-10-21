@@ -10,7 +10,8 @@
 #   An empty range (BASE = HEAD) is not an error: the package is written,
 #   and its Commits section holds the one line "Commits in range: none".
 #   Exit 3 (nothing written): HEAD does not descend from BASE. Exit 2: a
-#   usage error, or a BASE or HEAD that does not name a commit.
+#   usage error, a BASE or HEAD that does not name a commit, or a git error
+#   while comparing them.
 #
 # Explicit-commit mode (wave execution — fork extension):
 #   review-package --commits SHA [SHA...] [--out OUTFILE]
@@ -120,8 +121,8 @@ head=$2
 # plain object name (for example "^<name>", a negated revision).
 resolve_commit() { # label argument
   local name object_name_pattern='^([0-9a-f]{40}|[0-9a-f]{64})$'
-  name=$(git rev-parse --verify --quiet "${2}^{commit}") || { echo "bad $1: $2" >&2; return 2; }
-  [[ $name =~ $object_name_pattern ]] || { echo "bad $1: $2" >&2; return 2; }
+  name=$(git rev-parse --verify --quiet "${2}^{commit}") && [[ $name =~ $object_name_pattern ]] ||
+    { echo "bad $1: $2" >&2; return 2; }
   echo "$name"
 }
 base_name=$(resolve_commit BASE "$base") || exit 2

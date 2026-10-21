@@ -208,15 +208,19 @@ Agent tool (general-purpose):
        and before the Pre-Flight Plan Review and before any dispatch,
        check the branch. When the ledger holds a completed line, run
        `git merge-base --is-ancestor <head7> HEAD`, with `<head7>` the
-       HEAD recorded by the last completed ledger line in file order. A
-       non-zero exit has one of two causes: the branch was switched,
+       HEAD recorded by the last completed ledger line in file order. Exit
+       1 has one of two causes: the branch was switched,
        reset, or rewritten by an amend or a rebase, so it no longer holds
        work that the ledger records as complete; or the ledger is left
        from an abandoned or earlier run of this plan. Then dispatch
        nothing, write no `### Question <k>` or `### Conflict <k>`
        section, and return
        `BLOCKED task=<n>: review range invalid — HEAD does not descend from the last completed ledger HEAD <head7> (branch switched, reset or rewritten, or ledger left from an earlier run of this plan)`,
-       with `<n>` the first unchecked task of your task list. With no
+       with `<n>` the first unchecked task of your task list. Any other
+       non-zero exit is a git error (for example 128, when `<head7>` is
+       ambiguous or names no object): return the same kind of line, with
+       `review range invalid — cannot check the last completed ledger HEAD <head7>`
+       in place of the text after the dash, and name no cause. With no
        completed ledger line, skip this check. Then, for each assigned
        task that is unchecked
        when you start, set REVIEW_BASE = the HEAD recorded by the last
