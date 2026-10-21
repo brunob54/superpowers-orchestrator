@@ -66,3 +66,8 @@ _Invocation 1 — 2026-10-21 — N=3 M=3 — BASE..HEAD 093d71a..1349908 — bra
 
 _Completed — 2026-10-21 — cap reached — HEAD 63778304028428c4f546d4bf21ad3e5f45bb9e8f_
 Secrets found: none
+
+### Post-loop addendum 1 — 2026-10-21
+- [I1] decided (orchestrator): plan governs: "Must convey: a test outside the task that fails and that the change did not cause is not fixed, unless the brief or the controller's dispatch names that test as" — docs/superpowers-orchestrator/2026-10-21-upstream-v7-fixes/plans/upstream-v7-fixes.md
+
+_Completed — 2026-10-21 — cap reached — HEAD 63778304028428c4f546d4bf21ad3e5f45bb9e8f_ (effective HEAD unchanged by this addendum; unresolved = 0, user_decision = 0)
