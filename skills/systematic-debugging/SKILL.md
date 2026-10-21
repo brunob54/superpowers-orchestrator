@@ -51,11 +51,11 @@ This is non-negotiable. Every fix must trace back to a proven root cause. A fix 
   ```bash
   # Layer 1: Workflow
   echo "=== Secrets available in workflow: ==="
-  echo "IDENTITY: ${IDENTITY:+SET}${IDENTITY:-UNSET}"
+  echo "IDENTITY: $([ -n "${IDENTITY:+x}" ] && echo SET || echo UNSET)"
 
   # Layer 2: Build script
   echo "=== Env vars in build script: ==="
-  env | grep IDENTITY || echo "IDENTITY not in environment"
+  [ -n "${IDENTITY:+x}" ] && echo "IDENTITY in environment" || echo "IDENTITY not in environment"
 
   # Layer 3: Signing script
   echo "=== Keychain state: ==="
