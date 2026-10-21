@@ -1444,11 +1444,11 @@ git commit -m "docs(guide): v7.74.0 pre-flight table, failing tests outside a ta
 - All fast suites (procedural)
   - Verification: Step 8 runs every fast suite listed in `CLAUDE.md`, each as its own command.
 
-- [ ] **Step 1: Bump the version**
+- [x] **Step 1: Bump the version**
 
 Replace `7.73.1` with `7.74.0` in: `VERSION` (whole content `7.74.0` and a newline); `.claude-plugin/plugin.json` line 4 (`"version": "7.74.0",`); `.claude-plugin/marketplace.json` line 13; `plugin.universal.yaml` line 7 (`version: "7.74.0"`); `README.md` line 6 (badge `version-7.74.0-white`); `README.md` lines 22 and 24 (`v6.7.0–v7.73.1` → `v6.7.0–v7.74.0`, keeping the en dash).
 
-- [ ] **Step 2: Verify the bump**
+- [x] **Step 2: Verify the bump**
 
 Run: `grep -n '7\.73\.1' VERSION .claude-plugin/plugin.json .claude-plugin/marketplace.json plugin.universal.yaml README.md`
 Expected: no output (exit 1).
@@ -1456,7 +1456,7 @@ Expected: no output (exit 1).
 Run: `grep -c '7\.74\.0' VERSION .claude-plugin/plugin.json .claude-plugin/marketplace.json plugin.universal.yaml README.md`
 Expected: `VERSION:1`, `.claude-plugin/plugin.json:1`, `.claude-plugin/marketplace.json:1`, `plugin.universal.yaml:1`, `README.md:3`.
 
-- [ ] **Step 3: Write the release-notes entry**
+- [x] **Step 3: Write the release-notes entry**
 
 In `RELEASE-NOTES.md`, insert above the line that starts with `## v7.73.1` (after the header note block and its blank line) this entry, followed by one blank line:
 
@@ -1508,7 +1508,7 @@ Five Windows-only upstream fixes are recorded as accepted limits in the local is
 - After an abandoned run, a restarted run of the same plan in the same checkout stops at the start check until the old ledger is removed, and an old `preflight.md` makes the restarted run skip writing a new table.
 ```
 
-- [ ] **Step 4: Verify the release-notes entry**
+- [x] **Step 4: Verify the release-notes entry**
 
 Run: `grep -n '^## v7\.7[34]' RELEASE-NOTES.md | head -3`
 Expected: the `## v7.74.0 — …` line comes before the `## v7.73.1 — …` line.
@@ -1519,12 +1519,12 @@ Expected: a number of at most `120` (the summary of spec section 4.10 counts 117
 Run: `for n in 'HEAD is not a descendant of BASE' 'Commits in range: none' 'Is the branch of task N repaired?' 'review range invalid' '.superpowers/sdd/preflight.md' 'Major-Error Stop Policy' 'restores its version once' 'Do NOT dispatch subagents.' 'DONE_WITH_CONCERNS' 'not ported'; do printf '%s: ' "$n"; awk '/^## v7\.74\.0/ { f = 1 } /^## v7\.73\.1/ { exit } f' RELEASE-NOTES.md | grep -cF -- "$n"; done`
 Expected: every phrase prints a count of at least `1`.
 
-- [ ] **Step 5: Locate the issues log in the main checkout**
+- [x] **Step 5: Locate the issues log in the main checkout**
 
 Run: `MAIN=$(dirname "$(git rev-parse --path-format=absolute --git-common-dir)"); LOG="$MAIN/docs/orchestration-issues.md"; if [ ! -f "$LOG" ]; then echo "SKIP-ABSENT $LOG"; elif grep -qF -- '(upstream A10)' "$LOG"; then echo "SKIP-PRESENT $LOG"; else echo "APPEND $LOG"; fi`
 Expected: one line. `SKIP-ABSENT` or `SKIP-PRESENT` → do not edit the file; write that line into the task report and go to Step 7. `APPEND` → Step 6.
 
-- [ ] **Step 6: Append the accepted limits (only after `APPEND`)**
+- [x] **Step 6: Append the accepted limits (only after `APPEND`)**
 
 Open the file named by Step 5 with the Read tool at the `## Accepted limits` section (find its line and the next `## ` heading with `grep -n '^## ' <file>`). With the Edit tool, insert after the last entry of that section (before the blank line that precedes the next `## ` heading) these six entries:
 
@@ -1584,12 +1584,12 @@ Expected: `6` (all six entries stand inside `## Accepted limits`).
 
 Write into the task report which outcome happened: appended, skipped because absent, or skipped because already present. The file stays out of every commit.
 
-- [ ] **Step 7: Confirm the issues log is not staged**
+- [x] **Step 7: Confirm the issues log is not staged**
 
 Run: `MAIN=$(dirname "$(git rev-parse --path-format=absolute --git-common-dir)"); git -C "$MAIN" status --porcelain -- docs/orchestration-issues.md`
 Expected: no output (the file in the main checkout is ignored and untracked; the check runs there because Steps 5-6 edit that copy, also when this task runs in a linked worktree).
 
-- [ ] **Step 8: Run every fast suite**
+- [x] **Step 8: Run every fast suite**
 
 Run each command on its own (each prints a final results line; a suite that does not end with 0 failures stops the task):
 - Run: `bash tests/codex/run-unit-tests.sh`
@@ -1615,7 +1615,7 @@ Run each command on its own (each prints a final results line; a suite that does
 
 Expected: every command exits 0 and reports no failure.
 
-- [ ] **Step 9: Commit**
+- [x] **Step 9: Commit**
 
 ```bash
 git add VERSION .claude-plugin/plugin.json .claude-plugin/marketplace.json plugin.universal.yaml README.md RELEASE-NOTES.md
