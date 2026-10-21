@@ -29,3 +29,9 @@ plan: docs/superpowers-orchestrator/2026-10-21-upstream-v7-fixes/plans/upstream-
 
 ## Phase 3 — Batch 5 (task 13) — COMPLETE — commits 45438c3..e4048ac
 - Task 13: complete — release v7.74.0 and record the accepted limits
+
+## RULING 1 — 2026-10-21 — phase 4 — [I1] C9 criterion: spec-mandated wording governs
+Items: [I1] forced — plan governs: Task 6 "Must convey: a test outside the task that fails and that the change did not cause is not fixed, …" (spec 4.7 wording; failure mode 8 accepts the case)
+Detail: docs/superpowers-orchestrator/2026-10-21-upstream-v7-fixes/plans/upstream-v7-fixes-open-decisions.md
+Forks: none — contradiction: none
+Re-dispatch: phase 4, in-run resume 1 of 3, return 1 of 6
