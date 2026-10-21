@@ -208,12 +208,38 @@ Before dispatching Task 1, scan the plan once for conflicts:
 - anything the plan explicitly mandates that the review rubric treats as a
   defect (a test that asserts nothing, verbatim duplication of a logic block)
 
+The scan's result is a table, not a verdict. One row for every link
+between tasks: a path that the **Files:** lists of two or more tasks name,
+or a name that the text of two or more tasks mentions (for example a
+function, a type, a command or a file format). The row lists every task
+that mentions that path or name, what you compared (the `Compared` cell
+names the path or the name first), and what you found. For a name,
+compare what each listed task says the name is or does: what a task that
+defines it produces against what a task that uses it consumes; for a
+path, compare the edits that the listed tasks make at that path. One row
+for every task: whether its own text agrees with itself — the tests it
+specifies against the code it specifies, the files it creates against the
+files it changes later. A scan without these rows is not a scan you ran.
+The table has four columns: `Row` (`path`, `name` or `task`), `Tasks`,
+`Compared`, `Found`. `Found` is `none` unless the row shows a conflict of
+a kind that the two items above list; then it is a short description of
+that conflict. Every row whose `Found` is not `none` is a conflict, and
+the rules below for what you find apply to it.
+
+Write the table to `.superpowers/sdd/preflight.md`, under the line
+`## Pre-flight scan`, once per plan: when that file already exists, run
+the scan and handle what it finds as before, but do not write the table
+again, also not after the plan was amended. The table records what you
+compared; it never decides a conflict, and the answer to a conflict is not
+written into that file.
+
 Present everything you find to the user as one batched question — each
 finding beside the plan text that mandates it, asking which governs —
 before execution begins, not one interrupt per discovery mid-plan. If the
-scan is clean, proceed without comment. The review loop remains the net for
-conflicts that only emerge from implementation. (In Batched Autonomous Mode
-a pre-flight conflict is a blocker — journal it and end the batch.)
+scan finds no conflict, proceed without a question (the table is still
+written). The review loop still catches conflicts that appear only during
+implementation. (In Batched Autonomous Mode a pre-flight conflict is a
+blocker — journal it and end the batch.)
 
 ## Parallel Waves (default for independent tasks)
 

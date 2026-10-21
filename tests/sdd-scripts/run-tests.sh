@@ -1885,6 +1885,32 @@ assert_file_contains "SKILL.md Core Flow: Record BASE is unchanged" "$SDD_SKILL_
 V774_DWC='**DONE_WITH_CONCERNS:** The implementer completed the work but flagged doubts. Read the concerns before proceeding. If the concerns are about correctness or scope, address them before review. If they'"'"'re observations (e.g., "this file is getting large"), note them and proceed to review.'
 assert_eq "SKILL.md DONE_WITH_CONCERNS: the paragraph is unchanged" \
   "$(grep -E '^\*\*DONE_WITH_CONCERNS:\*\*' "$SDD_SKILL_MD")" "$V774_DWC"
+# D4: the Pre-Flight Plan Review writes what it compared as a table into its
+# own file, once per plan. The table records the scan; it never decides a
+# conflict.
+V774_PREFLIGHT="$WAVE_DIR/v774-preflight.txt"
+awk '/^## Pre-Flight Plan Review$/ { f = 1; print; next } f && /^## / { exit } f' "$SDD_SKILL_MD" > "$V774_PREFLIGHT"
+if [ -s "$V774_PREFLIGHT" ]; then ok "SKILL.md Pre-Flight: the section extract is not empty"; else bad "SKILL.md Pre-Flight: the section extract is not empty"; fi
+for needle in \
+  "The scan's result is a table, not a verdict." \
+  'Write the table to `.superpowers/sdd/preflight.md`, under the line `## Pre-flight scan`, once per plan: when that file already exists, run the scan and handle what it finds as before, but do not write the table again' \
+  'it never decides a conflict' \
+  'a path that the **Files:** lists of two or more tasks name, or a name that the text of two or more tasks mentions' \
+  'The row lists every task that mentions that path or name' \
+  'for a path, compare the edits that the listed tasks make at that path' \
+  '`Row` (`path`, `name` or `task`)' \
+  '`Found` is `none` unless the row shows a conflict of a kind that the two items above list' \
+  'Every row whose `Found` is not `none` is a conflict'; do
+  assert_folded_contains "SKILL.md Pre-Flight: contains '$needle'" "$V774_PREFLIGHT" "$needle"
+done
+for needle in '`Row` (`file`' 'One row for every pair of tasks' 'Rule on everything you find' 'Rule on each conflict' \
+              'record each ruling in the ledger' 'binding authority' 'proceed without comment'; do
+  if fold_file "$V774_PREFLIGHT" | grep -qF -- "$needle"; then
+    bad "SKILL.md Pre-Flight: does not contain '$needle'"
+  else
+    ok "SKILL.md Pre-Flight: does not contain '$needle'"
+  fi
+done
 bold ""
 bold "Results: $PASS passed, $FAIL failed"
 if [ "$FAIL" -gt 0 ]; then
