@@ -63,3 +63,6 @@ _Invocation 1 — 2026-10-21 — N=3 M=3 — BASE..HEAD 093d71a..1349908 — bra
 ### Dispositions
 - [M1] carried — review-package range mode checks the resolved base_name/head_name but builds the package from the raw arguments, so a ref that moves between guard and diff gives an unchecked range (same issue as carried task 2 security M1, shipped as-is in round 1) ← 2/3: r2:M1, r3:M1
 - [M2] carried — batch-controller start check pastes <head7> from the ledger into a git command without a hexadecimal check; needs a ledger written to mislead (outside the supported environment) ← 2/3: r2:M2, r3:M2
+
+_Completed — 2026-10-21 — cap reached — HEAD 63778304028428c4f546d4bf21ad3e5f45bb9e8f_
+Secrets found: none
