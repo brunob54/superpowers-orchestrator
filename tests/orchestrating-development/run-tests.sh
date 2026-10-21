@@ -685,6 +685,14 @@ assert_folded_contains "platform: the guide overview names Copilot CLI and OpenC
 assert_folded_contains "platform: the guide requirement names Copilot CLI" "$GUIDE_FILE" \
   'On any other platform, Copilot CLI included, the skill refuses with one line.'
 
+# 2026-10-21 (user decision): GitHub Copilot CLI is no longer a supported
+# platform. The badge names Claude Code only, and the Copilot CLI section of
+# the README carries the note. The note is a quote block, so its later lines
+# start with "> " and are checked as one whole line, not folded.
+assert_file_not_contains "platform: the README badge no longer names Copilot CLI" "$README_FILE" 'Copilot_CLI-white'
+assert_file_has_line "platform: the README Copilot CLI section carries the no-longer-supported note" "$README_FILE" \
+  '> **No longer supported (since 2026-10-21).** GitHub Copilot CLI is no'
+
 echo
 bold "Results: $PASS passed, $FAIL failed"
 if [ "$FAIL" -gt 0 ]; then
