@@ -26,3 +26,6 @@ plan: docs/superpowers-orchestrator/2026-10-21-upstream-v7-fixes/plans/upstream-
 - Task 10: complete — batch controller exit-3 rule and start check (C11, orchestrated)
 - Task 11: complete — GitHub Copilot CLI marked as no longer supported
 - Task 12: complete — user guide sections for the v7.74.0 behaviour
+
+## Phase 3 — Batch 5 (task 13) — COMPLETE — commits 45438c3..e4048ac
+- Task 13: complete — release v7.74.0 and record the accepted limits
