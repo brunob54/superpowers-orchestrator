@@ -427,7 +427,7 @@ git commit -m "fix(sdd): review-package exits 3 when HEAD does not descend from 
   - Verification: Step 2's commands (run the two lines with `IDENTITY=s3cret` and with `IDENTITY` unset; probe both hooks).
   - Sentence wording is free; the properties above bind.
 
-- [ ] **Step 1: Replace the two lines**
+- [x] **Step 1: Replace the two lines**
 
 In `skills/systematic-debugging/SKILL.md`, replace line 54 (`  echo "IDENTITY: ${IDENTITY:+SET}${IDENTITY:-UNSET}"`) with:
 
@@ -441,7 +441,7 @@ and line 58 (`  env | grep IDENTITY || echo "IDENTITY not in environment"`) with
   [ -n "${IDENTITY:-}" ] && echo "IDENTITY in environment" || echo "IDENTITY not in environment"
 ```
 
-- [ ] **Step 2: Run the lines and the hook probe**
+- [x] **Step 2: Run the lines and the hook probe**
 
 Run: `T=$(mktemp) && sed -n '54p;58p' skills/systematic-debugging/SKILL.md > "$T" && IDENTITY=s3cret bash "$T"; env -u IDENTITY bash "$T"; rm -f "$T"`
 Expected: four lines, in this order: `IDENTITY: SET`, `IDENTITY in environment`, `IDENTITY: UNSET`, `IDENTITY not in environment`. No line contains `s3cret`.
@@ -454,7 +454,7 @@ Expected: `0`
 
 Record the output of the first command in the task report (spec section 7.1).
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add skills/systematic-debugging/SKILL.md
