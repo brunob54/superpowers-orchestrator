@@ -1363,7 +1363,7 @@ git commit -m "docs(platforms): GitHub Copilot CLI is no longer supported" --tra
   - §9 must convey: before v7.74.0 every SDD script call rewrote `.superpowers/sdd/.gitignore`; since v7.74.0 it is created only when missing or empty; a committed ledger is part of the branch, is seen by the whole-branch reviewers, and makes an orchestrated run stop at the next batch boundary or at Phase 5.
   - Verification: Step 2's grep commands; `bash tests/orchestrating-development/run-tests.sh` stays green (its guide pins in section 12).
 
-- [ ] **Step 1: Write the four passages**
+- [x] **Step 1: Write the four passages**
 
 (a) **§3 Stage 2** — in the paragraph that ends "read the `Owed:` list yourself." (line 321), append to the same paragraph:
 
@@ -1383,7 +1383,7 @@ git commit -m "docs(platforms): GitHub Copilot CLI is no longer supported" --tra
 
 Insert each passage as a plain paragraph, without the `> ` prefix: the quote marks only delimit the text in this plan (unlike the README note of Task 11, which is a quote block in the README). Wrap the new prose at the line width of the surrounding paragraphs.
 
-- [ ] **Step 2: Verify the passages**
+- [x] **Step 2: Verify the passages**
 
 Run (folds the guide into one line, then counts each phrase):
 
@@ -1405,7 +1405,7 @@ Expected: every phrase prints a count of at least `1` (`review range invalid —
 Run: `bash tests/orchestrating-development/run-tests.sh 2>&1 | tail -1`
 Expected: `Results: <n> passed, 0 failed`.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add docs/guide/README.md
