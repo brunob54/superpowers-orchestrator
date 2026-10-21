@@ -6,3 +6,8 @@ _Invocation 1 — 2026-10-21 — spec docs/superpowers-orchestrator/2026-10-21-u
 plan: docs/superpowers-orchestrator/2026-10-21-upstream-v7-fixes/plans/upstream-v7-fixes.md — 13 tasks
 
 ## Phase 2 — Plan review — rounds 3 — converged — unresolved 0
+
+## Phase 3 — Batch 1 (tasks 1–3) — COMPLETE — commits efcfc4c..eca14f1
+- Task 1: complete — sdd-workspace writes .gitignore only when absent or empty (A13)
+- Task 2: complete — review-package exits 3 on a non-descendant range (C11, the script)
+- Task 3: complete — the systematic-debugging example prints no secret value (A17)
