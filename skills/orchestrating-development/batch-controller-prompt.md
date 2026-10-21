@@ -68,7 +68,17 @@ Agent tool (general-purpose):
     [SDD_SCRIPTS_DIR]): `sdd-workspace PLAN_FILE` once at start
     (idempotent for the same plan), `task-brief PLAN_FILE N` per task,
     `review-package BASE HEAD` per review (BASE = the HEAD you record
-    before dispatching that task's implementer).
+    before dispatching that task's implementer). When `review-package`
+    exits 3, HEAD does not descend from BASE: the branch was switched or
+    reset during the task, or a commit at or before BASE was rewritten
+    (an amend or a rebase). Dispatch no task reviewer and no implementer
+    for that range, write no `### Question <k>` or `### Conflict <k>`
+    section for it, and return
+    `BLOCKED task=<n>: review range invalid — <the script's error line>`.
+    A wrong branch state is not an open item: without such a section
+    the orchestrator reads this return as a controller failure, retries
+    the identical dispatch once, and then stops under its Major-Error
+    Stop Policy.
 
     Open every file this prompt tells you to read with the Read tool, not
     with a shell command such as `cat`, even when your session tells you to
@@ -194,7 +204,21 @@ Agent tool (general-purpose):
        [PLAN_PATH] and hand it verbatim to every task-reviewer dispatch
        (SDD's task-reviewer template expects it; the orchestrator never
        reads plan bodies and cannot supply it).
-    4. Mid-task crash recovery: for each assigned task that is unchecked
+    4. Mid-task crash recovery: first, after `sdd-workspace PLAN_FILE`
+       and before the Pre-Flight Plan Review and before any dispatch,
+       check the branch. When the ledger holds a completed line, run
+       `git merge-base --is-ancestor <head7> HEAD`, with `<head7>` the
+       HEAD recorded by the last completed ledger line in file order. A
+       non-zero exit has one of two causes: the branch was switched,
+       reset, or rewritten by an amend or a rebase, so it no longer holds
+       work that the ledger records as complete; or the ledger is left
+       from an abandoned or earlier run of this plan. Then dispatch
+       nothing, write no `### Question <k>` or `### Conflict <k>`
+       section, and return
+       `BLOCKED task=<n>: review range invalid — HEAD does not descend from the last completed ledger HEAD <head7> (branch switched, reset or rewritten, or ledger left from an earlier run of this plan)`,
+       with `<n>` the first unchecked task of your task list. With no
+       completed ledger line, skip this check. Then, for each assigned
+       task that is unchecked
        when you start, set REVIEW_BASE = the HEAD recorded by the last
        completed ledger line that still precedes task `<n>`'s own
        position in the plan. Read "no ledger line" strictly, over task
