@@ -605,6 +605,133 @@ assert_eq "--commits bad SHA exits 2" "$?" "2"
 "$SCRIPTS/review-package" --commits 2>/dev/null
 assert_eq "--commits with no SHAs exits 2" "$?" "2"
 
+bold "review-package (range guard, exit 3)"
+
+# A range whose HEAD does not descend from BASE gives a two-dot diff that
+# shows the task's own work as deleted: the script exits 3 and writes
+# nothing. An empty range (BASE = HEAD) is valid, and the package says so. A
+# BASE or HEAD that is not a commit exits 2. The section uses its own fixture
+# repository, so that the shared fixture keeps its state. Every call passes
+# full 40-character SHAs, because the script echoes its arguments as given.
+RG_REPO=$(mktemp -d)
+: "${RG_REPO:?mktemp failed — refusing to run with an empty repo path}"
+RG_REPO=$(cd "$RG_REPO" && pwd -P)
+RG_OUT=$(mktemp -d)
+: "${RG_OUT:?mktemp failed — refusing to run with an empty folder path}"
+RG_ERR="$RG_OUT/stderr.txt"
+cd "$RG_REPO"
+git -c init.defaultBranch=main init --quiet
+git config user.email "test@test"
+git config user.name "test"
+rg_commit() { # path content message -> prints the full SHA of the new commit
+  mkdir -p "$(dirname "$1")"
+  printf '%s\n' "$2" > "$1"
+  git add "$1" && git commit --quiet -m "$3"
+  git rev-parse HEAD
+}
+RG_C0=$(rg_commit a.txt a "c0: add a")
+RG_C1=$(rg_commit b.txt b "c1: add b")
+# A commit beside main, made without a checkout.
+RG_SIDE=$(git commit-tree "$RG_C0^{tree}" -p "$RG_C0" -m side)
+RG_C2=$(rg_commit docs/superpowers-orchestrator/x/x-review-log.md log "c2: change only a blinded file")
+git branch feature "$RG_C2"
+RG_C3=$(rg_commit m.txt m "c3: add m on main")
+git checkout --quiet feature
+RG_C4=$(rg_commit f.txt f "c4: add f on feature")
+git merge --no-ff --quiet -m "merge main into feature" main
+RG_M=$(git rev-parse HEAD)
+RG_C5=$(rg_commit g.txt g "c5: add g")
+assert_eq "range guard fixture: C3 and C4 exist, so the merge is not a fast-forward" \
+  "$(git rev-list --parents -n 1 "$RG_M" | wc -w | tr -d ' ')" "3"
+
+# (1) An empty range: exit 0, and the Commits section says so.
+RG_PKG="$RG_OUT/empty.diff"
+RG_STDOUT=$("$SCRIPTS/review-package" "$RG_C1" "$RG_C1" "$RG_PKG" 2>"$RG_ERR")
+assert_eq "range guard (1): an empty range exits 0" "$?" "0"
+assert_eq "range guard (1): the line after '## Commits' is 'Commits in range: none'" \
+  "$(awk 'prev == "## Commits" { print; exit } { prev = $0 }' "$RG_PKG" 2>/dev/null)" "Commits in range: none"
+if printf '%s\n' "$RG_STDOUT" | grep -qE ': 0 commit\(s\), [0-9]+ bytes$'; then
+  ok "range guard (1): the summary says 0 commit(s)"
+else
+  bad "range guard (1): the summary says 0 commit(s) (got: $RG_STDOUT)"
+fi
+
+# (2) HEAD does not descend from BASE: exit 3, one stderr line, no file.
+RG_PKG2="$RG_OUT/reversed.diff"
+"$SCRIPTS/review-package" "$RG_SIDE" "$RG_C1" "$RG_PKG2" > /dev/null 2>"$RG_ERR"
+assert_eq "range guard (2): HEAD not descending from BASE exits 3" "$?" "3"
+assert_eq "range guard (2): standard error is exactly the guard line" \
+  "$(cat "$RG_ERR")" "HEAD is not a descendant of BASE: $RG_SIDE..$RG_C1"
+[ ! -e "$RG_PKG2" ] && ok "range guard (2): no file at the given OUTFILE path" || bad "range guard (2): no file at the given OUTFILE path"
+"$SCRIPTS/review-package" "$RG_SIDE" "$RG_C1" > /dev/null 2>"$RG_ERR"
+assert_eq "range guard (2): without OUTFILE it also exits 3" "$?" "3"
+if ls "$RG_REPO/.superpowers/sdd"/review-*.diff > /dev/null 2>&1; then
+  bad "range guard (2): no review-*.diff in the workspace"
+else
+  ok "range guard (2): no review-*.diff in the workspace"
+fi
+# Test (1) and the first call of test (2) pass OUTFILE, so no call before
+# this one creates the workspace; the guard must stop the script before it
+# calls sdd-workspace.
+if [ -e "$RG_REPO/.superpowers" ]; then
+  bad "range guard (2): exit 3 without OUTFILE does not call sdd-workspace"
+else
+  ok "range guard (2): exit 3 without OUTFILE does not call sdd-workspace"
+fi
+
+# (3) A task that changes only a blinded file is not an empty range.
+RG_PKG3="$RG_OUT/blinded.diff"
+RG_STDOUT=$("$SCRIPTS/review-package" "$RG_C1" "$RG_C2" "$RG_PKG3" 2>"$RG_ERR")
+assert_eq "range guard (3): a range with only a blinded commit exits 0" "$?" "0"
+assert_contains "range guard (3): the summary says 0 commit(s)" "$RG_STDOUT" ": 0 commit(s), "
+assert_file_not_contains "range guard (3): the package does not say the range is empty" "$RG_PKG3" "Commits in range: none"
+
+# (4) A BASE that is a merge commit HEAD descends from.
+RG_PKG4="$RG_OUT/merge-base.diff"
+"$SCRIPTS/review-package" "$RG_M" "$RG_C5" "$RG_PKG4" > /dev/null 2>"$RG_ERR"
+assert_eq "range guard (4): a merge commit as BASE exits 0" "$?" "0"
+assert_file_contains "range guard (4): the package holds the task's hunk" "$RG_PKG4" "+g"
+
+# (5) --commits mode does not change.
+"$SCRIPTS/review-package" --commits "$RG_C5" --out "$RG_OUT/c5.diff" > /dev/null 2>"$RG_ERR"
+assert_eq "range guard (5): --commits with HEAD itself exits 0" "$?" "0"
+"$SCRIPTS/review-package" --commits "$RG_SIDE" --out "$RG_OUT/side.diff" > /dev/null 2>"$RG_ERR"
+assert_eq "range guard (5): --commits with a commit that is not an ancestor of HEAD exits 0" "$?" "0"
+
+# (6) A BASE or HEAD that is not a commit exits 2 and writes nothing.
+RG_PKG6="$RG_OUT/tree.diff"
+"$SCRIPTS/review-package" "$RG_C0^{tree}" "$RG_C5" "$RG_PKG6" > /dev/null 2>"$RG_ERR"
+assert_eq "range guard (6): a tree as BASE exits 2" "$?" "2"
+assert_file_contains "range guard (6): standard error names the bad BASE" "$RG_ERR" "bad BASE: "
+[ ! -e "$RG_PKG6" ] && ok "range guard (6): no file for a tree as BASE" || bad "range guard (6): no file for a tree as BASE"
+# The blob goes by its object ID: after "<rev>:" git reads the rest as a path.
+RG_BLOB=$(git rev-parse "$RG_C5:g.txt")
+RG_PKG6B="$RG_OUT/blob.diff"
+"$SCRIPTS/review-package" "$RG_C0" "$RG_BLOB" "$RG_PKG6B" > /dev/null 2>"$RG_ERR"
+assert_eq "range guard (6): a blob as HEAD exits 2" "$?" "2"
+assert_file_contains "range guard (6): standard error names the bad HEAD" "$RG_ERR" "bad HEAD: "
+[ ! -e "$RG_PKG6B" ] && ok "range guard (6): no file for a blob as HEAD" || bad "range guard (6): no file for a blob as HEAD"
+
+# (7) An annotated tag as BASE still passes: ^{commit} follows the tag.
+git tag -a t0 -m t0 "$RG_M"
+RG_PKG7="$RG_OUT/tag.diff"
+"$SCRIPTS/review-package" t0 "$RG_C5" "$RG_PKG7" > /dev/null 2>"$RG_ERR"
+assert_eq "range guard (7): an annotated tag as BASE exits 0" "$?" "0"
+assert_file_contains "range guard (7): the package holds the task's hunk" "$RG_PKG7" "+g"
+
+# (8) A BASE that starts with "^" names no commit: exit 2, one "bad BASE" line
+# last, and no file. "^<sha>" passes "rev-parse --verify" but is a negated
+# revision, not an object name.
+RG_PKG8="$RG_OUT/negated.diff"
+"$SCRIPTS/review-package" "^$RG_C1" "$RG_C5" "$RG_PKG8" > /dev/null 2>"$RG_ERR"
+assert_eq "range guard (8): a BASE starting with '^' exits 2" "$?" "2"
+assert_eq "range guard (8): the last standard error line names the bad BASE" \
+  "$(tail -n 1 "$RG_ERR")" "bad BASE: ^$RG_C1"
+[ ! -e "$RG_PKG8" ] && ok "range guard (8): no file for a BASE starting with '^'" || bad "range guard (8): no file for a BASE starting with '^'"
+
+cd "$REPO"
+rm -rf "$RG_REPO" "$RG_OUT"
+
 bold "sdd-workspace (plan scoping)"
 
 # Legacy pre-fix state: workspace holds briefs/diffs from the sections
