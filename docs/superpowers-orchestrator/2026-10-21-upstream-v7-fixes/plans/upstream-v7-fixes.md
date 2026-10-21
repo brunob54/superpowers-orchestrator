@@ -1061,7 +1061,7 @@ git commit -m "feat(sdd): unreadable test evidence is a warning item, not missin
   - Must convey: the no-package value is passed when the script is missing or fails with an exit code other than 3; on exit 3 nothing is dispatched (SKILL.md, Error Handling).
 - Verification for both: new section `28. multi-code-review: review-package exit 3 is fatal` in `bash tests/reviewer-templates/run-tests.sh`; the existing worklist-row-54 block (`CODE_FALLBACK_RANGE`, `CODE_SKILL_PROSE_MENTIONS`) stays green.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 In `tests/reviewer-templates/run-tests.sh`, after section 27 and before the final `echo`, insert:
 
@@ -1096,12 +1096,12 @@ assert_folded_contains "multi-code-review reviewer template: the no-package valu
   'fails with an exit code other than 3'
 ```
 
-- [ ] **Step 2: Run the test to verify it fails**
+- [x] **Step 2: Run the test to verify it fails**
 
 Run: `bash tests/reviewer-templates/run-tests.sh 2>&1 | grep -E 'FAIL|Results'`
 Expected: FAIL for the position check, the six bullet needles and the legend needle.
 
-- [ ] **Step 3: Implement the change**
+- [x] **Step 3: Implement the change**
 
 (a) `skills/multi-code-review/SKILL.md`, Error Handling: insert between the bullet "- Empty or invalid range (BASE = HEAD, no merge-base, or BASE does not resolve to a commit) → stop and report; nothing dispatched." (lines 1760-1761) and the fallback bullet that starts at line 1762:
 
@@ -1117,12 +1117,12 @@ Expected: FAIL for the position check, the six bullet needles and the legend nee
 
 (b) `skills/multi-code-review/reviewer-prompt.md`, placeholder legend (lines 265-272, outside the prompt block): replace "When the script is missing or failing," (line 267) with "When the script is missing or fails with an exit code other than 3," and append after "no-package form." (line 272) the sentence " On exit 3 nothing is dispatched (SKILL.md, Error Handling)." Rewrap the bullet's continuation lines with the same two-space indent.
 
-- [ ] **Step 4: Run the test to verify it passes**
+- [x] **Step 4: Run the test to verify it passes**
 
 Run: `bash tests/reviewer-templates/run-tests.sh 2>&1 | tail -1`
 Expected: PASS — `Results: <n> passed, 0 failed`.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add skills/multi-code-review/SKILL.md skills/multi-code-review/reviewer-prompt.md tests/reviewer-templates/run-tests.sh
