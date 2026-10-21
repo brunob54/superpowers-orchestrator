@@ -9,12 +9,12 @@
 **Architecture:** Two bash scripts of the SDD skill change behaviour (`sdd-workspace` writes its `.gitignore` only when the file is absent or empty; `review-package` range mode exits 3 on a HEAD that does not descend from BASE, exits 2 on a non-commit BASE or HEAD, and writes `Commits in range: none` for an empty range). Every other change is skill or template wording, each pinned by folded-text assertions in the existing fast suites (`tests/sdd-scripts`, `tests/reviewer-templates`, `tests/orchestrating-development`). The release task bumps the version, writes the release notes, updates the user guide and appends accepted limits to the local, untracked issues log.
 **Tech Stack:** bash 3.2+ (macOS) and git 2.50.1 for the scripts and the test suites; Markdown for skills, templates and documents; Node >= 16 only for the safety-hook probe in Task 3.
 **Assumptions:**
-- Every line number below refers to the files at commit `fb222d38` (v7.73.1). The branch `feature/upstream-v7-fixes` adds only files under `docs/superpowers-orchestrator/2026-10-21-upstream-v7-fixes/`, so the numbers hold at the start of Task 1 (checked on 2026-10-21 with `git diff --stat fb222d38 HEAD`). Once a task edits a file, later tasks locate their place in that file by its text, not by its number. Will NOT work if another branch is merged in before execution.
+- Every line number below refers to the files at commit `fb222d38` (v7.73.1). The branch `feature/upstream-v7-fixes` adds only files under `docs/superpowers-orchestrator/2026-10-21-upstream-v7-fixes/`, so the numbers hold at the start of Task 1 (checked on 2026-10-21 with `git diff --stat fb222d38 HEAD`). Once a task edits a file, later tasks locate their place in that file by its text, not by its number; inside one task, every line number is that of `fb222d38` too, so a step that follows an earlier step of the same task in the same file (Task 8 (b), Task 10 (b), Task 12 (b)-(d)) locates its place by the quoted text. Will NOT work if another branch is merged in before execution.
 - Assumes `git merge-base --is-ancestor` exits 0 for a commit and itself and exits non-zero (1, or 128 for an unknown object) otherwise (spec section 3; measured there with git 2.50.1). Will NOT work with a git that treats a commit as not its own ancestor.
 - Assumes `docs/orchestration-issues.md` is git-ignored through `.git/info/exclude` and is not tracked (checked on 2026-10-21: `git check-ignore -v` prints `.git/info/exclude:23:/docs/orchestration-issues.md`; `git ls-files --error-unmatch` fails). Task 13 therefore never stages it. Will NOT ship that edit with the branch, by design.
 - Assumes `.superpowers/` is git-ignored through `.git/info/exclude` in this checkout (checked: `.git/info/exclude:21:.superpowers/`). The test fixtures create their own repositories with `mktemp -d`, so the suites do not depend on it.
 - Assumes git 2.31 or later for `git rev-parse --path-format=absolute` (Task 13; this machine has git 2.50.1). Will NOT locate the main checkout with an older git; the step then fails loudly at that command.
-- Tasks 4, 5, 6 and 8 edit the same files (`skills/subagent-driven-development/SKILL.md`, `tests/sdd-scripts/run-tests.sh`); Tasks 7, 8 and 9 edit `tests/reviewer-templates/run-tests.sh`. They must run one after another, never in one parallel wave.
+- Tasks 1-13 run one after another, in numbered order; no task of this plan runs in a parallel wave. Most tasks share a file with another task: Tasks 1, 2, 4, 5, 6 and 8 edit `tests/sdd-scripts/run-tests.sh`; Tasks 4, 5 and 8 edit `skills/subagent-driven-development/SKILL.md`; Tasks 6 and 7 edit `implementer-prompt.md`; Tasks 7 and 8 edit `task-reviewer-prompt.md`; Tasks 7 and 9 edit `skills/multi-code-review/reviewer-prompt.md`; Tasks 7, 8 and 9 edit `tests/reviewer-templates/run-tests.sh`; Tasks 10 and 11 edit `tests/orchestrating-development/run-tests.sh`; Tasks 11 and 12 edit `docs/guide/README.md`; Tasks 11 and 13 edit `README.md`.
 **Global Constraints:**
 - Target version: `7.74.0` (one release). Version files: `VERSION`, `.claude-plugin/plugin.json`, `.claude-plugin/marketplace.json`, `plugin.universal.yaml`, the `README.md` version badge, and the two `v6.7.0–v7.73.1` ranges in the README's Lineage & status note (they become `v6.7.0–v7.74.0`).
 - `review-package` range mode: exit 3 with exactly the one line `HEAD is not a descendant of BASE: ${base}..${head}` on standard error and no file written; exit 2 keeps `bad BASE: <arg>` / `bad HEAD: <arg>` and now also covers a BASE or HEAD that names a tree or a blob; exit 0 for an empty range, whose `## Commits` section holds the one line `Commits in range: none`. `--commits` mode never exits 3. The `blind_pathspecs` list does not change.
@@ -162,7 +162,7 @@ rm -rf "$GI_REPO" "$GI_SAVED" "$GI_STAR"
 - [ ] **Step 2: Run the test to verify it fails**
 
 Run: `bash tests/sdd-scripts/run-tests.sh 2>&1 | grep -E 'FAIL|Results'`
-Expected: FAIL lines `sdd-workspace without arguments: the committed .gitignore stays byte-identical (now: *|)` and the same for the other four calls (the script rewrites the file on every call); the absent and empty cases pass; the suite exits 1.
+Expected: FAIL lines `sdd-workspace without arguments: the committed .gitignore stays byte-identical (now: *|)` and the same for the other four calls (the script rewrites the file on every call), and the five `<call>: git status shows no change to the committed .gitignore` checks (the rewritten file is tracked, so git reports it as modified); the absent and empty cases pass; the `Results:` line reports at least ten failures (the pipe into `grep` hides the suite's own exit status).
 
 - [ ] **Step 3: Implement the change**
 
@@ -190,7 +190,7 @@ Replace header lines 8-10 (from "A self-ignoring .gitignore keeps the" to "modif
 - [ ] **Step 4: Run the test to verify it passes**
 
 Run: `bash tests/sdd-scripts/run-tests.sh 2>&1 | tail -3`
-Expected: PASS — `Results: <n> passed, 0 failed`, exit 0.
+Expected: PASS — `Results: <n> passed, 0 failed`.
 
 Run: `grep -F 'is never changed' skills/subagent-driven-development/scripts/sdd-workspace`
 Expected: prints `# example one that the repository commits, is never changed.`
@@ -217,7 +217,7 @@ git commit -m "fix(sdd): sdd-workspace writes .gitignore only when absent or emp
 **Contract:**
 - `review-package BASE HEAD [OUTFILE]` (range mode)
   - Inputs: BASE, HEAD (any git revision), optional OUTFILE path.
-  - Output: exit 2 with `bad BASE: <BASE>` or `bad HEAD: <HEAD>` on standard error when that argument does not name a commit (a tree, a blob, or nothing); exit 3 with exactly `HEAD is not a descendant of BASE: <BASE>..<HEAD>` on standard error when BASE is not an ancestor of HEAD; in both cases no file is written and `sdd-workspace` is not called. Exit 0 otherwise; when the range BASE..HEAD holds zero commits (counted without the blind pathspecs), the line directly after `## Commits` is `Commits in range: none`.
+  - Output: exit 2 with `bad BASE: <BASE>` or `bad HEAD: <HEAD>` as the last line of standard error when that argument does not name a commit (a tree, a blob, or nothing; for a tree or a blob, git's own line `error: <arg>^{commit}: expected commit type, but the object dereferences to tree type` — or `blob type` — comes before it, because `--quiet` does not silence that message; tests (6) use a substring check for this reason); exit 3 with exactly `HEAD is not a descendant of BASE: <BASE>..<HEAD>` on standard error when BASE is not an ancestor of HEAD; in both cases no file is written and `sdd-workspace` is not called. Exit 0 otherwise; when the range BASE..HEAD holds zero commits (counted without the blind pathspecs), the line directly after `## Commits` is `Commits in range: none`.
   - Invariants: a commit is its own ancestor (BASE = HEAD exits 0); a BASE that is a merge commit HEAD descends from exits 0; a range whose commits change only blinded files exits 0 and does not carry the `Commits in range: none` line; an annotated tag as BASE exits 0; `--commits` mode is unchanged; the script still holds exactly four `git diff` / `git show` read lines, each with `"${no_helpers[@]}"`.
   - Verification: the new section `review-package (range guard, exit 3)` in `bash tests/sdd-scripts/run-tests.sh`, tests (1) to (7); the existing sections `review-package (range mode)`, `review-package (--commits mode)`, `review-package (reviewer blinding)` and `review-package ignores configured diff helper programs` stay green.
   - Interface: exit codes 0/2 and their messages are pinned by pre-existing tests (`bad BASE exits 2`); exit 3 and the new line are new and not externally pinned.
@@ -297,6 +297,14 @@ if ls "$RG_REPO/.superpowers/sdd"/review-*.diff > /dev/null 2>&1; then
 else
   ok "range guard (2): no review-*.diff in the workspace"
 fi
+# Test (1) and the first call of test (2) pass OUTFILE, so no call before
+# this one creates the workspace; the guard must stop the script before it
+# calls sdd-workspace.
+if [ -e "$RG_REPO/.superpowers" ]; then
+  bad "range guard (2): exit 3 without OUTFILE does not call sdd-workspace"
+else
+  ok "range guard (2): exit 3 without OUTFILE does not call sdd-workspace"
+fi
 
 # (3) A task that changes only a blinded file is not an empty range.
 RG_PKG3="$RG_OUT/blinded.diff"
@@ -345,7 +353,7 @@ rm -rf "$RG_REPO" "$RG_OUT"
 - [ ] **Step 2: Run the test to verify it fails**
 
 Run: `bash tests/sdd-scripts/run-tests.sh 2>&1 | grep -E 'FAIL|Results'`
-Expected: FAIL lines for `range guard (1): the line after '## Commits' is 'Commits in range: none'`, `range guard (2): HEAD not descending from BASE exits 3 (expected '3', got '0')`, the other (2) checks, and the (6) exit-code checks (a tree or a blob passes today's `rev-parse --verify`, so the script fails later with another code). Tests (3), (4), (5) and (7) pass.
+Expected: FAIL lines for `range guard (1): the line after '## Commits' is 'Commits in range: none'`, `range guard (2): HEAD not descending from BASE exits 3 (expected '3', got '0')`, the other (2) checks, and every (6) check — exit code, standard-error text and no file (a tree or a blob passes today's `rev-parse --verify`: today a tree as BASE exits 0 and writes a package, and a blob as HEAD exits 129 after the redirection has created the OUTFILE). Tests (3), (4), (5) and (7) pass.
 
 - [ ] **Step 3: Implement the change**
 
@@ -389,7 +397,7 @@ range_count=$(git rev-list --count "${base}..${head}")
 - [ ] **Step 4: Run the test to verify it passes**
 
 Run: `bash tests/sdd-scripts/run-tests.sh 2>&1 | tail -3`
-Expected: PASS — `Results: <n> passed, 0 failed`, exit 0 (the helper-program section still counts four `git diff`/`git show` read lines).
+Expected: PASS — `Results: <n> passed, 0 failed` (the helper-program section still counts four `git diff`/`git show` read lines).
 
 Run: `grep -c 'Commits in range: none' skills/subagent-driven-development/scripts/review-package`
 Expected: `2`
@@ -475,8 +483,8 @@ git commit -m "fix(systematic-debugging): the example prints no secret value" --
   - Invariants: the paragraph holds none of the counted phrases (`git commit`, `chore(plan)`, substring `tick`, the wave line); the **DONE_WITH_CONCERNS** paragraph is unchanged; `- Record BASE: `git rev-parse HEAD` before dispatching.` is unchanged.
   - Verification: v7.74.0 section of `tests/sdd-scripts/run-tests.sh` (folded needles and negative needles of spec section 7.1); the existing phrase counts of that suite stay green.
 - Resume Procedure step 2 sentence (SDD `SKILL.md:426-430`, wording artifact)
-  - Must convey: a task whose `## Open Issues` entry asks `Is the branch of task N repaired?` is neither marked complete nor reviewed in step 2; step 3 handles it.
-  - Verification: the needle is checked inside the `### Resume Procedure` section extract.
+  - Must convey: a task whose `## Open Issues` entry asks `Is the branch of task N repaired?` is neither marked complete nor reviewed in step 2; step 3 handles it; when the resume prompt answers that the branch is repaired, the task resumes at its task review from the journaled BASE (the **Exit 3** paragraph) before step 4, with no new BASE and no implementer dispatch — so step 4 and the Batch Loop's normal per-task flow never record a fresh BASE for it.
+  - Verification: the two needles are checked inside the `### Resume Procedure` section extract.
 
 - [ ] **Step 1: Write the failing test**
 
@@ -501,6 +509,7 @@ for needle in \
   '**Exit 3.** `review-package BASE HEAD` exits 3 when HEAD does not descend from BASE' \
   'or a commit at or before BASE was rewritten (an amend or a rebase), and no correct package exists' \
   'An orchestrated batch controller follows its own prompt for this exit.' \
+  'Never dispatch the task reviewer for that range' \
   'by the rule of your run mode in the rest of this paragraph only' \
   'never ask the implementer to switch or reset the branch' \
   'no numbered remedy of **BLOCKED** applies, also not item 5 (advance to the next independent task)' \
@@ -513,6 +522,8 @@ for needle in \
 done
 assert_folded_contains "SKILL.md Resume Procedure step 2: a task with the exit-3 question is left to step 3" "$V774_RESUME" \
   'A task whose entry under `## Open Issues` asks `Is the branch of task N repaired?` (**Exit 3** under **DONE**, Handling Implementer Status) is not marked complete here and is not reviewed here: step 3 handles its entry.'
+assert_folded_contains "SKILL.md Resume Procedure step 2: an answered exit-3 question resumes at the task review from the journaled BASE" "$V774_RESUME" \
+  'When the resume prompt answers that the branch is repaired, step 3 records the answer, and the task resumes at its task review from the journaled BASE, by the **Exit 3** paragraph, before step 4: record no new BASE and dispatch no implementer for it.'
 for needle in 'by the rule of your run mode below only' 'Resume Procedure step 2 never marks such a task complete'; do
   if fold_file "$SDD_SKILL_MD" | grep -qF -- "$needle"; then
     bad "SKILL.md exit 3: does not contain the draft wording '$needle'"
@@ -529,7 +540,7 @@ assert_eq "SKILL.md DONE_WITH_CONCERNS: the paragraph is unchanged" \
 - [ ] **Step 2: Run the test to verify it fails**
 
 Run: `bash tests/sdd-scripts/run-tests.sh 2>&1 | grep -E 'FAIL|Results'`
-Expected: FAIL for every `SKILL.md exit 3 and empty package: contains …` needle and for the Resume Procedure step 2 needle; the negative needles, `Record BASE` and `DONE_WITH_CONCERNS` pass.
+Expected: FAIL for every `SKILL.md exit 3 and empty package: contains …` needle and for the two Resume Procedure step 2 needles; the negative needles, `Record BASE` and `DONE_WITH_CONCERNS` pass.
 
 - [ ] **Step 3: Implement the change**
 
@@ -555,7 +566,11 @@ Then insert, after that line and one blank line, this new paragraph as a single 
    mark its checkbox complete and advance. A task whose entry under
    `## Open Issues` asks `Is the branch of task N repaired?` (**Exit 3** under
    **DONE**, Handling Implementer Status) is not marked complete here and is
-   not reviewed here: step 3 handles its entry.
+   not reviewed here: step 3 handles its entry. When the resume prompt
+   answers that the branch is repaired, step 3 records the answer, and the
+   task resumes at its task review from the journaled BASE, by the **Exit 3**
+   paragraph, before step 4: record no new BASE and dispatch no implementer
+   for it.
 ```
 
 No new line may start with `4. ` or `5. ` (the review-gates suite anchors Core Flow step 4 by such lines).
@@ -590,7 +605,7 @@ git commit -m "feat(sdd): rules for an empty review package and for review-packa
 **Contract:**
 - `## Pre-Flight Plan Review` section of SDD `SKILL.md` (wording artifact)
   - Must convey: the scan result is a four-column table (`Row` = `path`, `name` or `task`; `Tasks`; `Compared`; `Found`) with one row per path that the **Files:** lists of two or more tasks name, one row per name that the text of two or more tasks mentions (each row listing every task that mentions it), and one row per task; `Found` is `none` unless the row shows a conflict of a kind the two bullet items list; every row whose `Found` is not `none` is a conflict handled by the existing rules; the table goes to `.superpowers/sdd/preflight.md` under `## Pre-flight scan` once per plan (the scan still runs every time); the table never decides a conflict and no answer is written into that file; a scan with no conflict proceeds without a question, and the table is still written.
-  - Invariants: the two bullet items, `PREFLIGHT_CRITERION` and `RUBRIC_PARENTHETICAL` stay; the three run-mode rules (interactive question, batched blocker, orchestrated by the batch controller's own rule) stay; the section contains none of `` `Row` (`file` ``, `One row for every pair of tasks`, `Rule on everything you find`, `Rule on each conflict`, `record each ruling in the ledger`, `binding authority`, `proceed without comment`; no counted phrase of the SDD `SKILL.md` phrase counts.
+  - Invariants: the two bullet items, `PREFLIGHT_CRITERION` and `RUBRIC_PARENTHETICAL` stay; the interactive batched-question paragraph and the Batched Autonomous Mode blocker sentence stay (the orchestrated rule lives in `batch-controller-prompt.md:150-159`, outside this section, and does not change); the section contains none of `` `Row` (`file` ``, `One row for every pair of tasks`, `Rule on everything you find`, `Rule on each conflict`, `record each ruling in the ledger`, `binding authority`, `proceed without comment`; no counted phrase of the SDD `SKILL.md` phrase counts.
   - Verification: the Pre-Flight block of the v7.74.0 section of `tests/sdd-scripts/run-tests.sh`; `tests/reviewer-templates/run-tests.sh` (section 12 pins `PREFLIGHT_CRITERION`, `RUBRIC_PARENTHETICAL`) stays green.
 
 - [ ] **Step 1: Write the failing test**
@@ -673,8 +688,8 @@ Present everything you find to the user as one batched question — each
 finding beside the plan text that mandates it, asking which governs —
 before execution begins, not one interrupt per discovery mid-plan. If the
 scan finds no conflict, proceed without a question (the table is still
-written). The review loop remains the net for conflicts that only emerge
-from implementation. (In Batched Autonomous Mode a pre-flight conflict is a
+written). The review loop still catches conflicts that appear only during
+implementation. (In Batched Autonomous Mode a pre-flight conflict is a
 blocker — journal it and end the batch.)
 ```
 
@@ -1150,6 +1165,7 @@ bold "5f. review-package exit 3 and the start check: a BLOCKED return with no qu
 # dispatch when completed work was lost.
 for needle in \
   'When `review-package` exits 3, HEAD does not descend from BASE: the branch was switched or reset during the task, or a commit at or before BASE was rewritten (an amend or a rebase).' \
+  'Dispatch no task reviewer and no implementer for that range' \
   'write no `### Question <k>` or `### Conflict <k>` section for it, and return `BLOCKED task=<n>: review range invalid — <the script'"'"'s error line>`.' \
   'the orchestrator reads this return as a controller failure, retries the identical dispatch once, and then stops under its Major-Error Stop Policy' \
   '4. Mid-task crash recovery: first, after `sdd-workspace PLAN_FILE` and before the Pre-Flight Plan Review and before any dispatch, check the branch.' \
@@ -1167,7 +1183,7 @@ done
 - [ ] **Step 2: Run the test to verify it fails**
 
 Run: `bash tests/orchestrating-development/run-tests.sh 2>&1 | grep -E 'FAIL|Results'`
-Expected: ten FAIL lines, one for each needle except the last; `Task <n>: complete commits <base7>..<head7>` already passes (the `Then, for each assigned task …` needle fails too, because today's text has no "Then,").
+Expected: eleven FAIL lines, one for each needle except the last; `Task <n>: complete commits <base7>..<head7>` already passes (the `Then, for each assigned task …` needle fails too, because today's text has no "Then,").
 
 - [ ] **Step 3: Implement the change**
 
@@ -1251,8 +1267,8 @@ git commit -m "feat(orchestration): batch controller stops on review-package exi
 **Contract:**
 - Copilot CLI status in `README.md`, `docs/guide/README.md` §1, `docs/platforms/codex.md:9`, `.codex/INSTALL.md:7` (wording artifact)
   - Must convey: Copilot CLI is no longer supported since 2026-10-21; Claude Code is the platform to use; the history (Copilot CLI used up to v7.13.0) and every file stay; no reason is given.
-  - Invariants: the badge names only Claude Code; the `### GitHub Copilot CLI` section keeps its heading and status line and gains the note; the sentences pinned by section 12 of `tests/orchestrating-development/run-tests.sh` stay; no file holds `Use Claude Code or GitHub Copilot CLI.` any more.
-  - Verification: the two new section-12 assertions; Step 4's grep commands.
+  - Invariants: the badge names only Claude Code; the `### GitHub Copilot CLI` section keeps its heading and status line and gains the note; the sentences pinned by section 12 of `tests/orchestrating-development/run-tests.sh` stay; none of `README.md`, `docs/platforms/codex.md` and `.codex/INSTALL.md` holds `Use Claude Code or GitHub Copilot CLI.` any more (documents under `docs/superpowers-orchestrator/` that quote the old sentence stay).
+  - Verification: the two new section-12 assertions; Step 4's grep commands and its folded count of the `README.md:14` and `:461-463` phrases.
 
 - [ ] **Step 1: Write the failing test**
 
@@ -1307,8 +1323,19 @@ Expected: PASS — `Results: <n> passed, 0 failed` (the existing section-12 sent
 Run: `grep -c 'Use Claude Code or GitHub Copilot CLI' README.md docs/platforms/codex.md .codex/INSTALL.md`
 Expected: `README.md:0`, `docs/platforms/codex.md:0`, `.codex/INSTALL.md:0`.
 
-Run: `grep -c 'In Claude Code or Copilot CLI' README.md; grep -cF 'GitHub Copilot CLI and Codex are no longer supported' docs/guide/README.md`
-Expected: `0`, then `1`.
+Run: `grep -c 'In Claude Code or Copilot CLI' README.md; awk '{ l = $0; sub(/^[ \t]+/, "", l); sub(/[ \t]+$/, "", l); printf "%s ", l }' docs/guide/README.md | grep -oF -- 'GitHub Copilot CLI and Codex are no longer supported' | wc -l | tr -d ' '`
+Expected: `0`, then `1` (the guide is folded first, because the §1 parenthetical wraps across lines 33-34).
+
+Run (folds `README.md` into one line, because the `:461-463` row is rewrapped, then counts each phrase of the `:14` and `:461-463` rows):
+
+```bash
+for n in 'Copilot CLI and Codex are no longer supported' '(no longer supported since 2026-10-21) was last used with v7.13.0'; do
+  printf '%s: ' "$n"
+  awk '{ l = $0; sub(/^[ \t]+/, "", l); sub(/[ \t]+$/, "", l); printf "%s ", l }' README.md | grep -oF -- "$n" | wc -l | tr -d ' '
+done
+```
+
+Expected: each phrase prints `1`.
 
 - [ ] **Step 5: Commit**
 
@@ -1340,7 +1367,7 @@ git commit -m "docs(platforms): GitHub Copilot CLI is no longer supported" --tra
 
 (a) **§3 Stage 2** — in the paragraph that ends "read the `Owed:` list yourself." (line 321), append to the same paragraph:
 
-> Since v7.74.0 that review writes what it compared as a table into `.superpowers/sdd/preflight.md`: one row for each path that the **Files:** lists of two or more tasks name, and one row for each name that the text of two or more tasks mentions, each row listing every task that mentions that path or name; and one row for each task. It runs the scan at every start, as before, but writes the table only once per plan. The table only records the scan: a conflict is still asked of you (interactive), ends the batch (batched mode), or goes to the orchestrator (orchestrated run).
+> Since v7.74.0 the Pre-Flight Plan Review writes what it compared as a table into `.superpowers/sdd/preflight.md`: one row for each path that the **Files:** lists of two or more tasks name, and one row for each name that the text of two or more tasks mentions, each row listing every task that mentions that path or name; and one row for each task. It runs the scan at every start, as before, but writes the table only once per plan. The table only records the scan: a conflict is still asked of you (interactive), ends the batch (batched mode), or goes to the orchestrator (orchestrated run).
 
 (b) **§3 Stage 3** — after the paragraph that ends "moment the task completes." (line 350), add one blank line and this paragraph:
 
@@ -1354,7 +1381,7 @@ git commit -m "docs(platforms): GitHub Copilot CLI is no longer supported" --tra
 
 > **My committed `.superpowers/sdd/.gitignore` was reset to `*`.** Before v7.74.0 every SDD script call rewrote the file. Since v7.74.0 the scripts create it only when it is missing or empty, so a version you commit stays as you wrote it. If you also commit the ledger `progress.md`, it is part of the branch, the whole-branch reviewers see it, and an orchestrated run stops at the next batch boundary or at Phase 5, because every ledger write leaves the working tree dirty.
 
-Wrap the new prose at the line width of the surrounding paragraphs.
+Insert each passage as a plain paragraph, without the `> ` prefix: the quote marks only delimit the text in this plan (unlike the README note of Task 11, which is a quote block in the README). Wrap the new prose at the line width of the surrounding paragraphs.
 
 - [ ] **Step 2: Verify the passages**
 
@@ -1458,7 +1485,7 @@ Upstream obra/superpowers released v7.0.0 on 2026-10-09. A comparison with this 
 - **The systematic-debugging example prints no secret (upstream A17).** In `skills/systematic-debugging/SKILL.md`, with `IDENTITY=s3cret` the example printed `IDENTITY: SETs3cret`, and its `env | grep IDENTITY` line printed the value too. Both lines now use a `[ -n "${IDENTITY:-}" ]` test and print only `SET`/`UNSET` or `in environment`/`not in environment`. Upstream's `printenv` form is not ported, because the fork's secrets hook refuses it for a secret-like name such as `API_TOKEN`.
 - **Evidence the task reviewer cannot read is a ⚠️ item (upstream D8).** `skills/subagent-driven-development/task-reviewer-prompt.md` now says that evidence the reviewer cannot read is not missing evidence: the reviewer reads the report again, paging, and otherwise reports a ⚠️ "Cannot verify from diff" item, never a ❌ finding, and runs no test to produce the evidence again. "Handling Reviewer ⚠️ Items" in the SDD skill tells the controller to read the report file itself; evidence that is still unreadable or absent sends the task back to the implementer to re-run the tests and write the command and its output into the report file.
 - **The Pre-Flight Plan Review writes its scan as a table (upstream D4).** The scan used to leave no record ("If the scan is clean, proceed without comment"). The SDD controller now writes what it compared to the new file `.superpowers/sdd/preflight.md`, under `## Pre-flight scan`: one row per path that the **Files:** lists of two or more tasks name, one row per name that the text of two or more tasks mentions, and one row per task, in four columns (`Row`, `Tasks`, `Compared`, `Found`). The scan still runs at every start; the table is written once per plan. The table never decides a conflict: conflicts go through the existing rules of each run mode. Upstream's sentences that let the controller rule on conflicts are not ported.
-- **Four worker templates forbid subagent dispatch (upstream D6).** The implementer and task-reviewer templates of SDD and the reviewer templates of `multi-code-review` and `multi-doc-review` now say "Do NOT dispatch subagents.", the wording that `fix-prompt.md` already used. No controller text gets the sentence, because controllers must dispatch their workers. In the user's transcripts 0 of 83 implementers, 0 of 82 task reviewers and 1 of 299 review-round reviewers had dispatched a subagent, so the rule is insurance, not a fix for an observed fault.
+- **Four worker templates forbid subagent dispatch (upstream D6).** The implementer and task-reviewer templates of SDD and the reviewer templates of `multi-code-review` and `multi-doc-review` now say "Do NOT dispatch subagents.", the wording that `fix-prompt.md` already used. No controller text gets the sentence, because controllers must dispatch their workers. In the user's transcripts 0 of 83 implementers, 0 of 82 task reviewers and 1 of 299 review-round reviewers had dispatched a subagent, so the rule prevents a possible fault; it does not fix an observed one.
 - **A failing test outside the task is reported, not fixed (upstream C9).** `skills/subagent-driven-development/implementer-prompt.md` now says: a test outside the task that fails, and that the change did not cause, is not fixed, unless the brief or the dispatch names that test as part of the task. The change did not cause the failure when the test neither is a file that the task changes nor imports or reads one. The implementer commits its work as usual, reports `DONE_WITH_CONCERNS` and names the test as an observation, with the failing output and that reason. The controller proceeds to review, and the task reviewer and the fix subagent keep their existing rules. The checklist of `skills/test-driven-development/SKILL.md` carries the same reporting rule; in the main session, the failure is named in the reply to the user.
 - **GitHub Copilot CLI is no longer supported.** `README.md` (badge, introduction, platform status, Codex note and a note in the Copilot CLI section), `docs/guide/README.md`, `docs/platforms/codex.md` and `.codex/INSTALL.md` now say so, in the form of commit `4f15206`, which marked Codex as no longer supported. The Copilot CLI files and sections stay; Copilot CLI was last used with v7.13.0.
 - **User guide.** §3 describes the pre-flight table, the implementer rule for a failing test outside its task and the batched and interactive exit-3 paths; §4 describes the orchestrated stop and the start check; §9 has a troubleshooting entry for a reset `.superpowers/sdd/.gitignore`.
@@ -1559,8 +1586,8 @@ Write into the task report which outcome happened: appended, skipped because abs
 
 - [ ] **Step 7: Confirm the issues log is not staged**
 
-Run: `git status --porcelain -- docs/orchestration-issues.md`
-Expected: no output (the file is ignored and untracked).
+Run: `MAIN=$(dirname "$(git rev-parse --path-format=absolute --git-common-dir)"); git -C "$MAIN" status --porcelain -- docs/orchestration-issues.md`
+Expected: no output (the file in the main checkout is ignored and untracked; the check runs there because Steps 5-6 edit that copy, also when this task runs in a linked worktree).
 
 - [ ] **Step 8: Run every fast suite**
 
