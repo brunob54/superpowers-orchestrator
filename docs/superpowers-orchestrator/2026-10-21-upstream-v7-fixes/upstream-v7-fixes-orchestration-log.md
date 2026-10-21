@@ -16,3 +16,8 @@ plan: docs/superpowers-orchestrator/2026-10-21-upstream-v7-fixes/plans/upstream-
 - Task 4: complete — SDD SKILL.md empty-package sentence and exit-3 rules (C11)
 - Task 5: complete — Pre-Flight Plan Review writes its scan as a table (D4)
 - Task 6: complete — implementer reports a failing test outside its task, does not fix it (C9)
+
+## Phase 3 — Batch 3 (tasks 7–9) — COMPLETE — commits 3b44920..69db53b
+- Task 7: complete — four worker templates forbid subagent dispatch (D6)
+- Task 8: complete — unreadable evidence is a warning item, not missing evidence (D8)
+- Task 9: complete — multi-code-review stops on review-package exit 3 (C11, review loop)
