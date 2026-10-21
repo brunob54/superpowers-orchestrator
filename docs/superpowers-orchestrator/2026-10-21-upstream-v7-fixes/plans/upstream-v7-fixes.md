@@ -608,7 +608,7 @@ git commit -m "feat(sdd): rules for an empty review package and for review-packa
   - Invariants: the two bullet items, `PREFLIGHT_CRITERION` and `RUBRIC_PARENTHETICAL` stay; the interactive batched-question paragraph and the Batched Autonomous Mode blocker sentence stay (the orchestrated rule lives in `batch-controller-prompt.md:150-159`, outside this section, and does not change); the section contains none of `` `Row` (`file` ``, `One row for every pair of tasks`, `Rule on everything you find`, `Rule on each conflict`, `record each ruling in the ledger`, `binding authority`, `proceed without comment`; no counted phrase of the SDD `SKILL.md` phrase counts.
   - Verification: the Pre-Flight block of the v7.74.0 section of `tests/sdd-scripts/run-tests.sh`; `tests/reviewer-templates/run-tests.sh` (section 12 pins `PREFLIGHT_CRITERION`, `RUBRIC_PARENTHETICAL`) stays green.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 In `tests/sdd-scripts/run-tests.sh`, at the end of the v7.74.0 section (directly before the two final lines `bold ""` and `bold "Results: …"`), insert:
 
@@ -641,12 +641,12 @@ for needle in '`Row` (`file`' 'One row for every pair of tasks' 'Rule on everyth
 done
 ```
 
-- [ ] **Step 2: Run the test to verify it fails**
+- [x] **Step 2: Run the test to verify it fails**
 
 Run: `bash tests/sdd-scripts/run-tests.sh 2>&1 | grep -E 'FAIL|Results'`
 Expected: FAIL for every positive Pre-Flight needle and for `does not contain 'proceed without comment'`.
 
-- [ ] **Step 3: Implement the change**
+- [x] **Step 3: Implement the change**
 
 In `skills/subagent-driven-development/SKILL.md`, replace the whole `## Pre-Flight Plan Review` section (lines 203-216 at `fb222d38`, from the heading to the line ending "journal it and end the batch.)") with:
 
@@ -695,7 +695,7 @@ blocker — journal it and end the batch.)
 
 Keep the line `` `## Pre-flight scan`, once per plan: … `` starting with the backtick: a line that starts with `## ` would end the section extract of the test.
 
-- [ ] **Step 4: Run the tests to verify they pass**
+- [x] **Step 4: Run the tests to verify they pass**
 
 Run: `bash tests/sdd-scripts/run-tests.sh 2>&1 | tail -3`
 Expected: PASS — `Results: <n> passed, 0 failed`.
@@ -703,7 +703,7 @@ Expected: PASS — `Results: <n> passed, 0 failed`.
 Run: `bash tests/reviewer-templates/run-tests.sh 2>&1 | tail -1`
 Expected: `Results: <n> passed, 0 failed`.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add skills/subagent-driven-development/SKILL.md tests/sdd-scripts/run-tests.sh
