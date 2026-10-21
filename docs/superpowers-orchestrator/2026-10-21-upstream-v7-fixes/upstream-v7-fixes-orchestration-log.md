@@ -21,3 +21,8 @@ plan: docs/superpowers-orchestrator/2026-10-21-upstream-v7-fixes/plans/upstream-
 - Task 7: complete — four worker templates forbid subagent dispatch (D6)
 - Task 8: complete — unreadable evidence is a warning item, not missing evidence (D8)
 - Task 9: complete — multi-code-review stops on review-package exit 3 (C11, review loop)
+
+## Phase 3 — Batch 4 (tasks 10–12) — COMPLETE — commits 13e2e42..45438c3
+- Task 10: complete — batch controller exit-3 rule and start check (C11, orchestrated)
+- Task 11: complete — GitHub Copilot CLI marked as no longer supported
+- Task 12: complete — user guide sections for the v7.74.0 behaviour
