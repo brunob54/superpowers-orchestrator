@@ -732,7 +732,7 @@ git commit -m "feat(sdd): the pre-flight scan writes a table to preflight.md onc
   - Must convey: the relevant suite passes apart from failures named under the next item; a test outside the task that fails and that the change did not cause is not fixed but named (status `DONE_WITH_CONCERNS` when the report carries a status, or in the reply to the user in the main session) with its failing output and the reason; the same "did not cause" criterion; a test that the task writes or changes is not outside the task; in the main session, the task is the change the user asked for.
   - Verification: the C9 block of the v7.74.0 section (line checks on the TDD file).
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 In `tests/sdd-scripts/run-tests.sh`, at the end of the v7.74.0 section (directly before the two final lines), insert:
 
@@ -771,12 +771,12 @@ fi
 
 (Inside `case`, the quoted `"$V774_TDD_PREFIX"` matches literally, so its `[ ]` is not a pattern bracket.)
 
-- [ ] **Step 2: Run the test to verify it fails**
+- [x] **Step 2: Run the test to verify it fails**
 
 Run: `bash tests/sdd-scripts/run-tests.sh 2>&1 | grep -E 'FAIL|Results'`
 Expected: FAIL for the three `implementer-prompt.md C9` needles and the four TDD checklist checks.
 
-- [ ] **Step 3: Implement the change**
+- [x] **Step 3: Implement the change**
 
 In `skills/subagent-driven-development/implementer-prompt.md`, replace lines 55-56:
 
@@ -803,16 +803,16 @@ with:
 In `skills/test-driven-development/SKILL.md`, replace line 96 (`- [ ] Relevant suite passes.`) with these two lines:
 
 ```markdown
-- [ ] Relevant suite passes, apart from failures named under the next item.
-- [ ] A test outside your task that fails, and that your change did not cause, is not fixed: it is named in your report (status `DONE_WITH_CONCERNS` when your report carries a status), or in your reply to the user when you work in the main session, with the test's failing output and the reason why your change did not cause it. Your change did not cause the failure when the test neither is a file that your task changes nor imports or reads one. A test that your task writes or changes is not outside your task. In the main session, your task is the change the user asked for.
+- [x] Relevant suite passes, apart from failures named under the next item.
+- [x] A test outside your task that fails, and that your change did not cause, is not fixed: it is named in your report (status `DONE_WITH_CONCERNS` when your report carries a status), or in your reply to the user when you work in the main session, with the test's failing output and the reason why your change did not cause it. Your change did not cause the failure when the test neither is a file that your task changes nor imports or reads one. A test that your task writes or changes is not outside your task. In the main session, your task is the change the user asked for.
 ```
 
-- [ ] **Step 4: Run the test to verify it passes**
+- [x] **Step 4: Run the test to verify it passes**
 
 Run: `bash tests/sdd-scripts/run-tests.sh 2>&1 | tail -3`
 Expected: PASS — `Results: <n> passed, 0 failed` (the implementer phrase counts and the `## Commit Messages` whole-section pin still hold).
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add skills/subagent-driven-development/implementer-prompt.md skills/test-driven-development/SKILL.md tests/sdd-scripts/run-tests.sh
