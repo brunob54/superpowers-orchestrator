@@ -35,3 +35,5 @@ Items: [I1] forced — plan governs: Task 6 "Must convey: a test outside the tas
 Detail: docs/superpowers-orchestrator/2026-10-21-upstream-v7-fixes/plans/upstream-v7-fixes-open-decisions.md
 Forks: none — contradiction: none
 Re-dispatch: phase 4, in-run resume 1 of 3, return 1 of 6
+
+## Phase 4 — Code review — rounds 3 — cap — fixes 2 — unresolved 0
