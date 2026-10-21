@@ -93,7 +93,8 @@ Do not skip this step — a "failing test" that fails because the runner doesn't
 - [ ] Every changed behavior has a test.
 - [ ] Each new test was observed failing before implementation.
 - [ ] Changed tests pass.
-- [ ] Relevant suite passes.
+- [ ] Relevant suite passes, apart from failures named under the next item.
+- [ ] A test outside your task that fails, and that your change did not cause, is not fixed: it is named in your report (status `DONE_WITH_CONCERNS` when your report carries a status), or in your reply to the user when you work in the main session, with the test's failing output and the reason why your change did not cause it. Your change did not cause the failure when the test neither is a file that your task changes nor imports or reads one. A test that your task writes or changes is not outside your task. In the main session, your task is the change the user asked for.
 
 ## Advanced Test Strategy
 

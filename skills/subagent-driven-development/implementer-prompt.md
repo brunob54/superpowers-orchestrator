@@ -53,7 +53,15 @@ Task tool (general-purpose):
     It's always OK to pause and clarify. Don't guess or make assumptions.
 
     While iterating, run the focused test for what you're changing; run the
-    full suite once before committing, not after every edit.
+    full suite once before committing, not after every edit. A test outside
+    your task that fails, and that your change did not cause (a test that
+    your task writes or changes is your task's own), is not fixed, unless
+    your brief or the controller's dispatch names that test as part of
+    your task. Your change did not cause the failure when the test neither
+    is a file that your task changes nor imports or reads one. Commit your
+    work as usual, report DONE_WITH_CONCERNS and name the test as an
+    observation, not as a doubt about your own work: give the test's
+    failing output and the reason why your change did not cause it.
 
     ## Commit Messages
 

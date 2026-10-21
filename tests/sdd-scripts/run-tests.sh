@@ -1911,6 +1911,36 @@ for needle in '`Row` (`file`' 'One row for every pair of tasks' 'Rule on everyth
     ok "SKILL.md Pre-Flight: does not contain '$needle'"
   fi
 done
+# C9: an implementer that sees a test outside its task fail, and its change
+# did not cause the failure, does not fix it: it commits as usual and names
+# the test as an observation. The test-driven-development checklist carries
+# the same reporting rule for the main session and executing-plans.
+for needle in \
+  "A test outside your task that fails, and that your change did not cause (a test that your task writes or changes is your task's own), is not fixed, unless your brief or the controller's dispatch names that test as part of your task." \
+  'Your change did not cause the failure when the test neither is a file that your task changes nor imports or reads one.' \
+  "Commit your work as usual, report DONE_WITH_CONCERNS and name the test as an observation, not as a doubt about your own work: give the test's failing output and the reason why your change did not cause it."; do
+  assert_folded_contains "implementer-prompt.md C9: contains '$needle'" "$IMPLEMENTER_PROMPT_MD" "$needle"
+done
+TDD_SKILL_MD="$(dirname "$SDD_DIR")/test-driven-development/SKILL.md"
+V774_TDD_PREFIX='- [ ] A test outside your task that fails, and that your change did not cause, is not fixed'
+V774_TDD_SUFFIX='In the main session, your task is the change the user asked for.'
+if grep -qxF -- '- [ ] Relevant suite passes, apart from failures named under the next item.' "$TDD_SKILL_MD"; then
+  ok "TDD checklist: the suite item names the exception"
+else
+  bad "TDD checklist: the suite item names the exception"
+fi
+V774_TDD_LINE=$(grep -F -- "$V774_TDD_PREFIX" "$TDD_SKILL_MD" | head -n 1)
+case "$V774_TDD_LINE" in
+  "$V774_TDD_PREFIX"*"$V774_TDD_SUFFIX") ok "TDD checklist: the C9 item starts and ends as specified" ;;
+  *) bad "TDD checklist: the C9 item starts and ends as specified (got: $V774_TDD_LINE)" ;;
+esac
+assert_contains "TDD checklist: the C9 item states when the change did not cause the failure" "$V774_TDD_LINE" \
+  'Your change did not cause the failure when the test neither is a file that your task changes nor imports or reads one.'
+if grep -qxF -- '- [ ] Relevant suite passes.' "$TDD_SKILL_MD"; then
+  bad "TDD checklist: the old item '- [ ] Relevant suite passes.' is gone"
+else
+  ok "TDD checklist: the old item '- [ ] Relevant suite passes.' is gone"
+fi
 bold ""
 bold "Results: $PASS passed, $FAIL failed"
 if [ "$FAIL" -gt 0 ]; then
