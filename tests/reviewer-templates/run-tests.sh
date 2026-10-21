@@ -1075,6 +1075,35 @@ for f in "$ROOT"/skills/*/*-prompt.md; do
 done
 assert_eq "the prompt templates without a fence are exactly the two named files" "$FENCELESS" "$EXPECTED_FENCELESS"
 
+bold "26. Worker templates forbid subagent dispatch; controller texts do not"
+# Upstream D6 (v7.0.0): a worker must not dispatch subagents of its own. The
+# sentence goes into the first rule of exactly four worker templates. A
+# controller must dispatch its workers, so no controller text may carry it.
+NO_DISPATCH='Do NOT dispatch subagents.'
+SDD_IMPLEMENTER="$ROOT/skills/subagent-driven-development/implementer-prompt.md"
+LEAKAGE_SENTENCE='You are a focused subagent. Do NOT invoke any skills from the superpowers-orchestrator plugin. Do NOT use the Skill tool. Your only job is the task described below.'
+for t in "$SDD_IMPLEMENTER" "$SDD_TASK_REVIEWER"; do
+  name="${t#"$ROOT"/skills/}"
+  body="$WORK/no-dispatch-$(basename "$t" .md).txt"
+  extract_prompt_body "$t" > "$body"
+  if [ -s "$body" ]; then ok "$name: prompt body extract is non-empty"; else bad "$name: prompt body extract is empty"; fi
+  assert_folded_contains "$name: the sentence follows the only-job sentence" "$body" "Your only job is the task described below. $NO_DISPATCH"
+  assert_folded_contains "$name: the MUST-include sentence of SDD SKILL.md stays unbroken" "$body" "$LEAKAGE_SENTENCE"
+done
+for t in "$CODE_PROMPT" "$DOC_PROMPT"; do
+  name="${t#"$ROOT"/skills/}"
+  body="$WORK/no-dispatch-$(basename "$(dirname "$t")").txt"
+  extract_prompt_body "$t" > "$body"
+  if [ -s "$body" ]; then ok "$name: prompt body extract is non-empty"; else bad "$name: prompt body extract is empty"; fi
+  assert_folded_contains "$name: the sentence ends the first rule, after the Skill-tool sentence" "$body" "Do NOT use the Skill tool. $NO_DISPATCH"
+done
+for c in orchestrating-development/SKILL.md orchestrating-development/batch-controller-prompt.md \
+         orchestrating-development/code-review-loop-prompt.md orchestrating-development/doc-review-loop-prompt.md \
+         orchestrating-development/plan-writer-prompt.md multi-code-review/SKILL.md multi-doc-review/SKILL.md \
+         subagent-driven-development/SKILL.md; do
+  assert_folded_not_contains "$c: a controller text never forbids dispatching subagents" "$ROOT/skills/$c" 'Do NOT dispatch subagents'
+done
+
 echo
 bold "Results: $PASS passed, $FAIL failed"
 if [ "$FAIL" -gt 0 ]; then

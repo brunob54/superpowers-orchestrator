@@ -14,7 +14,7 @@ Task tool (general-purpose):
 
     You are a focused subagent. Do NOT invoke any skills from the
     superpowers-orchestrator plugin. Do NOT use the Skill tool. Your only job
-    is the task described below.
+    is the task described below. Do NOT dispatch subagents.
 
     ## Task Description
 
