@@ -70,7 +70,7 @@ digraph sdd_process {
 - Then dispatch the implementer (`./implementer-prompt.md`) with the brief path, a report-file path (`task-N-report.md` beside the brief), and an explicit model.
 - Resolve implementer questions before coding.
 - Require the implementer's ≤15-line status return; the detail lives in its report file.
-- Run `scripts/review-package BASE HEAD` (never `HEAD~1` — it silently drops all but the last commit of a multi-commit task) and dispatch the single task reviewer (`./task-reviewer-prompt.md`) with the brief, report, and package paths.
+- Run `scripts/review-package BASE HEAD` (never `HEAD~1` — it silently drops all but the last commit of a multi-commit task) and dispatch the single task reviewer (`./task-reviewer-prompt.md`) with the brief, report, and package paths. When the script exits 3, follow **Exit 3** under **DONE** in Handling Implementer Status instead.
 - Resolve any ⚠️ "cannot verify from diff" items yourself (see Handling Reviewer ⚠️ Items).
 - If the review finds Critical/Important issues: dispatch ONE fix subagent for all of them (spec gaps and quality findings together), have it append to the report file, then re-review — the re-review covers both verdicts.
 - Mark task complete: update the task's checkbox in plan.md from `- [ ]` to `- [x]`, append the ledger line (see Durable Progress), commit the tick as `chore(plan): <slug> task <n> complete` (`<slug>` = plan basename with the `YYYY-MM-DD-` prefix and `.md` stripped), staging the plan file by explicit path and ending the `git commit` command with `-- <plan file>` (without that path list, the commit also takes files that a subagent of a running wave has staged), and sync `state.md` if it has a plan status section.
@@ -427,7 +427,14 @@ Review gates are NOT relaxed: the full task review (spec-compliance AND code-qua
    narrative and may be one batch stale. Before dispatching the first unchecked
    task, check `git log` for evidence it was already implemented (a crash
    between commit and checkbox update leaves it done but unchecked); if so,
-   mark its checkbox complete and advance.
+   mark its checkbox complete and advance. A task whose entry under
+   `## Open Issues` asks `Is the branch of task N repaired?` (**Exit 3** under
+   **DONE**, Handling Implementer Status) is not marked complete here and is
+   not reviewed here: step 3 handles its entry. When the resume prompt
+   answers that the branch is repaired, step 3 records the answer, and the
+   task resumes at its task review from the journaled BASE, by the **Exit 3**
+   paragraph, before step 4: record no new BASE and dispatch no implementer
+   for it.
 3. If `## Open Issues` contains a blocking question and the resume prompt does
    not answer it, present the question to the user and STOP — never execute
    past an unanswered blocker. Record the eventual answer under
@@ -438,7 +445,9 @@ Review gates are NOT relaxed: the full task review (spec-compliance AND code-qua
 
 Implementer subagents report one of four statuses. Handle each appropriately:
 
-**DONE:** Generate the review package (`scripts/review-package BASE HEAD`, from this skill's directory — it prints the unique file path it wrote; BASE is the commit you recorded before dispatching the implementer — never `HEAD~1`), then dispatch the task reviewer with the printed path. In a wave, use `--commits` with the implementer's reported SHAs instead.
+**DONE:** Generate the review package (`scripts/review-package BASE HEAD`, from this skill's directory — it prints the unique file path it wrote; BASE is the commit you recorded before dispatching the implementer — never `HEAD~1`), then dispatch the task reviewer with the printed path. In a wave, use `--commits` with the implementer's reported SHAs instead. A task that committed nothing gets a package whose Commits section holds the line `Commits in range: none`; dispatch the task reviewer with it as with any package.
+
+**Exit 3.** `review-package BASE HEAD` exits 3 when HEAD does not descend from BASE: the branch was switched or reset during the task, or a commit at or before BASE was rewritten (an amend or a rebase), and no correct package exists (the script names the fault on standard error). Never dispatch the task reviewer for that range, and never ask the implementer to switch or reset the branch. Handle the task as **BLOCKED** at once, by the rule of your run mode in the rest of this paragraph only: no numbered remedy of **BLOCKED** applies, also not item 5 (advance to the next independent task), because this is a fault of the branch state, not of the implementer's capability, and the task's work is not yet reviewed. Interactive: ask the user one question that names the task, the range and the script's error line; after the user confirms that the branch is repaired, run the same `review-package BASE HEAD` call again with the same BASE. When it exits 3 again, ask the same question again. Batched Autonomous Mode: end the batch (Autonomy Policy) and journal under `## Open Issues`, marked blocking, this question: `Is the branch of task N repaired? (task N: BASE <sha>, implemented, not reviewed)`, with N the task number and `<sha>` its BASE in full, because nothing else keeps BASE after /clear. Resume Procedure step 3 presents that question to the user and stops. After the user answers that the branch is repaired, run `review-package <the journaled BASE> HEAD` and the task review; record no new BASE and dispatch no implementer for the task. When the script exits 3 again, journal the same question again and end; never pick a new BASE yourself. An orchestrated batch controller follows its own prompt for this exit.
 
 **DONE_WITH_CONCERNS:** The implementer completed the work but flagged doubts. Read the concerns before proceeding. If the concerns are about correctness or scope, address them before review. If they're observations (e.g., "this file is getting large"), note them and proceed to review.
 

@@ -1842,6 +1842,49 @@ assert_folded_contains "SKILL.md Batched Autonomous Mode: the review gate points
 assert_folded_contains "SKILL.md File Handoffs: item (4) of the implementer dispatch carries the resolution of each Critical and Important finding of the security review" "$SDD_SKILL_MD" \
   'and of each Critical and Important finding of the task'"'"'s security review; (5) the report-file path'
 
+# ── Rules of v7.74.0 (design 2026-10-21-upstream-v7-fixes) ────────────────
+# C11: review-package exits 3 when HEAD does not descend from BASE, and an
+# empty range gets the line "Commits in range: none". The SDD skill tells the
+# controller what to do with both, in each run mode. Later blocks of this
+# section pin the Pre-Flight table (D4), the implementer rule for a failing
+# test outside the task (C9) and the controller rule for unreadable test
+# evidence (D8).
+bold ""
+bold "SDD SKILL.md and implementer: rules of v7.74.0"
+V774_RESUME="$WAVE_DIR/v774-resume-procedure.txt"
+awk '/^### Resume Procedure/ { f = 1 } f && /^## / { exit } f' "$SDD_SKILL_MD" > "$V774_RESUME"
+for needle in \
+  'When the script exits 3, follow **Exit 3** under **DONE** in Handling Implementer Status instead.' \
+  'A task that committed nothing gets a package whose Commits section holds the line `Commits in range: none`; dispatch the task reviewer with it as with any package.' \
+  '**Exit 3.** `review-package BASE HEAD` exits 3 when HEAD does not descend from BASE' \
+  'or a commit at or before BASE was rewritten (an amend or a rebase), and no correct package exists' \
+  'An orchestrated batch controller follows its own prompt for this exit.' \
+  'Never dispatch the task reviewer for that range' \
+  'by the rule of your run mode in the rest of this paragraph only' \
+  'never ask the implementer to switch or reset the branch' \
+  'no numbered remedy of **BLOCKED** applies, also not item 5 (advance to the next independent task)' \
+  'after the user confirms that the branch is repaired, run the same `review-package BASE HEAD` call again with the same BASE. When it exits 3 again, ask the same question again.' \
+  '`Is the branch of task N repaired? (task N: BASE <sha>, implemented, not reviewed)`' \
+  'Resume Procedure step 3 presents that question to the user and stops.' \
+  'After the user answers that the branch is repaired, run `review-package <the journaled BASE> HEAD` and the task review; record no new BASE and dispatch no implementer for the task.' \
+  'When the script exits 3 again, journal the same question again and end; never pick a new BASE yourself.'; do
+  assert_folded_contains "SKILL.md exit 3 and empty package: contains '$needle'" "$SDD_SKILL_MD" "$needle"
+done
+assert_folded_contains "SKILL.md Resume Procedure step 2: a task with the exit-3 question is left to step 3" "$V774_RESUME" \
+  'A task whose entry under `## Open Issues` asks `Is the branch of task N repaired?` (**Exit 3** under **DONE**, Handling Implementer Status) is not marked complete here and is not reviewed here: step 3 handles its entry.'
+assert_folded_contains "SKILL.md Resume Procedure step 2: an answered exit-3 question resumes at the task review from the journaled BASE" "$V774_RESUME" \
+  'When the resume prompt answers that the branch is repaired, step 3 records the answer, and the task resumes at its task review from the journaled BASE, by the **Exit 3** paragraph, before step 4: record no new BASE and dispatch no implementer for it.'
+for needle in 'by the rule of your run mode below only' 'Resume Procedure step 2 never marks such a task complete'; do
+  if fold_file "$SDD_SKILL_MD" | grep -qF -- "$needle"; then
+    bad "SKILL.md exit 3: does not contain the draft wording '$needle'"
+  else
+    ok "SKILL.md exit 3: does not contain the draft wording '$needle'"
+  fi
+done
+assert_file_contains "SKILL.md Core Flow: Record BASE is unchanged" "$SDD_SKILL_MD" '- Record BASE: `git rev-parse HEAD` before dispatching.'
+V774_DWC='**DONE_WITH_CONCERNS:** The implementer completed the work but flagged doubts. Read the concerns before proceeding. If the concerns are about correctness or scope, address them before review. If they'"'"'re observations (e.g., "this file is getting large"), note them and proceed to review.'
+assert_eq "SKILL.md DONE_WITH_CONCERNS: the paragraph is unchanged" \
+  "$(grep -E '^\*\*DONE_WITH_CONCERNS:\*\*' "$SDD_SKILL_MD")" "$V774_DWC"
 bold ""
 bold "Results: $PASS passed, $FAIL failed"
 if [ "$FAIL" -gt 0 ]; then
