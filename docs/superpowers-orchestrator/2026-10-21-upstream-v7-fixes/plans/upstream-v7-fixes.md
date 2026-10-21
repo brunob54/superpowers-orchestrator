@@ -486,7 +486,7 @@ git commit -m "fix(systematic-debugging): the example prints no secret value" --
   - Must convey: a task whose `## Open Issues` entry asks `Is the branch of task N repaired?` is neither marked complete nor reviewed in step 2; step 3 handles it; when the resume prompt answers that the branch is repaired, the task resumes at its task review from the journaled BASE (the **Exit 3** paragraph) before step 4, with no new BASE and no implementer dispatch — so step 4 and the Batch Loop's normal per-task flow never record a fresh BASE for it.
   - Verification: the two needles are checked inside the `### Resume Procedure` section extract.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 In `tests/sdd-scripts/run-tests.sh`, directly before the two final lines `bold ""` and `bold "Results: $PASS passed, $FAIL failed"`, insert:
 
@@ -537,12 +537,12 @@ assert_eq "SKILL.md DONE_WITH_CONCERNS: the paragraph is unchanged" \
   "$(grep -E '^\*\*DONE_WITH_CONCERNS:\*\*' "$SDD_SKILL_MD")" "$V774_DWC"
 ```
 
-- [ ] **Step 2: Run the test to verify it fails**
+- [x] **Step 2: Run the test to verify it fails**
 
 Run: `bash tests/sdd-scripts/run-tests.sh 2>&1 | grep -E 'FAIL|Results'`
 Expected: FAIL for every `SKILL.md exit 3 and empty package: contains …` needle and for the two Resume Procedure step 2 needles; the negative needles, `Record BASE` and `DONE_WITH_CONCERNS` pass.
 
-- [ ] **Step 3: Implement the change**
+- [x] **Step 3: Implement the change**
 
 In `skills/subagent-driven-development/SKILL.md`:
 
@@ -575,7 +575,7 @@ Then insert, after that line and one blank line, this new paragraph as a single 
 
 No new line may start with `4. ` or `5. ` (the review-gates suite anchors Core Flow step 4 by such lines).
 
-- [ ] **Step 4: Run the tests to verify they pass**
+- [x] **Step 4: Run the tests to verify they pass**
 
 Run: `bash tests/sdd-scripts/run-tests.sh 2>&1 | tail -3`
 Expected: PASS — `Results: <n> passed, 0 failed` (the phrase counts `git commit|1`, `chore(plan)|1`, `tick|1` still hold).
@@ -583,7 +583,7 @@ Expected: PASS — `Results: <n> passed, 0 failed` (the phrase counts `git commi
 Run: `bash tests/reviewer-templates/run-tests.sh 2>&1 | tail -1 && bash tests/review-gates/run-tests.sh 2>&1 | tail -1`
 Expected: both print `Results: <n> passed, 0 failed`.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add skills/subagent-driven-development/SKILL.md tests/sdd-scripts/run-tests.sh
