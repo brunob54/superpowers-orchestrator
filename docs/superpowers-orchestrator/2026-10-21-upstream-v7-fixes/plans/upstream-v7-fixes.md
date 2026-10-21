@@ -1270,7 +1270,7 @@ git commit -m "feat(orchestration): batch controller stops on review-package exi
   - Invariants: the badge names only Claude Code; the `### GitHub Copilot CLI` section keeps its heading and status line and gains the note; the sentences pinned by section 12 of `tests/orchestrating-development/run-tests.sh` stay; none of `README.md`, `docs/platforms/codex.md` and `.codex/INSTALL.md` holds `Use Claude Code or GitHub Copilot CLI.` any more (documents under `docs/superpowers-orchestrator/` that quote the old sentence stay).
   - Verification: the two new section-12 assertions; Step 4's grep commands and its folded count of the `README.md:14` and `:461-463` phrases.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 In `tests/orchestrating-development/run-tests.sh`, at the end of section 12 (after the assertion whose needle is `'On any other platform, Copilot CLI included, the skill refuses with one line.'`) and before the final `echo`, insert:
 
@@ -1284,12 +1284,12 @@ assert_file_has_line "platform: the README Copilot CLI section carries the no-lo
   '> **No longer supported (since 2026-10-21).** GitHub Copilot CLI is no'
 ```
 
-- [ ] **Step 2: Run the test to verify it fails**
+- [x] **Step 2: Run the test to verify it fails**
 
 Run: `bash tests/orchestrating-development/run-tests.sh 2>&1 | grep -E 'FAIL|Results'`
 Expected: two FAIL lines (badge, note).
 
-- [ ] **Step 3: Implement the change**
+- [x] **Step 3: Implement the change**
 
 Apply each row (text located by its words; line numbers are those of `fb222d38`):
 
@@ -1315,7 +1315,7 @@ The note for `README.md` `### GitHub Copilot CLI` (a quote block; every line kee
 > Claude Code.
 ```
 
-- [ ] **Step 4: Run the tests to verify they pass**
+- [x] **Step 4: Run the tests to verify they pass**
 
 Run: `bash tests/orchestrating-development/run-tests.sh 2>&1 | tail -1`
 Expected: PASS — `Results: <n> passed, 0 failed` (the existing section-12 sentences still match).
@@ -1337,7 +1337,7 @@ done
 
 Expected: each phrase prints `1`.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add README.md docs/guide/README.md docs/platforms/codex.md .codex/INSTALL.md tests/orchestrating-development/run-tests.sh
