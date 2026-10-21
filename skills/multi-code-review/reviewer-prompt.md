@@ -264,12 +264,13 @@ Agent tool (general-purpose):
 - `[BASE_SHA]` / `[HEAD_SHA]` — REQUIRED: the review range
 - `[PACKAGE_FILE]` — REQUIRED: path printed by
   `../subagent-driven-development/scripts/review-package` (never inlined
-  into the controller's context). When the script is missing or failing,
-  pass the literal value
+  into the controller's context). When the script is missing or fails
+  with an exit code other than 3, pass the literal value
   `none — fetch the diff yourself via the git commands below` — the
   template's Diff Under Review fallback then applies (its git commands
   appear below the Diff file line); this is the only sanctioned
-  no-package form.
+  no-package form. On exit 3 nothing is dispatched (SKILL.md, Error
+  Handling).
 - `[LENS_NAME]` / `[LENS_INSTRUCTIONS]` — REQUIRED: lens name and its
   full instruction text copied verbatim from SKILL.md's Lens Rotation
 - `[PLAN_LINE]` — lens-1 rounds only: `Plan/requirements the branch

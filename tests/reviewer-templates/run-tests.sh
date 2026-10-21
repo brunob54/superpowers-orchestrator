@@ -1131,6 +1131,34 @@ assert_folded_not_contains "multi-code-review reviewer template: no unreadable-e
 assert_folded_contains "SDD SKILL.md: ⚠️ items include unreadable test evidence" "$SDD_SKILL" \
   "and test evidence in the implementer's report that the reviewer could not read"
 
+bold "28. multi-code-review: review-package exit 3 is fatal"
+# review-package exits 3 when HEAD does not descend from BASE: the branch
+# changed under the loop, and no correct package exists. The loop stops
+# instead of using the no-package fallback.
+CODE_FALLBACK_FIRST="$(first_line_of "$CODE_SKILL" '- `review-package` missing or failing')"
+if [ -n "$CODE_FALLBACK_FIRST" ] && [ "$CODE_FALLBACK_FIRST" -gt 1 ]; then
+  CODE_ABOVE_FALLBACK="$(sed -n "$((CODE_FALLBACK_FIRST - 1))p" "$CODE_SKILL")"
+else
+  CODE_ABOVE_FALLBACK=""
+fi
+case "$CODE_ABOVE_FALLBACK" in
+  *'to exit 3.') ok "multi-code-review SKILL.md: the exit-3 bullet stands directly before the fallback bullet" ;;
+  *) bad "multi-code-review SKILL.md: the exit-3 bullet stands directly before the fallback bullet (line above: '$CODE_ABOVE_FALLBACK')" ;;
+esac
+CODE_EXIT3_BULLET="$WORK/code-exit3-bullet.md"
+awk '/^- `review-package` exits 3/ { on = 1; print; next } on && /^- / { exit } on { print }' "$CODE_SKILL" > "$CODE_EXIT3_BULLET"
+for needle in \
+  '- `review-package` exits 3 (HEAD does not descend from BASE: the branch changed under the loop)' \
+  'fatal: stop the whole invocation and return' \
+  '`BLOCKED: review range invalid — <the script'"'"'s error line>`' \
+  'nothing dispatched' \
+  'The failed round owes no round entry' \
+  'never applies to exit 3'; do
+  assert_folded_contains "multi-code-review SKILL.md exit-3 bullet: contains '$needle'" "$CODE_EXIT3_BULLET" "$needle"
+done
+assert_folded_contains "multi-code-review reviewer template: the no-package value excepts exit 3" "$CODE_PROMPT" \
+  'fails with an exit code other than 3'
+
 echo
 bold "Results: $PASS passed, $FAIL failed"
 if [ "$FAIL" -gt 0 ]; then

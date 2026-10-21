@@ -1759,6 +1759,13 @@ completed invocation only on explicit user request.
   (pointer-mechanism rows below).
 - Empty or invalid range (BASE = HEAD, no merge-base, or BASE does not
   resolve to a commit) → stop and report; nothing dispatched.
+- `review-package` exits 3 (HEAD does not descend from BASE: the branch
+  changed under the loop) → fatal: stop the whole invocation and return
+  `BLOCKED: review range invalid — <the script's error line>`; nothing
+  dispatched. The failed round owes no round entry, because no reviewer
+  report of it was received; the entries of earlier rounds keep their
+  dispositions. The no-package fallback of the next bullet never applies
+  to exit 3.
 - `review-package` missing or failing → dispatch with `[PACKAGE_FILE]` =
   `none — fetch the diff yourself via the git commands below` (the
   template's sanctioned no-package form; its Diff Under Review fallback
