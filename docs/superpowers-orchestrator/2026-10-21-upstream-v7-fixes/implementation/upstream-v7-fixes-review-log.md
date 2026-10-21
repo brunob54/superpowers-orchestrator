@@ -39,3 +39,17 @@ _Invocation 1 — 2026-10-21 — N=3 M=3 — BASE..HEAD 093d71a..1349908 — bra
 - [carried task 13 a] carried — release note names ${IDENTITY:+x}; plan reference text still says ${IDENTITY:-} (3/3 ship-as-is)
 - [carried task 13 b] carried — Step 8 ran the 20 fast suites in one shell loop (3/3 ship-as-is)
 - [carried task 13 c] carried — RELEASE-NOTES.md header note still names GitHub Copilot CLI as used (3/3 ship-as-is)
+
+## Round 2 — Adversarial red-team — opus
+**Reviewers:** M=3, usable 3/3
+**Reviewer verdicts:** r1: 0 Critical, 2 Important, 2 Minor | r2: 0 Critical, 1 Important, 0 Minor | r3: 0 Critical, 2 Important, 1 Minor
+**Sources mapped:** 8/8
+**Reviewer verdict:** 0 Critical, 3 Important, 3 Minor
+**Converged:** no
+### Dispositions
+- [I1] user-decision — the C9 'did not cause' criterion counts only a test that is a changed file or directly imports or reads one, so a regression the task causes through another module, a run script or a shared fixture is labelled not caused and left unfixed (plan-mandated) — at skills/subagent-driven-development/implementer-prompt.md:57 — clause: Task 6 "Must convey: a test outside the task that fails and that the change did not cause is not fixed, unless the brief or the controller's dispatch names that test as" ← 3/3: r1:I1, r2:I1, r3:I1
+- [I2] fixed — batch-controller start-check BLOCKED return could meet a stale task-<n>-report.md section from an abandoned run of the same plan and be ruled on as an open item; the start check now renames that file to .stale, and the guide and release-note repair text name the old report files → 63778304 ← 1/3: r1:I2
+- [I3] rejected: needs a state outside the supported environment (the branch history rewritten during a run, CLAUDE.md Supported environment), which that section makes Minor; the exit-3 stop is loud as required — exit-3 handling offers no route when the user cannot or will not restore BASE as an ancestor ← 1/3: r3:I2
+- [M1] rejected: orchestration artifact (documented) — plan checkbox ticks inside the Task 6 reference block ← 1/3: r1:M1
+- [M2] fixed — Resume Procedure step 2 routed only a resume-prompt answer, not the user's answer to step 3's question, to the exit-3 task review → 63778304 ← 1/3: r1:M2
+- [M3] carried — Pre-Flight scan table rows for names two or more tasks mention are unbounded, so table size varies between controllers ← 1/3: r3:M1
