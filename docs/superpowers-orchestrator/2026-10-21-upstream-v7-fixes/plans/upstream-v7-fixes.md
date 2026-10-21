@@ -78,7 +78,7 @@ Placement rules used by several tasks:
   - Verification: `grep -F 'is never changed' skills/subagent-driven-development/scripts/sdd-workspace` prints the line.
   - Sentence wording is free.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 In `tests/sdd-scripts/run-tests.sh`, insert after line 104 (`git reset --quiet`, the end of the `sdd-workspace` section) and before `bold "task-brief"`:
 
@@ -159,12 +159,12 @@ cd "$REPO"
 rm -rf "$GI_REPO" "$GI_SAVED" "$GI_STAR"
 ```
 
-- [ ] **Step 2: Run the test to verify it fails**
+- [x] **Step 2: Run the test to verify it fails**
 
 Run: `bash tests/sdd-scripts/run-tests.sh 2>&1 | grep -E 'FAIL|Results'`
 Expected: FAIL lines `sdd-workspace without arguments: the committed .gitignore stays byte-identical (now: *|)` and the same for the other four calls (the script rewrites the file on every call), and the five `<call>: git status shows no change to the committed .gitignore` checks (the rewritten file is tracked, so git reports it as modified); the absent and empty cases pass; the `Results:` line reports at least ten failures (the pipe into `grep` hides the suite's own exit status).
 
-- [ ] **Step 3: Implement the change**
+- [x] **Step 3: Implement the change**
 
 In `skills/subagent-driven-development/scripts/sdd-workspace`, replace line 85 (`printf '*\n' > "$dir/.gitignore"`) with:
 
@@ -187,7 +187,7 @@ Replace header lines 8-10 (from "A self-ignoring .gitignore keeps the" to "modif
 
 (Line 8 keeps its first half, "subagent from writing its report file.", unchanged.)
 
-- [ ] **Step 4: Run the test to verify it passes**
+- [x] **Step 4: Run the test to verify it passes**
 
 Run: `bash tests/sdd-scripts/run-tests.sh 2>&1 | tail -3`
 Expected: PASS — `Results: <n> passed, 0 failed`.
@@ -195,7 +195,7 @@ Expected: PASS — `Results: <n> passed, 0 failed`.
 Run: `grep -F 'is never changed' skills/subagent-driven-development/scripts/sdd-workspace`
 Expected: prints `# example one that the repository commits, is never changed.`
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add skills/subagent-driven-development/scripts/sdd-workspace tests/sdd-scripts/run-tests.sh
