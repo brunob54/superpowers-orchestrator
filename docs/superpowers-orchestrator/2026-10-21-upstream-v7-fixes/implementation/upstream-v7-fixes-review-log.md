@@ -53,3 +53,13 @@ _Invocation 1 — 2026-10-21 — N=3 M=3 — BASE..HEAD 093d71a..1349908 — bra
 - [M1] rejected: orchestration artifact (documented) — plan checkbox ticks inside the Task 6 reference block ← 1/3: r1:M1
 - [M2] fixed — Resume Procedure step 2 routed only a resume-prompt answer, not the user's answer to step 3's question, to the exit-3 task review → 63778304 ← 1/3: r1:M2
 - [M3] carried — Pre-Flight scan table rows for names two or more tasks mention are unbounded, so table size varies between controllers ← 1/3: r3:M1
+
+## Round 3 — Security — opus
+**Reviewers:** M=3, usable 3/3
+**Reviewer verdicts:** r1: 0 Critical, 0 Important, 0 Minor | r2: 0 Critical, 0 Important, 2 Minor | r3: 0 Critical, 0 Important, 2 Minor
+**Sources mapped:** 4/4
+**Reviewer verdict:** 0 Critical, 0 Important, 2 Minor
+**Converged:** no
+### Dispositions
+- [M1] carried — review-package range mode checks the resolved base_name/head_name but builds the package from the raw arguments, so a ref that moves between guard and diff gives an unchecked range (same issue as carried task 2 security M1, shipped as-is in round 1) ← 2/3: r2:M1, r3:M1
+- [M2] carried — batch-controller start check pastes <head7> from the ledger into a git command without a hexadecimal check; needs a ledger written to mislead (outside the supported environment) ← 2/3: r2:M2, r3:M2
