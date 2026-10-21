@@ -7,7 +7,9 @@
 # cannot write into .git/ (protected path) — which would block an implementer
 # subagent from writing its report file. A self-ignoring .gitignore keeps the
 # workspace out of `git status` and out of accidental commits without
-# modifying any tracked file.
+# modifying any tracked file. The script writes that .gitignore only when the
+# workspace has none or an empty one: a .gitignore that is not empty, for
+# example one that the repository commits, is never changed.
 #
 # The workspace is plan-scoped: with PLAN_FILE, the plan's identity is
 # recorded in plan.ref (repo-relative physical path; absolute for plans
@@ -82,7 +84,10 @@ if [ $# -eq 1 ] && { [ ! -f "$1" ] || [ ! -r "$1" ]; }; then
 fi
 
 mkdir -p "$dir"
-printf '*\n' > "$dir/.gitignore"
+# Create-only: a repository may commit its own .gitignore here (for example
+# one that keeps progress.md tracked). Rewriting the file on every run would
+# undo that version each time. An empty file ignores nothing and is rewritten.
+[ -s "$dir/.gitignore" ] || printf '*\n' > "$dir/.gitignore"
 
 if [ $# -eq 1 ]; then
   plan=$1

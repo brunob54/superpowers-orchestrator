@@ -103,6 +103,80 @@ STATUS=$(git status --porcelain)
 assert_eq "workspace invisible to git status" "$STATUS" ""
 git reset --quiet
 
+bold "sdd-workspace (create-only .gitignore)"
+
+# A repository may commit its own .superpowers/sdd/.gitignore, for example one
+# that keeps the ledger progress.md tracked. Every script call must leave a
+# file that is not empty byte-identical; an absent or empty file is written as
+# "*" and a newline. The section uses its own fixture repository, so that the
+# shared fixture above keeps its state.
+GI_REPO=$(mktemp -d)
+: "${GI_REPO:?mktemp failed — refusing to run with an empty repo path}"
+GI_REPO=$(cd "$GI_REPO" && pwd -P)
+GI_SAVED=$(mktemp)
+GI_STAR=$(mktemp)
+printf '*\n' > "$GI_STAR"
+cd "$GI_REPO"
+git -c init.defaultBranch=main init --quiet
+git config user.email "test@test"
+git config user.name "test"
+GI_WS="$GI_REPO/.superpowers/sdd"
+GI_FILE="$GI_WS/.gitignore"
+mkdir -p "$GI_WS"
+printf '*\n!.gitignore\n!progress.md\n' > "$GI_FILE"
+cp "$GI_FILE" "$GI_SAVED"
+git add .superpowers/sdd/.gitignore && git commit --quiet -m "own workspace gitignore"
+GI_FIRST=$(git rev-parse HEAD)
+printf '### Task 1: x\nBody of task A.\n' > planA.md
+printf '### Task 1: y\nBody of task B.\n' > planB.md
+git add planA.md planB.md && git commit --quiet -m "two plans"
+
+gi_unchanged() { # label
+  if cmp -s "$GI_FILE" "$GI_SAVED"; then
+    ok "$1: the committed .gitignore stays byte-identical"
+  else
+    bad "$1: the committed .gitignore stays byte-identical (now: $(tr '\n' '|' < "$GI_FILE" 2>/dev/null))"
+  fi
+  assert_eq "$1: git status shows no change to the committed .gitignore" \
+    "$(git status --porcelain -- .superpowers/sdd/.gitignore)" ""
+}
+"$SCRIPTS/sdd-workspace" > /dev/null 2>&1
+gi_unchanged "sdd-workspace without arguments"
+"$SCRIPTS/sdd-workspace" planA.md > /dev/null 2>&1
+gi_unchanged "sdd-workspace planA.md"
+"$SCRIPTS/task-brief" planA.md 1 > /dev/null 2>&1
+gi_unchanged "task-brief planA.md 1"
+"$SCRIPTS/review-package" "$GI_FIRST" HEAD > /dev/null 2>&1
+gi_unchanged "review-package in range mode"
+"$SCRIPTS/sdd-workspace" planB.md > /dev/null 2>&1
+gi_unchanged "sdd-workspace planB.md (archives the planA workspace)"
+if ls -d "$GI_WS"/archive/* > /dev/null 2>&1; then
+  ok "a different plan archives the planA workspace"
+else
+  bad "a different plan archives the planA workspace"
+fi
+if ls "$GI_WS"/archive/*/.gitignore > /dev/null 2>&1; then
+  bad "the committed .gitignore is not moved into archive/"
+else
+  ok "the committed .gitignore is not moved into archive/"
+fi
+rm "$GI_FILE"
+"$SCRIPTS/sdd-workspace" > /dev/null 2>&1
+if cmp -s "$GI_FILE" "$GI_STAR"; then
+  ok "an absent .gitignore is written as '*' and a newline"
+else
+  bad "an absent .gitignore is written as '*' and a newline"
+fi
+: > "$GI_FILE"
+"$SCRIPTS/sdd-workspace" > /dev/null 2>&1
+if cmp -s "$GI_FILE" "$GI_STAR"; then
+  ok "an empty .gitignore is written as '*' and a newline"
+else
+  bad "an empty .gitignore is written as '*' and a newline"
+fi
+cd "$REPO"
+rm -rf "$GI_REPO" "$GI_SAVED" "$GI_STAR"
+
 bold "task-brief"
 
 cat > plan.md << 'PLAN'
