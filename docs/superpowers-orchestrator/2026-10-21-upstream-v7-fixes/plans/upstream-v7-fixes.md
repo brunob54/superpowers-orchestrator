@@ -226,7 +226,7 @@ git commit -m "fix(sdd): sdd-workspace writes .gitignore only when absent or emp
   - Verification: `grep -c 'Commits in range: none' skills/subagent-driven-development/scripts/review-package` prints `2` (header comment and the `echo` line).
   - Sentence wording is free.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 In `tests/sdd-scripts/run-tests.sh`, insert after the line `assert_eq "--commits with no SHAs exits 2" "$?" "2"` (end of the `review-package (--commits mode)` section) and before `bold "sdd-workspace (plan scoping)"`:
 
@@ -350,12 +350,12 @@ cd "$REPO"
 rm -rf "$RG_REPO" "$RG_OUT"
 ```
 
-- [ ] **Step 2: Run the test to verify it fails**
+- [x] **Step 2: Run the test to verify it fails**
 
 Run: `bash tests/sdd-scripts/run-tests.sh 2>&1 | grep -E 'FAIL|Results'`
 Expected: FAIL lines for `range guard (1): the line after '## Commits' is 'Commits in range: none'`, `range guard (2): HEAD not descending from BASE exits 3 (expected '3', got '0')`, the other (2) checks, and every (6) check — exit code, standard-error text and no file (a tree or a blob passes today's `rev-parse --verify`: today a tree as BASE exits 0 and writes a package, and a blob as HEAD exits 129 after the redirection has created the OUTFILE). Tests (3), (4), (5) and (7) pass.
 
-- [ ] **Step 3: Implement the change**
+- [x] **Step 3: Implement the change**
 
 In `skills/subagent-driven-development/scripts/review-package`:
 
@@ -394,7 +394,7 @@ range_count=$(git rev-list --count "${base}..${head}")
 #   usage error, or a BASE or HEAD that does not name a commit.
 ```
 
-- [ ] **Step 4: Run the test to verify it passes**
+- [x] **Step 4: Run the test to verify it passes**
 
 Run: `bash tests/sdd-scripts/run-tests.sh 2>&1 | tail -3`
 Expected: PASS — `Results: <n> passed, 0 failed` (the helper-program section still counts four `git diff`/`git show` read lines).
@@ -402,7 +402,7 @@ Expected: PASS — `Results: <n> passed, 0 failed` (the helper-program section s
 Run: `grep -c 'Commits in range: none' skills/subagent-driven-development/scripts/review-package`
 Expected: `2`
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add skills/subagent-driven-development/scripts/review-package tests/sdd-scripts/run-tests.sh
