@@ -840,7 +840,7 @@ git commit -m "feat(sdd,tdd): a failing test outside the task is reported, not f
   - Invariants: in the two SDD templates the sentence follows "Your only job is the task described below." and the MUST-include sentence of SDD `SKILL.md:595` stays one unbroken piece inside the prompt body; in the two review-loop templates the sentence follows `Do NOT use the Skill tool.` at the end of the first bullet (no new bullet, so `CODE_SHARED_IN_PLACE` and `DOC_SHARED_IN_PLACE` stay green); none of the eight controller files of spec section 4.6 contains `Do NOT dispatch subagents`, folded.
   - Verification: new section `26. Worker templates forbid subagent dispatch; controller texts do not` in `bash tests/reviewer-templates/run-tests.sh`; sections 9 and 24 of that suite stay green.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 In `tests/reviewer-templates/run-tests.sh`, after section 25 (after the line `assert_eq "the prompt templates without a fence are exactly the two named files" "$FENCELESS" "$EXPECTED_FENCELESS"`) and before the final `echo`, insert:
 
@@ -876,12 +876,12 @@ for c in orchestrating-development/SKILL.md orchestrating-development/batch-cont
 done
 ```
 
-- [ ] **Step 2: Run the test to verify it fails**
+- [x] **Step 2: Run the test to verify it fails**
 
 Run: `bash tests/reviewer-templates/run-tests.sh 2>&1 | grep -E 'FAIL|Results'`
 Expected: FAIL for the four `the sentence follows …` / `the sentence ends the first rule …` checks; the unbroken-sentence and controller checks pass.
 
-- [ ] **Step 3: Implement the change**
+- [x] **Step 3: Implement the change**
 
 `skills/subagent-driven-development/implementer-prompt.md` lines 15-17 and `skills/subagent-driven-development/task-reviewer-prompt.md` lines 23-25 — in each file replace the three lines of the first rule with:
 
@@ -905,7 +905,7 @@ Expected: FAIL for the four `the sentence follows …` / `the sentence ends the 
       Do NOT dispatch subagents.
 ```
 
-- [ ] **Step 4: Run the tests to verify they pass**
+- [x] **Step 4: Run the tests to verify they pass**
 
 Run: `bash tests/reviewer-templates/run-tests.sh 2>&1 | tail -1`
 Expected: PASS — `Results: <n> passed, 0 failed`.
@@ -913,7 +913,7 @@ Expected: PASS — `Results: <n> passed, 0 failed`.
 Run: `bash tests/sdd-scripts/run-tests.sh 2>&1 | tail -1 && bash tests/fill-prompt/run-tests.sh 2>&1 | tail -1`
 Expected: both print a results line with `0 failed`.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add skills/subagent-driven-development/implementer-prompt.md skills/subagent-driven-development/task-reviewer-prompt.md skills/multi-code-review/reviewer-prompt.md skills/multi-doc-review/reviewer-prompt.md tests/reviewer-templates/run-tests.sh
