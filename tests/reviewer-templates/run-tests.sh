@@ -1104,6 +1104,33 @@ for c in orchestrating-development/SKILL.md orchestrating-development/batch-cont
   assert_folded_not_contains "$c: a controller text never forbids dispatching subagents" "$ROOT/skills/$c" 'Do NOT dispatch subagents'
 done
 
+bold "27. Task reviewer: unreadable evidence is a ⚠️ item"
+# Upstream D8 (v7.0.0): a report or test evidence that the task reviewer
+# cannot read must not be reported as missing evidence. The reviewer reads the
+# report again, paging, and otherwise reports a ⚠️ item that the controller
+# resolves.
+TASK_TESTS_SECTION="$WORK/task-reviewer-tests-section.txt"
+awk '$0 == "    ## Tests" { f = 1; print; next } f && /^    ## / { exit } f' "$SDD_TASK_REVIEWER" > "$TASK_TESTS_SECTION"
+assert_folded_contains "task reviewer: evidence that cannot be read is not missing evidence" "$SDD_TASK_REVIEWER" \
+  'Evidence you cannot read is not missing evidence.'
+assert_folded_contains "task reviewer: no test is run to produce the evidence again" "$SDD_TASK_REVIEWER" \
+  'do not run a test to produce the evidence again, also not a focused one'
+assert_folded_contains "task reviewer: the ⚠️ output line names unreadable test evidence" "$SDD_TASK_REVIEWER" \
+  'and test evidence in the report that you could not read'
+assert_folded_contains "task reviewer: ## Tests keeps the focused-test permission" "$TASK_TESTS_SECTION" \
+  'Run a test only when reading the code raises a specific doubt that no existing run answers'
+PRISTINE_LINE="$(first_line_of "$TASK_TESTS_SECTION" 'test output should be pristine.')"
+EVIDENCE_LINE="$(first_line_of "$TASK_TESTS_SECTION" 'Evidence you cannot read')"
+if [ -n "$PRISTINE_LINE" ] && [ -n "$EVIDENCE_LINE" ] && [ "$EVIDENCE_LINE" -gt "$PRISTINE_LINE" ]; then
+  ok "task reviewer: inside ## Tests, the new paragraph follows the pristine-output sentence"
+else
+  bad "task reviewer: inside ## Tests, the new paragraph follows the pristine-output sentence (pristine line '$PRISTINE_LINE', evidence line '$EVIDENCE_LINE')"
+fi
+assert_folded_not_contains "multi-code-review reviewer template: no unreadable-evidence rule (its reviewer gets no implementer report)" \
+  "$CODE_PROMPT" 'Evidence you cannot read'
+assert_folded_contains "SDD SKILL.md: ⚠️ items include unreadable test evidence" "$SDD_SKILL" \
+  "and test evidence in the implementer's report that the reviewer could not read"
+
 echo
 bold "Results: $PASS passed, $FAIL failed"
 if [ "$FAIL" -gt 0 ]; then

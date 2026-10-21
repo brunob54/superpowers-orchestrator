@@ -1941,6 +1941,10 @@ if grep -qxF -- '- [ ] Relevant suite passes.' "$TDD_SKILL_MD"; then
 else
   ok "TDD checklist: the old item '- [ ] Relevant suite passes.' is gone"
 fi
+# D8: the controller resolves a ⚠️ item about test evidence by reading the
+# report file itself, paging; still unreadable or absent is a real gap.
+assert_folded_contains "SKILL.md ⚠️ items: the controller reads the report file for an item about test evidence" "$SDD_SKILL_MD" \
+  'For an item about test evidence, read the report file that holds the evidence with the Read tool'
 bold ""
 bold "Results: $PASS passed, $FAIL failed"
 if [ "$FAIL" -gt 0 ]; then

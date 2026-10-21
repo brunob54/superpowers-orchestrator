@@ -524,11 +524,17 @@ workspace (`scripts/sdd-workspace` prints its path):
 ## Handling Reviewer ⚠️ Items
 
 The task reviewer may report "⚠️ Cannot verify from diff" items —
-requirements that live in unchanged code or span tasks. These do not block
+requirements that live in unchanged code or span tasks, and test evidence in
+the implementer's report that the reviewer could not read. These do not block
 the rest of the review, but you must resolve each one yourself before
 marking the task complete: you hold the plan and cross-task context the
 reviewer lacks. If you confirm an item is a real gap, treat it as a failed
-spec verdict — send it back to the implementer and re-review.
+spec verdict — send it back to the implementer and re-review. For an item
+about test evidence, read the report file that holds the evidence with the
+Read tool, paging until no PARTIAL notice remains. If the evidence is still
+unreadable or absent, it is a real gap: send the task back to the implementer
+to re-run the tests and write the command and its output into the report
+file, then re-review.
 
 ## Constructing Reviewer Prompts
 
