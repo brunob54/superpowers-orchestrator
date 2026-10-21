@@ -103,6 +103,80 @@ STATUS=$(git status --porcelain)
 assert_eq "workspace invisible to git status" "$STATUS" ""
 git reset --quiet
 
+bold "sdd-workspace (create-only .gitignore)"
+
+# A repository may commit its own .superpowers/sdd/.gitignore, for example one
+# that keeps the ledger progress.md tracked. Every script call must leave a
+# file that is not empty byte-identical; an absent or empty file is written as
+# "*" and a newline. The section uses its own fixture repository, so that the
+# shared fixture above keeps its state.
+GI_REPO=$(mktemp -d)
+: "${GI_REPO:?mktemp failed — refusing to run with an empty repo path}"
+GI_REPO=$(cd "$GI_REPO" && pwd -P)
+GI_SAVED=$(mktemp)
+GI_STAR=$(mktemp)
+printf '*\n' > "$GI_STAR"
+cd "$GI_REPO"
+git -c init.defaultBranch=main init --quiet
+git config user.email "test@test"
+git config user.name "test"
+GI_WS="$GI_REPO/.superpowers/sdd"
+GI_FILE="$GI_WS/.gitignore"
+mkdir -p "$GI_WS"
+printf '*\n!.gitignore\n!progress.md\n' > "$GI_FILE"
+cp "$GI_FILE" "$GI_SAVED"
+git add .superpowers/sdd/.gitignore && git commit --quiet -m "own workspace gitignore"
+GI_FIRST=$(git rev-parse HEAD)
+printf '### Task 1: x\nBody of task A.\n' > planA.md
+printf '### Task 1: y\nBody of task B.\n' > planB.md
+git add planA.md planB.md && git commit --quiet -m "two plans"
+
+gi_unchanged() { # label
+  if cmp -s "$GI_FILE" "$GI_SAVED"; then
+    ok "$1: the committed .gitignore stays byte-identical"
+  else
+    bad "$1: the committed .gitignore stays byte-identical (now: $(tr '\n' '|' < "$GI_FILE" 2>/dev/null))"
+  fi
+  assert_eq "$1: git status shows no change to the committed .gitignore" \
+    "$(git status --porcelain -- .superpowers/sdd/.gitignore)" ""
+}
+"$SCRIPTS/sdd-workspace" > /dev/null 2>&1
+gi_unchanged "sdd-workspace without arguments"
+"$SCRIPTS/sdd-workspace" planA.md > /dev/null 2>&1
+gi_unchanged "sdd-workspace planA.md"
+"$SCRIPTS/task-brief" planA.md 1 > /dev/null 2>&1
+gi_unchanged "task-brief planA.md 1"
+"$SCRIPTS/review-package" "$GI_FIRST" HEAD > /dev/null 2>&1
+gi_unchanged "review-package in range mode"
+"$SCRIPTS/sdd-workspace" planB.md > /dev/null 2>&1
+gi_unchanged "sdd-workspace planB.md (archives the planA workspace)"
+if ls -d "$GI_WS"/archive/* > /dev/null 2>&1; then
+  ok "a different plan archives the planA workspace"
+else
+  bad "a different plan archives the planA workspace"
+fi
+if ls "$GI_WS"/archive/*/.gitignore > /dev/null 2>&1; then
+  bad "the committed .gitignore is not moved into archive/"
+else
+  ok "the committed .gitignore is not moved into archive/"
+fi
+rm "$GI_FILE"
+"$SCRIPTS/sdd-workspace" > /dev/null 2>&1
+if cmp -s "$GI_FILE" "$GI_STAR"; then
+  ok "an absent .gitignore is written as '*' and a newline"
+else
+  bad "an absent .gitignore is written as '*' and a newline"
+fi
+: > "$GI_FILE"
+"$SCRIPTS/sdd-workspace" > /dev/null 2>&1
+if cmp -s "$GI_FILE" "$GI_STAR"; then
+  ok "an empty .gitignore is written as '*' and a newline"
+else
+  bad "an empty .gitignore is written as '*' and a newline"
+fi
+cd "$REPO"
+rm -rf "$GI_REPO" "$GI_SAVED" "$GI_STAR"
+
 bold "task-brief"
 
 cat > plan.md << 'PLAN'
@@ -530,6 +604,133 @@ assert_file_not_contains "--commits: sibling subject excluded" "$CPKG" "task2: a
 assert_eq "--commits bad SHA exits 2" "$?" "2"
 "$SCRIPTS/review-package" --commits 2>/dev/null
 assert_eq "--commits with no SHAs exits 2" "$?" "2"
+
+bold "review-package (range guard, exit 3)"
+
+# A range whose HEAD does not descend from BASE gives a two-dot diff that
+# shows the task's own work as deleted: the script exits 3 and writes
+# nothing. An empty range (BASE = HEAD) is valid, and the package says so. A
+# BASE or HEAD that is not a commit exits 2. The section uses its own fixture
+# repository, so that the shared fixture keeps its state. Every call passes
+# full 40-character SHAs, because the script echoes its arguments as given.
+RG_REPO=$(mktemp -d)
+: "${RG_REPO:?mktemp failed — refusing to run with an empty repo path}"
+RG_REPO=$(cd "$RG_REPO" && pwd -P)
+RG_OUT=$(mktemp -d)
+: "${RG_OUT:?mktemp failed — refusing to run with an empty folder path}"
+RG_ERR="$RG_OUT/stderr.txt"
+cd "$RG_REPO"
+git -c init.defaultBranch=main init --quiet
+git config user.email "test@test"
+git config user.name "test"
+rg_commit() { # path content message -> prints the full SHA of the new commit
+  mkdir -p "$(dirname "$1")"
+  printf '%s\n' "$2" > "$1"
+  git add "$1" && git commit --quiet -m "$3"
+  git rev-parse HEAD
+}
+RG_C0=$(rg_commit a.txt a "c0: add a")
+RG_C1=$(rg_commit b.txt b "c1: add b")
+# A commit beside main, made without a checkout.
+RG_SIDE=$(git commit-tree "$RG_C0^{tree}" -p "$RG_C0" -m side)
+RG_C2=$(rg_commit docs/superpowers-orchestrator/x/x-review-log.md log "c2: change only a blinded file")
+git branch feature "$RG_C2"
+RG_C3=$(rg_commit m.txt m "c3: add m on main")
+git checkout --quiet feature
+RG_C4=$(rg_commit f.txt f "c4: add f on feature")
+git merge --no-ff --quiet -m "merge main into feature" main
+RG_M=$(git rev-parse HEAD)
+RG_C5=$(rg_commit g.txt g "c5: add g")
+assert_eq "range guard fixture: C3 and C4 exist, so the merge is not a fast-forward" \
+  "$(git rev-list --parents -n 1 "$RG_M" | wc -w | tr -d ' ')" "3"
+
+# (1) An empty range: exit 0, and the Commits section says so.
+RG_PKG="$RG_OUT/empty.diff"
+RG_STDOUT=$("$SCRIPTS/review-package" "$RG_C1" "$RG_C1" "$RG_PKG" 2>"$RG_ERR")
+assert_eq "range guard (1): an empty range exits 0" "$?" "0"
+assert_eq "range guard (1): the line after '## Commits' is 'Commits in range: none'" \
+  "$(awk 'prev == "## Commits" { print; exit } { prev = $0 }' "$RG_PKG" 2>/dev/null)" "Commits in range: none"
+if printf '%s\n' "$RG_STDOUT" | grep -qE ': 0 commit\(s\), [0-9]+ bytes$'; then
+  ok "range guard (1): the summary says 0 commit(s)"
+else
+  bad "range guard (1): the summary says 0 commit(s) (got: $RG_STDOUT)"
+fi
+
+# (2) HEAD does not descend from BASE: exit 3, one stderr line, no file.
+RG_PKG2="$RG_OUT/reversed.diff"
+"$SCRIPTS/review-package" "$RG_SIDE" "$RG_C1" "$RG_PKG2" > /dev/null 2>"$RG_ERR"
+assert_eq "range guard (2): HEAD not descending from BASE exits 3" "$?" "3"
+assert_eq "range guard (2): standard error is exactly the guard line" \
+  "$(cat "$RG_ERR")" "HEAD is not a descendant of BASE: $RG_SIDE..$RG_C1"
+[ ! -e "$RG_PKG2" ] && ok "range guard (2): no file at the given OUTFILE path" || bad "range guard (2): no file at the given OUTFILE path"
+"$SCRIPTS/review-package" "$RG_SIDE" "$RG_C1" > /dev/null 2>"$RG_ERR"
+assert_eq "range guard (2): without OUTFILE it also exits 3" "$?" "3"
+if ls "$RG_REPO/.superpowers/sdd"/review-*.diff > /dev/null 2>&1; then
+  bad "range guard (2): no review-*.diff in the workspace"
+else
+  ok "range guard (2): no review-*.diff in the workspace"
+fi
+# Test (1) and the first call of test (2) pass OUTFILE, so no call before
+# this one creates the workspace; the guard must stop the script before it
+# calls sdd-workspace.
+if [ -e "$RG_REPO/.superpowers" ]; then
+  bad "range guard (2): exit 3 without OUTFILE does not call sdd-workspace"
+else
+  ok "range guard (2): exit 3 without OUTFILE does not call sdd-workspace"
+fi
+
+# (3) A task that changes only a blinded file is not an empty range.
+RG_PKG3="$RG_OUT/blinded.diff"
+RG_STDOUT=$("$SCRIPTS/review-package" "$RG_C1" "$RG_C2" "$RG_PKG3" 2>"$RG_ERR")
+assert_eq "range guard (3): a range with only a blinded commit exits 0" "$?" "0"
+assert_contains "range guard (3): the summary says 0 commit(s)" "$RG_STDOUT" ": 0 commit(s), "
+assert_file_not_contains "range guard (3): the package does not say the range is empty" "$RG_PKG3" "Commits in range: none"
+
+# (4) A BASE that is a merge commit HEAD descends from.
+RG_PKG4="$RG_OUT/merge-base.diff"
+"$SCRIPTS/review-package" "$RG_M" "$RG_C5" "$RG_PKG4" > /dev/null 2>"$RG_ERR"
+assert_eq "range guard (4): a merge commit as BASE exits 0" "$?" "0"
+assert_file_contains "range guard (4): the package holds the task's hunk" "$RG_PKG4" "+g"
+
+# (5) --commits mode does not change.
+"$SCRIPTS/review-package" --commits "$RG_C5" --out "$RG_OUT/c5.diff" > /dev/null 2>"$RG_ERR"
+assert_eq "range guard (5): --commits with HEAD itself exits 0" "$?" "0"
+"$SCRIPTS/review-package" --commits "$RG_SIDE" --out "$RG_OUT/side.diff" > /dev/null 2>"$RG_ERR"
+assert_eq "range guard (5): --commits with a commit that is not an ancestor of HEAD exits 0" "$?" "0"
+
+# (6) A BASE or HEAD that is not a commit exits 2 and writes nothing.
+RG_PKG6="$RG_OUT/tree.diff"
+"$SCRIPTS/review-package" "$RG_C0^{tree}" "$RG_C5" "$RG_PKG6" > /dev/null 2>"$RG_ERR"
+assert_eq "range guard (6): a tree as BASE exits 2" "$?" "2"
+assert_file_contains "range guard (6): standard error names the bad BASE" "$RG_ERR" "bad BASE: "
+[ ! -e "$RG_PKG6" ] && ok "range guard (6): no file for a tree as BASE" || bad "range guard (6): no file for a tree as BASE"
+# The blob goes by its object ID: after "<rev>:" git reads the rest as a path.
+RG_BLOB=$(git rev-parse "$RG_C5:g.txt")
+RG_PKG6B="$RG_OUT/blob.diff"
+"$SCRIPTS/review-package" "$RG_C0" "$RG_BLOB" "$RG_PKG6B" > /dev/null 2>"$RG_ERR"
+assert_eq "range guard (6): a blob as HEAD exits 2" "$?" "2"
+assert_file_contains "range guard (6): standard error names the bad HEAD" "$RG_ERR" "bad HEAD: "
+[ ! -e "$RG_PKG6B" ] && ok "range guard (6): no file for a blob as HEAD" || bad "range guard (6): no file for a blob as HEAD"
+
+# (7) An annotated tag as BASE still passes: ^{commit} follows the tag.
+git tag -a t0 -m t0 "$RG_M"
+RG_PKG7="$RG_OUT/tag.diff"
+"$SCRIPTS/review-package" t0 "$RG_C5" "$RG_PKG7" > /dev/null 2>"$RG_ERR"
+assert_eq "range guard (7): an annotated tag as BASE exits 0" "$?" "0"
+assert_file_contains "range guard (7): the package holds the task's hunk" "$RG_PKG7" "+g"
+
+# (8) A BASE that starts with "^" names no commit: exit 2, one "bad BASE" line
+# last, and no file. "^<sha>" passes "rev-parse --verify" but is a negated
+# revision, not an object name.
+RG_PKG8="$RG_OUT/negated.diff"
+"$SCRIPTS/review-package" "^$RG_C1" "$RG_C5" "$RG_PKG8" > /dev/null 2>"$RG_ERR"
+assert_eq "range guard (8): a BASE starting with '^' exits 2" "$?" "2"
+assert_eq "range guard (8): the last standard error line names the bad BASE" \
+  "$(tail -n 1 "$RG_ERR")" "bad BASE: ^$RG_C1"
+[ ! -e "$RG_PKG8" ] && ok "range guard (8): no file for a BASE starting with '^'" || bad "range guard (8): no file for a BASE starting with '^'"
+
+cd "$REPO"
+rm -rf "$RG_REPO" "$RG_OUT"
 
 bold "sdd-workspace (plan scoping)"
 
@@ -1641,6 +1842,109 @@ assert_folded_contains "SKILL.md Batched Autonomous Mode: the review gate points
 assert_folded_contains "SKILL.md File Handoffs: item (4) of the implementer dispatch carries the resolution of each Critical and Important finding of the security review" "$SDD_SKILL_MD" \
   'and of each Critical and Important finding of the task'"'"'s security review; (5) the report-file path'
 
+# ── Rules of v7.74.0 (design 2026-10-21-upstream-v7-fixes) ────────────────
+# C11: review-package exits 3 when HEAD does not descend from BASE, and an
+# empty range gets the line "Commits in range: none". The SDD skill tells the
+# controller what to do with both, in each run mode. Later blocks of this
+# section pin the Pre-Flight table (D4), the implementer rule for a failing
+# test outside the task (C9) and the controller rule for unreadable test
+# evidence (D8).
+bold ""
+bold "SDD SKILL.md and implementer: rules of v7.74.0"
+V774_RESUME="$WAVE_DIR/v774-resume-procedure.txt"
+awk '/^### Resume Procedure/ { f = 1 } f && /^## / { exit } f' "$SDD_SKILL_MD" > "$V774_RESUME"
+for needle in \
+  'When the script exits 3, follow **Exit 3** under **DONE** in Handling Implementer Status instead.' \
+  'A task that committed nothing gets a package whose Commits section holds the line `Commits in range: none`; dispatch the task reviewer with it as with any package.' \
+  '**Exit 3.** `review-package BASE HEAD` exits 3 when HEAD does not descend from BASE' \
+  'or a commit at or before BASE was rewritten (an amend or a rebase), and no correct package exists' \
+  'An orchestrated batch controller follows its own prompt for this exit.' \
+  'Never dispatch the task reviewer for that range' \
+  'by the rule of your run mode in the rest of this paragraph only' \
+  'never ask the implementer to switch or reset the branch' \
+  'no numbered remedy of **BLOCKED** applies, also not item 5 (advance to the next independent task)' \
+  'after the user confirms that the branch is repaired, run the same `review-package BASE HEAD` call again with the same BASE. When it exits 3 again, ask the same question again.' \
+  '`Is the branch of task N repaired? (task N: BASE <sha>, implemented, not reviewed)`' \
+  'Resume Procedure step 3 presents that question to the user and stops.' \
+  'After the user answers that the branch is repaired, run `review-package <the journaled BASE> HEAD` and the task review; record no new BASE and dispatch no implementer for the task.' \
+  'When the script exits 3 again, journal the same question again and end; never pick a new BASE yourself.'; do
+  assert_folded_contains "SKILL.md exit 3 and empty package: contains '$needle'" "$SDD_SKILL_MD" "$needle"
+done
+assert_folded_contains "SKILL.md Resume Procedure step 2: a task with the exit-3 question is left to step 3" "$V774_RESUME" \
+  'A task whose entry under `## Open Issues` asks `Is the branch of task N repaired?` (**Exit 3** under **DONE**, Handling Implementer Status) is not marked complete here and is not reviewed here: step 3 handles its entry.'
+assert_folded_contains "SKILL.md Resume Procedure step 2: an answered exit-3 question resumes at the task review from the journaled BASE" "$V774_RESUME" \
+  'When the resume prompt, or the user'"'"'s answer to step 3'"'"'s question, says that the branch is repaired, step 3 records the answer, and in both cases the task resumes at its task review from the journaled BASE, by the **Exit 3** paragraph, before step 4: record no new BASE and dispatch no implementer for it.'
+for needle in 'by the rule of your run mode below only' 'Resume Procedure step 2 never marks such a task complete'; do
+  if fold_file "$SDD_SKILL_MD" | grep -qF -- "$needle"; then
+    bad "SKILL.md exit 3: does not contain the draft wording '$needle'"
+  else
+    ok "SKILL.md exit 3: does not contain the draft wording '$needle'"
+  fi
+done
+assert_file_contains "SKILL.md Core Flow: Record BASE is unchanged" "$SDD_SKILL_MD" '- Record BASE: `git rev-parse HEAD` before dispatching.'
+V774_DWC='**DONE_WITH_CONCERNS:** The implementer completed the work but flagged doubts. Read the concerns before proceeding. If the concerns are about correctness or scope, address them before review. If they'"'"'re observations (e.g., "this file is getting large"), note them and proceed to review.'
+assert_eq "SKILL.md DONE_WITH_CONCERNS: the paragraph is unchanged" \
+  "$(grep -E '^\*\*DONE_WITH_CONCERNS:\*\*' "$SDD_SKILL_MD")" "$V774_DWC"
+# D4: the Pre-Flight Plan Review writes what it compared as a table into its
+# own file, once per plan. The table records the scan; it never decides a
+# conflict.
+V774_PREFLIGHT="$WAVE_DIR/v774-preflight.txt"
+awk '/^## Pre-Flight Plan Review$/ { f = 1; print; next } f && /^## / { exit } f' "$SDD_SKILL_MD" > "$V774_PREFLIGHT"
+if [ -s "$V774_PREFLIGHT" ]; then ok "SKILL.md Pre-Flight: the section extract is not empty"; else bad "SKILL.md Pre-Flight: the section extract is not empty"; fi
+for needle in \
+  "The scan's result is a table, not a verdict." \
+  'Write the table to `.superpowers/sdd/preflight.md`, under the line `## Pre-flight scan`, once per plan: when that file already exists, run the scan and handle what it finds as before, but do not write the table again' \
+  'it never decides a conflict' \
+  'a path that the **Files:** lists of two or more tasks name, or a name that the text of two or more tasks mentions' \
+  'The row lists every task that mentions that path or name' \
+  'for a path, compare the edits that the listed tasks make at that path' \
+  '`Row` (`path`, `name` or `task`)' \
+  '`Found` is `none` unless the row shows a conflict of a kind that the two items above list' \
+  'Every row whose `Found` is not `none` is a conflict'; do
+  assert_folded_contains "SKILL.md Pre-Flight: contains '$needle'" "$V774_PREFLIGHT" "$needle"
+done
+for needle in '`Row` (`file`' 'One row for every pair of tasks' 'Rule on everything you find' 'Rule on each conflict' \
+              'record each ruling in the ledger' 'binding authority' 'proceed without comment'; do
+  if fold_file "$V774_PREFLIGHT" | grep -qF -- "$needle"; then
+    bad "SKILL.md Pre-Flight: does not contain '$needle'"
+  else
+    ok "SKILL.md Pre-Flight: does not contain '$needle'"
+  fi
+done
+# C9: an implementer that sees a test outside its task fail, and its change
+# did not cause the failure, does not fix it: it commits as usual and names
+# the test as an observation. The test-driven-development checklist carries
+# the same reporting rule for the main session and executing-plans.
+for needle in \
+  "A test outside your task that fails, and that your change did not cause (a test that your task writes or changes is your task's own), is not fixed, unless your brief or the controller's dispatch names that test as part of your task." \
+  'Your change did not cause the failure when the test neither is a file that your task changes nor imports or reads one.' \
+  "Commit your work as usual, report DONE_WITH_CONCERNS and name the test as an observation, not as a doubt about your own work: give the test's failing output and the reason why your change did not cause it."; do
+  assert_folded_contains "implementer-prompt.md C9: contains '$needle'" "$IMPLEMENTER_PROMPT_MD" "$needle"
+done
+TDD_SKILL_MD="$(dirname "$SDD_DIR")/test-driven-development/SKILL.md"
+V774_TDD_PREFIX='- [ ] A test outside your task that fails, and that your change did not cause, is not fixed'
+V774_TDD_SUFFIX='In the main session, your task is the change the user asked for.'
+if grep -qxF -- '- [ ] Relevant suite passes, apart from failures named under the next item.' "$TDD_SKILL_MD"; then
+  ok "TDD checklist: the suite item names the exception"
+else
+  bad "TDD checklist: the suite item names the exception"
+fi
+V774_TDD_LINE=$(grep -F -- "$V774_TDD_PREFIX" "$TDD_SKILL_MD" | head -n 1)
+case "$V774_TDD_LINE" in
+  "$V774_TDD_PREFIX"*"$V774_TDD_SUFFIX") ok "TDD checklist: the C9 item starts and ends as specified" ;;
+  *) bad "TDD checklist: the C9 item starts and ends as specified (got: $V774_TDD_LINE)" ;;
+esac
+assert_contains "TDD checklist: the C9 item states when the change did not cause the failure" "$V774_TDD_LINE" \
+  'Your change did not cause the failure when the test neither is a file that your task changes nor imports or reads one.'
+if grep -qxF -- '- [ ] Relevant suite passes.' "$TDD_SKILL_MD"; then
+  bad "TDD checklist: the old item '- [ ] Relevant suite passes.' is gone"
+else
+  ok "TDD checklist: the old item '- [ ] Relevant suite passes.' is gone"
+fi
+# D8: the controller resolves a ⚠️ item about test evidence by reading the
+# report file itself, paging; still unreadable or absent is a real gap.
+assert_folded_contains "SKILL.md ⚠️ items: the controller reads the report file for an item about test evidence" "$SDD_SKILL_MD" \
+  'For an item about test evidence, read the report file that holds the evidence with the Read tool'
 bold ""
 bold "Results: $PASS passed, $FAIL failed"
 if [ "$FAIL" -gt 0 ]; then

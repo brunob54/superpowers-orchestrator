@@ -6,7 +6,7 @@ Guide for using Superpowers Orchestrator with OpenAI Codex CLI.
 > platform of Superpowers Orchestrator. The Codex files (`.codex/`,
 > `.codex-plugin/`, `hooks/codex/`, `hooks/codex-hooks.json`) stay in the
 > repository, and their unit tests still run, but Codex is no longer
-> maintained or reviewed as a platform. Use Claude Code or GitHub Copilot CLI.
+> maintained or reviewed as a platform. Use Claude Code.
 
 > **Status: never run on Codex.** Everything here was written from the Codex
 > documentation and this repository's own script-level tests. The plugin has

@@ -544,6 +544,31 @@ assert_folded_contains "batch-controller-prompt.md item 5: a finding that an ans
 assert_folded_not_contains "batch-controller-prompt.md item 5: no longer says 'SDD mandates'" \
   "$BATCH_BLOCK" 'SDD mandates'
 
+bold "5f. review-package exit 3 and the start check: a BLOCKED return with no question section"
+# C11 of the v7.74.0 design: exit 3 of review-package means HEAD does not
+# descend from BASE. No ruling can repair a branch state, so the batch
+# controller returns BLOCKED with no Question or Conflict section, and the
+# orchestrator stops under its Major-Error Stop Policy. At its start, the
+# batch controller checks that the branch still descends from the HEAD of
+# the last completed ledger line, so a retried dispatch stops before any
+# dispatch when completed work was lost.
+for needle in \
+  'When `review-package` exits 3, HEAD does not descend from BASE: the branch was switched or reset during the task, or a commit at or before BASE was rewritten (an amend or a rebase).' \
+  'Dispatch no task reviewer and no implementer for that range' \
+  'write no `### Question <k>` or `### Conflict <k>` section for it, and return `BLOCKED task=<n>: review range invalid — <the script'"'"'s error line>`.' \
+  'the orchestrator reads this return as a controller failure, retries the identical dispatch once, and then stops under its Major-Error Stop Policy' \
+  '4. Mid-task crash recovery: first, after `sdd-workspace PLAN_FILE` and before the Pre-Flight Plan Review and before any dispatch, check the branch.' \
+  'run `git merge-base --is-ancestor <head7> HEAD`, with `<head7>` the HEAD recorded by the last completed ledger line in file order' \
+  'or the ledger is left from an abandoned or earlier run of this plan' \
+  '`BLOCKED task=<n>: review range invalid — HEAD does not descend from the last completed ledger HEAD <head7> (branch switched, reset or rewritten, or ledger left from an earlier run of this plan)`' \
+  'with `<n>` the first unchecked task of your task list' \
+  'rename an existing `.superpowers/sdd/task-<n>-report.md` (with `<n>` the task number of the return) to `.superpowers/sdd/task-<n>-report.md.stale`; never delete it, and when that name already exists, add a numeric suffix.' \
+  'With no completed ledger line, skip this check.' \
+  'Then, for each assigned task that is unchecked when you start, set REVIEW_BASE' \
+  'Task <n>: complete commits <base7>..<head7>'; do
+  assert_folded_contains "batch-controller-prompt.md exit 3 and start check: contains '$needle'" "$BATCH_BLOCK" "$needle"
+done
+
 bold "6. The Resume Answer section: heading without a parenthetical, the fixed sentence, the placeholder below it"
 for t in "${RESUME_TEMPLATES[@]}"; do
   f="$ORCH_DIR/$t"
@@ -660,6 +685,14 @@ assert_folded_contains "platform: the guide overview names Copilot CLI and OpenC
   'Copilot CLI and OpenCode have never run it'
 assert_folded_contains "platform: the guide requirement names Copilot CLI" "$GUIDE_FILE" \
   'On any other platform, Copilot CLI included, the skill refuses with one line.'
+
+# 2026-10-21 (user decision): GitHub Copilot CLI is no longer a supported
+# platform. The badge names Claude Code only, and the Copilot CLI section of
+# the README carries the note. The note is a quote block, so its later lines
+# start with "> " and are checked as one whole line, not folded.
+assert_file_not_contains "platform: the README badge no longer names Copilot CLI" "$README_FILE" 'Copilot_CLI-white'
+assert_file_has_line "platform: the README Copilot CLI section carries the no-longer-supported note" "$README_FILE" \
+  '> **No longer supported (since 2026-10-21).** GitHub Copilot CLI is no'
 
 echo
 bold "Results: $PASS passed, $FAIL failed"

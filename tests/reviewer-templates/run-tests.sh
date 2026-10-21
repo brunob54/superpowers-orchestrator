@@ -1075,6 +1075,90 @@ for f in "$ROOT"/skills/*/*-prompt.md; do
 done
 assert_eq "the prompt templates without a fence are exactly the two named files" "$FENCELESS" "$EXPECTED_FENCELESS"
 
+bold "26. Worker templates forbid subagent dispatch; controller texts do not"
+# Upstream D6 (v7.0.0): a worker must not dispatch subagents of its own. The
+# sentence goes into the first rule of exactly four worker templates. A
+# controller must dispatch its workers, so no controller text may carry it.
+NO_DISPATCH='Do NOT dispatch subagents.'
+SDD_IMPLEMENTER="$ROOT/skills/subagent-driven-development/implementer-prompt.md"
+LEAKAGE_SENTENCE='You are a focused subagent. Do NOT invoke any skills from the superpowers-orchestrator plugin. Do NOT use the Skill tool. Your only job is the task described below.'
+for t in "$SDD_IMPLEMENTER" "$SDD_TASK_REVIEWER"; do
+  name="${t#"$ROOT"/skills/}"
+  body="$WORK/no-dispatch-$(basename "$t" .md).txt"
+  extract_prompt_body "$t" > "$body"
+  if [ -s "$body" ]; then ok "$name: prompt body extract is non-empty"; else bad "$name: prompt body extract is empty"; fi
+  assert_folded_contains "$name: the sentence follows the only-job sentence" "$body" "Your only job is the task described below. $NO_DISPATCH"
+  assert_folded_contains "$name: the MUST-include sentence of SDD SKILL.md stays unbroken" "$body" "$LEAKAGE_SENTENCE"
+done
+for t in "$CODE_PROMPT" "$DOC_PROMPT"; do
+  name="${t#"$ROOT"/skills/}"
+  body="$WORK/no-dispatch-$(basename "$(dirname "$t")").txt"
+  extract_prompt_body "$t" > "$body"
+  if [ -s "$body" ]; then ok "$name: prompt body extract is non-empty"; else bad "$name: prompt body extract is empty"; fi
+  assert_folded_contains "$name: the sentence ends the first rule, after the Skill-tool sentence" "$body" "Do NOT use the Skill tool. $NO_DISPATCH"
+done
+for c in orchestrating-development/SKILL.md orchestrating-development/batch-controller-prompt.md \
+         orchestrating-development/code-review-loop-prompt.md orchestrating-development/doc-review-loop-prompt.md \
+         orchestrating-development/plan-writer-prompt.md multi-code-review/SKILL.md multi-doc-review/SKILL.md \
+         subagent-driven-development/SKILL.md; do
+  assert_folded_not_contains "$c: a controller text never forbids dispatching subagents" "$ROOT/skills/$c" 'Do NOT dispatch subagents'
+done
+
+bold "27. Task reviewer: unreadable evidence is a ⚠️ item"
+# Upstream D8 (v7.0.0): a report or test evidence that the task reviewer
+# cannot read must not be reported as missing evidence. The reviewer reads the
+# report again, paging, and otherwise reports a ⚠️ item that the controller
+# resolves.
+TASK_TESTS_SECTION="$WORK/task-reviewer-tests-section.txt"
+awk '$0 == "    ## Tests" { f = 1; print; next } f && /^    ## / { exit } f' "$SDD_TASK_REVIEWER" > "$TASK_TESTS_SECTION"
+assert_folded_contains "task reviewer: evidence that cannot be read is not missing evidence" "$SDD_TASK_REVIEWER" \
+  'Evidence you cannot read is not missing evidence.'
+assert_folded_contains "task reviewer: no test is run to produce the evidence again" "$SDD_TASK_REVIEWER" \
+  'do not run a test to produce the evidence again, also not a focused one'
+assert_folded_contains "task reviewer: the ⚠️ output line names unreadable test evidence" "$SDD_TASK_REVIEWER" \
+  'and test evidence in the report that you could not read'
+assert_folded_contains "task reviewer: ## Tests keeps the focused-test permission" "$TASK_TESTS_SECTION" \
+  'Run a test only when reading the code raises a specific doubt that no existing run answers'
+PRISTINE_LINE="$(first_line_of "$TASK_TESTS_SECTION" 'test output should be pristine.')"
+EVIDENCE_LINE="$(first_line_of "$TASK_TESTS_SECTION" 'Evidence you cannot read')"
+if [ -n "$PRISTINE_LINE" ] && [ -n "$EVIDENCE_LINE" ] && [ "$EVIDENCE_LINE" -gt "$PRISTINE_LINE" ]; then
+  ok "task reviewer: inside ## Tests, the new paragraph follows the pristine-output sentence"
+else
+  bad "task reviewer: inside ## Tests, the new paragraph follows the pristine-output sentence (pristine line '$PRISTINE_LINE', evidence line '$EVIDENCE_LINE')"
+fi
+assert_folded_not_contains "multi-code-review reviewer template: no unreadable-evidence rule (its reviewer gets no implementer report)" \
+  "$CODE_PROMPT" 'Evidence you cannot read'
+assert_folded_contains "SDD SKILL.md: ⚠️ items include unreadable test evidence" "$SDD_SKILL" \
+  "and test evidence in the implementer's report that the reviewer could not read"
+
+bold "28. multi-code-review: review-package exit 3 is fatal"
+# review-package exits 3 when HEAD does not descend from BASE: the branch
+# changed under the loop, and no correct package exists. The loop stops
+# instead of using the no-package fallback.
+CODE_FALLBACK_FIRST="$(first_line_of "$CODE_SKILL" '- `review-package` missing or failing')"
+if [ -n "$CODE_FALLBACK_FIRST" ] && [ "$CODE_FALLBACK_FIRST" -gt 1 ]; then
+  CODE_ABOVE_FALLBACK="$(sed -n "$((CODE_FALLBACK_FIRST - 1))p" "$CODE_SKILL")"
+else
+  CODE_ABOVE_FALLBACK=""
+fi
+case "$CODE_ABOVE_FALLBACK" in
+  *'to exit 3.') ok "multi-code-review SKILL.md: the exit-3 bullet stands directly before the fallback bullet" ;;
+  *) bad "multi-code-review SKILL.md: the exit-3 bullet stands directly before the fallback bullet (line above: '$CODE_ABOVE_FALLBACK')" ;;
+esac
+CODE_EXIT3_BULLET="$WORK/code-exit3-bullet.md"
+awk '/^- `review-package` exits 3/ { on = 1; print; next } on && /^- / { exit } on { print }' "$CODE_SKILL" > "$CODE_EXIT3_BULLET"
+for needle in \
+  '- `review-package` exits 3 (HEAD does not descend from BASE: the branch changed under the loop)' \
+  'fatal: stop the whole invocation and return' \
+  '`BLOCKED: review range invalid — <the script'"'"'s error line>`' \
+  'nothing dispatched' \
+  'The failed round owes no round entry' \
+  'never applies to exit 3'; do
+  assert_folded_contains "multi-code-review SKILL.md exit-3 bullet: contains '$needle'" "$CODE_EXIT3_BULLET" "$needle"
+done
+assert_folded_contains "multi-code-review reviewer template: the no-package value excepts exit 3" "$CODE_PROMPT" \
+  'fails with an exit code other than 3'
+
 echo
 bold "Results: $PASS passed, $FAIL failed"
 if [ "$FAIL" -gt 0 ]; then

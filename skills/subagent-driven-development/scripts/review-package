@@ -7,6 +7,11 @@
 #   Uses the recorded per-task BASE (never HEAD~1) so multi-commit tasks stay
 #   intact. Default OUTFILE: <workspace>/review-<base7>..<head7>.diff
 #   (named per range, so a re-review after fixes gets a distinct fresh file).
+#   An empty range (BASE = HEAD) is not an error: the package is written,
+#   and its Commits section holds the one line "Commits in range: none".
+#   Exit 3 (nothing written): HEAD does not descend from BASE. Exit 2: a
+#   usage error, a BASE or HEAD that does not name a commit, or a git error
+#   while comparing them.
 #
 # Explicit-commit mode (wave execution — fork extension):
 #   review-package --commits SHA [SHA...] [--out OUTFILE]
@@ -111,8 +116,33 @@ fi
 base=$1
 head=$2
 
-git rev-parse --verify --quiet "$base" >/dev/null || { echo "bad BASE: $base" >&2; exit 2; }
-git rev-parse --verify --quiet "$head" >/dev/null || { echo "bad HEAD: $head" >&2; exit 2; }
+# Prints the plain object name of the commit that an argument names. The
+# argument is bad when git fails, or when git prints something else than a
+# plain object name (for example "^<name>", a negated revision).
+resolve_commit() { # label argument
+  local name object_name_pattern='^([0-9a-f]{40}|[0-9a-f]{64})$'
+  name=$(git rev-parse --verify --quiet "${2}^{commit}") && [[ $name =~ $object_name_pattern ]] ||
+    { echo "bad $1: $2" >&2; return 2; }
+  echo "$name"
+}
+base_name=$(resolve_commit BASE "$base") || exit 2
+head_name=$(resolve_commit HEAD "$head") || exit 2
+
+# Range guard (exit 3). When HEAD does not descend from BASE, the two-dot
+# diff shows the task's own work as deleted. A commit is its own ancestor, so
+# BASE = HEAD passes: an empty range is not an error, and the package says so.
+# Exit code 1 of merge-base means "not an ancestor"; any other non-zero code
+# is a git error, which is a usage error (exit 2), not a guard result.
+ancestor_status=0
+git merge-base --is-ancestor "$base_name" "$head_name" || ancestor_status=$?
+case $ancestor_status in
+  0) ;;
+  1) echo "HEAD is not a descendant of BASE: ${base}..${head}" >&2; exit 3 ;;
+  *) echo "cannot compare BASE and HEAD: ${base}..${head}" >&2; exit 2 ;;
+esac
+# Counted without the blind pathspecs: a range whose commits change only
+# blinded files is not an empty range.
+range_count=$(git rev-list --count "${base_name}..${head_name}")
 
 if [ $# -eq 3 ]; then
   out=$3
@@ -125,6 +155,7 @@ fi
   echo "# Review package: ${base}..${head}"
   echo
   echo "## Commits"
+  [ "$range_count" -gt 0 ] || echo "Commits in range: none"
   git log --oneline "${base}..${head}" -- "${blind_pathspecs[@]}"
   echo
   echo "## Files changed"

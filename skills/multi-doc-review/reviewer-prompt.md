@@ -31,6 +31,7 @@ Agent tool (general-purpose):
     ## Subagent Rules
 
     - Do NOT invoke any skills from any plugin. Do NOT use the Skill tool.
+      Do NOT dispatch subagents.
     - Do NOT read any file whose name matches `*-review-log.md`.
     - Do NOT read any other documents under
       `docs/superpowers-orchestrator/*/specs/` or

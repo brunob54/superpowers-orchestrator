@@ -22,7 +22,7 @@ Task tool (general-purpose):
 
     You are a focused subagent. Do NOT invoke any skills from the
     superpowers-orchestrator plugin. Do NOT use the Skill tool. Your only job
-    is the task described below.
+    is the task described below. Do NOT dispatch subagents.
 
     ## What Was Requested
 
@@ -106,6 +106,14 @@ Task tool (general-purpose):
     Warnings or other noise in the implementer's reported test output are
     findings — test output should be pristine.
 
+    Evidence you cannot read is not missing evidence. If the report or its
+    test evidence looks cut off, or you cannot find a result that the
+    report claims, read the report file again with the Read tool, paging
+    as described above. If the evidence is still missing or cannot be
+    read after that, report it as a ⚠️ "Cannot verify from diff" item —
+    never as a ❌ finding that the evidence does not exist — and do not
+    run a test to produce the evidence again, also not a focused one.
+
     ## Part 1: Spec Compliance
 
     Compare the diff against What Was Requested:
@@ -174,7 +182,8 @@ Task tool (general-purpose):
     - ✅ Spec compliant | ❌ Issues found: [what's missing/extra/misunderstood,
       with file:line references]
     - ⚠️ Cannot verify from diff: [requirements you could not verify from the
-      diff alone, and what the controller should check — report alongside the
+      diff alone, and test evidence in the report that you could not read,
+      and what the controller should check — report alongside the
       ✅/❌ verdict for everything you could verify]
 
     ### Strengths
