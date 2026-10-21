@@ -11,3 +11,8 @@ plan: docs/superpowers-orchestrator/2026-10-21-upstream-v7-fixes/plans/upstream-
 - Task 1: complete — sdd-workspace writes .gitignore only when absent or empty (A13)
 - Task 2: complete — review-package exits 3 on a non-descendant range (C11, the script)
 - Task 3: complete — the systematic-debugging example prints no secret value (A17)
+
+## Phase 3 — Batch 2 (tasks 4–6) — COMPLETE — commits c25ef61..eed7347
+- Task 4: complete — SDD SKILL.md empty-package sentence and exit-3 rules (C11)
+- Task 5: complete — Pre-Flight Plan Review writes its scan as a table (D4)
+- Task 6: complete — implementer reports a failing test outside its task, does not fix it (C9)
