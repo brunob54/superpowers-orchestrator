@@ -319,6 +319,14 @@ mandates; it does not compare the plan with the spec. A plan executed
 through `executing-plans` has no Pre-Flight Plan Review, only a general
 critical read of the plan before work starts. In that case, and for an owed
 conflict where the spec contradicts itself, read the `Owed:` list yourself.
+Since v7.74.0 the Pre-Flight Plan Review writes what it compared as a table
+into `.superpowers/sdd/preflight.md`: one row for each path that the
+**Files:** lists of two or more tasks name, and one row for each name that
+the text of two or more tasks mentions, each row listing every task that
+mentions that path or name; and one row for each task. It runs the scan at
+every start, as before, but writes the table only once per plan. The table
+only records the scan: a conflict is still asked of you (interactive), ends
+the batch (batched mode), or goes to the orchestrator (orchestrated run).
 
 This file is the pipeline's backbone: its checkboxes are the durable
 position record that execution ticks and commits task by task (§5).
@@ -348,6 +356,28 @@ Whatever the mode: work happens on an isolated feature branch (never on
 `main` without your explicit consent), test-driven development is enforced
 for behavior changes, and each task's checkbox is ticked and committed the
 moment the task completes.
+
+Since v7.74.0 an implementer that sees a test outside its task fail, and
+its own change did not cause the failure, does not fix it, unless its brief
+or its dispatch names that test as part of the task. Its change did not
+cause the failure when the test neither is a file that the task changes nor
+imports or reads one. It commits its work as usual, reports
+`DONE_WITH_CONCERNS`, and names the test as an observation, with the test's
+failing output and that reason. The controller therefore proceeds to the
+task review, and the task reviewer decides whether the failure is a
+finding, so a fix, when one is made, goes through the review gate. In the
+main session, the test-driven development checklist has the failure named
+in the reply to you. In batched mode, a task whose review range is wrong
+ends the batch with the blocking question `Is the branch of task N
+repaired? (task N: BASE <sha>, implemented, not reviewed)` under `## Open
+Issues`. The next session asks you that question and stops; after you
+answer that the branch is repaired, it reviews that task from that BASE
+before it goes on. If the range is still wrong, it writes the same question
+under `## Open Issues` again and stops. In interactive mode the controller
+asks you at once, and asks again after each repair that leaves the range
+wrong. A task that committed nothing still gets its task review; its review
+package then says `Commits in range: none`. Implementers and the reviewers
+of SDD and of the two review loops do not dispatch subagents of their own.
 
 ### Stage 4 — Review and verify
 
@@ -853,6 +883,24 @@ a slip in the orchestrator's own fill command is corrected once; a
 controller report the orchestrator cannot parse is a malformed return and
 gets one retry; and a temporary directory path lost from the orchestrator's
 context is replaced by a fresh directory without a stop.
+
+Since v7.74.0, when a task's review range is wrong — the branch HEAD no
+longer descends from the commit recorded before the task, because the
+branch was switched, reset, or rewritten by an amend or a rebase — the
+batch controller returns `BLOCKED task=<n>: review range invalid — <the
+script's error line>` with no question. The orchestrator treats that return
+as a major error and retries the batch once. The retried controller first
+checks that the branch still descends from the HEAD of the last completed
+task in the ledger `.superpowers/sdd/progress.md`; when it does not, the
+retry returns the same kind of line at once, and the orchestrator stops and
+reports the error. That check stops for one of two causes. Either the
+branch was switched, reset, or rewritten: repair the branch, then resume
+the run. Or the ledger is left from an abandoned or earlier run of the same
+plan (abandoning a run deletes its branch, but not the ledger): remove or
+archive `.superpowers/sdd/progress.md`, and the stale
+`.superpowers/sdd/preflight.md` with it, then start the run again. A review
+loop whose range turns wrong in the same way stops the whole invocation and
+returns `BLOCKED: review range invalid — <the script's error line>`.
 
 A review finding that merely differs from a code block the plan showed is
 *not* one of these stops: since v7.7.0 those bodies are reference
@@ -1541,6 +1589,14 @@ it's invoked directly.
 **I edited a skill but behavior didn't change.** You edited a checkout;
 sessions run the installed copy under `~/.claude/plugins/cache/`. Update or
 reinstall the plugin, then start a fresh session (§1).
+
+**My committed `.superpowers/sdd/.gitignore` was reset to `*`.** Before
+v7.74.0 every SDD script call rewrote the file. Since v7.74.0 the scripts
+create it only when it is missing or empty, so a version you commit stays
+as you wrote it. If you also commit the ledger `progress.md`, it is part of
+the branch, the whole-branch reviewers see it, and an orchestrated run
+stops at the next batch boundary or at Phase 5, because every ledger write
+leaves the working tree dirty.
 
 **My unattended run has been silent for an hour.** Almost always a
 permission prompt: a subagent asked for an approval nobody is watching for,
