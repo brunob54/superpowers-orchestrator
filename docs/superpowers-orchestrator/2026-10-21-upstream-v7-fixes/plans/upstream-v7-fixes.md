@@ -1149,7 +1149,7 @@ git commit -m "feat(multi-code-review): review-package exit 3 stops the loop" --
   - Invariants (both artifacts): item 4 still starts with `4. Mid-task crash recovery:`; the continuation joins "Then, for each assigned task that is unchecked" with the unchanged "when you start, set REVIEW_BASE = …"; no bracketed uppercase token; no Core Flow step named; `Task <n>: complete commits <base7>..<head7>` stays in the block.
   - Verification: new section `5f.` in `bash tests/orchestrating-development/run-tests.sh`; `bash tests/in-run-rulings/run-tests.sh`, `bash tests/fill-prompt/run-tests.sh` and `bash tests/review-gates/run-tests.sh` stay green.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 In `tests/orchestrating-development/run-tests.sh`, after section 5e (after the assertion `assert_folded_not_contains "batch-controller-prompt.md item 5: no longer says 'SDD mandates'" …` and its needle line) and before `bold "6. The Resume Answer section: …"`, insert:
 
@@ -1180,12 +1180,12 @@ for needle in \
 done
 ```
 
-- [ ] **Step 2: Run the test to verify it fails**
+- [x] **Step 2: Run the test to verify it fails**
 
 Run: `bash tests/orchestrating-development/run-tests.sh 2>&1 | grep -E 'FAIL|Results'`
 Expected: eleven FAIL lines, one for each needle except the last; `Task <n>: complete commits <base7>..<head7>` already passes (the `Then, for each assigned task …` needle fails too, because today's text has no "Then,").
 
-- [ ] **Step 3: Implement the change**
+- [x] **Step 3: Implement the change**
 
 (a) `skills/orchestrating-development/batch-controller-prompt.md` lines 70-71 — replace:
 
@@ -1234,7 +1234,7 @@ with:
 
 The next existing line (`       when you start, set REVIEW_BASE = the HEAD recorded by the last`) stays unchanged and continues the sentence.
 
-- [ ] **Step 4: Run the tests to verify they pass**
+- [x] **Step 4: Run the tests to verify they pass**
 
 Run: `bash tests/orchestrating-development/run-tests.sh 2>&1 | tail -1`
 Expected: PASS — `Results: <n> passed, 0 failed`.
@@ -1242,7 +1242,7 @@ Expected: PASS — `Results: <n> passed, 0 failed`.
 Run: `bash tests/in-run-rulings/run-tests.sh 2>&1 | tail -1 && bash tests/fill-prompt/run-tests.sh 2>&1 | tail -1 && bash tests/review-gates/run-tests.sh 2>&1 | tail -1`
 Expected: each prints a results line with `0 failed`.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add skills/orchestrating-development/batch-controller-prompt.md tests/orchestrating-development/run-tests.sh
