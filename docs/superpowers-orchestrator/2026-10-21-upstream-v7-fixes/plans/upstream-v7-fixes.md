@@ -945,7 +945,7 @@ git commit -m "feat(templates): four worker templates forbid subagent dispatch" 
   - Invariant: no counted phrase of the SDD `SKILL.md` phrase counts.
 - Verification for all three: new section `27. Task reviewer: unreadable evidence is a ⚠️ item` in `bash tests/reviewer-templates/run-tests.sh`, and the D8 block of the v7.74.0 section of `bash tests/sdd-scripts/run-tests.sh`; `CODE_TESTS_SECTION` stays green.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 In `tests/reviewer-templates/run-tests.sh`, after section 26 and before the final `echo`, insert:
 
@@ -988,12 +988,12 @@ assert_folded_contains "SKILL.md ⚠️ items: the controller reads the report f
   'For an item about test evidence, read the report file that holds the evidence with the Read tool'
 ```
 
-- [ ] **Step 2: Run the tests to verify they fail**
+- [x] **Step 2: Run the tests to verify they fail**
 
 Run: `bash tests/reviewer-templates/run-tests.sh 2>&1 | grep -E 'FAIL|Results'; bash tests/sdd-scripts/run-tests.sh 2>&1 | grep -E 'FAIL|Results'`
 Expected: section 27 fails on the four new-wording checks and the order check; the sdd-scripts suite fails on the `SKILL.md ⚠️ items` check.
 
-- [ ] **Step 3: Implement the change**
+- [x] **Step 3: Implement the change**
 
 (a) `skills/subagent-driven-development/task-reviewer-prompt.md`, after line 107 (`    findings — test output should be pristine.`), inside `## Tests` and before `## Part 1: Spec Compliance`, add one blank line and:
 
@@ -1028,12 +1028,12 @@ with:
 
 > For an item about test evidence, read the report file that holds the evidence with the Read tool, paging until no PARTIAL notice remains. If the evidence is still unreadable or absent, it is a real gap: send the task back to the implementer to re-run the tests and write the command and its output into the report file, then re-review.
 
-- [ ] **Step 4: Run the tests to verify they pass**
+- [x] **Step 4: Run the tests to verify they pass**
 
 Run: `bash tests/reviewer-templates/run-tests.sh 2>&1 | tail -1 && bash tests/sdd-scripts/run-tests.sh 2>&1 | tail -1`
 Expected: PASS — both print `Results: <n> passed, 0 failed`.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add skills/subagent-driven-development/task-reviewer-prompt.md skills/subagent-driven-development/SKILL.md tests/reviewer-templates/run-tests.sh tests/sdd-scripts/run-tests.sh
