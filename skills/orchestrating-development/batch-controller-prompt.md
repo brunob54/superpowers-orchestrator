@@ -220,7 +220,16 @@ Agent tool (general-purpose):
        non-zero exit is a git error (for example 128, when `<head7>` is
        ambiguous or names no object): return the same kind of line, with
        `review range invalid — cannot check the last completed ledger HEAD <head7>`
-       in place of the text after the dash, and name no cause. With no
+       in place of the text after the dash, and name no cause. Before
+       either return, rename an existing
+       `.superpowers/sdd/task-<n>-report.md` (with `<n>` the task number of
+       the return) to `.superpowers/sdd/task-<n>-report.md.stale`; never
+       delete it, and when that name already exists, add a numeric suffix.
+       A report file left by an earlier run would otherwise hold an
+       unanswered `### Conflict <k>` or `### Question <k>` section, and the
+       orchestrator would read the return as an open-item return, not as a
+       controller failure. This rename is the only write of the start
+       check. With no
        completed ledger line, skip this check. Then, for each assigned
        task that is unchecked
        when you start, set REVIEW_BASE = the HEAD recorded by the last

@@ -562,6 +562,7 @@ for needle in \
   'or the ledger is left from an abandoned or earlier run of this plan' \
   '`BLOCKED task=<n>: review range invalid — HEAD does not descend from the last completed ledger HEAD <head7> (branch switched, reset or rewritten, or ledger left from an earlier run of this plan)`' \
   'with `<n>` the first unchecked task of your task list' \
+  'rename an existing `.superpowers/sdd/task-<n>-report.md` (with `<n>` the task number of the return) to `.superpowers/sdd/task-<n>-report.md.stale`; never delete it, and when that name already exists, add a numeric suffix.' \
   'With no completed ledger line, skip this check.' \
   'Then, for each assigned task that is unchecked when you start, set REVIEW_BASE' \
   'Task <n>: complete commits <base7>..<head7>'; do

@@ -456,11 +456,11 @@ Review gates are NOT relaxed: the full task review (spec-compliance AND code-qua
    mark its checkbox complete and advance. A task whose entry under
    `## Open Issues` asks `Is the branch of task N repaired?` (**Exit 3** under
    **DONE**, Handling Implementer Status) is not marked complete here and is
-   not reviewed here: step 3 handles its entry. When the resume prompt
-   answers that the branch is repaired, step 3 records the answer, and the
-   task resumes at its task review from the journaled BASE, by the **Exit 3**
-   paragraph, before step 4: record no new BASE and dispatch no implementer
-   for it.
+   not reviewed here: step 3 handles its entry. When the resume prompt, or
+   the user's answer to step 3's question, says that the branch is repaired,
+   step 3 records the answer, and in both cases the task resumes at its task
+   review from the journaled BASE, by the **Exit 3** paragraph, before
+   step 4: record no new BASE and dispatch no implementer for it.
 3. If `## Open Issues` contains a blocking question and the resume prompt does
    not answer it, present the question to the user and STOP — never execute
    past an unanswered blocker. Record the eventual answer under

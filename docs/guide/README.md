@@ -898,8 +898,12 @@ ledger HEAD to check, and the retry runs the task again. That check stops for on
 branch was switched, reset, or rewritten: repair the branch, then resume
 the run. Or the ledger is left from an abandoned or earlier run of the same
 plan (abandoning a run deletes its branch, but not the ledger): remove or
-archive `.superpowers/sdd/progress.md`, and the stale
-`.superpowers/sdd/preflight.md` with it, then start the run again. A review
+archive the whole `.superpowers/sdd/` workspace, or remove
+`.superpowers/sdd/progress.md`, the stale `.superpowers/sdd/preflight.md` and
+the old `.superpowers/sdd/task-*-report.md` files, then start the run again.
+(Before it returns, the controller renames a report file of the returned
+task to `task-<n>-report.md.stale`, so that the orchestrator does not read
+an old unanswered conflict in it as a question of this run.) A review
 loop whose range turns wrong in the same way stops the whole invocation and
 returns `BLOCKED: review range invalid — <the script's error line>`.
 

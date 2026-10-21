@@ -1873,7 +1873,7 @@ done
 assert_folded_contains "SKILL.md Resume Procedure step 2: a task with the exit-3 question is left to step 3" "$V774_RESUME" \
   'A task whose entry under `## Open Issues` asks `Is the branch of task N repaired?` (**Exit 3** under **DONE**, Handling Implementer Status) is not marked complete here and is not reviewed here: step 3 handles its entry.'
 assert_folded_contains "SKILL.md Resume Procedure step 2: an answered exit-3 question resumes at the task review from the journaled BASE" "$V774_RESUME" \
-  'When the resume prompt answers that the branch is repaired, step 3 records the answer, and the task resumes at its task review from the journaled BASE, by the **Exit 3** paragraph, before step 4: record no new BASE and dispatch no implementer for it.'
+  'When the resume prompt, or the user'"'"'s answer to step 3'"'"'s question, says that the branch is repaired, step 3 records the answer, and in both cases the task resumes at its task review from the journaled BASE, by the **Exit 3** paragraph, before step 4: record no new BASE and dispatch no implementer for it.'
 for needle in 'by the rule of your run mode below only' 'Resume Procedure step 2 never marks such a task complete'; do
   if fold_file "$SDD_SKILL_MD" | grep -qF -- "$needle"; then
     bad "SKILL.md exit 3: does not contain the draft wording '$needle'"
