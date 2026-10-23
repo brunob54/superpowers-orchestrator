@@ -151,7 +151,8 @@ IMPORTANT: Follow the skill exactly. I will be verifying that you:
 Begin now. Execute the plan."
 
 # Where Claude Code stores this run's transcript.
-# The path is ~/.claude/projects/<escaped-cwd>/<session-id>.jsonl, where
+# The path is <config>/projects/<escaped-cwd>/<session-id>.jsonl, where
+# <config> is CLAUDE_CONFIG_DIR, or ~/.claude when that variable is not set, and
 # <escaped-cwd> is the ABSOLUTE path of the directory claude runs in with every
 # character that is not a letter or a digit replaced by "-". The leading "/"
 # becomes a leading "-", and "_" becomes "-" as well. The path must be the
@@ -159,7 +160,7 @@ Begin now. Execute the plan."
 # /var/... is a link to /private/var/..., and Claude Code uses /private/var/...
 # create_claude_workdir already prints the physical path.
 WORKING_DIR_ESCAPED=$(echo "$CLAUDE_WORKDIR" | sed 's/[^a-zA-Z0-9]/-/g')
-SESSION_DIR="$HOME/.claude/projects/$WORKING_DIR_ESCAPED"
+SESSION_DIR="${CLAUDE_CONFIG_DIR:-$HOME/.claude}/projects/$WORKING_DIR_ESCAPED"
 
 # List the transcripts that already exist, so the one this run creates can be
 # identified afterwards by difference. The work folder has a new random name,

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 #
 # Sync this working tree into the installed superpowers-orchestrator plugin under
-# ~/.claude, so local edits take effect in every project without pushing or
+# the Claude Code configuration folder (CLAUDE_CONFIG_DIR, default ~/.claude), so local edits take effect in every project without pushing or
 # running `claude plugin update`.
 #
 # What gets copied: every file git considers part of the project — tracked files
@@ -20,7 +20,7 @@
 set -euo pipefail
 
 PLUGIN_ID="${PLUGIN_ID:-superpowers-orchestrator@superpowers-orchestrator}"
-REGISTRY="${CLAUDE_PLUGIN_REGISTRY:-$HOME/.claude/plugins/installed_plugins.json}"
+REGISTRY="${CLAUDE_PLUGIN_REGISTRY:-${CLAUDE_CONFIG_DIR:-$HOME/.claude}/plugins/installed_plugins.json}"
 LOCK_DIR=".in_use"
 PLUGIN_MANIFEST=".claude-plugin/plugin.json"
 
@@ -35,7 +35,8 @@ die() { printf 'error: %s\n' "$*" >&2; exit 1; }
 
 usage() {
   cat <<EOF
-Sync this working tree into the installed $PLUGIN_ID plugin under ~/.claude.
+Sync this working tree into the installed $PLUGIN_ID plugin under
+\${CLAUDE_CONFIG_DIR:-~/.claude}.
 
 Usage: $(basename "${BASH_SOURCE[0]}") [--dry-run] [--target DIR]
 

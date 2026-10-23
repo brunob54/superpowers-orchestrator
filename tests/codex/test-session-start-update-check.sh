@@ -50,6 +50,19 @@
 #      back; finding A4 of the same review), on both paths: the negative age
 #      counts as old, so the marketplace install asks again after a failed
 #      request, and the clone is fetched and fast-forwarded.
+#  12. CLAUDE_CONFIG_DIR names a configuration folder other than ~/.claude:
+#      the marketplace path reads the plugin registry
+#      (plugins/installed_plugins.json) of that folder. The registry under
+#      ~/.claude, left over from an older setup, lists an old version; the
+#      registry under CLAUDE_CONFIG_DIR lists the remote version, so the hook
+#      announces nothing. This holds also when a recent cache was written by
+#      a session start that read the old registry.
+#  13. CLAUDE_CONFIG_DIR is not set: the hook reads the registry under
+#      ~/.claude, as before.
+#  14. CLAUDE_CONFIG_DIR is set, and its folder holds no registry: the hook
+#      takes the local version from the plugin.json of the plugin folder. It
+#      does not read the registry under ~/.claude, which describes another
+#      installation of Claude Code.
 #
 # No network: every remote is a local bare repository, and a stand-in for
 # curl, first on PATH, answers the version request of the marketplace path.
@@ -85,6 +98,12 @@ AVAILABLE_NOTICE_END="is available**"
 # HOME: one for a marketplace install and one for a clone of the plugin.
 MARKETPLACE_CACHE=".claude/hooks-logs/update-check.cache"
 CLONE_CACHE=".claude/hooks-logs/update-check-clone.cache"
+# The plugin registry of Claude Code, relative to a configuration folder, and
+# the name of this plugin in it.
+REGISTRY="plugins/installed_plugins.json"
+PLUGIN_ID="superpowers-orchestrator@superpowers-orchestrator"
+# The version in the plugin.json that copy_plugin copies into a plugin folder.
+PLUGIN_JSON_VERSION=$(grep '"version"' "${REPO_ROOT}/.claude-plugin/plugin.json" | head -1 | grep -oE '[0-9]+\.[0-9]+\.[0-9]+')
 # Modification times for a cache, in the format of "touch -t": one older than
 # the cache interval of 24 hours, and one in the future.
 PAST_STAMP="202001010000"
@@ -203,10 +222,33 @@ origin_one_commit_ahead() {
   REMOTE_HEAD=$(git -C "$other" rev-parse HEAD)
 }
 
-# new_case <name>: sets F to a new folder for one case, with an empty HOME.
+# new_case <name>: sets F to a new folder for one case, with an empty HOME,
+# and clears CONFIG_DIR, so that the hook runs without CLAUDE_CONFIG_DIR.
 new_case() {
   F="${TMP}/$1"
   mkdir -p "${F}/home"
+  CONFIG_DIR=""
+}
+
+# write_registry <configuration folder> <version>: writes a plugin registry
+# into <configuration folder>, in the format of Claude Code, that lists this
+# plugin at <version>.
+write_registry() {
+  mkdir -p "$1/$(dirname "$REGISTRY")"
+  cat > "$1/${REGISTRY}" <<EOF
+{
+  "version": 2,
+  "plugins": {
+    "${PLUGIN_ID}": [
+      {
+        "scope": "user",
+        "installPath": "$1/plugins/cache/marketplace/plugin/$2",
+        "version": "$2"
+      }
+    ]
+  }
+}
+EOF
 }
 
 # install_from_marketplace: sets PLUG to a marketplace install (a plain copy
@@ -303,7 +345,9 @@ repo_state() {
 }
 
 # run_hook [<plugin folder>]: runs the hook of the plugin folder (default:
-# PLUG) with the HOME of the case and the update check enabled. Sets CTX to
+# PLUG) with the HOME of the case and the update check enabled. When
+# CONFIG_DIR is not empty, the hook also gets CLAUDE_CONFIG_DIR=CONFIG_DIR.
+# Sets CTX to
 # the additionalContext string of the Claude Code output branch and
 # CURL_CALLS to the number of calls of the stand-in for curl during this run.
 # A hook that writes no valid JSON output counts as one failure and leaves
@@ -314,6 +358,7 @@ run_hook() {
   local pass=()
   [ -n "${SYSTEMROOT:-}" ] && pass+=("SYSTEMROOT=$SYSTEMROOT")
   [ -n "${TEMP:-}" ] && pass+=("TEMP=$TEMP")
+  [ -n "$CONFIG_DIR" ] && pass+=("CLAUDE_CONFIG_DIR=$CONFIG_DIR")
   rm -f "$curl_log"
   (cd "$PROJECT" && env -i PATH="${BIN}:${PATH}" HOME="${F}/home" \
       GIT_CEILING_DIRECTORIES="$TMP" CURL_LOG="$curl_log" CURL_OFFLINE="$CURL_OFFLINE" \
@@ -494,6 +539,41 @@ assert_marketplace_notice "a failed request whose cache time is in the future, n
 clone_fixture future-cache-clone
 touch_cache "$CLONE_CACHE" "$FUTURE_STAMP"
 assert_clone_updated "a clone whose cache time is in the future"
+
+# ── Case 12: CLAUDE_CONFIG_DIR names another configuration folder ──────────
+marketplace_fixture config-dir-registry
+write_registry "${F}/home/.claude" "$OLD_VERSION"
+CONFIG_DIR="${F}/config"
+write_registry "$CONFIG_DIR" "$REMOTE_VERSION"
+assert_marketplace_quiet "the registry under CLAUDE_CONFIG_DIR lists the remote version, the one under ~/.claude an old one" 1
+# The cache holds only the remote version; the local version is read again at
+# every session start. A cache written by a session that read the old registry
+# under ~/.claude therefore cannot bring back the notice.
+marketplace_fixture config-dir-registry-cached
+write_registry "${F}/home/.claude" "$OLD_VERSION"
+run_hook
+assert_marketplace_notice "CLAUDE_CONFIG_DIR not set yet, the registry under ~/.claude lists an old version"
+CONFIG_DIR="${F}/config"
+write_registry "$CONFIG_DIR" "$REMOTE_VERSION"
+assert_marketplace_quiet "CLAUDE_CONFIG_DIR set, inside the cache interval of the earlier check" 0
+
+# ── Case 13: CLAUDE_CONFIG_DIR is not set ──────────────────────────────────
+# The registry lists the remote version, and the plugin.json an older one:
+# no notice proves that the hook read the registry under ~/.claude.
+marketplace_fixture home-registry
+write_registry "${F}/home/.claude" "$REMOTE_VERSION"
+assert_marketplace_quiet "CLAUDE_CONFIG_DIR not set, the registry under ~/.claude lists the remote version" 1
+
+# ── Case 14: CLAUDE_CONFIG_DIR is set, and its folder holds no registry ────
+# The registry under ~/.claude lists the remote version: a hook that read it
+# would announce nothing.
+marketplace_fixture config-dir-no-registry
+write_registry "${F}/home/.claude" "$REMOTE_VERSION"
+CONFIG_DIR="${F}/config"
+mkdir -p "$CONFIG_DIR"
+run_hook
+assert_marketplace_notice "CLAUDE_CONFIG_DIR without a registry"
+assert_contains "CLAUDE_CONFIG_DIR without a registry: the local version comes from the plugin.json" "$CTX" "(you have v${PLUGIN_JSON_VERSION})"
 
 echo "  ${PASS} passed, ${FAIL} failed"
 [ "$FAIL" -eq 0 ]
