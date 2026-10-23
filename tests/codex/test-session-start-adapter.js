@@ -292,11 +292,13 @@ const WORK_ROOT = fs.realpathSync(makeTempDir());
 //   removed;
 // - GIT_CEILING_DIRECTORIES stops git from finding a repository above WORK_ROOT;
 // - XDG_CONFIG_HOME is removed, so the adapter keeps the time of its last
-//   check under the HOME of the test.
+//   check under the HOME of the test;
+// - CLAUDE_CONFIG_DIR is removed, so the update check reads the plugin
+//   registry under the HOME of the test, never the developer's own registry.
 const FIXTURE_GLOBAL_CONFIG = path.join(WORK_ROOT, 'fixture-gitconfig');
 fs.writeFileSync(FIXTURE_GLOBAL_CONFIG, `[init]\n\tdefaultBranch = ${MAIN}\n`);
 const ENV = Object.fromEntries(Object.entries(process.env)
-  .filter(([key]) => !key.startsWith('GIT_') && key !== 'XDG_CONFIG_HOME'));
+  .filter(([key]) => !key.startsWith('GIT_') && key !== 'XDG_CONFIG_HOME' && key !== 'CLAUDE_CONFIG_DIR'));
 Object.assign(ENV, {
   HOME: WORK_ROOT,
   USERPROFILE: WORK_ROOT,

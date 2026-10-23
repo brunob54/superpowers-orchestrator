@@ -218,8 +218,11 @@ ${whats_new}</important-reminder>"
         # Read local version — prefer installed_plugins.json (authoritative: reflects the
         # currently active installed version even if this hook is running from an older
         # cached directory after a plugin update). Falls back to this script's own plugin.json.
+        # The registry is the one of the Claude Code installation that runs this hook: it
+        # lies in CLAUDE_CONFIG_DIR when that variable is set. The registry under
+        # ~/.claude then belongs to another installation and is not read.
         local local_version=""
-        local registry_file="${HOME}/.claude/plugins/installed_plugins.json"
+        local registry_file="${CLAUDE_CONFIG_DIR:-$HOME/.claude}/plugins/installed_plugins.json"
         if [ -f "$registry_file" ]; then
             local_version=$(grep -A 10 '"superpowers-orchestrator@superpowers-orchestrator"' "$registry_file" 2>/dev/null \
                 | grep '"version"' | head -1 | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' || echo "")

@@ -23,8 +23,9 @@ echo ""
 cd "$PROJECT_DIR"
 
 # Copy user's CLAUDE.md to simulate real environment
-if [ -f "$HOME/.claude/CLAUDE.md" ]; then
-    cp "$HOME/.claude/CLAUDE.md" "$PROJECT_DIR/.claude/CLAUDE.md"
+USER_CLAUDE_MD="${CLAUDE_CONFIG_DIR:-$HOME/.claude}/CLAUDE.md"
+if [ -f "$USER_CLAUDE_MD" ]; then
+    cp "$USER_CLAUDE_MD" "$PROJECT_DIR/.claude/CLAUDE.md"
     echo "Copied user CLAUDE.md"
 else
     echo "No user CLAUDE.md found, proceeding without"

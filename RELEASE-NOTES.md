@@ -8,6 +8,27 @@
 > (`REPOZY/superpowers-optimized`) and are kept unchanged as history; any
 > testing they describe was not done here.
 
+## v7.74.1 — the update check reads the plugin registry of CLAUDE_CONFIG_DIR
+
+**Problem.** With `CLAUDE_CONFIG_DIR` set, the session-start update check still read `~/.claude/plugins/installed_plugins.json`. That registry belongs to another Claude Code installation, so a user on the newest version was told to update at every session start.
+
+**Change.** The update check reads the registry under `${CLAUDE_CONFIG_DIR:-$HOME/.claude}`. With no registry there, it uses the plugin's own `plugin.json`, never `~/.claude`. `tools/sync-dev-install.sh` and two behavioural test scripts follow the same rule.
+
+**Effect.** Reinstall the plugin. The wrong notice stops at the next session start; the update-check cache needs no clean-up. Nothing to migrate.
+
+### What changed
+
+- **`hooks/session-start`, marketplace path of the update check.** The local version comes from the plugin registry (`plugins/installed_plugins.json`) of the Claude Code configuration folder: `CLAUDE_CONFIG_DIR` when that variable is set, `~/.claude` otherwise. This is the rule that `tests/claude-code/test-helpers.sh` already used. When the configuration folder holds no registry, the hook falls back to `.claude-plugin/plugin.json` of the plugin folder, as before; it does not read the registry under `~/.claude`, because that registry describes a different installation and was the cause of the wrong notice.
+- **The update-check cache is unchanged.** `update-check.cache` holds only the remote version, and the local version is read again at every session start, so a cache written while the hook read the wrong registry cannot bring the notice back. A new test step proves this: a recent cache from a session that read the old registry, then a session with `CLAUDE_CONFIG_DIR` set, gives no notice and no request.
+- **`tools/sync-dev-install.sh`.** Without `CLAUDE_PLUGIN_REGISTRY`, the script now finds the registry under `${CLAUDE_CONFIG_DIR:-$HOME/.claude}` and so syncs into the install of the configuration folder in use. `CLAUDE_PLUGIN_REGISTRY` still overrides it.
+- **Behavioural test scripts.** `tests/claude-code/test-subagent-driven-development-integration.sh` looks for the run's transcript under `${CLAUDE_CONFIG_DIR:-$HOME/.claude}/projects/`, where Claude Code writes it. `tests/explicit-skill-requests/run-haiku-test.sh` copies the user's `CLAUDE.md` from the same folder.
+- **Tests.** `tests/codex/test-session-start-update-check.sh` has three new cases: (12) a registry with an old version under HOME and one with the remote version under `CLAUDE_CONFIG_DIR` give no notice, also after a recent cache; (13) without `CLAUDE_CONFIG_DIR`, the registry under HOME is read as before; (14) a `CLAUDE_CONFIG_DIR` with no registry uses the plugin's `plugin.json`. `tests/codex/test-session-start-adapter.js` removes `CLAUDE_CONFIG_DIR` from the environment of its runs, so the update check there never reads the developer's own registry.
+
+### Left as is
+
+- **The `~/.claude/hooks-logs` folder** (update-check caches, save marker, edit log, session statistics, stop guard, the last-session HEAD file of `context-engine.js`, the refusal log of the safety hooks). These files are state of this plugin's hooks, not data of a Claude Code installation; their content does not depend on which installation runs the hook. Several hooks and the context-management skill's marker command share them, so they would all have to move at once, and files already on disk (for example the last-session HEAD) would be left behind.
+- **Text that names `~/.claude`** in the README, the Makefile help, comments and manual probe instructions: it describes the default folder.
+
 ## v7.74.0 — fixes ported from upstream v7.0.0; Copilot CLI no longer supported
 
 **Problem.** `sdd-workspace` reset a committed `.superpowers/sdd/.gitignore` on every call. `review-package` packaged a reversed range as a diff that deletes the task's work. A systematic-debugging example printed a secret value.
