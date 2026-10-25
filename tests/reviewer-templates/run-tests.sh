@@ -1451,7 +1451,23 @@ assert_folded_not_contains "multi-code-review SKILL.md: the old partial-round de
 # the expected set of the clean-round rule and tools/count-report-fields.js
 # both look for it in the reviewer prompt.
 PLAN_LINE_SENTENCE='Plan/requirements the branch implements (read it first):'
-assert_folded_contains "multi-code-review SKILL.md: the PLAN_LINE fill instruction carries the plan input sentence" "$CODE_SKILL" "$PLAN_LINE_SENTENCE"
+# The same sentence stands in the step 6 expected-set rule, so each check reads
+# only its own text: the PLAN_LINE fill paragraph of step 2, and the legend
+# entry of the reviewer prompt.
+PLAN_LINE_FILL="$WORK/plan-line-fill.txt"
+PLAN_LINE_LEGEND="$WORK/plan-line-legend.txt"
+awk '
+  /^ +`PLAN_LINE` is, on a lens-1/ { on = 1 }
+  on && (/^[ \t]*$/ || /^ +`CARRIED_BLOCK` is/) { exit }
+  on { print }
+' "$CODE_SKILL" > "$PLAN_LINE_FILL"
+awk '
+  /^- `\[PLAN_LINE\]` / { on = 1; print; next }
+  on && (/^[ \t]*$/ || /^- /) { exit }
+  on { print }
+' "$CODE_PROMPT" > "$PLAN_LINE_LEGEND"
+assert_folded_contains "multi-code-review SKILL.md: the PLAN_LINE fill paragraph carries the plan input sentence" "$PLAN_LINE_FILL" "$PLAN_LINE_SENTENCE"
+assert_folded_contains "multi-code-review reviewer prompt: the PLAN_LINE legend entry carries the plan input sentence" "$PLAN_LINE_LEGEND" "$PLAN_LINE_SENTENCE"
 for phrase in "$CODE_PARTIAL_DEF" "$CONVERGENCE_INPUTS" "$CODE_EXPECTED_SET" "$INPUT_NOT_DECLARED" "$SECTION_NOT_DECLARED" \
               "$EITHER_CAUSE" "$PARTIAL_WHATEVER" "$CLEAN_LINE_SCOPE" "$NEVER_RETRIED" "$FIX_REVIEWED" "$FIX_PATHS_COMMAND" "$FIX_DIFF_LINE_ONLY" "$CYCLE_REVIEWED_NEW" \
               "$CYCLE_NOT_ENDED" "$ADDENDUM_TEST" "$ADDENDUM_NO_UNRESOLVED" "$LOG_POSITION" "$LOG_SHAPES" "$LOG_UNKNOWN" \

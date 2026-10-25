@@ -157,7 +157,21 @@ awk '
 ' "$DOC_SKILL_FILE" >> "$WORK/spec-lens-cells.txt"
 assert_needle_in "diff needle: stands in the code reviewer prompt body" diff "$WORK/code-prompt-body.txt"
 assert_needle_in "document needle: stands in the doc reviewer prompt body" document "$WORK/doc-prompt-body.txt"
-assert_needle_in "plan needle: stands in the PLAN_LINE fill instruction of multi-code-review SKILL.md" plan "$CODE_SKILL_FILE"
+# The plan needle is also quoted in the step 6 expected-set rule of the same
+# SKILL.md, so the check reads only the two texts that carry the sentence:
+# the `PLAN_LINE` fill paragraph of step 2 and the legend entry of the prompt.
+awk '
+  /^ +`PLAN_LINE` is, on a lens-1/ { on = 1 }
+  on && (/^[ \t]*$/ || /^ +`CARRIED_BLOCK` is/) { exit }
+  on { print }
+' "$CODE_SKILL_FILE" > "$WORK/plan-line-fill.txt"
+awk '
+  /^- `\[PLAN_LINE\]` / { on = 1; print; next }
+  on && (/^[ \t]*$/ || /^- /) { exit }
+  on { print }
+' "$CODE_PROMPT_FILE" > "$WORK/plan-line-legend.txt"
+assert_needle_in "plan needle: stands in the PLAN_LINE fill paragraph of multi-code-review SKILL.md" plan "$WORK/plan-line-fill.txt"
+assert_needle_in "plan needle: stands in the PLAN_LINE legend entry of the multi-code-review reviewer prompt" plan "$WORK/plan-line-legend.txt"
 assert_needle_in "spec needle: stands in the two lens cells of multi-doc-review SKILL.md" spec "$WORK/spec-lens-cells.txt"
 
 echo
