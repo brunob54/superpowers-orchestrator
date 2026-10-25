@@ -1173,7 +1173,7 @@ git commit -m "feat(multi-code-review): inputs-read declarations decide clean ro
   - Invariants: no blank line is added or removed, and every line keeps the indentation of its paragraph or list item; the file has at most 1015 lines (recovers at least 64 of today's 1079; Task 7's reference texts add about 60-65 lines; three independent dry runs on 2026-10-25 put the most that reflow can recover outside the untouched zones at 78-87 lines, before the pinned-string limits; when Task 6 cannot reach 1015, Task 7 Step 3 continues this reflow under these same rules); no line is longer than 88 characters unless it was before; untouched: the frontmatter, every fenced block, every table row, every heading line, the whole `## Lens Instructions` section (parsed by line prefix in `extract_plan_cell`), the whole `## Report Marker` section, and every line that an `assert_file_has_line` of `tests/reviewer-templates/run-tests.sh` names; no line break falls inside a string that a `first_line_of "$DOC_SKILL" '<string>'` call of `tests/reviewer-templates/run-tests.sh` locates (for example `Skipped invocations (N=0)`, today mid-line at line 943, and `**Validate each report and consolidate:**`), and no such string moves to another paragraph; no reflowed line starts with `- `, `* `, `+ `, `> ` or a number followed by `. ` unless that line started so before (`tests/review-gates/run-tests.sh`'s `normalize_file` strips such a prefix); no line break falls inside the strings `harness probe —`, `harness probe not runnable here`, `Harness probes owed:` (unfolded pins of test 3).
   - Verification: Step 2's `reflow_check` prints `SAME-WORDS`, `SAME-ZONES`, `NO-NEW-LONG`, `SAME-LIST-COUNT` and `SAME-PARAGRAPHS`, and the line count is ≤ 1015 (up to 1025 accepted with the shortfall reported, as Step 2 says); `bash tests/reviewer-templates/run-tests.sh` and `bash tests/review-gates/run-tests.sh` pass. The 88-column limit counts characters, not bytes.
 
-- [ ] **Step 1: Reflow**
+- [x] **Step 1: Reflow**
 
 Reflow prose paragraphs and list items to at most 88 columns, keeping each paragraph's indentation and each list item's hanging indentation, in this order until the file has at most 1015 lines:
 1. Procedure step 2 (from `2. **Validate each report and consolidate:**` through its item 8, about 16 lines recoverable);
@@ -1183,7 +1183,7 @@ Reflow prose paragraphs and list items to at most 88 columns, keeping each parag
 5. the prose of `## Parameters` and `## Resolving a default` (about 40 lines available).
 Skip every zone the contract lists as untouched.
 
-- [ ] **Step 2: Verify that only line breaks changed**
+- [x] **Step 2: Verify that only line breaks changed**
 
 Define the check once in the shell (Task 7 Step 3 calls it again), then run it against `HEAD`:
 
@@ -1233,7 +1233,7 @@ Expected: `SAME-WORDS`, `SAME-ZONES`, `NO-NEW-LONG`, `SAME-LIST-COUNT`, `SAME-PA
 Run: `bash tests/reviewer-templates/run-tests.sh 2>&1 | grep -E '  FAIL: |Results'` and `bash tests/review-gates/run-tests.sh 2>&1 | grep -E '  FAIL: |Results'`
 Expected: no FAIL line in either; both end `0 failed`.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add skills/multi-doc-review/SKILL.md
