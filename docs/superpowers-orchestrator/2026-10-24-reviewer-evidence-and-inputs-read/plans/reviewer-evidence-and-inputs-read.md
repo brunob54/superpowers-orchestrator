@@ -541,7 +541,7 @@ git commit -m "feat(reviewer-prompts): evidence line under each Critical and Imp
 - Input sentences (wording invariant): the code prompt body contains `Read the diff file whole` and not `Document (read it whole`; the doc prompt body the reverse; neither body contains `Plan/requirements the branch implements (read it first):` or `read the spec listed under Target` (both arrive only through a filled placeholder). Verification: test 30.
 - Reviewer returns lists (wording artifact): both name the `### Inputs read` section. Verification: test 30, on the Reviewer returns extracts of test 29 (never the whole file: the `**Inputs read.**` paragraph holds the same words). These list edits are inside Global Constraint 2 under the reading stated in Task 2's Contract.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Add this section to `tests/reviewer-templates/run-tests.sh`, directly above the final `echo` / `bold "Results: …"` lines:
 
@@ -620,12 +620,12 @@ assert_folded_contains "code-review template: Reviewer returns names the section
 assert_folded_contains "doc-review template: Reviewer returns names the section" "$DOC_RETURNS" "$RETURNS_INPUTS"
 ```
 
-- [ ] **Step 2: Run the tests to verify they fail**
+- [x] **Step 2: Run the tests to verify they fail**
 
 Run: `bash tests/reviewer-templates/run-tests.sh 2>&1 | grep -E '  FAIL: |Results'`
 Expected: FAIL lines for the paragraph, format-example, position and Reviewer-returns checks of test 30; the input-sentence checks of the two prompt bodies and the `never quotes the input sentence` checks (which read an empty extract) pass already.
 
-- [ ] **Step 3: Edit both prompts**
+- [x] **Step 3: Edit both prompts**
 
 Code prompt format example: between `    - [M1] ...` and the blank line before `    ### Checks Run`, insert
 
@@ -708,7 +708,7 @@ Doc prompt: replace `Important finding.` at the end of the **Reviewer returns** 
 Important finding, and the `### Inputs read` section.
 ```
 
-- [ ] **Step 4: Run the tests to verify they pass**
+- [x] **Step 4: Run the tests to verify they pass**
 
 Run: `bash tests/reviewer-templates/run-tests.sh 2>&1 | grep -E '  FAIL: |Results'`
 Expected: one line, `Results: <n> passed, 0 failed` (test 22's unguarded-diff-read checks on the code prompt and test 24's `in this checkout` count included).
@@ -716,7 +716,7 @@ Expected: one line, `Results: <n> passed, 0 failed` (test 22's unguarded-diff-re
 Run: `bash tests/fill-prompt/run-tests.sh 2>&1 | grep -E '  FAIL: |Results'`
 Expected: no FAIL line.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add skills/multi-code-review/reviewer-prompt.md skills/multi-doc-review/reviewer-prompt.md tests/reviewer-templates/run-tests.sh
