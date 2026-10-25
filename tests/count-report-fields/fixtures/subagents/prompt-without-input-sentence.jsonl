@@ -1,0 +1,2 @@
+{"type":"user","message":{"role":"user","content":"You are an independent reviewer.\n\n## Lens (your ONLY focus in this review)\n\n**Security.** Review."}}
+{"type":"assistant","message":{"role":"assistant","content":[{"type":"tool_use","id":"h19","name":"SubagentHandback","input":{"message":"<!-- multi-review report -->\n\n### Verdict\nNo material issues under this lens.\n\n"}}]}}

@@ -841,6 +841,9 @@ assert_folded_contains "dashboard SKILL.md: a refused call is never the end" "$D
 # The old clause is absent from every Markdown file under skills/. The text is
 # folded, because a carrier can wrap the clause across a line break.
 find "$ROOT/skills" -name '*.md' | sort > "$WORK/skill-md-files.txt"
+# A list with no file would make the negative check below pass without
+# checking anything.
+if [ -s "$WORK/skill-md-files.txt" ]; then ok "the list of Markdown files under skills/ is not empty"; else bad "the list of Markdown files under skills/ is empty"; fi
 OLD_STOP_FILES=""
 while IFS= read -r f; do
   if fold_file "$f" | grep -qF -- "$OLD_PAGE_STOP"; then OLD_STOP_FILES="$OLD_STOP_FILES ${f#"$ROOT"/}"; fi
@@ -1444,6 +1447,11 @@ CODE_ERROR_UNUSABLE='→ partial round (u < M), continue (never clean)'
 UNREVIEWED_FIXES_LEAD='**Unreviewed fixes from more than one round.**'
 ONE_SEQUENCE='run ONE verification sequence, not one per round'
 assert_folded_not_contains "multi-code-review SKILL.md: the old partial-round definition is gone" "$CODE_SKILL" "$PARTIAL_DEF_OLD"
+# The sentence that PLAN_LINE is filled with is the source of the `plan` input:
+# the expected set of the clean-round rule and tools/count-report-fields.js
+# both look for it in the reviewer prompt.
+PLAN_LINE_SENTENCE='Plan/requirements the branch implements (read it first):'
+assert_folded_contains "multi-code-review SKILL.md: the PLAN_LINE fill instruction carries the plan input sentence" "$CODE_SKILL" "$PLAN_LINE_SENTENCE"
 for phrase in "$CODE_PARTIAL_DEF" "$CONVERGENCE_INPUTS" "$CODE_EXPECTED_SET" "$INPUT_NOT_DECLARED" "$SECTION_NOT_DECLARED" \
               "$EITHER_CAUSE" "$PARTIAL_WHATEVER" "$CLEAN_LINE_SCOPE" "$NEVER_RETRIED" "$FIX_REVIEWED" "$FIX_PATHS_COMMAND" "$FIX_DIFF_LINE_ONLY" "$CYCLE_REVIEWED_NEW" \
               "$CYCLE_NOT_ENDED" "$ADDENDUM_TEST" "$ADDENDUM_NO_UNRESOLVED" "$LOG_POSITION" "$LOG_SHAPES" "$LOG_UNKNOWN" \
@@ -1478,6 +1486,13 @@ for phrase in "$EVIDENCE_RULE_LEAD" "$EVIDENCE_TEXT_ONLY" "$EVIDENCE_ONE_SOURCE"
   assert_folded_contains "multi-doc-review SKILL.md Triage step: '$phrase'" "$DOC_TRIAGE_RANGE" "$phrase"
 done
 assert_folded_not_contains "multi-doc-review SKILL.md: the old partial-round definition is gone" "$DOC_SKILL" "$PARTIAL_DEF_OLD"
+# The words that decide the `spec` input stand in two lens cells; the expected
+# set of the clean-round rule and tools/count-report-fields.js both look for
+# them in the lens text pasted into the reviewer prompt.
+SPEC_INPUT_WORDS='read the spec listed under Target'
+extract_plan_cell "Correctness & completeness" "$WORK/spec-words-plan-cell.txt"
+assert_folded_contains "multi-doc-review SKILL.md: the plan cell of Correctness & completeness carries the spec input words" "$WORK/spec-words-plan-cell.txt" "$SPEC_INPUT_WORDS"
+assert_folded_contains "multi-doc-review SKILL.md: the Execution readiness cell carries the spec input words" "$READINESS_CELL" "$SPEC_INPUT_WORDS"
 for phrase in "$DOC_PARTIAL_DEF" "$CONVERGENCE_INPUTS" "$DOC_EXPECTED_SET" "$INPUT_NOT_DECLARED" "$SECTION_NOT_DECLARED" \
               "$EITHER_CAUSE" "$PARTIAL_WHATEVER" "$CLEAN_LINE_SCOPE" "$NEVER_RETRIED" "$DOC_SETTLED_UNCHANGED" "$LOG_POSITION" "$LOG_SHAPES" "$LOG_UNKNOWN" \
               "$DOC_ENTRY_KINDS" "$CLEAN_LINE_INPUTS" "$CLEAN_LINE_BOTH" "$BYTE_IDENTICAL_QUALIFIED" "$ERROR_INPUTS_BULLET" \

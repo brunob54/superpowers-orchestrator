@@ -239,7 +239,10 @@ function main(argv) {
       perInput[inputName].expected += 1;
       if (declared.has(inputName)) perInput[inputName].valid += 1;
     });
-    if (expected.every((inputName) => declared.has(inputName))) count.withInputs += 1;
+    // A prompt that matches no needle has an empty expected set; `every` is
+    // true on an empty set, so the report is counted only when the set is not
+    // empty.
+    if (expected.length > 0 && expected.every((inputName) => declared.has(inputName))) count.withInputs += 1;
     const fields = ciEvidence(body);
     count.ci += fields.findings;
     count.evidence += fields.withEvidence;
