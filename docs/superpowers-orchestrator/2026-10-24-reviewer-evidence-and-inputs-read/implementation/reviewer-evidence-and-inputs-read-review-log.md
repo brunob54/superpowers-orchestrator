@@ -32,3 +32,19 @@ _Invocation 1 — 2026-10-25 — N=4 M=3 — BASE..HEAD b8c9435..1a25f83 — bra
 - [carried task 8 unreadable transcript exit 1] carried — ship-as-is (3/3)
 - [carried task 8 no fixture for unknown or several ranges] carried — ship-as-is (3/3)
 - [carried task 9 short guide line] carried — ship-as-is (3/3)
+
+## Round 2 — Adversarial red-team — opus
+**Reviewers:** M=3, usable 3/3
+**Reviewer verdicts:** r1: 0 Critical, 1 Important, 2 Minor | r2: 0 Critical, 3 Important, 1 Minor | r3: 0 Critical, 2 Important, 2 Minor
+**Sources mapped:** 11/11
+**Reviewer verdict:** 0 Critical, 4 Important, 4 Minor
+**Converged:** no
+### Dispositions
+- [I1] user-decision — the `input partial` rejection reason applies to any gap-form or absence-form Important finding whose report declares the diff partial or omits the declaration, even when every unread range is annotated with unrelated paths and the evidence was read from the checkout file, so a true finding can be rejected with no file read; the fix-reviewed rule reads the same annotated declaration the opposite way (plan-mandated) — at skills/multi-code-review/SKILL.md:990 — clause: Task 4 "Must convey spec 5.2: the controller reads each Critical/Important finding's evidence line against the claim before choosing a disposition, as a text comparison" ← 3/3: r1:I1, r2:I2, r3:I1
+- [I2] user-decision — a fix that no reviewer read (every later report declares the diff partial without qualifying annotations) ships when the verification cap or the addendum bound is spent, and the loop's return carries no signal of it; only the `**Inputs read:**` log lines show it (plan-mandated) — at skills/multi-code-review/SKILL.md:1268-1276 — clause: Task 5 "Addendum re-review rule (wording artifact): a re-review is clean only when it also has a report that passes the fix-reviewed test; one without such a report and" ← 1/3: r2:I1
+- [I3] user-decision — the controller may reject an Important finding as `rejected: evidence (missing)` or `(line differs)` without opening any file, so a true finding from a reviewer that omits the new evidence line can be dropped, and two controllers decide differently (plan-mandated) — at skills/multi-code-review/SKILL.md:983-989 — clause: Task 4 "Must convey spec 5.2: the controller reads each Critical/Important finding's evidence line against the claim before choosing a disposition, as a text comparison" ← 1/3: r2:I3
+- [I4] fixed — verification re-review gave no single reading when unreviewed fixes come from more than one originating round; one sequence under the highest originating round and its lens → eb51fde7 ← 1/3: r3:I2
+- [M1] carried — the fix-reviewed test accepts a reviewer's path annotation on an unread range without checking that the range starts at a `diff --git` header and ends before the next one ← 2/3: r1:M1, r2:M1
+- [M2] carried — a diff with a hunk no reviewer can read whole (a large lockfile) makes every rotating round partial for the inputs-read cause, so the loop never converges early, with no message naming the cause ← 1/3: r1:M2
+- [M3] carried — paging stop clause has no exit when a single line exceeds the Read token cap (refused even at limit 1); harness: tested by the reviewer ← 1/3: r3:M1
+- [M4] carried — the absence form uses the removed text as the grep pattern, so a removed line holding a credential would be copied into the report ← 1/3: r3:M2
