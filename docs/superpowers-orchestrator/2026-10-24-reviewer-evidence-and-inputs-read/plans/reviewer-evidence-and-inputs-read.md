@@ -89,7 +89,7 @@ Test sections 29-33 are code artifacts with one contract, stated here once: ever
   - Verification: test 19 positive check on `skills/dashboard/SKILL.md`, the skills-wide negative check, and `bash tests/dashboard/run-tests.sh`.
 - Test needles in both suites (code artifact): `PAGE_UNTIL_END`, `FULL_PAGE_NOT_END`, `NEXT_AFTER_FULL`, `REFUSAL_NOT_END`, `OLD_PAGE_STOP` replace `PAGE_UNTIL_NO_PARTIAL`; a suite fails when any carrier lacks one of the four positive needles or any skills file still holds the old clause. Verification: Step 2 shows the failures before the edit, Step 4 shows none after.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 In `tests/reviewer-templates/run-tests.sh`, replace the comment and constants block that runs from `# Paging-rule contracts (orchestration issue row 26): every reviewer template` down to and including `PAGE_UNTIL_NO_PARTIAL='until a result carries no PARTIAL notice'` (lines 38-45) with:
 
@@ -192,7 +192,7 @@ bold "5c. Every controller template pages its skill body with the Read tool unti
 
 (Check that `assert_folded_not_contains` exists in that suite with `grep -n "assert_folded_not_contains()" tests/orchestrating-development/run-tests.sh`; when it does not, add it directly below that suite's `assert_folded_contains` definition, with the body of `tests/reviewer-templates/run-tests.sh` lines 160-162.)
 
-- [ ] **Step 2: Run the tests to verify they fail**
+- [x] **Step 2: Run the tests to verify they fail**
 
 Run: `bash tests/reviewer-templates/run-tests.sh 2>&1 | grep -E '  FAIL: |Results'`
 Expected: FAIL lines for `pages until a result returns fewer lines than its limit`, `a full page without a notice is not the end`, `where to read after a full page`, `a refused call is never the end` (three templates and the dashboard), and `no Markdown file under skills/ keeps the old stop clause` naming eight files; `Results: … failed` with a non-zero count.
@@ -200,7 +200,7 @@ Expected: FAIL lines for `pages until a result returns fewer lines than its limi
 Run: `bash tests/orchestrating-development/run-tests.sh 2>&1 | grep -E '  FAIL: |Results'`
 Expected: FAIL lines for the five new 5c assertions on each of the four controller templates.
 
-- [ ] **Step 3: Replace the paragraph in the seven templates and the dashboard step**
+- [x] **Step 3: Replace the paragraph in the seven templates and the dashboard step**
 
 In each of the seven templates, replace the 13-line paragraph that starts `    Open every file this prompt tells you to read with the Read tool, not` and ends `    page or a preview alone.` with:
 
@@ -240,7 +240,7 @@ In `skills/dashboard/SKILL.md`, replace lines 153-156 (from `   their content as
    Never act on a first page alone.
 ```
 
-- [ ] **Step 4: Run the tests to verify they pass**
+- [x] **Step 4: Run the tests to verify they pass**
 
 Run: `bash tests/reviewer-templates/run-tests.sh 2>&1 | grep -E '  FAIL: |Results'`
 Expected: one line, `Results: <n> passed, 0 failed`.
@@ -251,7 +251,7 @@ Expected: one line ending `0 failed`.
 Run: `bash tests/dashboard/run-tests.sh >/dev/null 2>&1; echo "dashboard exit $?"; bash tests/fill-prompt/run-tests.sh >/dev/null 2>&1; echo "fill-prompt exit $?"`
 Expected: `dashboard exit 0` and `fill-prompt exit 0`.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add skills/multi-code-review/reviewer-prompt.md skills/multi-doc-review/reviewer-prompt.md skills/subagent-driven-development/task-reviewer-prompt.md skills/orchestrating-development/doc-review-loop-prompt.md skills/orchestrating-development/code-review-loop-prompt.md skills/orchestrating-development/batch-controller-prompt.md skills/orchestrating-development/plan-writer-prompt.md skills/dashboard/SKILL.md tests/reviewer-templates/run-tests.sh tests/orchestrating-development/run-tests.sh
