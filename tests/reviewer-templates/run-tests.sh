@@ -35,14 +35,21 @@ OWED_LINE='Harness probes owed:'
 GUARD='never logged `user-decision` on the strength of an untested harness claim'
 MARKER='<!-- multi-review report -->'
 PATHSPEC="':(top,exclude)docs/superpowers-orchestrator/*/*-review-log.md'"
-# Paging-rule contracts (orchestration issue row 26): every reviewer template
-# hands its files over to the Read tool by name, forbids a shell command such
-# as `cat`, and ends the paging on a result that carries no PARTIAL notice.
-# `Read the diff file once` is the superseded hand-over wording of the two
-# diff templates: one Read call returns about 25,000 tokens at most, so a
-# large diff is never read "once".
+# Paging-rule contracts (orchestration issue row 26; stop clause changed in
+# release 7.75.0): every reviewer template hands its files over to the Read
+# tool by name, forbids a shell command such as `cat`, and ends the paging on
+# a result that returns fewer lines than its `limit`, or no line at all. A Read
+# that fills its `limit` carries no PARTIAL notice, so "no notice" does not
+# prove the end of the file; the old stop clause is kept only for the
+# negative check of test 19. `Read the diff file once` is the superseded
+# hand-over wording of the two diff templates: one Read call returns about
+# 25,000 tokens at most, so a large diff is never read "once".
 READ_TOOL_NOT_SHELL='with the Read tool, not with a shell command'
-PAGE_UNTIL_NO_PARTIAL='until a result carries no PARTIAL notice'
+PAGE_UNTIL_END='until a result returns fewer lines than its `limit`, or no line because the file is shorter than the offset'
+FULL_PAGE_NOT_END='a result that fills its `limit` is not the end, even when it carries no PARTIAL notice'
+NEXT_AFTER_FULL='Read again at the offset after the last line received, with the same `limit`'
+REFUSAL_NOT_END='a call refused for size returns no line either and is never the end'
+OLD_PAGE_STOP='until a result carries no PARTIAL notice'
 DIFF_ONCE_OLD='Read the diff file once'
 # The paging step's exit when the Read tool refuses a span for size, and the
 # rule for a file the prompt only passes on by path or takes one block from.
@@ -799,11 +806,14 @@ assert_folded_contains "token-efficiency: rule 6 names the PARTIAL notice and th
   'prints a PARTIAL notice naming the next `offset`'
 assert_file_not_contains "token-efficiency: no '2,000 lines' claim remains" "$TOKEN_EFFICIENCY_SKILL" '2,000 lines'
 
-bold "19. Every reviewer template pages its files with the Read tool until no PARTIAL notice remains"
+bold "19. Every reviewer template pages its files with the Read tool until a result returns fewer lines than its limit"
 # Row 26 measured 22 partial Read views on two transcripts, all by reviewers
 # or a code-review controller, and 21 of 21 controller `cat` calls persisted
 # to a 2 KB preview. The paging rule stands inside each prompt block (the only
 # part the fill script copies), directly after the hand-over sentence.
+# Release 7.75.0: a Read with an explicit `limit` that fills it prints no
+# PARTIAL notice, so the old stop clause ended the paging of a file of three
+# or more pages on its second page.
 PAGING_TEMPLATES=("$CODE_PROMPT" "$SDD_TASK_REVIEWER" "$DOC_PROMPT")
 for f in "${PAGING_TEMPLATES[@]}"; do
   name="${f#"$ROOT"/skills/}"
@@ -811,13 +821,30 @@ for f in "${PAGING_TEMPLATES[@]}"; do
   extract_prompt_body "$f" > "$body"
   if [ -s "$body" ]; then ok "$name: prompt body extract is non-empty"; else bad "$name: prompt body extract is empty (no '$PROMPT_OPEN' block)"; fi
   assert_folded_contains "$name: prompt body names the Read tool and forbids a shell command" "$body" "$READ_TOOL_NOT_SHELL"
-  assert_folded_contains "$name: prompt body pages until no PARTIAL notice remains" "$body" "$PAGE_UNTIL_NO_PARTIAL"
+  assert_folded_contains "$name: prompt body pages until a result returns fewer lines than its limit" "$body" "$PAGE_UNTIL_END"
+  assert_folded_contains "$name: prompt body says a full page without a notice is not the end" "$body" "$FULL_PAGE_NOT_END"
+  assert_folded_contains "$name: prompt body says where to read after a full page" "$body" "$NEXT_AFTER_FULL"
+  assert_folded_contains "$name: prompt body says a refused call is never the end" "$body" "$REFUSAL_NOT_END"
   assert_folded_contains "$name: prompt body halves the limit when a call is refused for size" "$body" "$HALVE_ON_REFUSAL"
   assert_folded_contains "$name: prompt body exempts a file only passed on by path" "$body" "$PASS_ON_BY_PATH"
 done
 for f in "$CODE_PROMPT" "$SDD_TASK_REVIEWER"; do
   assert_folded_not_contains "${f#"$ROOT"/skills/}: no longer says '$DIFF_ONCE_OLD'" "$f" "$DIFF_ONCE_OLD"
 done
+# The dashboard skill reads its own page files with the same stop clause.
+DASHBOARD_SKILL="$ROOT/skills/dashboard/SKILL.md"
+assert_folded_contains "dashboard SKILL.md: pages until a result returns fewer lines than its limit" "$DASHBOARD_SKILL" "$PAGE_UNTIL_END"
+assert_folded_contains "dashboard SKILL.md: a full page without a notice is not the end" "$DASHBOARD_SKILL" "$FULL_PAGE_NOT_END"
+assert_folded_contains "dashboard SKILL.md: where to read after a full page" "$DASHBOARD_SKILL" "$NEXT_AFTER_FULL"
+assert_folded_contains "dashboard SKILL.md: a refused call is never the end" "$DASHBOARD_SKILL" "$REFUSAL_NOT_END"
+# The old clause is absent from every Markdown file under skills/. The text is
+# folded, because a carrier can wrap the clause across a line break.
+find "$ROOT/skills" -name '*.md' | sort > "$WORK/skill-md-files.txt"
+OLD_STOP_FILES=""
+while IFS= read -r f; do
+  if fold_file "$f" | grep -qF -- "$OLD_PAGE_STOP"; then OLD_STOP_FILES="$OLD_STOP_FILES ${f#"$ROOT"/}"; fi
+done < "$WORK/skill-md-files.txt"
+assert_eq "no Markdown file under skills/ keeps the old stop clause '$OLD_PAGE_STOP'" "$OLD_STOP_FILES" ""
 
 bold "20. The SDD per-task flow names both worker templates in the steps that dispatch them"
 # Row 28: the implementer step named no template while the reviewer step did,
