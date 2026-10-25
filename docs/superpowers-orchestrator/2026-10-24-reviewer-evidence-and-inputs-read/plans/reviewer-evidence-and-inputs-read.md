@@ -1475,7 +1475,7 @@ git commit -m "feat(multi-doc-review): evidence triage rule and inputs-read decl
 - `tests/count-report-fields/run-tests.sh` (code artifact): loads `tests/lib/undefined-command-guard.sh` within its first 45 lines; fails when any expected line differs. Verification: Step 2 (fails without the script), Step 4 (passes), `bash tests/suite-guard/run-tests.sh`.
 - `MIN_GUARDED_SUITES` (code artifact): 21. Verification: `bash tests/suite-guard/run-tests.sh` passes with 21 suites.
 
-- [ ] **Step 1: Write the fixtures and the failing suite**
+- [x] **Step 1: Write the fixtures and the failing suite**
 
 Create `tests/count-report-fields/fixtures/review-log.md`:
 
@@ -1674,12 +1674,12 @@ MIN_GUARDED_SUITES=21
 
 (Check the exact current wording first with `sed -n 60,67p tests/suite-guard/run-tests.sh`.)
 
-- [ ] **Step 2: Run the suite to verify it fails**
+- [x] **Step 2: Run the suite to verify it fails**
 
 Run: `bash tests/count-report-fields/run-tests.sh 2>&1 | grep -E '  FAIL: |Results'`
 Expected: FAIL lines for every check of section 1 (node cannot find `tools/count-report-fields.js`, so the exit code is 1 and the output is empty), for the three section-2 exit-code checks (node exits 1, not 2) and for the `prints the usage line` checks; `Results: … failed`.
 
-- [ ] **Step 3: Write the script**
+- [x] **Step 3: Write the script**
 
 Create `tools/count-report-fields.js`:
 
@@ -1955,7 +1955,7 @@ bash tests/count-report-fields/run-tests.sh  # tools/count-report-fields.js: rev
 
 `CLAUDE.md` is git-ignored (`.gitignore:7`): this edit stays on disk and does not ship with the branch. When `CLAUDE.md` does not exist in the working folder (a fresh clone or a separate worktree), skip this edit, never create the file, and name the skipped edit in the task report.
 
-- [ ] **Step 4: Run the suites to verify they pass**
+- [x] **Step 4: Run the suites to verify they pass**
 
 Run: `bash tests/count-report-fields/run-tests.sh 2>&1 | grep -E '  FAIL: |Results'`
 Expected: one line, `Results: 11 passed, 0 failed`.
@@ -1963,7 +1963,7 @@ Expected: one line, `Results: 11 passed, 0 failed`.
 Run: `bash tests/suite-guard/run-tests.sh 2>&1 | grep -E '  FAIL: |Results|found [0-9]+ suites|count-report-fields'`
 Expected: no FAIL line; a PASS line names `tests/count-report-fields/run-tests.sh`, and a PASS line reads `… found 21 suites that must load the guard` (20 today, measured 2026-10-25, plus the new suite).
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add tools/count-report-fields.js tests/count-report-fields/run-tests.sh tests/count-report-fields/fixtures tests/suite-guard/run-tests.sh
