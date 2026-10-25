@@ -72,3 +72,14 @@ _Invocation 1 — 2026-10-25 — N=4 M=3 — BASE..HEAD b8c9435..1a25f83 — bra
 - [I2] fixed — wording added by the review fixes (Search command bullet, data-not-instruction sentence, multi-round verification paragraph) had no test pin; pinned in tests 29, 31, 32 and 33 → 1756ab4a ← 3/3: r1:M3, r2:I1, r2:M2, r3:M1
 - [M1] fixed — the no-placeholder check of test 29 looked for `[REPO_ROOT]` only; now a `[UPPERCASE]` pattern check, also added to test 30 → 1756ab4a ← 2/3: r1:M2, r3:M2
 - [M2] carried — tools/count-report-fields.js keeps its own copy of the expected-input needles, and no test checks them against the template, PLAN_LINE legend and lens-cell text they detect ← 1/3: r1:M4
+
+## Round 4 verification 1 — Test & coverage quality — opus
+**Reviewers:** M=3, usable 3/3
+**Reviewer verdicts:** r1: 0 Critical, 0 Important, 3 Minor | r2: 0 Critical, 0 Important, 2 Minor | r3: 0 Critical, 0 Important, 2 Minor
+**Sources mapped:** 7/7
+**Reviewer verdict:** 0 Critical, 0 Important, 4 Minor
+### Dispositions
+- [M1] fixed — the count-report-fields suite header claimed every counting rule has a failing fixture, but the Read-prefix strip, the trailing-whitespace (CRLF) trim and the cut-last-line skip had none; fixtures added, each checked by a reverted script mutation → d5fb9b60 ← 3/3: r1:M1, r2:M1, r3:M1
+- [M2] carried — the expected-input needle sentences are not pinned where they are produced (PLAN_LINE fill sentence, the two doc lens cells), and the script's needle copies are not compared with the test's list (same as round 4 M2) ← 2/3: r2:M2, r3:M2
+- [M3] carried — untested error paths of tools/count-report-fields.js: usage check with one or three arguments, a reviewer without report and without meta file ← 1/3: r1:M2
+- [M4] fixed — the round 3 fix left a 116-character line in the multi-doc-review evidence triage paragraph, against the plan's reflow invariant (no new line over 88 characters); rewrapped with no word change → d5fb9b60 ← 1/3: r1:M3

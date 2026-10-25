@@ -51,3 +51,21 @@ Covering tests:
     bash tests/reviewer-templates/run-tests.sh -> Results: 541 passed, 0 failed
     bash tests/suite-guard/run-tests.sh -> Results: 140 passed, 0 failed
     bash tests/in-run-rulings/run-tests.sh -> Results: 891 passed, 0 failed
+
+## Round 4
+
+Findings addressed: M1, M4.
+
+- M1: tests/count-report-fields/fixtures/subagents/pointer-reviewer.jsonl now wraps the plan needle across two numbered Read lines (`5<TAB>Plan/requirements the branch implements`, `6<TAB>(read it first): ...`). New fixtures crlf-report.jsonl (report with CRLF line ends, `- diff: whole` must count) and cut-last-line.jsonl (last JSONL line cut). Expected counts in tests/count-report-fields/run-tests.sh updated (14 reviewers, 12 reports, 8 with inputs, diff 8/10); header comment lists the three new fixtures. tools/count-report-fields.js not changed.
+- Mutations tried on a temporary copy of the script (copy deleted afterwards):
+  - stripReadPrefixes removed (`line.replace(READ_LINE_PREFIX_RE, '')` -> `line`): output line 2 becomes `plan 1/3` instead of `plan 2/4` -> suite fails.
+  - trailing-whitespace trim of report lines removed: `with-inputs-read: 7` and `diff 7/10` instead of 8 and 8/10 -> suite fails.
+  - skip of an unparseable JSONL line removed (the catch no longer reached): node stops with an uncaught SyntaxError -> suite fails.
+- M4: skills/multi-doc-review/SKILL.md lines 517-526 (`**Evidence line.**` paragraph) rewrapped, no word change. Before: `awk 'length($0)>88'` listed 517 (89), 520 (116) in lines 500-545 (512 and 544/545 were over 88 before the round-3 commit and stay). After: only 512 (90) and 545 (102) remain over 88 in that range, neither in the changed lines. File is 1073 lines (limit 1080).
+
+Covering tests:
+
+    bash tests/count-report-fields/run-tests.sh -> Results: 12 passed, 0 failed
+    bash tests/reviewer-templates/run-tests.sh -> Results: 541 passed, 0 failed
+    bash tests/review-gates/run-tests.sh -> Results: 142 passed, 0 failed
+    bash tests/in-run-rulings/run-tests.sh -> Results: 891 passed, 0 failed
