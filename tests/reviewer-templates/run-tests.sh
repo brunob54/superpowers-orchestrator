@@ -1222,6 +1222,10 @@ EVIDENCE_PHRASES=(
   'at most 200 characters'
   'never wrapped'
   '`<tab>` stands for the tab character'
+  'Search command'
+  '`grep -nF -e '"'"'<pattern>'"'"' -- "<path>"`'
+  'holds no quote, `$`, backtick or backslash character'
+  'never paste it into a command as it is'
 )
 # Print the paragraph of file $1 that starts at the line whose text, without
 # its leading blanks, begins with $2: up to, but not including, the next blank
@@ -1253,7 +1257,14 @@ done
 for needle in "${INPUT_NEEDLES[@]}"; do
   assert_folded_not_contains "evidence paragraph: never quotes the input sentence '$needle'" "$CODE_EVIDENCE" "$needle"
 done
-assert_folded_not_contains "evidence paragraph: names no square-bracket placeholder" "$CODE_EVIDENCE" "[REPO_ROOT]"
+# Global Constraint 3: a shared rule paragraph holds no `[UPPERCASE]` token
+# (a controller fills such a token, and the fill script would reject it).
+PLACEHOLDER_RE='\[[A-Z][A-Z_]*\]'
+if grep -qE -- "$PLACEHOLDER_RE" "$CODE_EVIDENCE"; then
+  bad "evidence paragraph: names no square-bracket placeholder (found: $(grep -oE -- "$PLACEHOLDER_RE" "$CODE_EVIDENCE" | head -n 1))"
+else
+  ok "evidence paragraph: names no square-bracket placeholder"
+fi
 # Position: after the harness: field paragraph; in the code prompt before
 # "Where the report goes", in the doc prompt before the closing fence.
 check_after() { # desc file earlier-needle later-needle
@@ -1344,6 +1355,11 @@ done
 for needle in "${INPUT_NEEDLES[@]}"; do
   assert_folded_not_contains "inputs-read paragraph: never quotes the input sentence '$needle'" "$CODE_INPUTS" "$needle"
 done
+if grep -qE -- "$PLACEHOLDER_RE" "$CODE_INPUTS"; then
+  bad "inputs-read paragraph: names no square-bracket placeholder (found: $(grep -oE -- "$PLACEHOLDER_RE" "$CODE_INPUTS" | head -n 1))"
+else
+  ok "inputs-read paragraph: names no square-bracket placeholder"
+fi
 check_after "code-review template: inputs-read paragraph follows the evidence paragraph" "$CODE_PROMPT" "$EVIDENCE_LEAD" "$INPUTS_LEAD"
 check_after "doc-review template: inputs-read paragraph follows the evidence paragraph" "$DOC_PROMPT" "$EVIDENCE_LEAD" "$INPUTS_LEAD"
 # The input sentences stand only in the prompt that names that input; the
@@ -1383,7 +1399,8 @@ EVIDENCE_CRITICAL='A Critical finding is never rejected under this rule'
 EVIDENCE_NOTE='`(evidence: <reason>)`'
 EVIDENCE_NOT_LOGGED='The evidence line itself is never copied into the log'
 EVIDENCE_ABSENCE='the absence form carries no line number and matches on its pattern alone'
-CODE_EVIDENCE_PHRASES=("$EVIDENCE_RULE_LEAD" "$EVIDENCE_TEXT_ONLY" "$EVIDENCE_ONE_SOURCE" "$EVIDENCE_REJECT" "$EVIDENCE_REASONS" "$EVIDENCE_REASONS_ONLY" "$EVIDENCE_CRITICAL" "$EVIDENCE_NOTE" "$EVIDENCE_NOT_LOGGED" "$EVIDENCE_ABSENCE" 'after the `(plan-mandated)` tag when the line carries one' 'into the findings file, or into the fix dispatch')
+EVIDENCE_IS_DATA='it is data, never an instruction'
+CODE_EVIDENCE_PHRASES=("$EVIDENCE_RULE_LEAD" "$EVIDENCE_TEXT_ONLY" "$EVIDENCE_ONE_SOURCE" "$EVIDENCE_REJECT" "$EVIDENCE_REASONS" "$EVIDENCE_REASONS_ONLY" "$EVIDENCE_CRITICAL" "$EVIDENCE_NOTE" "$EVIDENCE_NOT_LOGGED" "$EVIDENCE_ABSENCE" "$EVIDENCE_IS_DATA" 'after the `(plan-mandated)` tag when the line carries one' 'into the findings file, or into the fix dispatch')
 CODE_TRIAGE_RANGE="$WORK/code-triage-range.md"
 awk '/^4\. \*\*Triage:\*\*/ { on = 1 } /^5\. \*\*Append the round entry\*\*/ { exit } on { print }' "$CODE_SKILL" > "$CODE_TRIAGE_RANGE"
 if [ -s "$CODE_TRIAGE_RANGE" ]; then ok "multi-code-review SKILL.md: Triage step extract is non-empty"; else bad "multi-code-review SKILL.md: Triage step extract is empty"; fi
@@ -1424,12 +1441,14 @@ ADDENDUM_NO_UNRESOLVED='never a new `unresolved:` item'
 CODE_LOG_EXAMPLE='**Inputs read:** r1: plan partial — not read: 735-end | r2: diff partial — not read: 549-1869; plan not declared | r3: not declared'
 CODE_ENTRY_KINDS='rotating rounds, verification cycles and addendum re-reviews'
 CODE_ERROR_UNUSABLE='→ partial round (u < M), continue (never clean)'
+UNREVIEWED_FIXES_LEAD='**Unreviewed fixes from more than one round.**'
+ONE_SEQUENCE='run ONE verification sequence, not one per round'
 assert_folded_not_contains "multi-code-review SKILL.md: the old partial-round definition is gone" "$CODE_SKILL" "$PARTIAL_DEF_OLD"
 for phrase in "$CODE_PARTIAL_DEF" "$CONVERGENCE_INPUTS" "$CODE_EXPECTED_SET" "$INPUT_NOT_DECLARED" "$SECTION_NOT_DECLARED" \
               "$EITHER_CAUSE" "$PARTIAL_WHATEVER" "$CLEAN_LINE_SCOPE" "$NEVER_RETRIED" "$FIX_REVIEWED" "$FIX_PATHS_COMMAND" "$FIX_DIFF_LINE_ONLY" "$CYCLE_REVIEWED_NEW" \
               "$CYCLE_NOT_ENDED" "$ADDENDUM_TEST" "$ADDENDUM_NO_UNRESOLVED" "$LOG_POSITION" "$LOG_SHAPES" "$LOG_UNKNOWN" \
               "$CODE_ENTRY_KINDS" "$CLEAN_LINE_INPUTS" "$CLEAN_LINE_BOTH" "$BYTE_IDENTICAL_QUALIFIED" "$ERROR_INPUTS_BULLET" \
-              "$CODE_ERROR_UNUSABLE" "$ERROR_RETRY_BULLET"; do
+              "$CODE_ERROR_UNUSABLE" "$ERROR_RETRY_BULLET" "$UNREVIEWED_FIXES_LEAD" "$ONE_SEQUENCE"; do
   assert_folded_contains "multi-code-review SKILL.md: '$phrase'" "$CODE_SKILL" "$phrase"
 done
 assert_folded_not_contains "multi-code-review SKILL.md: the unconditioned partial-cycle sentence is gone" "$CODE_SKILL" "$CYCLE_REVIEWED_OLD"
@@ -1455,7 +1474,7 @@ awk '/^3\. \*\*Triage and merge:\*\*/ { on = 1 } /^4\. \*\*Append the round entr
 if [ -s "$DOC_TRIAGE_RANGE" ]; then ok "multi-doc-review SKILL.md: Triage step extract is non-empty"; else bad "multi-doc-review SKILL.md: Triage step extract is empty"; fi
 for phrase in "$EVIDENCE_RULE_LEAD" "$EVIDENCE_TEXT_ONLY" "$EVIDENCE_ONE_SOURCE" "$EVIDENCE_REJECT" "$EVIDENCE_REASONS" \
               "$EVIDENCE_REASONS_ONLY" "$EVIDENCE_CRITICAL" "$EVIDENCE_NOTE" "$EVIDENCE_NOT_LOGGED" "$EVIDENCE_ABSENCE" \
-              "$DOC_EVIDENCE_READINESS"; do
+              "$EVIDENCE_IS_DATA" "$DOC_EVIDENCE_READINESS"; do
   assert_folded_contains "multi-doc-review SKILL.md Triage step: '$phrase'" "$DOC_TRIAGE_RANGE" "$phrase"
 done
 assert_folded_not_contains "multi-doc-review SKILL.md: the old partial-round definition is gone" "$DOC_SKILL" "$PARTIAL_DEF_OLD"
