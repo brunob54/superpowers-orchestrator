@@ -282,7 +282,7 @@ git commit -m "fix(paging): stop paging on a short or empty Read result, not on 
 - Reviewer returns lists (wording artifact): both name the `evidence:` line under each Critical and Important finding. Verification: test 29, on the text from the `**Reviewer returns:**` line to the end of each file only.
 - Edit sites and Global Constraint 2: the code prompt's reference sentence (spec 5.4) and the two **Reviewer returns** lists (spec 5.1, last paragraph, and spec 9) are edits the spec requires, and none of them is a pinned span. The Reviewer returns lists stand after the closing fence; Global Constraint 2 forbids only a new heading there ("New text adds no heading after the closing fence"), and these edits add none. Task 3 edits the same lists under the same reading.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Add this section to `tests/reviewer-templates/run-tests.sh`, directly above the final `echo` / `bold "Results: …"` lines:
 
@@ -401,12 +401,12 @@ assert_folded_contains "doc-review template: Reviewer returns names the evidence
 
 (`CODE_BODY` is the code prompt body that test 22 already extracts; `first_line_of`, `fence_after`, `extract_prompt_body`, `assert_file_has_line` and the folded assertions are defined near the top of the file.)
 
-- [ ] **Step 2: Run the tests to verify they fail**
+- [x] **Step 2: Run the tests to verify they fail**
 
 Run: `bash tests/reviewer-templates/run-tests.sh 2>&1 | grep -E '  FAIL: |Results'`
 Expected: FAIL lines for every test-29 check except the `never quotes the input sentence` checks, the `names no square-bracket placeholder` check and the two `holds no literal tab character` checks (those pass already, because the paragraph is still absent), and the two `Reviewer returns extract is non-empty` checks (the lists exist already); `Results: … failed` with a non-zero count.
 
-- [ ] **Step 3: Edit both prompts**
+- [x] **Step 3: Edit both prompts**
 
 Code prompt, `## Output format`: replace the Critical example line `    - [C1] file:line — <what is wrong> | <why it matters> | <suggested fix>` with the two lines
 
@@ -504,7 +504,7 @@ doc-section references, and the `evidence:` line under each Critical and
 Important finding.
 ```
 
-- [ ] **Step 4: Run the tests to verify they pass**
+- [x] **Step 4: Run the tests to verify they pass**
 
 Run: `bash tests/reviewer-templates/run-tests.sh 2>&1 | grep -E '  FAIL: |Results'`
 Expected: one line, `Results: <n> passed, 0 failed` (test 24's `in this checkout` count of 2 and test 25's no-heading check included).
@@ -512,7 +512,7 @@ Expected: one line, `Results: <n> passed, 0 failed` (test 24's `in this checkout
 Run: `bash tests/fill-prompt/run-tests.sh 2>&1 | grep -E '  FAIL: |Results'`
 Expected: no FAIL line (the filled code prompt still ends on the template's last body line and holds no leftover placeholder).
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add skills/multi-code-review/reviewer-prompt.md skills/multi-doc-review/reviewer-prompt.md tests/reviewer-templates/run-tests.sh
