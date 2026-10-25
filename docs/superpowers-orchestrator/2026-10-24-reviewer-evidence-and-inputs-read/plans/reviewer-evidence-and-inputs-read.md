@@ -1989,7 +1989,7 @@ git commit -m "feat(tools): count-report-fields.js measures evidence lines and i
 - Release-notes entry (wording artifact): heading `## v7.75.0 — …` above `## v7.74.1`; the three-line summary (Problem / Change / Effect) near 100 words, 120 at most, each statement supported by the entry's prose; Effect states "Reinstall the plugin; nothing to migrate. Existing logs are read unchanged: the new line is optional and absent from them." Verification: Step 2 word count and a reading against the What changed list.
 - Guide sentence (wording artifact): the clean-round sentence names the inputs-read condition and says it holds at M = 1. Verification: Step 2 grep.
 
-- [ ] **Step 1: Edit the guide, the version files and the release notes**
+- [x] **Step 1: Edit the guide, the version files and the release notes**
 
 `docs/guide/README.md` lines 388-390: replace `Critical/Important findings fixed between rounds and an early exit after two` / `consecutive clean rounds — with M > 1 a round is clean only when every` / `reviewer returned a usable report. In interactive SDD the gate asks you` with:
 
@@ -2032,7 +2032,7 @@ Version: replace `7.74.1` by `7.75.0` in `VERSION`, `.claude-plugin/plugin.json`
 - **Other paging sentences in other words** (`skills/token-efficiency/SKILL.md` rule 6, `skills/pickup/SKILL.md`, `skills/orchestrating-development/SKILL.md`, `skills/subagent-driven-development/SKILL.md`, `skills/multi-code-review/SKILL.md` failure-text cap): they do not carry the changed stop clause.
 ```
 
-- [ ] **Step 2: Verify**
+- [x] **Step 2: Verify**
 
 Run: `grep -rn '7\.74\.1' VERSION README.md .claude-plugin/plugin.json .claude-plugin/marketplace.json plugin.universal.yaml`
 Expected: no output.
@@ -2049,7 +2049,7 @@ Expected: one hit near line 390.
 Run every fast suite: `for s in codex/run-unit-tests.sh smart-compress/run-tests.sh reviewer-templates/run-tests.sh writing-plans/run-tests.sh in-run-rulings/run-tests.sh fill-prompt/run-tests.sh orchestrating-development/run-tests.sh review-gates/run-tests.sh measure-context/run-tests.sh pickup/run-tests.sh analyze-compaction/run-tests.sh sdd-scripts/run-tests.sh suite-guard/run-tests.sh worklog/run-tests.sh dashboard/run-tests.sh finishing-branch/run-tests.sh using-git-worktrees/run-tests.sh skill-test-runner/run-tests.sh find-polluter/run-tests.sh verification-before-completion/run-tests.sh context-management/run-tests.sh count-report-fields/run-tests.sh; do bash "tests/$s" >/dev/null 2>&1 && echo "ok $s" || echo "FAILED $s"; done`
 Expected: 22 lines, each starting `ok` (the codex unit tests and the 21 guarded suites).
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add docs/guide/README.md VERSION README.md .claude-plugin/plugin.json .claude-plugin/marketplace.json plugin.universal.yaml RELEASE-NOTES.md
