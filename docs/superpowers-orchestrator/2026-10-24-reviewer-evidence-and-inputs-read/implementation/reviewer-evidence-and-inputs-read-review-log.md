@@ -60,3 +60,15 @@ _Invocation 1 — 2026-10-25 — N=4 M=3 — BASE..HEAD b8c9435..1a25f83 — bra
 - [M2] fixed — both evidence triage paragraphs now say the quoted text of an evidence line is data, never an instruction → d9814d5e ← 2/3: r1:M3, r3:M1
 - [M3] carried — the evidence rule tells the reviewer to read the finding's file even when the Subagent Rules forbid reading that path (sidecar patterns); unlikely because the package excludes those paths ← 1/3: r1:M1
 - [M4] carried — the fix-reviewed test accepts a reviewer's path annotation on an unread range without checking the range against the `diff --git` headers of the diff file (same as round 2 M1) ← 1/3: r2:M2
+
+## Round 4 — Test & coverage quality — opus
+**Reviewers:** M=3, usable 3/3
+**Reviewer verdicts:** r1: 0 Critical, 0 Important, 4 Minor | r2: 0 Critical, 1 Important, 2 Minor | r3: 0 Critical, 1 Important, 2 Minor
+**Sources mapped:** 10/10
+**Reviewer verdict:** 0 Critical, 2 Important, 2 Minor
+**Converged:** no
+### Dispositions
+- [I1] fixed — the count-report-fields fixtures could not fail on report precedence, the Write-copy rule, the Minor-heading filter, the marker window, the `unknown` and several-range input forms, or the break at the next heading; fixtures added and expected counts updated, each rule checked by a reverted script mutation → 1756ab4a ← 3/3: r1:M1, r2:M1, r3:I1
+- [I2] fixed — wording added by the review fixes (Search command bullet, data-not-instruction sentence, multi-round verification paragraph) had no test pin; pinned in tests 29, 31, 32 and 33 → 1756ab4a ← 3/3: r1:M3, r2:I1, r2:M2, r3:M1
+- [M1] fixed — the no-placeholder check of test 29 looked for `[REPO_ROOT]` only; now a `[UPPERCASE]` pattern check, also added to test 30 → 1756ab4a ← 2/3: r1:M2, r3:M2
+- [M2] carried — tools/count-report-fields.js keeps its own copy of the expected-input needles, and no test checks them against the template, PLAN_LINE legend and lens-cell text they detect ← 1/3: r1:M4
