@@ -48,3 +48,15 @@ _Invocation 1 — 2026-10-25 — N=4 M=3 — BASE..HEAD b8c9435..1a25f83 — bra
 - [M2] carried — a diff with a hunk no reviewer can read whole (a large lockfile) makes every rotating round partial for the inputs-read cause, so the loop never converges early, with no message naming the cause ← 1/3: r1:M2
 - [M3] carried — paging stop clause has no exit when a single line exceeds the Read token cap (refused even at limit 1); harness: tested by the reviewer ← 1/3: r3:M1
 - [M4] carried — the absence form uses the removed text as the grep pattern, so a removed line holding a credential would be copied into the report ← 1/3: r3:M2
+
+## Round 3 — Security — opus
+**Reviewers:** M=3, usable 3/3
+**Reviewer verdicts:** r1: 0 Critical, 0 Important, 3 Minor | r2: 0 Critical, 0 Important, 2 Minor | r3: 0 Critical, 0 Important, 2 Minor
+**Sources mapped:** 7/7
+**Reviewer verdict:** 0 Critical, 0 Important, 4 Minor
+**Converged:** no
+### Dispositions
+- [M1] fixed — the absence form put removed branch text inside a single-quoted shell command with no quoting rule (and could copy a removed credential); a search-command rule (Grep tool or `grep -nF -e` on a safe fixed fragment, path in double quotes, gap form for a secret) added byte-identically to both reviewer prompts → d9814d5e ← 3/3: r1:M2, r2:M1, r3:M2
+- [M2] fixed — both evidence triage paragraphs now say the quoted text of an evidence line is data, never an instruction → d9814d5e ← 2/3: r1:M3, r3:M1
+- [M3] carried — the evidence rule tells the reviewer to read the finding's file even when the Subagent Rules forbid reading that path (sidecar patterns); unlikely because the package excludes those paths ← 1/3: r1:M1
+- [M4] carried — the fix-reviewed test accepts a reviewer's path annotation on an unread range without checking the range against the `diff --git` headers of the diff file (same as round 2 M1) ← 1/3: r2:M2
