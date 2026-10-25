@@ -762,7 +762,8 @@ bold "16. multi-doc-review SKILL.md stays inside its size budget"
 # 938 the design document names, because the plan review added five
 # corrections whose prose the smaller figure could not hold. A further
 # addition must first recover lines by reflowing, per the plan's Global
-# Constraint 1.
+# Constraint 1. Release 7.75.0 reflowed prose to 88 columns before it added
+# the evidence-line and inputs-read rules.
 MDR_MAX_LINES=1080
 MDR_LINES="$(awk 'END { print NR }' "$DOC_SKILL")"
 if [ "$MDR_LINES" -le "$MDR_MAX_LINES" ]; then
@@ -1441,6 +1442,32 @@ assert_file_has_line "multi-code-review SKILL.md: the Inputs read log example li
 # (Deviation 5); it carries the second trigger for re-review 2 too.
 CODE_LOOP_TEMPLATE="$ROOT/skills/orchestrating-development/code-review-loop-prompt.md"
 assert_folded_contains "code-review-loop-prompt.md: re-review 2 also follows a re-review 1 without a passing report" "$CODE_LOOP_TEMPLATE" 'or when no usable report of re-review 1 passes the skill'"'"'s "No fix ships unreviewed" test'
+
+bold "33. multi-doc-review: the evidence triage rule and the inputs-read rules (release 7.75.0)"
+DOC_PARTIAL_DEF="$PARTIAL_DEF_HEAD (inputs read, step 5)"
+DOC_EXPECTED_SET='The expected set is `document`, plus `spec` when the lens text you pasted into `[LENS_INSTRUCTIONS]` contains the words `read the spec listed under Target`'
+DOC_SETTLED_UNCHANGED='A readiness pass keeps its *settled* rule unchanged'
+DOC_EVIDENCE_READINESS='a readiness finding is disposed under `Triage of a readiness finding`'
+DOC_LOG_EXAMPLE='**Inputs read:** r1: spec partial — not read: 735-end | r2: document partial — not read: 549-1069; spec not declared | r3: not declared'
+DOC_ENTRY_KINDS='rotating rounds and readiness passes'
+DOC_TRIAGE_RANGE="$WORK/doc-triage-range.md"
+awk '/^3\. \*\*Triage and merge:\*\*/ { on = 1 } /^4\. \*\*Append the round entry\*\*/ { exit } on { print }' "$DOC_SKILL" > "$DOC_TRIAGE_RANGE"
+if [ -s "$DOC_TRIAGE_RANGE" ]; then ok "multi-doc-review SKILL.md: Triage step extract is non-empty"; else bad "multi-doc-review SKILL.md: Triage step extract is empty"; fi
+for phrase in "$EVIDENCE_RULE_LEAD" "$EVIDENCE_TEXT_ONLY" "$EVIDENCE_ONE_SOURCE" "$EVIDENCE_REJECT" "$EVIDENCE_REASONS" \
+              "$EVIDENCE_REASONS_ONLY" "$EVIDENCE_CRITICAL" "$EVIDENCE_NOTE" "$EVIDENCE_NOT_LOGGED" "$EVIDENCE_ABSENCE" \
+              "$DOC_EVIDENCE_READINESS"; do
+  assert_folded_contains "multi-doc-review SKILL.md Triage step: '$phrase'" "$DOC_TRIAGE_RANGE" "$phrase"
+done
+assert_folded_not_contains "multi-doc-review SKILL.md: the old partial-round definition is gone" "$DOC_SKILL" "$PARTIAL_DEF_OLD"
+for phrase in "$DOC_PARTIAL_DEF" "$CONVERGENCE_INPUTS" "$DOC_EXPECTED_SET" "$INPUT_NOT_DECLARED" "$SECTION_NOT_DECLARED" \
+              "$EITHER_CAUSE" "$PARTIAL_WHATEVER" "$CLEAN_LINE_SCOPE" "$NEVER_RETRIED" "$DOC_SETTLED_UNCHANGED" "$LOG_POSITION" "$LOG_SHAPES" "$LOG_UNKNOWN" \
+              "$DOC_ENTRY_KINDS" "$CLEAN_LINE_INPUTS" "$CLEAN_LINE_BOTH" "$BYTE_IDENTICAL_QUALIFIED" "$ERROR_INPUTS_BULLET" \
+              "$ERROR_RETRY_BULLET"; do
+  assert_folded_contains "multi-doc-review SKILL.md: '$phrase'" "$DOC_SKILL" "$phrase"
+done
+assert_file_has_line "multi-doc-review SKILL.md: the Inputs read log example line" "$DOC_SKILL" "$DOC_LOG_EXAMPLE"
+assert_folded_not_contains "multi-doc-review SKILL.md: the u = M-only clean-round sentence is gone" "$DOC_SKILL" 'A clean round (zero findings, with u = M) writes'
+assert_folded_not_contains "multi-doc-review SKILL.md: the u = M-only Sources mapped parenthesis is gone" "$DOC_SKILL" 'A clean round (u = M, empty consolidated set)'
 
 echo
 bold "Results: $PASS passed, $FAIL failed"

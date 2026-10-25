@@ -394,9 +394,11 @@ invocation, or the resumed range above for a resume):
    retries, *u* = the number of usable reports. u = 0 → log the round as `inconclusive`
    (nothing is triaged, the clean streak is broken) and continue to the next round. u ≥
    1 → build one **consolidated finding set** from the usable reports by the rules
-   below, then continue; a round with u < M is *partial* — it is logged with its counts
-   and is never clean. With M = 1 the consolidated set is the report's enumeration with
-   its original ids, unchanged.
+   below, then continue; a round is *partial* when fewer than M reviewers returned a
+   usable report (u < M) or when a usable report does not declare every expected input
+   `whole` (inputs read, step 5) — it is logged with its counts and is never clean. With
+   M = 1 the consolidated set is the report's enumeration with its original ids,
+   unchanged.
    1. Enumeration is the source of truth: findings come from each report's enumerated
       findings, never from its count line.
    2. Union: every enumerated finding of every usable report appears in the set, on its
@@ -510,6 +512,27 @@ invocation, or the resumed range above for a resume):
       finding is either applied to the document or `rejected: <reason>` — never silently
       dropped. Minor findings: apply at your discretion; log all dispositions either
       way.
+   **Evidence line.** Before you choose the disposition of a Critical or Important
+   finding, read its `evidence:` line against the finding's claim — a text comparison
+   inside the report; open no file for it. With M ≥ 2 read each source's line in its own
+   report; the finding matches when at least one source's line matches. A presence or
+   gap line matches when its quoted text shows the defect (in the gap form, the text the
+   finding says is incomplete) and, for a line or range location, its number is that
+   line or lies inside the range; the absence form carries no line number and matches on
+   its pattern alone, when the pattern describes the missing thing; the secret form
+   matches on its number alone, the removed-file form on its path alone. A finding with
+   a `harness:` field needs no evidence line; the harness procedure runs first. A
+   finding whose line is missing or matches in no source is triaged normally (applied,
+   or `rejected: <reason>` on its merits); you may instead reject such an **Important**
+   finding as `rejected: evidence (<reason>)`, the parenthesis holding one of five fixed
+   phrases and nothing else: `missing`, `line differs`, `text does not show the defect`,
+   `pattern does not describe the missing thing`, `input partial` — the last for a
+   gap-form or absence-form finding whose report declares that input `partial` or not
+   at all (step 5). A Critical finding is never rejected under this rule: write
+   `(evidence: <reason>)` after its finding summary, before any `— harness probe:`
+   clause or ` ← ` annotation. The evidence line itself is never copied into the log.
+   Whether a quoted line lies in the named section is not checked here; a readiness
+   finding is disposed under `Triage of a readiness finding`, never by this rule.
    **A deliberate spec deviation is recorded on a fixed line.** When an applied finding,
    or an inline fix of the "After the loop" self-review, leaves the plan stating
    something the spec states differently — a figure, a cap, a rule the plan keeps on
@@ -529,13 +552,26 @@ invocation, or the resumed range above for a resume):
    wins, and with M ≥ 2 the disagreement is noted as `, counts recomputed` on that
    reviewer's entry of the `**Reviewer verdicts:**` line. A round is *clean* when the
    consolidated set enumerates zero Critical and zero Important **and** all M reviewers
-   returned a usable report (u = M); a partial round is never clean and breaks the
-   streak, like an `inconclusive` round. Exit the loop early only after **two
-   consecutive clean rounds**. Rejecting findings at triage never makes a round clean.
-   With N ≤ 2 no mid-loop exit occurs, but still report "converged" if the final two
-   rounds were clean; N = 1 always reports "cap reached". Because the union keeps every
-   reviewer's findings, two consecutive clean rounds are harder to reach with M > 1 than
-   with M = 1 — that is the intended effect.
+   returned a usable report (u = M) **and** every usable report's `### Inputs read`
+   section carries, for every input of the expected set, a line that reads `whole`
+   (`- <input>: whole`, nothing after the word); a line that begins `- <input>: partial`
+   is a `partial` declaration whatever follows it. The expected set is `document`, plus
+   `spec` when the lens text you pasted into `[LENS_INSTRUCTIONS]` contains the words
+   `read the spec listed under Target` (any run of whitespace, a line break included,
+   counts as one space; the words stand in the `plan` cell of
+   `Correctness & completeness` and in the `Execution readiness` cell); a line for any
+   other input is ignored. A round where, in any usable report, an expected input is
+   declared `partial`, or its line is missing or outside that grammar (*input not
+   declared*), or the whole section is missing (*not declared*), is partial for the
+   inputs-read cause: its findings are consolidated and triaged normally, no report is
+   retried for it, and its entry carries the `**Inputs read:**` line. A partial round —
+   for either cause — is never clean and breaks the streak, like an `inconclusive`
+   round. A readiness pass keeps its *settled* rule unchanged. Exit the loop early only
+   after **two consecutive clean rounds**. Rejecting findings at triage never makes a
+   round clean. With N ≤ 2 no mid-loop exit occurs, but still report "converged" if the
+   final two rounds were clean; N = 1 always reports "cap reached". Because the union
+   keeps every reviewer's findings, two consecutive clean rounds are harder to reach
+   with M > 1 than with M = 1 — that is the intended effect.
 
 **After the loop:** For a plan document, the post-sequence of `Readiness sequences`
 (below) runs first, before the self-review — with N = 0 there is no post-sequence, and
@@ -796,7 +832,8 @@ Sidecar file next to the target document: `<doc-basename>-review-log.md`.
 The invocation line records M right after N, **including when M = 1**, so that a log is
 self-describing. A line without `M=` (written by a release before 7.4.0) is read as M
 = 1. Either of the two invocation lines below adds `M=<m>`; the round entry that follows
-them (M = 1) is byte-identical to earlier releases:
+them (M = 1) is byte-identical to earlier releases when every usable report declares
+every input `whole`:
 
 ```
 _Invocation <k> — YYYY-MM-DD — N=<n> M=<m> — <invoker>_
@@ -853,8 +890,8 @@ Rules for the added lines:
   written on one line, never wrapped.
 - `**Sources mapped:**` — the traceability check of the procedure; both numbers are *k*.
   The entry is written only after the check passed, so the two numbers are always equal.
-  A clean round (u = M, empty consolidated set) writes `**Sources mapped:** 0/0`; only
-  an inconclusive round (u = 0) omits this line entirely.
+  A round with u = M and an empty consolidated set writes `**Sources mapped:** 0/0`;
+  only an inconclusive round (u = 0) omits this line entirely.
 - `**Reviewer verdict:**` — keeps its name and position; with M ≥ 2 it carries the
   **consolidated** counts.
 - Source annotation — ` ← <a>/<m>: <source ids>` appended at the end of the disposition
@@ -867,15 +904,37 @@ Rules for the added lines:
 - A `- spec deviation: …` line (Procedure step 3) stands alone at column 1 directly
   below the disposition or self-review note that made it, and carries no annotation.
 - The clean-round line `- none — no material issues under this lens` is written without
-  annotation and only when the consolidated set is empty **and** u = M. A partial round
-  with an empty consolidated set writes `- none — no material issues under this lens
-  (partial round, usable <u>/<m>)`.
+  annotation and only when the consolidated set is empty **and** u = M **and — in a
+  rotating round — every usable report declares every expected input `whole`**. A
+  partial round with an empty consolidated set writes
+  `- none — no material issues under this lens (partial round, usable <u>/<m>)` when
+  only u < M applies. A rotating round that is partial only for inputs read writes
+  `- none — no material issues under this lens (partial round, inputs read)`, and with
+  both causes `(partial round, usable <u>/<m>, inputs read)`. No other entry kind
+  writes the `inputs read` cause; a readiness pass keeps today's line.
 - An `inconclusive` round (u = 0) with M ≥ 2 writes `**Reviewers:** M=<m>, usable
   0/<m>`, `**Reviewer verdicts:** r1: unusable | r2: unusable | …`, no `**Sources
   mapped:**` line (nothing was consolidated), then `**Reviewer verdict:** inconclusive`
   and `- inconclusive — <reason>`.
 
-A clean round (zero findings, with u = M) writes exactly one disposition line: `- none —
+**The `**Inputs read:**` line.** Written only when a usable report declares an expected
+input (step 5) `partial` or does not declare it, and placed directly after the
+`**Reviewer verdict:**` line:
+
+```
+**Inputs read:** r1: spec partial — not read: 735-end | r2: document partial — not read: 549-1069; spec not declared | r3: not declared
+```
+
+Entry shapes: `<input> partial — not read: <ranges>` (`partial — not read: unknown` when
+the line names no range), `<input> not declared` (line missing or outside the grammar),
+and a bare `not declared` (no section). One entry per affected usable reviewer, in
+reviewer order, separated by ` | `, its inputs by `; `; `r<j>` as on the
+`**Reviewer verdicts:**` line (`r1: …` when M = 1); unusable reviewers are not
+listed. It is written in rotating rounds and readiness passes, as a record: the
+outcome follows step 5 or, in a readiness pass, the unchanged *settled* rule.
+
+A clean round (zero findings, with u = M and — in a rotating round — every expected
+input declared `whole`, step 5) writes exactly one disposition line: `- none —
 no material issues under this lens`. Skipped invocations (N=0) get a one-line `skipped`
 entry under their invocation note (which carries `M=` like every other); for a plan
 document that entry is followed by the pre-sequence's readiness entries and the
@@ -972,9 +1031,13 @@ governs the remaining passes.
   (the block's `reviewers-per-lens` line, else 1); never ask; note the substitution in
   the completion message. Block absent, its `reviewers-per-lens` line absent, or that
   line's value invalid → 1 (silent fallback).
-- One or more reviewers unusable after one retry, u ≥ 1 → partial round: consolidate the
-  usable reports, log `usable <u>/<m>` and `r<j>: unusable`, triage normally; the round
-  is never clean.
+- One or more reviewers unusable after one retry, u ≥ 1 → partial round (u < M):
+  consolidate the usable reports, log `usable <u>/<m>` and `r<j>: unusable`, triage
+  normally; the round is never clean.
+- A usable report that declares an expected input `partial`, or does not declare it (no
+  `### Inputs read` section, or the input's line missing or outside the grammar) →
+  partial round (inputs read): triage normally, write the `**Inputs read:**` line,
+  never retry; the round is never clean.
 - Sources-mapped mismatch (source ids mapped ≠ findings enumerated) → repair the
   consolidation before writing the entry; never write the line with unequal numbers.
 - Reviewer report with missing or duplicated ids → renumber by position per severity
