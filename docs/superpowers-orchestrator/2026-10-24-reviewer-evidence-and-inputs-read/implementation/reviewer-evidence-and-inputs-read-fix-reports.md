@@ -96,3 +96,19 @@ Covering tests:
     bash tests/orchestrating-development/run-tests.sh -> Results: 270 passed, 0 failed
     bash tests/suite-guard/run-tests.sh -> Results: 140 passed, 0 failed
     bash tests/in-run-rulings/run-tests.sh -> Results: 891 passed, 0 failed
+
+## Round 4
+
+Finding addressed: I1.
+
+Change: tests/count-report-fields/run-tests.sh section 3 and tests/reviewer-templates/run-tests.sh test 32 now extract the PLAN_LINE fill paragraph of skills/multi-code-review/SKILL.md (step 2) and the PLAN_LINE legend entry of skills/multi-code-review/reviewer-prompt.md, and search the plan needle in each text separately (not in the whole SKILL.md, which also quotes it in step 6).
+
+Covering tests after the change:
+
+    bash tests/count-report-fields/run-tests.sh   -> Results: 24 passed, 0 failed
+    bash tests/reviewer-templates/run-tests.sh    -> Results: 546 passed, 0 failed
+
+Reverted mutations (file restored after each):
+
+    reword SKILL.md line 575 (fill paragraph) -> count-report-fields: 23 passed, 1 failed (plan needle: PLAN_LINE fill paragraph); reviewer-templates: 545 passed, 1 failed (PLAN_LINE fill paragraph)
+    reword reviewer-prompt.md line 397 (legend) -> count-report-fields: 23 passed, 1 failed (plan needle: legend entry); reviewer-templates: 545 passed, 1 failed (legend entry)

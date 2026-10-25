@@ -106,5 +106,23 @@ _Invocation 1 — 2026-10-25 — N=4 M=3 — BASE..HEAD b8c9435..1a25f83 — bra
 - [M2] carried — the script constants LENS_HEADING, MARKER and INPUTS_HEADING are not checked against the live reviewer prompts ← 1/3: r1:M2
 - [M3] carried — no near-miss fixture for the secret-form regex or the exact `### Inputs read` heading match; loosened forms survive ← 1/3: r2:M1
 
-_Completed — 2026-10-25 — cap reached — HEAD f5ff0415064c2eeb44d966a935f27f009474478c_
+_Completed — 2026-10-25 — cap reached — HEAD 6745205de84465428ccff202006e6f8507b51981_
 Secrets found: none
+
+### Post-loop addendum 1 — 2026-10-25
+- [I1] decided (orchestrator): plan governs: (this answers the round 2 user-decision item on the `input partial` rejection reason) "Must convey spec 5.2: the controller reads each Critical/Important finding's evidence line against the claim before choosing a disposition, as a text comparison" — docs/superpowers-orchestrator/2026-10-24-reviewer-evidence-and-inputs-read/plans/reviewer-evidence-and-inputs-read.md
+- [I2] decided (orchestrator): plan governs: (this answers the round 2 user-decision item on a fix that no reviewer read) "Addendum re-review rule (wording artifact): a re-review is clean only when it also has a report that passes the fix-reviewed test; one without such a report and" — docs/superpowers-orchestrator/2026-10-24-reviewer-evidence-and-inputs-read/plans/reviewer-evidence-and-inputs-read.md
+- [I3] decided (orchestrator): plan governs: (this answers the round 2 user-decision item on rejecting an Important finding without opening a file) "Must convey spec 5.2: the controller reads each Critical/Important finding's evidence line against the claim before choosing a disposition, as a text comparison" — docs/superpowers-orchestrator/2026-10-24-reviewer-evidence-and-inputs-read/plans/reviewer-evidence-and-inputs-read.md
+- [I1] decided (orchestrator): fix it: (this answers the round 4 verification 3 unresolved item on the plan-needle drift checks) scope both plan-needle drift checks, tests/count-report-fields/run-tests.sh section 3 (line 160) and tests/reviewer-templates/run-tests.sh test 32, to the PLAN_LINE fill paragraph of skills/multi-code-review/SKILL.md and the legend entry of skills/multi-code-review/reviewer-prompt.md, so that rewording either text makes its check fail while the step 6 copy of the sentence is unchanged
+- [I1] fixed — round 4 verification 3 item: both plan-needle drift checks now search the PLAN_LINE fill paragraph of skills/multi-code-review/SKILL.md and the legend entry of reviewer-prompt.md separately; each checked by a reverted mutation → 6745205d
+
+## Round 4 addendum 1 re-review 1 — Test & coverage quality — opus
+**Reviewers:** M=3, usable 3/3 — verifies 6745205d
+**Reviewer verdicts:** r1: 0 Critical, 0 Important, 2 Minor | r2: 0 Critical, 0 Important, 3 Minor | r3: 0 Critical, 0 Important, 2 Minor
+**Sources mapped:** 7/7
+**Reviewer verdict:** 0 Critical, 0 Important, 4 Minor
+### Dispositions
+- [M1] carried — tools/count-report-fields.js constants LENS_HEADING (and MARKER, INPUTS_HEADING, POINTER_RE) are not tied to the live reviewer prompts by section 3 of tests/count-report-fields/run-tests.sh, although its comment says the script cannot drift from the prompts (same as round 4 verification 3 M2) ← 3/3: r1:M1, r2:M2, r3:M1
+- [M2] carried — the suite header claims a failing fixture for the handback-over-text precedence and the Write-copy exclusion of takenReport, but no fixture puts a text block or a Write copy after the last handback (same as round 4 verification 3 M1) ← 2/3: r1:M2, r2:M1
+- [M3] carried — section 1 checks 23 fixtures through two summed lines only; a failure does not name the fixture, and two opposite defects can cancel in the sum ← 1/3: r2:M3
+- [M4] carried — the PLAN_LINE fill-paragraph and legend-entry awk extractors are copied in tests/count-report-fields/run-tests.sh and tests/reviewer-templates/run-tests.sh; a shared helper under tests/lib/ would remove the copy ← 1/3: r3:M2
