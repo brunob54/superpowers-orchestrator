@@ -1265,7 +1265,7 @@ git commit -m "style(multi-doc-review): reflow prose to 88 columns to recover li
 - Clean-round scope and restatements (wording artifact): as in Task 5 — the condition on the plain line and the `inputs read` cause apply to rotating rounds only, so a settled readiness pass with an empty consolidated set still writes the plain line `Readiness entries` names; the restatements at lines 915 and 942 are rewritten; the `- <input>: partial` rule; the evidence rule applies to rotating rounds, and a readiness finding is disposed under `Triage of a readiness finding`. Verification: test 33 and Step 4's second grep.
 - Line budget (code artifact invariant): the file stays at most 1080 lines. The additions of this task are about 60-65 lines at 88 columns; with Task 6 at 1015 lines they fit, and Step 3's further reflow, under Task 6's contract rules, covers a shortfall of Task 6. Verification: test 16.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Add this section to `tests/reviewer-templates/run-tests.sh`, directly above the final `echo` / `bold "Results: …"` lines:
 
@@ -1307,12 +1307,12 @@ In the comment of test 16, replace the two lines `# addition must first recover 
 
 (Check the step headings first: `grep -n '^3\. \*\*Triage and merge:\*\*\|^4\. \*\*Append the round entry' skills/multi-doc-review/SKILL.md` prints two lines.)
 
-- [ ] **Step 2: Run the tests to verify they fail**
+- [x] **Step 2: Run the tests to verify they fail**
 
 Run: `bash tests/reviewer-templates/run-tests.sh 2>&1 | grep -E '  FAIL: |Results'`
 Expected: FAIL lines for the test-33 Triage-step phrases, the old-definition check, every `multi-doc-review SKILL.md: '…'` check, the log-example line, and the two negative checks `the u = M-only clean-round sentence is gone` and `the u = M-only Sources mapped parenthesis is gone` (their strings are in the file today, lines 942 and 915).
 
-- [ ] **Step 3: Edit `skills/multi-doc-review/SKILL.md`**
+- [x] **Step 3: Edit `skills/multi-doc-review/SKILL.md`**
 
 Locate each sentence by its words (Task 6 changed the line breaks), and write the new text at 88 columns with the indentation of its paragraph. First read the "Order of work" paragraph at the end of this step: its first item runs before item 1. The rewrites of items 1-8 follow the untouched-zone and no-break rules of Task 6's Contract too; in particular, item 8 leaves `Skipped invocations (N=0)` whole on one line.
 
@@ -1419,7 +1419,7 @@ Order of work, so that every reflow is checked by Task 6's `reflow_check`. Each 
 - After item 8: when the file still has more than 1080 lines, save a copy the same way, reflow paragraphs this step did not write until the file has at most 1080 lines, and run `reflow_check` against that copy with the same expected five words.
 - Zones, in this order: the zones of Task 6 Step 1 not yet reflowed, then any other prose paragraph or list item outside the untouched list of Task 6's contract. When every such zone is reflowed and the file still has more than 1080 lines, shorten the new text of items 2, 3, 5 and 6 (reference texts: only the test-33 needles bind; keep every needle of `EVIDENCE_*`, `LOG_*`, `CLEAN_LINE_*`, `DOC_*`, `PARTIAL_*` and the shared phrases folded in the file). When that is not enough, stop the task and report it as blocked, naming the line count: do not raise `MDR_MAX_LINES`, and remove no existing content (Global Constraint 1).
 
-- [ ] **Step 4: Run the tests to verify they pass**
+- [x] **Step 4: Run the tests to verify they pass**
 
 Run: `bash tests/reviewer-templates/run-tests.sh 2>&1 | grep -E '  FAIL: |Results'`
 Expected: one line, `Results: <n> passed, 0 failed` (test 16's 1080-line budget included).
@@ -1433,7 +1433,7 @@ Expected: the changed sites of this task (the `**Evidence line.**` paragraph's `
 Run: `grep -n -i 'clean round (' skills/multi-doc-review/SKILL.md`
 Expected: only the sentence item 8 rewrote (the inputs-read condition may stand on the next line); no hit reads `with u = M) writes`.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add skills/multi-doc-review/SKILL.md tests/reviewer-templates/run-tests.sh
