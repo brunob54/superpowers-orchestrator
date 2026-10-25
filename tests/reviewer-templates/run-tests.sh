@@ -1297,6 +1297,79 @@ if [ -s "$DOC_RETURNS" ]; then ok "doc-review template: Reviewer returns extract
 assert_folded_contains "code-review template: Reviewer returns names the evidence line" "$CODE_RETURNS" "$RETURNS_EVIDENCE"
 assert_folded_contains "doc-review template: Reviewer returns names the evidence line" "$DOC_RETURNS" "$RETURNS_EVIDENCE"
 
+bold "30. Reviewer prompts: the inputs-read section (release 7.75.0)"
+# Every report declares, per input the prompt tells the reviewer to read
+# whole, whether it read that input whole. The rule paragraph is byte-
+# identical in both prompts; the format-example lines differ by input name.
+INPUTS_LEAD='**Inputs read.**'
+INPUTS_HEADING_LINE='    ### Inputs read'
+CODE_INPUT_LINES=('    - diff: whole' '    - plan: partial — not read: 735-end')
+DOC_INPUT_LINES=('    - document: whole' '    - spec: whole')
+M1_EXAMPLE_LINE='    - [M1] ...'
+CHECKS_RUN_LINE='    ### Checks Run'
+DOC_REFERENCE_RULE='Every finding must reference a section or line'
+RETURNS_INPUTS='the `### Inputs read` section'
+INPUTS_PHRASES=(
+  'also a report whose verdict is'
+  '`- <input>: whole`'
+  '`- <input>: partial — not read: <ranges>`'
+  'returned every line from 1 to the end of the file'
+  'proves nothing about the lines after it'
+  'is not a missing range'
+  '`- diff: whole (4 pages)` is outside the grammar'
+  '`partial — not read: 1-end`'
+  '`<a>-end`'
+  '`unknown`'
+  'a skip chosen on purpose is a partial read'
+  '`547-864 (package-lock.json)`'
+  'is not an unread range'
+  'a shell redirection, not the Write tool'
+  '`- diff: partial — not read: unknown`'
+)
+CODE_INPUTS="$WORK/code-inputs.txt"
+DOC_INPUTS="$WORK/doc-inputs.txt"
+extract_lead_paragraph "$CODE_BODY" "$INPUTS_LEAD" > "$CODE_INPUTS"
+extract_lead_paragraph "$DOC_BODY" "$INPUTS_LEAD" > "$DOC_INPUTS"
+if [ -s "$CODE_INPUTS" ]; then ok "code-review template: inputs-read paragraph is inside the prompt body"; else bad "code-review template: no '$INPUTS_LEAD' paragraph inside the prompt body"; fi
+if [ -s "$DOC_INPUTS" ]; then ok "doc-review template: inputs-read paragraph is inside the prompt body"; else bad "doc-review template: no '$INPUTS_LEAD' paragraph inside the prompt body"; fi
+if [ -s "$CODE_INPUTS" ] && diff -q "$CODE_INPUTS" "$DOC_INPUTS" >/dev/null; then
+  ok "inputs-read paragraph is byte-identical in the two reviewer prompts"
+else
+  bad "inputs-read paragraph differs between the two reviewer prompts"
+fi
+for phrase in "${INPUTS_PHRASES[@]}"; do
+  assert_folded_contains "inputs-read paragraph: '$phrase'" "$CODE_INPUTS" "$phrase"
+done
+for needle in "${INPUT_NEEDLES[@]}"; do
+  assert_folded_not_contains "inputs-read paragraph: never quotes the input sentence '$needle'" "$CODE_INPUTS" "$needle"
+done
+check_after "code-review template: inputs-read paragraph follows the evidence paragraph" "$CODE_PROMPT" "$EVIDENCE_LEAD" "$INPUTS_LEAD"
+check_after "doc-review template: inputs-read paragraph follows the evidence paragraph" "$DOC_PROMPT" "$EVIDENCE_LEAD" "$INPUTS_LEAD"
+# The input sentences stand only in the prompt that names that input; the
+# plan and spec sentences arrive only through a filled placeholder.
+assert_folded_contains "code-review template body names the diff input" "$CODE_BODY" 'Read the diff file whole'
+assert_folded_not_contains "code-review template body does not name a document input" "$CODE_BODY" 'Document (read it whole'
+assert_folded_contains "doc-review template body names the document input" "$DOC_BODY" 'Document (read it whole'
+assert_folded_not_contains "doc-review template body does not name a diff input" "$DOC_BODY" 'Read the diff file whole'
+for body in "$CODE_BODY" "$DOC_BODY"; do
+  assert_folded_not_contains "$(basename "$body"): no plan input sentence outside the placeholder" "$body" 'Plan/requirements the branch implements (read it first):'
+  assert_folded_not_contains "$(basename "$body"): no spec input sentence outside the placeholder" "$body" 'read the spec listed under Target'
+done
+# Format example: the section's lines, in place.
+assert_file_has_line "code-review template: format example has the section heading" "$CODE_PROMPT" "$INPUTS_HEADING_LINE"
+for line in "${CODE_INPUT_LINES[@]}"; do assert_file_has_line "code-review template: format example line '$line'" "$CODE_PROMPT" "$line"; done
+assert_file_has_line "doc-review template: format example has the section heading" "$DOC_PROMPT" "$INPUTS_HEADING_LINE"
+for line in "${DOC_INPUT_LINES[@]}"; do assert_file_has_line "doc-review template: format example line '$line'" "$DOC_PROMPT" "$line"; done
+check_after "code-review template: the section follows the Minor example" "$CODE_PROMPT" "$M1_EXAMPLE_LINE" "$INPUTS_HEADING_LINE"
+check_after "code-review template: the section precedes Checks Run" "$CODE_PROMPT" "$INPUTS_HEADING_LINE" "$CHECKS_RUN_LINE"
+check_after "doc-review template: the section follows the Minor example" "$DOC_PROMPT" "$M1_EXAMPLE_LINE" "$INPUTS_HEADING_LINE"
+check_after "doc-review template: the section precedes the reference rule" "$DOC_PROMPT" "$INPUTS_HEADING_LINE" "$DOC_REFERENCE_RULE"
+# On the Reviewer returns extracts of test 29: the `**Inputs read.**` paragraph
+# inside the prompt body already holds the needle, so a whole-file check would
+# pass without the list edit.
+assert_folded_contains "code-review template: Reviewer returns names the section" "$CODE_RETURNS" "$RETURNS_INPUTS"
+assert_folded_contains "doc-review template: Reviewer returns names the section" "$DOC_RETURNS" "$RETURNS_INPUTS"
+
 echo
 bold "Results: $PASS passed, $FAIL failed"
 if [ "$FAIL" -gt 0 ]; then

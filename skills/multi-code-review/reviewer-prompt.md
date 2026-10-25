@@ -210,6 +210,10 @@ Agent tool (general-purpose):
     #### Minor
     - [M1] ...
 
+    ### Inputs read
+    - diff: whole
+    - plan: partial — not read: 735-end
+
     ### Checks Run
     - <named risk> → <what was checked outside the diff, if anything>
 
@@ -283,6 +287,53 @@ Agent tool (general-purpose):
       wrapped. In the example above, `<tab>` stands for the tab character
       that the Read tool prints; write the real tab.
 
+    **Inputs read.** Every report carries the `### Inputs read` section,
+    also a report whose verdict is "No material issues under this lens.":
+    below `### Findings` when the report has one, below `### Verdict`
+    otherwise, and above `### Checks Run` in a code review. Write one line
+    per input that the Inputs item below names, in exactly this
+    grammar and with no other words: `- <input>: whole`, or
+    `- <input>: partial — not read: <ranges>`.
+    - Inputs: for a code review, `- diff:` always, and `- plan:` only when
+      this prompt gives you a plan or requirements file to read first; for
+      a document review, `- document:` always, and `- spec:` only when
+      your lens instructions tell you to read the spec.
+    - `whole` means that your Read calls of that input together returned
+      every line from 1 to the end of the file. The end of the file is the
+      total that a PARTIAL notice names, or the last line of a Read result
+      that returned fewer lines than its `limit`, or that had no `limit`
+      and carried no PARTIAL notice. A result that returns exactly `limit`
+      lines proves nothing about the lines after it: read once more at the
+      offset after the last line you received; a result with no line (the
+      tool says the file is shorter than the offset and names its total
+      line count) proves the end. The tool's total counts one empty line
+      after the file's final newline; a range that covers only that
+      position is not a missing range. The line ends after the word
+      `whole`: `- diff: whole (4 pages)` is outside the grammar, and the
+      controller reads it as not declared.
+    - Every other case is `partial`, also zero Read calls of the input,
+      written `partial — not read: 1-end`. `<ranges>` lists the line
+      numbers you did not read, each as `<a>-<b>`, or `<a>-end` when the
+      end of the file is unknown, separated by a comma and one space
+      (`547-864, 1200-end`); write `unknown` instead when you cannot name
+      them (you read the input only through Bash output or a preview,
+      which carry no line numbers). Take the numbers from the Read tool's
+      notices and line prefixes, from the offsets you used, or from a skip
+      you chose; a skip chosen on purpose is a partial read. In a code
+      review, an unread range of the diff that starts at a `diff --git`
+      header and ends before the next one may name, in parentheses, the
+      diff paths it covers — `547-864 (package-lock.json)` — and nothing
+      else may follow a range; a hunk the Subagent Rules tell you to SKIP
+      is not an unread range.
+    - A code review without a diff file, where you fetch the diff
+      yourself: Bash output is cut at 30,000 characters, so run `mktemp`
+      alone once per diff command, redirect that command's output to the
+      path it printed (a shell redirection, not the Write tool) — on
+      Windows Git Bash convert that path once with `cygpath -m`, as for
+      the report file — and read that file with the Read tool. A diff you
+      read only from Bash output is declared
+      `- diff: partial — not read: unknown`.
+
     **Where the report goes.** The full report goes to a file; the
     controller never reads the Checks Run section, and leaving it out of
     the final message keeps the controller's context small. The steps:
@@ -355,6 +406,7 @@ rounds' findings, fix reports, and the review log are never passed.
 - the Verdict counts;
 - the findings by severity, with file:line references, and the `evidence:`
   line under each Critical and Important finding;
+- the `### Inputs read` section;
 - (round 1 only) the carried-finding triage recommendations —
   recommendations only; the controller decides and logs dispositions;
 - the path of the full report file, which also holds the Checks Run
