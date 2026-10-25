@@ -861,7 +861,7 @@ git commit -m "feat(multi-code-review): triage reads the evidence line of each C
 - Clean-round scope and restatements (wording artifact): the inputs-read condition on the plain clean-round line and the `inputs read` cause apply to rotating rounds only (spec 5.4); a verification cycle and an addendum re-review keep today's line. The Review Log Format sentences that restated "clean" with u = M alone (lines 1376, 1436-1440) name the condition or no longer say "clean", so the skill carries one definition. A line that begins `- <input>: partial` is a `partial` declaration whatever follows it (spec section 7). Verification: test 32 (`CLEAN_LINE_SCOPE`, `PARTIAL_WHATEVER`, two negative pins) and Step 4's second grep.
 - Code-review loop template, Deviation 5 (wording artifact): the addendum rule names both triggers of re-review 2 — a Critical/Important finding still standing, or no usable report of re-review 1 passing "No fix ships unreviewed" — and a fix dispatch only for the first; the phrases `at most two fix dispatches and two re-reviews per addendum` and `unresolved: addendum re-review` stay whole. Verification: test 32 (the re-review 2 pin) and `bash tests/in-run-rulings/run-tests.sh`.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Add this section to `tests/reviewer-templates/run-tests.sh`, directly above the final `echo` / `bold "Results: …"` lines:
 
@@ -919,12 +919,12 @@ CODE_LOOP_TEMPLATE="$ROOT/skills/orchestrating-development/code-review-loop-prom
 assert_folded_contains "code-review-loop-prompt.md: re-review 2 also follows a re-review 1 without a passing report" "$CODE_LOOP_TEMPLATE" 'or when no usable report of re-review 1 passes the skill'"'"'s "No fix ships unreviewed" test'
 ```
 
-- [ ] **Step 2: Run the tests to verify they fail**
+- [x] **Step 2: Run the tests to verify they fail**
 
 Run: `bash tests/reviewer-templates/run-tests.sh 2>&1 | grep -E '  FAIL: |Results'`
 Expected: FAIL lines for the old-definition check, every `multi-code-review SKILL.md: '…'` check of test 32 and the log-example line; the `unconditioned partial-cycle sentence is gone`, `the u = M-only Minor-only sentence is gone`, `the u = M-only Sources mapped parenthesis is gone` and `code-review-loop-prompt.md: re-review 2 also follows …` checks fail too (their strings are in the file today, lines 1202-1203, 1439 and 1376).
 
-- [ ] **Step 3a: Confirm the controller templates restate nothing (Global Constraint 5)**
+- [x] **Step 3a: Confirm the controller templates restate nothing (Global Constraint 5)**
 
 Run: `grep -n -i -E 'u = M|u < M|usable report|clean round|is \*clean\*|Reviewer verdict' skills/orchestrating-development/code-review-loop-prompt.md skills/orchestrating-development/doc-review-loop-prompt.md`
 Expected: no output, exit code 1 (as on 2026-10-25). Any output names a template that restates the rule: update that sentence in this task with the same widened condition and add it to the commit.
@@ -932,7 +932,7 @@ Expected: no output, exit code 1 (as on 2026-10-25). Any output names a template
 Run: `grep -n -i 're-review 2\|still stands' skills/orchestrating-development/code-review-loop-prompt.md`
 Expected: the Deviation 5 sentence that item 11 rewrites (lines 194-198 on 2026-10-25), and no other restatement of the addendum re-review rule.
 
-- [ ] **Step 3b: Edit `skills/multi-code-review/SKILL.md`**
+- [x] **Step 3b: Edit `skills/multi-code-review/SKILL.md`**
 
 1. Step 3 (line 691). Replace `below, then continue; a round with u < M is *partial* — it is logged` / `with its counts and is never clean. With M = 1 the consolidated set is` / `the report's enumeration with its original ids, unchanged.` with:
 
@@ -1132,7 +1132,7 @@ Minor-only round is clean for convergence when step 6 makes it clean
 
 (the text from `addendum; a finding still standing after re-review 2 is` onward stays, so the phrases `at most two fix dispatches and two re-reviews per addendum` and `unresolved: addendum re-review` that `tests/in-run-rulings/run-tests.sh` pins in this template stay whole).
 
-- [ ] **Step 4: Run the tests to verify they pass**
+- [x] **Step 4: Run the tests to verify they pass**
 
 Run: `bash tests/reviewer-templates/run-tests.sh 2>&1 | grep -E '  FAIL: |Results'`
 Expected: one line, `Results: <n> passed, 0 failed` (test 22's `no new content read without the two options` count of 1 included: the new `git show` is `--name-only`).
@@ -1149,7 +1149,7 @@ Expected: the hits are exactly the changed sites of this task, the lines of Task
 Run: `grep -n -i 'clean round (\|clean for convergence' skills/multi-code-review/SKILL.md`
 Expected: every hit belongs to a sentence item 10 rewrote (the inputs-read condition may stand on the next line); no hit reads `with u = M) writes` or `(with u = M) but`.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add skills/multi-code-review/SKILL.md skills/orchestrating-development/code-review-loop-prompt.md tests/reviewer-templates/run-tests.sh
