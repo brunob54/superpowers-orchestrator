@@ -105,3 +105,6 @@ _Invocation 1 — 2026-10-25 — N=4 M=3 — BASE..HEAD b8c9435..1a25f83 — bra
 - [M1] carried — no fixture puts an assistant text block after the last SubagentHandback, so the handback-over-text precedence of takenReport is not discriminated, although the suite header claims it ← 2/3: r1:M3, r3:M2
 - [M2] carried — the script constants LENS_HEADING, MARKER and INPUTS_HEADING are not checked against the live reviewer prompts ← 1/3: r1:M2
 - [M3] carried — no near-miss fixture for the secret-form regex or the exact `### Inputs read` heading match; loosened forms survive ← 1/3: r2:M1
+
+_Completed — 2026-10-25 — cap reached — HEAD f5ff0415064c2eeb44d966a935f27f009474478c_
+Secrets found: none
