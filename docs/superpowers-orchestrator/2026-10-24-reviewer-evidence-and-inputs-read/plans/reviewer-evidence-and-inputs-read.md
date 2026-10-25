@@ -742,7 +742,7 @@ git commit -m "feat(reviewer-prompts): inputs-read section in every reviewer rep
   - Verification: test 31 pins the phrases of its `CODE_EVIDENCE_PHRASES` list; the other properties above (the secret-form and removed-file rules, the harness order, the `input partial` condition, the placement on the disposition line) are checked by reading at review.
   - Sentence wording is free; the properties above bind. The `EVIDENCE_*` needles are fixed strings shared with test 33: both triage paragraphs (this task and Task 7) must contain them folded, and a rewording updates the needle and both paragraphs in the same commit.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Add this section to `tests/reviewer-templates/run-tests.sh`, directly above the final `echo` / `bold "Results: …"` lines:
 
@@ -770,12 +770,12 @@ done
 
 (The step headings are indented by 0 in the skill — `4. **Triage:**` at line 740 and `5. **Append the round entry**` at line 1077 start at column 0; check with `grep -n '^4\. \*\*Triage:\*\*\|^5\. \*\*Append the round entry' skills/multi-code-review/SKILL.md` before running.)
 
-- [ ] **Step 2: Run the tests to verify they fail**
+- [x] **Step 2: Run the tests to verify they fail**
 
 Run: `bash tests/reviewer-templates/run-tests.sh 2>&1 | grep -E '  FAIL: |Results'`
 Expected: FAIL lines for the twelve `multi-code-review SKILL.md Triage step:` checks; the extract check passes.
 
-- [ ] **Step 3: Add the paragraph**
+- [x] **Step 3: Add the paragraph**
 
 In `skills/multi-code-review/SKILL.md`, after the line `     reason.` that ends "you may reject it as unverifiable, logging that reason." (line 965) and before `   - **Plan-mandated findings**`, insert:
 
@@ -815,7 +815,7 @@ In `skills/multi-code-review/SKILL.md`, after the line `     reason.` that ends 
      into the log, into the findings file, or into the fix dispatch.
 ```
 
-- [ ] **Step 4: Run the tests to verify they pass**
+- [x] **Step 4: Run the tests to verify they pass**
 
 Run: `bash tests/reviewer-templates/run-tests.sh 2>&1 | grep -E '  FAIL: |Results'`
 Expected: one line, `Results: <n> passed, 0 failed`.
@@ -826,7 +826,7 @@ Expected: no FAIL line (the Triage-range phrases of its section 8 still match).
 Run: `for s in review-gates orchestrating-development sdd-scripts fill-prompt; do bash "tests/$s/run-tests.sh" >/dev/null 2>&1; echo "$s exit $?"; done`
 Expected: four lines, each ending `exit 0` (these suites also read `skills/multi-code-review/SKILL.md`).
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add skills/multi-code-review/SKILL.md tests/reviewer-templates/run-tests.sh
