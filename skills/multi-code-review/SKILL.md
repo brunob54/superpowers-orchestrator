@@ -963,6 +963,39 @@ code has been revised since, so a re-pass is meaningful):
      reference is triaged normally and counts toward convergence at its
      stated severity; you may reject it as unverifiable, logging that
      reason.
+     **Evidence line.** Before you choose the disposition of a Critical or
+     Important finding, read its `evidence:` line (`reviewer-prompt.md`,
+     Output format) against the finding's claim — a text comparison inside
+     the report; open no file for it. With M ≥ 2, read the evidence line of
+     each source finding in its own report (the consolidated set copies no
+     evidence line); the finding matches when at least one source's line
+     matches. A line matches when its line number equals the finding's
+     line, or lies inside the range for a range location, and its quoted
+     text shows the defect the finding names: in the gap form, it is the
+     text the finding says is incomplete; the absence form carries no line
+     number and matches on its pattern alone, when the pattern describes
+     the thing the finding says is missing; the secret form matches on its
+     line number alone, and the removed-file form on its path alone. A
+     finding with a `harness:` field needs no evidence line;
+     when a finding carries both, the harness procedure above runs first.
+     A finding whose evidence line is missing in every source, or matches
+     in no source, is triaged normally at its stated severity. You may
+     instead reject such an **Important** finding as
+     `rejected: evidence (<reason>)`; the parenthesis holds one of five
+     fixed phrases and nothing else: `missing`, `line differs`,
+     `text does not show the defect`,
+     `pattern does not describe the missing thing`, `input partial`.
+     `input partial` applies to a gap-form or absence-form finding whose
+     own report declares the input the finding concerns `partial`, or does
+     not declare it (`### Inputs read`, step 6): a governing line or an
+     empty search proves nothing about text the reviewer did not read. A
+     Critical finding is never rejected under this rule, as under the plan
+     rule of step 6: triage it normally and write `(evidence: <reason>)`,
+     with one of the same five phrases, directly after the finding summary
+     on its disposition line — after the `(plan-mandated)` tag when the
+     line carries one, and before any `— at` clause, `— harness probe:`
+     clause or ` ← ` annotation. The evidence line itself is never copied
+     into the log, into the findings file, or into the fix dispatch.
    - **Plan-mandated findings** (conflicting with what the plan's text
      requires) are the user's decision — after the harness guard above,
      log `user-decision`, present at

@@ -1370,6 +1370,26 @@ check_after "doc-review template: the section precedes the reference rule" "$DOC
 assert_folded_contains "code-review template: Reviewer returns names the section" "$CODE_RETURNS" "$RETURNS_INPUTS"
 assert_folded_contains "doc-review template: Reviewer returns names the section" "$DOC_RETURNS" "$RETURNS_INPUTS"
 
+bold "31. multi-code-review: the evidence triage rule (release 7.75.0)"
+# Shared with test 33 (multi-doc-review).
+EVIDENCE_RULE_LEAD='**Evidence line.** Before you choose the disposition of a Critical or Important finding'
+EVIDENCE_TEXT_ONLY='a text comparison inside the report; open no file for it'
+EVIDENCE_ONE_SOURCE="the finding matches when at least one source's line matches"
+EVIDENCE_REJECT='`rejected: evidence (<reason>)`'
+EVIDENCE_REASONS='`missing`, `line differs`, `text does not show the defect`, `pattern does not describe the missing thing`, `input partial`'
+EVIDENCE_REASONS_ONLY='one of five fixed phrases and nothing else'
+EVIDENCE_CRITICAL='A Critical finding is never rejected under this rule'
+EVIDENCE_NOTE='`(evidence: <reason>)`'
+EVIDENCE_NOT_LOGGED='The evidence line itself is never copied into the log'
+EVIDENCE_ABSENCE='the absence form carries no line number and matches on its pattern alone'
+CODE_EVIDENCE_PHRASES=("$EVIDENCE_RULE_LEAD" "$EVIDENCE_TEXT_ONLY" "$EVIDENCE_ONE_SOURCE" "$EVIDENCE_REJECT" "$EVIDENCE_REASONS" "$EVIDENCE_REASONS_ONLY" "$EVIDENCE_CRITICAL" "$EVIDENCE_NOTE" "$EVIDENCE_NOT_LOGGED" "$EVIDENCE_ABSENCE" 'after the `(plan-mandated)` tag when the line carries one' 'into the findings file, or into the fix dispatch')
+CODE_TRIAGE_RANGE="$WORK/code-triage-range.md"
+awk '/^4\. \*\*Triage:\*\*/ { on = 1 } /^5\. \*\*Append the round entry\*\*/ { exit } on { print }' "$CODE_SKILL" > "$CODE_TRIAGE_RANGE"
+if [ -s "$CODE_TRIAGE_RANGE" ]; then ok "multi-code-review SKILL.md: Triage step extract is non-empty"; else bad "multi-code-review SKILL.md: Triage step extract is empty"; fi
+for phrase in "${CODE_EVIDENCE_PHRASES[@]}"; do
+  assert_folded_contains "multi-code-review SKILL.md Triage step: '$phrase'" "$CODE_TRIAGE_RANGE" "$phrase"
+done
+
 echo
 bold "Results: $PASS passed, $FAIL failed"
 if [ "$FAIL" -gt 0 ]; then
