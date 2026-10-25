@@ -31,3 +31,5 @@ Items: [I1] forced — fix it: (this answers the round 4 verification 3 unresolv
 Detail: docs/superpowers-orchestrator/2026-10-24-reviewer-evidence-and-inputs-read/plans/reviewer-evidence-and-inputs-read-open-decisions.md
 Forks: 3 of 3 (design consistency, implementation practicality, adversarial) — contradiction: settled
 Re-dispatch: phase 4, in-run resume 1 of 3, return 1 of 6
+
+## Phase 4 — Code review — rounds 4 — cap — fixes 7 — unresolved 0
