@@ -69,3 +69,30 @@ Covering tests:
     bash tests/reviewer-templates/run-tests.sh -> Results: 541 passed, 0 failed
     bash tests/review-gates/run-tests.sh -> Results: 142 passed, 0 failed
     bash tests/in-run-rulings/run-tests.sh -> Results: 891 passed, 0 failed
+
+## Round 4
+
+Findings addressed (cycle 2): I1, I2, M1, M2.
+
+- I1: eight new fixtures in tests/count-report-fields/fixtures/subagents/ (input-lines-outside-grammar, pointer-reads-second-file, second-user-message-lens, blank-before-evidence, no-marker-no-meta, no-marker-bad-meta, no-marker-meta-without-description, prompt-without-input-sentence); two usage runs (one argument, three arguments); expected values updated (21 reviewer transcripts, 2 other, 16 reports, 10 with-inputs-read, 8 ci-findings, 6 with-evidence, per-input diff 10/13 plan 2/5 document 1/2 spec 1/1, 7 output lines). Script behaviour for (a)-(f) not changed; no fixture disagreed with the plan's Task 8 Contract.
+- Mutations of a copy of tools/count-report-fields.js (restored after each; each made the suite fail):
+  - (a) range grammar `partial — not read: (?:unknown|` loosened to `partial — not read: .+|(?:unknown|` -> per-input plan 3/5; bare `partial` accepted -> per-input diff 11/13.
+  - (b) `&& b.input.file_path === pointer[1]` removed (any Read result is prompt text) -> with-inputs-read 9, document 1/3.
+  - (c) every user text block used as the prompt -> reviewer-transcripts 22, other 1.
+  - (d) evidence line taken from `lines[i + 1]` instead of the next non-blank line -> with-evidence 5.
+  - (e) `description()` returns ` — undefined` for a meta file without a description -> line 5 fails; the catch returns ` — meta unreadable` -> lines 4 and 6 fail.
+  - (f) `argv.length !== 2` -> `< 2` -> the three-argument run exits 0.
+  - I2(4) `expected.length > 0 &&` removed -> with-inputs-read 11.
+  - A needle changed in the script copy (`named under Target`) -> section 3 spec check fails.
+- I2: tests/count-report-fields/run-tests.sh section 3 asserts each script needle in its live source (code prompt body, doc prompt body, multi-code-review SKILL.md, the two spec lens cells of multi-doc-review SKILL.md). tests/reviewer-templates/run-tests.sh test 32 pins the PLAN_LINE sentence in multi-code-review SKILL.md; test 33 pins `read the spec listed under Target` in the plan cell of Correctness & completeness and in the Execution readiness cell. tools/count-report-fields.js: with-inputs-read now requires a non-empty expected set. Each pin was checked by changing the live text in skills/ (restored afterwards): plan sentence reworded -> test 32 and count suite section 3 fail; spec words changed in the plan cell -> test 33 fails; changed in the readiness cell -> test 33 fails.
+- Header claim of tests/count-report-fields/run-tests.sh kept and now true; header shortened so the guard `source` line stays in the first 45 lines (tests/suite-guard).
+- M1: tests/reviewer-templates/run-tests.sh test 19 asserts the Markdown file list under skills/ is non-empty before the negative check.
+- M2: RELEASE-NOTES.md v7.75.0 Tests bullet reworded: test 19 checks the whole of skills/, test 5c checks the prompt block of each of the four controller templates.
+
+Covering tests:
+
+    bash tests/count-report-fields/run-tests.sh -> Results: 23 passed, 0 failed
+    bash tests/reviewer-templates/run-tests.sh -> Results: 545 passed, 0 failed
+    bash tests/orchestrating-development/run-tests.sh -> Results: 270 passed, 0 failed
+    bash tests/suite-guard/run-tests.sh -> Results: 140 passed, 0 failed
+    bash tests/in-run-rulings/run-tests.sh -> Results: 891 passed, 0 failed

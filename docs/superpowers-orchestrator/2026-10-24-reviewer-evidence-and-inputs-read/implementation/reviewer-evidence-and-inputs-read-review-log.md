@@ -83,3 +83,14 @@ _Invocation 1 — 2026-10-25 — N=4 M=3 — BASE..HEAD b8c9435..1a25f83 — bra
 - [M2] carried — the expected-input needle sentences are not pinned where they are produced (PLAN_LINE fill sentence, the two doc lens cells), and the script's needle copies are not compared with the test's list (same as round 4 M2) ← 2/3: r2:M2, r3:M2
 - [M3] carried — untested error paths of tools/count-report-fields.js: usage check with one or three arguments, a reviewer without report and without meta file ← 1/3: r1:M2
 - [M4] fixed — the round 3 fix left a 116-character line in the multi-doc-review evidence triage paragraph, against the plan's reflow invariant (no new line over 88 characters); rewrapped with no word change → d5fb9b60 ← 1/3: r1:M3
+
+## Round 4 verification 2 — Test & coverage quality — opus
+**Reviewers:** M=3, usable 3/3
+**Reviewer verdicts:** r1: 0 Critical, 2 Important, 2 Minor | r2: 0 Critical, 0 Important, 2 Minor | r3: 0 Critical, 0 Important, 2 Minor
+**Sources mapped:** 8/8
+**Reviewer verdict:** 0 Critical, 2 Important, 2 Minor
+### Dispositions
+- [I1] fixed — the count-report-fields header claim was still false: the range grammar, the pointer-file restriction, the first-user-message rule, the next-non-blank evidence rule, the missing-meta fallback and the three-argument usage check had no failing fixture; fixtures and checks added, each checked by a reverted script mutation → f5ff0415 ← 3/3: r1:I2, r2:M1, r2:M2, r3:M2
+- [I2] fixed — the input sentences that decide the expected set were not pinned at their source and the script needles were not tied to the live text, and an empty expected set counted as with-inputs-read; source pins in tests 32/33, a needle check in the count-report-fields suite, and an empty expected set no longer counts → f5ff0415 ← 2/3: r1:I1, r3:M1
+- [M1] fixed — test 19's check that the old stop clause is gone passed vacuously on an empty file list; it now asserts the list is non-empty → f5ff0415 ← 1/3: r1:M1
+- [M2] fixed — the v7.75.0 release note said test 5c checks every Markdown file under skills/; reworded to what each test checks → f5ff0415 ← 1/3: r1:M2
