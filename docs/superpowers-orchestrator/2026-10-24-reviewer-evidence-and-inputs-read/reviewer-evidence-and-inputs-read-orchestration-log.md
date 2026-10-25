@@ -17,3 +17,8 @@ note: a computer crash stopped the plan writer before its return; the same agent
 - Task 4: complete — evidence triage rule in multi-code-review
 - Task 5: complete — inputs-read rules in multi-code-review
 - Task 6: complete — reflow of multi-doc-review SKILL.md prose to recover lines
+
+## Phase 3 — Batch 3 (tasks 7–9) — COMPLETE — commits 46afebd..cc1da23
+- Task 7: complete — evidence and inputs-read rules in multi-doc-review
+- Task 8: complete — acceptance-measure script tools/count-report-fields.js and its suite
+- Task 9: complete — guide and release 7.75.0
