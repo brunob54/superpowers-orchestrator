@@ -688,9 +688,11 @@ code has been revised since, so a re-pass is meaningful):
    continues to the next round, as it did before pointer dispatch.
    u ≥ 1 → build one
    **consolidated finding set** from the usable reports by the rules
-   below, then continue; a round with u < M is *partial* — it is logged
-   with its counts and is never clean. With M = 1 the consolidated set is
-   the report's enumeration with its original ids, unchanged.
+   below, then continue; a round is *partial* when fewer than M reviewers
+   returned a usable report (u < M) or when a usable report does not
+   declare every expected input `whole` (inputs read, step 6) — it is
+   logged with its counts and is never clean. With M = 1 the consolidated
+   set is the report's enumeration with its original ids, unchanged.
    1. Enumeration is the source of truth: findings come from each report's
       enumerated findings, never from its count line.
    2. Union: every enumerated finding of every usable report appears in
@@ -1111,8 +1113,22 @@ code has been revised since, so a re-pass is meaningful):
 6. **Convergence check:** a round is *clean* when the **consolidated set**
    enumerates zero Critical and zero Important (never the count lines;
    never post-triage — rejections and user-decision findings never make a
-   round clean) **and** all M reviewers returned a usable report (u = M).
-   A partial round is never clean and breaks the streak. An
+   round clean) **and** all M reviewers returned a usable report (u = M)
+   **and** every usable report's `### Inputs read` section carries, for
+   every input of the expected set, a line that reads `whole`
+   (`- <input>: whole`, nothing after the word); a line that begins
+   `- <input>: partial` is a `partial` declaration whatever follows it.
+   The expected set is
+   `diff`, plus `plan` when you filled `PLAN_LINE` with the path-bearing
+   sentence `Plan/requirements the branch implements (read it first):
+   <plan path>` (step 2); a line for any other input is ignored. A round
+   where, in any usable report, an expected input is declared `partial`,
+   or its line is missing or outside that grammar (*input not declared*),
+   or the whole section is missing (*not declared*), is partial for the
+   inputs-read cause: its findings are consolidated and triaged normally,
+   no report is retried for it, and its entry carries the
+   `**Inputs read:**` line (Review Log Format). A partial round — for
+   either cause — is never clean and breaks the streak. An
    `inconclusive` round — no usable report at all — is never clean either
    and breaks the streak, so a streak can never contain one; whether the
    loop continues past it is decided in step 3, and it continues only in
@@ -1130,8 +1146,18 @@ code has been revised since, so a re-pass is meaningful):
    harder to reach with M > 1 — that is the intended effect.
 
    **No fix ships unreviewed:** a fix — any severity, including your own
-   Minor fixes — counts as *reviewed* only when a later round **with a
-   usable report** ran on the updated branch. Before ANY exit (convergence
+   Minor fixes — counts as *reviewed* only when a later round or
+   verification cycle ran on the updated branch with **at least one usable
+   report whose `diff` line reads `whole`, or reads `partial` with every
+   unread range annotated with the diff paths it covers, none of which the
+   fix commit changed**. List the fix commit's paths with
+   `git show --name-only --format= <sha>`, as its own command; an
+   unannotated range, or one naming a changed path, fails the test. This
+   rule reads the `diff` line only — a fix lands in the diff, never in the
+   plan — so a `plan` line that reads `partial` does not make a fix
+   unreviewed. A usable report whose `diff` line is `partial` without such
+   annotations, or not declared, has by its own statement not examined
+   the whole diff. Before ANY exit (convergence
    or cap) that would ship an unreviewed fix, dispatch a **verification
    re-review**: same lens as the round whose findings the fix addressed
    (your Minor fixes: the last-run lens), on the regenerated package,
@@ -1232,17 +1258,23 @@ code has been revised since, so a re-pass is meaningful):
    applies a fix that contradicts binding text — the orchestrator's guards
    are the only route to that. The 3-cycle cap is unchanged.
 
-   A partial verification cycle (1 ≤ u < M) counts as a cycle, and its
-   usable reports' findings are triaged normally. A partial round or cycle
-   satisfies "a later round with a usable report ran on the updated
-   branch": the fixes it examined count as reviewed. A partial
-   verification cycle after which no unreviewed fix remains (an empty
-   consolidated set included) ends the verification of its originating
-   round. "Never clean" concerns only the
-   convergence streak; it never reopens a verification — so a cap exit
-   after a partial round ships no unreviewed fix, and three partial
-   cycles with empty consolidated sets end with nothing standing and
-   nothing `unresolved`.
+   A verification cycle with 1 ≤ u < M (partial for the u < M cause)
+   counts as a cycle, and its usable reports' findings are triaged
+   normally. A round or cycle with at least one usable report whose `diff`
+   line reads `whole`, or `partial` with every unread range naming diff
+   paths the fix commit did not change, satisfies "a later round with a
+   usable report ran on the updated branch": the fixes it examined count
+   as reviewed. A verification cycle with such a report after which no
+   unreviewed fix remains (an empty consolidated set included) ends the
+   verification of its originating round. A cycle without such a report
+   (partial for the inputs-read cause) counts toward the 3-cycle cap and
+   does not end the verification; when the cap is reached this way, the
+   fix ships as the cap allows, and the `**Inputs read:**` lines of the
+   log show the declarations. "Never clean" concerns only the convergence
+   streak; it never reopens a verification — so a cap exit after a round
+   with such a report ships no unreviewed fix, whichever cause made that
+   round partial, and three cycles with such reports and empty
+   consolidated sets end with nothing standing and nothing `unresolved`.
 
 ## Lens Rotation
 
@@ -1323,7 +1355,8 @@ that drift from the text they are meant to check.
 The invocation line records M right after N, **including when M = 1**, so
 that a log is self-describing; a line without `M=` (written before 7.4.0)
 is read as M = 1. The invocation line below adds `M=<m>`; the round entry
-that follows it (M = 1) is byte-identical to earlier releases:
+that follows it (M = 1) is byte-identical to earlier releases when every
+usable report declares every input `whole`:
 
 ```
 _Invocation <k> — YYYY-MM-DD — N=<n> M=<m> — BASE..HEAD <base7>..<head7> — branch <raw-name> — <invoker>_
@@ -1406,7 +1439,7 @@ Rules for the added lines:
   entry is written on one line, never wrapped.
 - `**Sources mapped:**` — the traceability check of the Procedure; both
   numbers are *k*. The entry is written only after the check passed, so the
-  two numbers are always equal. A clean round (u = M, empty consolidated set)
+  two numbers are always equal. A round with u = M and an empty consolidated set
   writes `**Sources mapped:** 0/0`; only an inconclusive round (u = 0) omits
   this line entirely.
 - `**Reviewer verdict:**` — keeps its name and position; with M ≥ 2 it
@@ -1441,8 +1474,19 @@ Rules for the added lines:
   consolidated finding and keeps its annotation.
 - The clean-round line `- none — no material issues under this lens` is
   written without annotation and only when the consolidated set is empty
-  **and** u = M. A partial round with an empty consolidated set writes
-  `- none — no material issues under this lens (partial round, usable <u>/<m>)`.
+  **and** u = M **and — in a rotating round — every usable report declares
+  every expected input `whole`**. A partial round with an empty
+  consolidated set writes
+  `- none — no material issues under this lens (partial round, usable <u>/<m>)`
+  when only u < M applies, in every entry kind that writes it today. A
+  rotating round that is partial only for inputs read writes
+  `- none — no material issues under this lens (partial round, inputs read)`,
+  and with both causes `(partial round, usable <u>/<m>, inputs read)`. No
+  other entry kind writes the `inputs read` cause: a verification cycle or
+  an addendum re-review with an empty consolidated set writes the plain
+  line when u = M and `(partial round, usable <u>/<m>)` when u < M,
+  whatever the declarations say, and its `**Inputs read:**` line is the
+  record.
 - An `inconclusive` round (u = 0) with M ≥ 2 writes
   `**Reviewers:** M=<m>, usable 0/<m>`,
   `**Reviewer verdicts:** r1: unusable | r2: unusable | …`, no
@@ -1450,6 +1494,34 @@ Rules for the added lines:
   `- inconclusive — <reason>`.
 - A `skipped` entry is unchanged apart from its invocation fields, which
   carry `M=` like every other. The `_Completed — …` line is unchanged.
+
+**The `**Inputs read:**` line.** Written only when at least one usable
+report declares an expected input (step 6) `partial` or does not declare
+it, and placed directly after the `**Reviewer verdict:**` line, which
+every entry kind has (the `**Converged:**` line exists in rotating rounds
+only):
+
+```
+**Inputs read:** r1: plan partial — not read: 735-end | r2: diff partial — not read: 549-1869; plan not declared | r3: not declared
+```
+
+Three entry shapes: `<input> partial — not read: <ranges>` for a partial
+input (`partial — not read: unknown` when the report's line names no
+range), `<input> not declared` for an expected input whose line is
+missing or outside the grammar, and the bare `not declared` for a report
+without the section. One entry per affected usable reviewer, in reviewer
+order, separated by ` | `; a reviewer with several affected inputs lists
+them in one entry, separated by `; `. `r<j>` numbers the reviewers as on
+the `**Reviewer verdicts:**` line; with M = 1 the single entry is
+`r1: …`. Unusable reviewers are not listed (they appear on the
+`**Reviewer verdicts:**` line only), and a line for an input outside the
+expected set is ignored. A round whose usable reports all declare every
+expected input `whole` writes nothing new. The line is written in every
+entry kind built from the round-entry rules — rotating rounds,
+verification cycles and addendum re-reviews — and it is a record: a
+rotating round's outcome follows the clean-round rule of step 6, and a
+verification cycle's or an addendum re-review's outcome follows "No fix
+ships unreviewed" (step 6).
 
 Disposition summaries that reference a secret-bearing finding (hardcoded
 credential, token) cite it by file:line only and never reproduce the
@@ -1467,9 +1539,11 @@ Handling); Minor:
 `rejected: <reason>` — the `fixed` line uses the shape
 `fixed — <summary> → <sha>`, with the source annotation appended when
 M ≥ 2 (see above). A clean round (zero findings of any severity, and —
-on round 1 — no carried-finding dispositions either, with u = M) writes
-exactly one disposition line: `- none — no material issues under this
-lens`. A Minor-only round is clean for convergence (with u = M) but logs
+on round 1 — no carried-finding dispositions either, with u = M and — in a rotating round
+— every expected input declared `whole`, step 6) writes exactly one
+disposition line: `- none — no material issues under this lens`. A
+Minor-only round is clean for convergence when step 6 makes it clean
+(u = M and every expected input declared `whole`) but logs
 its Minor dispositions normally — never the "none" line. Note
 sonnet-floor substitutions on the round header line. Skipped invocations
 (N=0) get a one-line `skipped` entry carrying
@@ -1592,8 +1666,15 @@ a finding still standing after re-review 2 is
 suffix of "Self-sufficient open-item lines" and is an open item of the
 return like any other `unresolved:` line). Two fix dispatches and two
 re-reviews per addendum is the bound. A re-review is clean when no
-Critical/Important finding stands after triage. A clean re-review ends
-the addendum. On a retry after a lost return, a re-review whose heading
+Critical/Important finding stands after triage **and** at least one of
+its usable reports passes the test of "No fix ships unreviewed" (step 6)
+for the fix commit it verifies. A clean re-review ends the addendum. A
+re-review that leaves no Critical/Important finding standing but has no
+such report is followed by re-review 2 on the same fix, with no new fix
+dispatch, when the bound allows; when the bound is spent, the addendum
+ends and the fix stands, with the declarations on the entries'
+`**Inputs read:**` lines — never a new `unresolved:` item.
+On a retry after a lost return, a re-review whose heading
 already stands in the entry is never run again, and a fix whose commit
 the `fixed` line records is never dispatched again (idempotence, below).
 Each accepted
@@ -1786,7 +1867,7 @@ completed invocation only on explicit user request.
 ## Error Handling
 
 - Unusable report twice, with at least one other reviewer usable →
-  partial round, continue (never clean); with none usable in the round,
+  partial round (u < M), continue (never clean); with none usable in the round,
   the `inconclusive` entry is written, and the loop returns `BLOCKED`
   only when a reviewer's final message shows a prompt-file failure
   (pointer-mechanism rows below).
@@ -1818,9 +1899,15 @@ completed invocation only on explicit user request.
   note the substitution in the completion message. Block absent, its
   `reviewers-per-lens` line absent, or that line's value invalid → 1
   (silent fallback).
-- One or more reviewers unusable after one retry, u ≥ 1 → partial round:
+- One or more reviewers unusable after one retry, u ≥ 1 → partial round (u < M):
   consolidate the usable reports, log `usable <u>/<m>` and `r<j>: unusable`,
   triage normally; the round is never clean.
+- A usable report that declares an expected input `partial`, or does not
+  declare it (no `### Inputs read` section, or the input's line missing or
+  outside the grammar) → partial round (inputs read): triage normally,
+  write the `**Inputs read:**` line, never retry; the round is never clean
+  (step 6), and a fix it examined counts as reviewed only under "No fix
+  ships unreviewed".
 - All reviewers unusable after retries (u = 0), with at least one final
   message showing no sign of the prompt file's content — it names no file
   or hunk of the diff and carries no Findings or Verdict section (a tool

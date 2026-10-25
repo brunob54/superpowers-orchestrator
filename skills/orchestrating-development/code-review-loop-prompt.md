@@ -196,9 +196,10 @@ Agent tool (general-purpose):
        your return; an item the answer accepts as a finding to fix
        follows the skill's "Resolving user-decision and unresolved items"
        rule (one fix subagent, one verification re-review logged as
-       `## Round <i> addendum <n> re-review 1`, then — only when a
-       Critical/Important finding still stands — one more fix subagent and
-       re-review 2: at most two fix dispatches and two re-reviews per
+       `## Round <i> addendum <n> re-review 1`, then — only when a Critical/Important finding still stands, or
+       when no usable report of re-review 1 passes the skill's "No fix
+       ships unreviewed" test — re-review 2, after one more fix subagent
+       only in the first case: at most two fix dispatches and two re-reviews per
        addendum; a finding still standing after re-review 2 is
        `unresolved: addendum re-review`, an open item of your return;
        `fixed — <summary> → <sha>` disposition in the same addendum).

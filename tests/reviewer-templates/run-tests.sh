@@ -1390,6 +1390,58 @@ for phrase in "${CODE_EVIDENCE_PHRASES[@]}"; do
   assert_folded_contains "multi-code-review SKILL.md Triage step: '$phrase'" "$CODE_TRIAGE_RANGE" "$phrase"
 done
 
+bold "32. multi-code-review: the inputs-read rules (release 7.75.0)"
+# Shared with test 33 (multi-doc-review).
+PARTIAL_DEF_OLD='a round with u < M is *partial*'
+PARTIAL_DEF_HEAD='a round is *partial* when fewer than M reviewers returned a usable report (u < M) or when a usable report does not declare every expected input `whole`'
+CONVERGENCE_INPUTS="every usable report's \`### Inputs read\` section carries, for every input of the expected set, a line that reads \`whole\`"
+INPUT_NOT_DECLARED='(*input not declared*)'
+SECTION_NOT_DECLARED='(*not declared*)'
+EITHER_CAUSE='A partial round — for either cause — is never clean and breaks the streak'
+PARTIAL_WHATEVER='a line that begins `- <input>: partial` is a `partial` declaration whatever follows it'
+CLEAN_LINE_SCOPE='and — in a rotating round — every usable report declares every expected input `whole`'
+NEVER_RETRIED='no report is retried for it'
+LOG_POSITION='placed directly after the `**Reviewer verdict:**` line'
+LOG_SHAPES='`<input> partial — not read: <ranges>`'
+LOG_UNKNOWN='`partial — not read: unknown`'
+CLEAN_LINE_INPUTS='`- none — no material issues under this lens (partial round, inputs read)`'
+CLEAN_LINE_BOTH='`(partial round, usable <u>/<m>, inputs read)`'
+BYTE_IDENTICAL_QUALIFIED='when every usable report declares every input `whole`'
+ERROR_INPUTS_BULLET='→ partial round (inputs read)'
+ERROR_RETRY_BULLET='u ≥ 1 → partial round (u < M):'
+# multi-code-review only.
+CODE_PARTIAL_DEF="$PARTIAL_DEF_HEAD (inputs read, step 6)"
+CODE_EXPECTED_SET='The expected set is `diff`, plus `plan` when you filled `PLAN_LINE` with the path-bearing sentence'
+FIX_REVIEWED='at least one usable report whose `diff` line reads `whole`, or reads `partial` with every unread range annotated with the diff paths it covers, none of which the fix commit changed'
+FIX_PATHS_COMMAND='`git show --name-only --format= <sha>`'
+FIX_DIFF_LINE_ONLY='This rule reads the `diff` line only'
+CYCLE_REVIEWED_NEW='or `partial` with every unread range naming diff paths the fix commit did not change, satisfies "a later round with a usable report ran on the updated branch"'
+CYCLE_REVIEWED_OLD='A partial round or cycle satisfies "a later round with a usable report ran on the updated branch"'
+CYCLE_NOT_ENDED='counts toward the 3-cycle cap and does not end the verification'
+ADDENDUM_TEST='passes the test of "No fix ships unreviewed"'
+ADDENDUM_NO_UNRESOLVED='never a new `unresolved:` item'
+CODE_LOG_EXAMPLE='**Inputs read:** r1: plan partial — not read: 735-end | r2: diff partial — not read: 549-1869; plan not declared | r3: not declared'
+CODE_ENTRY_KINDS='rotating rounds, verification cycles and addendum re-reviews'
+CODE_ERROR_UNUSABLE='→ partial round (u < M), continue (never clean)'
+assert_folded_not_contains "multi-code-review SKILL.md: the old partial-round definition is gone" "$CODE_SKILL" "$PARTIAL_DEF_OLD"
+for phrase in "$CODE_PARTIAL_DEF" "$CONVERGENCE_INPUTS" "$CODE_EXPECTED_SET" "$INPUT_NOT_DECLARED" "$SECTION_NOT_DECLARED" \
+              "$EITHER_CAUSE" "$PARTIAL_WHATEVER" "$CLEAN_LINE_SCOPE" "$NEVER_RETRIED" "$FIX_REVIEWED" "$FIX_PATHS_COMMAND" "$FIX_DIFF_LINE_ONLY" "$CYCLE_REVIEWED_NEW" \
+              "$CYCLE_NOT_ENDED" "$ADDENDUM_TEST" "$ADDENDUM_NO_UNRESOLVED" "$LOG_POSITION" "$LOG_SHAPES" "$LOG_UNKNOWN" \
+              "$CODE_ENTRY_KINDS" "$CLEAN_LINE_INPUTS" "$CLEAN_LINE_BOTH" "$BYTE_IDENTICAL_QUALIFIED" "$ERROR_INPUTS_BULLET" \
+              "$CODE_ERROR_UNUSABLE" "$ERROR_RETRY_BULLET"; do
+  assert_folded_contains "multi-code-review SKILL.md: '$phrase'" "$CODE_SKILL" "$phrase"
+done
+assert_folded_not_contains "multi-code-review SKILL.md: the unconditioned partial-cycle sentence is gone" "$CODE_SKILL" "$CYCLE_REVIEWED_OLD"
+# The clean-round restatements in the Review Log Format carry the inputs-read
+# condition too, so the skill holds one definition of a clean round.
+assert_folded_not_contains "multi-code-review SKILL.md: the u = M-only Minor-only sentence is gone" "$CODE_SKILL" 'A Minor-only round is clean for convergence (with u = M) but'
+assert_folded_not_contains "multi-code-review SKILL.md: the u = M-only Sources mapped parenthesis is gone" "$CODE_SKILL" 'A clean round (u = M, empty consolidated set)'
+assert_file_has_line "multi-code-review SKILL.md: the Inputs read log example line" "$CODE_SKILL" "$CODE_LOG_EXAMPLE"
+# The code-review loop template restates the addendum re-review rule
+# (Deviation 5); it carries the second trigger for re-review 2 too.
+CODE_LOOP_TEMPLATE="$ROOT/skills/orchestrating-development/code-review-loop-prompt.md"
+assert_folded_contains "code-review-loop-prompt.md: re-review 2 also follows a re-review 1 without a passing report" "$CODE_LOOP_TEMPLATE" 'or when no usable report of re-review 1 passes the skill'"'"'s "No fix ships unreviewed" test'
+
 echo
 bold "Results: $PASS passed, $FAIL failed"
 if [ "$FAIL" -gt 0 ]; then
