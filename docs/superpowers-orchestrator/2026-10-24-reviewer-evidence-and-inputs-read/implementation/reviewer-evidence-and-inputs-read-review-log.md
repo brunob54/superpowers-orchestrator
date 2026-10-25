@@ -94,3 +94,14 @@ _Invocation 1 — 2026-10-25 — N=4 M=3 — BASE..HEAD b8c9435..1a25f83 — bra
 - [I2] fixed — the input sentences that decide the expected set were not pinned at their source and the script needles were not tied to the live text, and an empty expected set counted as with-inputs-read; source pins in tests 32/33, a needle check in the count-report-fields suite, and an empty expected set no longer counts → f5ff0415 ← 2/3: r1:I1, r3:M1
 - [M1] fixed — test 19's check that the old stop clause is gone passed vacuously on an empty file list; it now asserts the list is non-empty → f5ff0415 ← 1/3: r1:M1
 - [M2] fixed — the v7.75.0 release note said test 5c checks every Markdown file under skills/; reworded to what each test checks → f5ff0415 ← 1/3: r1:M2
+
+## Round 4 verification 3 — Test & coverage quality — opus
+**Reviewers:** M=3, usable 3/3
+**Reviewer verdicts:** r1: 0 Critical, 0 Important, 3 Minor | r2: 0 Critical, 1 Important, 1 Minor | r3: 0 Critical, 0 Important, 2 Minor
+**Sources mapped:** 7/7
+**Reviewer verdict:** 0 Critical, 1 Important, 3 Minor
+### Dispositions
+- [I1] unresolved: verification cap — the plan-needle drift checks (count-report-fields section 3 and reviewer-templates test 32) search the whole skills/multi-code-review/SKILL.md, which also quotes the sentence in the step 6 expected-set rule, so they still pass when the PLAN_LINE fill instruction (SKILL.md:574-575) or the reviewer-prompt legend (reviewer-prompt.md:397-398) is reworded; scope both checks to the fill paragraph and the legend entry — at tests/count-report-fields/run-tests.sh:160 — clause: none ← 3/3: r1:M1, r2:I1, r3:M1
+- [M1] carried — no fixture puts an assistant text block after the last SubagentHandback, so the handback-over-text precedence of takenReport is not discriminated, although the suite header claims it ← 2/3: r1:M3, r3:M2
+- [M2] carried — the script constants LENS_HEADING, MARKER and INPUTS_HEADING are not checked against the live reviewer prompts ← 1/3: r1:M2
+- [M3] carried — no near-miss fixture for the secret-form regex or the exact `### Inputs read` heading match; loosened forms survive ← 1/3: r2:M1
