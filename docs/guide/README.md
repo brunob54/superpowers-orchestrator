@@ -386,8 +386,10 @@ whole-branch review rounds (rotating lenses: correctness, red-team, security,
 test quality), each round dispatching M identical reviewers in parallel
 (default 1) whose reports are consolidated before triage, with
 Critical/Important findings fixed between rounds and an early exit after two
-consecutive clean rounds — with M > 1 a round is clean only when every
-reviewer returned a usable report. In interactive SDD the gate asks you
+consecutive clean rounds — a round is clean only when every reviewer returned
+a usable report and every report declares, in its `### Inputs read` section,
+each file it was told to read as read `whole`; this holds also at M = 1. In
+interactive SDD the gate asks you
 for N and M first. In batched autonomous mode it asks nothing: N and M are
 the values you stated when the batch run started or that the resume prompt
 carries, else the session defaults `SUPERPOWERS_REVIEW_ROUNDS` and
