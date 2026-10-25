@@ -5,3 +5,5 @@ _Invocation 1 — 2026-10-25 — spec docs/superpowers-orchestrator/2026-10-24-r
 ## Phase 1 — Plan — DONE — 2026-10-25
 plan: docs/superpowers-orchestrator/2026-10-24-reviewer-evidence-and-inputs-read/plans/reviewer-evidence-and-inputs-read.md — 9 tasks
 note: a computer crash stopped the plan writer before its return; the same agent was continued with SendMessage and returned PLAN_READY
+
+## Phase 2 — Plan review — rounds 4 — cap — unresolved 0
