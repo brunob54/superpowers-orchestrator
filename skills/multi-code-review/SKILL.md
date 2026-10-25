@@ -1276,6 +1276,15 @@ code has been revised since, so a re-pass is meaningful):
    round partial, and three cycles with such reports and empty
    consolidated sets end with nothing standing and nothing `unresolved`.
 
+   **Unreviewed fixes from more than one round.** When the unreviewed
+   fixes at exit come from more than one originating round, run ONE
+   verification sequence, not one per round: `<i>` is the highest
+   originating round, and the sequence runs under that round's lens (the
+   rule the post-loop addendum uses in After the Loop). A cycle with a
+   usable report that passes the test above reviews every fix it
+   examined, whatever the round that originated the fix. The cap and the
+   cycle counting are as stated above.
+
 ## Lens Rotation
 
 | Round | Lens |
