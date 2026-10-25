@@ -7,3 +7,8 @@ plan: docs/superpowers-orchestrator/2026-10-24-reviewer-evidence-and-inputs-read
 note: a computer crash stopped the plan writer before its return; the same agent was continued with SendMessage and returned PLAN_READY
 
 ## Phase 2 — Plan review — rounds 4 — cap — unresolved 0
+
+## Phase 3 — Batch 1 (tasks 1–3) — COMPLETE — commits 7bf9880..9e1d476
+- Task 1: complete — paging-rule stop clause in all eight carriers
+- Task 2: complete — evidence line in both reviewer prompts
+- Task 3: complete — inputs-read section in both reviewer prompts
