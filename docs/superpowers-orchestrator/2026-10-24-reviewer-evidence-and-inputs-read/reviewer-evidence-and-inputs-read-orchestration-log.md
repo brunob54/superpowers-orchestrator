@@ -22,3 +22,12 @@ note: a computer crash stopped the plan writer before its return; the same agent
 - Task 7: complete — evidence and inputs-read rules in multi-doc-review
 - Task 8: complete — acceptance-measure script tools/count-report-fields.js and its suite
 - Task 9: complete — guide and release 7.75.0
+
+## RULING 1 — 2026-10-25 — phase 4 — four open items: three plan governs, one fix it
+Items: [I1] design — plan governs: (this answers the round 2 user-decision item on the `input partial` rejection reason) Task 4 clause
+Items: [I2] forced — plan governs: (this answers the round 2 user-decision item on a fix that no reviewer read) Task 5 clause
+Items: [I3] forced — plan governs: (this answers the round 2 user-decision item on rejecting an Important finding without opening a file) Task 4 clause
+Items: [I1] forced — fix it: (this answers the round 4 verification 3 unresolved item on the plan-needle drift checks) scope both checks to the fill paragraph and the legend entry
+Detail: docs/superpowers-orchestrator/2026-10-24-reviewer-evidence-and-inputs-read/plans/reviewer-evidence-and-inputs-read-open-decisions.md
+Forks: 3 of 3 (design consistency, implementation practicality, adversarial) — contradiction: settled
+Re-dispatch: phase 4, in-run resume 1 of 3, return 1 of 6

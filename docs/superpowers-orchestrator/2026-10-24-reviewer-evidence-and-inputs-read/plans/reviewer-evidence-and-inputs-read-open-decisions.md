@@ -1,0 +1,37 @@
+# Open decisions — reviewer-evidence-and-inputs-read
+
+## Ruling 1 — 2026-10-25 — phase 4 — [I1] input partial rejection reason too broad (round 2)
+
+- **Class:** design
+- **Item:** [I1 inv 1] Important skills/multi-code-review/SKILL.md:990 — the `input partial` rejection reason applies to any gap-form or absence-form Important finding whose report declares the diff partial or omits the declaration, even when every unread range is annotated with unrelated paths and the evidence was read from the checkout file, so a true finding can be rejected with no file read; the fix-reviewed rule reads the same annotated declaration the opposite way
+- **Contract clause:** "Must convey spec 5.2: the controller reads each Critical/Important finding's evidence line against the claim before choosing a disposition, as a text comparison" — docs/superpowers-orchestrator/2026-10-24-reviewer-evidence-and-inputs-read/plans/reviewer-evidence-and-inputs-read.md, Task 4
+- **Defensible answers:** (1) plan governs: the rule stands as the Task 4 Contract and spec 5.2 item 3 word it; (2) amend plan + fix it: narrow `input partial` so that path annotations showing the unread part is unrelated keep it from applying
+- **Forks:** 3 of 3 — design consistency: VERDICT: plan governs. The `input partial` rule at SKILL.md:991-994 matches spec 5.2 item 3 and the Task 4 Contract; implementation practicality: VERDICT: amend plan + fix it (outcome 2): narrow `input partial` so it does not apply when every unread range of the declaration is annotated with diff paths, none of which is the finding's file; adversarial: VERDICT: plan governs — the `input partial` rule stands as the Task 4 Contract and spec 5.2 item 3 word it.; contradiction: settled — spec 5.3 gives the path annotation one role only ("the only annotation allowed", which keeps "the fix-reviewed rule of 5.4 intact") and none in triage, and the text a gap-form or absence-form finding concerns can stand in any path, so an annotation cannot show an unread range unrelated; the practicality fork's own TABLED line concedes this for the absence form. Tabled and recorded, not escalating: escalated (spec wrong) (design consistency); amend plan narrowing the gap form only (implementation practicality); plan governs plus an explanatory sentence, which needs a plan amendment (adversarial)
+- **Resolution:** plan governs: (this answers the round 2 user-decision item on the `input partial` rejection reason) "Must convey spec 5.2: the controller reads each Critical/Important finding's evidence line against the claim before choosing a disposition, as a text comparison" — docs/superpowers-orchestrator/2026-10-24-reviewer-evidence-and-inputs-read/plans/reviewer-evidence-and-inputs-read.md — spec 5.2 item 3 lets the reason apply when the report declares the input the finding concerns `partial` or not declared; spec 5.3 gives path annotations no triage role, and spec 11 item 2 accepts the over-rejection risk (rejection is optional and never for a Critical).
+
+## Ruling 2 — 2026-10-25 — phase 4 — [I2] fix that no reviewer read ships without a return signal (round 2)
+
+- **Class:** forced
+- **Item:** [I2 inv 1] Important skills/multi-code-review/SKILL.md:1268-1276 — a fix that no reviewer read (every later report declares the diff partial without qualifying annotations) ships when the verification cap or the addendum bound is spent, and the loop's return carries no signal of it; only the `**Inputs read:**` log lines show it
+- **Contract clause:** "Addendum re-review rule (wording artifact): a re-review is clean only when it also has a report that passes the fix-reviewed test; one without such a report and" — docs/superpowers-orchestrator/2026-10-24-reviewer-evidence-and-inputs-read/plans/reviewer-evidence-and-inputs-read.md, Task 5
+- **Defensible answers:** n/a
+- **Forks:** none; contradiction: none
+- **Resolution:** plan governs: (this answers the round 2 user-decision item on a fix that no reviewer read) "Addendum re-review rule (wording artifact): a re-review is clean only when it also has a report that passes the fix-reviewed test; one without such a report and" — docs/superpowers-orchestrator/2026-10-24-reviewer-evidence-and-inputs-read/plans/reviewer-evidence-and-inputs-read.md — spec section 11 item 5 accepts exactly this state as a limit ("the fix ships at the 3-cycle cap with the declarations in the log"), and a return signal would change the REVIEW_DONE return contract of orchestrating-development, which no plan task touches.
+
+## Ruling 3 — 2026-10-25 — phase 4 — [I3] Important finding rejected on evidence without opening a file (round 2)
+
+- **Class:** forced
+- **Item:** [I3 inv 1] Important skills/multi-code-review/SKILL.md:983-989 — the controller may reject an Important finding as `rejected: evidence (missing)` or `(line differs)` without opening any file, so a true finding from a reviewer that omits the new evidence line can be dropped, and two controllers decide differently
+- **Contract clause:** "Must convey spec 5.2: the controller reads each Critical/Important finding's evidence line against the claim before choosing a disposition, as a text comparison" — docs/superpowers-orchestrator/2026-10-24-reviewer-evidence-and-inputs-read/plans/reviewer-evidence-and-inputs-read.md, Task 4
+- **Defensible answers:** n/a
+- **Forks:** none; contradiction: none
+- **Resolution:** plan governs: (this answers the round 2 user-decision item on rejecting an Important finding without opening a file) "Must convey spec 5.2: the controller reads each Critical/Important finding's evidence line against the claim before choosing a disposition, as a text comparison" — docs/superpowers-orchestrator/2026-10-24-reviewer-evidence-and-inputs-read/plans/reviewer-evidence-and-inputs-read.md — spec 5.2 item 1 ("the controller opens no file for it") and item 3 ("may instead reject it") mandate exactly the behaviour the finding objects to, and spec 11 item 2 accepts its risk.
+
+## Ruling 4 — 2026-10-25 — phase 4 — [I1] plan-needle drift checks cannot fail (round 4 verification 3)
+
+- **Class:** forced
+- **Item:** [I1 inv 1] Important tests/count-report-fields/run-tests.sh:160 — the plan-needle drift checks (count-report-fields section 3 and reviewer-templates test 32) search the whole skills/multi-code-review/SKILL.md, which also quotes the sentence in the step 6 expected-set rule, so they still pass when the PLAN_LINE fill instruction (SKILL.md:574-575) or the reviewer-prompt legend (reviewer-prompt.md:397-398) is reworded; scope both checks to the fill paragraph and the legend entry
+- **Contract clause:** n/a
+- **Defensible answers:** n/a
+- **Forks:** none; contradiction: none
+- **Resolution:** fix it: (this answers the round 4 verification 3 unresolved item on the plan-needle drift checks) scope both plan-needle drift checks, tests/count-report-fields/run-tests.sh section 3 (line 160) and tests/reviewer-templates/run-tests.sh test 32, to the PLAN_LINE fill paragraph of skills/multi-code-review/SKILL.md and the legend entry of skills/multi-code-review/reviewer-prompt.md, so that rewording either text makes its check fail while the step 6 copy of the sentence is unchanged — a check that searches the whole file passes while a second copy of the sentence stands elsewhere in it, so it cannot fail on a reword of the text it names (line 160 passes "$CODE_SKILL_FILE" whole, unlike the three extracted-section checks beside it).
