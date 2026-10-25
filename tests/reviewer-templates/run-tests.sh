@@ -1186,6 +1186,117 @@ done
 assert_folded_contains "multi-code-review reviewer template: the no-package value excepts exit 3" "$CODE_PROMPT" \
   'fails with an exit code other than 3'
 
+bold "29. Reviewer prompts: the evidence line (release 7.75.0)"
+# Each Critical and Important finding carries one `evidence:` line copied from
+# the tool output of a fresh read of the cited line. The rule paragraph is
+# byte-identical in both reviewer prompts, so it is extracted from its lead-in
+# label to the next blank line (or the closing fence, in the doc prompt, where
+# it is the last paragraph) and the two extracts are compared.
+EVIDENCE_LEAD='**Evidence line.**'
+HARNESS_FIELD_LINE='`| harness: untested — <the one probe the controller should run>`.'
+WHERE_REPORT_GOES='**Where the report goes.**'
+# The four sentences that name a prompt input. The controller and
+# tools/count-report-fields.js derive the expected inputs from them, so a rule
+# paragraph that is shared by both prompts must never quote one of them.
+INPUT_NEEDLES=('Read the diff file whole' 'Document (read it whole' 'Plan/requirements the branch implements (read it first):' 'read the spec listed under Target')
+CODE_EVIDENCE_EXAMPLE='      evidence: 40<tab>  return attempts > max ? null : retry(fn)'
+DOC_EVIDENCE_EXAMPLE='      evidence: 57<tab>The client retries a failed request until it succeeds.'
+CODE_REFERENCE_NEW='Every finding must carry a file:line reference — the path and line of the changed code in the checkout.'
+CODE_REFERENCE_OLD='file:line reference into the diff'
+RETURNS_EVIDENCE='the `evidence:` line under each Critical and Important finding'
+EVIDENCE_PHRASES=(
+  'Directly below each Critical and each Important id line'
+  'needs no evidence line'
+  'A Minor finding gets none'
+  'never in the diff file'
+  '`grep -nH`'
+  'is not listed under Checks Run'
+  'correct the location before you report'
+  'For a document finding, read the target document'
+  'Presence form'
+  'Gap form'
+  '`evidence: grep -n '"'"'<pattern>'"'"' <path> → no match`'
+  '`evidence: <n> — secret-bearing line, not quoted`'
+  '`evidence: <path> — not in the checkout at HEAD`'
+  'at most 200 characters'
+  'never wrapped'
+  '`<tab>` stands for the tab character'
+)
+# Print the paragraph of file $1 that starts at the line whose text, without
+# its leading blanks, begins with $2: up to, but not including, the next blank
+# line or fence line. The lead text reaches awk through the environment so
+# that no character of it is reinterpreted.
+extract_lead_paragraph() { # file lead
+  lead="$2" awk 'BEGIN { l = ENVIRON["lead"] }
+    { t = $0; sub(/^[ \t]+/, "", t) }
+    !on && index(t, l) == 1 { on = 1 }
+    on && (t == "" || substr(t, 1, 3) == "```") { exit }
+    on { print }' "$1"
+}
+CODE_EVIDENCE="$WORK/code-evidence.txt"
+DOC_EVIDENCE="$WORK/doc-evidence.txt"
+extract_lead_paragraph "$CODE_BODY" "$EVIDENCE_LEAD" > "$CODE_EVIDENCE"
+DOC_BODY="$WORK/doc-body.txt"
+extract_prompt_body "$DOC_PROMPT" > "$DOC_BODY"
+extract_lead_paragraph "$DOC_BODY" "$EVIDENCE_LEAD" > "$DOC_EVIDENCE"
+if [ -s "$CODE_EVIDENCE" ]; then ok "code-review template: evidence paragraph is inside the prompt body"; else bad "code-review template: no '$EVIDENCE_LEAD' paragraph inside the prompt body"; fi
+if [ -s "$DOC_EVIDENCE" ]; then ok "doc-review template: evidence paragraph is inside the prompt body"; else bad "doc-review template: no '$EVIDENCE_LEAD' paragraph inside the prompt body"; fi
+if [ -s "$CODE_EVIDENCE" ] && diff -q "$CODE_EVIDENCE" "$DOC_EVIDENCE" >/dev/null; then
+  ok "evidence paragraph is byte-identical in the two reviewer prompts"
+else
+  bad "evidence paragraph differs between the two reviewer prompts"
+fi
+for phrase in "${EVIDENCE_PHRASES[@]}"; do
+  assert_folded_contains "evidence paragraph: '$phrase'" "$CODE_EVIDENCE" "$phrase"
+done
+for needle in "${INPUT_NEEDLES[@]}"; do
+  assert_folded_not_contains "evidence paragraph: never quotes the input sentence '$needle'" "$CODE_EVIDENCE" "$needle"
+done
+assert_folded_not_contains "evidence paragraph: names no square-bracket placeholder" "$CODE_EVIDENCE" "[REPO_ROOT]"
+# Position: after the harness: field paragraph; in the code prompt before
+# "Where the report goes", in the doc prompt before the closing fence.
+check_after() { # desc file earlier-needle later-needle
+  local a b
+  a="$(first_line_of "$2" "$3")"; b="$(first_line_of "$2" "$4")"
+  if [ -n "$a" ] && [ -n "$b" ] && [ "$b" -gt "$a" ]; then ok "$1"; else bad "$1 (line of '$3': '$a', line of '$4': '$b')"; fi
+}
+check_after "code-review template: evidence paragraph follows the harness: field paragraph" "$CODE_PROMPT" "$HARNESS_FIELD_LINE" "$EVIDENCE_LEAD"
+check_after "code-review template: evidence paragraph precedes 'Where the report goes'" "$CODE_PROMPT" "$EVIDENCE_LEAD" "$WHERE_REPORT_GOES"
+check_after "doc-review template: evidence paragraph follows the harness: field paragraph" "$DOC_PROMPT" "$HARNESS_FIELD_LINE" "$EVIDENCE_LEAD"
+DOC_OPEN="$(first_line_of "$DOC_PROMPT" "$PROMPT_OPEN")"
+DOC_CLOSE="$(fence_after "$DOC_PROMPT" "$DOC_OPEN")"
+DOC_LEAD_LINE="$(first_line_of "$DOC_PROMPT" "$EVIDENCE_LEAD")"
+if [ -n "$DOC_LEAD_LINE" ] && [ -n "$DOC_CLOSE" ] && [ "$DOC_LEAD_LINE" -lt "$DOC_CLOSE" ]; then
+  ok "doc-review template: evidence paragraph precedes the closing fence"
+else
+  bad "doc-review template: evidence paragraph precedes the closing fence (lead line '$DOC_LEAD_LINE', fence '$DOC_CLOSE')"
+fi
+# The format examples render the tab as <tab>: no prompt file holds a tab.
+TAB="$(printf '\t')"
+for f in "$CODE_PROMPT" "$DOC_PROMPT"; do
+  if grep -q -- "$TAB" "$f"; then bad "${f#"$ROOT"/skills/}: holds a literal tab character"; else ok "${f#"$ROOT"/skills/}: holds no literal tab character"; fi
+done
+assert_file_has_line "code-review template: format example carries an evidence line" "$CODE_PROMPT" "$CODE_EVIDENCE_EXAMPLE"
+assert_file_has_line "doc-review template: format example carries an evidence line" "$DOC_PROMPT" "$DOC_EVIDENCE_EXAMPLE"
+assert_folded_contains "code-review template: a file:line reference names the checkout" "$CODE_BODY" "$CODE_REFERENCE_NEW"
+assert_folded_not_contains "code-review template: no reference 'into the diff'" "$CODE_PROMPT" "$CODE_REFERENCE_OLD"
+# The Reviewer returns lists stand after the closing fence. Each check reads
+# only the text from the `**Reviewer returns:**` line to the end of the file,
+# because the rule paragraphs inside the prompt body hold similar words and
+# would make a whole-file check pass without the list edit (also test 30).
+RETURNS_LEAD='**Reviewer returns:**'
+CODE_RETURNS="$WORK/code-returns.txt"
+DOC_RETURNS="$WORK/doc-returns.txt"
+extract_from_lead() { # file lead: print from the first line that starts with lead to the end
+  lead="$2" awk 'BEGIN { l = ENVIRON["lead"] } index($0, l) == 1 { on = 1 } on { print }' "$1"
+}
+extract_from_lead "$CODE_PROMPT" "$RETURNS_LEAD" > "$CODE_RETURNS"
+extract_from_lead "$DOC_PROMPT" "$RETURNS_LEAD" > "$DOC_RETURNS"
+if [ -s "$CODE_RETURNS" ]; then ok "code-review template: Reviewer returns extract is non-empty"; else bad "code-review template: no line starts with '$RETURNS_LEAD'"; fi
+if [ -s "$DOC_RETURNS" ]; then ok "doc-review template: Reviewer returns extract is non-empty"; else bad "doc-review template: no line starts with '$RETURNS_LEAD'"; fi
+assert_folded_contains "code-review template: Reviewer returns names the evidence line" "$CODE_RETURNS" "$RETURNS_EVIDENCE"
+assert_folded_contains "doc-review template: Reviewer returns names the evidence line" "$DOC_RETURNS" "$RETURNS_EVIDENCE"
+
 echo
 bold "Results: $PASS passed, $FAIL failed"
 if [ "$FAIL" -gt 0 ]; then

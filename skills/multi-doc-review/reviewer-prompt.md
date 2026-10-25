@@ -148,6 +148,7 @@ Agent tool (general-purpose):
     ### Findings
     #### Critical
     - [C1] <doc section>: <what is wrong> | <why it matters> | <suggested fix>
+      evidence: 57<tab>The client retries a failed request until it succeeds.
     #### Important
     - [I1] ...
     #### Minor
@@ -163,6 +164,60 @@ Agent tool (general-purpose):
     `| harness: tested — <probe in one clause>; observed <result>` or
     `| harness: untested — <the one probe the controller should run>`.
     Findings about the document itself carry no `harness:` field.
+
+    **Evidence line.** Directly below each Critical and each Important id
+    line, write one line, indented by two spaces, that starts with
+    `evidence: `: you copy it from a fresh read of the line the finding is
+    about, so the read happens before you report. A finding that carries a
+    `harness:` field needs no evidence line: its premise is a runtime
+    property, and the harness procedure settles it. A Minor finding gets
+    none.
+    - Which file: for a code finding, open the file at the finding's path
+      under the **Repository root:** path that this prompt gives (under
+      `## Diff Under Review`) — an
+      absolute path, never one relative to the shell's working directory,
+      which is reset between Bash calls and can be another checkout — and
+      read it at the cited line, with the Read tool (`offset` set to that
+      line, `limit` 1: a read of one block, which the paging rule ends after
+      that line) or with `grep -nH`; never in the diff file, which
+      numbers its own lines, not the source file's lines. This read is part
+      of writing the finding: it is not a check outside the diff and is not
+      listed under Checks Run. The `file:line` of a code finding is a path
+      and a line of the checkout; when the read shows the defect at another
+      line, correct the location before you report. For a document finding,
+      read the target document.
+    - Presence form: the line the finding is about, copied from the tool
+      output — as the Read tool printed it (the line number, a tab, the
+      text; drop the spaces before the number) or as `grep -nH` printed it
+      (`<path>:<line>:<text>`; plain `grep -n` prints no path for a single
+      file). For a finding located at a line, the number is that line; at a
+      range `<path>:<a>-<b>`, a number inside the range; at a document
+      section, a line of that section.
+    - Gap form: when the finding says existing text is incomplete (a case
+      not covered, an error path not specified, a rule that does not say
+      what happens when …), the governing line — the sentence, table row
+      or list entry where the missing case belongs — in the presence form.
+      This is the usual form for a document finding.
+    - Absence form: when the finding says something is missing entirely
+      and no governing line exists, the search that found nothing:
+      `evidence: grep -n '<pattern>' <path> → no match`, with a pattern
+      that describes the missing thing. A line the branch removed from a
+      file that still exists (a deleted check, a dropped assertion) takes
+      this form, with the removed text as the pattern searched in the
+      checkout file, or the gap form with the enclosing line.
+    - Secret form: when the line holds a credential or another secret,
+      `evidence: <n> — secret-bearing line, not quoted`, with the line
+      number as `<n>`.
+    - Removed-file form: when the finding's path is not in the checkout at
+      HEAD (a file the branch deletes or renames),
+      `evidence: <path> — not in the checkout at HEAD`; do not quote the
+      diff file.
+    - Length: when the text after the prefix is longer than 200
+      characters, keep one window of at most 200 characters of that text
+      that holds the defect, and mark each cut end with `…` (the prefix and
+      the marks do not count). The evidence line is one line, never
+      wrapped. In the example above, `<tab>` stands for the tab character
+      that the Read tool prints; write the real tab.
 ```
 
 **Placeholders:**
@@ -184,4 +239,5 @@ Agent tool (general-purpose):
 rationale, prior rounds' findings, and the review log are never passed.
 
 **Reviewer returns:** marker line, Verdict counts, findings by severity with
-doc-section references.
+doc-section references, and the `evidence:` line under each Critical and
+Important finding.
