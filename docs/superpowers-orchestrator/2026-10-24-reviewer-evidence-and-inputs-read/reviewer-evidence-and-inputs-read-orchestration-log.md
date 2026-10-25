@@ -12,3 +12,8 @@ note: a computer crash stopped the plan writer before its return; the same agent
 - Task 1: complete — paging-rule stop clause in all eight carriers
 - Task 2: complete — evidence line in both reviewer prompts
 - Task 3: complete — inputs-read section in both reviewer prompts
+
+## Phase 3 — Batch 2 (tasks 4–6) — COMPLETE — commits 4a4c456..6265e7c
+- Task 4: complete — evidence triage rule in multi-code-review
+- Task 5: complete — inputs-read rules in multi-code-review
+- Task 6: complete — reflow of multi-doc-review SKILL.md prose to recover lines
