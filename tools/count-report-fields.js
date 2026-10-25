@@ -58,9 +58,6 @@ const INPUTS_HEADING = '### Inputs read';
 // One unread range: `<a>-<b>` or `<a>-end`, optionally followed by the diff
 // paths it covers in parentheses.
 const RANGE = '[0-9]+-(?:[0-9]+|end)(?: \\([^()]+\\))?';
-const INPUT_LINE_RE = new RegExp(
-  '^- (diff|plan|document|spec): (?:whole|partial — not read: (?:unknown|' + RANGE + '(?:, ' + RANGE + ')*))$'
-);
 // Each input of the expected set, with the prompt sentence that names it.
 const INPUTS = [
   { name: 'diff', needle: 'Read the diff file whole' },
@@ -68,6 +65,9 @@ const INPUTS = [
   { name: 'document', needle: 'Document (read it whole' },
   { name: 'spec', needle: 'read the spec listed under Target' },
 ];
+const INPUT_LINE_RE = new RegExp(
+  '^- (' + INPUTS.map((input) => input.name).join('|') + '): (?:whole|partial — not read: (?:unknown|' + RANGE + '(?:, ' + RANGE + ')*))$'
+);
 const DISPOSITION_PREFIX = '- [';
 const REJECTED_EVIDENCE = 'rejected: evidence (';
 const CRITICAL_NOTE = '(evidence: ';
