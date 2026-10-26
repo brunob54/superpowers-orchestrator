@@ -386,8 +386,10 @@ whole-branch review rounds (rotating lenses: correctness, red-team, security,
 test quality), each round dispatching M identical reviewers in parallel
 (default 1) whose reports are consolidated before triage, with
 Critical/Important findings fixed between rounds and an early exit after two
-consecutive clean rounds — with M > 1 a round is clean only when every
-reviewer returned a usable report. In interactive SDD the gate asks you
+consecutive clean rounds — a round is clean only when every reviewer returned
+a usable report and every report declares, in its `### Inputs read` section,
+each file it was told to read as read `whole`; this holds also at M = 1. In
+interactive SDD the gate asks you
 for N and M first. In batched autonomous mode it asks nothing: N and M are
 the values you stated when the batch run started or that the resume prompt
 carries, else the session defaults `SUPERPOWERS_REVIEW_ROUNDS` and
@@ -413,11 +415,14 @@ must be fixed, the loop writes your answers in the review log under a
 one re-review of the branch with M reviewers, logged as
 `## Round <i> addendum <n> re-review 1`. Since v7.18.0, when that re-review
 still leaves a Critical or Important finding, the loop runs one more fix and
-a second re-review. The limit is two fixes and two re-reviews for each
-addendum. A finding that still stands after the second re-review is logged
-`unresolved: addendum re-review` and comes back to you as an open item. In
-an autonomous run (§4) the orchestrator gives these answers by its rulings,
-and the same limit applies.
+a second re-review. Since v7.75.0, the loop also runs re-review 2 on
+the same fix, with no new fix, when no usable report of re-review 1
+declares the diff read whole. When the limit is spent, the fix stands
+and the declarations stay in the log. The limit is two fixes and two
+re-reviews for each addendum. A finding that still stands after the
+second re-review is logged `unresolved: addendum re-review` and comes
+back to you as an open item. In an autonomous run (§4) the orchestrator
+gives these answers by its rulings, and the same limit applies.
 
 Since v7.41.0 a fix subagent never edits the plan file, not even its
 reference text. When a finding can only be fixed by a change to the plan, the

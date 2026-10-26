@@ -8,6 +8,29 @@
 > (`REPOZY/superpowers-optimized`) and are kept unchanged as history; any
 > testing they describe was not done here.
 
+## v7.75.0 — reviewer reports carry an evidence line and an inputs-read section
+
+**Problem.** A review controller could not see whether a reviewer had re-opened the line a finding cites, nor whether it had read its inputs to the end. The paging rule also ended on a full page, which carries no PARTIAL notice.
+
+**Change.** Each Critical and Important finding carries an `evidence:` line copied from a fresh read; every report carries an `### Inputs read` section; a round is clean only when every expected input reads `whole`. Paging stops on a short or empty Read result.
+
+**Effect.** Reinstall the plugin; nothing to migrate. Existing logs are read unchanged: the new line is optional and absent from them.
+
+### What changed
+
+- **Reviewer prompts** (`skills/multi-code-review/reviewer-prompt.md`, `skills/multi-doc-review/reviewer-prompt.md`). A byte-identical `**Evidence line.**` rule: directly below each Critical and Important finding, one line indented by two spaces, copied from a Read at the cited line (or `grep -nH`) in the checkout file, never in the diff file. Five forms: presence, gap, absence (`grep -n '<pattern>' <path> → no match`), secret (`<n> — secret-bearing line, not quoted`) and removed file. A byte-identical `**Inputs read.**` rule: every report, also a clean one, declares each input it was told to read whole as `- <input>: whole` or `- <input>: partial — not read: <ranges>`; `whole` is defined by coverage of lines 1 to the end. The code prompt's reference sentence now names the checkout, not the diff.
+- **Controllers** (`skills/multi-code-review/SKILL.md`, `skills/multi-doc-review/SKILL.md`). Triage reads each Critical/Important finding's evidence line as text; an Important finding without a matching line may be `rejected: evidence (<reason>)` with one of five fixed reasons; a Critical one is never rejected on this ground and gets `(evidence: <reason>)` on its line. A round is *partial* also when a usable report does not declare every expected input `whole`; such a round is triaged normally, never clean, and never retried. A fix counts as reviewed only when a later round or cycle has a report whose `diff` line reads `whole`, or `partial` with every unread range annotated with diff paths the fix did not change. The log gains an `**Inputs read:**` line, written only when a declaration is not `whole`.
+- **Paging rule**, in the two reviewer prompts, the task reviewer, the four orchestrating-development controller templates and the dashboard skill: "until a result returns fewer lines than its `limit`, or no line because the file is shorter than the offset"; a full page is not the end. Measured: a Read with `limit` 3 on a 1,994-line file returned 3 lines and no PARTIAL notice.
+- **`tools/count-report-fields.js`** with the fast suite `tests/count-report-fields/run-tests.sh`: counts reviewer transcripts, marked reports, reports with a valid `### Inputs read` section, Critical/Important findings, findings with an evidence line, secret-form lines and evidence rejections in a session's `subagents/` folder. It also follows a dispatch by pointer to the reviewer's prompt file.
+- **Tests.** `tests/reviewer-templates/run-tests.sh` sections 29-33 pin the new wording; test 19 checks that the old stop clause is gone from every Markdown file under `skills/`; `tests/orchestrating-development/run-tests.sh` test 5c checks that the prompt block of each of the four controller templates holds the new stop clause and not the old one.
+
+### Left as is
+
+- **The single-pass review templates** (`skills/requesting-code-review/code-reviewer.md`, `agents/code-reviewer.md`, `agents/red-team.md`) and the evidence line and declaration for the task reviewer: a later change.
+- **The fix dispatch and `fix-prompt.md`**: the evidence line is never passed to the fix subagent and never copied into the log.
+- **The readiness *settled* rule**: unchanged until the acceptance measure shows how often reviewers obey the declaration.
+- **Other paging sentences in other words** (`skills/token-efficiency/SKILL.md` rule 6, `skills/pickup/SKILL.md`, `skills/orchestrating-development/SKILL.md`, `skills/subagent-driven-development/SKILL.md`, `skills/multi-code-review/SKILL.md` failure-text cap): they do not carry the changed stop clause.
+
 ## v7.74.1 — the update check reads the plugin registry of CLAUDE_CONFIG_DIR
 
 **Problem.** With `CLAUDE_CONFIG_DIR` set, the session-start update check still read `~/.claude/plugins/installed_plugins.json`. That registry belongs to another Claude Code installation, so a user on the newest version was told to update at every session start.

@@ -1,0 +1,2 @@
+{"type":"user","message":{"role":"user","content":"You are a fix subagent. Fix the findings below.\n\n- [I1] src/b.js:9 — path not checked"}}
+{"type":"assistant","message":{"role":"assistant","content":[{"type":"tool_use","id":"h6","name":"SubagentHandback","input":{"message":"Fixed I1 in abc1234."}}]}}

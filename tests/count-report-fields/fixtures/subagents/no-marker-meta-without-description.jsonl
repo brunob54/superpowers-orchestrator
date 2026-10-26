@@ -1,0 +1,2 @@
+{"type":"user","message":{"role":"user","content":"You are an independent code reviewer.\n\nRead the diff file whole, with the Read tool.\n\n## Lens (your ONLY focus in this review)\n\n**Adversarial red-team.** Review."}}
+{"type":"assistant","message":{"role":"assistant","content":[{"type":"text","text":"I ran out of time before writing the report."}]}}

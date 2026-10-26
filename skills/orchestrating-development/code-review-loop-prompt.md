@@ -74,12 +74,17 @@ Agent tool (general-purpose):
     call returns about 25,000 tokens at most and then prints a PARTIAL
     notice naming the next `offset` and a `limit`; Read again with the
     offset and the limit the notice names, halving the limit when a call is
-    refused for size, until a result carries no PARTIAL notice. Each
-    section this prompt names is read whole. A file you only pass on by
-    path, or take one block from, is not read whole: find the block with
-    `grep -n` and Read it with offset and limit. On a platform without the
-    Read tool, use the tool that pages by offset. Never act from a first
-    page or a preview alone.
+    refused for size, until a result returns fewer lines than its `limit`,
+    or no line because the file is shorter than the offset (the tool then
+    names the file's total line count); a result that fills its `limit` is
+    not the end, even when it carries no PARTIAL notice — Read again at the
+    offset after the last line received, with the same `limit` — and a call
+    refused for size returns no line either and is never the end — halve
+    the limit and read again. Each section this prompt names is read whole. A file
+    you only pass on by path, or take one block from, is not read whole:
+    find the block with `grep -n` and Read it with offset and limit. On a
+    platform without the Read tool, use the tool that pages by offset.
+    Never act from a first page or a preview alone.
 
     ## Resume Answer
 
@@ -191,9 +196,10 @@ Agent tool (general-purpose):
        your return; an item the answer accepts as a finding to fix
        follows the skill's "Resolving user-decision and unresolved items"
        rule (one fix subagent, one verification re-review logged as
-       `## Round <i> addendum <n> re-review 1`, then — only when a
-       Critical/Important finding still stands — one more fix subagent and
-       re-review 2: at most two fix dispatches and two re-reviews per
+       `## Round <i> addendum <n> re-review 1`, then — only when a Critical/Important finding still stands, or
+       when no usable report of re-review 1 passes the skill's "No fix
+       ships unreviewed" test — re-review 2, after one more fix subagent
+       only in the first case: at most two fix dispatches and two re-reviews per
        addendum; a finding still standing after re-review 2 is
        `unresolved: addendum re-review`, an open item of your return;
        `fixed — <summary> → <sha>` disposition in the same addendum).

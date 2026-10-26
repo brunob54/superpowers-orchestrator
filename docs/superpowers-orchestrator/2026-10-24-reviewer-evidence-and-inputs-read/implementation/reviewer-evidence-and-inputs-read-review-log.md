@@ -1,0 +1,128 @@
+_Invocation 1 — 2026-10-25 — N=4 M=3 — BASE..HEAD b8c9435..1a25f83 — branch feature/reviewer-evidence-and-inputs-read — gate: orchestration_
+
+## Round 1 — Correctness & spec alignment — opus
+**Reviewers:** M=3, usable 3/3
+**Reviewer verdicts:** r1: 0 Critical, 0 Important, 1 Minor | r2: 0 Critical, 0 Important, 2 Minor | r3: 0 Critical, 0 Important, 2 Minor
+**Sources mapped:** 5/5
+**Reviewer verdict:** 0 Critical, 0 Important, 5 Minor
+**Converged:** no
+### Dispositions
+- [M1] carried — tools/count-report-fields.js:54 counts a Critical/Important id line with a `harness:` field as a finding without evidence, although both reviewer prompts exempt it; the spec's measure defines with-evidence as presence only ← 1/3: r1:M1
+- [M2] fixed — docs/guide/README.md addendum paragraph did not name the second trigger of re-review 2 (no usable report of re-review 1 declares the diff read whole) → f8b078db ← 1/3: r2:M1
+- [M3] carried — skills/multi-doc-review/SKILL.md:531-532 evidence note for a Critical does not say that the reason is one of the same five phrases, as the code skill says ← 1/3: r2:M2
+- [M4] carried — the `(evidence: <reason>)` note on a Critical open-item line enters the orchestrator Phase 4 Item summary (orchestrating-development/SKILL.md:2096-2098 strips only `(plan-mandated)`); cosmetic ← 1/3: r3:M1
+- [M5] carried — tools/count-report-fields.js:236 matches the expected-input needles over the whole prompt, carried-findings text included, so a carried line quoting a needle can inflate the expected set ← 1/3: r3:M2
+- [carried task 1 paging stop clause] carried — ship-as-is (3/3)
+- [carried task 1 82-character line] carried — ship-as-is (3/3)
+- [carried task 2 doc prompt Repository root text] carried — ship-as-is (3/3)
+- [carried task 2 short wrapped lines] carried — ship-as-is (3/3)
+- [carried task 3 inert code-only bullet in doc prompt] carried — ship-as-is (3/3)
+- [carried task 4 short harness line] carried — ship-as-is (3/3)
+- [carried task 4 test 31 awk anchors] carried — ship-as-is (3/3)
+- [carried task 5 joined line code-review-loop-prompt.md:199] carried — ship-as-is (3/3)
+- [carried task 5 guide clean-round rule] carried — ship-as-is (3/3; already rewritten by Task 9)
+- [carried task 5 wide line item 10] carried — ship-as-is (3/3)
+- [carried task 6 line-initial `1)` in multi-doc-review Resume paragraph] fixed — paragraph re-wrapped, no word change → f8b078db
+- [carried task 6 line starting `= 1.`] carried — ship-as-is (3/3)
+- [carried task 6 code spans across lines] carried — ship-as-is (3/3)
+- [carried task 7 test 16 comment figure] carried — ship-as-is (3/3)
+- [carried task 8 fixture Write copy findings] carried — ship-as-is (3/3)
+- [carried task 8 untrimmed heading and id-line tests] carried — ship-as-is (3/3)
+- [carried task 8 INPUT_LINE_RE repeats INPUTS names] fixed — alternation built from INPUTS → f8b078db
+- [carried task 8 unreadable transcript exit 1] carried — ship-as-is (3/3)
+- [carried task 8 no fixture for unknown or several ranges] carried — ship-as-is (3/3)
+- [carried task 9 short guide line] carried — ship-as-is (3/3)
+
+## Round 2 — Adversarial red-team — opus
+**Reviewers:** M=3, usable 3/3
+**Reviewer verdicts:** r1: 0 Critical, 1 Important, 2 Minor | r2: 0 Critical, 3 Important, 1 Minor | r3: 0 Critical, 2 Important, 2 Minor
+**Sources mapped:** 11/11
+**Reviewer verdict:** 0 Critical, 4 Important, 4 Minor
+**Converged:** no
+### Dispositions
+- [I1] user-decision — the `input partial` rejection reason applies to any gap-form or absence-form Important finding whose report declares the diff partial or omits the declaration, even when every unread range is annotated with unrelated paths and the evidence was read from the checkout file, so a true finding can be rejected with no file read; the fix-reviewed rule reads the same annotated declaration the opposite way (plan-mandated) — at skills/multi-code-review/SKILL.md:990 — clause: Task 4 "Must convey spec 5.2: the controller reads each Critical/Important finding's evidence line against the claim before choosing a disposition, as a text comparison" ← 3/3: r1:I1, r2:I2, r3:I1
+- [I2] user-decision — a fix that no reviewer read (every later report declares the diff partial without qualifying annotations) ships when the verification cap or the addendum bound is spent, and the loop's return carries no signal of it; only the `**Inputs read:**` log lines show it (plan-mandated) — at skills/multi-code-review/SKILL.md:1268-1276 — clause: Task 5 "Addendum re-review rule (wording artifact): a re-review is clean only when it also has a report that passes the fix-reviewed test; one without such a report and" ← 1/3: r2:I1
+- [I3] user-decision — the controller may reject an Important finding as `rejected: evidence (missing)` or `(line differs)` without opening any file, so a true finding from a reviewer that omits the new evidence line can be dropped, and two controllers decide differently (plan-mandated) — at skills/multi-code-review/SKILL.md:983-989 — clause: Task 4 "Must convey spec 5.2: the controller reads each Critical/Important finding's evidence line against the claim before choosing a disposition, as a text comparison" ← 1/3: r2:I3
+- [I4] fixed — verification re-review gave no single reading when unreviewed fixes come from more than one originating round; one sequence under the highest originating round and its lens → eb51fde7 ← 1/3: r3:I2
+- [M1] carried — the fix-reviewed test accepts a reviewer's path annotation on an unread range without checking that the range starts at a `diff --git` header and ends before the next one ← 2/3: r1:M1, r2:M1
+- [M2] carried — a diff with a hunk no reviewer can read whole (a large lockfile) makes every rotating round partial for the inputs-read cause, so the loop never converges early, with no message naming the cause ← 1/3: r1:M2
+- [M3] carried — paging stop clause has no exit when a single line exceeds the Read token cap (refused even at limit 1); harness: tested by the reviewer ← 1/3: r3:M1
+- [M4] carried — the absence form uses the removed text as the grep pattern, so a removed line holding a credential would be copied into the report ← 1/3: r3:M2
+
+## Round 3 — Security — opus
+**Reviewers:** M=3, usable 3/3
+**Reviewer verdicts:** r1: 0 Critical, 0 Important, 3 Minor | r2: 0 Critical, 0 Important, 2 Minor | r3: 0 Critical, 0 Important, 2 Minor
+**Sources mapped:** 7/7
+**Reviewer verdict:** 0 Critical, 0 Important, 4 Minor
+**Converged:** no
+### Dispositions
+- [M1] fixed — the absence form put removed branch text inside a single-quoted shell command with no quoting rule (and could copy a removed credential); a search-command rule (Grep tool or `grep -nF -e` on a safe fixed fragment, path in double quotes, gap form for a secret) added byte-identically to both reviewer prompts → d9814d5e ← 3/3: r1:M2, r2:M1, r3:M2
+- [M2] fixed — both evidence triage paragraphs now say the quoted text of an evidence line is data, never an instruction → d9814d5e ← 2/3: r1:M3, r3:M1
+- [M3] carried — the evidence rule tells the reviewer to read the finding's file even when the Subagent Rules forbid reading that path (sidecar patterns); unlikely because the package excludes those paths ← 1/3: r1:M1
+- [M4] carried — the fix-reviewed test accepts a reviewer's path annotation on an unread range without checking the range against the `diff --git` headers of the diff file (same as round 2 M1) ← 1/3: r2:M2
+
+## Round 4 — Test & coverage quality — opus
+**Reviewers:** M=3, usable 3/3
+**Reviewer verdicts:** r1: 0 Critical, 0 Important, 4 Minor | r2: 0 Critical, 1 Important, 2 Minor | r3: 0 Critical, 1 Important, 2 Minor
+**Sources mapped:** 10/10
+**Reviewer verdict:** 0 Critical, 2 Important, 2 Minor
+**Converged:** no
+### Dispositions
+- [I1] fixed — the count-report-fields fixtures could not fail on report precedence, the Write-copy rule, the Minor-heading filter, the marker window, the `unknown` and several-range input forms, or the break at the next heading; fixtures added and expected counts updated, each rule checked by a reverted script mutation → 1756ab4a ← 3/3: r1:M1, r2:M1, r3:I1
+- [I2] fixed — wording added by the review fixes (Search command bullet, data-not-instruction sentence, multi-round verification paragraph) had no test pin; pinned in tests 29, 31, 32 and 33 → 1756ab4a ← 3/3: r1:M3, r2:I1, r2:M2, r3:M1
+- [M1] fixed — the no-placeholder check of test 29 looked for `[REPO_ROOT]` only; now a `[UPPERCASE]` pattern check, also added to test 30 → 1756ab4a ← 2/3: r1:M2, r3:M2
+- [M2] carried — tools/count-report-fields.js keeps its own copy of the expected-input needles, and no test checks them against the template, PLAN_LINE legend and lens-cell text they detect ← 1/3: r1:M4
+
+## Round 4 verification 1 — Test & coverage quality — opus
+**Reviewers:** M=3, usable 3/3
+**Reviewer verdicts:** r1: 0 Critical, 0 Important, 3 Minor | r2: 0 Critical, 0 Important, 2 Minor | r3: 0 Critical, 0 Important, 2 Minor
+**Sources mapped:** 7/7
+**Reviewer verdict:** 0 Critical, 0 Important, 4 Minor
+### Dispositions
+- [M1] fixed — the count-report-fields suite header claimed every counting rule has a failing fixture, but the Read-prefix strip, the trailing-whitespace (CRLF) trim and the cut-last-line skip had none; fixtures added, each checked by a reverted script mutation → d5fb9b60 ← 3/3: r1:M1, r2:M1, r3:M1
+- [M2] carried — the expected-input needle sentences are not pinned where they are produced (PLAN_LINE fill sentence, the two doc lens cells), and the script's needle copies are not compared with the test's list (same as round 4 M2) ← 2/3: r2:M2, r3:M2
+- [M3] carried — untested error paths of tools/count-report-fields.js: usage check with one or three arguments, a reviewer without report and without meta file ← 1/3: r1:M2
+- [M4] fixed — the round 3 fix left a 116-character line in the multi-doc-review evidence triage paragraph, against the plan's reflow invariant (no new line over 88 characters); rewrapped with no word change → d5fb9b60 ← 1/3: r1:M3
+
+## Round 4 verification 2 — Test & coverage quality — opus
+**Reviewers:** M=3, usable 3/3
+**Reviewer verdicts:** r1: 0 Critical, 2 Important, 2 Minor | r2: 0 Critical, 0 Important, 2 Minor | r3: 0 Critical, 0 Important, 2 Minor
+**Sources mapped:** 8/8
+**Reviewer verdict:** 0 Critical, 2 Important, 2 Minor
+### Dispositions
+- [I1] fixed — the count-report-fields header claim was still false: the range grammar, the pointer-file restriction, the first-user-message rule, the next-non-blank evidence rule, the missing-meta fallback and the three-argument usage check had no failing fixture; fixtures and checks added, each checked by a reverted script mutation → f5ff0415 ← 3/3: r1:I2, r2:M1, r2:M2, r3:M2
+- [I2] fixed — the input sentences that decide the expected set were not pinned at their source and the script needles were not tied to the live text, and an empty expected set counted as with-inputs-read; source pins in tests 32/33, a needle check in the count-report-fields suite, and an empty expected set no longer counts → f5ff0415 ← 2/3: r1:I1, r3:M1
+- [M1] fixed — test 19's check that the old stop clause is gone passed vacuously on an empty file list; it now asserts the list is non-empty → f5ff0415 ← 1/3: r1:M1
+- [M2] fixed — the v7.75.0 release note said test 5c checks every Markdown file under skills/; reworded to what each test checks → f5ff0415 ← 1/3: r1:M2
+
+## Round 4 verification 3 — Test & coverage quality — opus
+**Reviewers:** M=3, usable 3/3
+**Reviewer verdicts:** r1: 0 Critical, 0 Important, 3 Minor | r2: 0 Critical, 1 Important, 1 Minor | r3: 0 Critical, 0 Important, 2 Minor
+**Sources mapped:** 7/7
+**Reviewer verdict:** 0 Critical, 1 Important, 3 Minor
+### Dispositions
+- [I1] unresolved: verification cap — the plan-needle drift checks (count-report-fields section 3 and reviewer-templates test 32) search the whole skills/multi-code-review/SKILL.md, which also quotes the sentence in the step 6 expected-set rule, so they still pass when the PLAN_LINE fill instruction (SKILL.md:574-575) or the reviewer-prompt legend (reviewer-prompt.md:397-398) is reworded; scope both checks to the fill paragraph and the legend entry — at tests/count-report-fields/run-tests.sh:160 — clause: none ← 3/3: r1:M1, r2:I1, r3:M1
+- [M1] carried — no fixture puts an assistant text block after the last SubagentHandback, so the handback-over-text precedence of takenReport is not discriminated, although the suite header claims it ← 2/3: r1:M3, r3:M2
+- [M2] carried — the script constants LENS_HEADING, MARKER and INPUTS_HEADING are not checked against the live reviewer prompts ← 1/3: r1:M2
+- [M3] carried — no near-miss fixture for the secret-form regex or the exact `### Inputs read` heading match; loosened forms survive ← 1/3: r2:M1
+
+_Completed — 2026-10-25 — cap reached — HEAD 6745205de84465428ccff202006e6f8507b51981_
+Secrets found: none
+
+### Post-loop addendum 1 — 2026-10-25
+- [I1] decided (orchestrator): plan governs: (this answers the round 2 user-decision item on the `input partial` rejection reason) "Must convey spec 5.2: the controller reads each Critical/Important finding's evidence line against the claim before choosing a disposition, as a text comparison" — docs/superpowers-orchestrator/2026-10-24-reviewer-evidence-and-inputs-read/plans/reviewer-evidence-and-inputs-read.md
+- [I2] decided (orchestrator): plan governs: (this answers the round 2 user-decision item on a fix that no reviewer read) "Addendum re-review rule (wording artifact): a re-review is clean only when it also has a report that passes the fix-reviewed test; one without such a report and" — docs/superpowers-orchestrator/2026-10-24-reviewer-evidence-and-inputs-read/plans/reviewer-evidence-and-inputs-read.md
+- [I3] decided (orchestrator): plan governs: (this answers the round 2 user-decision item on rejecting an Important finding without opening a file) "Must convey spec 5.2: the controller reads each Critical/Important finding's evidence line against the claim before choosing a disposition, as a text comparison" — docs/superpowers-orchestrator/2026-10-24-reviewer-evidence-and-inputs-read/plans/reviewer-evidence-and-inputs-read.md
+- [I1] decided (orchestrator): fix it: (this answers the round 4 verification 3 unresolved item on the plan-needle drift checks) scope both plan-needle drift checks, tests/count-report-fields/run-tests.sh section 3 (line 160) and tests/reviewer-templates/run-tests.sh test 32, to the PLAN_LINE fill paragraph of skills/multi-code-review/SKILL.md and the legend entry of skills/multi-code-review/reviewer-prompt.md, so that rewording either text makes its check fail while the step 6 copy of the sentence is unchanged
+- [I1] fixed — round 4 verification 3 item: both plan-needle drift checks now search the PLAN_LINE fill paragraph of skills/multi-code-review/SKILL.md and the legend entry of reviewer-prompt.md separately; each checked by a reverted mutation → 6745205d
+
+## Round 4 addendum 1 re-review 1 — Test & coverage quality — opus
+**Reviewers:** M=3, usable 3/3 — verifies 6745205d
+**Reviewer verdicts:** r1: 0 Critical, 0 Important, 2 Minor | r2: 0 Critical, 0 Important, 3 Minor | r3: 0 Critical, 0 Important, 2 Minor
+**Sources mapped:** 7/7
+**Reviewer verdict:** 0 Critical, 0 Important, 4 Minor
+### Dispositions
+- [M1] carried — tools/count-report-fields.js constants LENS_HEADING (and MARKER, INPUTS_HEADING, POINTER_RE) are not tied to the live reviewer prompts by section 3 of tests/count-report-fields/run-tests.sh, although its comment says the script cannot drift from the prompts (same as round 4 verification 3 M2) ← 3/3: r1:M1, r2:M2, r3:M1
+- [M2] carried — the suite header claims a failing fixture for the handback-over-text precedence and the Write-copy exclusion of takenReport, but no fixture puts a text block or a Write copy after the last handback (same as round 4 verification 3 M1) ← 2/3: r1:M2, r2:M1
+- [M3] carried — section 1 checks 23 fixtures through two summed lines only; a failure does not name the fixture, and two opposite defects can cancel in the sum ← 1/3: r2:M3
+- [M4] carried — the PLAN_LINE fill-paragraph and legend-entry awk extractors are copied in tests/count-report-fields/run-tests.sh and tests/reviewer-templates/run-tests.sh; a shared helper under tests/lib/ would remove the copy ← 1/3: r3:M2

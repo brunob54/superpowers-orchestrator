@@ -87,12 +87,17 @@ Agent tool (general-purpose):
     call returns about 25,000 tokens at most and then prints a PARTIAL
     notice naming the next `offset` and a `limit`; Read again with the
     offset and the limit the notice names, halving the limit when a call is
-    refused for size, until a result carries no PARTIAL notice. Each
-    section this prompt names is read whole. A file you only pass on by
-    path, or take one block from, is not read whole: find the block with
-    `grep -n` and Read it with offset and limit. On a platform without the
-    Read tool, use the tool that pages by offset. Never act from a first
-    page or a preview alone.
+    refused for size, until a result returns fewer lines than its `limit`,
+    or no line because the file is shorter than the offset (the tool then
+    names the file's total line count); a result that fills its `limit` is
+    not the end, even when it carries no PARTIAL notice — Read again at the
+    offset after the last line received, with the same `limit` — and a call
+    refused for size returns no line either and is never the end — halve
+    the limit and read again. Each section this prompt names is read whole. A file
+    you only pass on by path, or take one block from, is not read whole:
+    find the block with `grep -n` and Read it with offset and limit. On a
+    platform without the Read tool, use the tool that pages by offset.
+    Never act from a first page or a preview alone.
 
     ## Batch Parameters
 

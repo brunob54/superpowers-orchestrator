@@ -87,14 +87,20 @@ RETURN_WINDOW='among the **first 10 non-blank lines**'
 RETURN_MARKER='<!-- orchestration report -->'
 RETURN_CAP_NOT_MALFORMED='a longer report is **not** malformed'
 NO_HEREDOC='never with a heredoc'
-# Paging-rule contracts (orchestration issue row 26): every controller
-# template hands its skill body over to the Read tool by name, forbids a shell
-# command such as `cat`, and ends the paging on a result that carries no
-# PARTIAL notice. The two templates that carry the background-output rule
-# also state that the rule governs background output files only.
+# Paging-rule contracts (orchestration issue row 26; stop clause changed in
+# release 7.75.0): every controller template hands its skill body over to the
+# Read tool by name, forbids a shell command such as `cat`, and ends the
+# paging on a result that returns fewer lines than its `limit`, or no line at
+# all — a Read that fills its `limit` carries no PARTIAL notice. The two
+# templates that carry the background-output rule also state that the rule
+# governs background output files only.
 PROMPT_OPEN='  prompt: |'
 READ_TOOL_NOT_SHELL='with the Read tool, not with a shell command'
-PAGE_UNTIL_NO_PARTIAL='until a result carries no PARTIAL notice'
+PAGE_UNTIL_END='until a result returns fewer lines than its `limit`, or no line because the file is shorter than the offset'
+FULL_PAGE_NOT_END='a result that fills its `limit` is not the end, even when it carries no PARTIAL notice'
+NEXT_AFTER_FULL='Read again at the offset after the last line received, with the same `limit`'
+REFUSAL_NOT_END='a call refused for size returns no line either and is never the end'
+OLD_PAGE_STOP='until a result carries no PARTIAL notice'
 BACKGROUND_RULE_SCOPE='That rule governs the output files of background commands only'
 # The paging step's exit when the Read tool refuses a span for size, and the
 # rule for a file the prompt only passes on by path or takes one block from.
@@ -486,7 +492,7 @@ for t in plan-writer-prompt.md doc-review-loop-prompt.md; do
     "$ORCH_DIR/$t" 'Never read the output file of a background command whole.'
 done
 
-bold "5c. Every controller template pages its skill body with the Read tool until no PARTIAL notice remains"
+bold "5c. Every controller template pages its skill body with the Read tool until a result returns fewer lines than its limit"
 # Row 26 measured every controller opening its skill body with `cat`: all 21
 # outputs were persisted to a 2 KB preview, and 9 controllers then received
 # 67.6 to 96.2 percent of the sections their prompt names. The paging rule
@@ -496,7 +502,11 @@ for t in "${TEMPLATES[@]}"; do
   extract_prompt_block "$ORCH_DIR/$t" "$block"
   if [ -s "$block" ]; then ok "$t: prompt block extract is non-empty"; else bad "$t: prompt block extract is empty (no '$PROMPT_OPEN' block)"; fi
   assert_folded_contains "$t: prompt block names the Read tool and forbids a shell command" "$block" "$READ_TOOL_NOT_SHELL"
-  assert_folded_contains "$t: prompt block pages until no PARTIAL notice remains" "$block" "$PAGE_UNTIL_NO_PARTIAL"
+  assert_folded_contains "$t: prompt block pages until a result returns fewer lines than its limit" "$block" "$PAGE_UNTIL_END"
+  assert_folded_contains "$t: prompt block says a full page without a notice is not the end" "$block" "$FULL_PAGE_NOT_END"
+  assert_folded_contains "$t: prompt block says where to read after a full page" "$block" "$NEXT_AFTER_FULL"
+  assert_folded_contains "$t: prompt block says a refused call is never the end" "$block" "$REFUSAL_NOT_END"
+  assert_folded_not_contains "$t: prompt block no longer stops on a result without a PARTIAL notice" "$block" "$OLD_PAGE_STOP"
   assert_folded_contains "$t: prompt block halves the limit when a call is refused for size" "$block" "$HALVE_ON_REFUSAL"
   assert_folded_contains "$t: prompt block exempts a file only passed on by path" "$block" "$PASS_ON_BY_PATH"
 done

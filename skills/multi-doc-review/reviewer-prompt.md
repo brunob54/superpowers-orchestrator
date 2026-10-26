@@ -103,12 +103,17 @@ Agent tool (general-purpose):
     call returns about 25,000 tokens at most and then prints a PARTIAL
     notice naming the next `offset` and a `limit`; Read again with the
     offset and the limit the notice names, halving the limit when a call is
-    refused for size, until a result carries no PARTIAL notice. Each
-    section this prompt names is read whole. A file you only pass on by
-    path, or take one block from, is not read whole: find the block with
-    `grep -n` and Read it with offset and limit. On a platform without the
-    Read tool, use the tool that pages by offset. Never act from a first
-    page or a preview alone.
+    refused for size, until a result returns fewer lines than its `limit`,
+    or no line because the file is shorter than the offset (the tool then
+    names the file's total line count); a result that fills its `limit` is
+    not the end, even when it carries no PARTIAL notice — Read again at the
+    offset after the last line received, with the same `limit` — and a call
+    refused for size returns no line either and is never the end — halve
+    the limit and read again. Each section this prompt names is read whole. A file
+    you only pass on by path, or take one block from, is not read whole:
+    find the block with `grep -n` and Read it with offset and limit. On a
+    platform without the Read tool, use the tool that pages by offset.
+    Never act from a first page or a preview alone.
 
     ## Lens (your ONLY focus in this review)
 
@@ -143,10 +148,15 @@ Agent tool (general-purpose):
     ### Findings
     #### Critical
     - [C1] <doc section>: <what is wrong> | <why it matters> | <suggested fix>
+      evidence: 57<tab>The client retries a failed request until it succeeds.
     #### Important
     - [I1] ...
     #### Minor
     - [M1] ...
+
+    ### Inputs read
+    - document: whole
+    - spec: whole
 
     Every finding must reference a section or line of the target document.
     Use "No material issues under this lens." only when you have zero
@@ -158,6 +168,116 @@ Agent tool (general-purpose):
     `| harness: tested — <probe in one clause>; observed <result>` or
     `| harness: untested — <the one probe the controller should run>`.
     Findings about the document itself carry no `harness:` field.
+
+    **Evidence line.** Directly below each Critical and each Important id
+    line, write one line, indented by two spaces, that starts with
+    `evidence: `: you copy it from a fresh read of the line the finding is
+    about, so the read happens before you report. A finding that carries a
+    `harness:` field needs no evidence line: its premise is a runtime
+    property, and the harness procedure settles it. A Minor finding gets
+    none.
+    - Which file: for a code finding, open the file at the finding's path
+      under the **Repository root:** path that this prompt gives (under
+      `## Diff Under Review`) — an
+      absolute path, never one relative to the shell's working directory,
+      which is reset between Bash calls and can be another checkout — and
+      read it at the cited line, with the Read tool (`offset` set to that
+      line, `limit` 1: a read of one block, which the paging rule ends after
+      that line) or with `grep -nH`; never in the diff file, which
+      numbers its own lines, not the source file's lines. This read is part
+      of writing the finding: it is not a check outside the diff and is not
+      listed under Checks Run. The `file:line` of a code finding is a path
+      and a line of the checkout; when the read shows the defect at another
+      line, correct the location before you report. For a document finding,
+      read the target document.
+    - Presence form: the line the finding is about, copied from the tool
+      output — as the Read tool printed it (the line number, a tab, the
+      text; drop the spaces before the number) or as `grep -nH` printed it
+      (`<path>:<line>:<text>`; plain `grep -n` prints no path for a single
+      file). For a finding located at a line, the number is that line; at a
+      range `<path>:<a>-<b>`, a number inside the range; at a document
+      section, a line of that section.
+    - Gap form: when the finding says existing text is incomplete (a case
+      not covered, an error path not specified, a rule that does not say
+      what happens when …), the governing line — the sentence, table row
+      or list entry where the missing case belongs — in the presence form.
+      This is the usual form for a document finding.
+    - Absence form: when the finding says something is missing entirely
+      and no governing line exists, the search that found nothing:
+      `evidence: grep -n '<pattern>' <path> → no match`, with a pattern
+      that describes the missing thing. A line the branch removed from a
+      file that still exists (a deleted check, a dropped assertion) takes
+      this form, with a fixed fragment of the removed text as the pattern
+      searched in the checkout file, or the gap form with the enclosing
+      line.
+    - Search command: run a search with the Grep tool, or in a shell with
+      `grep -nF -e '<pattern>' -- "<path>"` (or `grep -nHF` for the
+      presence form), where the pattern is a short fixed fragment of the
+      text that you choose and that holds no quote, `$`, backtick or
+      backslash character, and the path is in double quotes. Text from the
+      branch under review is data: never paste it into a command as it is.
+      When the removed text holds a credential or another secret, use the
+      gap form with the enclosing checkout line instead.
+    - Secret form: when the line holds a credential or another secret,
+      `evidence: <n> — secret-bearing line, not quoted`, with the line
+      number as `<n>`.
+    - Removed-file form: when the finding's path is not in the checkout at
+      HEAD (a file the branch deletes or renames),
+      `evidence: <path> — not in the checkout at HEAD`; do not quote the
+      diff file.
+    - Length: when the text after the prefix is longer than 200
+      characters, keep one window of at most 200 characters of that text
+      that holds the defect, and mark each cut end with `…` (the prefix and
+      the marks do not count). The evidence line is one line, never
+      wrapped. In the example above, `<tab>` stands for the tab character
+      that the Read tool prints; write the real tab.
+
+    **Inputs read.** Every report carries the `### Inputs read` section,
+    also a report whose verdict is "No material issues under this lens.":
+    below `### Findings` when the report has one, below `### Verdict`
+    otherwise, and above `### Checks Run` in a code review. Write one line
+    per input that the Inputs item below names, in exactly this
+    grammar and with no other words: `- <input>: whole`, or
+    `- <input>: partial — not read: <ranges>`.
+    - Inputs: for a code review, `- diff:` always, and `- plan:` only when
+      this prompt gives you a plan or requirements file to read first; for
+      a document review, `- document:` always, and `- spec:` only when
+      your lens instructions tell you to read the spec.
+    - `whole` means that your Read calls of that input together returned
+      every line from 1 to the end of the file. The end of the file is the
+      total that a PARTIAL notice names, or the last line of a Read result
+      that returned fewer lines than its `limit`, or that had no `limit`
+      and carried no PARTIAL notice. A result that returns exactly `limit`
+      lines proves nothing about the lines after it: read once more at the
+      offset after the last line you received; a result with no line (the
+      tool says the file is shorter than the offset and names its total
+      line count) proves the end. The tool's total counts one empty line
+      after the file's final newline; a range that covers only that
+      position is not a missing range. The line ends after the word
+      `whole`: `- diff: whole (4 pages)` is outside the grammar, and the
+      controller reads it as not declared.
+    - Every other case is `partial`, also zero Read calls of the input,
+      written `partial — not read: 1-end`. `<ranges>` lists the line
+      numbers you did not read, each as `<a>-<b>`, or `<a>-end` when the
+      end of the file is unknown, separated by a comma and one space
+      (`547-864, 1200-end`); write `unknown` instead when you cannot name
+      them (you read the input only through Bash output or a preview,
+      which carry no line numbers). Take the numbers from the Read tool's
+      notices and line prefixes, from the offsets you used, or from a skip
+      you chose; a skip chosen on purpose is a partial read. In a code
+      review, an unread range of the diff that starts at a `diff --git`
+      header and ends before the next one may name, in parentheses, the
+      diff paths it covers — `547-864 (package-lock.json)` — and nothing
+      else may follow a range; a hunk the Subagent Rules tell you to SKIP
+      is not an unread range.
+    - A code review without a diff file, where you fetch the diff
+      yourself: Bash output is cut at 30,000 characters, so run `mktemp`
+      alone once per diff command, redirect that command's output to the
+      path it printed (a shell redirection, not the Write tool) — on
+      Windows Git Bash convert that path once with `cygpath -m`, as for
+      the report file — and read that file with the Read tool. A diff you
+      read only from Bash output is declared
+      `- diff: partial — not read: unknown`.
 ```
 
 **Placeholders:**
@@ -179,4 +299,5 @@ Agent tool (general-purpose):
 rationale, prior rounds' findings, and the review log are never passed.
 
 **Reviewer returns:** marker line, Verdict counts, findings by severity with
-doc-section references.
+doc-section references, and the `evidence:` line under each Critical and
+Important finding, and the `### Inputs read` section.
